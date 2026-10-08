@@ -1,0 +1,40 @@
+{
+ "prereg": "35d03784",
+ "G_B5m": {
+  "n_regen": 2554812,
+  "n_dev": 2554812,
+  "ts_set_equal": true,
+  "md5_regen": "9bec7280550d9d88e058df2178597d79",
+  "md5_dev": "4ab691c908fc545c26243e8328d7a0a6",
+  "n_val_diff": 9,
+  "n_unexplained": 0,
+  "n_dev_dup_ts_diffvals": 2348,
+  "verdict": "EXPLAINED"
+ },
+ "diff_ts": [
+  1628474160000,
+  1639791180000,
+  1644189720000,
+  1646395980000,
+  1672069380000,
+  1673903940000,
+  1687253280000,
+  1701846660000,
+  1720641780000
+ ],
+ "unexplained_ts": [],
+ "n_2026": 252463,
+ "first": 1767225600000,
+ "last": 1782863940000,
+ "n_minutes_range": 260640,
+ "n_days": 182,
+ "days_lt_1440": 182,
+ "ambiguous_2026_ts": [
+  1767440640000,
+  1773372060000
+ ],
+ "md5_dev_records": "93f612668eda91c71fe16d19499d2d39",
+ "md5": "34e33678105275b3620d1c92c3510172",
+ "bytes": 56145504,
+ "path": "/home/ubuntu/claude_master/1003/ho1/ds/market.bin"
+}

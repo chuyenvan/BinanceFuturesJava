@@ -1,0 +1,294 @@
+{
+ "prereg": "35d03784",
+ "seal_ms": 1767200400000,
+ "tr_cut_ms": 1767199500000,
+ "store": "/home/ubuntu/claudedata/gate_dataset_full.csv.gz",
+ "store_md5": "4bde28cd6d439ec009954bb6ec7d2537",
+ "store_2026": {
+  "n": 260602,
+  "ts_first": "2026-01-01 00:00:00+07:00",
+  "ts_last": "2026-06-30 23:59:00+07:00",
+  "n_minutes_window": 260640,
+  "nan_by_feat": {}
+ },
+ "seeds": {
+  "42": {
+   "train": {
+    "seed": 42,
+    "n_train": 2629005,
+    "train_ts_min": "2021-01-01 07:00:00+07:00",
+    "train_ts_max": "2025-12-31 23:44:00+07:00",
+    "train_ts_max_ms": 1767199440000,
+    "tr_cut_ms": 1767199500000,
+    "label_years": [
+     2021,
+     2022,
+     2023,
+     2024,
+     2025
+    ],
+    "model": "/home/ubuntu/claude_master/1003/ho1/gate/gate_s42_cut20260101p15.json",
+    "model_sha256": "6a50ebb6f3714f5b5223979df22a36ea85348fd03ef8488e5c805c5884c87a7a"
+   },
+   "pred": {
+    "seed": 42,
+    "src_dev": "/home/ubuntu/wfo_ds_x1_2021/pred.bin",
+    "src_dev_md5": "5dd6bb4c3f98d89d58770005c0001526",
+    "n_src": 2500260,
+    "n_src_ge_seal_dropped": 420,
+    "n_dev": 2499840,
+    "md5_dev_records": "9b043a6568926913c25b7cc2889425cd",
+    "n_2026": 260602,
+    "n_total": 2760442,
+    "nan_p15_2026": 0,
+    "md5": "22f69456381d9d1abd1592382c3b0319",
+    "bytes": 44167076,
+    "path": "/home/ubuntu/claude_master/1003/ho1/gate/pred_s42/pred.bin"
+   }
+  },
+  "7": {
+   "train": {
+    "seed": 7,
+    "n_train": 2629005,
+    "train_ts_min": "2021-01-01 07:00:00+07:00",
+    "train_ts_max": "2025-12-31 23:44:00+07:00",
+    "train_ts_max_ms": 1767199440000,
+    "tr_cut_ms": 1767199500000,
+    "label_years": [
+     2021,
+     2022,
+     2023,
+     2024,
+     2025
+    ],
+    "model": "/home/ubuntu/claude_master/1003/ho1/gate/gate_s7_cut20260101p15.json",
+    "model_sha256": "b630646e35d2000e2ceaeec15f27f9e005bc3451b92e8b97d20ea09ddea917eb"
+   },
+   "pred": {
+    "seed": 7,
+    "src_dev": "/home/ubuntu/claude_master/1004/gabl/pred_SEED7/pred.bin",
+    "src_dev_md5": "b737fb6d64d198c14654ea9c92510b36",
+    "n_src": 2500260,
+    "n_src_ge_seal_dropped": 420,
+    "n_dev": 2499840,
+    "md5_dev_records": "d31422fdb32d9fba2ddef7c8cd0a1a1c",
+    "n_2026": 260602,
+    "n_total": 2760442,
+    "nan_p15_2026": 0,
+    "md5": "a5e60871ff91c9c246d8cdce6db6b520",
+    "bytes": 44167076,
+    "path": "/home/ubuntu/claude_master/1003/ho1/gate/pred_s7/pred.bin"
+   }
+  },
+  "13": {
+   "train": {
+    "seed": 13,
+    "n_train": 2629005,
+    "train_ts_min": "2021-01-01 07:00:00+07:00",
+    "train_ts_max": "2025-12-31 23:44:00+07:00",
+    "train_ts_max_ms": 1767199440000,
+    "tr_cut_ms": 1767199500000,
+    "label_years": [
+     2021,
+     2022,
+     2023,
+     2024,
+     2025
+    ],
+    "model": "/home/ubuntu/claude_master/1003/ho1/gate/gate_s13_cut20260101p15.json",
+    "model_sha256": "1b4024bfdf241f57a9e5cd3c4f0ff60b8ccf5f589f470e153670ca9876249379"
+   },
+   "pred": {
+    "seed": 13,
+    "src_dev": "/home/ubuntu/claude_master/1004/gsb/pred_S13/pred.bin",
+    "src_dev_md5": "cd6d7b2ed05b9ad326358717fdbdd842",
+    "n_src": 2500260,
+    "n_src_ge_seal_dropped": 420,
+    "n_dev": 2499840,
+    "md5_dev_records": "d07496fb8cd380b4de3812a5c3f248c9",
+    "n_2026": 260602,
+    "n_total": 2760442,
+    "nan_p15_2026": 0,
+    "md5": "a411080f1417ae9a3b9348087ee5741f",
+    "bytes": 44167076,
+    "path": "/home/ubuntu/claude_master/1003/ho1/gate/pred_s13/pred.bin"
+   }
+  },
+  "21": {
+   "train": {
+    "seed": 21,
+    "n_train": 2629005,
+    "train_ts_min": "2021-01-01 07:00:00+07:00",
+    "train_ts_max": "2025-12-31 23:44:00+07:00",
+    "train_ts_max_ms": 1767199440000,
+    "tr_cut_ms": 1767199500000,
+    "label_years": [
+     2021,
+     2022,
+     2023,
+     2024,
+     2025
+    ],
+    "model": "/home/ubuntu/claude_master/1003/ho1/gate/gate_s21_cut20260101p15.json",
+    "model_sha256": "2dc9fcccab90ac0767573e2a0fb9459e446063fb823e12668d2e98f2acdb5cc3"
+   },
+   "pred": {
+    "seed": 21,
+    "src_dev": "/home/ubuntu/claude_master/1004/gsb/pred_S21/pred.bin",
+    "src_dev_md5": "0b541d2259b31cf2794160e0aeafa3ff",
+    "n_src": 2500260,
+    "n_src_ge_seal_dropped": 420,
+    "n_dev": 2499840,
+    "md5_dev_records": "f601646494f572738c4c7820cae88eaa",
+    "n_2026": 260602,
+    "n_total": 2760442,
+    "nan_p15_2026": 0,
+    "md5": "76ce737583bb90fefb421fef1aa717fe",
+    "bytes": 44167076,
+    "path": "/home/ubuntu/claude_master/1003/ho1/gate/pred_s21/pred.bin"
+   }
+  },
+  "99": {
+   "train": {
+    "seed": 99,
+    "n_train": 2629005,
+    "train_ts_min": "2021-01-01 07:00:00+07:00",
+    "train_ts_max": "2025-12-31 23:44:00+07:00",
+    "train_ts_max_ms": 1767199440000,
+    "tr_cut_ms": 1767199500000,
+    "label_years": [
+     2021,
+     2022,
+     2023,
+     2024,
+     2025
+    ],
+    "model": "/home/ubuntu/claude_master/1003/ho1/gate/gate_s99_cut20260101p15.json",
+    "model_sha256": "de894da8d73d741066e3cf52cc804be06631d7664c9f802b29b38fd3a58cf931"
+   },
+   "pred": {
+    "seed": 99,
+    "src_dev": "/home/ubuntu/claude_master/1004/gsb/pred_S99/pred.bin",
+    "src_dev_md5": "5ef90e928cd4f5a7aa55c4b88a1b6bd1",
+    "n_src": 2500260,
+    "n_src_ge_seal_dropped": 420,
+    "n_dev": 2499840,
+    "md5_dev_records": "ee248ec4492f4e3ffb48846c8b54448a",
+    "n_2026": 260602,
+    "n_total": 2760442,
+    "nan_p15_2026": 0,
+    "md5": "56c42c0cd1204cb7aeced5f30c03d9ea",
+    "bytes": 44167076,
+    "path": "/home/ubuntu/claude_master/1003/ho1/gate/pred_s99/pred.bin"
+   }
+  },
+  "123": {
+   "train": {
+    "seed": 123,
+    "n_train": 2629005,
+    "train_ts_min": "2021-01-01 07:00:00+07:00",
+    "train_ts_max": "2025-12-31 23:44:00+07:00",
+    "train_ts_max_ms": 1767199440000,
+    "tr_cut_ms": 1767199500000,
+    "label_years": [
+     2021,
+     2022,
+     2023,
+     2024,
+     2025
+    ],
+    "model": "/home/ubuntu/claude_master/1003/ho1/gate/gate_s123_cut20260101p15.json",
+    "model_sha256": "953f7f628ab294aaea6079f470096c09e89fe29f9810bf24208c0acd41ecfbc7"
+   },
+   "pred": {
+    "seed": 123,
+    "src_dev": "/home/ubuntu/claude_master/1004/gsb/pred_S123/pred.bin",
+    "src_dev_md5": "9b1dad9051c3d72b8bba8c0f547623f9",
+    "n_src": 2500260,
+    "n_src_ge_seal_dropped": 420,
+    "n_dev": 2499840,
+    "md5_dev_records": "1c4b6fc8d2dd07553f4d1fcd7660218d",
+    "n_2026": 260602,
+    "n_total": 2760442,
+    "nan_p15_2026": 0,
+    "md5": "764576ecd7a86b4726a7f54bbf7ef1c3",
+    "bytes": 44167076,
+    "path": "/home/ubuntu/claude_master/1003/ho1/gate/pred_s123/pred.bin"
+   }
+  },
+  "777": {
+   "train": {
+    "seed": 777,
+    "n_train": 2629005,
+    "train_ts_min": "2021-01-01 07:00:00+07:00",
+    "train_ts_max": "2025-12-31 23:44:00+07:00",
+    "train_ts_max_ms": 1767199440000,
+    "tr_cut_ms": 1767199500000,
+    "label_years": [
+     2021,
+     2022,
+     2023,
+     2024,
+     2025
+    ],
+    "model": "/home/ubuntu/claude_master/1003/ho1/gate/gate_s777_cut20260101p15.json",
+    "model_sha256": "b53f828cbf26d135cbf9e1df0aa58ae6542f927c1bf6c6756f4e2a404cf37d17"
+   },
+   "pred": {
+    "seed": 777,
+    "src_dev": "/home/ubuntu/claude_master/1004/gsb/pred_S777/pred.bin",
+    "src_dev_md5": "25f738f752d4ed195ac42bd5075c9e94",
+    "n_src": 2500260,
+    "n_src_ge_seal_dropped": 420,
+    "n_dev": 2499840,
+    "md5_dev_records": "4ea9cea6467ed2dbe2ac6a5561498cc6",
+    "n_2026": 260602,
+    "n_total": 2760442,
+    "nan_p15_2026": 0,
+    "md5": "3889a6c2488c3107022064490727d649",
+    "bytes": 44167076,
+    "path": "/home/ubuntu/claude_master/1003/ho1/gate/pred_s777/pred.bin"
+   }
+  },
+  "2024": {
+   "train": {
+    "seed": 2024,
+    "n_train": 2629005,
+    "train_ts_min": "2021-01-01 07:00:00+07:00",
+    "train_ts_max": "2025-12-31 23:44:00+07:00",
+    "train_ts_max_ms": 1767199440000,
+    "tr_cut_ms": 1767199500000,
+    "label_years": [
+     2021,
+     2022,
+     2023,
+     2024,
+     2025
+    ],
+    "model": "/home/ubuntu/claude_master/1003/ho1/gate/gate_s2024_cut20260101p15.json",
+    "model_sha256": "187488a50fc8387cfd239f00ec70da5358527a2fff13dbae1ba1b7c7570d0b07"
+   },
+   "pred": {
+    "seed": 2024,
+    "src_dev": "/home/ubuntu/claude_master/1004/gsb/pred_S2024/pred.bin",
+    "src_dev_md5": "3be4fac48ab8b9e2fcec45a3f45417e4",
+    "n_src": 2500260,
+    "n_src_ge_seal_dropped": 420,
+    "n_dev": 2499840,
+    "md5_dev_records": "af6caf0a7f21f87596837213ac1b101d",
+    "n_2026": 260602,
+    "n_total": 2760442,
+    "nan_p15_2026": 0,
+    "md5": "9f76dc5d14c3daf2327b542b11b6f06f",
+    "bytes": 44167076,
+    "path": "/home/ubuntu/claude_master/1003/ho1/gate/pred_s2024/pred.bin"
+   }
+  }
+ },
+ "G_B2a": {
+  "n": 132480,
+  "pearson": 0.9966142177581787,
+  "spearman": 0.9969125048394509,
+  "pass": true
+ }
+}

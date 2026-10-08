@@ -1,0 +1,176 @@
+{
+ "G_B5f": {
+  "n": 2301065,
+  "before_first": 253175,
+  "stale": 572,
+  "raw15m": 157908,
+  "md5": "8e57d900d5c54c744bfcaf5c9b27fc93",
+  "want": "8e57d900d5c54c744bfcaf5c9b27fc93",
+  "off_seal7": 4446779204,
+  "pass": true
+ },
+ "bins": [
+  {
+   "name": "predict_wf_20210701.bin",
+   "md5": "ffec7e90979f85e23aeb902839dfeb1e",
+   "nrec": 999162,
+   "nan": 0,
+   "ts_min": 1625072400000,
+   "ts_max": 1633020300000,
+   "span_days": 91
+  },
+  {
+   "name": "predict_wf_20211001.bin",
+   "md5": "fdccbaac4f301833a4da95a9c233e52d",
+   "nrec": 1104563,
+   "nan": 0,
+   "ts_min": 1633021200000,
+   "ts_max": 1640969100000,
+   "span_days": 91
+  },
+  {
+   "name": "predict_wf_20220101.bin",
+   "md5": "a71cb93cfc580442418320eb0c9f8d04",
+   "nrec": 1123854,
+   "nan": 0,
+   "ts_min": 1640970000000,
+   "ts_max": 1648745100000,
+   "span_days": 89
+  },
+  {
+   "name": "predict_wf_20220401.bin",
+   "md5": "3cedf730b1fdff2bf3b3272a212ffe2d",
+   "nrec": 1172010,
+   "nan": 0,
+   "ts_min": 1648746000000,
+   "ts_max": 1656607500000,
+   "span_days": 90
+  },
+  {
+   "name": "predict_wf_20220701.bin",
+   "md5": "e723614e9df757e1437408f2b199a780",
+   "nrec": 1188418,
+   "nan": 0,
+   "ts_min": 1656608400000,
+   "ts_max": 1664556300000,
+   "span_days": 91
+  },
+  {
+   "name": "predict_wf_20221001.bin",
+   "md5": "6cf85dffa9a94aa8d3fd4ed73940b09c",
+   "nrec": 1242626,
+   "nan": 0,
+   "ts_min": 1664557200000,
+   "ts_max": 1672505100000,
+   "span_days": 91
+  },
+  {
+   "name": "predict_wf_20230101.bin",
+   "md5": "942ea9e3d579403fd2e267922f684aa9",
+   "nrec": 1302607,
+   "nan": 0,
+   "ts_min": 1672506000000,
+   "ts_max": 1680281100000,
+   "span_days": 89
+  },
+  {
+   "name": "predict_wf_20230401.bin",
+   "md5": "f801c640ab68cc07c757b1d43112cb08",
+   "nrec": 1524605,
+   "nan": 0,
+   "ts_min": 1680282000000,
+   "ts_max": 1688143500000,
+   "span_days": 90
+  },
+  {
+   "name": "predict_wf_20230701.bin",
+   "md5": "1e062b4ae5816f3f6cfc0ff2b6e5949d",
+   "nrec": 1671614,
+   "nan": 0,
+   "ts_min": 1688144400000,
+   "ts_max": 1696092300000,
+   "span_days": 91
+  },
+  {
+   "name": "predict_wf_20231001.bin",
+   "md5": "2b766454030610e148f38fc951d73a70",
+   "nrec": 1912959,
+   "nan": 0,
+   "ts_min": 1696093200000,
+   "ts_max": 1704041100000,
+   "span_days": 91
+  },
+  {
+   "name": "predict_wf_20240101.bin",
+   "md5": "53e100a0edac33701795f638fa1590c5",
+   "nrec": 2140992,
+   "nan": 0,
+   "ts_min": 1704042000000,
+   "ts_max": 1711903500000,
+   "span_days": 90
+  },
+  {
+   "name": "predict_wf_20240401.bin",
+   "md5": "1a717a07615d37a777356d87c412ef68",
+   "nrec": 2256504,
+   "nan": 0,
+   "ts_min": 1711904400000,
+   "ts_max": 1719765900000,
+   "span_days": 90
+  },
+  {
+   "name": "predict_wf_20240701.bin",
+   "md5": "5e198807ca793b39b70e07b37adeb0d7",
+   "nrec": 2362741,
+   "nan": 0,
+   "ts_min": 1719766800000,
+   "ts_max": 1727714700000,
+   "span_days": 91
+  },
+  {
+   "name": "predict_wf_20241001.bin",
+   "md5": "fb88843e37fb52c46a2cabf559092ca0",
+   "nrec": 2719452,
+   "nan": 0,
+   "ts_min": 1727715600000,
+   "ts_max": 1735663500000,
+   "span_days": 91
+  },
+  {
+   "name": "predict_wf_20250101.bin",
+   "md5": "43fd2bdfe20364017b4146d9bcbfd5da",
+   "nrec": 3056303,
+   "nan": 0,
+   "ts_min": 1735664400000,
+   "ts_max": 1743439500000,
+   "span_days": 89
+  },
+  {
+   "name": "predict_wf_20250401.bin",
+   "md5": "45e8c0fbe01e8e820309e22c721e8092",
+   "nrec": 3535785,
+   "nan": 0,
+   "ts_min": 1743440400000,
+   "ts_max": 1751301900000,
+   "span_days": 90
+  },
+  {
+   "name": "predict_wf_20250701.bin",
+   "md5": "830c3332ebdba4bdbf2e6a8b3a048e4f",
+   "nrec": 4078299,
+   "nan": 0,
+   "ts_min": 1751302800000,
+   "ts_max": 1759250700000,
+   "span_days": 91
+  },
+  {
+   "name": "predict_wf_20251001.bin",
+   "md5": "5ebae9298eb67bb4f12784b091148af7",
+   "nrec": 4517610,
+   "nan": 0,
+   "ts_min": 1759251600000,
+   "ts_max": 1767199500000,
+   "span_days": 91
+  }
+ ]
+}

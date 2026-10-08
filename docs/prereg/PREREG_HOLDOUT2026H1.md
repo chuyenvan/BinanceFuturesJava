@@ -87,3 +87,15 @@ Danh sách trắng: S1 `af706dc6…` (json), net015 `model_f19_4h.json` `83a5333
 ## 7. Thứ tự + điểm dừng vòng HO1
 
 B1 (commit này) → B2 gate 8 seed → B3 net015 2026 → B4 S1/bins 2026 → B5 dataset WFO append (cổng byte DEV) → B6 bundle + ticker 2026h1 + kiểm symbol → B8 parity C1–C3 + hiệu chuẩn net015 (seal đóng). Bất kỳ cổng FAIL ⇒ dừng bước đó, báo MASTER, không vá bằng tune. PASS hết ⇒ DỪNG, báo MASTER. Tiến độ ghi `docs/plan/HOLDOUT2026_PROGRESS.md`.
+
+## ADDENDUM-1 (2026-10-09, MASTER chốt) — chi tiết kỹ thuật, KHÔNG đổi cửa sổ / luật chấm
+
+Viết TRƯỚC khi có bất kỳ số hiệu năng / phân phối / tín hiệu 2026 nào được nhìn (seal vẫn ĐÓNG; đã sinh pred.bin 2026 của gate B2 nhưng chỉ đếm, NaN, md5).
+
+1. **market.bin (G-B5m) = EXPLAINED, chấp nhận.** Set Aerospike `market_data_object` có 2 348 phút DEV trùng `time` (nhiều key, giá trị khác) ⇒ exporter Java last-wins theo thứ tự scan, không tất định; tái sinh Python lệch 8–9 bản ghi/lần, 0 lệch không giải thích được. Đoạn DEV giữ NGUYÊN byte market.bin DEV (md5 `4ab691c9…`), chỉ append 2026 (last-wins theo thứ tự scan, như Java). 2 phút 2026 mơ hồ (ts 1767440640000, 1773372060000) liệt kê trong manifest. Cổng thật = parity B8 trên DEV phải trùng.
+2. **SIM_END_DATE=20260701** cho 48 kernel holdout (vòng sau): vòng lặp sim theo ngày UTC (`startTime = TIME_RUN 00:00 +07 + 7h`, dừng khi `startTime > endTime`), nên 20260630 sẽ dừng ở 2026-06-30 06:59 +07. Scorer cắt cửa sổ đúng 2026-01-01 00:00 → 2026-06-30 23:59 +07 (luật mục 1 không đổi). Dữ liệu market/ticker phủ tới hết ngày UTC 2026-06-30; pred/funding 2026 dừng ở 2026-07-01 00:00 +07.
+3. **pred.bin:** pred.bin DEV có 420 dòng ≥ 2026-01-01 00:00 +07 (tới 2025-12-31 23:59 UTC, từ fold_18 / seed 42). Bản holdout bỏ 420 dòng này, thay bằng model mới cut 2026-01-01 +07 của chính seed đó; phần bản ghi ts < 2026-01-01 00:00 +07 nguyên byte. Không ảnh hưởng run DEV (sim DEV xử lý tới hết ngày UTC 2025-12-30). Cột predRisk4H 2026 = 0f (fallback `WFOGateRunner`; cột không vào quyết định).
+4. **Pool S1 2026** = coin có bản ghi nhãn tại tick 15′ gate mở với `nBars_72h ≥ 288` (chỉ đọc `tEpochMs, symbol, nBars_72h`, KHÔNG đọc giá trị outcome). Cổng G-B4p trên 2025Q4: tập (symbol, tick) theo định nghĩa này phải trùng tập `g1lite.notna()` của ledger DEV ≥ 99% (Jaccard); không đạt ⇒ DỪNG báo MASTER.
+5. **feat_v2 dựng theo cửa sổ trên Oracle** (9 feature KEEP của S1, cửa sổ ≤ 30 ngày, warm-up ≥ 31 ngày trước 2025-10-01). Cổng G-B4a: đoạn chồng 2025Q4 so `feat_v2_x1.parquet` — ô có lệch tương đối > 1e-6 (hoặc NaN lệch) chiếm > 0,1% số ô ⇒ DỪNG.
+6. **net015 B3** chạy trên Oracle (không Kaggle), giữ lock, RSS ≤ 8G: OI đọc theo khối; file Tool1 chia quý UTC nên cửa sổ fold +07 đọc cả file quý trước. Thứ tự bản ghi trong 1 tick = sort ổn định (ts, symId) (pipeline gốc không xác định thứ tự tie). Cổng G-B3 giữ nguyên.
+7. **funding.bin (G-B5f) PASS** byte (`8e57d900…`) bằng bộ ghi Python; bản holdout = 18 bins DEV + 2 bins 2026 trên lưới market holdout, assert đoạn ts < 2026-01-01 00:00 +07 trùng byte DEV.
