@@ -95,6 +95,22 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public long entryPredictSymbol = 0;  // leg đầu từ PREDICT_SYMBOL_TRADE (funding-selector)
     public long entryDcaLevel = 0;       // DCA nhồi
     public long entryOther = 0;          // còn lại (SMALL_* nếu bật)
+    // [CRASH-PENALTY 2026-09-29, port NSEL 2026-10-08] docs/prereg/PREREG_CRASH_PENALTY.md — đếm "leg sập" bị phạt
+    //   (theo năm GMT+7). [NSEL] đếm ở chỗ order THẬT SỰ mở (sau mọi return) — sửa lỗi đếm thừa ~2% của efd85d6d.
+    public long crashPenTotal = 0;
+    public final java.util.TreeMap<Integer, Integer> crashPenByYear = new java.util.TreeMap<>();
+    // [NSEL 2026-10-08] docs/prereg/PREREG_NSEL.md §2 — counter thuần log (không đổi printDone).
+    public long nselCoreOnHeldWould = 0;       // coin đang giữ (hạng ≤ K_LÕI) qua gate LÕI (queryOnly) — đếm cả khi NSEL OFF
+    public long nselCoreOnHeldByAddWould = 0;  // ... và cụm có leg0 tầng THÊM — đếm cả khi CORE_ADD OFF
+    public long nselCoreAddRejMax = 0;         // CORE_ADD bị chặn vì cụm đã đủ NSEL_CORE_ADD_MAX_PER_CLUSTER
+    public long nselCoreAddAttempt = 0;        // CORE_ADD đi vào createOrder (gate LÕI đã qua)
+    public long nselCoreAddDone = 0;           // chân CORE_ADD thật sự mở
+    public long nselAddLegDone = 0;            // leg0 tầng THÊM thật sự mở
+    public final java.util.TreeMap<String, Long> nselLegsByTypeTier = new java.util.TreeMap<>();
+    public final java.util.TreeMap<String, Long> crashPenByTypeTier = new java.util.TreeMap<>();
+    /** [NSEL] chế độ gọi createOrder: thường / chân CORE_ADD (gate LÕI đã kiểm bằng queryOnly ở vòng selector). */
+    static final int NSEL_MODE_NORMAL = 0;
+    static final int NSEL_MODE_CORE_ADD = 2;
     public long predictSymbolRejectedGate = 0; // coin funding-selector bị gate REJECT (không vào lệnh)
 
     // =================================================================
@@ -407,7 +423,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 //   -> BO QUA toan bo khoi selector (level PREDICT_SYMBOL_TRADE + nhanh
                                 //   DCA_SIGNAL_GATE). Default false -> y het cu => byte-identical.
                                 if (symbol2Pred != null && !Configs.SELECTOR_LEG_CUT && !tickBlocked) {
-                                    java.util.List<Long> chosenCands = selectCands(symbol2Pred);
+                                    // [NSEL] OFF => selectCands cũ (K = SELECTOR_RANK_TOPK) => byte-identical.
+                                    //   ON => xét tới max(K_LÕI, K_THÊM) KHÔNG đổi SELECTOR_RANK_TOPK (final).
+                                    java.util.List<Long> chosenCands = com.binance.chuyennd.ai_ml.onnx.entry.NselGate.isOn()
+                                            ? selectCands(symbol2Pred, com.binance.chuyennd.ai_ml.onnx.entry.NselGate.selectorTopK())
+                                            : selectCands(symbol2Pred);
                                     // [TICKLOG] read-only: ngu canh tick (pool/nPass/nCand) + pool bi top-K loai.
                                     int _tlRank = -1;
                                     if (TickDecisionLog.ON) {
@@ -437,6 +457,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                             } else if (TickDecisionLog.ON) {
                                                 TickDecisionLog.candNoTicker(time, targetId, MarketLevelChange.PREDICT_SYMBOL_TRADE, symbolPred);
                                             }
+                                        } else if (nselOnHeld(targetId, symbol2Ticker[targetId], symbolPred, selRank, marketData)) {
+                                            // [NSEL 2026-10-08] docs/prereg/PREREG_NSEL.md §2 CORE_ADD: coin đang giữ bởi cụm
+                                            //   leg0 tầng THÊM + qua gate LÕI (queryOnly) => đã thêm chân CORE_ADD.
+                                            //   Hàm luôn đếm counter "would" (không side-effect); chỉ trả true khi
+                                            //   SIM_NSEL_CORE_ADD=true (fail-fast loại trừ DCA_SIGNAL_GATE) => OFF y nhánh cũ.
                                         } else if (Configs.DCA_SIGNAL_GATE) {
                                             // [DCA-SIGNAL 2026-09-14] docs/prereg/PREREG_DCA_SIGNAL_GATE.md — NHANH DUY NHAT duoc them.
                                             //   Binh thuong symbol dang co vi the bi LOAI khoi ung vien (dieu kien tren). O day:
@@ -637,6 +662,19 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             LOG.info("[CONC-PC] SUMMARY blocked={} pct={}",
                     concPerCoinBlocked, Configs.CONC_CAP_PERCOIN_PCT);
         }
+        // [CRASH-PENALTY] tong leg sap bi phat (theo nam) — dem SAU moi return (chan that su vao).
+        if (Configs.CRASH_ENTRY_PENALTY > 0f) {
+            LOG.info("[CRASH-PENALTY] SUMMARY penalty={} total={} byYear={} byTypeTier={}",
+                    Configs.CRASH_ENTRY_PENALTY, crashPenTotal, crashPenByYear, crashPenByTypeTier);
+        }
+        // [NSEL 2026-10-08] docs/prereg/PREREG_NSEL.md §2 — LUON in (ke ca OFF: counter would chay voi queryOnly).
+        //   add_rej_cap = THEM qua gate nhung khong mo duoc chan (budget/U_MAX, CONC, grid, D3D4...).
+        LOG.info("[NSEL] {} core_on_held_would={} core_on_held_by_add_would={} core_add_on={} core_add_attempt={} "
+                        + "core_add_done={} core_add_rej_cap={} core_add_rej_max={} add_leg_done={} add_rej_cap={} legs={}",
+                com.binance.chuyennd.ai_ml.onnx.entry.NselGate.stats(), nselCoreOnHeldWould, nselCoreOnHeldByAddWould,
+                Configs.NSEL_CORE_ADD, nselCoreAddAttempt, nselCoreAddDone, nselCoreAddAttempt - nselCoreAddDone,
+                nselCoreAddRejMax, nselAddLegDone,
+                com.binance.chuyennd.ai_ml.onnx.entry.NselGate.addPassCount() - nselAddLegDone, nselLegsByTypeTier);
         Utils.printMemoryUse(System.currentTimeMillis() - timeSimulator);
     }
 
@@ -732,12 +770,82 @@ public class SimulatorMarketLevelTicker1MStopLoss {
      */
     static int gridLegCount(List<OrderTargetInfoTest> legs) {
         if (legs == null) return 0;
-        if (!Configs.DCA_SIGNAL_GATE) return legs.size();
+        // [NSEL 2026-10-08] chan CORE_ADD cung KHONG tinh vao bac grid (PREREG_NSEL §2). Ca hai co OFF => size() cu.
+        if (!Configs.DCA_SIGNAL_GATE && !Configs.NSEL_CORE_ADD) return legs.size();
         int n = 0;
         for (OrderTargetInfoTest lg : legs) {
-            if (lg != null && !lg.dcaSignalLeg) n++;
+            if (lg != null && !lg.dcaSignalLeg && lg.nselTier != com.binance.chuyennd.ai_ml.onnx.entry.NselGate.TIER_CORE_ADD) n++;
         }
         return n;
+    }
+
+    /** [NSEL 2026-10-08] top-K tuong minh (K = max(K_LOI, K_THEM)) — cung phep chon voi rank-mode cua {@link #selectCands(long[])}. */
+    static java.util.List<Long> selectCands(long[] symbol2Pred, int k) {
+        java.util.List<Long> chosenCands = new java.util.ArrayList<>();
+        int nSel = Math.min(k, symbol2Pred.length);
+        for (int i = 0; i < nSel; i++) chosenCands.add(symbol2Pred[i]);
+        return chosenCands;
+    }
+
+    /** [NSEL] tang cua leg0 cum (leg dau theo thu tu them = thoi gian tang); -1 neu cum rong. */
+    static int clusterLeg0Tier(List<OrderTargetInfoTest> legs) {
+        if (legs == null || legs.isEmpty() || legs.get(0) == null) return -1;
+        return legs.get(0).nselTier;
+    }
+
+    /** [NSEL] so chan CORE_ADD trong cum. */
+    static int countCoreAdd(List<OrderTargetInfoTest> legs) {
+        if (legs == null) return 0;
+        int n = 0;
+        for (OrderTargetInfoTest lg : legs) {
+            if (lg != null && lg.nselTier == com.binance.chuyennd.ai_ml.onnx.entry.NselGate.TIER_CORE_ADD) n++;
+        }
+        return n;
+    }
+
+    /** [NSEL] CORE_ADD hop le ve CAU TRUC cum: leg0 tang THEM va chua du so CORE_ADD toi da. */
+    static boolean coreAddClusterEligible(List<OrderTargetInfoTest> legs, int maxPerCluster) {
+        return clusterLeg0Tier(legs) == com.binance.chuyennd.ai_ml.onnx.entry.NselGate.TIER_ADD
+                && countCoreAdd(legs) < maxPerCluster;
+    }
+
+    /**
+     * [CRASH-PENALTY port efd85d6d] "nen sap" = bar_ret nen QUYET DINH {@code (close-open)/open <= -0.01f}
+     * (float32, y het wt_crashpen SIM:1390-1391). Dung chung cho penalty (moi loai chan).
+     */
+    static boolean isCrashBar(float priceClose, float priceOpen) {
+        float barRet = (priceClose - priceOpen) / priceOpen;
+        return barRet <= -0.01f;
+    }
+
+    /**
+     * [NSEL 2026-10-08] coin DANG GIU trong vong selector (hang &lt;= K_LOI): kiem gate LOI bang queryOnly
+     * (KHONG nap buffer, KHONG noteCandidate) — dem would; neu SIM_NSEL_CORE_ADD va cum co leg0 tang THEM va chua
+     * du CORE_ADD ⇒ them 1 chan CORE_ADD qua createOrder (sizing/U_MAX/CONC/penalty nhu leg0 binh thuong).
+     *
+     * @return true neu da di vao nhanh CORE_ADD (chi khi SIM_NSEL_CORE_ADD=true)
+     */
+    private boolean nselOnHeld(short symbolId, KlineObjectSimple ticker, float symbolPred, int selRank,
+                               MarketDataObject marketData) {
+        if (Configs.SELECTOR_RANK_TOPK <= 0 || selRank > Configs.SELECTOR_RANK_TOPK) return false;
+        if (!Utils.isTickerAvailable(ticker)) return false;
+        if (entrySampleSkip(MarketLevelChange.PREDICT_SYMBOL_TRADE, ticker)) return false;
+        AiPredictionData predict = predictionMap.get(ticker.startTime);
+        if (predict == null) return false;
+        if (!aiRejectFilter.corePeekPass(predict, symbolPred)) return false;
+        nselCoreOnHeldWould++;
+        List<OrderTargetInfoTest> legs = symbol2OrdersEntry[symbolId];
+        if (clusterLeg0Tier(legs) != com.binance.chuyennd.ai_ml.onnx.entry.NselGate.TIER_ADD) return false;
+        nselCoreOnHeldByAddWould++;
+        if (!Configs.NSEL_CORE_ADD) return false;
+        if (!coreAddClusterEligible(legs, Configs.NSEL_CORE_ADD_MAX_PER_CLUSTER)) {
+            nselCoreAddRejMax++;
+            return true;
+        }
+        nselCoreAddAttempt++;
+        createOrder(OrderSide.BUY, symbolId, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE, marketData,
+                symbolPred, selRank, false, NSEL_MODE_CORE_ADD);
+        return true;
     }
 
     /**
@@ -945,6 +1053,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // 3. CHẠY PRE-CALCULATE (SORT SẴN FUNDING FEE MỘT LẦN DUY NHẤT)
         // [GDV2-EVEN 2026-09-29] quantile cuon tren TY SO r (SIM_GATE_ROLLING_MODE=ratio). Key vang -> no-op.
         com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.init();
+        // [NSEL 2026-10-08] tang THEM + fail-fast cau hinh (SAU GateRollingRatio.init). Key vang -> no-op.
+        com.binance.chuyennd.ai_ml.onnx.entry.NselGate.init();
         preprocessFundingData(time2SymbolPred);
         aiRejectFilter = new AIRejectFilter();
 
@@ -1308,8 +1418,36 @@ public class SimulatorMarketLevelTicker1MStopLoss {
      */
     private void createOrder(OrderSide side, short symbolId, KlineObjectSimple ticker, MarketLevelChange levelChange,
                              MarketDataObject marketData, Float symbolPred, Integer selRank, boolean dcaSignal) {
+        createOrder(side, symbolId, ticker, levelChange, marketData, symbolPred, selRank, dcaSignal, NSEL_MODE_NORMAL);
+    }
 
+    /**
+     * [GATE-RECAL 2026-09-26] docs/prereg/PREREG_GATE_RECAL.md §3.6 — nhip lay mau entry-leg (tach nguyen van tu
+     * createOrder 2026-10-08 de vong selector NSEL dung chung). true = BO QUA leg nay.
+     */
+    private static boolean entrySampleSkip(MarketLevelChange levelChange, KlineObjectSimple ticker) {
+        if (Configs.ENTRY_SAMPLE_MIN > 1
+                && levelChange != MarketLevelChange.BIG_DOWN
+                && levelChange != MarketLevelChange.DCA_LEVEL1) {
+            long _t = EntryGate.CURRENT_P15_TIME;
+            if (_t == Long.MIN_VALUE) _t = ticker.startTime;
+            return ((_t / 60000L) % Configs.ENTRY_SAMPLE_MIN) != 0;
+        }
+        return false;
+    }
 
+    /**
+     * [NSEL 2026-10-08] docs/prereg/PREREG_NSEL.md §2. {@code nselMode}:
+     * {@link #NSEL_MODE_NORMAL} = hanh vi cu (+ gate 2 tang khi NselGate bat);
+     * {@link #NSEL_MODE_CORE_ADD} = chan LOI cong don vao cum THEM (gate LOI da qua bang queryOnly o vong selector,
+     * KHONG goi entryGate lai ⇒ khong nap buffer; size = leg0 binh thuong: bac grid 0, khong DCA_SIGNAL_BASE_RATIO).
+     */
+    private void createOrder(OrderSide side, short symbolId, KlineObjectSimple ticker, MarketLevelChange levelChange,
+                             MarketDataObject marketData, Float symbolPred, Integer selRank, boolean dcaSignal,
+                             int nselMode) {
+        boolean coreAdd = nselMode == NSEL_MODE_CORE_ADD;
+        int nselTier = coreAdd ? com.binance.chuyennd.ai_ml.onnx.entry.NselGate.TIER_CORE_ADD
+                : com.binance.chuyennd.ai_ml.onnx.entry.NselGate.TIER_CORE;
 
         // [GATE-RECAL 2026-09-26] docs/prereg/PREREG_GATE_RECAL.md §3.6 + AMENDMENT §7 — nhip LAY MAU
         //   entry-leg: PHAM VI = CHI leg MO MOI khong phai BIG_DOWN va khong phai DCA_LEVEL1
@@ -1335,7 +1473,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_NO_PRED, symbolId, ticker, levelChange, symbolPred, null);
             return;
         }
-        if (!levelChange.equals(MarketLevelChange.BIG_DOWN)) {
+        if (coreAdd) {
+            // [NSEL] CORE_ADD: gate LOI da kiem (queryOnly, khong nap buffer) o nselOnHeld — khong goi lai entryGate.
+        } else if (!levelChange.equals(MarketLevelChange.BIG_DOWN)) {
                 // [L7 2026-09-11, docs/experiment/L7_LEAN_GATE.md] MOT cong entry duy nhat, DUNG CHUNG voi
                 //   LIVE (DetectEntrySignal2TradeNormal.createOrderBuyRequest goi cung ham nay).
                 //   Cong thuc nguong nam o com.binance.chuyennd.tradecore.EntryGate.
@@ -1345,8 +1485,16 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 boolean bookFull = Configs.GATE_QUOTA_SKIP_WHEN_FULL
                         && levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE
                         && TradeUtils.managerBudget(null, sizingMarginRunning(), sizingEquity(), levelChange) == null;
-                AIRejectFilter.FilterResult filterResult = aiRejectFilter.entryGate(predict, symbolPred,
-                        levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE, bookFull, selRank);
+                // [NSEL 2026-10-08] gate 2 tang CHI cho leg selector PREDICT (co rank, khong phai leg DCA-signal).
+                //   NselGate OFF (mac dinh) => nhanh cu nguyen van => byte-identical.
+                boolean nselGate = com.binance.chuyennd.ai_ml.onnx.entry.NselGate.isOn()
+                        && levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE && selRank != null && !dcaSignal;
+                AIRejectFilter.FilterResult filterResult = nselGate
+                        ? aiRejectFilter.entryGateNsel(predict, symbolPred, bookFull, selRank,
+                                (ticker.priceClose - ticker.priceOpen) / ticker.priceOpen)
+                        : aiRejectFilter.entryGate(predict, symbolPred,
+                                levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE, bookFull, selRank);
+                nselTier = filterResult.nselTier;
 
                 ablationSignalSeen++;
                 if (filterResult.decision == AIRejectFilter.FilterDecision.REJECT) {
@@ -1392,6 +1540,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         else entryOther++;
 
         Float entry = ticker.priceClose;
+        // [CRASH-PENALTY 2026-09-29, port NSEL 2026-10-08 tu efd85d6d] docs/prereg/PREREG_CRASH_PENALTY.md — "leg sap" =
+        //   nen quyet dinh bar_ret <= -1%. Phat vao GIA VAO (BUY vao DAT hon), MOI loai chan (PREDICT/BIG_DOWN/DCA/
+        //   CORE_ADD, ca tang THEM). Default penalty=0 => nhanh KHONG chay => byte-identical. Counter + log dem o cho
+        //   order THAT SU mo (cuoi ham), khong o day (efd85d6d dem truoc cac return tier3/budget/grid => thua ~2%).
+        boolean crashPenalized = false;
+        if (Configs.CRASH_ENTRY_PENALTY > 0f && isCrashBar(ticker.priceClose, ticker.priceOpen)) {
+            entry = entry * (1f + Configs.CRASH_ENTRY_PENALTY);
+            crashPenalized = true;
+        }
         Integer leverage = Configs.LEVERAGE_ORDER;
 
         long currentTs = ticker.startTime;
@@ -1452,6 +1609,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             int legIdx = gridLegCount(cur);     // 0 = leg dau
             // leg-signal an DUNG suat von co so (bac 0) — nua con lai cua suat da bi chia doi o leg dau.
             if (dcaSignal) legIdx = 0;
+            // [NSEL] CORE_ADD = size leg0 binh thuong (bac 0). DCA_SIGNAL_GATE bi fail-fast khi CORE_ADD bat
+            //   => khong bao gio nhan DCA_SIGNAL_BASE_RATIO ben duoi.
+            if (coreAdd) legIdx = 0;
             float ratio = DcaUtils.gridLegWeightRatio(legIdx);
             if (ratio <= 0f) {
                 if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_GRID_EXHAUSTED, symbolId, ticker, levelChange, symbolPred, predict);
@@ -1536,7 +1696,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         order.lastPrice = entry;
         order.firstEntryPrice = entry;   // HARD-SL: gia entry THAT cua leg nay; leg dau => gia entry dau cum (bat bien qua DCA)
         order.tickerOpen = ticker;
-        order.marketLevelChange = levelChange;
+        // [NSEL] chan CORE_ADD nhan dien trong printDone qua cot type (marketLevelChange) = "CORE_ADD".
+        //   Moi logic ben trong createOrder van chay voi levelChange=PREDICT_SYMBOL_TRADE. OFF => levelChange cu.
+        order.marketLevelChange = coreAdd ? MarketLevelChange.CORE_ADD : levelChange;
+        order.nselTier = nselTier;
 
         if (marketData != null) {
             order.marketData = marketData;
@@ -1577,6 +1740,27 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (Configs.CONC_CAP_BD_RATE_ENABLED && levelChange == MarketLevelChange.BIG_DOWN) {
             concBdRecord(ticker.startTime);
         }
+        // [NSEL / CRASH-PENALTY] dem SAU moi return (chan that su mo). Thuan log, khong doi printDone.
+        String typeTier = order.marketLevelChange + ":" + (nselTier == com.binance.chuyennd.ai_ml.onnx.entry.NselGate.TIER_ADD
+                ? "ADD" : nselTier == com.binance.chuyennd.ai_ml.onnx.entry.NselGate.TIER_CORE_ADD ? "CORE_ADD" : "CORE");
+        nselLegsByTypeTier.merge(typeTier, 1L, Long::sum);
+        if (nselTier == com.binance.chuyennd.ai_ml.onnx.entry.NselGate.TIER_ADD) nselAddLegDone++;
+        if (coreAdd) nselCoreAddDone++;
+        if (com.binance.chuyennd.ai_ml.onnx.entry.NselGate.isOn() || coreAdd) {
+            LOG.info("NSEL_LEG sym={} tOpen={} tMs={} type={} tier={} rank={}", symbolStr,
+                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime), ticker.startTime, order.marketLevelChange,
+                    nselTier, selRank);
+        }
+        if (crashPenalized) {
+            crashPenTotal++;
+            int y = Integer.parseInt(Utils.sdfMonth.format(new Date(ticker.startTime)).substring(0, 4));
+            crashPenByYear.merge(y, 1, Integer::sum);
+            crashPenByTypeTier.merge(typeTier, 1L, Long::sum);
+            LOG.info("[CRASH-PENALTY] leg sap sym={} t={} barRet={} penalty={} entry={} type={}",
+                    symbolStr, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime),
+                    String.format("%.4f", (ticker.priceClose - ticker.priceOpen) / ticker.priceOpen),
+                    Configs.CRASH_ENTRY_PENALTY, entry, typeTier);
+        }
     }
 
     public void initDataReady(TreeMap<Long, MarketDataObject> time2MarketData,
@@ -1599,6 +1783,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // 3. CHẠY PRE-CALCULATE (SORT SẴN FUNDING FEE MỘT LẦN DUY NHẤT)
         // [GDV2-EVEN 2026-09-29] quantile cuon tren TY SO r (SIM_GATE_ROLLING_MODE=ratio). Key vang -> no-op.
         com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.init();
+        // [NSEL 2026-10-08] tang THEM + fail-fast cau hinh (SAU GateRollingRatio.init). Key vang -> no-op.
+        com.binance.chuyennd.ai_ml.onnx.entry.NselGate.init();
         preprocessFundingData(this.time2SymbolPred);
         // FUNDING (Bước 3): warm-up cache funding_data NGAY (nạp 1 lần vào RAM) để initFunding/updateFundingFee
         // trong vòng nóng chỉ tra TreeMap, KHÔNG trigger scanAll Aerospike giữa backtest.

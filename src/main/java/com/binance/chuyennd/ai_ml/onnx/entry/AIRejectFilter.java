@@ -34,6 +34,8 @@ public class AIRejectFilter {
     public static class FilterResult {
         public FilterDecision decision;
         public String reason;
+        /** [NSEL 2026-10-08] tang cua ung vien PASS: {@link NselGate#TIER_CORE} (mac dinh) / {@link NselGate#TIER_ADD}. */
+        public int nselTier = NselGate.TIER_CORE;
 
         public FilterResult(FilterDecision decision, String reason) {
             this.decision = decision;
@@ -79,10 +81,9 @@ public class AIRejectFilter {
     }
 
     /**
-     * [GKF-PHASE3 2026-10-07] docs/prereg/PREREG_GATE_K_FRONTIER.md §7 — thêm {@code selRank}.
-     * Khi {@code Configs.GATE_BUFFER_TOPK = G &gt; 0} VÀ {@code selRank &gt; G} (hạng sau G) VÀ ứng viên PREDICT:
-     * dùng {@code thresholdCheckOnly} (KHÔNG nạp r vào buffer) ⇒ q_t/quota giữ ĐÚNG như nền; hạng sau G
-     * vẫn được kiểm {@code r &gt;= q_t} và vào lệnh nếu qua. {@code selRank == null} hoặc key &lt;= 0 ⇒ y hệt bản 4 tham số.
+     * [GKF-PHASE3 2026-10-07] chu ky 5 tham so giu nguyen cho caller sim. [NSEL 2026-10-08] nhanh
+     * {@code GATE_BUFFER_TOPK}/checkOnly DA BO (docs/prereg/PREREG_NSEL.md §2 "Don") — {@code selRank} khong con
+     * doi quyet dinh; gate 2 tang nam o {@link #entryGateNsel}. Key do mac dinh -1 nen bo nhanh = byte-identical.
      */
     public FilterResult entryGate(AiPredictionData prediction, Float symbolPred, boolean predictSymbolTrade,
                                   boolean bookFull, Integer selRank) {
@@ -100,18 +101,11 @@ public class AIRejectFilter {
             skipFullCount.incrementAndGet();
             return new FilterResult(FilterDecision.REJECT, "BOOK FULL: U>=U_MAX -> bo qua quota gate (khong nap r)");
         }
-        // [GKF-PHASE3] hạng sau GATE_BUFFER_TOPK: kiểm r>=q_t nhưng KHÔNG nạp buffer.
-        boolean checkOnly = sp != null && Configs.GATE_BUFFER_TOPK > 0
-                && selRank != null && selRank > Configs.GATE_BUFFER_TOPK;
         // [G2-LIVE-PORT 2026-09-29] docs/plan/PLAN_G2_LIVE_PORT.md — quantile cuộn trên CHÍNH TỈ SỐ r.
         //   LIVE key (LIVE_GATE_ROLLING_*) ưu tiên; SIM key (SIM_GATE_ROLLING_*) giữ nguyên GDV2.
         //   Cả hai vắng => thrBase = MIN_MOMENTUM_15M => byte-identical HEAD.
         float thrBase;
-        if (checkOnly && LiveGateRollingRatio.isOn()) {
-            thrBase = LiveGateRollingRatio.thresholdCheckOnly(prediction.timestamp, prediction.predReturn15M, sp);
-        } else if (checkOnly && GateRollingRatio.isOn()) {
-            thrBase = GateRollingRatio.thresholdCheckOnly(prediction.timestamp, prediction.predReturn15M, sp);
-        } else if (LiveGateRollingRatio.isOn() && sp != null) {
+        if (LiveGateRollingRatio.isOn() && sp != null) {
             thrBase = LiveGateRollingRatio.threshold(prediction.timestamp, prediction.predReturn15M, sp);
         } else if (GateRollingRatio.isOn() && sp != null) {
             thrBase = GateRollingRatio.threshold(prediction.timestamp, prediction.predReturn15M, sp);
@@ -126,6 +120,50 @@ public class AIRejectFilter {
             }
         }
         return res;
+    }
+
+    /**
+     * [NSEL 2026-10-08] docs/prereg/PREREG_NSEL.md §2 — gate 2 tang cho ung vien PREDICT (CHI sim, chi goi khi
+     * {@link NselGate#isOn()}).
+     * <ul>
+     *   <li>LOI: hang &lt;= K_LOI (= SELECTOR_RANK_TOPK) di NGUYEN {@link #entryGate} 5 tham so (buffer LOI,
+     *       noteCandidate, skipFull y nen). Hang &gt; K_LOI KHONG cham LOI (khong nap, khong dem).</li>
+     *   <li>THEM: buffer RIENG ({@link NselGate}) nap r cua MOI hang &lt;= NSEL_ADD_TOPK khi so khong day (ke ca
+     *       ung vien da qua LOI); quyet dinh THEM CHI xet khi LOI fail; F1 chi ap o day.</li>
+     * </ul>
+     * Tra ve REJECT, hoac PASS voi {@code nselTier} = TIER_CORE / TIER_ADD.
+     */
+    public FilterResult entryGateNsel(AiPredictionData prediction, Float symbolPred, boolean bookFull,
+                                      int selRank, float barRet) {
+        boolean corePass = false;
+        FilterResult coreRes = null;
+        if (selRank <= NselGate.coreTopK()) {
+            coreRes = entryGate(prediction, symbolPred, true, bookFull, selRank);
+            corePass = coreRes.decision == FilterDecision.PASS;
+        }
+        int tier = NselGate.decide(prediction.timestamp, prediction.predReturn15M, symbolPred, bookFull,
+                selRank, corePass, barRet);
+        if (tier == NselGate.TIER_CORE) return coreRes;
+        if (tier == NselGate.TIER_ADD) {
+            FilterResult r = new FilterResult(FilterDecision.PASS, "NSEL ADD tier");
+            r.nselTier = NselGate.TIER_ADD;
+            return r;
+        }
+        return coreRes != null ? coreRes : new FilterResult(FilterDecision.REJECT, "NSEL: hang > K_LOI, THEM fail");
+    }
+
+    /**
+     * [NSEL 2026-10-08] kiem gate LOI cho coin DANG GIU (CORE_ADD / counter would) — KHONG nap buffer, KHONG dem
+     * noteCandidate/notePass/mom15. Dung {@code GateRollingRatio.thresholdQueryOnly} (GateRatioBuffer.queryOnly):
+     * chi co the tinh truoc q cua gio hien tai tu CUNG tap r ts &lt; gio (ket qua y het addAndQuery se tinh) ⇒ khong
+     * doi quyet dinh nao cua LOI (khoa bang NselGateTest + J-B).
+     */
+    public boolean corePeekPass(AiPredictionData prediction, Float symbolPred) {
+        if (symbolPred == null) return false;
+        float thrBase = GateRollingRatio.isOn()
+                ? GateRollingRatio.thresholdQueryOnly(prediction.timestamp, prediction.predReturn15M, symbolPred)
+                : Configs.MIN_MOMENTUM_15M;
+        return !(prediction.predReturn15M < EntryGate.threshold(thrBase, symbolPred));
     }
 
     /** Giu signature cu de khong vo caller (BackTestEngineCombined/MarketThresholds/BenchmarkSpeedTest) —

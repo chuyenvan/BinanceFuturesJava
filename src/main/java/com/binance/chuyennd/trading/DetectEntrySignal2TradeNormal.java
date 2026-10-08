@@ -1371,6 +1371,9 @@ public class DetectEntrySignal2TradeNormal {
         // [G2-LIVE-PORT 2026-09-29] docs/plan/PLAN_G2_LIVE_PORT.md — gate rolling GDV2 (MODE=ratio).
         //   Key LIVE_GATE_ROLLING_* vắng => no-op (byte-identical HEAD). Nạp persist + seed lịch sử.
         com.binance.chuyennd.ai_ml.onnx.entry.LiveGateRollingRatio.init();
+        // [NSEL 2026-10-08] LIVE chua ho tro NSEL (chi sim vong nay): profile khai key NSEL/LIVE_NSEL_*/GATE_BUFFER_TOPK
+        //   => fail-fast, khong am tham lech parity. Khong khai => no-op.
+        com.binance.chuyennd.ai_ml.onnx.entry.NselGate.failIfLive();
         if (Configs.GATE_QUOTA_SKIP_WHEN_FULL) {
             LOG.warn("*** [GATE-QUOTA] LIVE SKIP_WHEN_FULL=ON: so day (managerBudget null) => khong nap r, khong tinh pass ***");
         }

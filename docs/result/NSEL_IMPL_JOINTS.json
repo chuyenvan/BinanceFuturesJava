@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-08",
+  "prereg": "docs/prereg/PREREG_NSEL.md",
+  "prereg_commit": "9986c929",
+  "branch": "feat/nsel",
+  "base": "9986c929",
+  "commits": {"code": "094fd7c0", "test": "df021437"},
+  "scope": "implement + J-A + jar + dataset; KHONG kernel, KHONG merge",
+  "keys": {
+    "NSEL_ADD_ENABLED": false,
+    "NSEL_ADD_TOPK": 32,
+    "SIM_NSEL_ADD_ROLLING_PCT": null,
+    "SIM_NSEL_ADD_ROLLING_DAYS": 90,
+    "NSEL_ADD_F1_MIN_BARRET": "NaN",
+    "SIM_NSEL_CORE_ADD": false,
+    "NSEL_CORE_ADD_MAX_PER_CLUSTER": 1,
+    "SIM_CRASH_ENTRY_PENALTY": 0.0,
+    "GATE_BUFFER_TOPK": "REMOVED (fail-fast)",
+    "LIVE_NSEL_*": "unsupported (fail-fast)"
+  },
+  "printdone": {"core_add_type": "CORE_ADD", "add_tier_leg0_type": "PREDICT_SYMBOL_TRADE (tier qua log NSEL_LEG)"},
+  "j_a": {"status": "PASS", "tests_before": 240, "tests_after": 259, "classes_before": 42, "classes_after": 44,
+          "new": {"NselGateTest": 12, "NselCoreAddTest": 7}},
+  "jar": {"path": "target/binance-java-sdk-1.2.4.jar", "built_from": "df021437",
+          "sha256": "b7c89f097241763bb240c24b411a66531b41dad12b1716f13237537386de62c2"},
+  "dataset": {"id": "chuyendinh/sim-jar-nsel", "files": ["sim.jar", "prof_r4_kg0_k16_f015_g155.properties", "dataset-metadata.json"],
+              "profile_md5": "0e0caef09e47931b706c696d587a5184"},
+  "j_b": {"status": "CHUA CHAY", "out": ["nsel-jb-s42", "nsel-jb-s7"], "ref": ["gqsf-a1", "gqsf-s7"]},
+  "j_c": {"status": "CHUA CHAY", "out": "nsel-jc", "ref": "flat3-cp-p1"},
+  "merge_module": "KHONG (cho J-B/J-C)"
+}
