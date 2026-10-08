@@ -1,0 +1,25 @@
+{
+ "n": 2301065,
+ "md5": "5620096e790b59ba6e8dce38f87a0f21",
+ "bytes": 4446783456,
+ "bins": [
+  "predict_wf_20210701.bin:ffec7e90979f85e23aeb902839dfeb1e",
+  "predict_wf_20211001.bin:fdccbaac4f301833a4da95a9c233e52d",
+  "predict_wf_20220101.bin:a71cb93cfc580442418320eb0c9f8d04",
+  "predict_wf_20220401.bin:3cedf730b1fdff2bf3b3272a212ffe2d",
+  "predict_wf_20220701.bin:e723614e9df757e1437408f2b199a780",
+  "predict_wf_20221001.bin:6cf85dffa9a94aa8d3fd4ed73940b09c",
+  "predict_wf_20230101.bin:942ea9e3d579403fd2e267922f684aa9",
+  "predict_wf_20230401.bin:f801c640ab68cc07c757b1d43112cb08",
+  "predict_wf_20230701.bin:1e062b4ae5816f3f6cfc0ff2b6e5949d",
+  "predict_wf_20231001.bin:2b766454030610e148f38fc951d73a70",
+  "predict_wf_20240101.bin:53e100a0edac33701795f638fa1590c5",
+  "predict_wf_20240401.bin:1a717a07615d37a777356d87c412ef68",
+  "predict_wf_20240701.bin:5e198807ca793b39b70e07b37adeb0d7",
+  "predict_wf_20241001.bin:fb88843e37fb52c46a2cabf559092ca0",
+  "predict_wf_20250101.bin:43fd2bdfe20364017b4146d9bcbfd5da",
+  "predict_wf_20250401.bin:45e8c0fbe01e8e820309e22c721e8092",
+  "predict_wf_20250701.bin:830c3332ebdba4bdbf2e6a8b3a048e4f",
+  "predict_wf_20251001.bin:fd89467f4b302f8ffb75bddc4c2351da"
+ ]
+}

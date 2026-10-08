@@ -35,6 +35,8 @@ def main():
     assert "MAP_OK" in r.stdout, r.stdout[-2000:] + r.stderr[-2000:]
     o = np.fromfile(FB.DEV_BINS + "/predict_wf_20251001.bin", dtype=DT)
     n = np.fromfile(C + "/bins/predict_wf_20251001.bin", dtype=DT)
+    o = o[np.lexsort((o["sym"].astype(np.int64), o["ts"].astype(np.int64)))]     # thu tu dong trong tick khac nhau
+    n = n[np.lexsort((n["sym"].astype(np.int64), n["ts"].astype(np.int64)))]     # => so theo khoa (ts, sym)
     same = len(o) == len(n) and np.array_equal(o["ts"], n["ts"]) and np.array_equal(o["sym"], n["sym"])
     m1 = dict(keys_equal=bool(same), n=int(len(o)))
     if same:
