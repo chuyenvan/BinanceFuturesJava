@@ -439,7 +439,7 @@ def proc_sym(X, t0):
     return out, mk
 
 
-def stage_path(nb=100, workers=3):
+def stage_path(nb=125, workers=3):
     S = pd.read_pickle(W + "/sig.pkl")
     U = S["U"].copy()
     U["psym"] = U["sym"] + "USDT"
