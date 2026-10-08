@@ -36,7 +36,11 @@ public enum MarketLevelChange {
 
     // 2026-08-31: entry forced-seller reversion (SimulatorForcedSeller). Them CUOI enum de
     // khong doi ordinal cac hang cu -> khong vo du lieu da serialize.
-    FORCED_SELLER("FORCED_SELLER");
+    FORCED_SELLER("FORCED_SELLER"),
+
+    // [NSEL 2026-10-08] docs/prereg/PREREG_NSEL.md §2 — chan LOI cong don vao cum tang THEM (chi sim).
+    //   Them CUOI enum (khong doi ordinal hang cu). Nhan dien trong printDone (cot type).
+    CORE_ADD("CORE_ADD");
 
     private final String code;
 

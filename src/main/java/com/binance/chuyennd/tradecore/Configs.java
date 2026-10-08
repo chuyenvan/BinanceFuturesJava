@@ -115,6 +115,10 @@ public class Configs {
     // Trượt giá mô phỏng cho mỗi chân khớp (entry + exit). 0.0005–0.001 là vùng hợp lý
     // cho coin thanh khoản tốt; coin nhỏ nên cao hơn. Áp cho cả entry và exit.
     public static float SLIPPAGE_RATE = 0.003f;
+    // [CRASH-PENALTY 2026-09-29, port NSEL 2026-10-08 tu wt_crashpen efd85d6d] docs/prereg/PREREG_CRASH_PENALTY.md —
+    //   phat them vao GIA VAO cua "leg sap" (nen quyet dinh bar_ret <= -1%), MOI loai chan. Default 0 (khong
+    //   khai bao SIM_CRASH_ENTRY_PENALTY) = byte-identical. Gia tri la FRACTION (vd 0.0069 / 0.01675).
+    public static float CRASH_ENTRY_PENALTY = 0f;
 
     // Công tắc bịt look-ahead nội-nến. MẶC ĐỊNH true (luôn bật khi backtest thật).
     // Đặt false CHỈ để đo "trước/sau khi bịt" — nếu PnL false >> true thì phần chênh
@@ -157,11 +161,19 @@ public class Configs {
     //   true => ung vien PREDICT tai luc so KHONG mo duoc lenh moi (managerBudget null, U >= U_MAX) KHONG nap r
     //   vao buffer gate rolling va KHONG tinh pass. Mac dinh false => byte-identical. Key GATE_QUOTA_SKIP_WHEN_FULL.
     public static boolean GATE_QUOTA_SKIP_WHEN_FULL = false;
-    // [GKF-PHASE3 2026-10-07] docs/prereg/PREREG_GATE_K_FRONTIER.md §7 — tach K_entry khoi K_buffer.
-    //   default -1 => bang SELECTOR_RANK_TOPK => byte-identical. Khi = G (>0) va SELECTOR_RANK_TOPK=K_entry>G:
-    //   chi r hang 1..G nap buffer (giu q_t nhu nen); hang G+1..K_entry van duoc kiem r>=q_t va vao lenh neu qua,
-    //   KHONG nap vao buffer. Key GATE_BUFFER_TOPK.
-    public static int GATE_BUFFER_TOPK = -1;
+    // [NSEL 2026-10-08] docs/prereg/PREREG_NSEL.md §2 — key GATE_BUFFER_TOPK (d3fb1f00, GKF-PHASE3) DA BO,
+    //   thay bang gate 2 tang NSEL; profile con khai GATE_BUFFER_TOPK => fail-fast (NselGate.validate).
+    //   Moi key duoi day mac dinh OFF => byte-identical. KHONG final: unit test lat truc tiep.
+    /** Bat tang THEM (instance gate rolling thu 2, buffer + pct + days rieng). Key NSEL_ADD_ENABLED. */
+    public static boolean NSEL_ADD_ENABLED = false;
+    /** Hang toi da cua tang THEM (selector xet toi max(SELECTOR_RANK_TOPK, NSEL_ADD_TOPK)). Key NSEL_ADD_TOPK. */
+    public static int NSEL_ADD_TOPK = 32;
+    /** F1: tang THEM chi vao leg0 khi bar_ret nen quyet dinh &gt; nguong. NaN = TAT. Key NSEL_ADD_F1_MIN_BARRET. */
+    public static float NSEL_ADD_F1_MIN_BARRET = Float.NaN;
+    /** CORE_ADD: LOI cong don vao cum co leg0 tang THEM. Key SIM_NSEL_CORE_ADD. */
+    public static boolean NSEL_CORE_ADD = false;
+    /** Toi da so chan CORE_ADD moi cum. Key NSEL_CORE_ADD_MAX_PER_CLUSTER. */
+    public static int NSEL_CORE_ADD_MAX_PER_CLUSTER = 1;
     public static float U_MAX  = 0.60f;   // trần tổng margin/equity, U≥U_MAX → chặn (gene search [0.40, 0.80])
 
 
@@ -912,8 +924,13 @@ public class Configs {
             if ((v = Cfg.get("SIM_U_MAX")) != null) U_MAX = Float.parseFloat(v.trim());
             // [GATE_QUOTA_SKIPFULL 2026-10-04] docs/prereg/PREREG_GATE_QUOTA_SKIPFULL.md (sim + live cung key; khong khai => false)
             if ((v = Cfg.get("GATE_QUOTA_SKIP_WHEN_FULL")) != null) GATE_QUOTA_SKIP_WHEN_FULL = Boolean.parseBoolean(v.trim());
-            // [GKF-PHASE3 2026-10-07] docs/prereg/PREREG_GATE_K_FRONTIER.md §7 (khong khai => -1 => byte-identical)
-            if ((v = Cfg.get("GATE_BUFFER_TOPK")) != null) GATE_BUFFER_TOPK = Integer.parseInt(v.trim());
+            // [NSEL 2026-10-08] docs/prereg/PREREG_NSEL.md §2 (khong khai => OFF => byte-identical).
+            //   GATE_BUFFER_TOPK da bo: con khai => NselGate.validate fail-fast (khong doc o day).
+            if ((v = Cfg.get("NSEL_ADD_ENABLED")) != null) NSEL_ADD_ENABLED = Boolean.parseBoolean(v.trim());
+            if ((v = Cfg.get("NSEL_ADD_TOPK")) != null) NSEL_ADD_TOPK = Integer.parseInt(v.trim());
+            if ((v = Cfg.get("NSEL_ADD_F1_MIN_BARRET")) != null) NSEL_ADD_F1_MIN_BARRET = Float.parseFloat(v.trim());
+            if ((v = Cfg.get("SIM_NSEL_CORE_ADD")) != null) NSEL_CORE_ADD = Boolean.parseBoolean(v.trim());
+            if ((v = Cfg.get("NSEL_CORE_ADD_MAX_PER_CLUSTER")) != null) NSEL_CORE_ADD_MAX_PER_CLUSTER = Integer.parseInt(v.trim());
             if ((v = Cfg.get("SIM_PREDICT_SYMBOL_RATE_MAX")) != null) PREDICT_SYMBOL_RATE_MAX_THRESHOLD = Float.parseFloat(v);
             if ((v = Cfg.get("SIM_RATE_PROFIT_STOP_MARKET")) != null) RATE_PROFIT_STOP_MARKET = Float.parseFloat(v);
             if ((v = Cfg.get("SIM_MS_DOWN_BIG_AVG")) != null) MS_DOWN_BIG_AVG = Float.parseFloat(v);
@@ -938,6 +955,8 @@ public class Configs {
             if ((v = Cfg.get("SIM_RATE_FEE")) != null) RATE_FEE = Float.parseFloat(v.trim());
             if ((v = Cfg.get("SIM_SLIPPAGE_RATE")) != null) SLIPPAGE_RATE = Float.parseFloat(v.trim());
             if ((v = Cfg.get("SIM_FUNDING_SCALE")) != null) FUNDING_SCALE = Float.parseFloat(v.trim());
+            // [CRASH-PENALTY] port tu efd85d6d. Default (khong khai bao) = 0f => byte-identical.
+            if ((v = Cfg.get("SIM_CRASH_ENTRY_PENALTY")) != null) CRASH_ENTRY_PENALTY = Float.parseFloat(v.trim());
         } catch (Exception e) {
             System.err.println("SIM env override parse error: " + e);
         }

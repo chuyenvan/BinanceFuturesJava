@@ -56,6 +56,9 @@ public class OrderTargetInfoTest implements Serializable {
      *  Mac dinh false => khi Configs.DCA_SIGNAL_GATE=false moi phep dem y het truoc => byte-identical.
      *  serialVersionUID khai bao tuong minh o tren nen them field KHONG pha doc/ghi storage cu. */
     public boolean dcaSignalLeg = false;
+    // [NSEL 2026-10-08] docs/prereg/PREREG_NSEL.md §2 — tang cua chan: 0 LOI (mac dinh, moi chan cu),
+    //   1 THEM (leg0 qua tang THEM), 2 CORE_ADD. Khong ghi printDone (giu md5 khi OFF).
+    public int nselTier = 0;
     public Float lastEntry;
 
     public Float priceTP;
