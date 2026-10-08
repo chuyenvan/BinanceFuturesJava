@@ -35,7 +35,24 @@ CONF = {"ho1-c1": (dict(GA.B0OV), "de-p1", "650c386f0d0dfea334af9d55ca2f21d4"),
         "ho1-c2": (K24, "gqsf-a1", "ad26fd55f0bb5db32038ec8b357cf8e7"),
         "ho1-c3": (dict(K24, **NSEL, SIM_CRASH_ENTRY_PENALTY="0.01675"), "nsel-m2-s42", "cbc067f717fa6bd06779c149d71e2e07"),
         "ho1-cal": (dict(GA.B0OV), "ho1-c1", None)}
-FUND_BLOCK = r'''# [HO1 CAL 2026-10-09] funding_ds: thay funding.bin (doan bins fold 20251001 = f18-retrain) -> viet lai md5_funding.
+FUND_BLOCK = r'''# [HO1 2026-10-09] kiem md5 ticker 2026h1 tren Kaggle == manifest Oracle (quyet dinh MASTER 4), CHI log.
+_tm = [c for c in glob.glob(IN + "/**/MANIFEST_MD5.json", recursive=True) if "/wfo-ticker-2026h1/" in c]
+if _tm:
+    _want = json.load(open(_tm[0]))
+    _ok, _bad, _miss = 0, [], []
+    for _nm, _w in sorted(_want.items()):
+        _c = [c for c in glob.glob(os.path.dirname(_tm[0]) + "/**/" + _nm + "*", recursive=True)]
+        if not _c:
+            _miss.append(_nm)
+            continue
+        if _md5(_c[0]) == _w:
+            _ok += 1
+        else:
+            _bad.append(_nm)
+    LOG.info("TICKER26_MD5 ok=%d bad=%d miss=%d bad_list=%s miss_list=%s", _ok, len(_bad), len(_miss), _bad[:5], _miss[:5])
+else:
+    LOG.info("TICKER26_MD5 khong thay MANIFEST_MD5.json")
+# [HO1 CAL 2026-10-09] funding_ds: thay funding.bin (doan bins fold 20251001 = f18-retrain) -> viet lai md5_funding.
 if CFG.get("funding_ds"):
     _fc = [c for c in sorted(glob.glob(IN + "/**/funding.bin", recursive=True)) if ("/" + CFG["funding_ds"] + "/") in c]
     if not _fc:
