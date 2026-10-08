@@ -1,5 +1,6 @@
 # SHADOW2_K24_SKIPFULL_PLAN — shadow #2 = K24 + GATE_QUOTA_SKIP_WHEN_FULL (paper, Oracle)
 
+- **DEPLOY 2026-10-08:** shadow #2 ĐANG CHẠY trên Oracle (`~/shadow_c3b`, unit `shadow-c3b`/`shadow-c3b-redis`, redis 7302), jar `20d412e8`, env khác #1 đúng 3 dòng, buffer G2 rút gọn. Chi tiết: `docs/audit/DEPLOY_SHADOW2_K24_20261008.md`.
 - **Ngày:** 2026-10-05. **Trạng thái:** KẾ HOẠCH — **chờ MASTER duyệt**. Chưa tạo thư mục/service, chưa build, chưa deploy. Không chạm 242, không sửa `~/shadow_c3`.
 - **Cập nhật 2026-10-05 (MASTER, owner duyệt merge):** `feat/shadow2-k24` (gồm `feat/live-sizing-c3live`) ĐÃ MERGE vào `module` tại `3a80ba91` ⇒ jar shadow #2 `20d412e8` ứng với code trên `module` (các dòng "không merge module" bên dưới là trạng thái trước merge). Mọi key mới default OFF.
 - **Buffer 242 bẩn (MASTER 10-05):** 1 198 tick đầu `gate_ratio_live.bin` 242 là r cấu hình cũ ⇒ q thô 0,0111 vs phần sạch (≥ 2026-10-01 13:00) 0,00645. Shadow #1 ngày 10-07 copy bản ĐÃ LỌC (bỏ < 10-01 13:00); buffer K24 cho #2 dựng lại chỉ từ dữ liệu sạch hoặc ghi rõ nếu dùng phần trước 10-01. Lọc buffer 242: chờ owner.
@@ -121,6 +122,6 @@ Kiểm diff: `diff <(grep '^export' ~/shadow_c3/app/conf/env.sh | sort) <(grep '
 | --- | --- | --- |
 | Phương án jar (A/B) | **B** — branch `feat/shadow2-k24` (worktree `~/src_wt_shadow2`), không merge `module` | MASTER 10-05 |
 | Commit jar, sha256 | `a052ebd9`; sha256 `20d412e83dba15ff9320b02c011f37d36a99c66b9f8487ff32a73adc12e7b238`; `~/claude_master/1005/shadow2/jar/binance-java-sdk-1.2.4.jar`; Kaggle `sim-jar-shadow2`; P0 `shadow2-p0` ff3ce513 | agent 10-05 |
-| Buffer gate (G1/G2), nguồn, số ngày | đề xuất **G2** (§4): dry-run 45,6 ngày, q_t K24 0,011619; dựng lại ngay trước start | MASTER |
-| Giờ start, giờ qua kiểm 60' | — | |
+| Buffer gate (G1/G2), nguồn, số ngày | **G2 rút gọn** (MASTER 10-08: chỉ dữ liệu sạch ≥ 2026-10-01 13:00 +07): 242 predictionSymbol+prediction 20261001..08 (chỉ đọc) → `build_gate_buffer_k24.py` K24 → `trim_gate_buffer.py --cutoff`; n 230 544, 10-01 13:00 → 10-08 14:30 (7,06 ngày, armed), q 0,0062053; sha256 `a0c27cad…`; đối chứng K16 vs buffer 242 trim: 99,81% tick khớp, q trùng bit 0,006307358853518963 | agent 10-08 |
+| Giờ start, giờ qua kiểm 60' | start app 2026-10-08 14:49:10 +07 (redis 14:33); kiểm 60': ĐẠT 2026-10-08 15:49 (banner/armed/topk=24/n_skipfull=0 u<0,6/NO-WRITE-242/#1 không ảnh hưởng; exception chỉ -2015 + NPE khởi động như #1); enable 2 unit 15:49; sha buffer a0c27cad… | agent 10-08 |
 | Log skipFull: thêm Java (a) hay proxy (b) | **(a)** Java — `[GATE] … n_skipfull= u=` (`a052ebd9`) | MASTER 10-05 |
