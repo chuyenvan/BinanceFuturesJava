@@ -1,0 +1,358 @@
+{
+ "n_ticker_files": 181,
+ "n_ticker_syms": 794,
+ "n_ticker_syms_20251231": 600,
+ "n_bins_syms": 686,
+ "mapper_size": 863,
+ "pin_size": 892,
+ "missing_mapper": [],
+ "missing_pin": [
+  "1000BONKUSDCUSDT",
+  "1000PEPEUSDCUSDT",
+  "1000SHIBUSDCUSDT",
+  "AAVEUSDCUSDT",
+  "ADAUSDCUSDT",
+  "AERGOUSDT",
+  "ARBUSDCUSDT",
+  "AVAXUSDCUSDT",
+  "BCHUSDCUSDT",
+  "BDXNUSDT",
+  "BIOUSDCUSDT",
+  "BNBUSDCUSDT",
+  "BOMEUSDCUSDT",
+  "BTCUSDCUSDT",
+  "CRVUSDCUSDT",
+  "DOGEUSDCUSDT",
+  "ENAUSDCUSDT",
+  "ETHBTCUSDT",
+  "ETHFIUSDCUSDT",
+  "ETHUSDCUSDT",
+  "FILUSDCUSDT",
+  "HBARUSDCUSDT",
+  "IPUSDCUSDT",
+  "KAITOUSDCUSDT",
+  "LINKUSDCUSDT",
+  "LTCUSDCUSDT",
+  "NEARUSDCUSDT",
+  "NEOUSDCUSDT",
+  "ORDIUSDCUSDT",
+  "PENGUUSDCUSDT",
+  "PNUTUSDCUSDT",
+  "SOLUSDCUSDT",
+  "SUIUSDCUSDT",
+  "SXPUSDT",
+  "TIAUSDCUSDT",
+  "TRUMPUSDCUSDT",
+  "UNIUSDCUSDT",
+  "WIFUSDCUSDT",
+  "WLDUSDCUSDT",
+  "WLFIUSDCUSDT",
+  "XRPUSDCUSDT"
+ ],
+ "excluded": [
+  "1000BONKUSDCUSDT",
+  "1000PEPEUSDCUSDT",
+  "1000SHIBUSDCUSDT",
+  "AAVEUSDCUSDT",
+  "ADAUSDCUSDT",
+  "AERGOUSDT",
+  "ARBUSDCUSDT",
+  "AVAXUSDCUSDT",
+  "BCHUSDCUSDT",
+  "BDXNUSDT",
+  "BIOUSDCUSDT",
+  "BNBUSDCUSDT",
+  "BOMEUSDCUSDT",
+  "BTCUSDCUSDT",
+  "CRVUSDCUSDT",
+  "DOGEUSDCUSDT",
+  "ENAUSDCUSDT",
+  "ETHBTCUSDT",
+  "ETHFIUSDCUSDT",
+  "ETHUSDCUSDT",
+  "FILUSDCUSDT",
+  "HBARUSDCUSDT",
+  "IPUSDCUSDT",
+  "KAITOUSDCUSDT",
+  "LINKUSDCUSDT",
+  "LTCUSDCUSDT",
+  "NEARUSDCUSDT",
+  "NEOUSDCUSDT",
+  "ORDIUSDCUSDT",
+  "PENGUUSDCUSDT",
+  "PNUTUSDCUSDT",
+  "SOLUSDCUSDT",
+  "SUIUSDCUSDT",
+  "SXPUSDT",
+  "TIAUSDCUSDT",
+  "TRUMPUSDCUSDT",
+  "UNIUSDCUSDT",
+  "WIFUSDCUSDT",
+  "WLDUSDCUSDT",
+  "WLFIUSDCUSDT",
+  "XRPUSDCUSDT"
+ ],
+ "n_excluded": 41,
+ "excluded_in_bins": [
+  "AERGOUSDT",
+  "BDXNUSDT",
+  "ETHBTCUSDT"
+ ],
+ "excluded_in_ticker": [
+  "1000BONKUSDCUSDT",
+  "1000PEPEUSDCUSDT",
+  "1000SHIBUSDCUSDT",
+  "AAVEUSDCUSDT",
+  "ADAUSDCUSDT",
+  "AERGOUSDT",
+  "ARBUSDCUSDT",
+  "AVAXUSDCUSDT",
+  "BCHUSDCUSDT",
+  "BDXNUSDT",
+  "BIOUSDCUSDT",
+  "BNBUSDCUSDT",
+  "BOMEUSDCUSDT",
+  "BTCUSDCUSDT",
+  "CRVUSDCUSDT",
+  "DOGEUSDCUSDT",
+  "ENAUSDCUSDT",
+  "ETHBTCUSDT",
+  "ETHFIUSDCUSDT",
+  "ETHUSDCUSDT",
+  "FILUSDCUSDT",
+  "HBARUSDCUSDT",
+  "IPUSDCUSDT",
+  "KAITOUSDCUSDT",
+  "LINKUSDCUSDT",
+  "LTCUSDCUSDT",
+  "NEARUSDCUSDT",
+  "NEOUSDCUSDT",
+  "ORDIUSDCUSDT",
+  "PENGUUSDCUSDT",
+  "PNUTUSDCUSDT",
+  "SOLUSDCUSDT",
+  "SUIUSDCUSDT",
+  "SXPUSDT",
+  "TIAUSDCUSDT",
+  "TRUMPUSDCUSDT",
+  "UNIUSDCUSDT",
+  "WIFUSDCUSDT",
+  "WLDUSDCUSDT",
+  "WLFIUSDCUSDT",
+  "XRPUSDCUSDT"
+ ],
+ "bins_id_mismatch_mapper": [],
+ "ticker_excluded_days": {
+  "1000BONKUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "1000PEPEUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "1000SHIBUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "AAVEUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "ADAUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "AERGOUSDT": [
+   27,
+   "20260101",
+   "20260630"
+  ],
+  "ARBUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "AVAXUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "BCHUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "BDXNUSDT": [
+   115,
+   "20260101",
+   "20260425"
+  ],
+  "BIOUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "BNBUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "BOMEUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "BTCUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "CRVUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "DOGEUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "ENAUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "ETHBTCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "ETHFIUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "ETHUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "FILUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "HBARUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "IPUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "KAITOUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "LINKUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "LTCUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "NEARUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "NEOUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "ORDIUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "PENGUUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "PNUTUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "SOLUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "SUIUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "SXPUSDT": [
+   8,
+   "20260101",
+   "20260425"
+  ],
+  "TIAUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "TRUMPUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "UNIUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "WIFUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "WLDUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "WLFIUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ],
+  "XRPUSDCUSDT": [
+   3,
+   "20260103",
+   "20260227"
+  ]
+ },
+ "note": "ticker-only (khong co trong bins) khong the vao lenh: entry chi lay tu predict2Symbol (bins); loai = bo khoi bins 2026",
+ "excluded_symids": [
+  284,
+  450,
+  682
+ ]
+}

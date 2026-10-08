@@ -1,0 +1,17 @@
+{
+ "excluded_symids": [
+  284,
+  450,
+  682
+ ],
+ "predict_wf_20260101.bin": {
+  "n_in": 4587093,
+  "n_dropped": 7468,
+  "sha256": "13e557835f3053179e535cc0c9059b9fc2751a1a8797e560cc0a091cb4907192"
+ },
+ "predict_wf_20260401.bin": {
+  "n_in": 4891812,
+  "n_dropped": 1856,
+  "sha256": "89eb3ce19006c731f135869beb681128105d8dafe35c49e7c02c1d8e75cc1813"
+ }
+}

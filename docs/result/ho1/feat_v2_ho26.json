@@ -1,0 +1,28 @@
+{
+ "prereg": "35d03784+ADD1",
+ "G_B4a": {
+  "dev_ts_max": "2026-01-01 00:00:00",
+  "rows_dev": 1246898,
+  "rows_new": 1246898,
+  "rows_only_one": 0,
+  "cells": 11222082,
+  "bad_cells": 0,
+  "bad_frac": 0.0,
+  "per_feat": {
+   "vol_7d": 0,
+   "dd_7d": 0,
+   "rk_dd_7d": 0,
+   "hrs_since_high_7d": 0,
+   "ret_3d": 0,
+   "rk_ret_3d": 0,
+   "ret_14d": 0,
+   "ls_global": 0,
+   "rk_oi_delta24h": 0
+  },
+  "pass": true
+ },
+ "t_start": 1754006400000,
+ "t_end": 1782864000000,
+ "n_rows": 3999669,
+ "n_rows_2026": 2748421
+}

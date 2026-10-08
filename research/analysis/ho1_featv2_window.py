@@ -29,8 +29,12 @@ ODT = np.dtype([("ts", ">i8"), ("sym", ">i2"), ("oi", ">f4", 5)])
 NAMES = ["oi_delta24h", "oi_z", "ls_global", "ls_toptrader", "taker_buy"]
 
 
+DEV_UNI = set()
+
+
 def closes(c26):
     a = np.fromfile(CLO, dtype=DT)
+    DEV_UNI.update(int(x) for x in np.unique(a["sym"]))
     b = np.fromfile(c26, dtype=DT)
     dmax = int(a["ts"].astype(np.int64).max())
     b = b[b["ts"].astype(np.int64) > dmax]
@@ -73,7 +77,13 @@ def oi_frames(P):
         if nm not in ("oi_delta24h", "ls_global"):
             continue
         M = od.assign(v=ov[:, j]).pivot(index="ts", columns="sym", values="v").reindex(index=P.index, columns=P.columns)
-        out[nm] = M.ffill(limit=2)
+        M = M.ffill(limit=2)
+        # Coin NGOAI universe DEV (627, niem yet 2026): chi tham gia cross-section OI tu khi co gia close dau tien
+        # (DEV: coin chi vao cross-section neu thuoc universe CLOSES) => doan DEV giu nguyen gia tri rank.
+        for c in [c for c in P.columns if c not in DEV_UNI]:
+            f0 = P[c].first_valid_index()
+            M.loc[M.index < (f0 if f0 is not None else M.index[-1] + 1), c] = np.nan
+        out[nm] = M
     return out
 
 
