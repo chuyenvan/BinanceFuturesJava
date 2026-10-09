@@ -40,6 +40,7 @@ Thư mục Oracle: `~/claude_master/1009/ho26/` (dữ liệu lớn KHÔNG push).
 | net015 2026 (A) | XONG | predict-only ONNX: 20260101 sha 8df74093 (4 587 093 rec), 20260401 406e527f (4 891 812), NaN 0; RSS 6,1G (lock) | ho2_net015_onnx.py |
 | bins 2026 (A) | XONG | x1_build_map + S1 2026 HO1 (`pred_ho26s1`); G-B4c PASS; loại 3 symbol (như B6) → `bins2026Ax` | ho2_chain.sh |
 | funding.bin + bundle | XONG | funding.bin md5 0700a96f (đoạn < 2026-01-01 +07 == DEV byte, prefix_equal); bundle mới `sim-ho26a-bundle` (market 34e33678, pred s42 22f69456 giữ HO1) | ho2_stage_bundle.py |
-| Parity lại C1–C3 + 48 kernel | ĐANG CHẠY (orchestrator) | xem `~/claude_master/1009/ho26/queue_status.tsv`, `parity_ho2.json` | ho26_queue.py |
+| Parity lại C1–C3 (seal đóng, bundle `sim-ho26a-bundle`) | **PASS** 10:22 | C1 ff3ce513 n 2517 vs de-p1: 0 cột lệch, chỉ in float32 trùng bit (volume 4, quantity 1); C2 ad26fd55 == gqsf-a1 (n 3541); C3 cbc067f7 == nsel-m2-s42 (n 7603); mọi kernel: jar/override/pred/TICKER26 181/181/mapper/penalty/không unseal OK (`docs/result/ho2/parity_ho2.json`) | ho26_queue.py pha 0 |
+| 48 kernel holdout (SEAL MỞ 10:22) | ĐANG CHẠY | orchestrator PID 2866443 (Oracle); trạng thái `~/claude_master/1009/ho26/queue_status.tsv` (slug/status/md5/n/parity/giờ — không eq/PnL); out `~/kaggle_sim/out/ho26-<cfg>-<b|s>-s<seed>`; KHÔNG chấm (2 scorer độc lập vòng sau) | ho26_queue.py pha 1 |
 
 Lộ thông tin nhỏ (khai báo): log `x1_build_map` in tỉ lệ dòng "co score" theo fold 2026 (phản ánh tần suất gate mở, như HO1). Không PnL/giá trị dự báo.
