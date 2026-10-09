@@ -1,0 +1,83 @@
+{
+ "prereg": "1682a311+2691816d (ADDENDUM-2)",
+ "phuong_an": "A",
+ "gate_A": {
+  "onnx": "/home/ubuntu/deploy_242_l3/models/g015x26_f15_cut20251001.onnx",
+  "onnx_sha256": "7921ceaf2405049ddf2c23187264c34d6c95a38125f33c9ef3506f02f4e6dd8b",
+  "orig": "/home/ubuntu/claude_master/1009/ho26/orig/predict_wf_20251001.bin",
+  "A0_sha256": "e03f0e58ed35f86929059cc349ceb18121df8b48ba3035293d7e6c9140da283a",
+  "A0": true,
+  "chunk": {
+   "patterns": [
+    "/home/ubuntu/ds_feat15m/features_20250701*",
+    "/home/ubuntu/ds_feat15m/features_20251001*"
+   ],
+   "lo": 1759251600000,
+   "hi": 1767200400000,
+   "n_tool1_in": 4517610,
+   "n_merged": 4517610,
+   "n_oi_nan_rows": 371,
+   "ts_min": 1759251600000,
+   "ts_max": 1767199500000
+  },
+  "n_new": 4517610,
+  "n_orig": 4517610,
+  "keys_equal": true,
+  "A1_max_abs": 4.76837158203125e-07,
+  "A1_mean_abs": 3.5643745401388234e-08,
+  "A1_nan_new": 0,
+  "A1_bit_identical_frac": 0.42433764756143183,
+  "A1": true,
+  "dev_md5": "5ebae9298eb67bb4f12784b091148af7",
+  "A2c_md5": "5ebae9298eb67bb4f12784b091148af7",
+  "A2c": true,
+  "A2_keys_equal": true,
+  "A2_max_abs": 4.76837158203125e-07,
+  "A2_n_gt_1e6": 0,
+  "A2_bit_identical_frac": 0.4243389756973267,
+  "A2_p123_bit_equal": true,
+  "A2": true,
+  "pass": true
+ },
+ "pred_2026": {
+  "chunk": {
+   "patterns": [
+    "/home/ubuntu/ds_feat15m/features_20251001*",
+    "/home/ubuntu/ds_feat15m/features_2026*"
+   ],
+   "lo": 1767200400000,
+   "hi": 1782838800000,
+   "n_tool1_in": 9478905,
+   "n_merged": 9478905,
+   "n_oi_nan_rows": 90,
+   "ts_min": 1767200400000,
+   "ts_max": 1782837900000
+  },
+  "files": {
+   "20260101": {
+    "path": "/home/ubuntu/claude_master/1009/ho26/net015_2026A/predict_wf_20260101.bin",
+    "n": 4587093,
+    "nan": 0,
+    "ts_min": 1767200400000,
+    "ts_max": 1774975500000,
+    "span_days": 89,
+    "lo": 1767200400000,
+    "hi": 1774976400000,
+    "sha256": "8df740934b840aeae0f22e13c06b07502ae60a11cdc4c26e8ef95a3551cd9d38",
+    "bytes": 119264418
+   },
+   "20260401": {
+    "path": "/home/ubuntu/claude_master/1009/ho26/net015_2026A/predict_wf_20260401.bin",
+    "n": 4891812,
+    "nan": 0,
+    "ts_min": 1774976400000,
+    "ts_max": 1782837900000,
+    "span_days": 90,
+    "lo": 1774976400000,
+    "hi": 1782838800000,
+    "sha256": "406e527fc2663ed2167a76dfcdb1c99df2bc518e9b5373475d4f5409075383fb",
+    "bytes": 127187112
+   }
+  }
+ }
+}
