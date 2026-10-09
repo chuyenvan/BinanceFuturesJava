@@ -1,0 +1,119 @@
+{
+ "bundle": {
+  "BINS_SHA256": {
+   "md5": "c89243f4783821d4c9ff03240ca42e70",
+   "bytes": 1620
+  },
+  "config.properties": {
+   "md5": "2f92f9a59df2146634fa97009fcf78b1",
+   "bytes": 2463
+  },
+  "exchange_info_pin.json": {
+   "md5": "5a815948d8909ea5b9615b28e28b53da",
+   "bytes": 303926
+  },
+  "funding.bin": {
+   "md5": "0700a96f949b356e32a5d5320ad0041e",
+   "bytes": 5550456412
+  },
+  "manifest.txt": {
+   "md5": "92e14f5b7a58514ebea8c33d94cf58b7",
+   "bytes": 3414
+  },
+  "market.bin": {
+   "md5": "34e33678105275b3620d1c92c3510172",
+   "bytes": 56145504
+  },
+  "pred.bin": {
+   "md5": "22f69456381d9d1abd1592382c3b0319",
+   "bytes": 44167076
+  },
+  "predict_wf_20220101.bin": {
+   "md5": "a71cb93cfc580442418320eb0c9f8d04",
+   "bytes": 29220204
+  },
+  "predict_wf_20220401.bin": {
+   "md5": "3cedf730b1fdff2bf3b3272a212ffe2d",
+   "bytes": 30472260
+  },
+  "predict_wf_20220701.bin": {
+   "md5": "e723614e9df757e1437408f2b199a780",
+   "bytes": 30898868
+  },
+  "predict_wf_20221001.bin": {
+   "md5": "6cf85dffa9a94aa8d3fd4ed73940b09c",
+   "bytes": 32308276
+  },
+  "predict_wf_20230101.bin": {
+   "md5": "942ea9e3d579403fd2e267922f684aa9",
+   "bytes": 33867782
+  },
+  "predict_wf_20230401.bin": {
+   "md5": "f801c640ab68cc07c757b1d43112cb08",
+   "bytes": 39639730
+  },
+  "predict_wf_20230701.bin": {
+   "md5": "1e062b4ae5816f3f6cfc0ff2b6e5949d",
+   "bytes": 43461964
+  },
+  "predict_wf_20231001.bin": {
+   "md5": "2b766454030610e148f38fc951d73a70",
+   "bytes": 49736934
+  },
+  "predict_wf_20240101.bin": {
+   "md5": "53e100a0edac33701795f638fa1590c5",
+   "bytes": 55665792
+  },
+  "predict_wf_20240401.bin": {
+   "md5": "1a717a07615d37a777356d87c412ef68",
+   "bytes": 58669104
+  },
+  "predict_wf_20240701.bin": {
+   "md5": "5e198807ca793b39b70e07b37adeb0d7",
+   "bytes": 61431266
+  },
+  "predict_wf_20241001.bin": {
+   "md5": "fb88843e37fb52c46a2cabf559092ca0",
+   "bytes": 70705752
+  },
+  "predict_wf_20250101.bin": {
+   "md5": "43fd2bdfe20364017b4146d9bcbfd5da",
+   "bytes": 79463878
+  },
+  "predict_wf_20250401.bin": {
+   "md5": "45e8c0fbe01e8e820309e22c721e8092",
+   "bytes": 91930410
+  },
+  "predict_wf_20250701.bin": {
+   "md5": "830c3332ebdba4bdbf2e6a8b3a048e4f",
+   "bytes": 106035774
+  },
+  "predict_wf_20251001.bin": {
+   "md5": "5ebae9298eb67bb4f12784b091148af7",
+   "bytes": 117457860
+  },
+  "predict_wf_20260101.bin": {
+   "md5": "56ea2eb064e0a3ce917201756c6b379b",
+   "bytes": 119070250
+  },
+  "predict_wf_20260401.bin": {
+   "md5": "c0f14613869646c7f53caf011a227d38",
+   "bytes": 127138856
+  },
+  "regime_cont_allcoin.csv": {
+   "md5": "c19062c864b182f3c77d88891e258757",
+   "bytes": 90462
+  }
+ },
+ "preds": {
+  "42": "22f69456381d9d1abd1592382c3b0319",
+  "7": "a5e60871ff91c9c246d8cdce6db6b520",
+  "13": "a411080f1417ae9a3b9348087ee5741f",
+  "21": "76ce737583bb90fefb421fef1aa717fe",
+  "99": "56c42c0cd1204cb7aeced5f30c03d9ea",
+  "123": "764576ecd7a86b4726a7f54bbf7ef1c3",
+  "777": "3889a6c2488c3107022064490727d649",
+  "2024": "9f76dc5d14c3daf2327b542b11b6f06f"
+ },
+ "bundle_name": "sim-ho26a-bundle"
+}

@@ -28,3 +28,18 @@ Manifest json nhỏ: `docs/result/ho1/`.
 1. **MASTER quyết CAL** (4,97% lệnh DEV > 1%): nguyên nhân lệch Q4 = net015 retrain (f18-retrain) ≠ G015x26 gốc ở mức quyết định lệnh dù flip bản lề chỉ 0,81% ô (path-dependence khuếch đại). Không tự vá/tune. Các hướng để MASTER chọn: chấp nhận + khai báo trong pre-reg; hoặc thước CAL khác (khai trước); hoặc đổi nguồn bins 2026.
 2. MASTER xác nhận C1 (1 ô quantity cùng hiện tượng in float32 như volume).
 3. Holdout 48 kernel (vòng sau, MASTER mở seal): SIM_END_DATE=20260701 (ADDENDUM-1), `ticker_min_days=2007`, dataset `wfo-ticker-2026h1` bản mới nhất (v2); sửa khối TICKER26_MD5 trong kernel so tên `.bin` với md5 gunzip (`t26md5_out`/`ticker26_oracle_gunzip_md5.json`).
+
+## HO2 (2026-10-09 08:20–) — cổng hiệu chuẩn + mở seal (agent HO2, MASTER quyết ADDENDUM-2)
+Thư mục Oracle: `~/claude_master/1009/ho26/` (dữ liệu lớn KHÔNG push). Kết quả nhỏ: `docs/result/ho2/`.
+
+| Bước | Trạng thái | Kết quả / hash | Script |
+|---|---|---|---|
+| ADDENDUM-2 | XONG | 1682a311 (quyết định 1–4), 2691816d (§2a artifact + cổng A chốt trước đo), 8fe35b23 (§5 = PHƯƠNG ÁN A) | — |
+| Tìm artifact | XONG | JSON gốc `predwf_G015/model_f15_4h` mất (đĩa + output Kaggle bị ghi đè); dùng ONNX export của chính booster đó `deploy_242_l3/models/g015x26_f15_cut20251001.onnx` 7921ceaf; dự đoán gốc fold 20251001 lấy từ backup Kaggle `predwf-g015x26-gate` (sha e03f0e58) | — |
+| Cổng A (DEV 2025Q4) | **PASS** | A0 sha OK; A1 khoá 4 517 610 == gốc, max\|Δ\| 4,77e-7; A2c map(gốc) == bins DEV md5 5ebae929 (byte); A2 max\|Δ\| 4,77e-7, 0 ô > 1e-6, p1..p3 trùng bit (`gateA.json`) | ho2_net015_onnx.py |
+| net015 2026 (A) | XONG | predict-only ONNX: 20260101 sha 8df74093 (4 587 093 rec), 20260401 406e527f (4 891 812), NaN 0; RSS 6,1G (lock) | ho2_net015_onnx.py |
+| bins 2026 (A) | XONG | x1_build_map + S1 2026 HO1 (`pred_ho26s1`); G-B4c PASS; loại 3 symbol (như B6) → `bins2026Ax` | ho2_chain.sh |
+| funding.bin + bundle | XONG | funding.bin md5 0700a96f (đoạn < 2026-01-01 +07 == DEV byte, prefix_equal); bundle mới `sim-ho26a-bundle` (market 34e33678, pred s42 22f69456 giữ HO1) | ho2_stage_bundle.py |
+| Parity lại C1–C3 + 48 kernel | ĐANG CHẠY (orchestrator) | xem `~/claude_master/1009/ho26/queue_status.tsv`, `parity_ho2.json` | ho26_queue.py |
+
+Lộ thông tin nhỏ (khai báo): log `x1_build_map` in tỉ lệ dòng "co score" theo fold 2026 (phản ánh tần suất gate mở, như HO1). Không PnL/giá trị dự báo.

@@ -1,0 +1,25 @@
+{
+ "G_B4c": true,
+ "files": {
+  "predict_wf_20260101.bin": {
+   "n": 4587093,
+   "same_keys": true,
+   "multiset_equal": true,
+   "n_changed": 3248204,
+   "sha256": "5b80e088b24c480433a601ee9c6ed93c841d26f1eb381b31d3916bd7eb2c62e6",
+   "span_days": 89,
+   "ts_min": 1767200400000,
+   "ts_max": 1774975500000
+  },
+  "predict_wf_20260401.bin": {
+   "n": 4891812,
+   "same_keys": true,
+   "multiset_equal": true,
+   "n_changed": 2538885,
+   "sha256": "d209386200fec420c16de649f89debdda52bced501819fe138941e253a84e662",
+   "span_days": 90,
+   "ts_min": 1774976400000,
+   "ts_max": 1782837900000
+  }
+ }
+}
