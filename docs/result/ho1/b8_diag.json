@@ -1,0 +1,82 @@
+{
+ "c1": {
+  "n": 2517,
+  "cells_diff": 5,
+  "cols": [
+   "quantity",
+   "volume"
+  ],
+  "all_f32_equal": true,
+  "cells": [
+   {
+    "row": 395,
+    "sym": "ADA",
+    "start": "20250302 23:46",
+    "col": "volume",
+    "c1": "7.387205E7",
+    "dev": "7.3872048E7",
+    "f32_equal": true
+   },
+   {
+    "row": 479,
+    "sym": "1000WHY",
+    "start": "20250127 14:27",
+    "col": "quantity",
+    "c1": "3.614185E7",
+    "dev": "3.6141848E7",
+    "f32_equal": true
+   },
+   {
+    "row": 612,
+    "sym": "1000PEPE",
+    "start": "20241210 04:04",
+    "col": "volume",
+    "c1": "3.958625E7",
+    "dev": "3.9586248E7",
+    "f32_equal": true
+   },
+   {
+    "row": 659,
+    "sym": "DOGE",
+    "start": "20241112 17:08",
+    "col": "volume",
+    "c1": "1.0717323E8",
+    "dev": "1.07173232E8",
+    "f32_equal": true
+   },
+   {
+    "row": 1430,
+    "sym": "BCH",
+    "start": "20230630 20:41",
+    "col": "volume",
+    "c1": "3.708635E7",
+    "dev": "3.7086352E7",
+    "f32_equal": true
+   }
+  ]
+ },
+ "cal": {
+  "preQ4_identical": true,
+  "n_preQ4": 2235,
+  "n_c1": 2517,
+  "n_cal": 2530,
+  "q4_c1": 282,
+  "q4_cal": 295,
+  "only_c1": 56,
+  "only_cal": 69,
+  "symdiff": 125,
+  "frac_q4": 0.4432624113475177,
+  "frac_all_dev": 0.049662296384584824,
+  "by_month_only_c1_only_cal": {
+   "202511": [
+    15,
+    26
+   ],
+   "202510": [
+    41,
+    43
+   ]
+  },
+  "stop": true
+ }
+}

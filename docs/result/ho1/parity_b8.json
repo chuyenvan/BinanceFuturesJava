@@ -1,0 +1,55 @@
+{
+ "ho1-c1": {
+  "md5": "ff3ce513edf2316088a4b5ac464f76dc",
+  "n": 2517,
+  "jar_ok": true,
+  "mapper": 863,
+  "pred_used": "22f69456381d9d1abd1592382c3b0319",
+  "date_last": "20251230",
+  "vs_ref": {
+   "header_equal": true,
+   "n": 2517,
+   "n_ref": 2517,
+   "col_diff": {
+    "volume": 4,
+    "quantity": 1
+   },
+   "volume_text_diff": 4,
+   "pass": false
+  },
+  "pass": false
+ },
+ "ho1-c2": {
+  "md5": "ad26fd55f0bb5db32038ec8b357cf8e7",
+  "n": 3541,
+  "jar_ok": true,
+  "mapper": 863,
+  "pred_used": "22f69456381d9d1abd1592382c3b0319",
+  "date_last": "20251230",
+  "want": "ad26fd55f0bb5db32038ec8b357cf8e7",
+  "pass": true
+ },
+ "ho1-c3": {
+  "md5": "cbc067f717fa6bd06779c149d71e2e07",
+  "n": 7603,
+  "jar_ok": true,
+  "mapper": 863,
+  "pred_used": "22f69456381d9d1abd1592382c3b0319",
+  "date_last": "20251230",
+  "want": "cbc067f717fa6bd06779c149d71e2e07",
+  "pass": true
+ },
+ "ho1-cal": {
+  "md5": "b502cbc1fcfbae7f2b99afda1ba2f084",
+  "n": 2530,
+  "jar_ok": true,
+  "mapper": 863,
+  "pred_used": "22f69456381d9d1abd1592382c3b0319",
+  "date_last": "20251230",
+  "n_c1_q4": 282,
+  "n_cal_q4": 295,
+  "symdiff": 125,
+  "frac": 0.4432624113475177,
+  "stop": true
+ }
+}

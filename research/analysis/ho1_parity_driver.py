@@ -186,9 +186,9 @@ def cmp_c1(tag, ref):
 
 def q4keys(tag):
     h, r = rows(tag)
-    si, ti = h.index("sym"), h.index("start")
-    lo, hi = 1759251600000, 1767200400000          # 2025-10-01 / 2026-01-01 00:00 +07
-    return {(x[si], x[ti]) for x in r if lo <= int(float(x[ti])) < hi}
+    si, ti, li = h.index("sym"), h.index("start"), h.index("level")
+    lo, hi = "20251001 00:00", "20260101 00:00"    # printDone start = chuoi 'YYYYMMDD HH:MM' gio local +07
+    return {(x[si], x[ti].strip(), x[li]) for x in r if lo <= x[ti].strip() < hi}
 
 
 def compare(a):
@@ -211,6 +211,8 @@ def compare(a):
         else:
             r["want"] = want
             r["pass"] = bool(r["md5"] == want and r["jar_ok"])
+            if r["md5"] != want:                      # chan doan (khong doi luat: cong = md5)
+                r["diag_vs_ref"] = cmp_c1(tag, ref)
         res[tag] = r
         log.info("%s %s", tag, json.dumps(r, default=str))
     json.dump(res, open(H + "/parity.json", "w"), indent=1, default=str)

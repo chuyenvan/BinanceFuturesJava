@@ -41,7 +41,7 @@ def sha_concat(files):
 def link(src, dst):
     if os.path.lexists(dst):
         os.remove(dst)
-    os.link(src, dst)
+    os.link(os.path.realpath(src), dst)   # HO1b: nguon co the la symlink tuong doi (daily/...) -> hardlink file that
 
 
 def count_hdr(p):
