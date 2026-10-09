@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # research/ops/health_242.sh — healthcheck host 242 chạy TRÊN ORACLE (cron */5). Runbook: docs/runbooks/HARDEN_242.md mục R4.
 # - CHỈ ĐỌC trên 242: 1 phiên ssh / lần, pgrep + tail log + redis-cli cluster info + systemctl is-active. KHÔNG restart gì.
-# - Cảnh báo qua Telegram nếu có file $TG_ENV (TG_TOKEN=..., TG_CHAT=...; chmod 600; KHÔNG commit). Không có ⇒ ghi
+# - Cảnh báo qua Telegram nếu có file $TG_ENV (TG_TOKEN=.../TG_CHAT=... hoac tele-token:/tele-chat-id:; chmod 600; KHÔNG commit). Không có ⇒ ghi
 #   $STATE_DIR/ALERT_PENDING_NEED_OWNER_CHANNEL.txt (cần owner cấp kênh).
 # - Báo khi vấn đề lặp >= CONSEC lần liên tiếp (mặc định 2 = 10 phút, tránh báo nhầm cửa sổ auto-restart 12h),
 #   nhắc lại mỗi REMIND_SEC nếu còn lỗi, báo RECOVERED khi hết.
@@ -65,7 +65,8 @@ cur=$(printf '%s\n' "${P[@]:-}" | sed 's/(.*//' | sort -u | tr '\n' ' ' | sed 's
 summary="trading_n=$(g trading_n) legacy_n=$(g legacy_n) legacy_age=$(g legacy_age) updpos_age=$(g updpos_age) ingest_n=$(g ingest_n) kline_age=$(g kline_age) redis=$(g redis_state) aero=$(g aero_active)/$(g aero_port) disk=$(g disk_pct)% mem_avail=$(g mem_avail_mb)MB"
 send(){ local msg="[242-HEALTH] $1"
   if [ $DRY = 1 ]; then echo "WOULD_SEND: $msg"; return; fi
-  if [ -r "$TG_ENV" ]; then ( . "$TG_ENV"
+  if [ -r "$TG_ENV" ]; then ( TG_TOKEN=$(sed -nE 's/^[[:space:]]*(export[[:space:]]+)?(TG_TOKEN=|tele-token:[[:space:]]*)//p' "$TG_ENV" | head -1 | tr -d '\r"')
+      TG_CHAT=$(sed -nE 's/^[[:space:]]*(export[[:space:]]+)?(TG_CHAT=|tele-chat-id:[[:space:]]*)//p' "$TG_ENV" | head -1 | tr -d '\r"')
       printf 'url = "https://api.telegram.org/bot%s/sendMessage"\n' "$TG_TOKEN" | curl -s -m 15 -o /dev/null -w '%{http_code}' -K - \
         --data-urlencode "chat_id=$TG_CHAT" --data-urlencode "text=$msg" ) > "$STATE_DIR/.last_send_http" 2>&1
     log "SENT http=$(cat "$STATE_DIR/.last_send_http") $msg"
