@@ -1,0 +1,33 @@
+{
+ "ho4-dev-k24-s-s42": {
+  "n_new": 3554,
+  "n_ref": 3517,
+  "md5_new": "0701b7bcc53c7412f7fda912ea1b937d",
+  "md5_ref": "16679656a66f4b4f4c0fa91810067dca",
+  "pre_rows_equal": true,
+  "n_pre": 3056,
+  "md5_equal": false,
+  "n_new_S": 498,
+  "n_ref_S": 461,
+  "matched": 305,
+  "match_frac": 0.6124497991967871,
+  "dpnl_rel": 0.2213341476442147,
+  "pass": false
+ },
+ "ho4-dev-b0-s-s42": {
+  "n_new": 2523,
+  "n_ref": 2492,
+  "md5_new": "1ac94fd4210fc308d74dde1b714f124f",
+  "md5_ref": "0c3fa34d5b08687e109360d5674a4db9",
+  "pre_rows_equal": true,
+  "n_pre": 2151,
+  "md5_equal": false,
+  "n_new_S": 372,
+  "n_ref_S": 341,
+  "matched": 206,
+  "match_frac": 0.553763440860215,
+  "dpnl_rel": 0.07224170666424685,
+  "pass": false
+ },
+ "pass": false
+}

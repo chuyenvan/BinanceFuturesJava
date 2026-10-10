@@ -93,3 +93,8 @@ Lưu ý thiết kế cho vòng sau: (1) B4b "md5 H1 trùng ho26" với SIM_END_D
 - §4b-bis Tool1 md inline: p0 ≤1e-3 96,79%, bins 96,76% (mọi tháng 96–97%).
 - Lock oracle_heavy: đã trả; 0 kernel Kaggle đang chạy; dữ liệu cache: `oi_rebuild/` đã cắt còn ts ≥ 2026-06-29 UTC (513 MB, 17,69 M dòng, `TRIM.json`) để trả đĩa; ticker Q3 tháng 9 chưa dựng.
 - Kernel Kaggle đã dùng: `ho3b-mka-h1` (Kernel A), `sim-ho3b-mk-{k24,b0}-s-s42`, `ho3b-x-h1slice` (3 phiên bản, 2 lỗi hạ tầng asd: thiếu thư mục Lua, Ubuntu 24.04).
+
+### HO4-P0 cập nhật 18:20 — P3 FAIL ⇒ DỪNG (chờ MASTER). Chi tiết `docs/result/ho4/HO4_P0.md`
+- Sim DEV (thay lát 2025H2 bằng bản dựng lại Vision): k24-s-s42 trùng lệnh 61,2% (305/498 vs 461), \|ΔΣPnL_S\| 22,1%; b0-s-s42 55,4% (206/372 vs 341), 7,2% ⇒ FAIL (≥ 99% ∧ ≤ 1%). Dòng start < 2025-07-01 trùng từng dòng; FUND_HO4_SELFCHECK trùng byte 257 433/257 433.
+- Chẩn đoán D1 (ticker + funding DEV, cùng exporter): market bit-exact 100% trên phút chung nhưng tập phút lệch (race `SimpleDateFormat` trong `saveMarketDataBatch`); store gate 66,5%, Tool1 85,5%, nhãn 98,3% ⇒ store DEV không tái sinh được kể cả từ ticker DEV.
+- Không dựng 2026, 0 kernel holdout. Việc tiếp theo cần MASTER: luật universe 2026, thước P3 mới (tất định với chính pipeline Vision; cần sửa race .java), CLOSES_1H từ 1m.

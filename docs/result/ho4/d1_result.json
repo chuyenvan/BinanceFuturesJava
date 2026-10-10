@@ -1,0 +1,169 @@
+{
+ "tag": "ho4-dev-d1",
+ "prereg": "ADDENDUM-5 31e3c9e7",
+ "steps": {
+  "klines": {
+   "secs": 150,
+   "n_listing": 0,
+   "uni_month": {},
+   "days": {
+    "dev_ticker_missing": []
+   }
+  },
+  "funding_F": {
+   "dev_pts": 507367,
+   "found": 507367,
+   "equal": 507367,
+   "dev_sym": 574,
+   "dev_sym_no_vision": [],
+   "vis_extra_pts": 0,
+   "bad_examples": [],
+   "vis_sym_not_local": [],
+   "frac": 1.0,
+   "pass": true,
+   "secs": 52
+  },
+  "ingest": {
+   "rc": 0,
+   "secs": 236,
+   "tail": "ord\n2026-10-10 16:53:32.488 INFO  [main] c.b.c.a.v.d.IngestTickerFileToAerospike:   150 ngay xong (ngay gan nhat 20251028, 1440 phut), tong 216000 record\n2026-10-10 16:54:08.289 INFO  [main] c.b.c.a.v.d.IngestTickerFileToAerospike:   180 ngay xong (ngay gan nhat 20251127, 1440 phut), tong 259200 record\n2026-10-10 16:54:42.493 INFO  [main] c.b.c.a.v.d.IngestTickerFileToAerospike:   210 ngay xong (ngay gan nhat 20251227, 1440 phut), tong 302400 record\n2026-10-10 16:54:47.246 INFO  [main] c.b.c.a.v.d.IngestTickerFileToAerospike: HET INGEST: 214 ngay OK, 0 ngay thieu file, tong 308160 record phut\n"
+  },
+  "market_M": {
+   "dev_min": 257447,
+   "new_min": 240103,
+   "common": 233329,
+   "dev_only": 24118,
+   "new_only": 6774,
+   "cells": 792663,
+   "ok_cells": 699987,
+   "common_cell_frac": 1.0,
+   "common_row_all3": 1.0,
+   "max_abs_common": 0.0,
+   "frac": 0.8830827224179758,
+   "pass": false,
+   "by_month": {
+    "2025-07": {
+     "dev_only": 4035,
+     "new_only": 1100
+    },
+    "2025-08": {
+     "dev_only": 4032,
+     "new_only": 1131
+    },
+    "2025-09": {
+     "dev_only": 3924,
+     "new_only": 1179
+    },
+    "2025-10": {
+     "dev_only": 4097,
+     "new_only": 1168
+    },
+    "2025-11": {
+     "dev_only": 3824,
+     "new_only": 1108
+    },
+    "2025-12": {
+     "dev_only": 4206,
+     "new_only": 1088
+    }
+   }
+  }
+ },
+ "tasks": [
+  {
+   "name": "mkt",
+   "rc": 0,
+   "secs": 148.9,
+   "tail": "NFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20260928 07:00\n2026-10-10 16:57:15.888 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20260929 07:00\n2026-10-10 16:57:15.890 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20260930 07:00\n2026-10-10 16:57:15.892 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20261001 07:00\n2026-10-10 16:57:15.894 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20261002 07:00\n2026-10-10 16:57:15.896 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20261003 07:00\n2026-10-10 16:57:15.898 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20261004 07:00\n2026-10-10 16:57:15.900 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20261005 07:00\n2026-10-10 16:57:15.902 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20261006 07:00\n2026-10-10 16:57:15.905 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20261007 07:00\n2026-10-10 16:57:15.907 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20261008 07:00\n2026-10-10 16:57:15.909 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20261009 07:00\n2026-10-10 16:57:15.912 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20261010 07:00\n2026-10-10 16:57:15.915 INFO  [main] c.b.c.r.ExportMarketData2File: \ud83c\udf89 Export Market Data to Aerospike DONE!\n",
+   "market_dump_n": 279219,
+   "outputs": {
+    "market_rebuilt.bin": {
+     "md5": "430326a6cd3baf5fc53ae56bee0455c0",
+     "bytes": 5584384
+    }
+   }
+  },
+  {
+   "name": "gate",
+   "rc": 0,
+   "secs": 3746.2,
+   "tail": ".r.FundingFeeManager: Init funding fee data: 831 symbols\n2026-10-10 17:05:09.270 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset: ... replay 30 ng\u00e0y | rows=39300 | day=20250717\n2026-10-10 17:14:05.826 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset: ... replay 60 ng\u00e0y | rows=82500 | day=20250816\n2026-10-10 17:22:54.694 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset: ... replay 90 ng\u00e0y | rows=125700 | day=20250915\n2026-10-10 17:31:55.344 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset: ... replay 120 ng\u00e0y | rows=168900 | day=20251015\n2026-10-10 17:42:52.594 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset: ... replay 150 ng\u00e0y | rows=212100 | day=20251114\n2026-10-10 17:53:46.629 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset: ... replay 180 ng\u00e0y | rows=255300 | day=20251214\n2026-10-10 17:59:44.003 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset:    replay xong: rows=280801 | skip(feature null)=0 | range 20250620 .. 20260101\n2026-10-10 17:59:44.004 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset:    featChecksum=314535.600772 (so 2 l\u1ea7n ch\u1ea1y \u0111\u1ec3 check determinism)\n2026-10-10 17:59:44.643 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset: \ud83d\udd0e VERIFY: emit=280801 d\u00f2ng | file=280801 d\u00f2ng data | 42378765 bytes\n2026-10-10 17:59:44.643 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset: \u2705 EXPORT OK: 280801 d\u00f2ng data + 1 header -> /kaggle/working/out/gate/gate_dev.csv.gz\n2026-10-10 17:59:44.643 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset:    B\u01b0\u1edbc ti\u1ebfp: \u0111\u1ea9y file l\u00ean Kaggle, train per-fold v\u1edbi purge >= 900000 ms (15 ph\u00fat).\n",
+   "outputs": {
+    "gate/gate_dev.csv.gz": {
+     "md5": "980ce648a2bf788300a49f879202f385",
+     "bytes": 42378765
+    }
+   }
+  },
+  {
+   "name": "t1a",
+   "rc": 0,
+   "secs": 211.0,
+   "tail": "apper initialized. Total: 863, Next ID: 864\n..2026-10-10 17:59:47.495 INFO  [main] c.b.c.a.f.e.f.ExportFeaturesForPythonTool: \ud83d\udcc2 \u0110ang t\u1ea1o file m\u1edbi: /kaggle/working/out/t1a/features_20250701_to_20251001.t1c.gz\n2026-10-10 17:59:49.744 INFO  [ForkJoinPool.commonPool-worker-2] c.b.c.r.FundingFeeManager: Init funding fee data: 831 symbols\n............................................................................................2026-10-10 18:03:15.562 INFO  [main] c.b.c.a.f.e.f.Tool1ColSink: Tool1ColSink \u0111\u00f3ng /kaggle/working/out/t1a/features_20250701_to_20251001.t1c.gz: 4079936 record | 21 chunk | 147244077 bytes (36.09 B/record sau gzip)\n2026-10-10 18:03:15.563 INFO  [main] c.b.c.a.f.e.f.ExportFeaturesForPythonTool: \n\ud83c\udf89 \u0110\u00e3 \u0111\u00f3ng file: /kaggle/working/out/t1a/features_20250701_to_20251001.t1c.gz (T\u1ed5ng: 4079936 records)\n2026-10-10 18:03:15.563 INFO  [main] c.b.c.a.f.e.f.ExportFeaturesForPythonTool: \ud83d\udcc2 \u0110ang t\u1ea1o file m\u1edbi: /kaggle/working/out/t1a/features_20251001_to_20260101.t1c.gz\n.2026-10-10 18:03:15.599 INFO  [main] c.b.c.a.f.e.f.Tool1ColSink: Tool1ColSink \u0111\u00f3ng /kaggle/working/out/t1a/features_20251001_to_20260101.t1c.gz: 497 record | 1 chunk | 26612 bytes (53.55 B/record sau gzip)\n2026-10-10 18:03:15.599 INFO  [main] c.b.c.a.f.e.f.ExportFeaturesForPythonTool: \n\ud83c\udf89 \u0110\u00e3 \u0111\u00f3ng file cu\u1ed1i: /kaggle/working/out/t1a/features_20251001_to_20260101.t1c.gz (T\u1ed5ng: 497 records)\n2026-10-10 18:03:15.599 INFO  [main] c.b.c.a.f.e.f.ExportFeaturesForPythonTool: \ud83c\udfc1 HO\u00c0N T\u1ea4T TO\u00c0N B\u1ed8 QU\u00c1 TR\u00ccNH XU\u1ea4T FEATURES!\n",
+   "outputs": {
+    "t1a/features_20250701_to_20251001.t1c.gz": {
+     "md5": "d94444691f1ff366a831c883c8b89f60",
+     "bytes": 147244077
+    },
+    "t1a/features_20251001_to_20260101.t1c.gz": {
+     "md5": "858e1068b23b3a66fd2e81ce965a2aa2",
+     "bytes": 26612
+    }
+   }
+  },
+  {
+   "name": "t1b",
+   "rc": 0,
+   "secs": 233.8,
+   "tail": "ain] c.b.c.a.f.e.f.ExportFeaturesForPythonTool:    - Th\u1eddi gian k\u1ebft th\u00fac (Hi\u1ec7n t\u1ea1i): 20260101 07:00\n2026-10-10 18:03:17.253 INFO  [main] c.b.c.a.f.e.f.ExportFeaturesForPythonTool: ======================================================\n2026-10-10 18:03:17.857 INFO  [main] c.b.c.a.d.SimpleSymbolMapper: \ud83d\udd04 Initializing SimpleSymbolMapper (Singleton) from Aerospike...\n2026-10-10 18:03:17.859 INFO  [main] c.b.c.a.DataManagerAerospikeFloatSim: \u2705 Loaded Symbol Mapper: 863 symbols from Aerospike.\n2026-10-10 18:03:17.860 INFO  [main] c.b.c.a.d.SimpleSymbolMapper: \u2705 SimpleSymbolMapper initialized. Total: 863, Next ID: 864\n..2026-10-10 18:03:18.941 INFO  [main] c.b.c.a.f.e.f.ExportFeaturesForPythonTool: \ud83d\udcc2 \u0110ang t\u1ea1o file m\u1edbi: /kaggle/working/out/t1b/features_20251001_to_20260101.t1c.gz\n2026-10-10 18:03:20.513 INFO  [main] c.b.c.r.FundingFeeManager: Init funding fee data: 831 symbols\n.............................................................................................2026-10-10 18:07:09.602 INFO  [main] c.b.c.a.f.e.f.Tool1ColSink: Tool1ColSink \u0111\u00f3ng /kaggle/working/out/t1b/features_20251001_to_20260101.t1c.gz: 4518556 record | 23 chunk | 168642807 bytes (37.32 B/record sau gzip)\n2026-10-10 18:07:09.602 INFO  [main] c.b.c.a.f.e.f.ExportFeaturesForPythonTool: \n\ud83c\udf89 \u0110\u00e3 \u0111\u00f3ng file cu\u1ed1i: /kaggle/working/out/t1b/features_20251001_to_20260101.t1c.gz (T\u1ed5ng: 4518556 records)\n2026-10-10 18:07:09.602 INFO  [main] c.b.c.a.f.e.f.ExportFeaturesForPythonTool: \ud83c\udfc1 HO\u00c0N T\u1ea4T TO\u00c0N B\u1ed8 QU\u00c1 TR\u00ccNH XU\u1ea4T FEATURES!\n",
+   "outputs": {
+    "t1b/features_20251001_to_20260101.t1c.gz": {
+     "md5": "8eb89959aaa8005f99d3989ab8340e64",
+     "bytes": 168642807
+    }
+   }
+  },
+  {
+   "name": "laba",
+   "rc": 0,
+   "secs": 102.4,
+   "tail": "  [pool-3-thread-4] c.b.c.a.f.e.ExportFundingLabel:    coin thi\u1ebfu-data t\u1edbi 72h: ALLUSDT (status lifecycle=LIVE)\n2026-10-10 18:08:51.692 INFO  [pool-3-thread-4] c.b.c.a.f.e.ExportFundingLabel:    coin thi\u1ebfu-data t\u1edbi 72h: ALTUSDT (status lifecycle=LIVE)\n2026-10-10 18:08:51.693 INFO  [main] c.b.c.a.f.e.ExportFundingLabel: \ud83e\udde9 G\u1ed8P CU\u1ed0I: 2 qu\u00fd, 4 partition (ch\u1ec9 ch\u1ea1y khi m\u1ecdi partition \u0111\u00e3 k\u1ebft th\u00fac)\n2026-10-10 18:08:51.700 INFO  [pool-2-thread-2] c.b.c.a.f.e.ExportFundingLabel: \u2705 \u0110\u00e3 g\u1ed9p qu\u00fd 20251001_to_20260101 -> /kaggle/working/out/laba/funding_label_20251001_to_20260101.pb (459188 bytes protobuf, 4 file part, 13419 d\u00f2ng \u0110\u00c3 \u0110\u1ed0I CHI\u1ebeU KH\u1edaP, S\u1eb4N S\u00c0NG push Kaggle r\u1ed3i xo\u00e1 local)\n2026-10-10 18:08:51.797 INFO  [pool-2-thread-1] c.b.c.a.f.e.ExportFundingLabel: \u2705 \u0110\u00e3 g\u1ed9p qu\u00fd 20250701_to_20251001 -> /kaggle/working/out/laba/funding_label_20250701_to_20251001.pb (168139903 bytes protobuf, 4 file part, 4077369 d\u00f2ng \u0110\u00c3 \u0110\u1ed0I CHI\u1ebeU KH\u1edaP, S\u1eb4N S\u00c0NG push Kaggle r\u1ed3i xo\u00e1 local)\n2026-10-10 18:08:51.797 INFO  [main] c.b.c.a.f.e.ExportFundingLabel: \ud83e\udde9 G\u1ed8P CU\u1ed0I xong: 2/2 qu\u00fd OK\n2026-10-10 18:08:51.797 INFO  [main] c.b.c.a.f.e.ExportFundingLabel: \u2705 Xong to\u00e0n b\u1ed9: 4090788 d\u00f2ng emit, 507 coin trong universe | 20250701 \u2192 20251001 | d\u1eef li\u1ec7u chia theo FILE QU\u00dd (xem log '\u0110\u00e3 g\u1ed9p qu\u00fd' \u0111\u1ec3 bi\u1ebft t\u1eebng file, KH\u00d4NG c\u00f3 1 file /kaggle/working/out/laba/funding_label.csv duy nh\u1ea5t)\n2026-10-10 18:08:51.816 INFO  [main] c.b.c.a.f.e.ExportFundingLabel:    meta -> /kaggle/working/out/laba/funding_label.csv.meta.json (stepMinutes=15)\n",
+   "outputs": {
+    "laba/funding_label.csv.meta.json": {
+     "md5": "87b42b26d8ea39761e58e62e40c953f5",
+     "bytes": 302
+    },
+    "laba/funding_label_20250701_to_20251001.pb": {
+     "md5": "9abec98649894ab114bda2a997259ce1",
+     "bytes": 168139903
+    },
+    "laba/funding_label_20251001_to_20260101.pb": {
+     "md5": "d723f7e7f3a242e71a1eefcf106c747d",
+     "bytes": 459188
+    }
+   }
+  },
+  {
+   "name": "labb",
+   "rc": 0,
+   "secs": 121.2,
+   "tail": "[pool-3-thread-3] c.b.c.a.f.e.ExportFundingLabel:    coin thi\u1ebfu-data t\u1edbi 72h: AVAAIUSDT (status lifecycle=LIVE)\n2026-10-10 18:10:53.052 INFO  [pool-3-thread-3] c.b.c.a.f.e.ExportFundingLabel:    coin thi\u1ebfu-data t\u1edbi 72h: AVAUSDT (status lifecycle=LIVE)\n2026-10-10 18:10:53.052 INFO  [main] c.b.c.a.f.e.ExportFundingLabel: \ud83e\udde9 G\u1ed8P CU\u1ed0I: 2 qu\u00fd, 4 partition (ch\u1ec9 ch\u1ea1y khi m\u1ecdi partition \u0111\u00e3 k\u1ebft th\u00fac)\n2026-10-10 18:10:53.059 INFO  [pool-2-thread-2] c.b.c.a.f.e.ExportFundingLabel: \u2705 \u0110\u00e3 g\u1ed9p qu\u00fd 20260101_to_20260401 -> /kaggle/working/out/labb/funding_label_20260101_to_20260401.pb (490875 bytes protobuf, 4 file part, 14310 d\u00f2ng \u0110\u00c3 \u0110\u1ed0I CHI\u1ebeU KH\u1edaP, S\u1eb4N S\u00c0NG push Kaggle r\u1ed3i xo\u00e1 local)\n2026-10-10 18:10:53.176 INFO  [pool-2-thread-1] c.b.c.a.f.e.ExportFundingLabel: \u2705 \u0110\u00e3 g\u1ed9p qu\u00fd 20251001_to_20260101 -> /kaggle/working/out/labb/funding_label_20251001_to_20260101.pb (187653029 bytes protobuf, 4 file part, 4536031 d\u00f2ng \u0110\u00c3 \u0110\u1ed0I CHI\u1ebeU KH\u1edaP, S\u1eb4N S\u00c0NG push Kaggle r\u1ed3i xo\u00e1 local)\n2026-10-10 18:10:53.176 INFO  [main] c.b.c.a.f.e.ExportFundingLabel: \ud83e\udde9 G\u1ed8P CU\u1ed0I xong: 2/2 qu\u00fd OK\n2026-10-10 18:10:53.177 INFO  [main] c.b.c.a.f.e.ExportFundingLabel: \u2705 Xong to\u00e0n b\u1ed9: 4550341 d\u00f2ng emit, 554 coin trong universe | 20251001 \u2192 20260101 | d\u1eef li\u1ec7u chia theo FILE QU\u00dd (xem log '\u0110\u00e3 g\u1ed9p qu\u00fd' \u0111\u1ec3 bi\u1ebft t\u1eebng file, KH\u00d4NG c\u00f3 1 file /kaggle/working/out/labb/funding_label.csv duy nh\u1ea5t)\n2026-10-10 18:10:53.192 INFO  [main] c.b.c.a.f.e.ExportFundingLabel:    meta -> /kaggle/working/out/labb/funding_label.csv.meta.json (stepMinutes=15)\n",
+   "outputs": {
+    "labb/funding_label.csv.meta.json": {
+     "md5": "61a1d5b61b1887d7def735873bc7d018",
+     "bytes": 302
+    },
+    "labb/funding_label_20251001_to_20260101.pb": {
+     "md5": "5f76623214e2bf46b1136694e17b6965",
+     "bytes": 187653029
+    },
+    "labb/funding_label_20260101_to_20260401.pb": {
+     "md5": "530e14f51ec3b8eebfb73ac4b39e8f9f",
+     "bytes": 490875
+    }
+   }
+  }
+ ],
+ "jar_sha256": "b7c89f097241763bb240c24b411a66531b41dad12b1716f13237537386de62c2",
+ "ok": true
+}

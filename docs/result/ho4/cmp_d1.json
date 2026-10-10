@@ -1,0 +1,98 @@
+{
+ "prereg": "ADDENDUM-5 31e3c9e7",
+ "S": [
+  1751302800000,
+  1767200400000
+ ],
+ "tool1_label_lo_utc": 1751328000000,
+ "label_max": 1766965500000,
+ "G_gate": {
+  "rows_ref": 264960,
+  "rows_new": 264960,
+  "ref_only": 0,
+  "new_only": 0,
+  "cells": 8743680,
+  "bad": 2931913,
+  "ok_frac": 0.6646820331942614,
+  "bad_by_col": {
+   "momentum1M": 30889,
+   "momentum15M": 30891,
+   "momentumAcceleration": 30891,
+   "advanceDeclineRatio": 264298,
+   "percentAboveMA20": 264655,
+   "volumeRatioUpDown": 263616,
+   "marketBreadthStrength": 264663,
+   "btcDominance": 263576,
+   "fundingRateRaw": 192716,
+   "fundingRateAvg24H": 192946,
+   "fundingRateTrend": 84297,
+   "basketMomentum15M": 257630,
+   "basketMomentum1H": 261104,
+   "basketRsi14": 264821,
+   "basketVolSpike": 264920
+  },
+  "bad_rows_by_month": {
+   "2025-07": 44640,
+   "2025-08": 44640,
+   "2025-10": 44640,
+   "2025-12": 44640,
+   "2025-09": 43200,
+   "2025-11": 43200
+  },
+  "pass": false
+ },
+ "T_tool1": {
+  "t1a": {
+   "rows_ref": 4079936,
+   "rows_new": 4079936,
+   "both": 4079936,
+   "cells": 163197440,
+   "bad": 23304753,
+   "ok_frac": 0.8571990283671116,
+   "ok_frac_iqr_desc": 0.9505651865617499,
+   "worst_cols": {
+    "16": 0.000112,
+    "15": 0.000793,
+    "14": 0.00135,
+    "13": 0.014827,
+    "12": 0.031511,
+    "18": 0.358622
+   },
+   "file": "features_20250701_to_20251001.t1c.gz"
+  },
+  "t1b": {
+   "rows_ref": 4503821,
+   "rows_new": 4503821,
+   "both": 4503821,
+   "cells": 180152840,
+   "bad": 26504146,
+   "ok_frac": 0.8528796659547526,
+   "ok_frac_iqr_desc": 0.9415363143872725,
+   "worst_cols": {
+    "16": 0.0,
+    "15": 0.000224,
+    "14": 0.002305,
+    "13": 0.013448,
+    "12": 0.026347,
+    "18": 0.188259
+   },
+   "file": "features_20251001_to_20260101.t1c.gz"
+  },
+  "ok_frac": 0.8549326973025914,
+  "pass": false
+ },
+ "L_labels": {
+  "laba_files": [
+   "funding_label_20250701_to_20251001.pb"
+  ],
+  "labb_files": [
+   "funding_label_20251001_to_20260101.pb"
+  ],
+  "rows_ref": 8490842,
+  "rows_new": 8476926,
+  "ref_found": 8476926,
+  "new_only": 0,
+  "eq_frac_vs_dev": 0.9832322872101494,
+  "pass": false
+ }
+}

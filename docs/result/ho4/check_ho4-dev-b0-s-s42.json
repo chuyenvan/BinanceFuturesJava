@@ -1,0 +1,25 @@
+{
+ "tag": "ho4-dev-b0-s-s42",
+ "chk": {
+  "ok": true,
+  "jar": true,
+  "mapper": true,
+  "ov": true,
+  "pred": true,
+  "fund": true,
+  "market": true,
+  "no_unseal": true,
+  "pen": true,
+  "n": true
+ },
+ "ok_all": true,
+ "n": 2523,
+ "fund_lines": [
+  "2026-10-10 10:21:33,699 INFO FUND_HO4_SELFCHECK keys_equal=True n_old=257433 n_self=257433 diff=0",
+  "2026-10-10 10:21:57,510 INFO FUND_HO4 prefix=2043631 S_old=257433 S_new=241210 S_same_bytes=0 suffix=252458",
+  "2026-10-10 10:22:09,441 INFO FUND_HO4_OK md5_funding=75a67ab1169abf0e1bb062db81ac2df6 -> WFO_DATA_DIR /kaggle/working/wfo_ds_fund"
+ ],
+ "ticker_line": [
+  "2026-10-10 10:22:10,826 INFO jar=/kaggle/input/datasets/chuyendinh/sim-jar-nsel/sim.jar ds=/kaggle/working/wfo_ds_fund predwf=/kaggle/input/datasets/chuyendinh/sim-ho26a-bundle ticker=1826"
+ ]
+}

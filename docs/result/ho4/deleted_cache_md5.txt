@@ -1,0 +1,6 @@
+80b8f5b197894c77501a5fd0d54e630c  chain/market.bin
+31de47f1874c802adf8155d868353a75  chain/pred.bin
+af754b631df59893937eba3f26759245  chain/bins/predict_wf_20250701.bin
+fbdb607f8b8fc5330559bf04f16e7275  chain/bins/predict_wf_20251001.bin
+82e555a818c80a77edc3606aa306a058  chain/net015/predict_wf_20250701.bin
+4c0b2ee5499f50017b65fbb098761961  chain/net015/predict_wf_20251001.bin

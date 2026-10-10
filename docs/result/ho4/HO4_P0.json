@@ -1,0 +1,543 @@
+{
+ "prereg": "ADDENDUM-5 31e3c9e7",
+ "verdict": "P3 FAIL => DUNG",
+ "K": {
+  "prereg": "ADDENDUM-5 31e3c9e7",
+  "totals": {
+   "ref": 142608973,
+   "vis": 143303053,
+   "both": 142604153,
+   "eq5_quote": 142604152,
+   "ref_only": 4820,
+   "vis_only": 698900
+  },
+  "per_month": {
+   "20250701": {
+    "both": 21529095,
+    "eq5": 21529095,
+    "ref_only": 0,
+    "vis_only": 13380,
+    "ref": 21529095
+   },
+   "20250801": {
+    "both": 22450620,
+    "eq5": 22450619,
+    "ref_only": 0,
+    "vis_only": 0,
+    "ref": 22450620
+   },
+   "20250901": {
+    "both": 22774167,
+    "eq5": 22774167,
+    "ref_only": 0,
+    "vis_only": 0,
+    "ref": 22774167
+   },
+   "20251001": {
+    "both": 24974332,
+    "eq5": 24974332,
+    "ref_only": 1380,
+    "vis_only": 0,
+    "ref": 24975712
+   },
+   "20251101": {
+    "both": 25107344,
+    "eq5": 25107344,
+    "ref_only": 1500,
+    "vis_only": 0,
+    "ref": 25108844
+   },
+   "20251201": {
+    "both": 25768595,
+    "eq5": 25768595,
+    "ref_only": 1940,
+    "vis_only": 685520,
+    "ref": 25770535
+   }
+  },
+  "sym_no_vision": [
+   "\u5e01\u5b89\u4eba\u751fUSDT"
+  ],
+  "Ka_frac": 0.9999999929875815,
+  "Kb_frac_dev_only": 3.379871475548737e-05,
+  "vis_only_frac_of_ref": 0.0049008136395456686,
+  "days_eq5_lt_0_9999": {},
+  "Ka_pass": true,
+  "Kb_pass": true
+ },
+ "F": {
+  "dev_pts": 507367,
+  "found": 507367,
+  "equal": 507367,
+  "dev_sym": 574,
+  "dev_sym_no_vision": [],
+  "vis_extra_pts": 0,
+  "bad_examples": [],
+  "vis_sym_not_local": [],
+  "frac": 1.0,
+  "pass": true,
+  "secs": 217
+ },
+ "M": {
+  "dev_min": 257447,
+  "new_min": 241594,
+  "common": 234754,
+  "dev_only": 22693,
+  "new_only": 6840,
+  "cells": 792861,
+  "ok_cells": 355951,
+  "common_cell_frac": 0.5054241177289134,
+  "common_row_all3": 0.1495522972984486,
+  "max_abs_common": 0.061492135748267174,
+  "frac": 0.44894502315033785,
+  "pass": false,
+  "by_month": {
+   "2025-07": {
+    "dev_only": 3789,
+    "new_only": 1122,
+    "bad_common": 30403
+   },
+   "2025-08": {
+    "dev_only": 3731,
+    "new_only": 1129,
+    "bad_common": 35372
+   },
+   "2025-09": {
+    "dev_only": 3721,
+    "new_only": 1162,
+    "bad_common": 29603
+   },
+   "2025-10": {
+    "dev_only": 3770,
+    "new_only": 1195,
+    "bad_common": 33241
+   },
+   "2025-11": {
+    "dev_only": 3731,
+    "new_only": 1136,
+    "bad_common": 36212
+   },
+   "2025-12": {
+    "dev_only": 3951,
+    "new_only": 1096,
+    "bad_common": 34815
+   }
+  }
+ },
+ "GTL": {
+  "prereg": "ADDENDUM-5 31e3c9e7",
+  "S": [
+   1751302800000,
+   1767200400000
+  ],
+  "tool1_label_lo_utc": 1751328000000,
+  "label_max": 1766965500000,
+  "G_gate": {
+   "rows_ref": 264960,
+   "rows_new": 264960,
+   "ref_only": 0,
+   "new_only": 0,
+   "cells": 8743680,
+   "bad": 3444028,
+   "ok_frac": 0.6061123005416484,
+   "bad_by_col": {
+    "momentum1M": 147568,
+    "momentum5M": 945,
+    "momentum15M": 142139,
+    "momentum1H": 1000,
+    "momentum4H": 1180,
+    "momentum24H": 2380,
+    "momentumAcceleration": 142145,
+    "trendStrengthETH": 1560,
+    "trendConsistency": 416,
+    "volatility1M": 940,
+    "volatility15M": 949,
+    "volatility1H": 989,
+    "volatility24H": 2310,
+    "volatilityTermStructure": 2379,
+    "advanceDeclineRatio": 264444,
+    "percentAboveMA20": 264537,
+    "volumeRatioUpDown": 264601,
+    "marketBreadthStrength": 264552,
+    "btcDominance": 264935,
+    "rsi14": 954,
+    "volumeSpike": 960,
+    "distMA20": 959,
+    "fundingRateRaw": 233040,
+    "fundingRateAvg24H": 233934,
+    "fundingRateTrend": 150943,
+    "basketMomentum15M": 260685,
+    "basketMomentum1H": 262769,
+    "basketRsi14": 264889,
+    "basketVolSpike": 264926
+   },
+   "bad_rows_by_month": {
+    "2025-07": 44640,
+    "2025-08": 44640,
+    "2025-10": 44640,
+    "2025-12": 44640,
+    "2025-09": 43200,
+    "2025-11": 43200
+   },
+   "pass": false
+  },
+  "L_labels": {
+   "laba_files": [
+    "funding_label_20250701_to_20251001.pb"
+   ],
+   "labb_files": [
+    "funding_label_20251001_to_20260101.pb"
+   ],
+   "rows_ref": 8490842,
+   "rows_new": 8523250,
+   "ref_found": 8476926,
+   "new_only": 46324,
+   "eq_frac_vs_dev": 0.9647282330774734,
+   "pass": false
+  },
+  "T_tool1": {
+   "t1a": {
+    "rows_ref": 4079936,
+    "rows_new": 4110819,
+    "both": 4079936,
+    "cells": 164432760,
+    "bad": 71579950,
+    "ok_frac": 0.5646855894166102,
+    "ok_frac_iqr_desc": 0.8741015841368837,
+    "worst_cols": {
+     "15": 0.000109,
+     "16": 0.000113,
+     "14": 0.001,
+     "33": 0.001016,
+     "32": 0.001108,
+     "34": 0.001143
+    },
+    "file": "features_20250701_to_20251001.t1c.gz"
+   },
+   "t1b": {
+    "rows_ref": 4503821,
+    "rows_new": 4585612,
+    "both": 4503821,
+    "cells": 183424480,
+    "bad": 84718505,
+    "ok_frac": 0.5381286892567447,
+    "ok_frac_iqr_desc": 0.8552303923663842,
+    "worst_cols": {
+     "16": 0.0,
+     "34": 0.000224,
+     "15": 0.000225,
+     "33": 0.000284,
+     "32": 0.000408,
+     "14": 0.001593
+    },
+    "file": "features_20251001_to_20260101.t1c.gz"
+   },
+   "ok_frac": 0.5506821850250982,
+   "pass": false
+  }
+ },
+ "chain": {
+  "V_featv2": {
+   "dev_ts_max": "2026-01-01 00:00:00",
+   "rows_dev": 2337337,
+   "rows_new": 2408118,
+   "rows_only_one": 70781,
+   "cells": 21673062,
+   "bad_cells": 6323994,
+   "bad_frac": 0.2917905185709338,
+   "per_feat": {
+    "vol_7d": 89815,
+    "dd_7d": 10272,
+    "rk_dd_7d": 2326978,
+    "hrs_since_high_7d": 11343,
+    "ret_3d": 11240,
+    "rk_ret_3d": 2323817,
+    "ret_14d": 11297,
+    "ls_global": 1372,
+    "rk_oi_delta24h": 900831
+   },
+   "pass": false,
+   "n_rows": 2419566,
+   "ok_frac": 0.7082094814290663
+  },
+  "P_p15": {
+   "rows_dev": 264960,
+   "rows_new": 264960,
+   "both": 264960,
+   "one_side": 0,
+   "ok_rows": 102152,
+   "ok_frac": 0.38553743961352654,
+   "rows_feat_equal": 0,
+   "max_abs": 0.2263287678360939,
+   "pass": false,
+   "pred_rows_changed": 264960,
+   "pred_md5": "31de47f1874c802adf8155d868353a75",
+   "pred_base_md5": "22f69456381d9d1abd1592382c3b0319"
+  },
+  "S1_pool": {
+   "open_new": 8567,
+   "open_dev": 9004,
+   "pool_new": 4301942,
+   "pool_dev": 4473320,
+   "jaccard": 0.8418132219980863,
+   "new_label_files": [
+    "funding_label_20250701_to_20251001.pb",
+    "funding_label_20251001_to_20260101.pb"
+   ],
+   "devQ4_model_vs_pred": {
+    "both": 3499202,
+    "one": 0,
+    "max_abs": 0.0
+   },
+   "Q3_rows": 899266,
+   "Q3_in_dev": 851584,
+   "Q3_feat_cov": 0.9941930418808228,
+   "Q4_rows": 3402676,
+   "Q4_feat_cov": 0.9957747960722678,
+   "pred_s1_sha256": "c0f431bdc56591eca96dbfdd3fd6ad467b160ca377fcb2dd0f5f10a689f67797"
+  },
+  "N_net015": {
+   "20251001": {
+    "n_orig": 4517610,
+    "n_new": 4599511,
+    "common": 4517610,
+    "keys_equal": false,
+    "ok_cells": 881188,
+    "ok_frac": 0.19158297479884276,
+    "max_abs": 0.5310768038034439,
+    "bit_equal_frac": 0.05112681262880151,
+    "spearman": 0.9830863084180712,
+    "n_written_common": 4517610,
+    "n_written_extra": 81901,
+    "sha256": "b7b5c43332c38dc444475278a4554eb19cf56e1b8da8b8848f639a35598775ac",
+    "pass": false
+   },
+   "20250701_delta": {
+    "n_new": 4096920,
+    "n_both": 4066147,
+    "n_new_only": 30773
+   },
+   "20250701": {
+    "n_orig": 4078299,
+    "n_new": 4096920,
+    "common": 4066147,
+    "keys_equal": false,
+    "ok_cells": 1056593,
+    "ok_frac": 0.2571366478854593,
+    "max_abs": 0.24173665046691895,
+    "bit_equal_frac": 0.14917340666729462,
+    "spearman": 0.9901947072275806,
+    "n_written_common": 4066147,
+    "n_written_extra": 30773,
+    "sha256": "34e3aa9ab3b326cf1d77bb3bfd256cd6cdc4dd535bc9c0f2a8ca6eb4dcb0feaf"
+   }
+  },
+  "B_bins": {
+   "20251001": {
+    "n_dev": 4517610,
+    "n_new": 4599511,
+    "common": 4517610,
+    "keys_equal": false,
+    "ok_cells": 169462,
+    "ok_frac": 0.03684348183969992,
+    "md5": "fbdb607f8b8fc5330559bf04f16e7275",
+    "dev_md5": "5ebae9298eb67bb4f12784b091148af7",
+    "pass": false
+   },
+   "20250701": {
+    "n_dev": 4078299,
+    "n_new": 4096920,
+    "common": 4066147,
+    "keys_equal": false,
+    "ok_cells": 488721,
+    "ok_frac": 0.11893707386972047,
+    "md5": "af754b631df59893937eba3f26759245",
+    "dev_md5": "830c3332ebdba4bdbf2e6a8b3a048e4f"
+   },
+   "map_tail": [
+    "16:40:24 predict_wf_20251001.bin rows 4599511 co score 0.736 doi 0.731",
+    "TOTAL rows 8696431 changed 4255026 (0.489) -> /home/ubuntu/claude_master/1010/ho4/chain/bins",
+    "MAP_OK"
+   ]
+  },
+  "mkt_sim": {
+   "base_md5": "34e33678105275b3620d1c92c3510172",
+   "n_base": 2807275,
+   "n_out": 2791422,
+   "n_S_base": 257447,
+   "n_S_new": 241594,
+   "md5": "80b8f5b197894c77501a5fd0d54e630c"
+  }
+ },
+ "sim": {
+  "ho4-dev-k24-s-s42": {
+   "n_new": 3554,
+   "n_ref": 3517,
+   "md5_new": "0701b7bcc53c7412f7fda912ea1b937d",
+   "md5_ref": "16679656a66f4b4f4c0fa91810067dca",
+   "pre_rows_equal": true,
+   "n_pre": 3056,
+   "md5_equal": false,
+   "n_new_S": 498,
+   "n_ref_S": 461,
+   "matched": 305,
+   "match_frac": 0.6124497991967871,
+   "dpnl_rel": 0.2213341476442147,
+   "pass": false
+  },
+  "ho4-dev-b0-s-s42": {
+   "n_new": 2523,
+   "n_ref": 2492,
+   "md5_new": "1ac94fd4210fc308d74dde1b714f124f",
+   "md5_ref": "0c3fa34d5b08687e109360d5674a4db9",
+   "pre_rows_equal": true,
+   "n_pre": 2151,
+   "md5_equal": false,
+   "n_new_S": 372,
+   "n_ref_S": 341,
+   "matched": 206,
+   "match_frac": 0.553763440860215,
+   "dpnl_rel": 0.07224170666424685,
+   "pass": false
+  },
+  "pass": false
+ },
+ "D1": {
+  "prereg": "ADDENDUM-5 31e3c9e7",
+  "S": [
+   1751302800000,
+   1767200400000
+  ],
+  "tool1_label_lo_utc": 1751328000000,
+  "label_max": 1766965500000,
+  "G_gate": {
+   "rows_ref": 264960,
+   "rows_new": 264960,
+   "ref_only": 0,
+   "new_only": 0,
+   "cells": 8743680,
+   "bad": 2931913,
+   "ok_frac": 0.6646820331942614,
+   "bad_by_col": {
+    "momentum1M": 30889,
+    "momentum15M": 30891,
+    "momentumAcceleration": 30891,
+    "advanceDeclineRatio": 264298,
+    "percentAboveMA20": 264655,
+    "volumeRatioUpDown": 263616,
+    "marketBreadthStrength": 264663,
+    "btcDominance": 263576,
+    "fundingRateRaw": 192716,
+    "fundingRateAvg24H": 192946,
+    "fundingRateTrend": 84297,
+    "basketMomentum15M": 257630,
+    "basketMomentum1H": 261104,
+    "basketRsi14": 264821,
+    "basketVolSpike": 264920
+   },
+   "bad_rows_by_month": {
+    "2025-07": 44640,
+    "2025-08": 44640,
+    "2025-10": 44640,
+    "2025-12": 44640,
+    "2025-09": 43200,
+    "2025-11": 43200
+   },
+   "pass": false
+  },
+  "T_tool1": {
+   "t1a": {
+    "rows_ref": 4079936,
+    "rows_new": 4079936,
+    "both": 4079936,
+    "cells": 163197440,
+    "bad": 23304753,
+    "ok_frac": 0.8571990283671116,
+    "ok_frac_iqr_desc": 0.9505651865617499,
+    "worst_cols": {
+     "16": 0.000112,
+     "15": 0.000793,
+     "14": 0.00135,
+     "13": 0.014827,
+     "12": 0.031511,
+     "18": 0.358622
+    },
+    "file": "features_20250701_to_20251001.t1c.gz"
+   },
+   "t1b": {
+    "rows_ref": 4503821,
+    "rows_new": 4503821,
+    "both": 4503821,
+    "cells": 180152840,
+    "bad": 26504146,
+    "ok_frac": 0.8528796659547526,
+    "ok_frac_iqr_desc": 0.9415363143872725,
+    "worst_cols": {
+     "16": 0.0,
+     "15": 0.000224,
+     "14": 0.002305,
+     "13": 0.013448,
+     "12": 0.026347,
+     "18": 0.188259
+    },
+    "file": "features_20251001_to_20260101.t1c.gz"
+   },
+   "ok_frac": 0.8549326973025914,
+   "pass": false
+  },
+  "L_labels": {
+   "laba_files": [
+    "funding_label_20250701_to_20251001.pb"
+   ],
+   "labb_files": [
+    "funding_label_20251001_to_20260101.pb"
+   ],
+   "rows_ref": 8490842,
+   "rows_new": 8476926,
+   "ref_found": 8476926,
+   "new_only": 0,
+   "eq_frac_vs_dev": 0.9832322872101494,
+   "pass": false
+  }
+ },
+ "D1_M": {
+  "dev_min": 257447,
+  "new_min": 240103,
+  "common": 233329,
+  "dev_only": 24118,
+  "new_only": 6774,
+  "cells": 792663,
+  "ok_cells": 699987,
+  "common_cell_frac": 1.0,
+  "common_row_all3": 1.0,
+  "max_abs_common": 0.0,
+  "frac": 0.8830827224179758,
+  "pass": false,
+  "by_month": {
+   "2025-07": {
+    "dev_only": 4035,
+    "new_only": 1100
+   },
+   "2025-08": {
+    "dev_only": 4032,
+    "new_only": 1131
+   },
+   "2025-09": {
+    "dev_only": 3924,
+    "new_only": 1179
+   },
+   "2025-10": {
+    "dev_only": 4097,
+    "new_only": 1168
+   },
+   "2025-11": {
+    "dev_only": 3824,
+    "new_only": 1108
+   },
+   "2025-12": {
+    "dev_only": 4206,
+    "new_only": 1088
+   }
+  }
+ }
+}
