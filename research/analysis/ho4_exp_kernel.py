@@ -98,10 +98,11 @@ def kl(sym, m):
     v = np.array([[float(r[1]), float(r[2]), float(r[3]), float(r[4]), float(r[7])] for r in rows], np.float64).astype(np.float32)
     return sym, (ts, v)
 t0 = time.time()
-ksyms = [s for s in list_syms("data/futures/um/monthly/klines/") if in_uni(s)]
+DEVTK = CFG.get("dev_ticker_ds") or []          # CHAN DOAN D1: dung ticker DEV (dataset) thay Vision
+ksyms = [] if DEVTK else [s for s in list_syms("data/futures/um/monthly/klines/") if in_uni(s)]
 LOG.info("Vision klines listing: %d symbol trong universe (mapper %d)", len(ksyms), len(MAPPER))
 day_stats, uni_month = {}, {}
-for m in CFG["months"]:
+for m in ([] if DEVTK else CFG["months"]):
     with ThreadPoolExecutor(CFG.get("dl_threads", 24)) as ex:
         D = {s: r for s, r in ex.map(lambda s: kl(s, m), ksyms) if r is not None}
     uni_month[m] = sorted(D)
@@ -124,6 +125,28 @@ for m in CFG["months"]:
         day_stats[d.strftime("%Y%m%d")] = dict(n_min=len(mins), n_cells=sum(len(x[1]) for x in mins), n_sym=len({e[0] for x in mins for e in x[1]}))
         d += datetime.timedelta(days=1)
     del D
+TKDIR = OUTD + "/ticker/"
+if DEVTK:
+    TKDIR = "/tmp/tkdev/"
+    os.makedirs(TKDIR, exist_ok=True)
+    _d0 = datetime.datetime.strptime(CFG["ingest"][0], "%Y%m%d"); _d1 = datetime.datetime.strptime(CFG["ingest"][1], "%Y%m%d")
+    _tk = {}
+    for _p in glob.glob(IN + "/**/ticker_2*.bin*", recursive=True):
+        if any(("/" + _ds + "/") in _p for _ds in DEVTK):
+            _tk[re.search(r"ticker_(\d{8})", _p).group(1)] = _p
+    _d, _miss = _d0, []
+    while _d <= _d1:
+        _s = _d.strftime("%Y%m%d"); _p = _tk.get(_s)
+        if _p is None:
+            _miss.append(_s)
+        elif _p.endswith(".gz"):
+            os.symlink(_p, TKDIR + "ticker_%s.bin.gz" % _s)
+        else:
+            with open(_p, "rb") as _fi, gzip.open(TKDIR + "ticker_%s.bin.gz" % _s, "wb", 1) as _fo:
+                shutil.copyfileobj(_fi, _fo, 1 << 22)
+        _d += datetime.timedelta(days=1)
+    day_stats["dev_ticker_missing"] = _miss
+    LOG.info("D1: ticker DEV %d ngay, thieu %s", len(_tk), _miss)
 RES["steps"]["klines"] = dict(secs=round(time.time() - t0), n_listing=len(ksyms), uni_month={k: len(v) for k, v in uni_month.items()}, days=day_stats)
 json.dump(uni_month, open(OUTD + "/universe_by_month.json", "w"))
 save()
@@ -182,6 +205,9 @@ fund_rows = []
 for s in sorted(V):
     js = json.dumps({str(t): V[s][t] for t in sorted(V[s])}, separators=(",", ":")).encode()
     fund_rows.append((s, {"f_data": bytes(cramjam.snappy.compress_raw(js))}))
+if CFG.get("funding_local"):                    # CHAN DOAN D1: funding_data = ban sao local DEV
+    fund_rows = list(AS["funding_data"])
+    LOG.info("D1: funding_data = ban sao local (%d)", len(fund_rows))
 pickle.dump({"funding_data": fund_rows}, open(OUTD + "/funding_vision.pkl", "wb"), protocol=4)
 save()
 # ---------------- B3: Aerospike CE rieng trong kernel ----------------
@@ -276,7 +302,7 @@ os.chdir(WORK)
 JAVA = ["java", "-Duser.timezone=Asia/Ho_Chi_Minh", "-Xmx%dg" % CFG.get("xmx_gb", 11), "-cp", jar]
 t0 = time.time()
 rc = subprocess.call(JAVA + ["com.binance.chuyennd.ai_ml.validation.data.IngestTickerFileToAerospike", CFG["ingest"][0],
-                             CFG["ingest"][1], "127.0.0.1", "3222", "test", OUTD + "/ticker/"],
+                             CFG["ingest"][1], "127.0.0.1", "3222", "test", TKDIR],
                      stdout=open(WORK + "/logs/ingest.out", "w"), stderr=subprocess.STDOUT)
 RES["steps"]["ingest"] = dict(rc=rc, secs=round(time.time() - t0), tail=open(WORK + "/logs/ingest.out", errors="ignore").read()[-600:])
 LOG.info("INGEST rc=%s %ss", rc, RES["steps"]["ingest"]["secs"])
@@ -403,7 +429,7 @@ def submit(cfgp):
     code = KX.replace("__CFG_JSON__", repr(json.dumps(cfg))).replace("__JW_SRC__", repr(open(JW).read()))
     compile(code, "k", "exec")
     open(os.path.join(fol, "run.py"), "w").write(code)
-    dss = sorted({cfg["jar_ds"], cfg["cfg_ds"], cfg["as_ds"], cfg["asdata_ds"], cfg["dev_market_ds"]})
+    dss = sorted({cfg["jar_ds"], cfg["cfg_ds"], cfg["as_ds"], cfg["asdata_ds"], cfg["dev_market_ds"]} | set(cfg.get("dev_ticker_ds") or []))
     md = {"id": ref, "title": slug(tag), "code_file": "run.py", "language": "python", "kernel_type": "script",
           "is_private": True, "enable_gpu": False, "enable_internet": True,
           "dataset_sources": [USER + "/" + d for d in dss], "competition_sources": [], "kernel_sources": []}

@@ -21,5 +21,113 @@
   "pass": false,
   "n_rows": 2419566,
   "ok_frac": 0.7082094814290663
+ },
+ "P_p15": {
+  "rows_dev": 264960,
+  "rows_new": 264960,
+  "both": 264960,
+  "one_side": 0,
+  "ok_rows": 102152,
+  "ok_frac": 0.38553743961352654,
+  "rows_feat_equal": 0,
+  "max_abs": 0.2263287678360939,
+  "pass": false,
+  "pred_rows_changed": 264960,
+  "pred_md5": "31de47f1874c802adf8155d868353a75",
+  "pred_base_md5": "22f69456381d9d1abd1592382c3b0319"
+ },
+ "S1_pool": {
+  "open_new": 8567,
+  "open_dev": 9004,
+  "pool_new": 4301942,
+  "pool_dev": 4473320,
+  "jaccard": 0.8418132219980863,
+  "new_label_files": [
+   "funding_label_20250701_to_20251001.pb",
+   "funding_label_20251001_to_20260101.pb"
+  ],
+  "devQ4_model_vs_pred": {
+   "both": 3499202,
+   "one": 0,
+   "max_abs": 0.0
+  },
+  "Q3_rows": 899266,
+  "Q3_in_dev": 851584,
+  "Q3_feat_cov": 0.9941930418808228,
+  "Q4_rows": 3402676,
+  "Q4_feat_cov": 0.9957747960722678,
+  "pred_s1_sha256": "c0f431bdc56591eca96dbfdd3fd6ad467b160ca377fcb2dd0f5f10a689f67797"
+ },
+ "N_net015": {
+  "20251001": {
+   "n_orig": 4517610,
+   "n_new": 4599511,
+   "common": 4517610,
+   "keys_equal": false,
+   "ok_cells": 881188,
+   "ok_frac": 0.19158297479884276,
+   "max_abs": 0.5310768038034439,
+   "bit_equal_frac": 0.05112681262880151,
+   "spearman": 0.9830863084180712,
+   "n_written_common": 4517610,
+   "n_written_extra": 81901,
+   "sha256": "b7b5c43332c38dc444475278a4554eb19cf56e1b8da8b8848f639a35598775ac",
+   "pass": false
+  },
+  "20250701_delta": {
+   "n_new": 4096920,
+   "n_both": 4066147,
+   "n_new_only": 30773
+  },
+  "20250701": {
+   "n_orig": 4078299,
+   "n_new": 4096920,
+   "common": 4066147,
+   "keys_equal": false,
+   "ok_cells": 1056593,
+   "ok_frac": 0.2571366478854593,
+   "max_abs": 0.24173665046691895,
+   "bit_equal_frac": 0.14917340666729462,
+   "spearman": 0.9901947072275806,
+   "n_written_common": 4066147,
+   "n_written_extra": 30773,
+   "sha256": "34e3aa9ab3b326cf1d77bb3bfd256cd6cdc4dd535bc9c0f2a8ca6eb4dcb0feaf"
+  }
+ },
+ "B_bins": {
+  "20251001": {
+   "n_dev": 4517610,
+   "n_new": 4599511,
+   "common": 4517610,
+   "keys_equal": false,
+   "ok_cells": 169462,
+   "ok_frac": 0.03684348183969992,
+   "md5": "fbdb607f8b8fc5330559bf04f16e7275",
+   "dev_md5": "5ebae9298eb67bb4f12784b091148af7",
+   "pass": false
+  },
+  "20250701": {
+   "n_dev": 4078299,
+   "n_new": 4096920,
+   "common": 4066147,
+   "keys_equal": false,
+   "ok_cells": 488721,
+   "ok_frac": 0.11893707386972047,
+   "md5": "af754b631df59893937eba3f26759245",
+   "dev_md5": "830c3332ebdba4bdbf2e6a8b3a048e4f"
+  },
+  "map_tail": [
+   "16:40:24 predict_wf_20251001.bin rows 4599511 co score 0.736 doi 0.731",
+   "TOTAL rows 8696431 changed 4255026 (0.489) -> /home/ubuntu/claude_master/1010/ho4/chain/bins",
+   "MAP_OK"
+  ]
+ },
+ "mkt_sim": {
+  "base_md5": "34e33678105275b3620d1c92c3510172",
+  "n_base": 2807275,
+  "n_out": 2791422,
+  "n_S_base": 257447,
+  "n_S_new": 241594,
+  "md5": "80b8f5b197894c77501a5fd0d54e630c"
  }
 }

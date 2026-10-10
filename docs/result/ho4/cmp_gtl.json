@@ -1,0 +1,112 @@
+{
+ "prereg": "ADDENDUM-5 31e3c9e7",
+ "S": [
+  1751302800000,
+  1767200400000
+ ],
+ "tool1_label_lo_utc": 1751328000000,
+ "label_max": 1766965500000,
+ "G_gate": {
+  "rows_ref": 264960,
+  "rows_new": 264960,
+  "ref_only": 0,
+  "new_only": 0,
+  "cells": 8743680,
+  "bad": 3444028,
+  "ok_frac": 0.6061123005416484,
+  "bad_by_col": {
+   "momentum1M": 147568,
+   "momentum5M": 945,
+   "momentum15M": 142139,
+   "momentum1H": 1000,
+   "momentum4H": 1180,
+   "momentum24H": 2380,
+   "momentumAcceleration": 142145,
+   "trendStrengthETH": 1560,
+   "trendConsistency": 416,
+   "volatility1M": 940,
+   "volatility15M": 949,
+   "volatility1H": 989,
+   "volatility24H": 2310,
+   "volatilityTermStructure": 2379,
+   "advanceDeclineRatio": 264444,
+   "percentAboveMA20": 264537,
+   "volumeRatioUpDown": 264601,
+   "marketBreadthStrength": 264552,
+   "btcDominance": 264935,
+   "rsi14": 954,
+   "volumeSpike": 960,
+   "distMA20": 959,
+   "fundingRateRaw": 233040,
+   "fundingRateAvg24H": 233934,
+   "fundingRateTrend": 150943,
+   "basketMomentum15M": 260685,
+   "basketMomentum1H": 262769,
+   "basketRsi14": 264889,
+   "basketVolSpike": 264926
+  },
+  "bad_rows_by_month": {
+   "2025-07": 44640,
+   "2025-08": 44640,
+   "2025-10": 44640,
+   "2025-12": 44640,
+   "2025-09": 43200,
+   "2025-11": 43200
+  },
+  "pass": false
+ },
+ "L_labels": {
+  "laba_files": [
+   "funding_label_20250701_to_20251001.pb"
+  ],
+  "labb_files": [
+   "funding_label_20251001_to_20260101.pb"
+  ],
+  "rows_ref": 8490842,
+  "rows_new": 8523250,
+  "ref_found": 8476926,
+  "new_only": 46324,
+  "eq_frac_vs_dev": 0.9647282330774734,
+  "pass": false
+ },
+ "T_tool1": {
+  "t1a": {
+   "rows_ref": 4079936,
+   "rows_new": 4110819,
+   "both": 4079936,
+   "cells": 164432760,
+   "bad": 71579950,
+   "ok_frac": 0.5646855894166102,
+   "ok_frac_iqr_desc": 0.8741015841368837,
+   "worst_cols": {
+    "15": 0.000109,
+    "16": 0.000113,
+    "14": 0.001,
+    "33": 0.001016,
+    "32": 0.001108,
+    "34": 0.001143
+   },
+   "file": "features_20250701_to_20251001.t1c.gz"
+  },
+  "t1b": {
+   "rows_ref": 4503821,
+   "rows_new": 4585612,
+   "both": 4503821,
+   "cells": 183424480,
+   "bad": 84718505,
+   "ok_frac": 0.5381286892567447,
+   "ok_frac_iqr_desc": 0.8552303923663842,
+   "worst_cols": {
+    "16": 0.0,
+    "34": 0.000224,
+    "15": 0.000225,
+    "33": 0.000284,
+    "32": 0.000408,
+    "14": 0.001593
+   },
+   "file": "features_20251001_to_20260101.t1c.gz"
+  },
+  "ok_frac": 0.5506821850250982,
+  "pass": false
+ }
+}

@@ -1,0 +1,344 @@
+{
+ "2025-07": {
+  "n_vision": 501,
+  "n_dev_day": 484,
+  "n_extra": 17,
+  "dev_not_vision": [],
+  "extra": [
+   {
+    "sym": "A2ZUSDT",
+    "rows": 2400,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "BNXUSDT",
+    "rows": 44640,
+    "zero_qv": 44640,
+    "zero_frac": 1.0
+   },
+   {
+    "sym": "BTCDOMUSDT",
+    "rows": 44640,
+    "zero_qv": 79,
+    "zero_frac": 0.0018
+   },
+   {
+    "sym": "CTKUSDT",
+    "rows": 44640,
+    "zero_qv": 87,
+    "zero_frac": 0.0019
+   },
+   {
+    "sym": "CVCUSDT",
+    "rows": 44640,
+    "zero_qv": 267,
+    "zero_frac": 0.006
+   },
+   {
+    "sym": "CVXUSDT",
+    "rows": 43950,
+    "zero_qv": 31680,
+    "zero_frac": 0.7208
+   },
+   {
+    "sym": "ERAUSDT",
+    "rows": 20670,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "ESPORTSUSDT",
+    "rows": 3720,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "NAORISUSDT",
+    "rows": 690,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "PLAYUSDT",
+    "rows": 870,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "SLPUSDT",
+    "rows": 43935,
+    "zero_qv": 31685,
+    "zero_frac": 0.7212
+   },
+   {
+    "sym": "TAGUSDT",
+    "rows": 9405,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "TAUSDT",
+    "rows": 15390,
+    "zero_qv": 3,
+    "zero_frac": 0.0002
+   },
+   {
+    "sym": "TREEUSDT",
+    "rows": 3480,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "USDCUSDT",
+    "rows": 44640,
+    "zero_qv": 237,
+    "zero_frac": 0.0053
+   },
+   {
+    "sym": "ZORAUSDT",
+    "rows": 9420,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "ZRCUSDT",
+    "rows": 3735,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   }
+  ]
+ },
+ "2025-10": {
+  "n_vision": 581,
+  "n_dev_day": 560,
+  "n_extra": 21,
+  "dev_not_vision": [],
+  "extra": [
+   {
+    "sym": "42USDT",
+    "rows": 6570,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "APRUSDT",
+    "rows": 12330,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "ATUSDT",
+    "rows": 3630,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "BLUAIUSDT",
+    "rows": 15150,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "BNXUSDT",
+    "rows": 44640,
+    "zero_qv": 44640,
+    "zero_frac": 1.0
+   },
+   {
+    "sym": "BTCDOMUSDT",
+    "rows": 44640,
+    "zero_qv": 210,
+    "zero_frac": 0.0047
+   },
+   {
+    "sym": "CCUSDT",
+    "rows": 720,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "COMMONUSDT",
+    "rows": 6450,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "CTKUSDT",
+    "rows": 44640,
+    "zero_qv": 246,
+    "zero_frac": 0.0055
+   },
+   {
+    "sym": "CVCUSDT",
+    "rows": 44640,
+    "zero_qv": 270,
+    "zero_frac": 0.006
+   },
+   {
+    "sym": "CVXUSDT",
+    "rows": 44640,
+    "zero_qv": 223,
+    "zero_frac": 0.005
+   },
+   {
+    "sym": "KITEUSDT",
+    "rows": 3690,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "LABUSDT",
+    "rows": 20730,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "ONUSDT",
+    "rows": 11010,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "RIVERUSDT",
+    "rows": 20715,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "RVVUSDT",
+    "rows": 19350,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "SLPUSDT",
+    "rows": 44640,
+    "zero_qv": 328,
+    "zero_frac": 0.0073
+   },
+   {
+    "sym": "TURTLEUSDT",
+    "rows": 13500,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "USDCUSDT",
+    "rows": 44640,
+    "zero_qv": 21,
+    "zero_frac": 0.0005
+   },
+   {
+    "sym": "ZBTUSDT",
+    "rows": 20910,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "\u5e01\u5b89\u4eba\u751fUSDT",
+    "rows": 16620,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   }
+  ]
+ },
+ "2025-12": {
+  "n_vision": 608,
+  "n_dev_day": 593,
+  "n_extra": 15,
+  "dev_not_vision": [],
+  "extra": [
+   {
+    "sym": "BNXUSDT",
+    "rows": 44640,
+    "zero_qv": 44640,
+    "zero_frac": 1.0
+   },
+   {
+    "sym": "BREVUSDT",
+    "rows": 2235,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "BTCDOMUSDT",
+    "rows": 44640,
+    "zero_qv": 1066,
+    "zero_frac": 0.0239
+   },
+   {
+    "sym": "COLLECTUSDT",
+    "rows": 645,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "CTKUSDT",
+    "rows": 44640,
+    "zero_qv": 1987,
+    "zero_frac": 0.0445
+   },
+   {
+    "sym": "CVCUSDT",
+    "rows": 44640,
+    "zero_qv": 181,
+    "zero_frac": 0.0041
+   },
+   {
+    "sym": "CVXUSDT",
+    "rows": 44640,
+    "zero_qv": 1912,
+    "zero_frac": 0.0428
+   },
+   {
+    "sym": "GUAUSDT",
+    "rows": 15225,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "IRUSDT",
+    "rows": 15210,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "LITUSDT",
+    "rows": 43590,
+    "zero_qv": 31680,
+    "zero_frac": 0.7268
+   },
+   {
+    "sym": "MAGMAUSDT",
+    "rows": 630,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "SLPUSDT",
+    "rows": 44640,
+    "zero_qv": 1160,
+    "zero_frac": 0.026
+   },
+   {
+    "sym": "USDCUSDT",
+    "rows": 44640,
+    "zero_qv": 212,
+    "zero_frac": 0.0047
+   },
+   {
+    "sym": "ZKPUSDT",
+    "rows": 15240,
+    "zero_qv": 0,
+    "zero_frac": 0.0
+   },
+   {
+    "sym": "\u5e01\u5b89\u4eba\u751fUSDT",
+    "rows": 44640,
+    "zero_qv": 3,
+    "zero_frac": 0.0001
+   }
+  ]
+ }
+}

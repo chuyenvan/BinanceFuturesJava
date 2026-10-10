@@ -1,0 +1,1252 @@
+{
+ "tag": "ho4-dev-x",
+ "prereg": "ADDENDUM-5 31e3c9e7",
+ "steps": {
+  "klines": {
+   "secs": 2569,
+   "n_listing": 824,
+   "uni_month": {
+    "2025-06": 481,
+    "2025-07": 501,
+    "2025-08": 520,
+    "2025-09": 552,
+    "2025-10": 581,
+    "2025-11": 594,
+    "2025-12": 608
+   },
+   "days": {
+    "20250601": {
+     "n_min": 1440,
+     "n_cells": 665280,
+     "n_sym": 462
+    },
+    "20250602": {
+     "n_min": 1440,
+     "n_cells": 665280,
+     "n_sym": 462
+    },
+    "20250603": {
+     "n_min": 1440,
+     "n_cells": 666090,
+     "n_sym": 463
+    },
+    "20250604": {
+     "n_min": 1440,
+     "n_cells": 668565,
+     "n_sym": 465
+    },
+    "20250605": {
+     "n_min": 1440,
+     "n_cells": 671430,
+     "n_sym": 467
+    },
+    "20250606": {
+     "n_min": 1440,
+     "n_cells": 672480,
+     "n_sym": 467
+    },
+    "20250607": {
+     "n_min": 1440,
+     "n_cells": 672480,
+     "n_sym": 467
+    },
+    "20250608": {
+     "n_min": 1440,
+     "n_cells": 672480,
+     "n_sym": 467
+    },
+    "20250609": {
+     "n_min": 1440,
+     "n_cells": 673290,
+     "n_sym": 468
+    },
+    "20250610": {
+     "n_min": 1440,
+     "n_cells": 675300,
+     "n_sym": 470
+    },
+    "20250611": {
+     "n_min": 1440,
+     "n_cells": 678165,
+     "n_sym": 472
+    },
+    "20250612": {
+     "n_min": 1440,
+     "n_cells": 679680,
+     "n_sym": 472
+    },
+    "20250613": {
+     "n_min": 1440,
+     "n_cells": 680520,
+     "n_sym": 473
+    },
+    "20250614": {
+     "n_min": 1440,
+     "n_cells": 681120,
+     "n_sym": 473
+    },
+    "20250615": {
+     "n_min": 1440,
+     "n_cells": 681120,
+     "n_sym": 473
+    },
+    "20250616": {
+     "n_min": 1440,
+     "n_cells": 681120,
+     "n_sym": 473
+    },
+    "20250617": {
+     "n_min": 1440,
+     "n_cells": 682020,
+     "n_sym": 474
+    },
+    "20250618": {
+     "n_min": 1440,
+     "n_cells": 683925,
+     "n_sym": 476
+    },
+    "20250619": {
+     "n_min": 1440,
+     "n_cells": 686010,
+     "n_sym": 477
+    },
+    "20250620": {
+     "n_min": 1440,
+     "n_cells": 686880,
+     "n_sym": 477
+    },
+    "20250621": {
+     "n_min": 1440,
+     "n_cells": 686880,
+     "n_sym": 477
+    },
+    "20250622": {
+     "n_min": 1440,
+     "n_cells": 686880,
+     "n_sym": 477
+    },
+    "20250623": {
+     "n_min": 1440,
+     "n_cells": 686880,
+     "n_sym": 477
+    },
+    "20250624": {
+     "n_min": 1440,
+     "n_cells": 687540,
+     "n_sym": 478
+    },
+    "20250625": {
+     "n_min": 1440,
+     "n_cells": 689940,
+     "n_sym": 480
+    },
+    "20250626": {
+     "n_min": 1440,
+     "n_cells": 691920,
+     "n_sym": 481
+    },
+    "20250627": {
+     "n_min": 1440,
+     "n_cells": 692640,
+     "n_sym": 481
+    },
+    "20250628": {
+     "n_min": 1440,
+     "n_cells": 692640,
+     "n_sym": 481
+    },
+    "20250629": {
+     "n_min": 1440,
+     "n_cells": 692640,
+     "n_sym": 481
+    },
+    "20250630": {
+     "n_min": 1440,
+     "n_cells": 692640,
+     "n_sym": 481
+    },
+    "20250701": {
+     "n_min": 1440,
+     "n_cells": 692640,
+     "n_sym": 481
+    },
+    "20250702": {
+     "n_min": 1440,
+     "n_cells": 692640,
+     "n_sym": 481
+    },
+    "20250703": {
+     "n_min": 1440,
+     "n_cells": 693300,
+     "n_sym": 482
+    },
+    "20250704": {
+     "n_min": 1440,
+     "n_cells": 695865,
+     "n_sym": 484
+    },
+    "20250705": {
+     "n_min": 1440,
+     "n_cells": 696960,
+     "n_sym": 484
+    },
+    "20250706": {
+     "n_min": 1440,
+     "n_cells": 696960,
+     "n_sym": 484
+    },
+    "20250707": {
+     "n_min": 1440,
+     "n_cells": 697830,
+     "n_sym": 485
+    },
+    "20250708": {
+     "n_min": 1440,
+     "n_cells": 698400,
+     "n_sym": 485
+    },
+    "20250709": {
+     "n_min": 1440,
+     "n_cells": 699150,
+     "n_sym": 486
+    },
+    "20250710": {
+     "n_min": 1440,
+     "n_cells": 700995,
+     "n_sym": 488
+    },
+    "20250711": {
+     "n_min": 1440,
+     "n_cells": 702720,
+     "n_sym": 488
+    },
+    "20250712": {
+     "n_min": 1440,
+     "n_cells": 702720,
+     "n_sym": 488
+    },
+    "20250713": {
+     "n_min": 1440,
+     "n_cells": 702720,
+     "n_sym": 488
+    },
+    "20250714": {
+     "n_min": 1440,
+     "n_cells": 702720,
+     "n_sym": 488
+    },
+    "20250715": {
+     "n_min": 1440,
+     "n_cells": 705315,
+     "n_sym": 491
+    },
+    "20250716": {
+     "n_min": 1440,
+     "n_cells": 707040,
+     "n_sym": 491
+    },
+    "20250717": {
+     "n_min": 1440,
+     "n_cells": 707550,
+     "n_sym": 492
+    },
+    "20250718": {
+     "n_min": 1440,
+     "n_cells": 708480,
+     "n_sym": 492
+    },
+    "20250719": {
+     "n_min": 1440,
+     "n_cells": 708480,
+     "n_sym": 492
+    },
+    "20250720": {
+     "n_min": 1440,
+     "n_cells": 708480,
+     "n_sym": 492
+    },
+    "20250721": {
+     "n_min": 1440,
+     "n_cells": 709470,
+     "n_sym": 493
+    },
+    "20250722": {
+     "n_min": 1440,
+     "n_cells": 709920,
+     "n_sym": 493
+    },
+    "20250723": {
+     "n_min": 1440,
+     "n_cells": 708525,
+     "n_sym": 493
+    },
+    "20250724": {
+     "n_min": 1440,
+     "n_cells": 709920,
+     "n_sym": 493
+    },
+    "20250725": {
+     "n_min": 1440,
+     "n_cells": 711465,
+     "n_sym": 495
+    },
+    "20250726": {
+     "n_min": 1440,
+     "n_cells": 712800,
+     "n_sym": 495
+    },
+    "20250727": {
+     "n_min": 1440,
+     "n_cells": 712800,
+     "n_sym": 495
+    },
+    "20250728": {
+     "n_min": 1440,
+     "n_cells": 712800,
+     "n_sym": 495
+    },
+    "20250729": {
+     "n_min": 1440,
+     "n_cells": 715095,
+     "n_sym": 498
+    },
+    "20250730": {
+     "n_min": 1440,
+     "n_cells": 718080,
+     "n_sym": 499
+    },
+    "20250731": {
+     "n_min": 1440,
+     "n_cells": 720120,
+     "n_sym": 501
+    },
+    "20250801": {
+     "n_min": 1440,
+     "n_cells": 721440,
+     "n_sym": 501
+    },
+    "20250802": {
+     "n_min": 1440,
+     "n_cells": 721440,
+     "n_sym": 501
+    },
+    "20250803": {
+     "n_min": 1440,
+     "n_cells": 721440,
+     "n_sym": 501
+    },
+    "20250804": {
+     "n_min": 1440,
+     "n_cells": 721440,
+     "n_sym": 501
+    },
+    "20250805": {
+     "n_min": 1440,
+     "n_cells": 722430,
+     "n_sym": 503
+    },
+    "20250806": {
+     "n_min": 1440,
+     "n_cells": 725190,
+     "n_sym": 504
+    },
+    "20250807": {
+     "n_min": 1440,
+     "n_cells": 727455,
+     "n_sym": 507
+    },
+    "20250808": {
+     "n_min": 1440,
+     "n_cells": 730080,
+     "n_sym": 507
+    },
+    "20250809": {
+     "n_min": 1440,
+     "n_cells": 730080,
+     "n_sym": 507
+    },
+    "20250810": {
+     "n_min": 1440,
+     "n_cells": 730080,
+     "n_sym": 507
+    },
+    "20250811": {
+     "n_min": 1440,
+     "n_cells": 730080,
+     "n_sym": 507
+    },
+    "20250812": {
+     "n_min": 1440,
+     "n_cells": 730080,
+     "n_sym": 507
+    },
+    "20250813": {
+     "n_min": 1440,
+     "n_cells": 731565,
+     "n_sym": 509
+    },
+    "20250814": {
+     "n_min": 1440,
+     "n_cells": 732960,
+     "n_sym": 509
+    },
+    "20250815": {
+     "n_min": 1440,
+     "n_cells": 733665,
+     "n_sym": 510
+    },
+    "20250816": {
+     "n_min": 1440,
+     "n_cells": 734400,
+     "n_sym": 510
+    },
+    "20250817": {
+     "n_min": 1440,
+     "n_cells": 734400,
+     "n_sym": 510
+    },
+    "20250818": {
+     "n_min": 1440,
+     "n_cells": 735090,
+     "n_sym": 511
+    },
+    "20250819": {
+     "n_min": 1440,
+     "n_cells": 735840,
+     "n_sym": 511
+    },
+    "20250820": {
+     "n_min": 1440,
+     "n_cells": 736995,
+     "n_sym": 513
+    },
+    "20250821": {
+     "n_min": 1440,
+     "n_cells": 738720,
+     "n_sym": 513
+    },
+    "20250822": {
+     "n_min": 1440,
+     "n_cells": 739590,
+     "n_sym": 514
+    },
+    "20250823": {
+     "n_min": 1440,
+     "n_cells": 741090,
+     "n_sym": 515
+    },
+    "20250824": {
+     "n_min": 1440,
+     "n_cells": 741600,
+     "n_sym": 515
+    },
+    "20250825": {
+     "n_min": 1440,
+     "n_cells": 742470,
+     "n_sym": 516
+    },
+    "20250826": {
+     "n_min": 1440,
+     "n_cells": 743670,
+     "n_sym": 517
+    },
+    "20250827": {
+     "n_min": 1440,
+     "n_cells": 745290,
+     "n_sym": 518
+    },
+    "20250828": {
+     "n_min": 1440,
+     "n_cells": 746370,
+     "n_sym": 519
+    },
+    "20250829": {
+     "n_min": 1440,
+     "n_cells": 748530,
+     "n_sym": 520
+    },
+    "20250830": {
+     "n_min": 1440,
+     "n_cells": 748800,
+     "n_sym": 520
+    },
+    "20250831": {
+     "n_min": 1440,
+     "n_cells": 748800,
+     "n_sym": 520
+    },
+    "20250901": {
+     "n_min": 1440,
+     "n_cells": 749730,
+     "n_sym": 521
+    },
+    "20250902": {
+     "n_min": 1440,
+     "n_cells": 751230,
+     "n_sym": 522
+    },
+    "20250903": {
+     "n_min": 1440,
+     "n_cells": 753915,
+     "n_sym": 525
+    },
+    "20250904": {
+     "n_min": 1440,
+     "n_cells": 756000,
+     "n_sym": 525
+    },
+    "20250905": {
+     "n_min": 1440,
+     "n_cells": 756000,
+     "n_sym": 525
+    },
+    "20250906": {
+     "n_min": 1440,
+     "n_cells": 756000,
+     "n_sym": 525
+    },
+    "20250907": {
+     "n_min": 1440,
+     "n_cells": 756000,
+     "n_sym": 525
+    },
+    "20250908": {
+     "n_min": 1440,
+     "n_cells": 756660,
+     "n_sym": 526
+    },
+    "20250909": {
+     "n_min": 1440,
+     "n_cells": 760032,
+     "n_sym": 529
+    },
+    "20250910": {
+     "n_min": 1440,
+     "n_cells": 761760,
+     "n_sym": 529
+    },
+    "20250911": {
+     "n_min": 1440,
+     "n_cells": 762480,
+     "n_sym": 530
+    },
+    "20250912": {
+     "n_min": 1440,
+     "n_cells": 764970,
+     "n_sym": 532
+    },
+    "20250913": {
+     "n_min": 1440,
+     "n_cells": 766080,
+     "n_sym": 532
+    },
+    "20250914": {
+     "n_min": 1440,
+     "n_cells": 766080,
+     "n_sym": 532
+    },
+    "20250915": {
+     "n_min": 1440,
+     "n_cells": 766680,
+     "n_sym": 533
+    },
+    "20250916": {
+     "n_min": 1440,
+     "n_cells": 767520,
+     "n_sym": 533
+    },
+    "20250917": {
+     "n_min": 1440,
+     "n_cells": 770220,
+     "n_sym": 536
+    },
+    "20250918": {
+     "n_min": 1440,
+     "n_cells": 773550,
+     "n_sym": 538
+    },
+    "20250919": {
+     "n_min": 1440,
+     "n_cells": 776130,
+     "n_sym": 540
+    },
+    "20250920": {
+     "n_min": 1440,
+     "n_cells": 777600,
+     "n_sym": 540
+    },
+    "20250921": {
+     "n_min": 1440,
+     "n_cells": 777600,
+     "n_sym": 540
+    },
+    "20250922": {
+     "n_min": 1440,
+     "n_cells": 777600,
+     "n_sym": 540
+    },
+    "20250923": {
+     "n_min": 1440,
+     "n_cells": 778470,
+     "n_sym": 541
+    },
+    "20250924": {
+     "n_min": 1440,
+     "n_cells": 779865,
+     "n_sym": 542
+    },
+    "20250925": {
+     "n_min": 1440,
+     "n_cells": 781470,
+     "n_sym": 543
+    },
+    "20250926": {
+     "n_min": 1440,
+     "n_cells": 784755,
+     "n_sym": 547
+    },
+    "20250927": {
+     "n_min": 1440,
+     "n_cells": 788430,
+     "n_sym": 548
+    },
+    "20250928": {
+     "n_min": 1440,
+     "n_cells": 789120,
+     "n_sym": 548
+    },
+    "20250929": {
+     "n_min": 1440,
+     "n_cells": 790560,
+     "n_sym": 550
+    },
+    "20250930": {
+     "n_min": 1440,
+     "n_cells": 793500,
+     "n_sym": 552
+    },
+    "20251001": {
+     "n_min": 1440,
+     "n_cells": 796559,
+     "n_sym": 554
+    },
+    "20251002": {
+     "n_min": 1440,
+     "n_cells": 798447,
+     "n_sym": 555
+    },
+    "20251003": {
+     "n_min": 1440,
+     "n_cells": 800008,
+     "n_sym": 556
+    },
+    "20251004": {
+     "n_min": 1440,
+     "n_cells": 800640,
+     "n_sym": 556
+    },
+    "20251005": {
+     "n_min": 1440,
+     "n_cells": 800640,
+     "n_sym": 556
+    },
+    "20251006": {
+     "n_min": 1440,
+     "n_cells": 801630,
+     "n_sym": 557
+    },
+    "20251007": {
+     "n_min": 1440,
+     "n_cells": 802650,
+     "n_sym": 558
+    },
+    "20251008": {
+     "n_min": 1440,
+     "n_cells": 804270,
+     "n_sym": 559
+    },
+    "20251009": {
+     "n_min": 1440,
+     "n_cells": 805815,
+     "n_sym": 560
+    },
+    "20251010": {
+     "n_min": 1440,
+     "n_cells": 807958,
+     "n_sym": 562
+    },
+    "20251011": {
+     "n_min": 1440,
+     "n_cells": 809970,
+     "n_sym": 563
+    },
+    "20251012": {
+     "n_min": 1440,
+     "n_cells": 810720,
+     "n_sym": 563
+    },
+    "20251013": {
+     "n_min": 1440,
+     "n_cells": 811290,
+     "n_sym": 564
+    },
+    "20251014": {
+     "n_min": 1440,
+     "n_cells": 813810,
+     "n_sym": 566
+    },
+    "20251015": {
+     "n_min": 1440,
+     "n_cells": 815730,
+     "n_sym": 567
+    },
+    "20251016": {
+     "n_min": 1440,
+     "n_cells": 816480,
+     "n_sym": 567
+    },
+    "20251017": {
+     "n_min": 1440,
+     "n_cells": 818355,
+     "n_sym": 570
+    },
+    "20251018": {
+     "n_min": 1440,
+     "n_cells": 821430,
+     "n_sym": 571
+    },
+    "20251019": {
+     "n_min": 1440,
+     "n_cells": 822240,
+     "n_sym": 571
+    },
+    "20251020": {
+     "n_min": 1440,
+     "n_cells": 823020,
+     "n_sym": 572
+    },
+    "20251021": {
+     "n_min": 1440,
+     "n_cells": 824430,
+     "n_sym": 573
+    },
+    "20251022": {
+     "n_min": 1440,
+     "n_cells": 825660,
+     "n_sym": 574
+    },
+    "20251023": {
+     "n_min": 1440,
+     "n_cells": 827370,
+     "n_sym": 575
+    },
+    "20251024": {
+     "n_min": 1440,
+     "n_cells": 828930,
+     "n_sym": 576
+    },
+    "20251025": {
+     "n_min": 1440,
+     "n_cells": 829440,
+     "n_sym": 576
+    },
+    "20251026": {
+     "n_min": 1440,
+     "n_cells": 829440,
+     "n_sym": 576
+    },
+    "20251027": {
+     "n_min": 1440,
+     "n_cells": 830940,
+     "n_sym": 578
+    },
+    "20251028": {
+     "n_min": 1440,
+     "n_cells": 832320,
+     "n_sym": 578
+    },
+    "20251029": {
+     "n_min": 1440,
+     "n_cells": 833880,
+     "n_sym": 580
+    },
+    "20251030": {
+     "n_min": 1440,
+     "n_cells": 835200,
+     "n_sym": 580
+    },
+    "20251031": {
+     "n_min": 1440,
+     "n_cells": 835920,
+     "n_sym": 581
+    },
+    "20251101": {
+     "n_min": 1440,
+     "n_cells": 836640,
+     "n_sym": 581
+    },
+    "20251102": {
+     "n_min": 1440,
+     "n_cells": 836640,
+     "n_sym": 581
+    },
+    "20251103": {
+     "n_min": 1440,
+     "n_cells": 836640,
+     "n_sym": 581
+    },
+    "20251104": {
+     "n_min": 1440,
+     "n_cells": 837360,
+     "n_sym": 582
+    },
+    "20251105": {
+     "n_min": 1440,
+     "n_cells": 838950,
+     "n_sym": 583
+    },
+    "20251106": {
+     "n_min": 1440,
+     "n_cells": 841680,
+     "n_sym": 586
+    },
+    "20251107": {
+     "n_min": 1440,
+     "n_cells": 843840,
+     "n_sym": 586
+    },
+    "20251108": {
+     "n_min": 1440,
+     "n_cells": 843840,
+     "n_sym": 586
+    },
+    "20251109": {
+     "n_min": 1440,
+     "n_cells": 843840,
+     "n_sym": 586
+    },
+    "20251110": {
+     "n_min": 1440,
+     "n_cells": 844650,
+     "n_sym": 587
+    },
+    "20251111": {
+     "n_min": 1440,
+     "n_cells": 845879,
+     "n_sym": 588
+    },
+    "20251112": {
+     "n_min": 1440,
+     "n_cells": 848145,
+     "n_sym": 590
+    },
+    "20251113": {
+     "n_min": 1440,
+     "n_cells": 849600,
+     "n_sym": 590
+    },
+    "20251114": {
+     "n_min": 1440,
+     "n_cells": 851025,
+     "n_sym": 592
+    },
+    "20251115": {
+     "n_min": 1440,
+     "n_cells": 852480,
+     "n_sym": 592
+    },
+    "20251116": {
+     "n_min": 1440,
+     "n_cells": 852480,
+     "n_sym": 592
+    },
+    "20251117": {
+     "n_min": 1440,
+     "n_cells": 852480,
+     "n_sym": 592
+    },
+    "20251118": {
+     "n_min": 1440,
+     "n_cells": 852480,
+     "n_sym": 592
+    },
+    "20251119": {
+     "n_min": 1440,
+     "n_cells": 852480,
+     "n_sym": 592
+    },
+    "20251120": {
+     "n_min": 1440,
+     "n_cells": 852480,
+     "n_sym": 592
+    },
+    "20251121": {
+     "n_min": 1440,
+     "n_cells": 853275,
+     "n_sym": 593
+    },
+    "20251122": {
+     "n_min": 1440,
+     "n_cells": 853920,
+     "n_sym": 593
+    },
+    "20251123": {
+     "n_min": 1440,
+     "n_cells": 853920,
+     "n_sym": 593
+    },
+    "20251124": {
+     "n_min": 1440,
+     "n_cells": 853920,
+     "n_sym": 593
+    },
+    "20251125": {
+     "n_min": 1440,
+     "n_cells": 853920,
+     "n_sym": 593
+    },
+    "20251126": {
+     "n_min": 1440,
+     "n_cells": 854400,
+     "n_sym": 594
+    },
+    "20251127": {
+     "n_min": 1440,
+     "n_cells": 855360,
+     "n_sym": 594
+    },
+    "20251128": {
+     "n_min": 1440,
+     "n_cells": 855360,
+     "n_sym": 594
+    },
+    "20251129": {
+     "n_min": 1440,
+     "n_cells": 855360,
+     "n_sym": 594
+    },
+    "20251130": {
+     "n_min": 1440,
+     "n_cells": 855360,
+     "n_sym": 594
+    },
+    "20251201": {
+     "n_min": 1440,
+     "n_cells": 855360,
+     "n_sym": 594
+    },
+    "20251202": {
+     "n_min": 1440,
+     "n_cells": 856200,
+     "n_sym": 595
+    },
+    "20251203": {
+     "n_min": 1440,
+     "n_cells": 856800,
+     "n_sym": 595
+    },
+    "20251204": {
+     "n_min": 1440,
+     "n_cells": 856800,
+     "n_sym": 595
+    },
+    "20251205": {
+     "n_min": 1440,
+     "n_cells": 856800,
+     "n_sym": 595
+    },
+    "20251206": {
+     "n_min": 1440,
+     "n_cells": 857700,
+     "n_sym": 596
+    },
+    "20251207": {
+     "n_min": 1440,
+     "n_cells": 858240,
+     "n_sym": 596
+    },
+    "20251208": {
+     "n_min": 1440,
+     "n_cells": 858240,
+     "n_sym": 596
+    },
+    "20251209": {
+     "n_min": 1440,
+     "n_cells": 858240,
+     "n_sym": 596
+    },
+    "20251210": {
+     "n_min": 1440,
+     "n_cells": 860040,
+     "n_sym": 598
+    },
+    "20251211": {
+     "n_min": 1440,
+     "n_cells": 862075,
+     "n_sym": 599
+    },
+    "20251212": {
+     "n_min": 1440,
+     "n_cells": 864135,
+     "n_sym": 601
+    },
+    "20251213": {
+     "n_min": 1440,
+     "n_cells": 865440,
+     "n_sym": 601
+    },
+    "20251214": {
+     "n_min": 1440,
+     "n_cells": 865950,
+     "n_sym": 602
+    },
+    "20251215": {
+     "n_min": 1440,
+     "n_cells": 866880,
+     "n_sym": 602
+    },
+    "20251216": {
+     "n_min": 1440,
+     "n_cells": 866880,
+     "n_sym": 602
+    },
+    "20251217": {
+     "n_min": 1440,
+     "n_cells": 866880,
+     "n_sym": 602
+    },
+    "20251218": {
+     "n_min": 1440,
+     "n_cells": 866880,
+     "n_sym": 602
+    },
+    "20251219": {
+     "n_min": 1440,
+     "n_cells": 866880,
+     "n_sym": 602
+    },
+    "20251220": {
+     "n_min": 1440,
+     "n_cells": 866880,
+     "n_sym": 602
+    },
+    "20251221": {
+     "n_min": 1440,
+     "n_cells": 869355,
+     "n_sym": 605
+    },
+    "20251222": {
+     "n_min": 1440,
+     "n_cells": 871200,
+     "n_sym": 605
+    },
+    "20251223": {
+     "n_min": 1440,
+     "n_cells": 870150,
+     "n_sym": 605
+    },
+    "20251224": {
+     "n_min": 1440,
+     "n_cells": 871200,
+     "n_sym": 605
+    },
+    "20251225": {
+     "n_min": 1440,
+     "n_cells": 871200,
+     "n_sym": 605
+    },
+    "20251226": {
+     "n_min": 1440,
+     "n_cells": 871200,
+     "n_sym": 605
+    },
+    "20251227": {
+     "n_min": 1440,
+     "n_cells": 871200,
+     "n_sym": 605
+    },
+    "20251228": {
+     "n_min": 1440,
+     "n_cells": 871200,
+     "n_sym": 605
+    },
+    "20251229": {
+     "n_min": 1440,
+     "n_cells": 871200,
+     "n_sym": 605
+    },
+    "20251230": {
+     "n_min": 1440,
+     "n_cells": 871995,
+     "n_sym": 606
+    },
+    "20251231": {
+     "n_min": 1440,
+     "n_cells": 873915,
+     "n_sym": 608
+    }
+   }
+  },
+  "funding_F": {
+   "dev_pts": 507367,
+   "found": 507367,
+   "equal": 507367,
+   "dev_sym": 574,
+   "dev_sym_no_vision": [],
+   "vis_extra_pts": 0,
+   "bad_examples": [],
+   "vis_sym_not_local": [],
+   "frac": 1.0,
+   "pass": true,
+   "secs": 217
+  },
+  "ingest": {
+   "rc": 0,
+   "secs": 430,
+   "tail": "ord\n2026-10-10 14:44:06.011 INFO  [main] c.b.c.a.v.d.IngestTickerFileToAerospike:   150 ngay xong (ngay gan nhat 20251028, 1440 phut), tong 216000 record\n2026-10-10 14:45:08.002 INFO  [main] c.b.c.a.v.d.IngestTickerFileToAerospike:   180 ngay xong (ngay gan nhat 20251127, 1440 phut), tong 259200 record\n2026-10-10 14:46:11.605 INFO  [main] c.b.c.a.v.d.IngestTickerFileToAerospike:   210 ngay xong (ngay gan nhat 20251227, 1440 phut), tong 302400 record\n2026-10-10 14:46:20.053 INFO  [main] c.b.c.a.v.d.IngestTickerFileToAerospike: HET INGEST: 214 ngay OK, 0 ngay thieu file, tong 308160 record phut\n"
+  },
+  "market_M": {
+   "dev_min": 257447,
+   "new_min": 241594,
+   "common": 234754,
+   "dev_only": 22693,
+   "new_only": 6840,
+   "cells": 792861,
+   "ok_cells": 355951,
+   "common_cell_frac": 0.5054241177289134,
+   "common_row_all3": 0.1495522972984486,
+   "max_abs_common": 0.061492135748267174,
+   "frac": 0.44894502315033785,
+   "pass": false,
+   "by_month": {
+    "2025-07": {
+     "dev_only": 3789,
+     "new_only": 1122,
+     "bad_common": 30403
+    },
+    "2025-08": {
+     "dev_only": 3731,
+     "new_only": 1129,
+     "bad_common": 35372
+    },
+    "2025-09": {
+     "dev_only": 3721,
+     "new_only": 1162,
+     "bad_common": 29603
+    },
+    "2025-10": {
+     "dev_only": 3770,
+     "new_only": 1195,
+     "bad_common": 33241
+    },
+    "2025-11": {
+     "dev_only": 3731,
+     "new_only": 1136,
+     "bad_common": 36212
+    },
+    "2025-12": {
+     "dev_only": 3951,
+     "new_only": 1096,
+     "bad_common": 34815
+    }
+   }
+  }
+ },
+ "tasks": [
+  {
+   "name": "mkt",
+   "rc": 0,
+   "secs": 263.1,
+   "tail": "NFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20260928 07:00\n2026-10-10 14:50:43.085 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20260929 07:00\n2026-10-10 14:50:43.090 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20260930 07:00\n2026-10-10 14:50:43.094 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20261001 07:00\n2026-10-10 14:50:43.099 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20261002 07:00\n2026-10-10 14:50:43.103 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20261003 07:00\n2026-10-10 14:50:43.106 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20261004 07:00\n2026-10-10 14:50:43.111 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20261005 07:00\n2026-10-10 14:50:43.114 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20261006 07:00\n2026-10-10 14:50:43.118 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20261007 07:00\n2026-10-10 14:50:43.123 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20261008 07:00\n2026-10-10 14:50:43.128 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20261009 07:00\n2026-10-10 14:50:43.133 INFO  [main] c.b.c.r.ExportMarketData2File: Read data from Aerospike: 20261010 07:00\n2026-10-10 14:50:43.138 INFO  [main] c.b.c.r.ExportMarketData2File: \ud83c\udf89 Export Market Data to Aerospike DONE!\n",
+   "market_dump_n": 281106,
+   "outputs": {
+    "market_rebuilt.bin": {
+     "md5": "262c856f10b528fad46afe95eb89da0a",
+     "bytes": 5622124
+    }
+   }
+  },
+  {
+   "name": "gate",
+   "rc": 0,
+   "secs": 4517.8,
+   "tail": ".r.FundingFeeManager: Init funding fee data: 611 symbols\n2026-10-10 14:59:59.050 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset: ... replay 30 ng\u00e0y | rows=39300 | day=20250717\n2026-10-10 15:10:58.004 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset: ... replay 60 ng\u00e0y | rows=82500 | day=20250816\n2026-10-10 15:22:10.062 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset: ... replay 90 ng\u00e0y | rows=125700 | day=20250915\n2026-10-10 15:34:20.123 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset: ... replay 120 ng\u00e0y | rows=168900 | day=20251015\n2026-10-10 15:46:40.186 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset: ... replay 150 ng\u00e0y | rows=212100 | day=20251114\n2026-10-10 15:58:41.157 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset: ... replay 180 ng\u00e0y | rows=255300 | day=20251214\n2026-10-10 16:06:03.034 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset:    replay xong: rows=280801 | skip(feature null)=0 | range 20250620 .. 20260101\n2026-10-10 16:06:03.035 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset:    featChecksum=314909.949249 (so 2 l\u1ea7n ch\u1ea1y \u0111\u1ec3 check determinism)\n2026-10-10 16:06:04.384 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset: \ud83d\udd0e VERIFY: emit=280801 d\u00f2ng | file=280801 d\u00f2ng data | 42441889 bytes\n2026-10-10 16:06:04.385 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset: \u2705 EXPORT OK: 280801 d\u00f2ng data + 1 header -> /kaggle/working/out/gate/gate_dev.csv.gz\n2026-10-10 16:06:04.385 INFO  [main] c.b.c.a.f.e.g.ExportGateDataset:    B\u01b0\u1edbc ti\u1ebfp: \u0111\u1ea9y file l\u00ean Kaggle, train per-fold v\u1edbi purge >= 900000 ms (15 ph\u00fat).\n",
+   "outputs": {
+    "gate/gate_dev.csv.gz": {
+     "md5": "c32a2bcd0e6047e1a408d3dba5ab0878",
+     "bytes": 42441889
+    }
+   }
+  },
+  {
+   "name": "t1a",
+   "rc": 0,
+   "secs": 300.3,
+   "tail": "apper initialized. Total: 863, Next ID: 864\n..2026-10-10 16:06:09.497 INFO  [main] c.b.c.a.f.e.f.ExportFeaturesForPythonTool: \ud83d\udcc2 \u0110ang t\u1ea1o file m\u1edbi: /kaggle/working/out/t1a/features_20250701_to_20251001.t1c.gz\n2026-10-10 16:06:11.330 INFO  [ForkJoinPool.commonPool-worker-3] c.b.c.r.FundingFeeManager: Init funding fee data: 611 symbols\n............................................................................................2026-10-10 16:11:04.821 INFO  [main] c.b.c.a.f.e.f.Tool1ColSink: Tool1ColSink \u0111\u00f3ng /kaggle/working/out/t1a/features_20250701_to_20251001.t1c.gz: 4110819 record | 21 chunk | 148311584 bytes (36.08 B/record sau gzip)\n2026-10-10 16:11:04.822 INFO  [main] c.b.c.a.f.e.f.ExportFeaturesForPythonTool: \n\ud83c\udf89 \u0110\u00e3 \u0111\u00f3ng file: /kaggle/working/out/t1a/features_20250701_to_20251001.t1c.gz (T\u1ed5ng: 4110819 records)\n2026-10-10 16:11:04.822 INFO  [main] c.b.c.a.f.e.f.ExportFeaturesForPythonTool: \ud83d\udcc2 \u0110ang t\u1ea1o file m\u1edbi: /kaggle/working/out/t1a/features_20251001_to_20260101.t1c.gz\n.2026-10-10 16:11:04.869 INFO  [main] c.b.c.a.f.e.f.Tool1ColSink: Tool1ColSink \u0111\u00f3ng /kaggle/working/out/t1a/features_20251001_to_20260101.t1c.gz: 501 record | 1 chunk | 25872 bytes (51.64 B/record sau gzip)\n2026-10-10 16:11:04.869 INFO  [main] c.b.c.a.f.e.f.ExportFeaturesForPythonTool: \n\ud83c\udf89 \u0110\u00e3 \u0111\u00f3ng file cu\u1ed1i: /kaggle/working/out/t1a/features_20251001_to_20260101.t1c.gz (T\u1ed5ng: 501 records)\n2026-10-10 16:11:04.869 INFO  [main] c.b.c.a.f.e.f.ExportFeaturesForPythonTool: \ud83c\udfc1 HO\u00c0N T\u1ea4T TO\u00c0N B\u1ed8 QU\u00c1 TR\u00ccNH XU\u1ea4T FEATURES!\n",
+   "outputs": {
+    "t1a/features_20250701_to_20251001.t1c.gz": {
+     "md5": "c6819bcf447333d851d15f4920f13682",
+     "bytes": 148311584
+    },
+    "t1a/features_20251001_to_20260101.t1c.gz": {
+     "md5": "04bb7b38833f2cac6c1d9193cf6dc721",
+     "bytes": 25872
+    }
+   }
+  },
+  {
+   "name": "t1b",
+   "rc": 0,
+   "secs": 337.1,
+   "tail": "turesForPythonTool:    - Th\u1eddi gian k\u1ebft th\u00fac (Hi\u1ec7n t\u1ea1i): 20260101 07:00\n2026-10-10 16:11:07.097 INFO  [main] c.b.c.a.f.e.f.ExportFeaturesForPythonTool: ======================================================\n2026-10-10 16:11:08.058 INFO  [main] c.b.c.a.d.SimpleSymbolMapper: \ud83d\udd04 Initializing SimpleSymbolMapper (Singleton) from Aerospike...\n2026-10-10 16:11:08.062 INFO  [main] c.b.c.a.DataManagerAerospikeFloatSim: \u2705 Loaded Symbol Mapper: 863 symbols from Aerospike.\n2026-10-10 16:11:08.065 INFO  [main] c.b.c.a.d.SimpleSymbolMapper: \u2705 SimpleSymbolMapper initialized. Total: 863, Next ID: 864\n..2026-10-10 16:11:09.940 INFO  [main] c.b.c.a.f.e.f.ExportFeaturesForPythonTool: \ud83d\udcc2 \u0110ang t\u1ea1o file m\u1edbi: /kaggle/working/out/t1b/features_20251001_to_20260101.t1c.gz\n2026-10-10 16:11:11.595 INFO  [ForkJoinPool.commonPool-worker-3] c.b.c.r.FundingFeeManager: Init funding fee data: 611 symbols\n.............................................................................................2026-10-10 16:16:42.433 INFO  [main] c.b.c.a.f.e.f.Tool1ColSink: Tool1ColSink \u0111\u00f3ng /kaggle/working/out/t1b/features_20251001_to_20260101.t1c.gz: 4600485 record | 24 chunk | 172012861 bytes (37.39 B/record sau gzip)\n2026-10-10 16:16:42.433 INFO  [main] c.b.c.a.f.e.f.ExportFeaturesForPythonTool: \n\ud83c\udf89 \u0110\u00e3 \u0111\u00f3ng file cu\u1ed1i: /kaggle/working/out/t1b/features_20251001_to_20260101.t1c.gz (T\u1ed5ng: 4600485 records)\n2026-10-10 16:16:42.434 INFO  [main] c.b.c.a.f.e.f.ExportFeaturesForPythonTool: \ud83c\udfc1 HO\u00c0N T\u1ea4T TO\u00c0N B\u1ed8 QU\u00c1 TR\u00ccNH XU\u1ea4T FEATURES!\n",
+   "outputs": {
+    "t1b/features_20251001_to_20260101.t1c.gz": {
+     "md5": "7b28bd40705e13f58b670d58718042ab",
+     "bytes": 172012861
+    }
+   }
+  },
+  {
+   "name": "laba",
+   "rc": 0,
+   "secs": 198.5,
+   "tail": "  [pool-3-thread-4] c.b.c.a.f.e.ExportFundingLabel:    coin thi\u1ebfu-data t\u1edbi 72h: ALLUSDT (status lifecycle=LIVE)\n2026-10-10 16:20:00.742 INFO  [pool-3-thread-4] c.b.c.a.f.e.ExportFundingLabel:    coin thi\u1ebfu-data t\u1edbi 72h: ALTUSDT (status lifecycle=LIVE)\n2026-10-10 16:20:00.743 INFO  [main] c.b.c.a.f.e.ExportFundingLabel: \ud83e\udde9 G\u1ed8P CU\u1ed0I: 2 qu\u00fd, 4 partition (ch\u1ec9 ch\u1ea1y khi m\u1ecdi partition \u0111\u00e3 k\u1ebft th\u00fac)\n2026-10-10 16:20:00.753 INFO  [pool-2-thread-2] c.b.c.a.f.e.ExportFundingLabel: \u2705 \u0110\u00e3 g\u1ed9p qu\u00fd 20251001_to_20260101 -> /kaggle/working/out/laba/funding_label_20251001_to_20260101.pb (459188 bytes protobuf, 4 file part, 13419 d\u00f2ng \u0110\u00c3 \u0110\u1ed0I CHI\u1ebeU KH\u1edaP, S\u1eb4N S\u00c0NG push Kaggle r\u1ed3i xo\u00e1 local)\n2026-10-10 16:20:00.919 INFO  [pool-2-thread-1] c.b.c.a.f.e.ExportFundingLabel: \u2705 \u0110\u00e3 g\u1ed9p qu\u00fd 20250701_to_20251001 -> /kaggle/working/out/laba/funding_label_20250701_to_20251001.pb (168139903 bytes protobuf, 4 file part, 4077369 d\u00f2ng \u0110\u00c3 \u0110\u1ed0I CHI\u1ebeU KH\u1edaP, S\u1eb4N S\u00c0NG push Kaggle r\u1ed3i xo\u00e1 local)\n2026-10-10 16:20:00.920 INFO  [main] c.b.c.a.f.e.ExportFundingLabel: \ud83e\udde9 G\u1ed8P CU\u1ed0I xong: 2/2 qu\u00fd OK\n2026-10-10 16:20:00.920 INFO  [main] c.b.c.a.f.e.ExportFundingLabel: \u2705 Xong to\u00e0n b\u1ed9: 4090788 d\u00f2ng emit, 511 coin trong universe | 20250701 \u2192 20251001 | d\u1eef li\u1ec7u chia theo FILE QU\u00dd (xem log '\u0110\u00e3 g\u1ed9p qu\u00fd' \u0111\u1ec3 bi\u1ebft t\u1eebng file, KH\u00d4NG c\u00f3 1 file /kaggle/working/out/laba/funding_label.csv duy nh\u1ea5t)\n2026-10-10 16:20:00.946 INFO  [main] c.b.c.a.f.e.ExportFundingLabel:    meta -> /kaggle/working/out/laba/funding_label.csv.meta.json (stepMinutes=15)\n",
+   "outputs": {
+    "laba/funding_label.csv.meta.json": {
+     "md5": "8ee371f7b2614553539d7b2bb84aab32",
+     "bytes": 302
+    },
+    "laba/funding_label_20250701_to_20251001.pb": {
+     "md5": "9abec98649894ab114bda2a997259ce1",
+     "bytes": 168139903
+    },
+    "laba/funding_label_20251001_to_20260101.pb": {
+     "md5": "d723f7e7f3a242e71a1eefcf106c747d",
+     "bytes": 459188
+    }
+   }
+  },
+  {
+   "name": "labb",
+   "rc": 0,
+   "secs": 247.0,
+   "tail": "  [pool-3-thread-4] c.b.c.a.f.e.ExportFundingLabel:    coin thi\u1ebfu-data t\u1edbi 72h: ALLUSDT (status lifecycle=LIVE)\n2026-10-10 16:24:08.218 INFO  [pool-3-thread-4] c.b.c.a.f.e.ExportFundingLabel:    coin thi\u1ebfu-data t\u1edbi 72h: ALTUSDT (status lifecycle=LIVE)\n2026-10-10 16:24:08.218 INFO  [main] c.b.c.a.f.e.ExportFundingLabel: \ud83e\udde9 G\u1ed8P CU\u1ed0I: 2 qu\u00fd, 4 partition (ch\u1ec9 ch\u1ea1y khi m\u1ecdi partition \u0111\u00e3 k\u1ebft th\u00fac)\n2026-10-10 16:24:08.232 INFO  [pool-2-thread-2] c.b.c.a.f.e.ExportFundingLabel: \u2705 \u0110\u00e3 g\u1ed9p qu\u00fd 20260101_to_20260401 -> /kaggle/working/out/labb/funding_label_20260101_to_20260401.pb (490875 bytes protobuf, 4 file part, 14310 d\u00f2ng \u0110\u00c3 \u0110\u1ed0I CHI\u1ebeU KH\u1edaP, S\u1eb4N S\u00c0NG push Kaggle r\u1ed3i xo\u00e1 local)\n2026-10-10 16:24:08.454 INFO  [pool-2-thread-1] c.b.c.a.f.e.ExportFundingLabel: \u2705 \u0110\u00e3 g\u1ed9p qu\u00fd 20251001_to_20260101 -> /kaggle/working/out/labb/funding_label_20251001_to_20260101.pb (189533553 bytes protobuf, 4 file part, 4583147 d\u00f2ng \u0110\u00c3 \u0110\u1ed0I CHI\u1ebeU KH\u1edaP, S\u1eb4N S\u00c0NG push Kaggle r\u1ed3i xo\u00e1 local)\n2026-10-10 16:24:08.455 INFO  [main] c.b.c.a.f.e.ExportFundingLabel: \ud83e\udde9 G\u1ed8P CU\u1ed0I xong: 2/2 qu\u00fd OK\n2026-10-10 16:24:08.455 INFO  [main] c.b.c.a.f.e.ExportFundingLabel: \u2705 Xong to\u00e0n b\u1ed9: 4597457 d\u00f2ng emit, 558 coin trong universe | 20251001 \u2192 20260101 | d\u1eef li\u1ec7u chia theo FILE QU\u00dd (xem log '\u0110\u00e3 g\u1ed9p qu\u00fd' \u0111\u1ec3 bi\u1ebft t\u1eebng file, KH\u00d4NG c\u00f3 1 file /kaggle/working/out/labb/funding_label.csv duy nh\u1ea5t)\n2026-10-10 16:24:08.479 INFO  [main] c.b.c.a.f.e.ExportFundingLabel:    meta -> /kaggle/working/out/labb/funding_label.csv.meta.json (stepMinutes=15)\n",
+   "outputs": {
+    "labb/funding_label.csv.meta.json": {
+     "md5": "b99854212e4e4a409f7562fbd7e4d0b9",
+     "bytes": 302
+    },
+    "labb/funding_label_20251001_to_20260101.pb": {
+     "md5": "c51d6191863933ac0bae355f50242751",
+     "bytes": 189533553
+    },
+    "labb/funding_label_20260101_to_20260401.pb": {
+     "md5": "530e14f51ec3b8eebfb73ac4b39e8f9f",
+     "bytes": 490875
+    }
+   }
+  }
+ ],
+ "jar_sha256": "b7c89f097241763bb240c24b411a66531b41dad12b1716f13237537386de62c2",
+ "ok": true
+}

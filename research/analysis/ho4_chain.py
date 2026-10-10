@@ -276,7 +276,7 @@ def write_like_orig(r, kr, knew, pnew, path):
         for c in ("p1", "p2", "p3"):
             e[c] = np.float32(np.nan)
         out = np.concatenate([out, e])
-    out.tofile(path)
+    out.astype(DT).tofile(path)          # FIX: np.concatenate tra ve native-endian (bai hoc HO3b) — phat hien qua kiem khoa B
     return int(hit.sum()), int(len(extra))
 
 
@@ -374,8 +374,10 @@ def stage_mkt():
     assert md5f(MKT_BASE).startswith("34e33678"), "market base phai = bundle sim-ho26a"
     base, nb = rd(MKT_BASE), rd(KX + "/market_rebuilt.bin")
     tb, tn = base["ts"].astype(np.int64), nb["ts"].astype(np.int64)
-    out = np.concatenate([base[tb < S_LO], nb[(tn >= S_LO) & (tn < S_HI)], base[tb >= S_HI]])
+    MDT = np.dtype([("ts", ">i8"), ("v", "V12")])
+    out = np.concatenate([base[tb < S_LO], nb[(tn >= S_LO) & (tn < S_HI)], base[tb >= S_HI]]).astype(MDT)
     assert (np.diff(out["ts"].astype(np.int64)) > 0).all()
+    assert out.dtype == MDT and out.tobytes()[:12] == base.tobytes()[:12]
     p = C + "/market.bin"
     with open(p, "wb") as f:
         f.write(struct.pack(">i", len(out))); f.write(out.tobytes())
