@@ -1,0 +1,25 @@
+{
+ "V_featv2": {
+  "dev_ts_max": "2026-01-01 00:00:00",
+  "rows_dev": 2337337,
+  "rows_new": 2408118,
+  "rows_only_one": 70781,
+  "cells": 21673062,
+  "bad_cells": 6323994,
+  "bad_frac": 0.2917905185709338,
+  "per_feat": {
+   "vol_7d": 89815,
+   "dd_7d": 10272,
+   "rk_dd_7d": 2326978,
+   "hrs_since_high_7d": 11343,
+   "ret_3d": 11240,
+   "rk_ret_3d": 2323817,
+   "ret_14d": 11297,
+   "ls_global": 1372,
+   "rk_oi_delta24h": 900831
+  },
+  "pass": false,
+  "n_rows": 2419566,
+  "ok_frac": 0.7082094814290663
+ }
+}

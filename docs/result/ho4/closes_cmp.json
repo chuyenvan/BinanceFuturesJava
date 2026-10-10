@@ -1,0 +1,11 @@
+{
+ "pin": 2983637,
+ "new": 3075293,
+ "common": 2983637,
+ "pin_only": 0,
+ "new_only": 91656,
+ "eq": 2983637,
+ "eq_frac_common": 1.0,
+ "neq_by_month": {},
+ "pin_only_syms": 0
+}
