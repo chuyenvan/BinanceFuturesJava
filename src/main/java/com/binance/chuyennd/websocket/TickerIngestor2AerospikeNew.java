@@ -47,6 +47,8 @@ public class TickerIngestor2AerospikeNew {
     static final long SETTLE_SEC = cfgLong("KLINE_SETTLE_SEC", 30);
     static final long SETTLE_MIN_AGE_SEC = cfgLong("KLINE_SETTLE_MIN_AGE_SEC", 20);
     static final int SETTLE_LIMIT = (int) cfgLong("KLINE_SETTLE_LIMIT", 3);
+    /** Pass settle DAU TIEN sau khi start: limit lon (weight van 1 khi < 100) => lap lo phut trong luc dung/restart 12h. */
+    static final int SETTLE_LIMIT_STARTUP = (int) cfgLong("KLINE_SETTLE_LIMIT_STARTUP", 30);
     static final int REST_RETRY = (int) cfgLong("KLINE_REST_RETRY", 2);
     static final int WS_STREAMS_PER_CONN = (int) cfgLong("KLINE_WS_STREAMS_PER_CONN", 150);
     static final long STATS_MIN = cfgLong("KLINE_STATS_MIN", 10);
@@ -73,8 +75,8 @@ public class TickerIngestor2AerospikeNew {
 
     public void start() {
         LOG.info("🚀 TickerIngestor V8.1 (HYBRID REALTIME - KHẮC PHỤC TRỄ 1 PHÚT) Started! [KLINE-INGEST] mode={} "
-                + "wsFlushMs={} earlyRestSec={} settleSec={} settleMinAgeSec={} settleLimit={} retry={} streamsPerConn={}",
-                MODE, WS_FLUSH_MS, EARLY_REST_SEC, SETTLE_SEC, SETTLE_MIN_AGE_SEC, SETTLE_LIMIT, REST_RETRY, WS_STREAMS_PER_CONN);
+                + "wsFlushMs={} earlyRestSec={} settleSec={} settleMinAgeSec={} settleLimit={} startupLimit={} retry={} streamsPerConn={}",
+                MODE, WS_FLUSH_MS, EARLY_REST_SEC, SETTLE_SEC, SETTLE_MIN_AGE_SEC, SETTLE_LIMIT, SETTLE_LIMIT_STARTUP, REST_RETRY, WS_STREAMS_PER_CONN);
 
         List<String> symbols = collectSymbolsFromRedis();
         globalSubscribedSymbols.addAll(symbols);
@@ -300,6 +302,7 @@ public class TickerIngestor2AerospikeNew {
     private void startFinalizerLoop() {
         Thread t = new Thread(() -> {
             long lastWsFlush = 0, lastEarly = 0, lastSettle = 0, lastStats = 0;
+            boolean firstSettle = true;
             int wsCount = 0, earlyCalls = 0;
             while (true) {
                 try {
@@ -323,12 +326,14 @@ public class TickerIngestor2AerospikeNew {
                         lastSettle = m;
                         if (!BinanceRestGuard.isBanned()) {
                             long t0 = System.currentTimeMillis();
+                            int lim = firstSettle ? Math.max(SETTLE_LIMIT, SETTLE_LIMIT_STARTUP) : SETTLE_LIMIT;
+                            firstSettle = false;
                             KlineIngestCore.SettleResult r = core.settle(System.currentTimeMillis(),
-                                    new ArrayList<>(globalSubscribedSymbols), SETTLE_LIMIT);
+                                    new ArrayList<>(globalSubscribedSymbols), lim);
                             lastRestCalls = earlyCalls + r.fetched + r.failed;
                             if (r.rewrittenDiff > 0 || r.failed > 0 || r.filledMissing > 0) {
-                                LOG.info("[KLINE-INGEST] settle phut {}: fetched={} failed={} rewritten_diff={} filled_missing={} same={} diff_by_minute={} ({} ms)",
-                                        Utils.normalizeDateYYYYMMDDHHmm(m), r.fetched, r.failed, r.rewrittenDiff, r.filledMissing,
+                                LOG.info("[KLINE-INGEST] settle phut {} (limit={}): fetched={} failed={} rewritten_diff={} filled_missing={} same={} diff_by_minute={} ({} ms)",
+                                        Utils.normalizeDateYYYYMMDDHHmm(m), lim, r.fetched, r.failed, r.rewrittenDiff, r.filledMissing,
                                         r.same, r.diffByMinute.values(), System.currentTimeMillis() - t0);
                             }
                         }
