@@ -46,6 +46,7 @@ def f32(x):
 
 def cmp(a):
     W = json.load(open(os.path.join(WD, "ws.json")))
+    W["syms"] = [s for s in W["syms"] if s.isascii()]
     ev = W["final_ev"]
     t0 = min(e[1] for e in ev)
     t1 = max(e[1] for e in ev)
