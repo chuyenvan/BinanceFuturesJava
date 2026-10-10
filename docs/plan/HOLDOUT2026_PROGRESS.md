@@ -61,3 +61,17 @@ Pre-reg ADDENDUM-3 `44d45ca1` (commit TRƯỚC mọi bước; chưa nhìn số Q
 | B5 48 kernel | KHÔNG LÀM — 0 kernel, 0 dataset Kaggle | — | — |
 
 Việc còn lại: MASTER chọn A/B/C ở `HO3_B1B2.md` và viết ADDENDUM-4 (thước B2 mới) TRƯỚC khi dựng. Nếu A: writer Python ticker Java-serialized (cổng md5 byte vs `ticker_2026*.bin.gz` H1) → Tool1/nhãn bằng Java exporter trên Kaggle (`TICKER_SOURCE=file`) → store gate Q3 bằng `devexport_202609.py` (funding/market theo nguồn đã chốt) → p15 8 seed → net015 ONNX + S1 → funding.bin trên Kaggle (Oracle còn 3,6G) → parity B4 → orchestrator (mẫu `ho26_queue.py`, slug `ho3-*`, `SIM_END_DATE=20261001`, `ticker_min_days=2099`).
+
+## HO3b (2026-10-10 11:00–) — tiếp nối HO3 theo QUYẾT ĐỊNH MASTER (ADDENDUM-4)
+Thư mục Oracle `~/claude_master/1003/ho3b/` (dữ liệu lớn KHÔNG push). Tiền tố file/kernel/dataset `ho3b`. Script nguồn: `research/analysis/ho3b_*.py` (commit cùng progress).
+
+| Bước | Trạng thái | Kết quả / hash |
+|---|---|---|
+| ADDENDUM-4 (nguyên văn MASTER) | XONG | `c321709b`; §4a cổng OI + §4b cổng market + §2 kết quả: `62c0cd67`; §4b-bis: `d21485df` |
+| §2 37 symbol thiếu funding Vision | XONG | 24 lệnh H1 trong 18/48 run ho26 (ARX 14, GLW 6, BMNR 2, STXX 2) > 0 ⇒ báo; loại khỏi Q3 (`docs/result/ho3/f37_ho26.json`) |
+| Bộ ghi ticker Java-serialized (`ho3b_jwrite.py`) | XONG | round-trip byte 3/3 ngày H1; Aerospike local → file == HO26 byte 2/3 ngày (20260630, 20260401; 20260115 lệch = store local đổi sau export) |
+| Cổng 3 OI: tải Vision toàn lịch sử + writeCoin | ĐANG CHẠY | `ho3b_oi_rebuild.py` (6 proc × 16 luồng), log `oi_rebuild.log`; DEV 12-29..31 mẫu 3 symbol: oi_delta/ls/taker 100% trùng, oi_z lệch ≤ 9,5e-5 tương đối (lịch sử Vision khác lúc build ghim; không chỉnh) |
+| Cổng 4 market: Kernel A Java `ExportMarketBinFromTicker` H1 | XONG | `ho3b-mka-h1` 260 998 phút (HO26 252 867; chỉ inline 8 155, chỉ HO26 24); market cổng md5 `1fef346a…` (prefix DEV byte); pred s42 md5 `66bcced9…` (tái hiện p15 HO26 bit trước khi vá; 40 981/260 602 dòng H1 đổi p15); datasets `ho3b-mkt-h1`, `ho3b-pred-mk-s42` |
+| Cổng 4: 2 kernel `sim-ho3b-mk-{k24,b0}-s-s42` | ĐANG CHẠY (push 11:39) | funding.bin dựng lại trong kernel (khối FUND_REBUILD đã thử offline: OK + phát hiện hỏng) |
+| Cổng 5 exporter Java | THIẾT KẾ | rào cản: `ExportGateDataset` chỉ Aerospike; Tool1 đọc funding qua Aerospike ⇒ cần Aerospike riêng trong kernel Kaggle (dự kiến §4c) |
+| B3/B4/B5 | CHƯA | — |
