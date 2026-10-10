@@ -143,3 +143,20 @@ Viết và commit TRƯỚC mọi bước HO3 (kho dữ liệu, tải, dựng, ke
    - R19 (CAO, diễn giải): kết quả H1 đã biết ⇒ (i) không độc lập; chỉ (ii) dùng làm xác nhận mù.
    - R20 (THẤP): lỗ dữ liệu trong Q3 (phút thiếu) liệt kê; 242 sập 10-07 nằm ngoài cửa sổ.
 8. Nếu một thành phần không dựng đủ Q3 với cổng PASS: KHÔNG tự rút ngắn cửa sổ; DỪNG báo MASTER (đổi mép = addendum mới, commit trước kernel).
+
+## ADDENDUM-4 (2026-10-10, MASTER chốt — agent HO3b) — đổi thước B2, nguồn dữ liệu Q3
+
+Viết và commit TRƯỚC mọi bước dựng HO3b (B3 trở đi, và trước mọi cổng mới dưới đây). **Tại thời điểm viết: chưa nhìn số Q3 ngoài tỉ lệ khớp kline đã khai** (HO3 B1/B2 `e79dbe9b`: chỉ tỉ lệ khớp/đếm/khoảng ts; không printDone/equity/PnL, không phân phối p15/sp/net015/S1/feature Q3). Không đổi cửa sổ / luật chấm ADDENDUM-3 §1–§2.
+
+QUYẾT ĐỊNH MASTER (nguyên văn):
+
+Nguyên tắc: holdout phải dùng CÙNG nguồn dữ liệu mà live 242 nhìn thấy (sim≈live). Vision chỉ là nguồn đối chiếu/thay thế khi 242 không có. Đổi thước B2 từ "trùng byte" sang "tương đương ở mức quyết định/kinh tế" cho thành phần không tái sinh được byte.
+1. Kline 1′ Q3: Aerospike 242 `ticker.kline_1m_opt` (đã PASS 99,99961% vs ticker HO26). Lệch 242↔Vision từ 2026-04-25 được điều tra riêng (agent khác), KHÔNG chặn HO3.
+2. Funding Q3: Vision (giá trị trùng 100% trên mốc chung). 37 symbol không có funding trên Vision ⇒ KHÔNG giao dịch trong Q3 (liệt kê; kiểm số lệnh H1 của chúng ở ho26 — nếu > 0 thì báo).
+3. OI Q3: dựng từ Vision metrics. Cổng mức feature → mô hình trên đoạn H1: dựng lại OI H1 bằng cùng cách, tính feature OI mà model dùng, rồi p15 + net015 bins H1 từ feature dựng lại so với bản HO26: p15 spearman ≥ 0,99 VÀ |Δp15| ≤ 1e-3 ở ≥ 99% ô VÀ bins trùng ≥ 99% ô. Không đạt ⇒ DỪNG báo.
+4. market.bin + 3 feature momentum Q3: generator inline. Cổng KINH TẾ trên H1: dựng toàn bộ H1 bằng generator inline thay market.bin HO26, chạy 2 kernel (k24-s-s42, b0-s-s42, SIM_END_DATE=20260701) ⇒ so với ho26 cùng seed: trùng ≥ 95% lệnh (sym, phút vào ±1) VÀ |ΔΣPnL_S| ≤ 5%. Đạt ⇒ dùng generator cho Q3 (H1 giữ nguyên byte HO26). Không đạt ⇒ DỪNG báo.
+5. Store gate features, Tool1 15′, nhãn pool S1: chạy exporter Java gốc trên Kaggle (không Java trên Oracle) cho 07-01→09-30; cổng: exporter chạy lại một lát H1 (≥ 7 ngày) phải khớp bản HO26 (feature ≤1e-6 ở ≥ 99,9% ô; Tool1/nhãn trùng ≥ 99,9%).
+6. Sau đó B3 (append, H1 giữ byte) → B4 (DEV C1–C3 PASS + H1 md5 trùng ho26-*-s-s42 vì H1 không đổi) → B5 48 kernel (SIM_END_DATE=20261001) qua orchestrator, KHÔNG chấm.
+Ngân sách: nếu bước 3 hoặc 4 FAIL thì dừng, báo MASTER kèm số; không thử sửa sau khi thấy kết quả cổng.
+
+Ghi chú: chi tiết thực thi của từng cổng (file thước, cách ghép khoá, lát ngày) sẽ được ghi thành §4a, §4b… dưới mục này và commit TRƯỚC khi đo cổng tương ứng; không đổi ngưỡng ở trên.
