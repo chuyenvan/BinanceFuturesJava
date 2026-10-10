@@ -47,3 +47,17 @@ Lộ thông tin nhỏ (khai báo): log `x1_build_map` in tỉ lệ dòng "co sco
 
 HO2 vận hành: 2 kernel đầu `ho26-b0-b-s42`, `ho26-b0-s-s42` COMPLETE + parity tự động PASS (11:06/11:10; ~44–48′/kernel B0; C2/C3 DEV 52–54′ ⇒ K24/M2 holdout ước ~60–65′). ETA 48 kernel ≈ 22–24 h từ 10:22 ⇒ ~2026-10-10 08:00–11:00 +07.
 Kiểm tiến độ: `tail -n 60 ~/claude_master/1009/ho26/queue_status.tsv; ps -p $(cat ~/claude_master/1009/ho26/queue.pid) -o pid,etime`. Orchestrator chết ⇒ resume (state.json): `cd ~/claude_master/1009/ho26 && setsid nohup python3 ho26_queue.py >> queue.out 2>&1 < /dev/null &`. Việc còn lại (vòng sau): 2 scorer độc lập commit TRƯỚC khi đọc printDone/equity 2026; chấm 1 lần theo §1.
+
+## HO3 (2026-10-10 08:10–) — kéo dài holdout tới 2026-09-30 (agent HO3)
+Pre-reg ADDENDUM-3 `44d45ca1` (commit TRƯỚC mọi bước; chưa nhìn số Q3). Thư mục Oracle `~/claude_master/1003/ho3/`. Kết quả nhỏ `docs/result/ho3/` (chi tiết `HO3_B1B2.md`).
+
+| Bước | Trạng thái | Kết quả | Script |
+|---|---|---|---|
+| B0 ADDENDUM-3 | XONG | 44d45ca1 | — |
+| B1 kho dữ liệu | XONG | kline 242 tới 10-09 (0 phút thiếu Q3); kline local/market_data_object local tới 08-13; funding local chết 07-07, 242 sống; OI ghim tới 06-30 23:55 UTC; store gate/Tool1/nhãn tới 07-01 (Tool1/nhãn = Java exporter) | `ho3_b2_kline_as.py --probe`, `ho3_gaps.py` |
+| B2 validate chéo | **FAIL ⇒ DỪNG, báo MASTER** | K1 242 vs ticker HO26 H1 99,99961% PASS; Vision vs ticker HO26: T3 99,997%, gãy từ 04-25 (T5 84,3%, T6 86,7%); Vision vs 242 Q3 91,2% FAIL; funding Vision vs local 99,881% mốc (giá trị 100%, thiếu 37 symbol) FAIL chặt, 242 vs local 98,98% + 934 lệch giá trị; OI Vision rebuild: oi_delta 99,96%, ls/taker 83,1% (lệch nguyên ngày, vd 06-15) FAIL; market inline ≤1e-6 44,2% FAIL, store re-read 99,37% FAIL; gate momentum×3 FAIL (trích audit) | `ho3_b2_*.py` |
+| B3 dựng Q3 | KHÔNG LÀM (luật B2) | — | — |
+| B4 parity | KHÔNG LÀM | — | — |
+| B5 48 kernel | KHÔNG LÀM — 0 kernel, 0 dataset Kaggle | — | — |
+
+Việc còn lại: MASTER chọn A/B/C ở `HO3_B1B2.md` và viết ADDENDUM-4 (thước B2 mới) TRƯỚC khi dựng. Nếu A: writer Python ticker Java-serialized (cổng md5 byte vs `ticker_2026*.bin.gz` H1) → Tool1/nhãn bằng Java exporter trên Kaggle (`TICKER_SOURCE=file`) → store gate Q3 bằng `devexport_202609.py` (funding/market theo nguồn đã chốt) → p15 8 seed → net015 ONNX + S1 → funding.bin trên Kaggle (Oracle còn 3,6G) → parity B4 → orchestrator (mẫu `ho26_queue.py`, slug `ho3-*`, `SIM_END_DATE=20261001`, `ticker_min_days=2099`).

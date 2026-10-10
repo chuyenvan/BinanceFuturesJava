@@ -1,0 +1,30 @@
+{
+ "ref": "ticker",
+ "window": [
+  "20260301",
+  "20260401"
+ ],
+ "months": [
+  "2026-02",
+  "2026-03"
+ ],
+ "totals": {
+  "ref": 25693431,
+  "vis": 25693664,
+  "both": 25693431,
+  "eq_ohlc": 25692808,
+  "eq5_quote": 25692695,
+  "eq5_base": 1752810,
+  "ref_only": 0,
+  "vis_only": 233,
+  "nosym_vis": 0,
+  "eq_ohlc_rate_vs_ref": 0.999975752557142,
+  "eq_ohlc_rate_vs_both": 0.999975752557142,
+  "eq5_quote_rate_vs_ref": 0.9999713545458371,
+  "eq5_quote_rate_vs_both": 0.9999713545458371,
+  "eq5_base_rate_vs_ref": 0.06822016102092399,
+  "eq5_base_rate_vs_both": 0.06822016102092399
+ },
+ "n_sym": 584,
+ "sym_no_vision": []
+}

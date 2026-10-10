@@ -1,0 +1,29 @@
+{
+ "ref": "as242",
+ "window": [
+  "20260817",
+  "20260901"
+ ],
+ "months": [
+  "2026-08"
+ ],
+ "totals": {
+  "ref": 15134424,
+  "vis": 15134475,
+  "both": 15134424,
+  "eq_ohlc": 14285792,
+  "eq5_quote": 13800580,
+  "eq5_base": 1507022,
+  "ref_only": 0,
+  "vis_only": 51,
+  "nosym_vis": 0,
+  "eq_ohlc_rate_vs_ref": 0.9439270368003434,
+  "eq_ohlc_rate_vs_both": 0.9439270368003434,
+  "eq5_quote_rate_vs_ref": 0.9118668804309963,
+  "eq5_quote_rate_vs_both": 0.9118668804309963,
+  "eq5_base_rate_vs_ref": 0.09957577506748853,
+  "eq5_base_rate_vs_both": 0.09957577506748853
+ },
+ "n_sym": 708,
+ "sym_no_vision": []
+}

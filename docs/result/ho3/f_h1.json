@@ -1,0 +1,76 @@
+{
+ "window": [
+  "20260101",
+  "20260701"
+ ],
+ "totals": {
+  "vision_vs_local": {
+   "ref": 547888,
+   "oth": 547272,
+   "both": 547238,
+   "eq": 547238,
+   "ref_only": 650,
+   "oth_only": 34,
+   "eq_rate_vs_ref": 0.9988136261425693
+  },
+  "s242_vs_local": {
+   "ref": 547888,
+   "oth": 551766,
+   "both": 543216,
+   "eq": 542282,
+   "ref_only": 4672,
+   "oth_only": 8550,
+   "eq_rate_vs_ref": 0.9897679817772975
+  },
+  "vision_vs_242": {
+   "ref": 551766,
+   "oth": 547272,
+   "both": 542819,
+   "eq": 541885,
+   "ref_only": 8947,
+   "oth_only": 4453,
+   "eq_rate_vs_ref": 0.9820920462659896
+  }
+ },
+ "n_sym": 751,
+ "n_sym_vision_vs_local_not_100": 37,
+ "sym_vision_vs_local_not_100": [
+  "AAOIUSDT",
+  "ADBEUSDT",
+  "ALABUSDT",
+  "AMATUSDT",
+  "ARXUSDT",
+  "ASMLUSDT",
+  "AXTIUSDT",
+  "BDXNUSDT",
+  "BMNRUSDT",
+  "BXUSDT",
+  "CIENUSDT",
+  "COSTUSDT",
+  "CRDOUSDT",
+  "CRWDUSDT",
+  "DKNGUSDT",
+  "EBAYUSDT",
+  "EWZUSDT",
+  "GLWUSDT",
+  "GMEUSDT",
+  "HIMSUSDT",
+  "HPEUSDT",
+  "IWMUSDT",
+  "KLACUSDT",
+  "KORUUSDT",
+  "LRCXUSDT",
+  "NFLXUSDT",
+  "REUSDT",
+  "RIVNUSDT",
+  "SMCIUSDT",
+  "SONYUSDT",
+  "STXXUSDT",
+  "SXPUSDT",
+  "URNMUSDT",
+  "UVXYUSDT",
+  "XLEUSDT",
+  "ZMUSDT",
+  "\u5e01\u5b89\u4eba\u751fUSDT"
+ ]
+}
