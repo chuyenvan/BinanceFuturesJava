@@ -43,7 +43,10 @@ public class TickerIngestor2AerospikeNew {
     static final String MODE_LEGACY = "legacy", MODE_REST = "rest_settle", MODE_WS = "ws_settle";
     static final String MODE = normMode(com.binance.chuyennd.tradecore.Cfg.getOr("KLINE_INGEST_MODE", MODE_WS));
     static final long WS_FLUSH_MS = cfgLong("KLINE_WS_FLUSH_MS", 1500);
-    static final long EARLY_REST_SEC = cfgLong("KLINE_EARLY_REST_SEC", 2);
+    /** REST som cho symbol THIEU WS final. Do 2026-10-10 (/market, 30 sym x 8 phut): x=true toi p50 0,52 s nhung ~22% symbol
+     *  (it giao dich) toi o ~3,04 s moi phut, 0 sau 3,5 s => ws_settle mac dinh 4 s (WS suy giam >50% thieu o giay 2 => REST ngay);
+     *  rest_settle mac dinh 2 s (nhu V8.1). Ca hai xong truoc khi live doc o giay 6. */
+    static final long EARLY_REST_SEC = cfgLong("KLINE_EARLY_REST_SEC", MODE_REST.equals(MODE) ? 2 : 4);
     static final long SETTLE_SEC = cfgLong("KLINE_SETTLE_SEC", 30);
     static final long SETTLE_MIN_AGE_SEC = cfgLong("KLINE_SETTLE_MIN_AGE_SEC", 20);
     static final int SETTLE_LIMIT = (int) cfgLong("KLINE_SETTLE_LIMIT", 3);
@@ -318,7 +321,12 @@ public class TickerIngestor2AerospikeNew {
                         }
                         core.flushLateFinals();
                     }
-                    if (m > lastEarly && inMin >= EARLY_REST_SEC * 1000L && (!ws || m <= lastWsFlush)) {
+                    boolean earlyDue = inMin >= EARLY_REST_SEC * 1000L;
+                    if (ws && !earlyDue && m > lastEarly && m <= lastWsFlush && inMin >= 2000L) {
+                        int nSym = globalSubscribedSymbols.size();     // WS suy giam: > 50% symbol chua co final o giay 2
+                        earlyDue = nSym > 0 && core.missingFinals(m, new ArrayList<>(globalSubscribedSymbols)).size() * 2 > nSym;
+                    }
+                    if (m > lastEarly && earlyDue && (!ws || m <= lastWsFlush)) {
                         lastEarly = m;
                         if (inMin <= 50_000L) earlyCalls = earlyPass(m, curMin, ws, wsCount);
                     }
@@ -376,8 +384,9 @@ public class TickerIngestor2AerospikeNew {
                 cur.putAll(r.open);
             }
         }
-        LOG.info("✅ [KLINE V9 {}] Chốt nến phút {} thành công. Total: {} symbols (ws_final={} rest_som={} rest_loi={} thieu_ws={})",
-                MODE, Utils.normalizeDateYYYYMMDDHHmm(m), wsCount + nClosed, wsCount, nClosed, nFail, ws ? need.size() : 0);
+        int wsHave = ws ? syms.size() - need.size() : 0;   // WS final da co (ghi o giay 1,5 + toi muon)
+        LOG.info("✅ [KLINE V9 {}] Chốt nến phút {} thành công. Total: {} symbols (ws_final={} ws_flush_1s5={} rest_som={} rest_loi={} thieu_ws={})",
+                MODE, Utils.normalizeDateYYYYMMDDHHmm(m), wsHave + nClosed, wsHave, wsCount, nClosed, nFail, ws ? need.size() : 0);
         return need.size();
     }
 
