@@ -326,7 +326,7 @@ if pgrep -f -- "-cp target/binance-java-sdk-1.2.4.jar $MC" >/dev/null; then echo
 PF=$APP/run/$MC.pid
 [ -f "$PF" ] && { echo "pidfile stale $(cat $PF) -> $PF.stale_$(date +%s)"; mv -f "$PF" "$PF.stale_$(date +%s)"; }
 for i in $(seq 1 120); do
-  a=down; timeout 3 bash -c "</dev/tcp/$H/3222" 2>/dev/null && timeout 3 bash -c "</dev/tcp/127.0.0.1/3000" 2>/dev/null && a=up
+  a=down; timeout 3 bash -c "</dev/tcp/$H/3222" 2>/dev/null && timeout 3 bash -c "</dev/tcp/127.0.0.1/3222" 2>/dev/null && a=up
   s=; for p in 30001 30002 30003 30004 30005 30006; do
         s=$(timeout 3 $R -h $H -p $p CLUSTER INFO 2>/dev/null | tr -d '\r' | awk -F: '/^cluster_state/{print $2}'); [ -n "$s" ] && break; done
   [ "$a" = up ] && [ "$s" = ok ] && { echo "deps ok sau $((i*5))s"; exit 0; }
@@ -477,3 +477,9 @@ từng node theo R2.6 nếu node lỗi) → R1 disable → R5 khôi phục publi
 2. Token Telegram đang hardcode trong source repo (`Utils`, `P2PTelegramNotifier`) — nên xoay và chuyển ra config.
 3. Cửa sổ reboot thật để nghiệm thu (sau R6).
 4. Ngoài phạm vi: 80/443 mở không listener; mongod `*:27017` enabled; container docker cũ (tvcs) — giữ/xoá.
+
+## NHẬT KÝ THỰC THI (MASTER, 2026-10-09/10)
+- 10-09 08:19: R5 (đóng 8002, 53/tcp+udp) + R1 (aerospike enable + drop-in). Owner thêm 10-09: đóng 80/443 + xoá rich rule mongod 27017 (14:04).
+- 10-09 08:22: R2.0–R2.1 (backup /root/harden_r2, config, unit). 10-09: R3 (KillMode test PASS, prestart, unit h242-ingest/h242-trading enable). R4 cron Oracle + Telegram (http 200; script đọc tg.env dạng `tele-token:`).
+- 10-10 07:55–08:00: R2.2–R2.5, R2.7 (owner cho MASTER làm thay): 3 replica → 3 failover + chuyển master; HLEN order 47 giữ nguyên, app blpop lỗi +1; 6 node systemd enable, cwd/dir /var/lib/redis-cluster/<port>, 0 dòng 127.0.0.1 trong nodes.conf; restart + SIGKILL replica tự lên; script cũ DEPRECATED rc=1. Master hiện: 30004/30005/30006.
+- 10-10 08:03 REBOOT NGHIỆM THU: aerospike + 6 redis tự lên, cluster ok, HLEN 47, 0 "order null" mới. **LỖI runbook R3.2**: prestart kiểm 127.0.0.1:3000 nhưng asd chỉ nghe 3222 (127.0.0.1 + IP) ⇒ treo chờ. Sửa 08:07 (kiểm 127.0.0.1:3222, thay file bằng mv), kill prestart treo, start h242-ingest + h242-trading ⇒ app lên 08:07:40 ("deps ok sau 5s"), gate buffer nạp 190 560 armed (không seed), LEGACY managed 47, env LIVE_PROFILE=c3_shadow SHADOW_NO_PUSH=true TOPK 16, LANG=en_US.UTF-8. Vị thế legacy không quản lý ~4,7 phút (08:03:09→08:07:50). Lần boot sau prestart đã đúng.
