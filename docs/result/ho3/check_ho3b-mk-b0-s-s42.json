@@ -1,0 +1,26 @@
+{
+ "tag": "ho3b-mk-b0-s-s42",
+ "chk": {
+  "ok": true,
+  "jar": true,
+  "mapper": true,
+  "ov": true,
+  "pred": true,
+  "t26": true,
+  "fund": true,
+  "market": true,
+  "unseal": true,
+  "nsel": true,
+  "pen": true,
+  "n": true
+ },
+ "ok_all": true,
+ "n": 2674,
+ "md5": "1333d772ac48b0e6cbc340e8ef448d7e",
+ "fund_log": [
+  "2026-10-10 04:41:30,330 INFO FUND_REBUILD prefix_rec=2301064 new_rec=260566 before_first=0 stale=432 off_seal7=4446779204",
+  "2026-10-10 04:41:30,571 INFO FUND_REBUILD_CHECK h1_old=252458 h1_new=260566 old_missing=24 old_diff=0 new_extra=8132",
+  "2026-10-10 04:41:31,260 INFO FUND_REBUILD_CHECK old_missing_not_in_new_grid=24 old_missing_in_grid=0",
+  "2026-10-10 04:41:40,310 INFO FUND_REBUILD_OK md5_funding=23e4c1076deddf8cc020cd27abbfa8ba -> WFO_DATA_DIR /kaggle/working/wfo_ds_fund"
+ ]
+}

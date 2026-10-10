@@ -1,0 +1,25 @@
+{
+ "ho3b-mk-k24-s-s42": {
+  "ref": "ho26-k24-s-s42",
+  "n_new": 228,
+  "n_ho26": 221,
+  "n_match": 173,
+  "match_rate": 0.7587719298245614,
+  "sum_pnl_s_new": 10771.877203,
+  "sum_pnl_s_ho26": 10674.855017,
+  "rel_dpnl": 0.009088852808350993,
+  "pass": false
+ },
+ "ho3b-mk-b0-s-s42": {
+  "ref": "ho26-b0-s-s42",
+  "n_new": 182,
+  "n_ho26": 174,
+  "n_match": 142,
+  "match_rate": 0.7802197802197802,
+  "sum_pnl_s_new": 6363.200725999998,
+  "sum_pnl_s_ho26": 7445.518349,
+  "rel_dpnl": 0.14536497961157624,
+  "pass": false
+ },
+ "PASS": false
+}

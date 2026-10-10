@@ -45,7 +45,7 @@ def http(url, tries=4):
 def list_dates(sym):
     out, marker, pages = set(), "", 0
     while True:
-        url = S3 + "?prefix=" + PREF + sym + "/" + ("&marker=" + urllib.parse.quote(marker) if marker else "")
+        url = S3 + "?prefix=" + urllib.parse.quote(PREF + sym + "/") + ("&marker=" + urllib.parse.quote(marker) if marker else "")
         x = (http(url) or b"").decode("utf-8", "ignore")
         pages += 1
         last = None
@@ -100,7 +100,8 @@ def parse_ct(s):
 
 def parse_day(sym, d):
     """-> (ts np.int64 [n], vals f32 [n,4], conv) hoac None (404/rong). ts da normalize5m + dich theo quy uoc file."""
-    b = http("%s%s%s/%s-metrics-%s.zip" % (BASE, PREF, sym, sym, d))
+    qs = urllib.parse.quote(sym)
+    b = http("%s%s%s/%s-metrics-%s.zip" % (BASE, PREF, qs, qs, d))
     if b is None:
         return None
     z = zipfile.ZipFile(io.BytesIO(b))

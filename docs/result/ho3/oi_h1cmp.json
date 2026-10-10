@@ -1,0 +1,69 @@
+{
+ "2026-01": {
+  "rows_rebuild": 4840981,
+  "rows_pin": 4829588,
+  "both": 4829588,
+  "oi_delta24h": 0.999695,
+  "oi_z": 0.125568,
+  "ls_global": 1.0,
+  "ls_toptrader": 0.999998,
+  "taker_buy": 1.0
+ },
+ "2026-02": {
+  "rows_rebuild": 4442357,
+  "rows_pin": 4429719,
+  "both": 4429672,
+  "oi_delta24h": 0.999059,
+  "oi_z": 0.121687,
+  "ls_global": 0.999944,
+  "ls_toptrader": 0.999964,
+  "taker_buy": 0.999948
+ },
+ "2026-03": {
+  "rows_rebuild": 4960787,
+  "rows_pin": 4944391,
+  "both": 4944369,
+  "oi_delta24h": 0.998599,
+  "oi_z": 0.103334,
+  "ls_global": 0.999975,
+  "ls_toptrader": 0.999979,
+  "taker_buy": 0.999969
+ },
+ "2026-04": {
+  "rows_rebuild": 4860053,
+  "rows_pin": 4837679,
+  "both": 4837654,
+  "oi_delta24h": 0.997283,
+  "oi_z": 0.079563,
+  "ls_global": 0.999874,
+  "ls_toptrader": 0.999888,
+  "taker_buy": 0.999865
+ },
+ "2026-05": {
+  "rows_rebuild": 5073533,
+  "rows_pin": 5052811,
+  "both": 5052707,
+  "oi_delta24h": 0.997852,
+  "oi_z": 0.083356,
+  "ls_global": 0.999421,
+  "ls_toptrader": 0.999557,
+  "taker_buy": 0.999856
+ },
+ "2026-06": {
+  "rows_rebuild": 5301077,
+  "rows_pin": 5249975,
+  "both": 5236457,
+  "oi_delta24h": 0.607213,
+  "oi_z": 0.054204,
+  "ls_global": 0.529652,
+  "ls_toptrader": 0.551681,
+  "taker_buy": 0.516439
+ },
+ "H1_weighted": {
+  "oi_delta24h": 0.9286278261332329,
+  "oi_z": 0.09363325605013793,
+  "ls_global": 0.9158940942955965,
+  "ls_toptrader": 0.9198561040904355,
+  "taker_buy": 0.9136081807802655
+ }
+}

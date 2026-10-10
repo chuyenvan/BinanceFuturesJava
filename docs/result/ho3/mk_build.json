@@ -1,0 +1,32 @@
+{
+ "prereg": "ADDENDUM-4 \u00a74b 62c0cd67",
+ "kernel_a_market": "kaggle/out/ho3b-mka-h1/market.bin",
+ "kernel_a_md5": "9d1ade16d34bdfd83686be1e4d66538a",
+ "market": {
+  "n_total": 2815406,
+  "n_dev": 2554408,
+  "n_h1_ho26": 252867,
+  "n_h1_inline": 260998,
+  "inline_only": 8155,
+  "ho26_only": 24,
+  "ka_rows": 260998,
+  "ka_first": 1767200400000,
+  "ka_last": 1782863940000,
+  "last_ho26": 1782863940000,
+  "md5": "1fef346a8b0fad725f7e2b5f6917d395",
+  "bytes": 56308124,
+  "md5_dev_prefix": "5a1a7ada73269cb4b798b46484c4177a"
+ },
+ "pred": {
+  "n": 2760442,
+  "n_dev": 2499840,
+  "n_h1": 260602,
+  "h1_md_hit": 260578,
+  "h1_md_miss": 24,
+  "rows_m1_changed": 256981,
+  "rows_p15_changed": 40981,
+  "md5": "66bcced903f9c2aea6a38ee2494c6c7c",
+  "reproduce_ho26_bit": true,
+  "model": "/home/ubuntu/claude_master/1003/ho1/gate/gate_s42_cut20260101p15.json"
+ }
+}

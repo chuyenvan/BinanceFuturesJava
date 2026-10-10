@@ -49,6 +49,15 @@ def main():
             f.write(raw)
         os.replace(p + ".tmp", p)
         ns = [len(x[1]) for x in mins]
+        seen = {}
+        for t, ent in mins:
+            for x_ in ent:
+                v = seen.get(x_[0])
+                if v is None:
+                    seen[x_[0]] = [t, t]
+                else:
+                    v[1] = t
+        json.dump(seen, open(os.path.join(out, 'seen_%s.json' % day), 'w'))
         man[day] = dict(md5_gunzip=hashlib.md5(raw).hexdigest(), bytes_raw=len(raw), bytes_gz=os.path.getsize(p),
                         n_min=len(mins), n_miss=len(miss), miss=miss[:50], sym_min=min(ns) if ns else 0,
                         sym_max=max(ns) if ns else 0, cluster=cl)

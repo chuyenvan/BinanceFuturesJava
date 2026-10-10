@@ -75,3 +75,15 @@ Thư mục Oracle `~/claude_master/1003/ho3b/` (dữ liệu lớn KHÔNG push). 
 | Cổng 4: 2 kernel `sim-ho3b-mk-{k24,b0}-s-s42` | ĐANG CHẠY (push 11:39) | funding.bin dựng lại trong kernel (khối FUND_REBUILD đã thử offline: OK + phát hiện hỏng) |
 | Cổng 5 exporter Java | THIẾT KẾ | rào cản: `ExportGateDataset` chỉ Aerospike; Tool1 đọc funding qua Aerospike ⇒ cần Aerospike riêng trong kernel Kaggle (dự kiến §4c) |
 | B3/B4/B5 | CHƯA | — |
+
+### HO3b cập nhật 12:35 — CỔNG 4 FAIL ⇒ DỪNG (luật ngân sách ADDENDUM-4), báo MASTER
+Chi tiết `docs/result/ho3/HO3B_GATES.md`.
+
+| Cổng | Trạng thái | Số |
+|---|---|---|
+| 4 market inline (kinh tế, H1) | **FAIL** | trùng lệnh k24 75,9% / b0 78,0% (≥95%); \|ΔΣPnL_S\| k24 0,9% / b0 14,5% (≤5%); DEV printDone trùng từng dòng; lệch dồn T6 (k24 59/112, b0 47/83). Tham chiếu: ho26 s42 vs 7 seed khác cùng cấu hình trùng 57–84%, \|ΔΣPnL\| 0–79% |
+| 5 exporter Java Kaggle (lát H1) | FAIL theo thước (gate 93,83%, Tool1 99,23%, nhãn 57,1%) | do cấu hình lát (warm-up 48 h, nhãn thiếu 72 h nhìn trước); sau warm-up/đủ nhìn trước = 100% cả 3; provenance Tool1 = `FF_UNFILTERED=1` |
+| 3 OI (feature→mô hình) | CHỜ lock oracle_heavy (KDIV giữ từ 11:37) | `ho3b_g3chain.sh` tự chạy rebuilt rồi pinned (đối chứng), kết quả `~/claude_master/1003/ho3b/g3{r,p}/gate3.json`. Báo kèm OI dựng lại vs file ghim: T1–T5 ls/taker ≥ 99,94%, oi_delta ≥ 99,73%; **T6 chỉ 52–61%** (`oi_h1cmp.json`) |
+
+Dữ liệu đã dựng (giữ cho vòng sau nếu MASTER cho tiếp): OI Vision toàn lịch sử 863 symbol (769 có dữ liệu, 47,27 M dòng 2025-12-29→2026-10-01, `~/claude_master/1003/ho3b/oi_rebuild/`, 1,4 GB); ticker Q3 242 tháng 7, 8 trên Kaggle `wfo-ticker-2026q3a`, `wfo-ticker-2026q3b` (31+31 file, md5 gunzip trong MANIFEST_Q3.json, 0 phút thiếu); tháng 9 + 10-01..03 CHƯA (dừng); funding Q3 pickle `ds_asq3/funding_q3.pkl` (local ∪ Vision); datasets `ho3b-aerospike-ce`, `ho3b-asdata`, `ho3b-mkt-h1`, `ho3b-pred-mk-s42`. Script sẵn cho B3: `ho3b_net015_q3.py`, `ho3b_p15_q3.py`, `ho3b_s1_q3.py`, `ho3b_lifecycle_q3.py`, `ho3b_exp_kernel.py`, `ho3b_ticker_q3.py`.
+Lưu ý thiết kế cho vòng sau: (1) B4b "md5 H1 trùng ho26" với SIM_END_DATE=20260701 sẽ lệch có cấu trúc vì bundle mới có dữ liệu 07-01 00:00–06:59 +07 (HO26 không có pred/bins giờ đó) ⇒ cần MASTER định nghĩa lại thước B4b; (2) Tool1 dùng md (`rateDownAvg`, `rateDown15MAvg`) ⇒ md inline cũng đi vào net015 (ngoài phạm vi cổng 4); (3) `symbol_lifecycle` local dừng 08-13 ⇒ nhãn/pool Q3 sau 08-13 rỗng nếu không cập nhật (script `ho3b_lifecycle_q3.py`).

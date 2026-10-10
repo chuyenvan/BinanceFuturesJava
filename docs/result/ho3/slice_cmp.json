@@ -1,0 +1,75 @@
+{
+ "prereg": "ADDENDUM-4 \u00a74c 27fa291b",
+ "window": [
+  1772298000000,
+  1772902800000
+ ],
+ "gate": {
+  "rows_ref": 10080,
+  "rows_new": 10080,
+  "rows_one_side": 0,
+  "cells": 332640,
+  "bad": 20536,
+  "ok_frac": 0.9382635882635882,
+  "bad_by_col": {
+   "advanceDeclineRatio": 1851,
+   "percentAboveMA20": 1848,
+   "volumeRatioUpDown": 1836,
+   "marketBreadthStrength": 1848,
+   "btcDominance": 1854,
+   "fundingRateRaw": 1320,
+   "fundingRateAvg24H": 1560,
+   "fundingRateTrend": 1078,
+   "basketMomentum15M": 1782,
+   "basketMomentum1H": 1840,
+   "basketRsi14": 1859,
+   "basketVolSpike": 1860
+  },
+  "pass": false
+ },
+ "tool1": {
+  "rows_ho26": 360960,
+  "t1u": {
+   "rows_new": 360960,
+   "both": 360960,
+   "keys_equal": true,
+   "cells": 14438400,
+   "bad": 110471,
+   "ok_frac": 0.9923488059618795,
+   "worst_cols": {
+    "18": 0.882602,
+    "16": 0.930111,
+    "14": 0.946648,
+    "13": 0.9717,
+    "12": 0.979172
+   },
+   "pass": false
+  },
+  "t1d": {
+   "rows_new": 17469,
+   "both": 17465,
+   "keys_equal": false,
+   "cells": 14438560,
+   "bad": 13799769,
+   "ok_frac": 0.04424201582429277,
+   "worst_cols": {
+    "34": 0.007272,
+    "32": 0.042599,
+    "33": 0.04552,
+    "24": 0.782078,
+    "18": 0.879874
+   },
+   "pass": false
+  }
+ },
+ "labels": {
+  "rows_ho26": 362878,
+  "rows_new": 362338,
+  "ho26_keys_found": 362338,
+  "eq_frac_vs_ho26": 0.5714289651067301,
+  "files": [
+   "funding_label_20260101_to_20260401.pb"
+  ],
+  "pass": false
+ }
+}
