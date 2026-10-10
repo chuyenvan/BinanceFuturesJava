@@ -183,3 +183,9 @@ Ghi chú: chi tiết thực thi của từng cổng (file thước, cách ghép 
 
 ### ADDENDUM-4 §2 — kết quả kiểm 37 symbol không có funding Vision (đo 2026-10-10, chỉ đếm lệnh)
 - 48 run ho26, lệnh start ≥ 2026-01-01: **24 lệnh > 0** (ARX 14, GLW 6, BMNR 2, STXX 2; 18/48 run: m2 14 run, b0/k24 chỉ seed 13). Theo quyết định 2: 37 symbol bị loại khỏi giao dịch Q3 (bins Q3 bỏ symbol, như loại 3 symbol B6). File `docs/result/ho3/f37_ho26.json`.
+
+### ADDENDUM-4 §4b-bis (2026-10-10, TRƯỚC khi chạy 2 kernel cổng 4 và trước mọi đo bổ sung)
+
+- Làm rõ assert (ii) của khối FUND_REBUILD (§4b): phút có trong funding.bin cũ VÀ có trong lưới market mới ⇒ bản ghi phải trùng byte; phút cũ vắng mặt chỉ được phép khi phút đó KHÔNG có trong lưới market mới (generator bỏ phút). Không đổi ngưỡng cổng.
+- Phát hiện khi đọc code (chưa đo): Tool1 (`FundingFeatureExtractorV2`) dùng `rateDownAvg`, `rateDown15MAvg` của market data ⇒ net015/bins Q3 cũng phụ thuộc md inline, NGOÀI phạm vi cổng 4 MASTER đặt (market.bin + 3 momentum gate). Kiểm BỔ SUNG (mô tả, báo MASTER, KHÔNG đổi PASS/FAIL cổng 4): thay 2 cột này trong Tool1 H1 (`build_rows` HO1) bằng md inline Kernel A (không có md ⇒ 0, ngữ nghĩa Java; không lượng tử hoá int16 như writer T1C1 — khai là xấp xỉ), ONNX `7921ceaf…` predict, so p0 vs `net015_2026A` theo thước cổng 3 (spearman ≥ 0,99; ô |Δp0| ≤ 1e-3 ≥ 99%) và bins (`x1_build_map`, S1 HO26) ô trùng ≥ 99%. Không đạt ⇒ báo MASTER trước B3, không tự quyết.
+- Cổng 5 (exporter Java trên Kaggle): đọc code cho thấy `ExportGateDataset` chỉ đọc Aerospike (kline `kline_1m_opt`, `market_data_object`, `funding_data` qua `FundingFeeManager`); Tool1 ở chế độ file vẫn đọc funding qua Aerospike (`getReadClient`). Trên Kaggle `getReadClient` = Aerospike Oracle (kline tới 08-13, md tới 08-13, funding tới 07-07) ⇒ chạy thẳng sẽ dùng dữ liệu Q3 cũ/thiếu. Chi tiết thực thi cổng 5 sẽ chốt ở §4c trước khi chạy.
