@@ -483,6 +483,7 @@ public class DetectEntrySignal2TradeNormal {
                 if (s1Order) LATEST_SEL_RANK.put(symbol, rank + 1);
                 if (Configs.SELECTOR_RANK_TOPK > 0 && rank >= Configs.SELECTOR_RANK_TOPK) break;
                 rank++;
+                tickerWindow.audit().markTopK(symbol);   // [KFIX-B] thuoc do dung nen luc quyet dinh (chi dem)
                 // [EXPORT-FIX 2026-10-01] ghi selector CUNG tick (score/rank/gateValue/p15) — mac dinh TAT
                 // (key LIVE_FEAT_DUMP<=0 => no-op), chi ghi, khong doi quyet dinh.
                 com.binance.chuyennd.ai_ml.features.export.entry.LiveFeatureDump.maybeDumpSelector(
@@ -497,8 +498,13 @@ public class DetectEntrySignal2TradeNormal {
                     gateThrMin = (gateThrMin == null || thr < gateThrMin) ? thr : gateThrMin;
                     gateThrMax = (gateThrMax == null || thr > gateThrMax) ? thr : gateThrMax;
                 }
+                int kfixRej0 = predictRejects.size();
                 createOrderBuyRequest(symbol, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE,
                         symbol2Max15m.get(symbol), marketRate, predictData, symbolPred, symbol2LastTickers, predictRejects);
+                // [KFIX-B] PASS gate = khong bi gate REJECT o tick nay (chi dem, khong doi quyet dinh)
+                if (predictData != null && symbolPred != null && predictRejects.size() == kfixRej0) {
+                    tickerWindow.audit().markPass(symbol);
+                }
             }
             // [GATE 2026-09-11, L7] MOT dong/tick chung minh cong entry tang 2 dang chay that tren
             //   live va chay DUNG cong thuc cua backtest (com.binance.chuyennd.tradecore.EntryGate).

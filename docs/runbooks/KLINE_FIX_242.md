@@ -208,3 +208,37 @@ Lưu ý: `Utils.reset` (auto-restart 12 h) chép env của JVM cha ⇒ mode gi�
    KHÔNG còn khớp Aerospike sau backfill; export lại = biến thể mới, pre-reg riêng.
 5. IP Oracle dùng chung (shadow + script): REST script luôn tuần tự + trần weight + dừng khi 429/418 (sự cố 2026-10-10 13:55: probe
    backfill bản đầu song song 16 luồng limit=1500 ⇒ 48×429 rồi IP Oracle bị ban 418 tới 14:11:58 — đã sửa script).
+
+## H. Deploy jar TRADING — đọc lại nến + thước `[LIVE-KLINE]` (branch `fix/live-ticker-reread`, live 242 + 2 shadow)
+Thay đổi: `LiveTickerWindow` mỗi tick đọc lại `KLINE_LIVE_REREAD_MIN` (mặc định 3, 0 = tắt = hành vi cũ) phút ĐÃ nạp gần nhất,
+nến khác ⇒ ghi đè cache; `S1RankerLive` đọc lại close giờ vừa nạp 1 lần (≥ 2′ sau mốc giờ); `LiveKlineAudit` đo độ đúng nến lúc
+quyết định. Không đổi quyết định/công thức nào (chỉ dữ liệu nến trong cache được sửa cho tick SAU). Làm SAU mục A (ingest ws_settle),
+gộp được với lần restart ở mục D (chép buffer cùng lúc). Jar = cùng artifact `target/binance-java-sdk-1.2.4.jar` (chứa cả ingest:
+bản này chỉ thêm tên symbol thiếu WS vào dòng `Chốt nến phút` — deploy cho ingest cũng được, không bắt buộc).
+```bash
+# Oracle: build (sha trong báo cáo KFIX-B)
+cd /home/ubuntu/claude_master/1010/kreread_wt && git log --oneline -1 && /home/ubuntu/tools/apache-maven-3.9.9/bin/mvn -o -q package -DskipTests && sha256sum target/binance-java-sdk-1.2.4.jar
+scp -P 2222 -i /home/ubuntu/.ssh/id_rsa_chuyennd target/binance-java-sdk-1.2.4.jar root@103.157.218.242:/home/chuyennd/java/v_t_m/target/binance-java-sdk-1.2.4.jar.kreread_new
+# 242 (47 vị thế LEGACY không quản lý trong lúc dừng, giữ < 2′)
+V=/home/chuyennd/java/v_t_m; TS=$(date +%Y%m%d_%H%M); cd $V
+sha256sum target/binance-java-sdk-1.2.4.jar | tee target/sha_before_kreread_$TS.txt; sha256sum target/binance-java-sdk-1.2.4.jar.kreread_new
+cp -p target/binance-java-sdk-1.2.4.jar target/binance-java-sdk-1.2.4.jar.bak_kreread_$TS
+systemctl stop h242-trading && mv target/binance-java-sdk-1.2.4.jar.kreread_new target/binance-java-sdk-1.2.4.jar && systemctl start h242-trading
+# Shadow #1/#2 (Oracle): cùng mẫu trong ~/shadow_c3/app và ~/shadow_c3b/app — backup jar .bak_kreread_$TS, systemctl stop shadow-c3 / shadow-c3b, thay jar, start
+```
+**Đọc counter** (mỗi 10′, phút chẵn 10; phút đầu tiên được chốt ~3′ sau start):
+`grep -a '\[LIVE-KLINE\]' logs/full.log | tail -3` ⇒
+`[LIVE-KLINE] reread=3' win{minutes=10 decided_on_unsettled=a/b correct=x% | topK c/d correct=y% | pass e/f correct=z% | reread_overwritten=n s1_close_rewritten=s} cum{…}`.
+- `decided_on_unsettled` = số (symbol, phút quyết định) mà nến đọc lúc quyết định (giây 6) ≠ nến đọc lại 1–2 tick sau (≥ 66 s, đã qua
+  pass settle +30 s). `correct = 1 − a/b`. `topK` = symbol vào top-K selector của tick; `pass` = symbol không bị gate REJECT (xấp xỉ:
+  `createOrderBuyRequest` không thêm vào `predictRejects`; lệnh bị chặn vì lý do khác vẫn tính là pass). `reread_overwritten` = ô cache sửa.
+- Kỳ vọng: trước sửa ingest ≈ 85% (14,9% ô sai + 12,5% phút nặn); sau ws_settle ≥ 99%.
+**Ngưỡng:** `cum correct` (all) < 99% sau ≥ 6 h, hoặc `win correct` < 97% 3 cửa sổ liên tiếp, hoặc `pass` < 99% sau ≥ 24 h (mẫu nhỏ) ⇒ chẩn đoán:
+1. Ingest dùng WS chưa: `grep -a 'Chốt nến phút' collectData/logs/full.log | tail -20` — `ws_final` ≈ số symbol, `thieu_ws`, `rest_som`;
+   **tỉ lệ REST fallback giây 4 = rest_som / Total** (> 1% là bất thường); `vd_thieu_ws=[…]` = symbol thiếu WS (tối đa 10).
+2. `grep -a '\[KLINE-INGEST\] mode=' … | tail -3` — `ws_conn` < số kết nối, `ws_reconnects` tăng, `ws_late`, `early_failed`, `rewritten_diff(+)`.
+3. `grep -a '\[KLINE-WS\]' … | tail` — kết nối đóng/mở lặp (Binance đổi đường ⇒ `KLINE_WS_BASE`).
+4. Thời điểm: `research/analysis/kfix_race_read_vs_flush.py` (log trading vs log chốt) — live đọc trước khi chốt ở bao nhiêu % phút.
+**Rollback:** nhanh (không đổi jar): thêm `export KLINE_LIVE_REREAD_MIN=0` vào `conf/env.sh` (shadow: Environment của unit) + restart
+⇒ hành vi cũ (thước vô nghĩa). Đầy đủ: `systemctl stop h242-trading; cp -p target/binance-java-sdk-1.2.4.jar.bak_kreread_<TS> target/binance-java-sdk-1.2.4.jar; systemctl start h242-trading`
+(sha = `sha_before_kreread_<TS>.txt`). Chi phí: +≤ 3 phút đọc Aerospike/tick (~60 KB, vài ms); RAM không đổi.

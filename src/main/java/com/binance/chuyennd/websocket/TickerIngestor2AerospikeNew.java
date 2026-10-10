@@ -385,8 +385,9 @@ public class TickerIngestor2AerospikeNew {
             }
         }
         int wsHave = ws ? syms.size() - need.size() : 0;   // WS final da co (ghi o giay 1,5 + toi muon)
-        LOG.info("✅ [KLINE V9 {}] Chốt nến phút {} thành công. Total: {} symbols (ws_final={} ws_flush_1s5={} rest_som={} rest_loi={} thieu_ws={})",
-                MODE, Utils.normalizeDateYYYYMMDDHHmm(m), wsHave + nClosed, wsHave, wsCount, nClosed, nFail, ws ? need.size() : 0);
+        LOG.info("✅ [KLINE V9 {}] Chốt nến phút {} thành công. Total: {} symbols (ws_final={} ws_flush_1s5={} rest_som={} rest_loi={} thieu_ws={} vd_thieu_ws={})",
+                MODE, Utils.normalizeDateYYYYMMDDHHmm(m), wsHave + nClosed, wsHave, wsCount, nClosed, nFail, ws ? need.size() : 0,
+                ws ? need.subList(0, Math.min(10, need.size())) : "[]");
         return need.size();
     }
 

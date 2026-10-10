@@ -101,6 +101,8 @@ public final class S1RankerLive {
     private OrtSession session;
     private String inputName;
     private long lastHourLoaded = 0L;
+    /** [KFIX-B] gio da doc lai close (key t-1m) 1 lan sau khi nap — sua close doc luc nen chua chot. */
+    private long lastHourRechecked = 0L;
     private boolean broken = false;
 
     private S1RankerLive() {
@@ -216,9 +218,35 @@ public final class S1RankerLive {
         }
     }
 
+    /** [KFIX-B] Doc lai close cua gio t (nen 1m open_time t-1m) va ghi de hist neu khac. Tra so coin bi sua. */
+    int recheckHour(long t) {
+        Map<String, KlineObjectOptimized> m = DataManagerAerospikeFloatSim.getExistingTickersMap(
+                new Key(NS_242, SET_TICKER, minuteKey(t - MIN)));
+        int fixed = 0;
+        for (Map.Entry<String, KlineObjectOptimized> e : m.entrySet()) {
+            String sym = e.getKey().endsWith("USDT") ? e.getKey() : e.getKey() + "USDT";
+            float pc = e.getValue().getPriceClose();
+            if (pc <= 0f) continue;
+            TreeMap<Long, Double> h = hist.computeIfAbsent(sym, k -> new TreeMap<>());
+            Double old = h.get(t);
+            if (old == null || old.doubleValue() != (double) pc) {
+                h.put(t, (double) pc);
+                fixed++;
+            }
+        }
+        com.binance.chuyennd.aerospike.LiveKlineAudit.countS1Rewrite(fixed);
+        LOG.info("[LIVE-KLINE] S1 doc lai close gio {}: {} coin, sua {}", t, m.size(), fixed);
+        return fixed;
+    }
+
     /** Nap cac moc gio con thieu (warm-up lan dau; sau do moi gio 1 ban ghi). */
     private void refresh(Collection<String> universe, long lastClosedHour) {
         boolean firstWarmup = (lastHourLoaded == 0L);
+        if (!firstWarmup && lastHourRechecked != lastHourLoaded
+                && System.currentTimeMillis() >= lastHourLoaded + 2 * MIN) {
+            lastHourRechecked = lastHourLoaded;
+            recheckHour(lastHourLoaded);
+        }
         long from = firstWarmup
                 ? lastClosedHour - (long) (HIST_HOURS - 1) * H
                 : lastHourLoaded + H;
