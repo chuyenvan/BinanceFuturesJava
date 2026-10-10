@@ -97,6 +97,21 @@ Phân rã: beta (C2) -10 974 · thời điểm (C1−C2) 46 239 · chọn coin (
 leg0/seed [220, 265, 270, 268, 256, 241, 245, 243]; bỏ {'nosym': 0, 'noprice': 0}; nguồn ứng viên {'top24': 4053, 'universe': 1}; thoát proxy coin thật {'trail': 1723, 'time': 258, 'mark': 27}. ΣPnL_S sim thật (có DCA) ['10 675', '10 821', '14 018', '8 359', '8 849', '8 528', '10 670', '9 912'].
 Hiệu chuẩn proxy 2026 (leg0 không-DCA k24-s): n 1955, pearson 0,988, lệch TB -0,31 pp, |lệch| p50 0,00 pp.
 
+### A5 — độ nhạy phí in-sim (penalty 2,67%)
+
+| seed | ΣPnL_S @2,67% | @1,675% | phí gốc | n @2,67% | ROI realized % @2,67% |
+|---|---|---|---|---|---|
+| 42 | 8 814 | 10 675 | 15 081 | 221 | 9,87 |
+| 7 | 7 987 | 10 821 | 15 482 | 270 | 9,66 |
+| 13 | 11 509 | 14 018 | 19 224 | 271 | 12,04 |
+| 21 | 6 508 | 8 359 | 12 501 | 275 | 7,58 |
+| 99 | 7 149 | 8 849 | 11 064 | 262 | 7,96 |
+| 123 | 6 745 | 8 528 | 12 275 | 241 | 7,82 |
+| 777 | 8 369 | 10 670 | 15 542 | 248 | 9,22 |
+| 2024 | 7 488 | 9 912 | 14 346 | 244 | 8,58 |
+
+@2,67%: mean 8 071 [6 508..11 509], 8/8 seed > 0; Δ vs 1,675% mean -2 158; thiếu [].
+
 ### A6 — bối cảnh thị trường (Vision 1h; 2026H1 vs 8 nửa năm DEV 2022H1–2025H2)
 
 | chuỗi | chỉ số | 2026H1 | DEV mean [min..max] | hạng (giảm dần) | mật độ /30 ngày 2026 vs DEV |
@@ -138,5 +153,16 @@ Thành phần/giờ EW50: {"mean": 49.9, "min": 0.0, "max": 50.0, "n_pos": 39407
 - Thời điểm (C1 − C2 = +46,2k) là nguồn chính: mua top-24 đúng các phút gate cho vào (sau sập) lãi, kể cả coin ngẫu nhiên; mua phút ngẫu nhiên lỗ (beta −11,0k trong thị trường −40%).
 - Proxy chỉ leg0, không DCA, không giới hạn vốn/slot ⇒ S_real proxy (mean 6,4k/seed) ≠ ΣPnL_S sim (10,2k/seed); so sánh hợp lệ chỉ giữa S_real và đối chứng (cùng proxy). Hiệu chuẩn 2026: pearson 0,988, lệch TB −0,31pp.
 
-### A5, A7
-Đang chờ 8 kernel A5 (aud26-k24-p267-s*); A7 viết sau khi có A5.
+### Đọc A2 — sự kiện
+- Top-5 ngày lãi (theo `end`) gần như trùng ở cả 8 seed: 01-19, 06-06, 06-04, 02-01 (8/8 seed) + 06-25 / 06-05. Bỏ top-5 ngày ⇒ ΣPnL_S k24 còn 601 (6/8 > 0): ~94% lãi holdout đến từ 4–6 ngày sập.
+- H-A (K24 ≥ B0) mong manh: bỏ top-3 ngày ⇒ Δ −633 (1/8 seed > 0); bỏ T1 ⇒ Δ +103 (2/8). Lợi thế K24 nằm ở cùng vài ngày sự kiện.
+
+### A7 — kết luận (áp luật khai trước)
+- (a) EDGE vượt đối chứng: p(C1) = 0,003, p(C2) = 0,001 < 0,025 ⇒ **ĐẠT theo luật**. Phần vững là THỜI ĐIỂM (C2: 6/8 seed p < 0,025; C1 − C2 = +46,2k). Chọn coin (+15,7k, 31% S_real) có điểm ước lượng dương nhưng p từng seed 0/8 < 0,025 ⇒ bằng chứng yếu (p gộp lạc quan, xem trên).
+- (b) PHỤ THUỘC SỰ KIỆN theo luật: bỏ T6 ⇒ mean 3 884, 8/8 > 0; bỏ top-3 ngày ⇒ mean 3 539 > 0 ⇒ **KHÔNG kích hoạt**. Nhưng mô tả: lãi tập trung ở 4–6 ngày sập (bỏ top-5 ⇒ 601).
+- (c) BETA: mean C2 = −10 974 < 0 ⇒ **KHÔNG**. Thị trường 2026H1 giảm (EW50 −40,5%, BTC −33,3%, ETH −47,2%) mà chiến lược long vẫn dương; mật độ đợt sập toàn thị trường thấp nhất 9 nửa năm (EW50 1,33 vs DEV 3,40 /30 ngày).
+- A3: P(ROI ≤ 0) gộp 0,28% (block 10) / 0,52% (block 5); CI95 ROI k24 1,7…17,5% — cửa sổ dương không phải do nhiễu ngày (nhưng bootstrap ngày không phá được cấu trúc "vài ngày sự kiện" nếu sự kiện thưa là bản chất).
+- A5 @2,67%: ΣPnL_S mean 8 071 [6 508..11 509], 8/8 seed > 0 (Δ vs 1,675% -2 158; ROI realized mean 9,09% vs 9,78% @1,675%: phần lớn chênh ΣPnL là do vốn đầu 2026 thấp hơn vì phạt từ 2021).
+- A1: khớp giá vào 85,5% < 99% ⇒ chặn mức CAO (dù tác động PnL bậc 1 ≈ 0 và lệch nghiêng bảo thủ).
+- **Mức tin cậy theo luật: TRUNG BÌNH** — (a) đạt, không (b), không (c), A3 đạt, A5 đạt; A1 trượt ngưỡng 99%.
+- Trả lời câu hỏi: holdout k24 dương chủ yếu nhờ **(a) giá trị thời điểm** (mua top-24 ngay sau sập) vượt đối chứng, **không phải (c) beta** (beta âm). Thành phần **(b)** có thật ở dạng tập trung: ~4–6 ngày sập tạo gần hết lãi; kỳ vọng 6 tháng tới phụ thuộc số sự kiện sập, phương sai lớn. Lợi thế K24 so với B0 không vững trước phép bỏ top-3 ngày.
