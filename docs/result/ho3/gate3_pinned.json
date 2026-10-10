@@ -1,0 +1,127 @@
+{
+ "prereg": "ADDENDUM-4 \u00a74a 62c0cd67",
+ "mode": "pinned",
+ "feat_s1": {
+  "G_B4a": {
+   "dev_ts_max": "2026-01-01 00:00:00",
+   "rows_dev": 1246898,
+   "rows_new": 1246898,
+   "rows_only_one": 0,
+   "cells": 11222082,
+   "bad_cells": 0,
+   "bad_frac": 0.0,
+   "per_feat": {
+    "vol_7d": 0,
+    "dd_7d": 0,
+    "rk_dd_7d": 0,
+    "hrs_since_high_7d": 0,
+    "ret_3d": 0,
+    "rk_ret_3d": 0,
+    "ret_14d": 0,
+    "ls_global": 0,
+    "rk_oi_delta24h": 0
+   },
+   "pass": true
+  },
+  "pool_rows": 5870333,
+  "s1_rows": 5870333,
+  "feat_cov": 0.9988837089820969,
+  "pred": "/home/ubuntu/claude_master/1003/ho3b/g3p/pred_s1.parquet",
+  "pred_sha256": "0d625d7bb0a111fb698b6d295f87bd1dc5e7f2c4c1f917ae70714c65fd400d6a"
+ },
+ "net015": {
+  "chunk": {
+   "patterns": [
+    "/home/ubuntu/ds_feat15m/features_20251001*",
+    "/home/ubuntu/ds_feat15m/features_2026*"
+   ],
+   "lo": 1767200400000,
+   "hi": 1782838800000,
+   "n_tool1_in": 9478905,
+   "n_merged": 9478905,
+   "n_oi_nan_rows": 90,
+   "ts_min": 1767200400000,
+   "ts_max": 1782837900000
+  },
+  "20260101": {
+   "n": 4587093,
+   "nan": 0,
+   "sha256": "8df740934b840aeae0f22e13c06b07502ae60a11cdc4c26e8ef95a3551cd9d38"
+  },
+  "20260401": {
+   "n": 4891812,
+   "nan": 0,
+   "sha256": "406e527fc2663ed2167a76dfcdb1c99df2bc518e9b5373475d4f5409075383fb"
+  }
+ },
+ "map": {
+  "map_tail": "MAP_OK"
+ },
+ "compare": {
+  "net015": {
+   "n": 9478905,
+   "n_ho26": 9478905,
+   "keys_equal": true,
+   "spearman": 1.0,
+   "frac_le_1e3": 1.0,
+   "bit_equal_frac": 1.0,
+   "by_month": {
+    "2026-01": {
+     "n": 1560862,
+     "frac_le_1e3": 1.0,
+     "spearman": 1.0
+    },
+    "2026-02": {
+     "n": 1430583,
+     "frac_le_1e3": 1.0,
+     "spearman": 1.0
+    },
+    "2026-03": {
+     "n": 1595648,
+     "frac_le_1e3": 1.0,
+     "spearman": 0.9999999999999999
+    },
+    "2026-04": {
+     "n": 1556116,
+     "frac_le_1e3": 1.0,
+     "spearman": 0.9999999999999999
+    },
+    "2026-05": {
+     "n": 1632513,
+     "frac_le_1e3": 1.0,
+     "spearman": 0.9999999999999999
+    },
+    "2026-06": {
+     "n": 1703183,
+     "frac_le_1e3": 1.0,
+     "spearman": 1.0
+    }
+   }
+  },
+  "bins": {
+   "n": 9478905,
+   "n_ho26": 9478905,
+   "keys_equal": true,
+   "cell_eq_frac": 1.0,
+   "byte_equal": {
+    "20260101": true,
+    "20260401": true
+   },
+   "by_month": {
+    "2026-01": 1.0,
+    "2026-02": 1.0,
+    "2026-03": 1.0,
+    "2026-04": 1.0,
+    "2026-05": 1.0,
+    "2026-06": 1.0
+   }
+  },
+  "PASS": true
+ },
+ "cleaned_sha256": {
+  "net015/predict_wf_20260401.bin": "406e527fc2663ed2167a76dfcdb1c99df2bc518e9b5373475d4f5409075383fb",
+  "net015/predict_wf_20260101.bin": "8df740934b840aeae0f22e13c06b07502ae60a11cdc4c26e8ef95a3551cd9d38",
+  "bins/predict_wf_20260401.bin": "d209386200fec420c16de649f89debdda52bced501819fe138941e253a84e662",
+  "bins/predict_wf_20260101.bin": "5b80e088b24c480433a601ee9c6ed93c841d26f1eb381b31d3916bd7eb2c62e6"
+ }
+}

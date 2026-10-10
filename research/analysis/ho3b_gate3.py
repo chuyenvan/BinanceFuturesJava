@@ -64,7 +64,7 @@ def comb_hourly_file(path):
     lo, hi = FW.T_START - 3 * H, FW.T_END + 1
     a = read_oi_comb(lo, hi)
     a = a[a["ts"].astype(np.int64) % H == 0]
-    a.tofile(path)
+    a.astype(ODT).tofile(path)   # FIX: np.concatenate tra ve native-endian; file OI la big-endian
     log.info("OI gio ghep -> %s %d dong", path, len(a))
 
 
