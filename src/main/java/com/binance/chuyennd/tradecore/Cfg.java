@@ -50,7 +50,10 @@ public final class Cfg {
             "SIM_END_DATE", "HOME", "APP_PID_DIR", "APP_MAIN_CLASS", "GEN_THREADS", "NO_VALIDATE",
             "CONFIG_STRICT", "SHADOW_NO_PUSH", "OI_STALE_HALT", "OI_STALE_HALT_MS",
             // [FIX_NO_WRITE_242 2026-10-03] cong ghi Aerospike 242 (Live242WriteGuard) — ha tang, khong phai tham so GD
-            "LIVE_WRITE_242_ENABLED", "LIVE_IS_SHADOW_HOST");
+            "LIVE_WRITE_242_ENABLED", "LIVE_IS_SHADOW_HOST",
+            // [KFIX 2026-10-10] ingest kline 1m (TickerIngestor2AerospikeNew/KlineWsClient) — ha tang, khong phai tham so GD
+            "KLINE_INGEST_MODE", "KLINE_WS_FLUSH_MS", "KLINE_EARLY_REST_SEC", "KLINE_SETTLE_SEC", "KLINE_SETTLE_MIN_AGE_SEC",
+            "KLINE_SETTLE_LIMIT", "KLINE_REST_RETRY", "KLINE_WS_STREAMS_PER_CONN", "KLINE_STATS_MIN", "KLINE_WS_BASE");
 
     /** Tien to cua bien env DUOC COI LA THAM SO GIAO DICH — cam dat khi da co profile. */
     private static final List<String> TRADING_PREFIXES = Arrays.asList(

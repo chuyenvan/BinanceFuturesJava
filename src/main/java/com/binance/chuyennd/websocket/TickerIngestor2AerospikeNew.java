@@ -36,17 +36,63 @@ public class TickerIngestor2AerospikeNew {
     // lồng trong restFetchService(15) → đỉnh 15×30=450 luồng). Pool sống suốt vòng đời ingest (P1 long-running).
     private final java.util.concurrent.ForkJoinPool klineFetchPool = new java.util.concurrent.ForkJoinPool(30);
 
+    // ===== [KFIX 2026-10-10] chot nen 1m = ban CUOI cua san (docs/runbooks/KLINE_FIX_242.md, audit KLINE_242_DIVERGENCE) =====
+    // KLINE_INGEST_MODE: ws_settle (mac dinh: WS x=true + REST som cho symbol thieu + REST settle ghi de neu khac)
+    //                    rest_settle (khong WS: REST som giay 2 cho moi symbol + REST settle)
+    //                    legacy (V8.1 y nguyen — ROLLBACK khong can doi jar)
+    static final String MODE_LEGACY = "legacy", MODE_REST = "rest_settle", MODE_WS = "ws_settle";
+    static final String MODE = normMode(com.binance.chuyennd.tradecore.Cfg.getOr("KLINE_INGEST_MODE", MODE_WS));
+    static final long WS_FLUSH_MS = cfgLong("KLINE_WS_FLUSH_MS", 1500);
+    static final long EARLY_REST_SEC = cfgLong("KLINE_EARLY_REST_SEC", 2);
+    static final long SETTLE_SEC = cfgLong("KLINE_SETTLE_SEC", 30);
+    static final long SETTLE_MIN_AGE_SEC = cfgLong("KLINE_SETTLE_MIN_AGE_SEC", 20);
+    static final int SETTLE_LIMIT = (int) cfgLong("KLINE_SETTLE_LIMIT", 3);
+    static final int REST_RETRY = (int) cfgLong("KLINE_REST_RETRY", 2);
+    static final int WS_STREAMS_PER_CONN = (int) cfgLong("KLINE_WS_STREAMS_PER_CONN", 150);
+    static final long STATS_MIN = cfgLong("KLINE_STATS_MIN", 10);
+    private final ExecutorService klineRestPool = Executors.newFixedThreadPool(30);
+    private final KlineIngestCore core = new KlineIngestCore(new AerospikeMinuteStore(), this::restKlines, klineRestPool,
+            REST_RETRY, 300L, SETTLE_MIN_AGE_SEC * 1000L, 15_000L);
+    private volatile KlineWsClient wsClient;
+    private volatile int lastRestCalls = 0;
+
+    /** Store prod: doc record phut (key yyyyMMdd-HHmm, cung dinh dang writeMinuteBatch) + ghi merge theo symbol. */
+    static final class AerospikeMinuteStore implements KlineIngestCore.MinuteStore {
+        @Override
+        public Map<String, KlineObjectOptimized> read(long minute) {
+            String k = new java.text.SimpleDateFormat("yyyyMMdd-HHmm").format(new Date(minute));
+            return DataManagerAerospikeFloatSim.getExistingTickersMap(new com.aerospike.client.Key(
+                    Configs.AEROSPIKE_NAMESPACE, DataManagerAerospikeFloatSim.AEROSPIKE_SET_NAME_TICKER, k));
+        }
+
+        @Override
+        public void write(long minute, Map<String, KlineObjectOptimized> candles) {
+            DataManagerAerospikeFloatSim.writeMinuteBatch(minute, candles);
+        }
+    }
+
     public void start() {
-        LOG.info("🚀 TickerIngestor V8.1 (HYBRID REALTIME - KHẮC PHỤC TRỄ 1 PHÚT) Started!");
+        LOG.info("🚀 TickerIngestor V8.1 (HYBRID REALTIME - KHẮC PHỤC TRỄ 1 PHÚT) Started! [KLINE-INGEST] mode={} "
+                + "wsFlushMs={} earlyRestSec={} settleSec={} settleMinAgeSec={} settleLimit={} retry={} streamsPerConn={}",
+                MODE, WS_FLUSH_MS, EARLY_REST_SEC, SETTLE_SEC, SETTLE_MIN_AGE_SEC, SETTLE_LIMIT, REST_RETRY, WS_STREAMS_PER_CONN);
 
         List<String> symbols = collectSymbolsFromRedis();
         globalSubscribedSymbols.addAll(symbols);
 
         startDataRepair(30 * 60);
-        startIngestorLoops();
+        if (MODE_LEGACY.equals(MODE)) {
+            startIngestorLoops(true);          // V8.1 y nguyen (rollback: KLINE_INGEST_MODE=legacy)
+        } else {
+            startIngestorLoops(false);         // chi Rest-Price-Loop (nan nen phut dang mo)
+            startFinalizerLoop();
+            if (MODE_WS.equals(MODE)) {
+                wsClient = new KlineWsClient(core, this::onOpenUpdate, WS_STREAMS_PER_CONN, 75_000L);
+                wsClient.start(() -> new ArrayList<>(globalSubscribedSymbols));
+            }
+        }
     }
 
-    private void startIngestorLoops() {
+    private void startIngestorLoops(boolean legacyKlineLoop) {
         // --- LUỒNG 1: LẤY GIÁ & "HOẠT HÌNH" NẾN HIỆN TẠI (3s/lần) ---
         new Thread(() -> {
             Thread.currentThread().setName("Rest-Price-Loop");
@@ -120,7 +166,7 @@ public class TickerIngestor2AerospikeNew {
 
                         // 🔥 ĐIỂM SỬA QUAN TRỌNG: Ghi liên tục NẾN HIỆN TẠI xuống DB để Bot không bị trễ
                         if (!currentMinuteCandles.isEmpty()) {
-                            DataManagerAerospikeFloatSim.writeMinuteBatch(curMin, new HashMap<>(currentMinuteCandles));
+                            writeOpenMinute(curMin, new HashMap<>(currentMinuteCandles));
                         }
 
                         // Repair mã mới
@@ -143,8 +189,8 @@ public class TickerIngestor2AerospikeNew {
             }
         }).start();
 
-        // --- LUỒNG 2: CHỐT NẾN CHUẨN (ĐÚNG 1 LẦN KHI SANG PHÚT MỚI) ---
-        new Thread(() -> {
+        // --- LUỒNG 2: CHỐT NẾN CHUẨN (ĐÚNG 1 LẦN KHI SANG PHÚT MỚI) --- [KFIX] chi mode legacy
+        if (legacyKlineLoop) new Thread(() -> {
             Thread.currentThread().setName("Rest-Kline-Loop");
             long lastProcessedMinute = 0;
 
@@ -185,6 +231,149 @@ public class TickerIngestor2AerospikeNew {
                 }
             }
         }).start();
+    }
+
+    // ============================ [KFIX 2026-10-10] ============================
+    static String normMode(String m) {
+        String x = m == null ? "" : m.trim().toLowerCase(java.util.Locale.ROOT);
+        if (MODE_LEGACY.equals(x) || MODE_REST.equals(x) || MODE_WS.equals(x)) return x;
+        LOG.error("[KLINE-INGEST] KLINE_INGEST_MODE='{}' khong hop le -> dung {}", m, MODE_WS);
+        return MODE_WS;
+    }
+
+    static long cfgLong(String key, long def) {
+        String v = com.binance.chuyennd.tradecore.Cfg.getOr(key, null);
+        if (v == null) return def;
+        try {
+            return Long.parseLong(v.trim());
+        } catch (NumberFormatException e) {
+            LOG.error("[KLINE-INGEST] {}='{}' khong phai so nguyen -> mac dinh {}", key, v, def);
+            return def;
+        }
+    }
+
+    /** Ghi nen phut DANG MO (nan). Mode moi: qua core (CHAN neu phut da chot). Legacy: ghi thang nhu V8.1. */
+    private void writeOpenMinute(long minute, Map<String, KlineObjectOptimized> candles) {
+        if (MODE_LEGACY.equals(MODE)) DataManagerAerospikeFloatSim.writeMinuteBatch(minute, candles);
+        else core.writeOpenMinute(minute, candles);
+    }
+
+    /** WS x=false: nen phut dang mo chinh xac (O/H/L/C/Q dang chay) lam goc cho bo nan. */
+    private void onOpenUpdate(String fullSym, long openTime, KlineObjectOptimized k) {
+        if (openTime != Utils.getMinute(System.currentTimeMillis())) return;
+        timeBuffer.computeIfAbsent(openTime, m -> new ConcurrentHashMap<>()).put(KlineIngestCore.shortSym(fullSym), k);
+    }
+
+    /** REST klines 1m moi nhat; NEM exception khi ban / body loi (core retry + dem failed + log). */
+    private List<KlineIngestCore.Bar> restKlines(String symbol, int limit) throws Exception {
+        if (BinanceRestGuard.isBanned()) throw new IllegalStateException("banned (BinanceRestGuard)");
+        String url = "https://fapi.binance.com/fapi/v1/klines?symbol=" + symbol + "&interval=1m&limit=" + limit;
+        String response = HttpRequest.getContentFromUrl(url, 3000);
+        BinanceRestGuard.reportBan(response);
+        if (StringUtils.isBlank(response) || !response.trim().startsWith("[")) {
+            throw new IllegalStateException("body khong phai mang: " + StringUtils.abbreviate(String.valueOf(response), 120));
+        }
+        return parseRestKlines(response);
+    }
+
+    /** Parse body klines (mang 12 cot) -> Bar float32 (Float.parseFloat — cung cach parse WS). */
+    static List<KlineIngestCore.Bar> parseRestKlines(String body) {
+        JSONArray arr = new JSONArray(body);
+        List<KlineIngestCore.Bar> out = new ArrayList<>(arr.length());
+        for (int i = 0; i < arr.length(); i++) {
+            JSONArray k = arr.getJSONArray(i);
+            out.add(new KlineIngestCore.Bar(k.getLong(0), KlineObjectOptimized.newBuilder()
+                    .setPriceOpen(Float.parseFloat(k.getString(1))).setMaxPrice(Float.parseFloat(k.getString(2)))
+                    .setMinPrice(Float.parseFloat(k.getString(3))).setPriceClose(Float.parseFloat(k.getString(4)))
+                    .setTotalUsdt(Float.parseFloat(k.getString(7))).build()));
+        }
+        return out;
+    }
+
+    /**
+     * Luong "Kline-Finalizer" (100 ms/nhip), M = phut vua dong:
+     * (1) ws: giay >= WS_FLUSH_MS ghi WS final cua M; moi nhip ghi WS final toi muon;
+     * (2) giay >= EARLY_REST_SEC: REST som (limit=2) cho symbol THIEU WS final (rest_settle: moi symbol) — ghi M kip truoc
+     *     khi live doc (giay 6), seed nen phut dang mo; (3) giay >= SETTLE_SEC: REST limit=SETTLE_LIMIT, ghi de nen da dong
+     *     >= SETTLE_MIN_AGE_SEC neu khac store (M va M-1); (4) [KLINE-INGEST] counter moi STATS_MIN phut.
+     */
+    private void startFinalizerLoop() {
+        Thread t = new Thread(() -> {
+            long lastWsFlush = 0, lastEarly = 0, lastSettle = 0, lastStats = 0;
+            int wsCount = 0, earlyCalls = 0;
+            while (true) {
+                try {
+                    long now = System.currentTimeMillis();
+                    long curMin = Utils.getMinute(now);
+                    long m = curMin - Utils.TIME_MINUTE;
+                    long inMin = now - curMin;
+                    boolean ws = MODE_WS.equals(MODE);
+                    if (ws) {
+                        if (m > lastWsFlush && inMin >= WS_FLUSH_MS) {
+                            wsCount = core.flushWsFinals(m);
+                            lastWsFlush = m;
+                        }
+                        core.flushLateFinals();
+                    }
+                    if (m > lastEarly && inMin >= EARLY_REST_SEC * 1000L && (!ws || m <= lastWsFlush)) {
+                        lastEarly = m;
+                        if (inMin <= 50_000L) earlyCalls = earlyPass(m, curMin, ws, wsCount);
+                    }
+                    if (m > lastSettle && inMin >= SETTLE_SEC * 1000L) {
+                        lastSettle = m;
+                        if (!BinanceRestGuard.isBanned()) {
+                            long t0 = System.currentTimeMillis();
+                            KlineIngestCore.SettleResult r = core.settle(System.currentTimeMillis(),
+                                    new ArrayList<>(globalSubscribedSymbols), SETTLE_LIMIT);
+                            lastRestCalls = earlyCalls + r.fetched + r.failed;
+                            if (r.rewrittenDiff > 0 || r.failed > 0 || r.filledMissing > 0) {
+                                LOG.info("[KLINE-INGEST] settle phut {}: fetched={} failed={} rewritten_diff={} filled_missing={} same={} diff_by_minute={} ({} ms)",
+                                        Utils.normalizeDateYYYYMMDDHHmm(m), r.fetched, r.failed, r.rewrittenDiff, r.filledMissing,
+                                        r.same, r.diffByMinute.values(), System.currentTimeMillis() - t0);
+                            }
+                        }
+                    }
+                    if (STATS_MIN > 0 && (curMin / Utils.TIME_MINUTE) % STATS_MIN == 0 && curMin > lastStats && inMin >= 45_000L) {
+                        lastStats = curMin;
+                        KlineWsClient w = wsClient;
+                        LOG.info("[KLINE-INGEST] mode={} {} | ws_conn={}/{} ws_reconnects={} symbols={} rest_klines_calls_last_min={} (weight ~ +60 price/funding, limit 2400/phut)",
+                                MODE, core.statsLine(), w == null ? 0 : w.aliveConnections(), w == null ? 0 : w.connections(),
+                                w == null ? 0 : w.reconnects(), globalSubscribedSymbols.size(), lastRestCalls);
+                    }
+                    core.gc(curMin - 10 * Utils.TIME_MINUTE);
+                    for (Long k : new ArrayList<>(timeBuffer.keySet())) {
+                        if (k < curMin - Utils.TIME_MINUTE) timeBuffer.remove(k);
+                    }
+                    Thread.sleep(100);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return;
+                } catch (Exception e) {
+                    LOG.error("[KLINE-INGEST] Kline-Finalizer loi: {}", e.toString(), e);
+                    Utils.sleep(1000L);
+                }
+            }
+        }, "Kline-Finalizer");
+        t.start();
+    }
+
+    /** REST som cho phut M; log 1 dong/phut (giu cum 'Chốt nến phút' cho health_242.sh). Tra so call REST. */
+    private int earlyPass(long m, long curMin, boolean ws, int wsCount) {
+        List<String> syms = new ArrayList<>(globalSubscribedSymbols);
+        List<String> need = ws ? core.missingFinals(m, syms) : syms;
+        int nClosed = 0, nFail = 0;
+        if (!need.isEmpty() && !BinanceRestGuard.isBanned()) {
+            KlineIngestCore.EarlyResult r = core.earlyRest(m, need);
+            nClosed = r.closed.size();
+            nFail = r.failed.size();
+            if (!r.open.isEmpty()) {
+                ConcurrentHashMap<String, KlineObjectOptimized> cur = timeBuffer.computeIfAbsent(curMin, k -> new ConcurrentHashMap<>());
+                cur.putAll(r.open);
+            }
+        }
+        LOG.info("✅ [KLINE V9 {}] Chốt nến phút {} thành công. Total: {} symbols (ws_final={} rest_som={} rest_loi={} thieu_ws={})",
+                MODE, Utils.normalizeDateYYYYMMDDHHmm(m), wsCount + nClosed, wsCount, nClosed, nFail, ws ? need.size() : 0);
+        return need.size();
     }
 
     //    private void fetchKlinesForBatch(List<String> symbols) {
