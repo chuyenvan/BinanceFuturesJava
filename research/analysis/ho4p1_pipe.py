@@ -16,6 +16,7 @@ ST = W + "/pipe_state.json"
 PY = sys.executable
 CH_DET = lambda e, o: ["push", "ho4p1-chdet-%s" % e, "det", json.dumps({"det_src": "ho4p1-det-%s" % e, "oi_src": "ho4p1-oi-%s" % o})]
 Y26 = {"q_src": {"q1": "ho4p1-x26-q1", "q2": "ho4p1-x26-q2", "q3": "ho4p1-x26-q3"}, "oi_src": "ho4p1-oi-a"}
+Y26R = {"q_src": {"q1": "ho4p1-x26-q1r", "q2": "ho4p1-x26-q2", "q3": "ho4p1-x26-q3"}, "oi_src": "ho4p1-oi-a"}  # S5
 # (slug, lenh push, phu thuoc COMPLETE, cong can PASS)
 STEPS = [
     ("ho4p1-det-a", None, [], []),
@@ -31,14 +32,15 @@ STEPS = [
     ("ho4p1-tk26", ["stage", "tk26"], ["ho4p1-x26-q1", "ho4p1-x26-q2", "ho4p1-x26-q3"], ["exp"]),
     ("ho4p1-chain-y26", ["chainops", "push", "ho4p1-chain-y26", "y26", json.dumps(Y26)],
      ["ho4p1-x26-q1", "ho4p1-x26-q2", "ho4p1-x26-q3", "ho4p1-oi-a"], ["exp", "oi", "chain"]),
+    ("ho4p1-chain-y26r", ["chainops", "push", "ho4p1-chain-y26r", "y26", json.dumps(Y26R)],
+     ["ho4p1-x26-q1r", "ho4p1-x26-q2", "ho4p1-x26-q3", "ho4p1-oi-a"], ["exp", "oi", "chain"]),
     ("ho4p1-tkdev", ["simdev", "tkdev"], ["ho4p1-det-a"], []),
     ("ho4p1-devcmp", ["chainops", "push", "ho4p1-devcmp", "devcmp", json.dumps({"det_src": "ho4p1-det-a", "chain_src": "ho4p1-chdet-a"})],
      ["ho4p1-det-a", "ho4p1-chdet-a"], []),
-    ("sim-ho4p1-dev-k24-s-s42", ["simdev", "submit", "ho4p1-dev-k24-s-s42"], ["ho4p1-tkdev", "ho4p1-devcmp", "ho4p1-chdet-a"], []),
-    ("sim-ho4p1-dev-b0-s-s42", ["simdev", "submit", "ho4p1-dev-b0-s-s42"], ["ho4p1-tkdev", "ho4p1-devcmp", "ho4p1-chdet-a"], []),
 ]
 GATES = {"exp": ("ho4p1-det-a", "ho4p1-det-b", "exp"), "oi": ("ho4p1-oi-a", "ho4p1-oi-b", "oi"),
-         "chain": ("ho4p1-chdet-a", "ho4p1-chdet-b", "chain")}
+         "chain": ("ho4p1-chdet-a", "ho4p1-chdet-b", "chain"),
+         "s5q1": ("ho4p1-x26-q1", "ho4p1-x26-q1r", "exp"), "s5chain": ("ho4p1-chain-y26", "ho4p1-chain-y26r", "chain")}
 SCRIPT = {"ops": A + "/ho4p1_ops.py", "chainops": A + "/ho4p1_chainops.py", "stage": A + "/ho4p1_stage.py", "simdev": A + "/ho4p1_simdev.py"}
 TERM = {"COMPLETE", "ERROR", "CANCELACKNOWLEDGED", "CANCELLED"}
 
@@ -69,6 +71,8 @@ def active(a):
 def load():
     st = json.load(open(ST)) if os.path.exists(ST) else {}
     st.setdefault("gates", {g: None for g in GATES})
+    for g in GATES:
+        st["gates"].setdefault(g, None)
     for slug, cmd, _, _ in STEPS:
         st.setdefault(slug, {"state": "pushed" if cmd is None else "todo", "pushes": 0 if cmd else 1})
     return st
@@ -154,7 +158,8 @@ def main():
                 act = active(a)
             except Exception as e:  # noqa: BLE001
                 log.warning("active loi %s", e); act = ["?", "?"]
-            if len(act) < 2:
+            own = {"chuyendinh/" + x for x in spec if st[x]["state"] == "pushed"}
+            if len(set(act) | own) < 2:
                 slug = todo[0]
                 ok = push(spec[slug][0])
                 if ok is None:

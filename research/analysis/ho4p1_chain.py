@@ -66,6 +66,10 @@ H2.ONNX = CODE + "/g015x26_f15_cut20251001.onnx"
 S1.MAP = CODE + "/symbol_map_781.csv"
 assert G.OI_FILE == "/tmp/oi_comb.bin" and G.MAP_CSV == CODE + "/symbol_map_863.csv"
 V3 = json.load(open(CODE + "/v3full.json"))
+_m863 = pd.read_csv(CODE + "/symbol_map_863.csv")
+_cnt = _m863.groupby("symId").symbol.nunique()
+DUP_IDS = {int(i) for i in _cnt[_cnt > 1].index}   # §6.2a (ADDENDUM-6): id dung chung boi 2 symbol trong mapper -> loai
+RES["dup_ids"] = {int(i): sorted(_m863[_m863.symId == i].symbol) for i in sorted(DUP_IDS)}
 assert len(V3) == 33
 ODT = G.OI_DT
 DT = HN.DT
@@ -166,6 +170,9 @@ def rows_t1(sources, lo, hi):
         aa.append(x[(xt >= max(lo, a0)) & (xt < min(hi, a1))].copy())
         del x, xt
     a = np.concatenate(aa); del aa
+    dmask = np.isin(a["sym"].astype(np.int64), np.array(sorted(DUP_IDS), np.int64))
+    n_dup_rows = int(dmask.sum())
+    a = a[~dmask]                                   # §6.2a: symId mapper mo ho (2 symbol/1 id) -> loai
     k = a["ts"].astype(np.int64) * 10000 + a["sym"].astype(np.int64)
     assert len(np.unique(k)) == len(k), "trung khoa (ts,sym) Tool1"
     aoc = HN.read_oi(lo - G.OI_TOL, hi)
@@ -185,7 +192,7 @@ def rows_t1(sources, lo, hi):
     X[:, :40] = a["f"][mg["ridx"].to_numpy()]
     X[:, 40:] = mg[G.OI_NAMES].to_numpy(np.float32)
     ts, sym = mg["ts"].to_numpy(np.int64), mg["symId"].to_numpy(np.int32)
-    info = dict(n_tool1=int(len(a)), n_rows=int(len(mg)), oi_nan_rows=int(np.isnan(X[:, 40:]).all(axis=1).sum()),
+    info = dict(n_tool1=int(len(a)), n_rows=int(len(mg)), n_drop_dup_id_rows=n_dup_rows, oi_nan_rows=int(np.isnan(X[:, 40:]).all(axis=1).sum()),
                 ts_min=int(ts.min()), ts_max=int(ts.max()))
     del a, mg
     return X, ts, sym, info
@@ -409,7 +416,7 @@ def run_y26():
     nof = set()
     for q in QS:
         nof |= set(json.load(open(one("universe_excl.json", QS[q])))["no_funding_vision"])
-    ids = {int(s2i[s]) for s in nof if s in s2i}
+    ids = {int(s2i[s]) for s in nof if s in s2i} | DUP_IDS
     RES["steps"]["excl_no_funding"] = dict(symbols=sorted(nof), ids=sorted(ids))
     RES["steps"]["bins"] = {c: drop_syms(OUT + "/bins/predict_wf_%s.bin" % c, ids) for c in cuts}
     RES["secs"] = round(time.time() - t0)

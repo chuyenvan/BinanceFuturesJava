@@ -1,0 +1,98 @@
+{
+ "a": "ho4p1-x26-q1",
+ "b": "ho4p1-x26-q1r",
+ "kind": "exp",
+ "rc": [
+  [
+   "mkt",
+   0
+  ],
+  [
+   "gate",
+   0
+  ],
+  [
+   "t1",
+   0
+  ],
+  [
+   "lab",
+   0
+  ],
+  [
+   "mkt",
+   0
+  ],
+  [
+   "gate",
+   0
+  ],
+  [
+   "t1",
+   0
+  ],
+  [
+   "lab",
+   0
+  ]
+ ],
+ "ok": [
+  true,
+  true
+ ],
+ "n_files": [
+  137,
+  137
+ ],
+ "only_a": [],
+ "only_b": [],
+ "n_equal": 137,
+ "diff": [],
+ "groups": {
+  "CLOSES_1H_vision1m.bin": [
+   1,
+   1
+  ],
+  "funding_vision.pkl": [
+   1,
+   1
+  ],
+  "gate": [
+   1,
+   1
+  ],
+  "lab": [
+   3,
+   3
+  ],
+  "lifecycle.pkl": [
+   1,
+   1
+  ],
+  "market_rebuilt.bin": [
+   1,
+   1
+  ],
+  "t1": [
+   2,
+   2
+  ],
+  "ticker/*": [
+   124,
+   124
+  ],
+  "ticker_raw_md5.json": [
+   1,
+   1
+  ],
+  "universe_by_month.json": [
+   1,
+   1
+  ],
+  "universe_excl.json": [
+   1,
+   1
+  ]
+ },
+ "pass": true
+}

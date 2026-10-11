@@ -63,6 +63,8 @@ def build_queue():
         for c in ("b0", "k24"):
             q.append(("ho4-%s-b-s%d" % (c, s), 1, dict(CFGS[c]), s, "20261001", True))
             q.append(("ho4-%s-s-s%d" % (c, s), 1, dict(CFGS[c], SIM_CRASH_ENTRY_PENALTY=PEN), s, "20261001", True))
+    for tg in ("ho4p1-dev-k24-s-s42", "ho4p1-dev-b0-s-s42"):         # P3-DEV chi bao (ho4p1_simdev.py)
+        q.append((tg, 2, {}, 42, "20260101", False))
     return q
 
 
@@ -211,6 +213,19 @@ def parity_verdict(st):
     return res["pass_all"]
 
 
+def s5_status():
+    """ADDENDUM-6 §6.6: chay lai quy chua 2026-03 (q1 vs q1r MANIFEST) + chuoi (chain-y26 vs chain-y26r) md5 trung.
+    Doc cong tu pipe_state.json (ho4p1_pipe.py). True/False/None (chua co)."""
+    try:
+        g = json.load(open("/home/ubuntu/claude_master/1011/ho4p1/pipe_state.json"))["gates"]
+    except Exception:  # noqa: BLE001
+        return None
+    v = [g.get("s5q1"), g.get("s5chain")]
+    if any(x is False for x in v):
+        return False
+    return True if all(x is True for x in v) else None
+
+
 def running(ks):
     out = []
     for k in ks._api().kernels_list(mine=True, page_size=50):
@@ -224,6 +239,14 @@ def running(ks):
 
 
 def finish(ks, st, tag, ov, seed, unseal, kstatus):
+    if tag.startswith("ho4p1-dev-"):                 # P3-DEV: chi tai output, so sanh rieng (ho4p1_simdev.py compare)
+        try:
+            ks.fetch(tag)
+        except Exception as e:  # noqa: BLE001
+            log.warning("fetch %s loi %s", tag, str(e)[:200])
+        st[tag].update(state="PASS" if kstatus == "COMPLETE" else "FAIL", kstatus=kstatus)
+        tsv_row(tag, kstatus, None, None, "P3-DEV")
+        return
     try:
         ks.fetch(tag)
     except Exception as e:  # noqa: BLE001
@@ -278,7 +301,12 @@ def main():
                 mine_active += 1
         phase = st["_phase"]
         if phase == 0 and all(st[t]["state"] in ("PASS", "FAIL") for t in PARITY):
-            if parity_verdict(st):
+            s5 = s5_status()
+            if s5 is None and all(st[t]["state"] == "PASS" for t in PARITY):
+                log.info("C1/C2 xong, CHO S5 (q1r + chain-y26r md5) truoc khi mo pha 1")
+                time.sleep(POLL_S)
+                continue
+            if parity_verdict(st) and s5 is True:
                 st["_phase"] = 1
                 save_state(st)
                 log.info("PARITY PASS -> MO SEAL: pha 1 (32 kernel holdout)")
@@ -289,6 +317,11 @@ def main():
             break
         todo = [t for t, ph, *_ in queue if ph == max(phase, 0) and st[t]["state"] in ("todo", "retry")]
         if phase == 1 and not todo and mine_active == 0:
+            st["_phase"] = 2
+            save_state(st)
+            log.info("PHA 1 XONG -> pha 2 (2 sim DEV P3-DEV, chi bao)")
+            continue
+        if phase == 2 and not todo and mine_active == 0:
             break
         if todo and mine_active < MAX_PAR:
             try:
@@ -302,7 +335,11 @@ def main():
                 ph, ov, seed, end, u = spec[t]
                 assert (ph == 1) == u and (u is False or st["_phase"] == 1), "unseal chi o pha 1 sau parity PASS"
                 try:
-                    push(ks, t, ov, seed, end, u)
+                    if ph == 2:
+                        import ho4p1_simdev as SDV
+                        SDV.submit(t)
+                    else:
+                        push(ks, t, ov, seed, end, u)
                     st[t]["pushes"] += 1
                     st[t]["state"] = "pushed"
                     st[t]["pushed_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
