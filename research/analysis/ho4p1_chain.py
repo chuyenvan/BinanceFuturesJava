@@ -104,8 +104,11 @@ def build_oi(lo, cut, hi):
     t = r["ts"].astype(np.int64)
     b = r[(t >= cut) & (t < hi)]
     out = np.concatenate([a, b]).astype(ODT)
+    dm = np.isin(out["sym"].astype(np.int64), np.array(sorted(DUP_IDS), np.int64))
+    out = out[~dm]                                  # §6.2a: id mapper mo ho -> loai khoi OI ghep
     out.tofile(G.OI_FILE)
-    RES["steps"]["oi"] = dict(pin_rows=int(len(a)), rebuilt_rows=int(len(b)), lo=lo, cut=cut, hi=hi, md5=md5f(G.OI_FILE))
+    RES["steps"]["oi"] = dict(pin_rows=int(len(a)), rebuilt_rows=int(len(b)), drop_dup_id_rows=int(dm.sum()), lo=lo, cut=cut, hi=hi,
+                              md5=md5f(G.OI_FILE))
     log.info("OI ghep %s", RES["steps"]["oi"])
     del raw, r, a, b, out
 
@@ -243,6 +246,10 @@ def closes_merge(parts):
         t = c["ts"].astype(np.int64)
         out.append(c[(t >= a0) & (t < a1)])
     c = np.concatenate(out)
+    dm = np.isin(c["sym"].astype(np.int64), np.array(sorted(DUP_IDS), np.int64))
+    RES.setdefault("closes_drop_dup_id_rows", 0)
+    RES["closes_drop_dup_id_rows"] += int(dm.sum())
+    c = c[~dm]                                      # §6.2a: id mapper mo ho -> loai ca khoi CLOSES_1H/feat_v2
     k = c["ts"].astype(np.int64) * 10000 + c["sym"].astype(np.int64)
     assert len(np.unique(k)) == len(k)
     return c
