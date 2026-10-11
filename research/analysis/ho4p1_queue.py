@@ -238,6 +238,47 @@ def running(ks):
     return out
 
 
+DISK_MIN = 1 << 30                                   # giu dia >= 1G; duoi muc nay tam dung day kernel
+MARKET_MD5 = "0fcc44d839fd14f7ee661bc1a8bb9c01"
+CANON = "/home/ubuntu/kaggle_sim/out/ho4-b0-b-s42/wfo_ds_override/market.bin"   # ban chuan (MASTER da hardlink)
+
+
+def own_cap():
+    """So kernel toi da CUA QUEUE (file q/max_own, mac dinh MAX_PAR) — chua 1 slot cho kernel do khac (vd ho4p1-dupfx).
+    Kiem tai khoan <= MAX_PAR van giu nguyen."""
+    try:
+        return max(0, min(MAX_PAR, int(open(os.path.join(os.path.dirname(STATE), "max_own")).read().strip())))
+    except Exception:  # noqa: BLE001
+        return MAX_PAR
+
+
+def disk_free():
+    import shutil
+    return shutil.disk_usage("/").free
+
+
+def dedupe_market(tag):
+    """Sau PASS: thay wfo_ds_override/market.bin bang hardlink toi ban chuan, CHI khi md5 trung."""
+    p = OUT % tag + "wfo_ds_override/market.bin"
+    try:
+        if not os.path.exists(p) or not os.path.exists(CANON):
+            return
+        if os.stat(p).st_ino == os.stat(CANON).st_ino:
+            return
+        m = md5f(p)
+        if m != MARKET_MD5:
+            log.warning("dedupe %s bo qua: md5 market %s != chuan", tag, m)
+            return
+        tmp = p + ".ho4p1_lnk"
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        os.link(CANON, tmp)
+        os.replace(tmp, p)
+        log.info("dedupe %s: market.bin -> hardlink ban chuan (free %.2fG)", tag, disk_free() / 2**30)
+    except Exception as e:  # noqa: BLE001
+        log.warning("dedupe %s loi %s", tag, str(e)[:200])
+
+
 def finish(ks, st, tag, ov, seed, unseal, kstatus):
     if tag.startswith("ho4p1-dev-"):                 # P3-DEV: chi tai output, so sanh rieng (ho4p1_simdev.py compare)
         try:
@@ -258,6 +299,7 @@ def finish(ks, st, tag, ov, seed, unseal, kstatus):
         s["state"] = "PASS"
         tsv_row(tag, kstatus, md5, n, "PASS")
         log.info("DONE %s PASS md5=%s n=%s", tag, md5, n)
+        dedupe_market(tag)
         return
     infra = (kstatus != "COMPLETE") or not chk.get("ok") or not chk.get("mapper") or not chk.get("n")
     if infra and s["pushes"] < 2:
@@ -279,6 +321,10 @@ def main():
     for t, *_ in queue:
         st.setdefault(t, {"state": "todo", "pushes": 0})
     save_state(st)
+    assert md5f(CANON) == MARKET_MD5, "ban chuan market.bin sai md5"
+    for t, *_ in queue:
+        if st[t]["state"] == "PASS" and not t.startswith("ho4p1-dev-"):
+            dedupe_market(t)
     log.info("QUEUE %d kernel (code_sha %s, chain %s, tk %s): %s", len(queue), CODE_SHA, CHAIN, TKK, [t for t, *_ in queue])
     while True:
         mine_active = 0
@@ -323,7 +369,11 @@ def main():
             continue
         if phase == 2 and not todo and mine_active == 0:
             break
-        if todo and mine_active < MAX_PAR:
+        if todo and mine_active < own_cap() and disk_free() < DISK_MIN:
+            log.warning("DIA CON %.2fG < 1G -> TAM DUNG day kernel", disk_free() / 2**30)
+            time.sleep(POLL_S)
+            continue
+        if todo and mine_active < own_cap():
             try:
                 run = running(ks)
             except Exception as e:  # noqa: BLE001

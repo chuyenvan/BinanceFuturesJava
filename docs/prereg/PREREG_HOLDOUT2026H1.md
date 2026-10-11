@@ -325,3 +325,28 @@ Viết và commit TRƯỚC S3 (mọi kernel/đo của vòng HO4-P1). **Trạng t
 - Luật (áp §6.2-1 "thiếu/hỏng mapper ⇒ loại + liệt kê"): 8 id này (16 symbol) **loại khỏi giao dịch**: bỏ dòng Tool1 có symId ∈ {843..850} trước net015 (mọi fold) và xoá khỏi bins; vẫn ở trong dữ liệu market/gate (tính theo tên symbol). Đếm dòng bỏ ghi trong result chain. Lát DEV (P3-DET) không có symbol nào trong 16 symbol này ⇒ đầu ra det không đổi.
 - Không sửa mapper (quyết định 6). Kernel exporter không chạy lại (Tool1 file giữ nguyên; lọc ở chuỗi hạ nguồn).
 - (bổ sung 18:58, cùng lý do, trước khi chạy lại; chưa nhìn số 2026) Kernel chain lần 2 dừng ở assert trùng khoá CLOSES_1H (cũng khoá theo symId) ⇒ 8 id trên cũng bị bỏ khỏi CLOSES_1H Vision, feat_v2 và OI ghép trong chuỗi hạ nguồn (mọi chỗ khoá theo symId). Kiểm toàn vẹn khác giữ nguyên.
+
+## ADDENDUM-7 (2026-10-12, MASTER chốt — agent HO4-P1) — id mapper trùng ở exporter Java, STGUSDT, MAPAUD
+
+**Chưa nhìn số sim 2026.** Addendum này commit TRƯỚC khi bất kỳ scorer nào đọc printDone/equity cửa sổ 2026 và TRƯỚC khi chạy kernel đo `ho4p1-dupfx`. Không đổi luật chấm, ngưỡng, universe hay 32 kernel đã/đang chạy; chỉ khai sai lệch đã biết + cách đo ở mức feature (KHÔNG chạy sim lại).
+
+### 7.1 (a) Exporter Java đọc ticker theo tên hay theo id — kết quả kiểm code (jar exporter 99c5f040, HEAD module)
+- Ghi: `IngestTickerFileToAerospike` ghi `MinuteDataFinal.tickers` khoá theo **tên** symbol (`putTickers(full, …)`).
+- Đọc: `DataManagerAerospikeFloatSim.readDataFromAerospike1M` trả `TreeMap<Long, Map<String, KlineObjectSimple>>` — khoá theo **tên**, đủ cả 16 symbol của 8 cặp id trùng. (Hàm `readDataFromAerospike1M_ShortKey` đánh mảng theo id — `klineArray[getId(sym)]` — có lỗi đè, nhưng KHÔNG exporter nào của HO4-P1 gọi nó.)
+- `ExportMarketData2File` (market.bin, market breadth): chỉ dùng `Map<String,…>` + `symbol2LastTickers` theo tên, không gọi `SimpleSymbolMapper` ⇒ **không bị ảnh hưởng** bởi id trùng (dự kiến md5 market A == B trong kernel đo).
+- `ExportGateDataset` (gate dataset → gate rolling của sim): đọc theo tên nhưng cập nhật `HistoryManager.updateHistory` (tên → id qua `SimpleSymbolMapper`, ring buffer **theo id**) và `CoinRankManager.updateRanking` (top 50 % theo tổng volume 720 nến **theo id**), `findPotentialLosers` (rổ nhãn) cũng qua `HistoryManager` ⇒ **bị ảnh hưởng**: mỗi cặp dùng chung 1 ring; phút có cả 2 symbol thì symbol đứng sau trong thứ tự lặp HashMap ghi đè (luật "cùng startTime → ghi đè nến cuối"); cả 2 tên đọc cùng 1 lịch sử trộn. Đây là sai lệch "thiếu hoặc lẫn 8 symbol" ở breadth/rổ gate Q3 (khoá trùng từ 2026-07-16, 1784192400000).
+- Các nhánh khác đã khai: Tool1/net015/bins/CLOSES/feat_v2/OI loại 8 cặp theo §6.2a. `ExportFundingLabel` tạo anchor theo tên (KEYSET tắt trong cấu hình y26) — không đo thêm.
+- MASTER chấp nhận đây là **sai lệch đã biết**, trùng với hành vi live trước khi sửa mapper (branch `fix/symbol-mapper`). Không sửa, không chạy lại 32 kernel.
+
+### 7.2 Đo ảnh hưởng ở mức feature (cố định TRƯỚC khi chạy; chỉ báo, không có ngưỡng PASS/FAIL)
+Kernel exporter `ho4p1-dupfx` (`research/analysis/ho4p1_dupfx.py` = KX của `ho4p1_exp_kernel.py` + 3 hook chỉ-thêm): Vision 2026-06..09 + 10-01..03, ingest 20260701→20261003, Aerospike CE riêng trong kernel.
+1. `mktA` (ExportMarketData2File, TIME_RUN 20260701) → `market_A.bin`; `gateA` (ExportGateDataset 20260710→20261001) với mapper gốc.
+2. Ghi lại `symbol_mapper/global_id_map` CHỈ trong Aerospike của kernel: symbol thứ 2 (thứ tự chữ cái) của mỗi id trùng nhận id mới max+1…; truncate `market_data_object`; `mktB` → `market_B.bin`; `gateB` cùng cửa sổ.
+3. Báo: số phút cả 2 symbol của mỗi cặp cùng có kline; md5 market A vs B; gateA vs gateB so **chuỗi CSV chính xác** theo timestamp: số dòng (phút) đổi, số cột đổi / tổng cột, theo tháng, mỗi cột (n, ts đầu, |Δ| trung vị/max, |giá trị| trung vị). Nhãn gate trong CSV được báo riêng như cột.
+4. Không đọc printDone/equity; không chạy sim; không đổi artefact đã dùng cho 32 kernel.
+
+### 7.3 (b) STGUSDT
+Đuôi settle cắt từ 2026-09-24 dù `exchange_info_pin.json` (2026-09-03) còn TRADING. Vision và 242 đều volume 0 từ 09-24 → 10-10 ⇒ **giữ luật** §6.2 (đuôi volume-0 ≥ 1440 phút), chỉ ghi chú; volume bị cắt = 0.
+
+### 7.4 (c) MAPAUD
+`docs/audit/MAPPER_AUDIT_20261011.md` (branch `fix/symbol-mapper`, d5c48dd9): 130 "đuôi settle" = 129 đúng, 0 nhầm, 1 không rõ (STGUSDT, xem 7.3); volume quote bị cắt = 0 USDT mọi tháng ⇒ không đổi luật universe HO4.
