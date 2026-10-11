@@ -1,0 +1,2141 @@
+{
+ "audit": "MAPAUD 2026-10-11",
+ "hashmap_victim_estimate": {
+  "1024": {
+   "843": {
+    "kept": "MUUUSDT",
+    "victim_features_from_twin": "XBIUSDT"
+   },
+   "844": {
+    "kept": "BNCUSDT",
+    "victim_features_from_twin": "SOXSUSDT"
+   },
+   "845": {
+    "kept": "FWDIUSDT",
+    "victim_features_from_twin": "TZAUSDT"
+   },
+   "846": {
+    "kept": "VRTUSDT",
+    "victim_features_from_twin": "MINIMAXUSDT"
+   },
+   "847": {
+    "kept": "ZHIPUUSDT",
+    "victim_features_from_twin": "SNOWUSDT"
+   },
+   "848": {
+    "kept": "SHAZUSDT",
+    "victim_features_from_twin": "APPUSDT"
+   },
+   "849": {
+    "kept": "SOFIUSDT",
+    "victim_features_from_twin": "GEVUSDT"
+   },
+   "850": {
+    "kept": "SKHYUSDT",
+    "victim_features_from_twin": "PANWUSDT"
+   }
+  },
+  "2048": {
+   "843": {
+    "kept": "MUUUSDT",
+    "victim_features_from_twin": "XBIUSDT"
+   },
+   "844": {
+    "kept": "BNCUSDT",
+    "victim_features_from_twin": "SOXSUSDT"
+   },
+   "845": {
+    "kept": "TZAUSDT",
+    "victim_features_from_twin": "FWDIUSDT"
+   },
+   "846": {
+    "kept": "MINIMAXUSDT",
+    "victim_features_from_twin": "VRTUSDT"
+   },
+   "847": {
+    "kept": "ZHIPUUSDT",
+    "victim_features_from_twin": "SNOWUSDT"
+   },
+   "848": {
+    "kept": "SHAZUSDT",
+    "victim_features_from_twin": "APPUSDT"
+   },
+   "849": {
+    "kept": "SOFIUSDT",
+    "victim_features_from_twin": "GEVUSDT"
+   },
+   "850": {
+    "kept": "PANWUSDT",
+    "victim_features_from_twin": "SKHYUSDT"
+   }
+  }
+ },
+ "live_log_counts_pass_push_buyLines": {
+  "APPUSDT": [
+   0,
+   0,
+   0
+  ],
+  "BNCUSDT": [
+   125,
+   16,
+   13
+  ],
+  "FWDIUSDT": [
+   10,
+   4,
+   6
+  ],
+  "GEVUSDT": [
+   2,
+   2,
+   4
+  ],
+  "MINIMAXUSDT": [
+   49,
+   4,
+   8
+  ],
+  "MUUUSDT": [
+   1,
+   1,
+   2
+  ],
+  "PANWUSDT": [
+   2,
+   0,
+   0
+  ],
+  "SHAZUSDT": [
+   22,
+   1,
+   2
+  ],
+  "SKHYUSDT": [
+   0,
+   0,
+   0
+  ],
+  "SNOWUSDT": [
+   25,
+   1,
+   2
+  ],
+  "SOFIUSDT": [
+   4,
+   4,
+   6
+  ],
+  "SOXSUSDT": [
+   79,
+   0,
+   0
+  ],
+  "TZAUSDT": [
+   0,
+   0,
+   0
+  ],
+  "VRTUSDT": [
+   1,
+   1,
+   2
+  ],
+  "XBIUSDT": [
+   1,
+   1,
+   2
+  ],
+  "ZHIPUUSDT": [
+   3,
+   3,
+   4
+  ]
+ },
+ "live_log_note": "buyLines = so dong 'Create order market BUY'/'Create Order market .. BUY' (moi lenh ~2 dong); pass = 'AI PASS'",
+ "mapper_live_242": {
+  "bins": [
+   "data"
+  ],
+  "dups": {
+   "843": [
+    "MUUUSDT",
+    "XBIUSDT"
+   ],
+   "844": [
+    "BNCUSDT",
+    "SOXSUSDT"
+   ],
+   "845": [
+    "FWDIUSDT",
+    "TZAUSDT"
+   ],
+   "846": [
+    "MINIMAXUSDT",
+    "VRTUSDT"
+   ],
+   "847": [
+    "SNOWUSDT",
+    "ZHIPUUSDT"
+   ],
+   "848": [
+    "APPUSDT",
+    "SHAZUSDT"
+   ],
+   "849": [
+    "GEVUSDT",
+    "SOFIUSDT"
+   ],
+   "850": [
+    "PANWUSDT",
+    "SKHYUSDT"
+   ]
+  },
+  "gen": 1284,
+  "host": "103.157.218.242:3222",
+  "key": "global_id_map",
+  "max_id": 933,
+  "min_id": 1,
+  "missing_ids": [
+   752,
+   753,
+   754,
+   755,
+   756,
+   757,
+   758,
+   759
+  ],
+  "n": 933,
+  "n_ids": 925,
+  "ns": "ticker",
+  "set": "symbol_mapper",
+  "sha256_canon": "a5334902232813d6ab2d1cfe5454d848a4b10c0d901b03b9c9db0a2bb1f7826e",
+  "sha_def": "sha256 cua chuoi 'symbol,id\\n' sap theo symbol"
+ },
+ "mvn_test": {
+  "after": {
+   "classes": 46,
+   "fail": 0,
+   "tests": 273
+  },
+  "before": {
+   "classes": 45,
+   "fail": 0,
+   "tests": 264
+  }
+ },
+ "settle": {
+  "counts": {
+   "dung": 129,
+   "khong_ro": 1,
+   "nham": 0
+  },
+  "n_rec_242": 282,
+  "nham_cut_share_by_month": {
+   "2026-01": 0.0,
+   "2026-02": 0.0,
+   "2026-03": 0.0,
+   "2026-04": 0.0,
+   "2026-05": 0.0,
+   "2026-06": 0.0,
+   "2026-07": 0.0,
+   "2026-08": 0.0,
+   "2026-09": 0.0
+  },
+  "rule": "(co dinh truoc khi chay):\n  nham   : co volume > 0 sau ngay bat dau duoi (Vision ngay >= from_day+1) HOAC 242 volume>0 sau from_ts o >= 2 ngay mau\n  dung   : khong co volume sau from_day (Vision & 242) VA (pin != TRADING hoac lifecycle != LIVE hoac Vision het file)\n  khong_ro: con lai",
+  "syms": {
+   "1000WHYUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-03-17",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-03-17",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-03-17",
+    "vision_last_row": "2026-10-10"
+   },
+   "1000XUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "42USDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-01-30",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-01-30",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-01-30",
+    "vision_last_row": "2026-10-10"
+   },
+   "A2ZUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-03-24",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-03-24",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-03-24",
+    "vision_last_row": "2026-10-10"
+   },
+   "ACXUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-08-07",
+    "a242_last_present": "2026-10-06",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-08-07",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-08-07",
+    "vision_last_row": "2026-10-10"
+   },
+   "AGIXUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "AI16ZUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-06-13",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "AIUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-04-24",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-04-28",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-04-28",
+    "vision_last_row": "2026-10-10"
+   },
+   "ALPACAUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "ALPHAUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "AMBUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "ATAUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-05-19",
+    "a242_last_present": "2026-06-13",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-05-19",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-05-19",
+    "vision_last_row": "2026-10-10"
+   },
+   "B3USDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-04-24",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-04-28",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-04-28",
+    "vision_last_row": "2026-10-10"
+   },
+   "BADGERUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "BAKEUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "BALUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "BDXNUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-03-17",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-03-17",
+    "pin_status": null,
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-03-17",
+    "vision_last_row": "2026-03-31"
+   },
+   "BIDUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-01-21",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-01-21",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-01-21",
+    "vision_last_row": "2026-10-10"
+   },
+   "BLZUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "BNXUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": null,
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "BOBUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-04-28",
+    "a242_last_present": "2026-06-13",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-04-28",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-04-28",
+    "vision_last_row": "2026-10-10"
+   },
+   "BONDUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "BSWUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "CHESSUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-02-06",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-02-06",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-02-06",
+    "vision_last_row": "2026-10-10"
+   },
+   "COMBOUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "COMMONUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-01-30",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-01-30",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-01-30",
+    "vision_last_row": "2026-10-10"
+   },
+   "COSUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-06-11",
+    "a242_last_present": "2026-06-13",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-06-11",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-06-11",
+    "vision_last_row": "2026-10-10"
+   },
+   "CUDISUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-01-30",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-01-30",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-01-30",
+    "vision_last_row": "2026-10-10"
+   },
+   "DAMUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-04-24",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-04-29",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-04-29",
+    "vision_last_row": "2026-10-10"
+   },
+   "DARUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "DEFIUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "DEGENUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-04-24",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-04-28",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-04-28",
+    "vision_last_row": "2026-10-10"
+   },
+   "DEGOUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-04-21",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-04-21",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-04-21",
+    "vision_last_row": "2026-10-10"
+   },
+   "DENTUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-04-21",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-04-21",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-04-21",
+    "vision_last_row": "2026-10-10"
+   },
+   "DFUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-02-06",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-02-06",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-02-06",
+    "vision_last_row": "2026-10-10"
+   },
+   "DGBUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-05-31",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "DMCUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-01-21",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-01-21",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-01-21",
+    "vision_last_row": "2026-10-10"
+   },
+   "DUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-06-11",
+    "a242_last_present": "2026-06-13",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-06-11",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-06-11",
+    "vision_last_row": "2026-10-10"
+   },
+   "EPTUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-01-30",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-01-30",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-01-30",
+    "vision_last_row": "2026-10-10"
+   },
+   "FIOUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-04-15",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-04-15",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-04-15",
+    "vision_last_row": "2026-10-10"
+   },
+   "FISUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-10",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "FLMUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "FORTHUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-03-24",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-03-24",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-03-24",
+    "vision_last_row": "2026-10-10"
+   },
+   "FTMUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "FTTUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-05-31",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "FUNUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-04-15",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-04-15",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-04-15",
+    "vision_last_row": "2026-10-10"
+   },
+   "FXSUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-01-06",
+    "a242_last_present": "2026-06-13",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-01-06",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-01-06",
+    "vision_last_row": "2026-10-10"
+   },
+   "GHSTUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-02-06",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-02-06",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-02-06",
+    "vision_last_row": "2026-10-10"
+   },
+   "GLMRUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-05-31",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "HFTUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-08-07",
+    "a242_last_present": "2026-10-06",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-08-07",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-08-07",
+    "vision_last_row": "2026-10-10"
+   },
+   "HIFIUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "HIGHUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-06-11",
+    "a242_last_present": "2026-06-13",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-06-11",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-06-11",
+    "vision_last_row": "2026-10-10"
+   },
+   "HIPPOUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-04-08",
+    "a242_last_present": "2026-06-13",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-04-08",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-04-08",
+    "vision_last_row": "2026-10-10"
+   },
+   "HOOKUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-03-24",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-03-24",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-03-24",
+    "vision_last_row": "2026-10-10"
+   },
+   "ICXUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-08-26",
+    "a242_last_present": "2026-10-06",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-08-26",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-08-26",
+    "vision_last_row": "2026-10-10"
+   },
+   "IDEXUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-05-31",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "IPUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-06-28",
+    "a242_last_present": "2026-10-06",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-06-28",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-06-28",
+    "vision_last_row": "2026-10-10"
+   },
+   "IRUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-04-24",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-04-29",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-04-29",
+    "vision_last_row": "2026-10-10"
+   },
+   "KDAUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "KEYUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "KLAYUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "LEVERUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "LINAUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "LOKAUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "LOOMUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "LRCUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-03-24",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-03-24",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-03-24",
+    "vision_last_row": "2026-10-10"
+   },
+   "MBOXUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-06-11",
+    "a242_last_present": "2026-06-13",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-06-11",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-06-11",
+    "vision_last_row": "2026-10-10"
+   },
+   "MDTUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-05-31",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "MEMEFIUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "MILKUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-05",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "MKRUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "MLNUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-05-19",
+    "a242_last_present": "2026-06-13",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-05-19",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-05-19",
+    "vision_last_row": "2026-10-10"
+   },
+   "MYROUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "NEIROETHUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "NFPUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-07-02",
+    "a242_last_present": "2026-10-06",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-07-02",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-07-02",
+    "vision_last_row": "2026-10-10"
+   },
+   "NKNUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-02-06",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-02-06",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-02-06",
+    "vision_last_row": "2026-10-10"
+   },
+   "NTRNUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-03-24",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-03-24",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-03-24",
+    "vision_last_row": "2026-10-10"
+   },
+   "NULSUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "OBOLUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-05",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "OCEANUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "OLUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-04-08",
+    "a242_last_present": "2026-06-13",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-04-08",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-04-08",
+    "vision_last_row": "2026-10-10"
+   },
+   "OMGUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "OMNIUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "OMUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-02-23",
+    "a242_last_present": "2026-06-13",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-02-23",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-02-23",
+    "vision_last_row": "2026-10-10"
+   },
+   "ORBSUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "OXTUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-04-15",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-04-15",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-04-15",
+    "vision_last_row": "2026-10-10"
+   },
+   "PERPUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "PHBUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-05-19",
+    "a242_last_present": "2026-06-13",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-05-19",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-05-19",
+    "vision_last_row": "2026-10-10"
+   },
+   "PONKEUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "PORT3USDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-06-13",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "PUFFERUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-04-08",
+    "a242_last_present": "2026-06-13",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-04-08",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-04-08",
+    "vision_last_row": "2026-10-10"
+   },
+   "QUICKUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "RADUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-05-31",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "RAYUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-05-31",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "RDNTUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-03-24",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-03-24",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-03-24",
+    "vision_last_row": "2026-10-10"
+   },
+   "REEFUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "REIUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-10",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "RENUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "RLSUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-04-08",
+    "a242_last_present": "2026-06-13",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-04-08",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-04-08",
+    "vision_last_row": "2026-10-10"
+   },
+   "RVVUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-02-10",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-02-10",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-02-10",
+    "vision_last_row": "2026-10-10"
+   },
+   "SCRTUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-08-26",
+    "a242_last_present": "2026-10-06",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-08-26",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-08-26",
+    "vision_last_row": "2026-10-10"
+   },
+   "SCUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-05-31",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "SKATEUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-10",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "SLERFUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "STGUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-09-24",
+    "a242_last_present": "2026-10-06",
+    "cls": "khong_ro",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-09-24",
+    "pin_status": "TRADING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-09-24",
+    "vision_last_row": "2026-10-10"
+   },
+   "STMXUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "STORJUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-08-26",
+    "a242_last_present": "2026-10-06",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-08-26",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-08-26",
+    "vision_last_row": "2026-10-10"
+   },
+   "STRAXUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-05-31",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "SWELLUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "SXPUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-05",
+    "pin_status": null,
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-05-31"
+   },
+   "SYSUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-05-19",
+    "a242_last_present": "2026-06-13",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-05-19",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-05-19",
+    "vision_last_row": "2026-10-10"
+   },
+   "TANSSIUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-01-21",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-01-21",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-01-21",
+    "vision_last_row": "2026-10-10"
+   },
+   "TOKENUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-05",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "TONUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-06-23",
+    "a242_last_present": "2026-10-06",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-06-23",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-06-23",
+    "vision_last_row": "2026-10-10"
+   },
+   "TROYUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "TRUUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-04-21",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-04-21",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-04-21",
+    "vision_last_row": "2026-10-10"
+   },
+   "UNFIUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "UXLINKUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "VANRYUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-08-07",
+    "a242_last_present": "2026-10-06",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-08-07",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-08-07",
+    "vision_last_row": "2026-10-10"
+   },
+   "VFYUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-03-17",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-03-17",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-03-17",
+    "vision_last_row": "2026-10-10"
+   },
+   "VICUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-08-07",
+    "a242_last_present": "2026-10-06",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-08-07",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-08-07",
+    "vision_last_row": "2026-10-10"
+   },
+   "VIDTUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "VINEUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-04-24",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-04-28",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-04-28",
+    "vision_last_row": "2026-10-10"
+   },
+   "VOXELUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-10",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "WAVESUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-05-31",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "XCNUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "XEMUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": null,
+    "a242_last_present": "2026-01-03",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2025-12-01",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": null,
+    "vision_last_row": "2026-10-10"
+   },
+   "YALAUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-02-10",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-02-10",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-02-10",
+    "vision_last_row": "2026-10-10"
+   },
+   "ZKJUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-04-24",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-04-29",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-04-29",
+    "vision_last_row": "2026-10-10"
+   },
+   "ZRCUSDT": {
+    "a242_days_vol_after": 0,
+    "a242_last_nonzero": "2026-01-21",
+    "a242_last_present": "2026-04-24",
+    "cls": "dung",
+    "cut_qv_2026q1q3": 0,
+    "from_day": "2026-01-21",
+    "pin_status": "SETTLING",
+    "vision_days_vol_after": 0,
+    "vision_last_nonzero": "2026-01-21",
+    "vision_last_row": "2026-10-10"
+   }
+  },
+  "universe_n": 821,
+  "universe_qv_by_month": {
+   "2026-01": 1380510227320.7239,
+   "2026-02": 1397751242733.4333,
+   "2026-03": 1332596592368.2878,
+   "2026-04": 1144632458077.4802,
+   "2026-05": 1152513721716.5986,
+   "2026-06": 1373463503349.5117,
+   "2026-07": 1257501747596.4338,
+   "2026-08": 1384592484963.8462,
+   "2026-09": 1539734995025.9604
+  }
+ },
+ "snapshots": {
+  "asdata_pkl": {
+   "diff_vs_live": [],
+   "dups": {
+    "843": [
+     "MUUUSDT",
+     "XBIUSDT"
+    ],
+    "844": [
+     "BNCUSDT",
+     "SOXSUSDT"
+    ],
+    "845": [
+     "FWDIUSDT",
+     "TZAUSDT"
+    ],
+    "846": [
+     "MINIMAXUSDT",
+     "VRTUSDT"
+    ],
+    "847": [
+     "SNOWUSDT",
+     "ZHIPUUSDT"
+    ],
+    "848": [
+     "APPUSDT",
+     "SHAZUSDT"
+    ],
+    "849": [
+     "GEVUSDT",
+     "SOFIUSDT"
+    ],
+    "850": [
+     "PANWUSDT",
+     "SKHYUSDT"
+    ]
+   },
+   "max_id": 863,
+   "missing": [
+    752,
+    753,
+    754,
+    755,
+    756,
+    757,
+    758,
+    759
+   ],
+   "n": 863,
+   "n_ids": 855,
+   "only_here": 0,
+   "sha": ""
+  },
+  "csv781_0708": {
+   "diff_vs_live": [],
+   "dups": {},
+   "max_id": 789,
+   "missing": [
+    752,
+    753,
+    754,
+    755,
+    756,
+    757,
+    758,
+    759
+   ],
+   "n": 781,
+   "n_ids": 781,
+   "only_here": 0,
+   "sha": "41ee8f1b96b8a01c"
+  },
+  "csv781_stage": {
+   "diff_vs_live": [],
+   "dups": {},
+   "max_id": 789,
+   "missing": [
+    752,
+    753,
+    754,
+    755,
+    756,
+    757,
+    758,
+    759
+   ],
+   "n": 781,
+   "n_ids": 781,
+   "only_here": 0,
+   "sha": "41ee8f1b96b8a01c"
+  },
+  "csv863_0806": {
+   "diff_vs_live": [],
+   "dups": {
+    "843": [
+     "MUUUSDT",
+     "XBIUSDT"
+    ],
+    "844": [
+     "BNCUSDT",
+     "SOXSUSDT"
+    ],
+    "845": [
+     "FWDIUSDT",
+     "TZAUSDT"
+    ],
+    "846": [
+     "MINIMAXUSDT",
+     "VRTUSDT"
+    ],
+    "847": [
+     "SNOWUSDT",
+     "ZHIPUUSDT"
+    ],
+    "848": [
+     "APPUSDT",
+     "SHAZUSDT"
+    ],
+    "849": [
+     "GEVUSDT",
+     "SOFIUSDT"
+    ],
+    "850": [
+     "PANWUSDT",
+     "SKHYUSDT"
+    ]
+   },
+   "max_id": 863,
+   "missing": [
+    752,
+    753,
+    754,
+    755,
+    756,
+    757,
+    758,
+    759
+   ],
+   "n": 863,
+   "n_ids": 855,
+   "only_here": 0,
+   "sha": "3f8175512f385d83"
+  },
+  "csv863_stage": {
+   "diff_vs_live": [],
+   "dups": {
+    "843": [
+     "MUUUSDT",
+     "XBIUSDT"
+    ],
+    "844": [
+     "BNCUSDT",
+     "SOXSUSDT"
+    ],
+    "845": [
+     "FWDIUSDT",
+     "TZAUSDT"
+    ],
+    "846": [
+     "MINIMAXUSDT",
+     "VRTUSDT"
+    ],
+    "847": [
+     "SNOWUSDT",
+     "ZHIPUUSDT"
+    ],
+    "848": [
+     "APPUSDT",
+     "SHAZUSDT"
+    ],
+    "849": [
+     "GEVUSDT",
+     "SOFIUSDT"
+    ],
+    "850": [
+     "PANWUSDT",
+     "SKHYUSDT"
+    ]
+   },
+   "max_id": 863,
+   "missing": [
+    752,
+    753,
+    754,
+    755,
+    756,
+    757,
+    758,
+    759
+   ],
+   "n": 863,
+   "n_ids": 855,
+   "only_here": 0,
+   "sha": "3f8175512f385d83"
+  },
+  "live242": {
+   "diff_vs_live": [],
+   "dups": {
+    "843": [
+     "MUUUSDT",
+     "XBIUSDT"
+    ],
+    "844": [
+     "BNCUSDT",
+     "SOXSUSDT"
+    ],
+    "845": [
+     "FWDIUSDT",
+     "TZAUSDT"
+    ],
+    "846": [
+     "MINIMAXUSDT",
+     "VRTUSDT"
+    ],
+    "847": [
+     "SNOWUSDT",
+     "ZHIPUUSDT"
+    ],
+    "848": [
+     "APPUSDT",
+     "SHAZUSDT"
+    ],
+    "849": [
+     "GEVUSDT",
+     "SOFIUSDT"
+    ],
+    "850": [
+     "PANWUSDT",
+     "SKHYUSDT"
+    ]
+   },
+   "max_id": 933,
+   "missing": [
+    752,
+    753,
+    754,
+    755,
+    756,
+    757,
+    758,
+    759
+   ],
+   "n": 933,
+   "n_ids": 925,
+   "only_here": 0,
+   "sha": ""
+  },
+  "oracle_test_ns": {
+   "diff_vs_live": [],
+   "dups": {
+    "843": [
+     "MUUUSDT",
+     "XBIUSDT"
+    ],
+    "844": [
+     "BNCUSDT",
+     "SOXSUSDT"
+    ],
+    "845": [
+     "FWDIUSDT",
+     "TZAUSDT"
+    ],
+    "846": [
+     "MINIMAXUSDT",
+     "VRTUSDT"
+    ],
+    "847": [
+     "SNOWUSDT",
+     "ZHIPUUSDT"
+    ],
+    "848": [
+     "APPUSDT",
+     "SHAZUSDT"
+    ],
+    "849": [
+     "GEVUSDT",
+     "SOFIUSDT"
+    ],
+    "850": [
+     "PANWUSDT",
+     "SKHYUSDT"
+    ]
+   },
+   "max_id": 863,
+   "missing": [
+    752,
+    753,
+    754,
+    755,
+    756,
+    757,
+    758,
+    759
+   ],
+   "n": 863,
+   "n_ids": 855,
+   "only_here": 0,
+   "sha": ""
+  },
+  "val_pred_0825": {
+   "diff_vs_live": [],
+   "dups": {},
+   "max_id": 789,
+   "missing": [
+    752,
+    753,
+    754,
+    755,
+    756,
+    757,
+    758,
+    759
+   ],
+   "n": 781,
+   "n_ids": 781,
+   "only_here": 0,
+   "sha": "41ee8f1b96b8a01c"
+  }
+ }
+}
