@@ -1,0 +1,18 @@
+{
+ "a": "ho4p1-oi-a",
+ "b": "ho4p1-oi-b",
+ "kind": "oi",
+ "md5_raw": [
+  "2f24cc5dbca3360e1621d8c4f8e6cfb2",
+  "2f24cc5dbca3360e1621d8c4f8e6cfb2"
+ ],
+ "md5_gz": [
+  "715aa75b829345fcf904969e16c0dc37",
+  "715aa75b829345fcf904969e16c0dc37"
+ ],
+ "rows": [
+  77601160,
+  77601160
+ ],
+ "pass": true
+}

@@ -1,0 +1,44 @@
+{
+ "a": "ho4p1-chdet-a",
+ "b": "ho4p1-chdet-b",
+ "kind": "chain",
+ "ok": [
+  true,
+  true
+ ],
+ "n_files": [
+  8,
+  8
+ ],
+ "only_a": [],
+ "only_b": [],
+ "n_equal": 8,
+ "diff": [],
+ "groups": {
+  "bins": [
+   2,
+   2
+  ],
+  "feat_v2.parquet": [
+   1,
+   1
+  ],
+  "market.bin": [
+   1,
+   1
+  ],
+  "net015": [
+   2,
+   2
+  ],
+  "pred_det_s42": [
+   1,
+   1
+  ],
+  "s1_ho4p1det.parquet": [
+   1,
+   1
+  ]
+ },
+ "pass": true
+}

@@ -120,3 +120,12 @@ Ghi chú hạ tầng: chuỗi hạ nguồn chuyển sang Kaggle (dataset `ho4p1-
 - Mô tả (P3-DEV, chỉ báo, từ det-a): F funding 506 263/506 263 mốc = 100%; market: phút DEV 257 447 đều có trong bản mới (chỉ-DEV 0), bản mới thêm 7 513 phút (= lỗ race của DEV); ô phút chung 58,7% (universe khác). Đuôi settle bỏ 69 symbol (gồm bộ 10 symbol settle chỉ-có-trong-file DEV). Symbol thiếu funding Vision trong lát: 0.
 - Scheduler nền `ho4p1_pipe.py` (PID file `pipe.pid`) đã đẩy `ho4p1-x26-q1` + `ho4p1-oi-a` (13:38); thứ tự tiếp: q2, q3, oi-b, chdet-a/b (cổng chain), q1r, tk26, chain-y26 (chỉ khi 3 cổng exp/oi/chain PASS), rồi P3-DEV (tkdev, devcmp, 2 sim DEV).
 - Sửa hạ tầng (không đổi đầu ra): kernel exporter thêm `del KL` + gc trước Aerospike/JVM (giảm RAM) cho các kernel sau det-a/b.
+
+### HO4-P1 cập nhật 17:05 — P3-DET PASS toàn bộ (exporter + OI + chuỗi hạ nguồn)
+| Cổng | Cặp | Kết quả |
+|---|---|---|
+| exporter | `ho4p1-det-a` vs `-b` | 229/229 file md5 trùng |
+| OI | `ho4p1-oi-a` vs `-b` | md5 raw `2f24cc5d…` = `2f24cc5d…`, gz `715aa75b…` = `715aa75b…`, 77 601 160 dòng |
+| chuỗi hạ nguồn (Kaggle) | `ho4p1-chdet-a` vs `-b` | 8/8 file md5 trùng (feat_v2, pred s42, S1, net015 ×2, bins ×2, market.bin); bins Q4 md5 `75579478…` |
+⇒ **P3-DET PASS** (`docs/result/ho4/ho4p1_det_{exp,oi,chain}.json`). P3-KF giữ số P0 (K-a 99,9999993%, K-b 0,0034%, F 100%); det-a tính lại F = 506 263/506 263.
+S4 đang chạy: `ho4p1-x26-q1` XONG (88′, 0 symbol thiếu funding Vision, 111 symbol đuôi settle trong cửa sổ Q1), `ho4p1-x26-q2` XONG (104′), `ho4p1-x26-q3` đang chạy, `ho4p1-x26-q1r` (S5 chạy lại quý chứa 2026-03) đang chạy. Tiếp: `ho4p1-tk26`, `ho4p1-chain-y26`, rồi P3-DEV (tkdev, devcmp, 2 sim DEV).
