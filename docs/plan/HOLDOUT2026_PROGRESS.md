@@ -98,3 +98,19 @@ Lưu ý thiết kế cho vòng sau: (1) B4b "md5 H1 trùng ho26" với SIM_END_D
 - Sim DEV (thay lát 2025H2 bằng bản dựng lại Vision): k24-s-s42 trùng lệnh 61,2% (305/498 vs 461), \|ΔΣPnL_S\| 22,1%; b0-s-s42 55,4% (206/372 vs 341), 7,2% ⇒ FAIL (≥ 99% ∧ ≤ 1%). Dòng start < 2025-07-01 trùng từng dòng; FUND_HO4_SELFCHECK trùng byte 257 433/257 433.
 - Chẩn đoán D1 (ticker + funding DEV, cùng exporter): market bit-exact 100% trên phút chung nhưng tập phút lệch (race `SimpleDateFormat` trong `saveMarketDataBatch`); store gate 66,5%, Tool1 85,5%, nhãn 98,3% ⇒ store DEV không tái sinh được kể cả từ ticker DEV.
 - Không dựng 2026, 0 kernel holdout. Việc tiếp theo cần MASTER: luật universe 2026, thước P3 mới (tất định với chính pipeline Vision; cần sửa race .java), CLOSES_1H từ 1m.
+
+## HO4-P1 (2026-10-11 10:57–) — sửa race + dựng holdout 2026 từ Vision + 32 kernel (ADDENDUM-6)
+Thư mục Oracle `~/claude_master/1011/ho4p1/` (cache ≤ 500 MB; dữ liệu nặng chỉ trên Kaggle). Tiền tố `ho4p1`. Script `research/analysis/ho4p1_*.py`.
+
+| Bước | Trạng thái | Kết quả / hash |
+|---|---|---|
+| S1 sửa race `saveMarketDataBatch` | XONG | fix `76c5bc40`, merge `--no-ff` module **`0594986e`**; mvn test 259 → 264 PASS; jar exporter sha256 `99c5f040…` dataset `ho4p1-jar-exp` |
+| S2 ADDENDUM-6 | XONG | **`af6d6c94`** (khai: chưa nhìn số sim cửa sổ 2026 nào từ dữ liệu Vision) |
+| S3 P3-DET exporter `ho4p1-det-a/b` | ĐANG CHẠY (push 11:18) | — |
+| S3 P3-DET OI `ho4p1-oi-a/b` | CHỜ slot | — |
+| S3 P3-DET chuỗi hạ nguồn (kernel Kaggle `ho4p1_chain.py`, mode det) | CHỜ | smoke test Oracle (DEV 3 ngày): rows_t1+ONNX == file gốc e03f0e58 max\|Δ\| 3,6e-7 |
+| S4 2026 (q1/q2/q3 + chain y26) | CHỜ P3-DET | cfg `cfg_ho4p1-x26-q{1,2,3}.json` |
+| S5 parity C1/C2 + q1r | CHỜ | orchestrator `ho4p1_queue.py` pha 0 |
+| S6 32 kernel | CHỜ | orchestrator `ho4p1_queue.py` pha 1 |
+
+Ghi chú hạ tầng: chuỗi hạ nguồn chuyển sang Kaggle (dataset `ho4p1-code` = module repo + model đóng băng) vì cache Oracle ≤ 500 MB không chứa nổi Tool1/nhãn/OI; sim 2026 mount output kernel chain + `ho4p1-tk26` qua kernel_sources (không stage dữ liệu lớn qua Oracle).
