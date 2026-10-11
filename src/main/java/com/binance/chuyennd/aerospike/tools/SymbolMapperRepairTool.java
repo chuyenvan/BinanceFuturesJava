@@ -33,6 +33,8 @@ import java.util.TreeMap;
  *   apply &lt;backup.json&gt;  : GHI 242 — can MAPPER_REPAIR_CONFIRM=YES + Live242WriteGuard cho ghi; backup record
  *                           (file chua ton tai) TRUOC; 1 lenh operate CAS (generation) putItems; doc lai, assert 0 trung.
  * </pre>
+ *   restore &lt;backup.json&gt; &lt;pre_restore.json&gt; : [LIVEFIX2] GHI 242 — rollback: symbol trong backup co id khac =&gt;
+ *                           tra id cu (symbol moi giu nguyen); can MAPPER_REPAIR_CONFIRM=YES; backup hien trang truoc.
  * Khong goi SimpleSymbolMapper (init se fail-fast khi map dang co id trung).
  */
 public class SymbolMapperRepairTool {
@@ -53,11 +55,15 @@ public class SymbolMapperRepairTool {
         int holes = SymbolIdRules.maxId(m) - (int) m.values().stream().distinct().count();
         LOG.info("[MAPPER-CHECK] n={} maxId={} gen={} idTrung={} {} idLo={}", m.size(), SymbolIdRules.maxId(m),
                 r.generation, dups.size(), dups, holes);
+        if ("restore".equals(mode)) {
+            restore(c, r, m, args.length > 1 ? args[1] : null, args.length > 2 ? args[2] : null);
+            return;
+        }
         Map<String, Short> plan = SymbolIdRules.planRepair(m);
         if ("check".equals(mode)) System.exit(dups.isEmpty() ? 0 : 3);
         LOG.info("[MAPPER-PLAN] {} symbol doi id: {}", plan.size(), plan);
         if ("plan".equals(mode) || plan.isEmpty()) return;
-        if (!"apply".equals(mode)) throw new IllegalArgumentException("mode = check|plan|apply");
+        if (!"apply".equals(mode)) throw new IllegalArgumentException("mode = check|plan|apply|restore");
         apply(c, r, m, plan, args.length > 1 ? args[1] : null);
     }
 
@@ -100,5 +106,74 @@ public class SymbolMapperRepairTool {
         if (m2.size() != m.size()) throw new IllegalStateException("so symbol doi " + m.size() + " -> " + m2.size());
         LOG.info("✅ [MAPPER-REPAIR] OK: n={} maxId={} gen={} 0 id trung. KHOI DONG LAI moi JVM ghi mapper.",
                 m2.size(), SymbolIdRules.maxId(m2), after.generation);
+    }
+
+    // ===================== [LIVEFIX2 2026-10-11] restore (rollback mapper tu backup JSON) =====================
+
+    /** Doc JSON backup do {@link #toJson} ghi: {"generation":N,"map":{"SYM":id,...}}. */
+    static Map<String, Short> parseBackupMap(String json) {
+        int i = json.indexOf("\"map\":{");
+        if (i < 0) throw new IllegalArgumentException("backup khong co truong map");
+        java.util.regex.Matcher mt = java.util.regex.Pattern.compile("\"((?:[^\"\\\\]|\\\\.)*)\":(\\d+)")
+                .matcher(json.substring(i + 7));
+        Map<String, Short> m = new HashMap<>();
+        while (mt.find()) {
+            String sym = mt.group(1).replace("\\\"", "\"").replace("\\\\", "\\");
+            m.put(sym, Short.parseShort(mt.group(2)));
+        }
+        if (m.isEmpty()) throw new IllegalArgumentException("backup rong");
+        return m;
+    }
+
+    /**
+     * Ke hoach khoi phuc: symbol CO trong backup ma id hien tai khac (hoac thieu) =&gt; id trong backup.
+     * Symbol moi (cap sau repair, khong co trong backup) GIU NGUYEN. Nem neu khoi phuc lam 1 symbol moi trung id.
+     */
+    static Map<String, Short> restorePlan(Map<String, Short> current, Map<String, Short> backup) {
+        Map<String, Short> plan = new TreeMap<>();
+        for (Map.Entry<String, Short> e : backup.entrySet()) {
+            Short cur = current.get(e.getKey());
+            if (!e.getValue().equals(cur)) plan.put(e.getKey(), e.getValue());
+        }
+        for (Map.Entry<String, Short> e : current.entrySet()) {
+            if (backup.containsKey(e.getKey())) continue;
+            if (plan.containsValue(e.getValue())) {
+                throw new IllegalStateException("khoi phuc se trung id voi symbol moi " + e.getKey() + "=" + e.getValue());
+            }
+        }
+        return plan;
+    }
+
+    private static void restore(AerospikeClient c, Record r, Map<String, Short> m, String backupPath,
+                                String preRestorePath) throws Exception {
+        if (!"YES".equals(Cfg.get(KEY_CONFIRM))) throw new IllegalStateException("can " + KEY_CONFIRM + "=YES");
+        if (!Live242WriteGuard.writesEnabled()) throw new IllegalStateException("Live242WriteGuard chan ghi (shadow host?)");
+        if (backupPath == null || !new File(backupPath).isFile()) throw new IllegalStateException("backup khong ton tai: " + backupPath);
+        if (preRestorePath == null || new File(preRestorePath).exists()) {
+            throw new IllegalStateException("can duong dan backup-truoc-restore CHUA ton tai: " + preRestorePath);
+        }
+        Map<String, Short> backup = parseBackupMap(new String(Files.readAllBytes(new File(backupPath).toPath()), StandardCharsets.UTF_8));
+        Map<String, Short> plan = restorePlan(m, backup);
+        LOG.info("[MAPPER-RESTORE] {} symbol tra ve id trong backup: {}", plan.size(), plan);
+        if (plan.isEmpty()) return;
+        Files.write(new File(preRestorePath).toPath(), toJson(m, r.generation).getBytes(StandardCharsets.UTF_8));
+        Map<Value, Value> items = new HashMap<>();
+        for (Map.Entry<String, Short> e : plan.entrySet()) items.put(Value.get(e.getKey()), Value.get((long) e.getValue()));
+        WritePolicy wp = new WritePolicy();
+        wp.sendKey = true;
+        wp.expiration = 0;
+        wp.recordExistsAction = RecordExistsAction.UPDATE_ONLY;
+        wp.generationPolicy = GenerationPolicy.EXPECT_GEN_EQUAL;
+        wp.generation = r.generation;
+        c.operate(wp, AerospikeSymbolMapperStore.key(),
+                MapOperation.putItems(MapPolicy.Default, DataManagerAerospikeFloatSim.MAPPER_BIN_NAME, items));
+        Record after = c.get(null, AerospikeSymbolMapperStore.key());
+        Map<String, Short> m2 = AerospikeSymbolMapperStore.toShortMap(after.getMap(DataManagerAerospikeFloatSim.MAPPER_BIN_NAME));
+        for (Map.Entry<String, Short> e : plan.entrySet()) {
+            if (!e.getValue().equals(m2.get(e.getKey()))) throw new IllegalStateException("sau restore lech: " + e);
+        }
+        LOG.warn("⚠️ [MAPPER-RESTORE] OK n={} gen={} idTrung={} — mapper CO LAI id trung: chi chay JAR CU hoac "
+                + "SYMBOL_MAPPER_DUP_POLICY=WARN (jar moi FAIL mac dinh).", m2.size(), after.generation,
+                SymbolIdRules.duplicateIds(m2).size());
     }
 }
