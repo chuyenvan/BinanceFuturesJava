@@ -114,3 +114,9 @@ Thư mục Oracle `~/claude_master/1011/ho4p1/` (cache ≤ 500 MB; dữ liệu n
 | S6 32 kernel | CHỜ | orchestrator `ho4p1_queue.py` pha 1 |
 
 Ghi chú hạ tầng: chuỗi hạ nguồn chuyển sang Kaggle (dataset `ho4p1-code` = module repo + model đóng băng) vì cache Oracle ≤ 500 MB không chứa nổi Tool1/nhãn/OI; sim 2026 mount output kernel chain + `ho4p1-tk26` qua kernel_sources (không stage dữ liệu lớn qua Oracle).
+
+### HO4-P1 cập nhật 13:45 — P3-DET exporter PASS
+- `ho4p1-det-a` vs `ho4p1-det-b` (2 kernel độc lập, ~2 h 20′ mỗi kernel): **229/229 file md5 trùng** (ticker 214 ngày, market dump, CSV gate, Tool1 3 file, nhãn 4 file, CLOSES_1H, funding Vision, lifecycle, universe) ⇒ cổng exporter PASS (`~/claude_master/1011/ho4p1/det_exp.json`). Mọi task rc=0.
+- Mô tả (P3-DEV, chỉ báo, từ det-a): F funding 506 263/506 263 mốc = 100%; market: phút DEV 257 447 đều có trong bản mới (chỉ-DEV 0), bản mới thêm 7 513 phút (= lỗ race của DEV); ô phút chung 58,7% (universe khác). Đuôi settle bỏ 69 symbol (gồm bộ 10 symbol settle chỉ-có-trong-file DEV). Symbol thiếu funding Vision trong lát: 0.
+- Scheduler nền `ho4p1_pipe.py` (PID file `pipe.pid`) đã đẩy `ho4p1-x26-q1` + `ho4p1-oi-a` (13:38); thứ tự tiếp: q2, q3, oi-b, chdet-a/b (cổng chain), q1r, tk26, chain-y26 (chỉ khi 3 cổng exp/oi/chain PASS), rồi P3-DEV (tkdev, devcmp, 2 sim DEV).
+- Sửa hạ tầng (không đổi đầu ra): kernel exporter thêm `del KL` + gc trước Aerospike/JVM (giảm RAM) cho các kernel sau det-a/b.

@@ -139,7 +139,10 @@ R.append(('''pickle.dump({"funding_data": fund_rows}, open(OUTD + "/funding_visi
 NOF = sorted(s for s in KL if s not in V and bool(((KL[s][0] >= S_LO) & (KL[s][0] < S_HI)).any()))
 RES["steps"]["no_funding_vision"] = NOF
 json.dump(dict(no_funding_vision=NOF, settle_tail=TAIL, n_universe=len(KL)), open(OUTD + "/universe_excl.json", "w"), indent=1, sort_keys=True)
-LOG.info("symbol co kline trong S nhung khong co funding Vision: %d %s", len(NOF), NOF[:20])'''))
+LOG.info("symbol co kline trong S nhung khong co funding Vision: %d %s", len(NOF), NOF[:20])
+del KL                                           # giai phong RAM truoc Aerospike + JVM (khong doi dau ra)
+import gc as _gc
+_gc.collect()'''))
 R.append(('''    for k, bins in rows:
         CL.put(("test", st, k), bins, policy=WP)
     NLOAD[st] = len(rows)''',

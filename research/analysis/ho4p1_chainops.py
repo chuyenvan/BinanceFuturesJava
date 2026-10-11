@@ -11,7 +11,7 @@ A = R + "/research/analysis"
 sys.path.insert(0, A)
 W = "/home/ubuntu/claude_master/1011/ho4p1"
 USER = "chuyendinh"
-FILES = {A + "/ho4p1_chain.py": None, R + "/research/pipeline/g015_net_train.py": None, A + "/ho1_net015_predict.py": None,
+FILES = {A + "/ho4p1_chain.py": None, A + "/ho4p1_devcmp.py": None, R + "/research/pipeline/g015_net_train.py": None, A + "/ho1_net015_predict.py": None,
          A + "/ho2_net015_onnx.py": None, A + "/ho1_featv2_window.py": None, A + "/ho1_s1_2026.py": None,
          R + "/research/pipeline/x1/x1_build_map.py": None, "/home/ubuntu/sel1m_code/tool1_col.py": None,
          "/home/ubuntu/sel1m_code/funding_label_pb.py": None, "/home/ubuntu/sel1m_code/funding_label_pb2.py": None,
@@ -78,7 +78,7 @@ shutil.copytree(os.path.dirname(c[0]), "/tmp/code")
 CFG["code_dir"] = "/tmp/code"
 json.dump(CFG, open("/tmp/cfg.json", "w"))
 logging.info("INPUT %s", sorted(set(p.split("/")[3] for p in glob.glob("/kaggle/input/*/*"))))
-rc = subprocess.call([sys.executable, "-u", "/tmp/code/ho4p1_chain.py", "/tmp/cfg.json"])
+rc = subprocess.call([sys.executable, "-u", "/tmp/code/" + CFG.get("script", "ho4p1_chain.py"), "/tmp/cfg.json"])
 logging.info("CHAIN_RC %s", rc)
 sys.exit(rc)
 '''
@@ -95,13 +95,20 @@ def push(tag, mode, extra):
         log.error("DA CO %d kernel dang chay %s", len(act), act); sys.exit(3)
     ex = json.loads(extra)
     cfg = dict(mode=mode, tag=tag, model_sha=MODEL_SHA, pin_sha=PIN_SHA, seeds=SEEDS, **ex)
+    if mode == "devcmp":
+        cfg["script"] = "ho4p1_devcmp.py"
     fol = os.path.join(W, "kaggle", slug(tag))
     os.makedirs(fol, exist_ok=True)
     code = RUN.replace("__CFG__", repr(json.dumps(cfg)))
     compile(code, "k", "exec")
     open(fol + "/run.py", "w").write(code)
-    dss = ["ho4p1-code", "funding-oi-percoin", "sim-ho26a-bundle"] + ["ho26-pred-s%d" % s for s in (SEEDS if mode == "y26" else [42])]
-    ks = [ex["oi_src"]] + ([ex["det_src"]] if mode == "det" else sorted(ex["q_src"].values()))
+    if mode == "devcmp":
+        dss = ["ho4p1-code", "bdchain-gate-store", "funding-tool1-15m", "funding-label-15m", "s1-featv2-x1-20260919",
+               "predwf-g015x26-gate", "sim-ho26a-bundle", "ho26-pred-s42"]
+        ks = [ex["det_src"], ex["chain_src"]]
+    else:
+        dss = ["ho4p1-code", "funding-oi-percoin", "sim-ho26a-bundle"] + ["ho26-pred-s%d" % s for s in (SEEDS if mode == "y26" else [42])]
+        ks = [ex["oi_src"]] + ([ex["det_src"]] if mode == "det" else sorted(ex["q_src"].values()))
     md = {"id": USER + "/" + slug(tag), "title": slug(tag), "code_file": "run.py", "language": "python", "kernel_type": "script",
           "is_private": True, "enable_gpu": False, "enable_internet": True, "dataset_sources": [USER + "/" + d for d in dss],
           "competition_sources": [], "kernel_sources": [USER + "/" + k for k in ks]}
