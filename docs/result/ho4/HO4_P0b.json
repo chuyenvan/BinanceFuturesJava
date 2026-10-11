@@ -1,0 +1,682 @@
+{
+ "phase": "HO4-P0b",
+ "addendum_ref": "31e3c9e7",
+ "windows": {
+  "gate": "2025-09-30..2025-10-16 +07",
+  "tool1": "2025-10-01..2025-10-16 UTC",
+  "labels": "2025-10-01..2025-10-09 UTC"
+ },
+ "tolerance": "|d| <= 1e-6*max(1,|ref|), NaN==NaN",
+ "detcmp": {
+  "market_run1_vs_run2": {
+   "n1": 81267,
+   "n2": 81201,
+   "common": 75539,
+   "only1": 5728,
+   "only2": 5662,
+   "val_equal_common": 1.0,
+   "minutes_window": 87840
+  },
+  "gate_g1_vs_g2_same_input": {
+   "rows_a": 23040,
+   "rows_b": 23040,
+   "common": 23040,
+   "ok_frac": 1.0,
+   "cols_bad": {}
+  },
+  "gate_g1_vs_g3_start_earlier": {
+   "rows_a": 23040,
+   "rows_b": 23040,
+   "common": 23040,
+   "ok_frac": 1.0,
+   "cols_bad": {}
+  },
+  "gate_g1_vs_dev": {
+   "rows_a": 23040,
+   "rows_b": 23040,
+   "common": 23040,
+   "ok_frac": 0.6767966119528619,
+   "cols_bad": {
+    "momentum1M": 0.9007,
+    "momentum15M": 0.9007,
+    "momentumAcceleration": 0.9007,
+    "advanceDeclineRatio": 0.0018,
+    "percentAboveMA20": 0.0008,
+    "volumeRatioUpDown": 0.0031,
+    "marketBreadthStrength": 0.0009,
+    "btcDominance": 0.0005,
+    "fundingRateRaw": 0.4166,
+    "fundingRateAvg24H": 0.4457,
+    "fundingRateTrend": 0.7243,
+    "basketMomentum15M": 0.0248,
+    "basketMomentum1H": 0.0131,
+    "basketRsi14": 0.0005,
+    "basketVolSpike": 0.0
+   }
+  },
+  "gate_d1x_vs_dev": {
+   "rows_a": 23040,
+   "rows_b": 23040,
+   "common": 23040,
+   "ok_frac": 0.9893544823232323,
+   "cols_bad": {
+    "momentum1M": 0.8829,
+    "momentum15M": 0.8829,
+    "momentumAcceleration": 0.8829
+   }
+  },
+  "tool1_t1_vs_t2": {
+   "keys_a": 721647,
+   "keys_b": 721647,
+   "common": 721647,
+   "ok_frac": 1.0,
+   "cols_bad": {}
+  },
+  "tool1_t1_vs_dev": {
+   "keys_a": 721647,
+   "keys_b": 721647,
+   "common": 721647,
+   "ok_frac": 0.8330492955697176,
+   "cols_bad": {
+    "2": 0.9866,
+    "3": 0.8596,
+    "5": 0.9042,
+    "12": 0.0297,
+    "13": 0.0076,
+    "14": 0.0014,
+    "15": 0.0007,
+    "16": 0.0,
+    "18": 0.4141,
+    "21": 0.8543,
+    "23": 0.8329,
+    "27": 0.8336,
+    "30": 0.8354,
+    "32": 0.9293,
+    "33": 0.9162,
+    "34": 0.9163
+   }
+  },
+  "tool1_d1x_vs_dev": {
+   "keys_a": 721647,
+   "keys_b": 721647,
+   "common": 721647,
+   "ok_frac": 0.9690428630618572,
+   "cols_bad": {
+    "2": 0.9866,
+    "3": 0.8596,
+    "5": 0.8846,
+    "14": 0.9135,
+    "21": 0.8543,
+    "23": 0.8329,
+    "27": 0.8336,
+    "30": 0.8354,
+    "32": 0.9293,
+    "33": 0.9162,
+    "34": 0.9163
+   }
+  },
+  "label_l1_vs_l2": {
+   "rows_a": 528326,
+   "rows_b": 528326,
+   "common": 528326,
+   "only_a": 0,
+   "only_b": 0,
+   "eq_frac_common": 1.0,
+   "eq_frac_union": 1.0
+  },
+  "label_l1_vs_dev": {
+   "rows_a": 528326,
+   "rows_b": 528832,
+   "common": 528326,
+   "only_a": 0,
+   "only_b": 506,
+   "eq_frac_common": 0.7261917831036141,
+   "eq_frac_union": 0.725496944209125
+  },
+  "label_d1x_vs_dev": {
+   "rows_a": 528326,
+   "rows_b": 528832,
+   "common": 528326,
+   "only_a": 0,
+   "only_b": 506,
+   "eq_frac_common": 0.7261917831036141,
+   "eq_frac_union": 0.725496944209125
+  }
+ },
+ "labels_full_lookahead": {
+  "rows_a": 383666,
+  "rows_b": 383666,
+  "common": 383666,
+  "only_a": 0,
+  "only_b": 0,
+  "eq_frac_common": 1.0,
+  "eq_frac_union": 1.0
+ },
+ "t1xcmp": {
+  "gate_t1x_vs_dev": {
+   "rows_a": 23040,
+   "rows_b": 23040,
+   "common": 23040,
+   "ok_frac": 1.0,
+   "cols_bad": {}
+  },
+  "tool1_t1_vs_dev": {
+   "keys_a": 721647,
+   "keys_b": 721647,
+   "common": 721647,
+   "ok_frac": 0.97192675227639,
+   "cols_bad": {
+    "2": 0.9866,
+    "3": 0.8596,
+    "14": 0.9135,
+    "21": 0.8543,
+    "23": 0.8329,
+    "27": 0.8336,
+    "30": 0.8354,
+    "32": 0.9293,
+    "33": 0.9162,
+    "34": 0.9163
+   }
+  },
+  "tool1_t1e_vs_dev": {
+   "keys_a": 721647,
+   "keys_b": 721647,
+   "common": 721647,
+   "ok_frac": 0.6148188103047612,
+   "cols_bad": {
+    "1": 0.9958,
+    "2": 0.9614,
+    "3": 0.5229,
+    "4": 0.4988,
+    "5": 0.8869,
+    "6": 0.2653,
+    "7": 0.4368,
+    "8": 0.3147,
+    "10": 0.5838,
+    "11": 0.2636,
+    "12": 0.8879,
+    "13": 0.8827,
+    "14": 0.7352,
+    "15": 0.3743,
+    "16": 0.0271,
+    "21": 0.2844,
+    "22": 0.7092,
+    "23": 0.0112,
+    "27": 0.2152,
+    "28": 0.3998,
+    "30": 0.2234,
+    "31": 0.3142,
+    "32": 0.4453,
+    "33": 0.4237,
+    "34": 0.4238,
+    "35": 0.093,
+    "36": 0.7676,
+    "37": 0.2781,
+    "39": 0.3666
+   }
+  },
+  "tool1_t1_vs_t1e": {
+   "keys_a": 721647,
+   "keys_b": 721647,
+   "common": 721647,
+   "ok_frac": 0.6244486570303763,
+   "cols_bad": {
+    "1": 0.9958,
+    "2": 0.9707,
+    "3": 0.5186,
+    "4": 0.4988,
+    "5": 0.8876,
+    "6": 0.2653,
+    "7": 0.4368,
+    "8": 0.3147,
+    "10": 0.5838,
+    "11": 0.2636,
+    "12": 0.8886,
+    "13": 0.8848,
+    "14": 0.7355,
+    "15": 0.3743,
+    "16": 0.0271,
+    "21": 0.3742,
+    "22": 0.7092,
+    "23": 0.1058,
+    "27": 0.2154,
+    "28": 0.3998,
+    "30": 0.2234,
+    "31": 0.3142,
+    "32": 0.5058,
+    "33": 0.4893,
+    "34": 0.4893,
+    "35": 0.093,
+    "36": 0.7676,
+    "37": 0.2781,
+    "39": 0.3666
+   }
+  }
+ },
+ "tool1_quantization_check": {
+  "t1_vs_dev": {
+   "n": 721647,
+   "strict": 0.97193,
+   "loose_1step": 1.0,
+   "strict_by_day": {
+    "0": 1.0,
+    "1": 1.0,
+    "2": 1.0,
+    "3": 1.0,
+    "4": 1.0,
+    "5": 1.0,
+    "6": 1.0,
+    "7": 1.0,
+    "8": 1.0,
+    "9": 1.0,
+    "10": 1.0,
+    "11": 1.0,
+    "12": 0.92,
+    "13": 0.8319,
+    "14": 0.8324
+   },
+   "loose_cols_bad": {}
+  },
+  "t1e_vs_dev": {
+   "n": 721647,
+   "strict": 0.61482,
+   "loose_1step": 1.0,
+   "strict_by_day": {
+    "0": 0.5353,
+    "1": 0.676,
+    "2": 0.6911,
+    "3": 0.6934,
+    "4": 0.5415,
+    "5": 0.5587,
+    "6": 0.5769,
+    "7": 0.5829,
+    "8": 0.4809,
+    "9": 0.597,
+    "10": 0.7409,
+    "11": 0.7412,
+    "12": 0.6081,
+    "13": 0.5429,
+    "14": 0.6539
+   },
+   "loose_cols_bad": {}
+  },
+  "t1_vs_t1e": {
+   "n": 721647,
+   "strict": 0.62445,
+   "loose_1step": 1.0,
+   "strict_by_day": {
+    "0": 0.5353,
+    "1": 0.676,
+    "2": 0.6911,
+    "3": 0.6934,
+    "4": 0.5415,
+    "5": 0.5587,
+    "6": 0.5769,
+    "7": 0.5829,
+    "8": 0.4809,
+    "9": 0.597,
+    "10": 0.7409,
+    "11": 0.7412,
+    "12": 0.6206,
+    "13": 0.5892,
+    "14": 0.7376
+   },
+   "loose_cols_bad": {}
+  }
+ },
+ "tool1_start_by_day": {
+  "n_common": 721647,
+  "by_day": {
+   "0": {
+    "cells": 0.5353,
+    "c3_btcDom": 0.1768,
+    "c21_fundPct": 0.1266,
+    "c35_ret15m": 0.1163,
+    "c16_basketVolSpike": 0.0209
+   },
+   "1": {
+    "cells": 0.676,
+    "c3_btcDom": 0.9142,
+    "c21_fundPct": 0.0722,
+    "c35_ret15m": 0.1573,
+    "c16_basketVolSpike": 0.0313
+   },
+   "2": {
+    "cells": 0.6911,
+    "c3_btcDom": 1.0,
+    "c21_fundPct": 0.059,
+    "c35_ret15m": 0.1477,
+    "c16_basketVolSpike": 0.0105
+   },
+   "3": {
+    "cells": 0.6934,
+    "c3_btcDom": 1.0,
+    "c21_fundPct": 0.0706,
+    "c35_ret15m": 0.1579,
+    "c16_basketVolSpike": 0.042
+   },
+   "4": {
+    "cells": 0.5415,
+    "c3_btcDom": 0.3125,
+    "c21_fundPct": 0.102,
+    "c35_ret15m": 0.1069,
+    "c16_basketVolSpike": 0.0105
+   },
+   "5": {
+    "cells": 0.5587,
+    "c3_btcDom": 0.1874,
+    "c21_fundPct": 0.1049,
+    "c35_ret15m": 0.0896,
+    "c16_basketVolSpike": 0.0205
+   },
+   "6": {
+    "cells": 0.5769,
+    "c3_btcDom": 0.1771,
+    "c21_fundPct": 0.1009,
+    "c35_ret15m": 0.0865,
+    "c16_basketVolSpike": 0.0104
+   },
+   "7": {
+    "cells": 0.5829,
+    "c3_btcDom": 0.1874,
+    "c21_fundPct": 0.1044,
+    "c35_ret15m": 0.0878,
+    "c16_basketVolSpike": 0.0104
+   },
+   "8": {
+    "cells": 0.4809,
+    "c3_btcDom": 0.1685,
+    "c21_fundPct": 0.1111,
+    "c35_ret15m": 0.088,
+    "c16_basketVolSpike": 0.0731
+   },
+   "9": {
+    "cells": 0.597,
+    "c3_btcDom": 0.626,
+    "c21_fundPct": 0.5862,
+    "c35_ret15m": 0.0631,
+    "c16_basketVolSpike": 0.0417
+   },
+   "10": {
+    "cells": 0.7409,
+    "c3_btcDom": 1.0,
+    "c21_fundPct": 1.0,
+    "c35_ret15m": 0.0459,
+    "c16_basketVolSpike": 0.0104
+   },
+   "11": {
+    "cells": 0.7412,
+    "c3_btcDom": 1.0,
+    "c21_fundPct": 1.0,
+    "c35_ret15m": 0.0442,
+    "c16_basketVolSpike": 0.0624
+   },
+   "12": {
+    "cells": 0.6206,
+    "c3_btcDom": 0.625,
+    "c21_fundPct": 0.6051,
+    "c35_ret15m": 0.0452,
+    "c16_basketVolSpike": 0.0208
+   },
+   "13": {
+    "cells": 0.5892,
+    "c3_btcDom": 0.2502,
+    "c21_fundPct": 0.5289,
+    "c35_ret15m": 0.0662,
+    "c16_basketVolSpike": 0.0104
+   },
+   "14": {
+    "cells": 0.7376,
+    "c3_btcDom": 0.156,
+    "c21_fundPct": 1.0,
+    "c35_ret15m": 0.0967,
+    "c16_basketVolSpike": 0.0313
+   }
+  }
+ },
+ "port_python": {
+  "20250715": {
+   "n_ts": 2880,
+   "pairs": {
+    "dev_vs_port": {
+     "rows": 2880,
+     "ok_frac": 0.9505155723905724,
+     "cols_bad": {
+      "momentum1M": 0.9691,
+      "momentum15M": 0.9691,
+      "momentumAcceleration": 0.9691,
+      "volumeRatioUpDown": 0.9962,
+      "fundingRateRaw": 0.5493,
+      "fundingRateAvg24H": 0.5288,
+      "fundingRateTrend": 0.3854
+     }
+    }
+   }
+  },
+  "20251010": {
+   "n_ts": 2880,
+   "pairs": {
+    "dev_vs_port": {
+     "rows": 2880,
+     "ok_frac": 0.9591224747474747,
+     "cols_bad": {
+      "momentum1M": 0.9698,
+      "momentum15M": 0.9698,
+      "momentumAcceleration": 0.9698,
+      "volumeRatioUpDown": 0.9941,
+      "rsi14": 0.9972,
+      "fundingRateRaw": 0.6927,
+      "fundingRateAvg24H": 0.5493,
+      "fundingRateTrend": 0.5083
+     }
+    }
+   }
+  }
+ },
+ "ticker_file_vs_aerospike": {
+  "20251010": {
+   "min_file": 1440,
+   "min_as": 1440,
+   "ms_file": 797878,
+   "ms_as": 783478,
+   "ms_both": 783478,
+   "eq5": 783478,
+   "eq_ohlc": 783478,
+   "file_only": 14400,
+   "as_only": 0,
+   "min_miss_as": 0,
+   "min_miss_file": 0,
+   "sym_file": 555,
+   "sym_as": 545,
+   "sym_file_only": [
+    "DGBUSDT",
+    "FTTUSDT",
+    "GLMRUSDT",
+    "IDEXUSDT",
+    "MDTUSDT",
+    "RADUSDT",
+    "RAYUSDT",
+    "SCUSDT",
+    "STRAXUSDT",
+    "WAVESUSDT"
+   ],
+   "sym_as_only": []
+  },
+  "20250715": {
+   "min_file": 1440,
+   "min_as": 1440,
+   "ms_file": 695235,
+   "ms_as": 680835,
+   "ms_both": 680835,
+   "eq5": 680835,
+   "eq_ohlc": 680835,
+   "file_only": 14400,
+   "as_only": 0,
+   "min_miss_as": 0,
+   "min_miss_file": 0,
+   "sym_file": 484,
+   "sym_as": 474,
+   "sym_file_only": [
+    "DGBUSDT",
+    "FTTUSDT",
+    "GLMRUSDT",
+    "IDEXUSDT",
+    "MDTUSDT",
+    "RADUSDT",
+    "RAYUSDT",
+    "SCUSDT",
+    "STRAXUSDT",
+    "WAVESUSDT"
+   ],
+   "sym_as_only": []
+  }
+ },
+ "q3": {
+  "gate": {
+   "gate s42": {
+    "exists": true,
+    "ts_equal": true,
+    "h1": {
+     "n": 260602,
+     "le1e6": 1.0,
+     "bit": 1.0,
+     "max_abs": 0.0
+    }
+   },
+   "gate s7": {
+    "exists": true,
+    "ts_equal": true,
+    "h1": {
+     "n": 260602,
+     "le1e6": 1.0,
+     "bit": 1.0,
+     "max_abs": 0.0
+    }
+   },
+   "gate s13": {
+    "exists": true,
+    "ts_equal": true,
+    "h1": {
+     "n": 260602,
+     "le1e6": 1.0,
+     "bit": 1.0,
+     "max_abs": 0.0
+    }
+   },
+   "gate s21": {
+    "exists": true,
+    "ts_equal": true,
+    "h1": {
+     "n": 260602,
+     "le1e6": 1.0,
+     "bit": 1.0,
+     "max_abs": 0.0
+    }
+   },
+   "gate s99": {
+    "exists": true,
+    "ts_equal": true,
+    "h1": {
+     "n": 260602,
+     "le1e6": 1.0,
+     "bit": 1.0,
+     "max_abs": 0.0
+    }
+   },
+   "gate s123": {
+    "exists": true,
+    "ts_equal": true,
+    "h1": {
+     "n": 260602,
+     "le1e6": 1.0,
+     "bit": 1.0,
+     "max_abs": 0.0
+    }
+   },
+   "gate s777": {
+    "exists": true,
+    "ts_equal": true,
+    "h1": {
+     "n": 260602,
+     "le1e6": 1.0,
+     "bit": 1.0,
+     "max_abs": 0.0
+    }
+   },
+   "gate s2024": {
+    "exists": true,
+    "ts_equal": true,
+    "h1": {
+     "n": 260602,
+     "le1e6": 1.0,
+     "bit": 1.0,
+     "max_abs": 0.0
+    }
+   },
+   "retrain s42": {
+    "sha256": "6a50ebb6f3714f5b5223979df22a36ea85348fd03ef8488e5c805c5884c87a7a",
+    "sha_equal": true,
+    "n_train": 2629005,
+    "train_ts_max": "2025-12-31 23:44:00+07:00",
+    "h1_vs_orig_model": {
+     "n": 260602,
+     "le1e6": 1.0,
+     "bit": 1.0,
+     "max_abs": 0.0
+    }
+   }
+  },
+  "net015_s1": {
+   "onnx": "/home/ubuntu/deploy_242_l3/models/g015x26_f15_cut20251001.onnx",
+   "onnx_sha_ok": true,
+   "s1_json": "/home/ubuntu/s1_model/s1a2x1_cut20251231.json",
+   "s1_sha_ok": true,
+   "ref_sha_ok": true,
+   "n_ref": 4587093,
+   "n_new": 4587093,
+   "common": 4587093,
+   "fold20260101": {
+    "n": 4587093,
+    "le1e6": 1.0,
+    "bit": 1.0,
+    "max_abs": 0.0
+   }
+  }
+ },
+ "gitlog_since_20250725": [
+  "== src/main/java/com/binance/chuyennd/ai_ml/features/export/gate/ExportGateDataset.java",
+  "c13574a2 08-24 11:40 checkpoint(WIP): dong bang code/docs dang lam do truoc khi mo luong khung v1",
+  "463edee8 08-21 15:01 checkpoint: live v1 deployed changes (Aug18-20) pre further edits",
+  "c56e1fdb 08-11 18:53 chore(wfo): snapshot campaign 1m/net + finalize 226->ORACLE + dọn rác",
+  "== src/main/java/com/binance/chuyennd/ai_ml/features/export/fundingv2/ExportFeaturesForPythonTool.java",
+  "c56e1fdb 08-11 18:53 chore(wfo): snapshot campaign 1m/net + finalize 226->ORACLE + dọn rác",
+  "e6e9e52d 07-30 08:25 feat(export): che do FF_UNFILTERED re-export tren luoi 15m + sub-sample deterministic (opt-in)",
+  "== src/main/java/com/binance/chuyennd/ai_ml/features/export/ExportFundingLabel.java",
+  "c56e1fdb 08-11 18:53 chore(wfo): snapshot campaign 1m/net + finalize 226->ORACLE + dọn rác",
+  "== src/main/java/com/binance/chuyennd/tradecore/MarketBigChangeDetector.java",
+  "08beda05 10-01 13:01 prereg+code(BD-CHAIN): doi rateDown15MAvg theo ty le universe f — VIEC0 ket luan INPUT MODEL (gate33 idx2=momentum15M; selector45 idx5) + them key SIM_BD_FRACTION (default 0, byte-identical); DUNG o VIEC2 vi Kaggle ban (sm-pathexit running)",
+  "804484f9 09-17 06:10 BD-THRESHOLD-FRAGILITY: tach MS_DOWN_BIG_AVG_DCA khoi BIG_DOWN (isDcaAlt dung field moi); default byte-identical",
+  "637513c2 09-03 16:07 fix(safety): khoi phuc 4 kill-switch bi xoa NHAM o dot 2 refactor",
+  "5f40a90c 09-03 15:47 refactor(engine): xoa 40 co-che TRO voi cau hinh dang chay (giu dung nhanh dang di)",
+  "== src/main/java/com/binance/chuyennd/research/ExportMarketData2File.java",
+  "== src/main/java/com/binance/chuyennd/aerospike/DataManagerAerospikeFloatSim.java",
+  "302bc211 10-02 23:52 fix(no-write-242): chan ghi rac vao Aerospike 242 tu kernel Kaggle (R1) va shadow_c3 Oracle (R2)",
+  "59521a56 09-30 14:34 fix(OOM-OI-LIVE): nguyen nhan goc = reader KHONG cat cua so 24h (chunk-thang merge ca thang ~8640 diem/set) + double-buffer => peak ~4,4-5,0GB > -Xmx4g => OOM + retry-storm 10s; fix mode inplace (cat 24h + nap tung lo 64 coin vao map dang song + bound knownCoins + backoff), default legacy byte-identical",
+  "876250e1 09-29 10:50 feat(B4-PASS-SPEED): ha 1 luot live ~250s->250ms steady (giu parity) — BatchRead 1 lan moi coin + doc chi chunk-thang gan + cache OI qua tick + market-only skip full universe + S1 batch read; instrument [PASS-TIMING]; 183 test PASS; parity 60/60 bit-identical",
+  "37fd5024 09-24 20:55 chore(docs): to chuc lai docs/ thanh folder con",
+  "53488e43 08-29 15:40 wip: frozen-v1 sim working state + phase1 docs",
+  "c13574a2 08-24 11:40 checkpoint(WIP): dong bang code/docs dang lam do truoc khi mo luong khung v1",
+  "463edee8 08-21 15:01 checkpoint: live v1 deployed changes (Aug18-20) pre further edits",
+  "c56e1fdb 08-11 18:53 chore(wfo): snapshot campaign 1m/net + finalize 226->ORACLE + dọn rác",
+  "8741f851 08-04 11:07 refactor(infra): rename identifier 226 -> ORACLE (retire 226, Oracle la hub)",
+  "af0b2cc1 07-30 08:25 fix(aerospike): pin GMT+7 cho day-anchor + key format duong DOC ticker/pred",
+  "== src/main/java/com/binance/chuyennd/ai_ml/features/export/entry/ComprehensiveMarketFeatureExtractor.java",
+  "== src/main/java/com/binance/chuyennd/ai_ml/features/export/HistoryManager.java",
+  "== src/main/java/com/binance/chuyennd/tradecore/CoinRankManager.java",
+  "fab02f27 09-02 11:31 feat(ablation): TS_GAP_CONST, TIER_FLAT (env-gated, default off) + fix header printDone",
+  "== src/main/java/com/binance/chuyennd/research/FundingFeeManager.java",
+  "== src/main/java/com/binance/chuyennd/ai_ml/data/SymbolLifecycleManager.java",
+  "c56e1fdb 08-11 18:53 chore(wfo): snapshot campaign 1m/net + finalize 226->ORACLE + dọn rác",
+  "== src/main/java/com/binance/chuyennd/ai_ml/features/export/entry/MarketFeatures.java"
+ ]
+}

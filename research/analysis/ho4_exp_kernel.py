@@ -10,7 +10,7 @@ import json, logging, os, re, sys
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", stream=sys.stdout)
 log = logging.getLogger("ho4_exp")
 USER = "chuyendinh"
-WD = "/home/ubuntu/claude_master/1010/ho4/kaggle"
+WD = "/home/ubuntu/claude_master/1011/ho4b/kaggle"
 JW = "/home/ubuntu/src/BinanceFuturesJava/research/analysis/ho3b_jwrite.py"
 KX = r'''"""HO4 exporter kernel — SINH TU ho4_exp_kernel.py (ADDENDUM-5 31e3c9e7)"""
 import glob, gzip, hashlib, io, json, logging, os, pickle, re, shutil, socket, struct, subprocess, sys, time, datetime
@@ -25,6 +25,7 @@ OUTD = WORK + "/out"
 for _d in (OUTD, WORK + "/logs", OUTD + "/ticker"):
     os.makedirs(_d, exist_ok=True)
 open(WORK + "/ho3b_jwrite.py", "w").write(__JW_SRC__)
+open(WORK + "/jbin.py", "w").write(__JBIN_SRC__)
 sys.path.insert(0, WORK)
 import ho3b_jwrite as JWR
 RES = dict(tag=CFG["tag"], prereg="ADDENDUM-5 31e3c9e7", steps={}, tasks=[])
@@ -139,6 +140,18 @@ if DEVTK:
         _s = _d.strftime("%Y%m%d"); _p = _tk.get(_s)
         if _p is None:
             _miss.append(_s)
+        elif CFG.get("drop_syms"):               # HO4b D1x: bo cac symbol chi co trong file ticker DEV (khong co trong store)
+            import jbin as _JB
+            _drop = set(CFG["drop_syms"])
+            _raw = gzip.open(_p).read() if _p.endswith(".gz") else open(_p, "rb").read()
+            _mins = []
+            for _ms, _m in _JB.iter_minutes(_raw):
+                _e = [(_sy, _v[4], _v[1], _v[2], _v[3], _v[5], _v[0]) for _sy, _v in _m.items() if _sy not in _drop]
+                if _e:
+                    _mins.append((_ms, _e))
+            with gzip.open(TKDIR + "ticker_%s.bin.gz" % _s, "wb", 1) as _fo:
+                _fo.write(JWR.encode_day(_mins))
+            day_stats.setdefault("drop_days", 0); day_stats["drop_days"] += 1
         elif _p.endswith(".gz"):
             os.symlink(_p, TKDIR + "ticker_%s.bin.gz" % _s)
         else:
@@ -277,6 +290,19 @@ for st, rows in AS.items():
 for k, bins in fund_rows:
     CL.put(("test", "funding_data", k), bins, policy=WP)
 NLOAD["funding_data"] = len(fund_rows)
+if CFG.get("market_from_dev"):                  # HO4b: nap set market_data_object tu market.bin DEV (loai race tap phut)
+    _lo, _hi = CFG["market_from_dev"]
+    with open(pick("market.bin", CFG["dev_market_ds"]), "rb") as _f:
+        _n = struct.unpack(">i", _f.read(4))[0]
+        _buf = _f.read(20 * _n)
+    _nm = 0
+    for _i in range(_n):
+        _t = struct.unpack_from(">q", _buf, 20 * _i)[0]
+        if _lo <= _t < _hi:
+            _k = datetime.datetime.fromtimestamp(_t / 1000, TZ7).strftime("%Y%m%d-%H%M")
+            CL.put(("test", "market_data_object", _k), {"time": _t, "data": bytearray(_buf[20 * _i + 8:20 * _i + 20])}, policy=WP)
+            _nm += 1
+    NLOAD["market_from_dev"] = _nm
 LOG.info("nap set nho: %s (asdata sets=%s)", NLOAD, list(AS))
 # ---------------- B4: config + ingest kline (Java goc) ----------------
 RAWCFG = open(pick("config.properties", CFG["cfg_ds"])).read().splitlines()
@@ -357,6 +383,12 @@ for t in CFG["tasks"]:
         os.makedirs(p.replace("@OUT", OUTD), exist_ok=True)
     cmd = JAVA + [t["cls"]] + [a.replace("@OUT", OUTD) for a in t["args"]]
     LOG.info("TASK %s CMD %s ENV %s CFG %s", t["name"], " ".join(cmd), t.get("env"), t.get("cfg"))
+    if t.get("pre") == "truncate_market":       # HO4b: lam rong set truoc lan chay lap (do tinh tat dinh)
+        CL.truncate("test", "market_data_object", 0)
+        time.sleep(5)
+        _left = []
+        CL.scan("test", "market_data_object").foreach(lambda r: _left.append(1))
+        LOG.info("truncate market_data_object: con %d record", len(_left))
     t0 = time.time(); lf = WORK + "/logs/%s.out" % t["name"]
     try:
         rc = subprocess.call(cmd, env=env, stdout=open(lf, "w"), stderr=subprocess.STDOUT, timeout=t.get("timeout_s", 14400))
@@ -364,13 +396,29 @@ for t in CFG["tasks"]:
         rc = "timeout"
     r = dict(name=t["name"], rc=rc, secs=round(time.time() - t0, 1), tail=open(lf, errors="ignore").read()[-1500:])
     if t.get("post") == "market" and rc == 0:
-        n = dump_market(OUTD + "/market_rebuilt.bin")
+        _mf = OUTD + "/" + t.get("dump", "market_rebuilt.bin")
+        _mk = "market_M" + t.get("mkey", "")
+        n = dump_market(_mf)
         r["market_dump_n"] = n
         try:
-            RES["steps"]["market_M"] = gate_M(OUTD + "/market_rebuilt.bin")
-            LOG.info("CONG M: %s", {k: v for k, v in RES["steps"]["market_M"].items() if k != "by_month"})
+            RES["steps"][_mk] = gate_M(_mf)
+            LOG.info("CONG M: %s", {k: v for k, v in RES["steps"][_mk].items() if k != "by_month"})
         except Exception as e:
-            RES["steps"]["market_M"] = dict(error=repr(e))
+            RES["steps"][_mk] = dict(error=repr(e))
+    if t.get("post") == "tk_rt" and rc == 0:    # HO4b: round-trip ticker DEV -> Aerospike -> ExportTickerDaily
+        _rt = {}
+        _dev = {}
+        for _p in glob.glob(IN + "/**/ticker_2*.bin*", recursive=True):
+            if any(("/" + _ds + "/") in _p for _ds in DEVTK):
+                _dev[re.search(r"ticker_(\d{8})", _p).group(1)] = _p
+        for _p in sorted(glob.glob(OUTD + "/rt/ticker_*")):
+            _s = re.search(r"ticker_(\d{8})", _p).group(1)
+            _a = gzip.open(_p).read() if _p.endswith(".gz") else open(_p, "rb").read()
+            _q = _dev.get(_s)
+            _b = (gzip.open(_q).read() if _q.endswith(".gz") else open(_q, "rb").read()) if _q else b""
+            _rt[_s] = dict(bytes_new=len(_a), bytes_dev=len(_b), md5_equal=hashlib.md5(_a).hexdigest() == hashlib.md5(_b).hexdigest())
+        RES["steps"]["tk_rt"] = _rt
+        LOG.info("TK_RT %s", _rt)
     outs = {}
     for p in sorted(glob.glob(OUTD + "/" + t.get("out_glob", t["name"] + "*"), recursive=True)):
         if os.path.isfile(p):
@@ -426,7 +474,8 @@ def submit(cfgp):
     ref = "%s/%s" % (USER, slug(tag))
     fol = os.path.join(WD, slug(tag))
     os.makedirs(fol, exist_ok=True)
-    code = KX.replace("__CFG_JSON__", repr(json.dumps(cfg))).replace("__JW_SRC__", repr(open(JW).read()))
+    code = KX.replace("__CFG_JSON__", repr(json.dumps(cfg))).replace("__JW_SRC__", repr(open(JW).read())).replace(
+        "__JBIN_SRC__", repr(open(os.path.join(os.path.dirname(JW), "jbin.py")).read()))
     compile(code, "k", "exec")
     open(os.path.join(fol, "run.py"), "w").write(code)
     dss = sorted({cfg["jar_ds"], cfg["cfg_ds"], cfg["as_ds"], cfg["asdata_ds"], cfg["dev_market_ds"]} | set(cfg.get("dev_ticker_ds") or []))
