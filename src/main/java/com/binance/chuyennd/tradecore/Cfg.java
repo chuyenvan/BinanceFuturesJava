@@ -50,7 +50,9 @@ public final class Cfg {
             "SIM_END_DATE", "HOME", "APP_PID_DIR", "APP_MAIN_CLASS", "GEN_THREADS", "NO_VALIDATE",
             "CONFIG_STRICT", "SHADOW_NO_PUSH", "OI_STALE_HALT", "OI_STALE_HALT_MS",
             // [FIX_NO_WRITE_242 2026-10-03] cong ghi Aerospike 242 (Live242WriteGuard) — ha tang, khong phai tham so GD
-            "LIVE_WRITE_242_ENABLED", "LIVE_IS_SHADOW_HOST");
+            "LIVE_WRITE_242_ENABLED", "LIVE_IS_SHADOW_HOST",
+            // [MAPAUD 2026-10-11] symbol_mapper: chinh sach id trung khi nap + xac nhan tool sua (ha tang)
+            "SYMBOL_MAPPER_DUP_POLICY", "MAPPER_REPAIR_CONFIRM");
 
     /** Tien to cua bien env DUOC COI LA THAM SO GIAO DICH — cam dat khi da co profile. */
     private static final List<String> TRADING_PREFIXES = Arrays.asList(
