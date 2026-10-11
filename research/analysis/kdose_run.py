@@ -180,7 +180,7 @@ def p15_of(X):
 
 def select(e, rep):
     """chi so o (vao mang CMI.. sap theo phut) bi loi: moi bin b lay round(e/ebar*|E_b|) o deu, khong lap."""
-    if e is None:
+    if e is None or e == 0:
         return None
     if e == "all":
         return np.arange(len(G["CMI"]))
@@ -211,7 +211,7 @@ def run_engine(sel, regime, out_idx, md_check=0):
     want = np.zeros(NM, bool)
     want[out_idx] = True
     inv = np.full(nsym, -1, np.int64)
-    rows, got, nchk, nbad = [], [], 0, 0
+    rows, got, nchk, nbad, last_hb = [], [], 0, 0, -1
     lo = int(np.searchsorted(smi, I_START))
     for i in range(I_START, IW1):
         row = PT[i]
@@ -238,6 +238,12 @@ def run_engine(sel, regime, out_idx, md_check=0):
             r2 = chk.update({s: (float(a[0]), float(a[1]), float(a[2]), float(a[3])) for s, a in zip(syms, arr)})
             nchk += 1
             nbad += int((r2 is None) != (rate is None) or (r2 is not None and (r2[0] != rate[0] or r2[2] != rate[2])))
+        if i >= IW0 and ts // H != last_hb:
+            # [sua bug path-dependence] fund_feats cache theo (sym, gio) tai LAN GOI DAU trong gio; ban day du (KDIV) goi o
+            # phut co du lieu dau tien cua moi gio -> am cache dung luc do de p15 o M* doc lap voi tap phut xuat.
+            last_hb = ts // H
+            bk = eng.top_ids
+            eng.fund_feats(fst, bk if len(bk) else np.array([eng.str2id.get("BTCUSDT")], dtype=np.int64), ts)
         if want[i]:
             rows.append(dx.features_row(eng, fst, ts, syms, arr, rate))
             got.append(i)
@@ -432,6 +438,9 @@ def scen(task):
     res = dict(e=e, rep=rep, regime=regime, ncell=int(0 if sel is None else len(sel)), gate=st,
                dp15_p50=float(np.percentile(dp, 50)) if len(dp) else 0.0,
                dp15_p99=float(np.percentile(dp, 99)) if len(dp) else 0.0, sec=time.time() - t0)
+    if regime == "R2" and e in (0.0, "all"):
+        ref = (G["P15_0"] if e == 0.0 else G["P15_R2"])[G["MS_POS"]]
+        res["mstar_eq_full_pct"] = 100.0 * float(np.mean(pw == ref))
     return res, {k: v.tolist() for k, v in flips.items()}
 
 
@@ -551,12 +560,13 @@ def load_base():
     TS = z["TS"]
     build_cfgs(TS)
     G["P15_0"], G["MS_POS"], G["MS_IDX"], G["floor"] = z["P15_0"], z["MS_POS"], z["MS_IDX"], np.float32(z["floor"])
+    G["P15_R2"] = z["P15_R2"]
     G["PASS0"] = {k: z["PASS0_" + k] for k in G["C"]}
     G["Q0"] = {k: z["Q0_" + k] for k in G["C"]}
 
 
 def tasks_all():
-    T = [("all", 0, "R1"), ("all", 0, "R2")]
+    T = [(0.0, 0, "R2"), ("all", 0, "R2"), ("all", 0, "R1")]     # 2 dau = kiem path-independence M*
     ebar = G["E_b"].sum() / G["N_b"].sum()
     for e in GRID:
         if e >= ebar:          # pre-reg §3: e >= ebar -> thay bang ebar (= tap "all", tat dinh) — khong lap 20 lan
@@ -739,7 +749,8 @@ def s1_prep():
     it = np.arange(IG0, IW1, 60) - 1
     PT = G["PT"]
     stb = np.array([s in STABLE for s in G["names"]])
-    C1, C0 = PT[it, :, 3].astype(np.float64), PT[it - 60, :, 3].astype(np.float64)
+    ns = G["nsym"]
+    C1, C0 = PT[it, :ns, 3].astype(np.float64), PT[it - 60, :ns, 3].astype(np.float64)
     hmap = np.full(NM, -1, np.int64)
     hmap[it] = np.arange(len(it))
     G["S1"] = dict(it=it, C1=C1, C0=C0, stb=stb, hmap=hmap)
