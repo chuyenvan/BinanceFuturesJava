@@ -51,7 +51,7 @@ final class CompactFileDay {
         int p = day.size();
         long[] times = new long[p];
         Map<Short, float[]> coin2 = new HashMap<>();
-        int arrLen = 1000; // mặc định khớp KaggleDataLoader; ghi đè theo mảng thực tế bên dưới
+        int arrLen = SymbolIdLimits.CAPACITY; // [LIVEFIX2] mặc định khớp loader (truoc 1000); ghi đè theo mảng thực tế bên dưới
         int idx = 0;
         for (Map.Entry<Long, KlineObjectSimple[]> e : day.entrySet()) {
             times[idx] = e.getKey();

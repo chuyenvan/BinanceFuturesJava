@@ -1,5 +1,6 @@
 package com.binance.chuyennd.tradecore;
 
+import com.binance.chuyennd.ai_ml.data.SymbolIdLimits;
 import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
 import com.binance.chuyennd.object.MarketLevelChange;
 import org.slf4j.Logger;
@@ -57,7 +58,7 @@ public final class PumpDumpFilter {
     private static final int HOUR_MS = 3_600_000;
     private static final int FIVE_MIN_MS = 5 * MIN_MS;
 
-    private static final int MAX_SYMBOL = 1000;
+    private static final int MAX_SYMBOL = SymbolIdLimits.CAPACITY; // [LIVEFIX2] truoc: 1000
 
     private static String mode = "off";
     private static boolean loaded = false;

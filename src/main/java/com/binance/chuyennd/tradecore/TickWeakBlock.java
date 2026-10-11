@@ -1,5 +1,6 @@
 package com.binance.chuyennd.tradecore;
 
+import com.binance.chuyennd.ai_ml.data.SymbolIdLimits;
 import com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
@@ -169,7 +170,7 @@ public final class TickWeakBlock {
     }
 
     private static void buildExcluded(int n) {
-        excluded = new boolean[Math.max(n, 1000)];
+        excluded = new boolean[Math.max(n, SymbolIdLimits.CAPACITY)]; // [LIVEFIX2] truoc: 1000
         int k = 0;
         String first = null;
         for (int id = 0; id < excluded.length; id++) {

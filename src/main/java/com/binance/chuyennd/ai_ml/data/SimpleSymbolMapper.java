@@ -33,8 +33,8 @@ public class SimpleSymbolMapper {
 
     public static final String KEY_DUP_POLICY = "SYMBOL_MAPPER_DUP_POLICY";
     static final int MAX_CAS_RETRY = 20;
-    /** Tran mang theo id dang hardcode (HistoryManager.MAX_COINS=1000, klineArray[1000]) — vuot =&gt; log ERROR. */
-    static final int ID_SOFT_CAP = 1000;
+    /** Tran mang theo id (SymbolIdLimits.CAPACITY; truoc LIVEFIX2 = 1000 hardcode) — vuot =&gt; log ERROR. */
+    static final int ID_SOFT_CAP = SymbolIdLimits.CAPACITY;
 
     // Map lưu trữ: Symbol (String) <-> ID (Short)
     private final Map<String, Short> strToId = new ConcurrentHashMap<>();
@@ -203,8 +203,8 @@ public class SimpleSymbolMapper {
         }
         if (id > counter) counter = id;
         if (id >= ID_SOFT_CAP) {
-            LOG.error("⛔ [MAPPER-CAP] {} -> id {} >= {}: HistoryManager.MAX_COINS / klineArray[1000] se BO symbol (live) "
-                    + "hoac nem AIOOBE (sim) — nang tran truoc (docs/audit/MAPPER_AUDIT_20261011.md).", symbol, id, ID_SOFT_CAP);
+            LOG.error("⛔ [MAPPER-CAP] {} -> id {} >= {}: SymbolIdLimits.CAPACITY: HistoryManager bo symbol (live, [ID-CAP]) "
+                    + "hoac sim nem IllegalStateException — nang tran truoc (docs/audit/MAPPER_AUDIT_20261011.md).", symbol, id, ID_SOFT_CAP);
         }
     }
 

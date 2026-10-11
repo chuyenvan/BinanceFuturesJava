@@ -2,6 +2,7 @@
  */
 package com.binance.chuyennd.research;
 
+import com.binance.chuyennd.ai_ml.data.SymbolIdLimits;
 import ai.onnxruntime.OrtException;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper;
@@ -117,8 +118,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     // 🔥 SỬ DỤNG MẢNG CỐ ĐỊNH O(1) ĐỂ LOẠI BỎ AUTOBOXING RÁC CỦA HASHMAP
     // =================================================================
     @SuppressWarnings("unchecked")
-    public List<OrderTargetInfoTest>[] symbol2OrdersEntry = new ArrayList[1000];
-    public OrderTargetInfoTest[] symbol2OrderRunning = new OrderTargetInfoTest[1000];
+    // [LIVEFIX2] danh chi so theo symbolId: tran chung (truoc 1000). activeRunningIds ben duoi danh theo SO LENH, khong doi.
+    public List<OrderTargetInfoTest>[] symbol2OrdersEntry = new ArrayList[SymbolIdLimits.CAPACITY];
+    public OrderTargetInfoTest[] symbol2OrderRunning = new OrderTargetInfoTest[SymbolIdLimits.CAPACITY];
 
     // 🔥 TỐI ƯU TUYỆT ĐỐI: Dùng mảng nguyên thủy thay cho HashSet<Short>
     // Loại bỏ hoàn toàn Autoboxing khi gọi add(), remove() hay contains()

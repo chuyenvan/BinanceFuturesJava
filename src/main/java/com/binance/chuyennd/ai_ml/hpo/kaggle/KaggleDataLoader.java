@@ -1,5 +1,6 @@
 package com.binance.chuyennd.ai_ml.hpo.kaggle;
 
+import com.binance.chuyennd.ai_ml.data.SymbolIdLimits;
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
@@ -107,14 +108,14 @@ public class KaggleDataLoader {
 
         for (Map.Entry<Long, Map<String, KlineObjectSimple>> timeEntry : rawData.entrySet()) {
             // Khởi tạo mảng 5000 phần tử (tốn cực ít RAM vì chỉ chứa reference)
-            KlineObjectSimple[] klineArray = new KlineObjectSimple[1000];
+            KlineObjectSimple[] klineArray = new KlineObjectSimple[SymbolIdLimits.CAPACITY]; // [LIVEFIX2] truoc: 1000
 
             for (Map.Entry<String, KlineObjectSimple> symbolEntry : timeEntry.getValue().entrySet()) {
                 String fullSymbol = symbolEntry.getKey().endsWith("USDT") ? symbolEntry.getKey() : symbolEntry.getKey() + "USDT";
                 short symbolId = com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper.getInstance().getId(fullSymbol);
 
                 // Nạp thẳng vào Index của mảng
-                klineArray[symbolId] = symbolEntry.getValue();
+                klineArray[SymbolIdLimits.requireInRange("KaggleDataLoader", fullSymbol, symbolId)] = symbolEntry.getValue();
             }
             optimizedData.put(timeEntry.getKey(), klineArray);
         }
