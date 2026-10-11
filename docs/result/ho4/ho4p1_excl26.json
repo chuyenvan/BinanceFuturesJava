@@ -1,0 +1,394 @@
+{
+ "prereg": "ADDENDUM-6 af6d6c94",
+ "months": [
+  "2026-01",
+  "2026-02",
+  "2026-03",
+  "2026-04",
+  "2026-05",
+  "2026-06",
+  "2026-07",
+  "2026-08",
+  "2026-09"
+ ],
+ "excluded_no_mapper": [
+  "ACNUSDT",
+  "AGPUUSDT",
+  "AMCUSDT",
+  "ANETUSDT",
+  "APLDUSDT",
+  "BTCSTUSDT",
+  "BWETUSDT",
+  "BYDUSDT",
+  "CRMLUSDT",
+  "CSOPSAMSUNG2LUSDT",
+  "CSOPSKHYNIX2LUSDT",
+  "CVNAUSDT",
+  "CXMTUSDT",
+  "CYPHUSDT",
+  "DDOGUSDT",
+  "DJTUSDT",
+  "DOSUSDT",
+  "GDXUSDT",
+  "GPROUSDT",
+  "GTLBUSDT",
+  "HANMIUSDT",
+  "HK0625USDT",
+  "HK0992USDT",
+  "HUTUSDT",
+  "IONQUSDT",
+  "KODEX200USDT",
+  "KOUSDT",
+  "KUAISHOUUSDT",
+  "LGELECTRONICSUSDT",
+  "LYTEUSDT",
+  "MARAUSDT",
+  "MARSCOINUSDT",
+  "MDBUSDT",
+  "MEITUANUSDT",
+  "MOONSHOTUSDT",
+  "MPUSDT",
+  "MRKUSDT",
+  "MRNAUSDT",
+  "NAVERUSDT",
+  "NETUSDT",
+  "NKEUSDT",
+  "NVDLUSDT",
+  "OKLOUSDT",
+  "OURAUSDT",
+  "PATHUSDT",
+  "PDDUSDT",
+  "PONSUSDT",
+  "RAMUSDT",
+  "RDDTUSDT",
+  "RUMUSDT",
+  "SAMSUNGEMUSDT",
+  "SECZUSDT",
+  "SHOPUSDT",
+  "SKDDUSDT",
+  "SKUUUSDT",
+  "SNTUSDT",
+  "STPTUSDT",
+  "TEAMUSDT",
+  "TEMUSDT",
+  "TSLLUSDT",
+  "TWSTUSDT",
+  "UNHUSDT",
+  "UNITREEUSDT",
+  "USDBRLUSDT",
+  "VSTUSDT",
+  "XOMUSDT",
+  "ZHONGJIUSDT",
+  "ZSUSDT"
+ ],
+ "excluded_died": [
+  "BTCDOMUSDT",
+  "USDCUSDT"
+ ],
+ "excluded_regex": [
+  "\u54c8\u57fa\u7c73USDT",
+  "\u5e01\u5b89\u4eba\u751fUSDT",
+  "\u6211\u8e0f\u9a6c\u6765\u4e86USDT",
+  "\u725b\u6765USDT",
+  "\u9f99\u867eUSDT"
+ ],
+ "no_funding_vision_trading_excluded": [],
+ "settle_tail_symbols": [
+  "1000WHYUSDT",
+  "1000XUSDT",
+  "42USDT",
+  "A2ZUSDT",
+  "ACXUSDT",
+  "AGIXUSDT",
+  "AI16ZUSDT",
+  "AIUSDT",
+  "ALPACAUSDT",
+  "ALPHAUSDT",
+  "AMBUSDT",
+  "ATAUSDT",
+  "B3USDT",
+  "BADGERUSDT",
+  "BAKEUSDT",
+  "BALUSDT",
+  "BDXNUSDT",
+  "BIDUSDT",
+  "BLZUSDT",
+  "BNXUSDT",
+  "BOBUSDT",
+  "BONDUSDT",
+  "BSWUSDT",
+  "CHESSUSDT",
+  "COMBOUSDT",
+  "COMMONUSDT",
+  "COSUSDT",
+  "CUDISUSDT",
+  "DAMUSDT",
+  "DARUSDT",
+  "DEFIUSDT",
+  "DEGENUSDT",
+  "DEGOUSDT",
+  "DENTUSDT",
+  "DFUSDT",
+  "DGBUSDT",
+  "DMCUSDT",
+  "DUSDT",
+  "EPTUSDT",
+  "FIOUSDT",
+  "FISUSDT",
+  "FLMUSDT",
+  "FORTHUSDT",
+  "FTMUSDT",
+  "FTTUSDT",
+  "FUNUSDT",
+  "FXSUSDT",
+  "GHSTUSDT",
+  "GLMRUSDT",
+  "HFTUSDT",
+  "HIFIUSDT",
+  "HIGHUSDT",
+  "HIPPOUSDT",
+  "HOOKUSDT",
+  "ICXUSDT",
+  "IDEXUSDT",
+  "IPUSDT",
+  "IRUSDT",
+  "KDAUSDT",
+  "KEYUSDT",
+  "KLAYUSDT",
+  "LEVERUSDT",
+  "LINAUSDT",
+  "LOKAUSDT",
+  "LOOMUSDT",
+  "LRCUSDT",
+  "MBOXUSDT",
+  "MDTUSDT",
+  "MEMEFIUSDT",
+  "MILKUSDT",
+  "MKRUSDT",
+  "MLNUSDT",
+  "MYROUSDT",
+  "NEIROETHUSDT",
+  "NFPUSDT",
+  "NKNUSDT",
+  "NTRNUSDT",
+  "NULSUSDT",
+  "OBOLUSDT",
+  "OCEANUSDT",
+  "OLUSDT",
+  "OMGUSDT",
+  "OMNIUSDT",
+  "OMUSDT",
+  "ORBSUSDT",
+  "OXTUSDT",
+  "PERPUSDT",
+  "PHBUSDT",
+  "PONKEUSDT",
+  "PORT3USDT",
+  "PUFFERUSDT",
+  "QUICKUSDT",
+  "RADUSDT",
+  "RAYUSDT",
+  "RDNTUSDT",
+  "REEFUSDT",
+  "REIUSDT",
+  "RENUSDT",
+  "RLSUSDT",
+  "RVVUSDT",
+  "SCRTUSDT",
+  "SCUSDT",
+  "SKATEUSDT",
+  "SLERFUSDT",
+  "STGUSDT",
+  "STMXUSDT",
+  "STORJUSDT",
+  "STRAXUSDT",
+  "SWELLUSDT",
+  "SXPUSDT",
+  "SYSUSDT",
+  "TANSSIUSDT",
+  "TOKENUSDT",
+  "TONUSDT",
+  "TROYUSDT",
+  "TRUUSDT",
+  "UNFIUSDT",
+  "UXLINKUSDT",
+  "VANRYUSDT",
+  "VFYUSDT",
+  "VICUSDT",
+  "VIDTUSDT",
+  "VINEUSDT",
+  "VOXELUSDT",
+  "WAVESUSDT",
+  "XCNUSDT",
+  "XEMUSDT",
+  "YALAUSDT",
+  "ZKJUSDT",
+  "ZRCUSDT"
+ ],
+ "volume_share_by_month": {
+  "2026-01": {
+   "died": {
+    "share": 0.000228,
+    "n_sym": 2
+   },
+   "no_mapper": {
+    "share": 0.0,
+    "n_sym": 3
+   },
+   "regex": {
+    "share": 0.004349,
+    "n_sym": 2
+   },
+   "uni": {
+    "share": 0.995422,
+    "n_sym": 622
+   }
+  },
+  "2026-02": {
+   "died": {
+    "share": 0.000211,
+    "n_sym": 2
+   },
+   "no_mapper": {
+    "share": 0.0,
+    "n_sym": 3
+   },
+   "regex": {
+    "share": 0.002426,
+    "n_sym": 2
+   },
+   "uni": {
+    "share": 0.997363,
+    "n_sym": 634
+   }
+  },
+  "2026-03": {
+   "died": {
+    "share": 0.000163,
+    "n_sym": 2
+   },
+   "no_mapper": {
+    "share": 0.0,
+    "n_sym": 3
+   },
+   "regex": {
+    "share": 0.000925,
+    "n_sym": 3
+   },
+   "uni": {
+    "share": 0.998912,
+    "n_sym": 648
+   }
+  },
+  "2026-04": {
+   "died": {
+    "share": 0.0002,
+    "n_sym": 2
+   },
+   "no_mapper": {
+    "share": 0.0,
+    "n_sym": 3
+   },
+   "regex": {
+    "share": 0.0063,
+    "n_sym": 3
+   },
+   "uni": {
+    "share": 0.9935,
+    "n_sym": 664
+   }
+  },
+  "2026-05": {
+   "died": {
+    "share": 0.000202,
+    "n_sym": 2
+   },
+   "no_mapper": {
+    "share": 0.0,
+    "n_sym": 3
+   },
+   "regex": {
+    "share": 0.00133,
+    "n_sym": 3
+   },
+   "uni": {
+    "share": 0.998468,
+    "n_sym": 696
+   }
+  },
+  "2026-06": {
+   "died": {
+    "share": 0.0002,
+    "n_sym": 2
+   },
+   "no_mapper": {
+    "share": 0.0,
+    "n_sym": 3
+   },
+   "regex": {
+    "share": 0.001447,
+    "n_sym": 3
+   },
+   "uni": {
+    "share": 0.998353,
+    "n_sym": 753
+   }
+  },
+  "2026-07": {
+   "died": {
+    "share": 0.000219,
+    "n_sym": 2
+   },
+   "no_mapper": {
+    "share": 0.0,
+    "n_sym": 2
+   },
+   "regex": {
+    "share": 0.000421,
+    "n_sym": 3
+   },
+   "uni": {
+    "share": 0.99936,
+    "n_sym": 794
+   }
+  },
+  "2026-08": {
+   "died": {
+    "share": 0.00024,
+    "n_sym": 2
+   },
+   "no_mapper": {
+    "share": 0.001271,
+    "n_sym": 32
+   },
+   "regex": {
+    "share": 0.001715,
+    "n_sym": 4
+   },
+   "uni": {
+    "share": 0.996774,
+    "n_sym": 795
+   }
+  },
+  "2026-09": {
+   "died": {
+    "share": 0.000102,
+    "n_sym": 2
+   },
+   "no_mapper": {
+    "share": 0.006931,
+    "n_sym": 67
+   },
+   "regex": {
+    "share": 0.006096,
+    "n_sym": 5
+   },
+   "uni": {
+    "share": 0.986872,
+    "n_sym": 795
+   }
+  }
+ },
+ "ho26_trades_no_funding": {},
+ "ho26_runs_scanned": 48
+}

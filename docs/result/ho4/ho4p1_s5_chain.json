@@ -1,0 +1,72 @@
+{
+ "a": "ho4p1-chain-y26",
+ "b": "ho4p1-chain-y26r",
+ "kind": "chain",
+ "ok": [
+  true,
+  true
+ ],
+ "n_files": [
+  17,
+  17
+ ],
+ "only_a": [],
+ "only_b": [],
+ "n_equal": 17,
+ "diff": [],
+ "groups": {
+  "bins": [
+   3,
+   3
+  ],
+  "feat_v2_26.parquet": [
+   1,
+   1
+  ],
+  "market.bin": [
+   1,
+   1
+  ],
+  "net015": [
+   3,
+   3
+  ],
+  "pred_s123": [
+   1,
+   1
+  ],
+  "pred_s13": [
+   1,
+   1
+  ],
+  "pred_s2024": [
+   1,
+   1
+  ],
+  "pred_s21": [
+   1,
+   1
+  ],
+  "pred_s42": [
+   1,
+   1
+  ],
+  "pred_s7": [
+   1,
+   1
+  ],
+  "pred_s777": [
+   1,
+   1
+  ],
+  "pred_s99": [
+   1,
+   1
+  ],
+  "s1_ho4p1y26.parquet": [
+   1,
+   1
+  ]
+ },
+ "pass": true
+}
