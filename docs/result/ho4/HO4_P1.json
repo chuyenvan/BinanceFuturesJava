@@ -1868,5 +1868,5 @@
    "pass_all": true
   }
  },
- "queue_status": "slug\tstatus\tmd5_printDone\tn\tparity\ttime\nho4p1-c1\tCOMPLETE\tff3ce513edf2316088a4b5ac464f76dc\t2517\tPASS\t2026-10-11 19:57:36\nho4p1-c2\tCOMPLETE\tad26fd55f0bb5db32038ec8b357cf8e7\t3541\tPASS\t2026-10-11 20:01:55\n"
+ "queue_status": "slug\tstatus\tmd5_printDone\tn\tparity\ttime\nho4p1-c1\tCOMPLETE\tff3ce513edf2316088a4b5ac464f76dc\t2517\tPASS\t2026-10-11 19:57:36\nho4p1-c2\tCOMPLETE\tad26fd55f0bb5db32038ec8b357cf8e7\t3541\tPASS\t2026-10-11 20:01:55\nho4-b0-b-s42\tCOMPLETE\t42e5470c3784962fc4c2f3ba4d526252\t2801\tPASS\t2026-10-11 20:46:01\nho4-b0-s-s42\tCOMPLETE\t4653469e36f01fdffb875b6cce9d5ad5\t2805\tPASS\t2026-10-11 20:46:20\n"
 }

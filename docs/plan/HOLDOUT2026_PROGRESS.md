@@ -138,3 +138,8 @@ S4 đang chạy: `ho4p1-x26-q1` XONG (88′, 0 symbol thiếu funding Vision, 11
 ### HO4-P1 cập nhật 20:05 — parity PASS, 32 kernel đang chạy
 - C1 PASS (n 2 517, mọi cột == `de-p1`, 5 ô in float32), C2 md5 `ad26fd55…` == `gqsf-a1` PASS; ticker 273/273, FUND selfcheck 257 433/257 433.
 - Pha 1 (32 kernel `ho4-{b0,k24}-{b,s}-s{42,7,13,21,99,123,777,2024}`) mở 20:02; ETA ~13–16 h (≈ 50–60′/kernel, 2 song song). Pha 2: 2 sim DEV (P3-DEV). KHÔNG chấm; scorer vòng sau.
+
+### HO4-P1 cập nhật 20:50 — 2 kernel holdout đầu PASS parity tự động; bàn giao orchestrator
+- `ho4-b0-b-s42`, `ho4-b0-s-s42` COMPLETE + parity PASS (~43′/kernel). ETA 32 kernel ≈ 07:45 ngày 2026-10-12 (+ pha 2 ~45′). Theo dõi: `~/claude_master/1011/ho4p1/q/queue_status.tsv`, `q/queue_py.log`, PID `q/queue.pid`. Resume: chạy lại lệnh khởi động trong docstring `ho4p1_queue.py` (state.json).
+- Dọn cache: xoá worktree `ho4race_wt` (đã merge) và jar hardlink stage (dataset `ho4p1-jar-exp` đã có).
+- Việc vòng sau: 2 scorer độc lập (commit trước khi đọc output) chấm E0/H-A cho 9 tháng / H1 / Q3 + độ nhạy H1 HO4 vs HO26; P3-DEV sim so bằng `python3 research/analysis/ho4p1_simdev.py compare` sau pha 2.

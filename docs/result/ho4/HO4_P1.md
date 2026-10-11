@@ -46,5 +46,5 @@ Pre-reg: `docs/prereg/PREREG_HOLDOUT2026H1.md` ADDENDUM-6 **`af6d6c94`** (+ §6.
 
 ## S6 — 32 kernel (orchestrator nền, KHÔNG chấm)
 - `ho4p1_queue.py` PID trong `~/claude_master/1011/ho4p1/q/queue.pid`; log `q/queue_py.log`; trạng thái `q/queue_status.tsv` (slug/status/md5/n/parity/giờ); state `q/state.json` (resume). ≤ 2 kernel song song toàn tài khoản; retry 1 lần chỉ lỗi hạ tầng (cfg y hệt); parity tự động mỗi kernel: jar `b7c89f09`, override (y hệt `ho26-*`), pred md5 theo seed (`arts.json`), ticker 2026 273/273, FUND selfcheck, mapper ≥ 800, penalty, UNSEAL.
-- Pha 1 bắt đầu 20:02 (`ho4-b0-b-s42` …), thứ tự xen kẽ theo seed (4 kernel/seed). Out `~/kaggle_sim/out/ho4-<cfg>-<b|s>-s<seed>`. Pha 2 sau đó: 2 sim DEV P3-DEV (`ho4p1_simdev.py compare` để so).
+- Pha 1 bắt đầu 20:02; 20:46 `ho4-b0-b-s42`, `ho4-b0-s-s42` COMPLETE + parity PASS (~43′/kernel) ⇒ ETA 32 kernel ≈ 07:45 2026-10-12; (`ho4-b0-b-s42` …), thứ tự xen kẽ theo seed (4 kernel/seed). Out `~/kaggle_sim/out/ho4-<cfg>-<b|s>-s<seed>`. Pha 2 sau đó: 2 sim DEV P3-DEV (`ho4p1_simdev.py compare` để so).
 - Chấm = 2 scorer độc lập vòng sau (commit trước khi đọc output); luật E0/H-A cho 9 tháng / H1 / Q3 + độ nhạy H1 HO4 vs HO26 (ADDENDUM-6 §6.7).
