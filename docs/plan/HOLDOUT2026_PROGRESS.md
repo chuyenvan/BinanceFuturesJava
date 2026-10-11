@@ -134,3 +134,7 @@ S4 đang chạy: `ho4p1-x26-q1` XONG (88′, 0 symbol thiếu funding Vision, 11
 - S4: `ho4p1-x26-q{1,2,3}` + `ho4p1-tk26` + `ho4p1-chain-y26` (Kaggle) ⇒ market 2026 393 120 phút (md5 market.bin `0fcc44d8…`), pred 8 seed (đoạn DEV == HO1), net015 3 fold, bins 3 file (`arts.json`). Lỗi thực thi phát hiện bằng assert: 8 symId mapper dùng chung 2 symbol ⇒ ADDENDUM-6 §6.2a (`923d7643`, `95da70a9`) loại 16 symbol khỏi giao dịch, chạy lại chain.
 - S5: q1 vs q1r 137/137 md5; chain-y26 vs chain-y26r 17/17 md5 ⇒ PASS.
 - Orchestrator nền `ho4p1_queue.py` (PID trong `~/claude_master/1011/ho4p1/q/queue.pid`, log `q/queue_py.log`, trạng thái `q/queue_status.tsv`): pha 0 C1/C2 (đẩy 19:17/19:19) → chờ S5 (đã PASS) → pha 1 32 kernel `ho4-{b0,k24}-{b,s}-s{seed}` → pha 2 2 sim DEV (P3-DEV).
+
+### HO4-P1 cập nhật 20:05 — parity PASS, 32 kernel đang chạy
+- C1 PASS (n 2 517, mọi cột == `de-p1`, 5 ô in float32), C2 md5 `ad26fd55…` == `gqsf-a1` PASS; ticker 273/273, FUND selfcheck 257 433/257 433.
+- Pha 1 (32 kernel `ho4-{b0,k24}-{b,s}-s{42,7,13,21,99,123,777,2024}`) mở 20:02; ETA ~13–16 h (≈ 50–60′/kernel, 2 song song). Pha 2: 2 sim DEV (P3-DEV). KHÔNG chấm; scorer vòng sau.

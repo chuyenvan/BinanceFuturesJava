@@ -42,4 +42,9 @@ Pre-reg: `docs/prereg/PREREG_HOLDOUT2026H1.md` ADDENDUM-6 **`af6d6c94`** (+ §6.
 
 ## S5 — parity
 - Chạy lại quý chứa 2026-03: **q1 vs q1r 137/137 md5**; **chain-y26 vs chain-y26r 17/17 md5** ⇒ PASS.
-- C1/C2 seal đóng: xem trạng thái orchestrator.
+- **C1** B0 K16 s42 phí gốc (`SIM_END_DATE=20251231`, artefact mới): n 2 517 = `de-p1`; mọi cột trùng trừ 5 ô in float32 trùng bit (4 volume + 1 quantity, như HO2) ⇒ **PASS**. **C2** K24+skipFull: md5 **`ad26fd55f0bb5db32038ec8b357cf8e7`** == `gqsf-a1` (n 3 541) ⇒ **PASS**. Cả 2: `TICKER_HO4P1 ok=273 bad=0 miss=0 extra=0 other=0`; `FUND_HO4_SELFCHECK keys_equal=True 257 433/257 433 diff=0`; funding.bin prefix 2 301 064 bản ghi (byte bundle) + 393 120 bản ghi 2026 dựng lại.
+
+## S6 — 32 kernel (orchestrator nền, KHÔNG chấm)
+- `ho4p1_queue.py` PID trong `~/claude_master/1011/ho4p1/q/queue.pid`; log `q/queue_py.log`; trạng thái `q/queue_status.tsv` (slug/status/md5/n/parity/giờ); state `q/state.json` (resume). ≤ 2 kernel song song toàn tài khoản; retry 1 lần chỉ lỗi hạ tầng (cfg y hệt); parity tự động mỗi kernel: jar `b7c89f09`, override (y hệt `ho26-*`), pred md5 theo seed (`arts.json`), ticker 2026 273/273, FUND selfcheck, mapper ≥ 800, penalty, UNSEAL.
+- Pha 1 bắt đầu 20:02 (`ho4-b0-b-s42` …), thứ tự xen kẽ theo seed (4 kernel/seed). Out `~/kaggle_sim/out/ho4-<cfg>-<b|s>-s<seed>`. Pha 2 sau đó: 2 sim DEV P3-DEV (`ho4p1_simdev.py compare` để so).
+- Chấm = 2 scorer độc lập vòng sau (commit trước khi đọc output); luật E0/H-A cho 9 tháng / H1 / Q3 + độ nhạy H1 HO4 vs HO26 (ADDENDUM-6 §6.7).
