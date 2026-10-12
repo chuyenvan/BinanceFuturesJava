@@ -10,8 +10,14 @@ import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -42,6 +48,7 @@ public final class LiveGateRollingRatio {
     private static final long HOUR = 3600_000L;
     private static final int FLUSH_BATCH = 4096;
     private static final String DEFAULT_FILE = "run/gate_ratio_live.bin";
+    private static final String SYMBOL_PRED_DIR = "storage/data/predictionSymbol";
 
     private static boolean inited = false;
     private static boolean on = false;
@@ -62,6 +69,7 @@ public final class LiveGateRollingRatio {
     private static float[] pendingR = new float[FLUSH_BATCH];
     private static int pendingCount = 0;
     private static boolean hookInstalled = false;
+    private static int seedCalls = 0;   // số lần seedHistory chạy (chỉ để unit test kiểm)
 
     private LiveGateRollingRatio() {
     }
@@ -94,7 +102,7 @@ public final class LiveGateRollingRatio {
         LOG.warn("*** [GATE-RATIO] LIVE BAT: mode=ratio pct={} window={}d file={} | warm-up 7d | "
                         + "quantile tren TY SO r (CAUSAL) ***",
                 String.format("%.8f", pct), days, persistFile);
-        loadPersistedAndSeed();
+        loadPersistedAndSeed(System.currentTimeMillis());
         installShutdownHook();
     }
 
@@ -181,14 +189,34 @@ public final class LiveGateRollingRatio {
         curHour = Long.MIN_VALUE;
         hourEval = hourPass = 0;
         pendingCount = 0;
+        seedCalls = 0;
+    }
+
+    /** Chỉ cho unit test: trỏ file persist sang đường dẫn tạm (không đụng file persist thật). */
+    static void setPersistFileForTest(String path) {
+        persistFile = path;
+    }
+
+    /** Chỉ cho unit test: số lần seedHistory đã chạy kể từ resetForTest. */
+    static int seedCallsForTest() {
+        return seedCalls;
     }
 
     // ============================================================
     // Persist (append-only) + seed
     // ============================================================
 
-    private static void loadPersistedAndSeed() {
-        long now = System.currentTimeMillis();
+    /**
+     * Nạp persist + seed (gọi từ {@link #init} với {@code now = System.currentTimeMillis()}; package-private
+     * cho unit test với {@code now} giả).
+     *
+     * <p>[GATE-PERSIST-ROBUST 2026-10-12] Persist có chunk hỏng ({@code droppedChunks > 0}) ⇒ GIỮ các record
+     * đọc được (KHÔNG seed lại toàn bộ chỉ vì có chunk hỏng — luật seed như cũ: chỉ khi
+     * {@code persistedStart > now − 7d}); sao lưu file gốc sang {@code <file>.corrupt_<yyyyMMdd_HHmmss>}
+     * (copy) rồi {@code writeFresh} buffer để file sạch. Sao lưu lỗi ⇒ KHÔNG ghi đè (giữ file gốc; lần nạp
+     * sau vẫn resync được). Exception IO khác ⇒ hành vi cũ (seed lại từ lịch sử).
+     */
+    static void loadPersistedAndSeed(long now) {
         long minTs = now - (long) days * DAY;
         GateRatioPersist.Records persisted = new GateRatioPersist.Records(new long[0], new float[0]);
         try {
@@ -197,6 +225,11 @@ public final class LiveGateRollingRatio {
             LOG.error("[GATE-RATIO] khong nap duoc persist {}: {} — se seed lai tu lich su",
                     persistFile, e.getMessage());
         }
+        boolean corrupt = persisted.droppedChunks > 0;
+        if (corrupt) {
+            LOG.error("[GATE-RATIO] persist hong: bo {} chunk ({} byte), giu {} record",
+                    persisted.droppedChunks, persisted.droppedBytes, persisted.ts.length);
+        }
         long persistedStart = persisted.ts.length > 0 ? persisted.ts[0] : now;
         boolean seeded = false;
         if (persistedStart > now - 7L * DAY) {
@@ -204,11 +237,18 @@ public final class LiveGateRollingRatio {
             seeded = seedHistory(minTs, persistedStart);
         }
         buffer.bulkAdd(persisted.ts, persisted.r);
-        // Compact CHỈ khi vừa seed (cold-start): ghi lại file gọn (seed + persist) để restart sau KHÔNG
-        // phải seed lại. Steady-state (đủ dữ liệu) giữ APPEND-ONLY, không viết lại.
-        if (seeded && buffer.size() > 0) {
+        // Compact khi vừa seed (cold-start): ghi lại file gọn (seed + persist) để restart sau KHÔNG phải seed
+        // lại. Persist hỏng: ghi lại file sạch (sau khi sao lưu bản gốc). Steady-state giữ APPEND-ONLY.
+        boolean rewrite = corrupt || (seeded && buffer.size() > 0);
+        if (rewrite && corrupt && !backupCorruptFile(now)) {
+            rewrite = false;
+        }
+        if (rewrite) {
             try {
                 GateRatioPersist.writeFresh(persistFile, buffer.tsSnapshot(), buffer.rSnapshot());
+                if (corrupt) {
+                    LOG.warn("[GATE-RATIO] da viet lai persist sach {}: {} record", persistFile, buffer.size());
+                }
             } catch (Exception e) {
                 LOG.error("[GATE-RATIO] khong compact persist {}: {}", persistFile, e.getMessage());
             }
@@ -216,6 +256,26 @@ public final class LiveGateRollingRatio {
         LOG.info("[GATE-RATIO] LIVE nạp buffer: size={} firstTs={} (warm-up={})",
                 buffer.size(), buffer.firstTs() == Long.MIN_VALUE ? "-" : Utils.normalizeDateYYYYMMDDHHmm(buffer.firstTs()),
                 buffer.firstTs() > now - 7L * DAY ? "chưa đủ 7d -> fallback base" : "armed");
+    }
+
+    /** Copy (không move) file persist gốc sang {@code <file>.corrupt_<yyyyMMdd_HHmmss>[_n]}. true nếu OK. */
+    private static boolean backupCorruptFile(long now) {
+        File src = new File(persistFile);
+        if (!src.exists()) return true;
+        String base = persistFile + ".corrupt_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date(now));
+        File dst = new File(base);
+        for (int i = 1; dst.exists() && i < 1000; i++) {
+            dst = new File(base + "_" + i);
+        }
+        try {
+            Files.copy(src.toPath(), dst.toPath(), StandardCopyOption.COPY_ATTRIBUTES);
+            LOG.warn("[GATE-RATIO] da sao luu persist hong -> {}", dst.getPath());
+            return true;
+        } catch (Exception e) {
+            LOG.error("[GATE-RATIO] khong sao luu duoc persist hong {} -> {}: {} — KHONG viet lai file",
+                    persistFile, dst.getPath(), e.getMessage());
+            return false;
+        }
     }
 
     /**
@@ -230,21 +290,105 @@ public final class LiveGateRollingRatio {
      * live; vị thế lịch sử không lưu đầy đủ) ⇒ seed có thể gồm/thiếu vài coin so tập ứng viên thật;
      * (2) tick thiếu p15/sp ⇒ bỏ qua tick; (3) sp = P(no-pump) Funding, đúng cho đường R4 (không C3).
      * Seed chỉ ảnh hưởng q_t KHỞI ĐẦU; live tự hiệu chỉnh khi tích lũy r thật.
+     *
+     * <p>[GATE-PERSIST-ROBUST 2026-10-12] Đọc sp (file local, rẻ) TRƯỚC p15 (Aerospike) và bỏ qua cả ngày
+     * không có thư mục {@code predictionSymbol/<yyyyMMdd>} ⇒ không gọi Aerospike cho tick chắc chắn bị bỏ.
+     * Tập record seed giống hệt bản cũ (tick thiếu sp/p15 vốn đã bị bỏ).
      */
     private static boolean seedHistory(long from, long to) {
+        seedCalls++;
         int gridMin = Configs.LIVE_ENTRY_GRID_MIN > 0 ? Configs.LIVE_ENTRY_GRID_MIN : 15;
         int topK = Configs.SELECTOR_RANK_TOPK > 0 ? Configs.SELECTOR_RANK_TOPK : 16;
+        long t0ms = System.currentTimeMillis();
+        SeedResult res = collectSeed(from, to, gridMin, topK, new SeedSource() {
+            @Override
+            public boolean dayDirExists(String yyyyMMdd) {
+                return new File(SYMBOL_PRED_DIR + "/" + yyyyMMdd).isDirectory();
+            }
+
+            @Override
+            public Map<String, Float> symbolPred(long t) {
+                return readSymbolPred(t);
+            }
+
+            @Override
+            public AiPredictionData p15(long t) {
+                return DataManagerAerospikeFloatSim.getAiPredictionAtTime(t);
+            }
+        });
+        long elapsed = System.currentTimeMillis() - t0ms;
+        LOG.info("[GATE-RATIO] seed quet [{}..{}): {} tick goi Aerospike, bo {} ngay khong co thu muc "
+                        + "predictionSymbol, {} ms",
+                Utils.normalizeDateYYYYMMDDHHmm(from), Utils.normalizeDateYYYYMMDDHHmm(to),
+                res.aerospikeCalls, res.skippedDays, elapsed);
+        long[] ts = res.ts;
+        float[] r = res.r;
+        if (ts.length == 0) {
+            LOG.warn("[GATE-RATIO] seed lịch sử RỖNG (thiếu p15/sp?) -> dùng warm-up 7d (fallback base)");
+            return false;
+        }
+        buffer.bulkAdd(ts, r);
+        LOG.info("[GATE-RATIO] seed lịch sử: {} record ({}..{}) | nguồn p15=Aerospike ai_pred_1m, "
+                        + "sp=predictionSymbol (P(no-pump)); sai khác vs sim: held-symbol + tick thiếu",
+                ts.length,
+                Utils.normalizeDateYYYYMMDDHHmm(ts[0]),
+                Utils.normalizeDateYYYYMMDDHHmm(ts[ts.length - 1]));
+        return true;
+    }
+
+    /** Nguồn dữ liệu cho seed (tách để unit test không cần Aerospike / thư mục thật). */
+    interface SeedSource {
+        boolean dayDirExists(String yyyyMMdd);
+
+        Map<String, Float> symbolPred(long t);
+
+        AiPredictionData p15(long t);
+    }
+
+    /** Kết quả quét seed. */
+    static final class SeedResult {
+        final long[] ts;
+        final float[] r;
+        final int aerospikeCalls;
+        final int skippedDays;
+
+        SeedResult(long[] ts, float[] r, int aerospikeCalls, int skippedDays) {
+            this.ts = ts;
+            this.r = r;
+            this.aerospikeCalls = aerospikeCalls;
+            this.skippedDays = skippedDays;
+        }
+    }
+
+    /**
+     * Lõi quét seed (package-private cho unit test). Thứ tự mỗi tick lưới: (1) ngày không có thư mục
+     * predictionSymbol ⇒ bỏ (cache theo ngày); (2) sp rỗng/thiếu ⇒ bỏ; (3) mới gọi p15 (Aerospike), null ⇒ bỏ.
+     * Lỗi bất kỳ ở một tick ⇒ bỏ tick (best-effort, như cũ).
+     */
+    static SeedResult collectSeed(long from, long to, int gridMin, int topK, SeedSource src) {
         List<Long> tsList = new ArrayList<>();
         List<Float> rList = new ArrayList<>();
+        Map<String, Boolean> dayExists = new HashMap<>();
+        int aerospikeCalls = 0;
+        int skippedDays = 0;
         long t0 = (from / 60_000L) * 60_000L;
         int guard = 0;
         for (long t = t0; t < to && guard < 200_000; t += 60_000L, guard++) {
             if ((t / 60_000L) % gridMin != 0) continue;
             try {
-                AiPredictionData p15 = DataManagerAerospikeFloatSim.getAiPredictionAtTime(t);
-                if (p15 == null) continue;
-                Map<String, Float> spMap = readSymbolPred(t);
+                String day = Utils.normalizeDateYYYYMMDD(t);
+                Boolean exists = dayExists.get(day);
+                if (exists == null) {
+                    exists = src.dayDirExists(day);
+                    dayExists.put(day, exists);
+                    if (!exists) skippedDays++;
+                }
+                if (!exists) continue;
+                Map<String, Float> spMap = src.symbolPred(t);
                 if (spMap == null || spMap.isEmpty()) continue;
+                aerospikeCalls++;
+                AiPredictionData p15 = src.p15(t);
+                if (p15 == null) continue;
                 List<Map.Entry<String, Float>> sorted = new ArrayList<>(spMap.entrySet());
                 sorted.sort(Map.Entry.comparingByValue());
                 int n = Math.min(topK, sorted.size());
@@ -261,28 +405,18 @@ public final class LiveGateRollingRatio {
                 // best-effort: bỏ tick lỗi
             }
         }
-        if (tsList.isEmpty()) {
-            LOG.warn("[GATE-RATIO] seed lịch sử RỖNG (thiếu p15/sp?) -> dùng warm-up 7d (fallback base)");
-            return false;
-        }
         long[] ts = new long[tsList.size()];
         float[] r = new float[rList.size()];
         for (int i = 0; i < ts.length; i++) {
             ts[i] = tsList.get(i);
             r[i] = rList.get(i);
         }
-        buffer.bulkAdd(ts, r);
-        LOG.info("[GATE-RATIO] seed lịch sử: {} record ({}..{}) | nguồn p15=Aerospike ai_pred_1m, "
-                        + "sp=predictionSymbol (P(no-pump)); sai khác vs sim: held-symbol + tick thiếu",
-                ts.length,
-                Utils.normalizeDateYYYYMMDDHHmm(ts[0]),
-                Utils.normalizeDateYYYYMMDDHHmm(ts[ts.length - 1]));
-        return true;
+        return new SeedResult(ts, r, aerospikeCalls, skippedDays);
     }
 
     @SuppressWarnings("unchecked")
     private static Map<String, Float> readSymbolPred(long t) {
-        String path = "storage/data/predictionSymbol/" + Utils.normalizeDateYYYYMMDD(t) + "/" + t;
+        String path = SYMBOL_PRED_DIR + "/" + Utils.normalizeDateYYYYMMDD(t) + "/" + t;
         Object o = StorageSnappy.readObjectFromFile(path);
         if (o instanceof Map) {
             try {
