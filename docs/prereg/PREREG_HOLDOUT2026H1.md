@@ -350,3 +350,14 @@ Kernel exporter `ho4p1-dupfx` (`research/analysis/ho4p1_dupfx.py` = KX của `ho
 
 ### 7.4 (c) MAPAUD
 `docs/audit/MAPPER_AUDIT_20261011.md` (branch `fix/symbol-mapper`, d5c48dd9): 130 "đuôi settle" = 129 đúng, 0 nhầm, 1 không rõ (STGUSDT, xem 7.3); volume quote bị cắt = 0 USDT mọi tháng ⇒ không đổi luật universe HO4.
+
+### ADDENDUM-7 §7.5 — kết quả đo `ho4p1-dupfx` (2026-10-12 09:12, HO4-P1; chỉ mức feature, KHÔNG sim; **chưa nhìn số sim 2026**)
+Chi tiết: `docs/result/ho4/ho4p1_dupfx.json`. Kernel COMPLETE, 4 task rc 0 (mktA 82 s, gateA 2872 s, mktB 88 s, gateB 3113 s); remap 8 symbol → id 864–871.
+- **market.bin: md5 A == B** (6568d15f…) ⇒ ExportMarketData2File không bị ảnh hưởng (đọc theo tên — khớp §7.1).
+- Cặp trùng: cả 2 symbol cùng có kline 107 450–114 660 phút/cặp (symbol thứ 2 xuất hiện từ 2026-07-16/17/21; symbol thứ nhất từ 07-09/10).
+- **gate (ExportGateDataset 20260710→20261001, 119 521 phút, 41 cột): 118 561 phút (99,2 %) có ≥ 1 cột đổi; 16/41 cột đổi**, 25 cột giữ nguyên. Đổi từ 07-10 (trước khi 2 symbol cùng tồn tại), nhiều khả năng do `getSymbol(id)` chỉ trả 1 tên/ id ⇒ rổ top-50 % và rổ losers mang sai tên ngay khi symbol thứ nhất có kline.
+  - breadth/thị trường (từ 07-10 18:00): advanceDeclineRatio, percentAboveMA20, volumeRatioUpDown, marketBreadthStrength, btcDominance — |Δ| trung vị ≈ 0,4–1 % độ lớn cột (vd percentAboveMA20 0,0021 / 0,49; advanceDeclineRatio 0,0089 / 1,01; max 15,5).
+  - funding rổ (từ 07-10 18:00): fundingRateRaw/Avg24H/Trend — |Δ| trung vị ≈ 3–5 % độ lớn cột.
+  - rổ basket (từ 07-16 17:00, khi 2 symbol cùng có): basketMomentum15M/1H, basketRsi14, basketVolSpike — |Δ| trung vị ≈ 0,1–1,8 % (basketVolSpike max 85).
+  - nhãn gate (label_oldbasket/ret15m/ret60m/max24h, từ 07-10 03:41): ~62 700 phút (52 %) đổi.
+- Đây là sai lệch đã biết (MASTER chấp nhận, trùng live trước sửa mapper); không sửa, không chạy lại sim/32 kernel; không ngưỡng PASS/FAIL. Gate dataset Q3 (đầu vào gate của chain `ho4p1-chain-y26`) mang lệch này từ 2026-07-10.

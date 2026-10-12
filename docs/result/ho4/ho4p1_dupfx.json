@@ -1,0 +1,289 @@
+{
+ "dup_pairs": {
+  "APPUSDT/SHAZUSDT": {
+   "both": 107460,
+   "first_a": 1783673100000,
+   "first_b": 1784624400000,
+   "n_a": 123315,
+   "n_b": 107460
+  },
+  "BNCUSDT/SOXSUSDT": {
+   "both": 114655,
+   "first_a": 1783607100000,
+   "first_b": 1784192700000,
+   "n_a": 124415,
+   "n_b": 114655
+  },
+  "FWDIUSDT/TZAUSDT": {
+   "both": 114650,
+   "first_a": 1783607400000,
+   "first_b": 1784193000000,
+   "n_a": 124410,
+   "n_b": 114650
+  },
+  "GEVUSDT/SOFIUSDT": {
+   "both": 107455,
+   "first_a": 1783672200000,
+   "first_b": 1784624700000,
+   "n_a": 123330,
+   "n_b": 107455
+  },
+  "MINIMAXUSDT/VRTUSDT": {
+   "both": 113580,
+   "first_a": 1784257200000,
+   "first_b": 1783672500000,
+   "n_a": 113580,
+   "n_b": 123325
+  },
+  "MUUUSDT/XBIUSDT": {
+   "both": 114660,
+   "first_a": 1784192400000,
+   "first_b": 1783606800000,
+   "n_a": 114660,
+   "n_b": 124420
+  },
+  "PANWUSDT/SKHYUSDT": {
+   "both": 107450,
+   "first_a": 1784625000000,
+   "first_b": 1783698600000,
+   "n_a": 107450,
+   "n_b": 122890
+  },
+  "SNOWUSDT/ZHIPUUSDT": {
+   "both": 113575,
+   "first_a": 1783672800000,
+   "first_b": 1784257500000,
+   "n_a": 123320,
+   "n_b": 113575
+  }
+ },
+ "dupfx": {
+  "cols": {
+   "advanceDeclineRatio": {
+    "col_med_abs": 1.00840342,
+    "first_ts": 1783681200000,
+    "max_abs": 15.5,
+    "med_abs": 0.008853080000000069,
+    "n": 117533
+   },
+   "basketMomentum15M": {
+    "col_med_abs": 0.00103446,
+    "first_ts": 1784196000000,
+    "max_abs": 0.0005368500000000001,
+    "med_abs": 1.8119999999999942e-05,
+    "n": 109843
+   },
+   "basketMomentum1H": {
+    "col_med_abs": 0.00216101,
+    "first_ts": 1784196000000,
+    "max_abs": 0.00123075,
+    "med_abs": 3.775000000000002e-05,
+    "n": 109853
+   },
+   "basketRsi14": {
+    "col_med_abs": 49.92118073,
+    "first_ts": 1784196000000,
+    "max_abs": 0.6192779600000051,
+    "med_abs": 0.07160187000000207,
+    "n": 109860
+   },
+   "basketVolSpike": {
+    "col_med_abs": 1.10236931,
+    "first_ts": 1784196000000,
+    "max_abs": 85.04731143000001,
+    "med_abs": 0.006397490000000006,
+    "n": 109861
+   },
+   "btcDominance": {
+    "col_med_abs": 0.16113767,
+    "first_ts": 1783681200000,
+    "max_abs": 0.06876419,
+    "med_abs": 0.0013417450000000192,
+    "n": 117810
+   },
+   "fundingRateAvg24H": {
+    "col_med_abs": 2.734e-05,
+    "first_ts": 1783681200000,
+    "max_abs": 2.6350000000000004e-05,
+    "med_abs": 9.499999999999994e-07,
+    "n": 117844
+   },
+   "fundingRateRaw": {
+    "col_med_abs": 3.178e-05,
+    "first_ts": 1783681200000,
+    "max_abs": 5.3500000000000006e-05,
+    "med_abs": 1.0700000000000008e-06,
+    "n": 118260
+   },
+   "fundingRateTrend": {
+    "col_med_abs": 1.963e-05,
+    "first_ts": 1783681200000,
+    "max_abs": 3.413e-05,
+    "med_abs": 9.999999999999997e-07,
+    "n": 118077
+   },
+   "label_max24h": {
+    "col_med_abs": 0.07925781,
+    "first_ts": 1783629660000,
+    "max_abs": 0.06711625,
+    "med_abs": 0.0006698750000000003,
+    "n": 62730
+   },
+   "label_oldbasket": {
+    "col_med_abs": 0.00842302,
+    "first_ts": 1783629660000,
+    "max_abs": 0.006356450000000001,
+    "med_abs": 6.975999999999944e-05,
+    "n": 62632
+   },
+   "label_ret15m": {
+    "col_med_abs": 0.00188937,
+    "first_ts": 1783629660000,
+    "max_abs": 0.004214220000000001,
+    "med_abs": 9.261999999999986e-05,
+    "n": 62697
+   },
+   "label_ret60m": {
+    "col_med_abs": 0.00389803,
+    "first_ts": 1783629660000,
+    "max_abs": 0.005775720000000001,
+    "med_abs": 0.00018253000000000008,
+    "n": 62724
+   },
+   "marketBreadthStrength": {
+    "col_med_abs": 0.40184048,
+    "first_ts": 1783681200000,
+    "max_abs": 0.013899510000000004,
+    "med_abs": 0.0020291199999999954,
+    "n": 118346
+   },
+   "percentAboveMA20": {
+    "col_med_abs": 0.49244714,
+    "first_ts": 1783681200000,
+    "max_abs": 0.015496289999999996,
+    "med_abs": 0.0021411599999999753,
+    "n": 118360
+   },
+   "volumeRatioUpDown": {
+    "col_med_abs": 1.01474547,
+    "first_ts": 1783681200000,
+    "max_abs": 506.62572478999994,
+    "med_abs": 0.009590509999999997,
+    "n": 117810
+   }
+  },
+  "first_diff_ts": 1783629660000,
+  "gate_md5": [
+   "cda89e1f1d46852330fc6cd6b222cdbc",
+   "e71bc77a6352fc045580eb34888b8566"
+  ],
+  "market_md5": [
+   "6568d15f6bfb1542461248a7c35bff97",
+   "6568d15f6bfb1542461248a7c35bff97"
+  ],
+  "n_cols": 41,
+  "n_cols_diff": 16,
+  "n_rows_diff": 118561,
+  "only_a": 0,
+  "only_b": 0,
+  "rows": [
+   119521,
+   119521
+  ],
+  "rows_by_month": {
+   "2026-07": 31680,
+   "2026-08": 44640,
+   "2026-09": 43200,
+   "2026-10": 1
+  },
+  "rows_diff_by_month": {
+   "2026-07": 30720,
+   "2026-08": 44640,
+   "2026-09": 43200,
+   "2026-10": 1
+  }
+ },
+ "kernel": "chuyendinh/ho4p1-dupfx",
+ "note": "chi muc feature, khong sim; chua nhin so sim 2026",
+ "prereg": "ADDENDUM-7 106dd923",
+ "remap_dups": {
+  "SHAZUSDT": [
+   848,
+   869
+  ],
+  "SKHYUSDT": [
+   850,
+   871
+  ],
+  "SOFIUSDT": [
+   849,
+   870
+  ],
+  "SOXSUSDT": [
+   844,
+   865
+  ],
+  "TZAUSDT": [
+   845,
+   866
+  ],
+  "VRTUSDT": [
+   846,
+   867
+  ],
+  "XBIUSDT": [
+   843,
+   864
+  ],
+  "ZHIPUUSDT": [
+   847,
+   868
+  ]
+ },
+ "tasks": [
+  [
+   "mktA",
+   0,
+   82.2,
+   {
+    "market_A.bin": {
+     "bytes": 2736004,
+     "md5": "6568d15f6bfb1542461248a7c35bff97"
+    }
+   }
+  ],
+  [
+   "gateA",
+   0,
+   2871.6,
+   {
+    "gate/gateA.csv.gz": {
+     "bytes": 17929925,
+     "md5": "cda89e1f1d46852330fc6cd6b222cdbc"
+    }
+   }
+  ],
+  [
+   "mktB",
+   0,
+   87.6,
+   {
+    "market_B.bin": {
+     "bytes": 2736004,
+     "md5": "6568d15f6bfb1542461248a7c35bff97"
+    }
+   }
+  ],
+  [
+   "gateB",
+   0,
+   3112.9,
+   {
+    "gate/gateB.csv.gz": {
+     "bytes": 17945361,
+     "md5": "e71bc77a6352fc045580eb34888b8566"
+    }
+   }
+  ]
+ ]
+}
