@@ -1,0 +1,2597 @@
+{
+ "arts": {
+  "bins_md5": {
+   "predict_wf_20200101.bin": "968aa154d7256619aa58fec7b20816cd",
+   "predict_wf_20200401.bin": "00836856087025f580a903033517ca35",
+   "predict_wf_20200701.bin": "d3b23cb38d54228d161f9edc8c48ae4d",
+   "predict_wf_20201001.bin": "4d4578facb1d98ede634f5fcc84aa7f6"
+  },
+  "chain_slug": "bcast-ch20-a",
+  "pred_s42": "9bdb720f30640a6dcf590d9dc397028c",
+  "tk_md5": "(369 entries, xem dataset ticker_raw_md5.json)",
+  "x_slug": "bcast-x20-a"
+ },
+ "chain": {
+  "dup_ids": {
+   "843": [
+    "MUUUSDT",
+    "XBIUSDT"
+   ],
+   "844": [
+    "BNCUSDT",
+    "SOXSUSDT"
+   ],
+   "845": [
+    "FWDIUSDT",
+    "TZAUSDT"
+   ],
+   "846": [
+    "MINIMAXUSDT",
+    "VRTUSDT"
+   ],
+   "847": [
+    "SNOWUSDT",
+    "ZHIPUUSDT"
+   ],
+   "848": [
+    "APPUSDT",
+    "SHAZUSDT"
+   ],
+   "849": [
+    "GEVUSDT",
+    "SOFIUSDT"
+   ],
+   "850": [
+    "PANWUSDT",
+    "SKHYUSDT"
+   ]
+  },
+  "manifest": {
+   "bins/predict_wf_20200101.bin": {
+    "bytes": 3341650,
+    "md5": "968aa154d7256619aa58fec7b20816cd"
+   },
+   "bins/predict_wf_20200401.bin": {
+    "bytes": 5008562,
+    "md5": "00836856087025f580a903033517ca35"
+   },
+   "bins/predict_wf_20200701.bin": {
+    "bytes": 8851934,
+    "md5": "d3b23cb38d54228d161f9edc8c48ae4d"
+   },
+   "bins/predict_wf_20201001.bin": {
+    "bytes": 16055312,
+    "md5": "4d4578facb1d98ede634f5fcc84aa7f6"
+   },
+   "feat_v2_bc20.parquet": {
+    "bytes": 12980677,
+    "md5": "6b2de4ccf4f9a70d9044aa96b041583d"
+   },
+   "market.bin": {
+    "bytes": 10532404,
+    "md5": "232ee1e588c12d58448495bf3ce75045"
+   },
+   "net015/predict_wf_20200101.bin": {
+    "bytes": 3341650,
+    "md5": "46bfc68bc245fd9fb780670fd0df8087"
+   },
+   "net015/predict_wf_20200401.bin": {
+    "bytes": 5008562,
+    "md5": "dcbcf5eb2a6824aa51acfedc237f98c5"
+   },
+   "net015/predict_wf_20200701.bin": {
+    "bytes": 8851934,
+    "md5": "9c51078dbdd80a1bd56b623776fa4c35"
+   },
+   "net015/predict_wf_20201001.bin": {
+    "bytes": 16055312,
+    "md5": "627c136e07397de137d2ff8ca3333a3a"
+   },
+   "pred_s123/pred.bin": {
+    "bytes": 8425924,
+    "md5": "ee4a787fac72ac643c4288e552af4896"
+   },
+   "pred_s13/pred.bin": {
+    "bytes": 8425924,
+    "md5": "591368e24a7edc76971e8573d228e676"
+   },
+   "pred_s2024/pred.bin": {
+    "bytes": 8425924,
+    "md5": "5dd6d7925b3fe265480416fe4aecc744"
+   },
+   "pred_s21/pred.bin": {
+    "bytes": 8425924,
+    "md5": "5a74386767cfe25a5577928d55aa0aa3"
+   },
+   "pred_s42/pred.bin": {
+    "bytes": 8425924,
+    "md5": "9bdb720f30640a6dcf590d9dc397028c"
+   },
+   "pred_s7/pred.bin": {
+    "bytes": 8425924,
+    "md5": "080d3d2b083f34afb25d6c798fef28fe"
+   },
+   "pred_s777/pred.bin": {
+    "bytes": 8425924,
+    "md5": "0f50847e482ca7060abaad70b023ff84"
+   },
+   "pred_s99/pred.bin": {
+    "bytes": 8425924,
+    "md5": "2b9bc7dbc4d4d13a95b92b2faa0c8b0c"
+   },
+   "s1_bcast20.parquet": {
+    "bytes": 412896,
+    "md5": "73c408fa9b10d5746ac2c715c319d414"
+   }
+  },
+  "ok": true,
+  "secs": 120,
+  "steps": {
+   "bins": {
+    "20200101": {
+     "md5": "968aa154d7256619aa58fec7b20816cd",
+     "n_before": 128525,
+     "n_dropped": 0,
+     "nan_p0": 0,
+     "ts_nondecr": true
+    },
+    "20200401": {
+     "md5": "00836856087025f580a903033517ca35",
+     "n_before": 192637,
+     "n_dropped": 0,
+     "nan_p0": 0,
+     "ts_nondecr": true
+    },
+    "20200701": {
+     "md5": "d3b23cb38d54228d161f9edc8c48ae4d",
+     "n_before": 340459,
+     "n_dropped": 0,
+     "nan_p0": 0,
+     "ts_nondecr": true
+    },
+    "20201001": {
+     "md5": "4d4578facb1d98ede634f5fcc84aa7f6",
+     "n_before": 617512,
+     "n_dropped": 0,
+     "nan_p0": 0,
+     "ts_nondecr": true
+    }
+   },
+   "bins_raw": {
+    "20200101": {
+     "md5": "968aa154d7256619aa58fec7b20816cd",
+     "n": 128525,
+     "nan_p0": 0,
+     "ts_max": 1585673100000,
+     "ts_min": 1577836800000,
+     "ts_nondecr": true
+    },
+    "20200401": {
+     "md5": "00836856087025f580a903033517ca35",
+     "n": 192637,
+     "nan_p0": 0,
+     "ts_max": 1593535500000,
+     "ts_min": 1585674000000,
+     "ts_nondecr": true
+    },
+    "20200701": {
+     "md5": "d3b23cb38d54228d161f9edc8c48ae4d",
+     "n": 340459,
+     "nan_p0": 0,
+     "ts_max": 1601484300000,
+     "ts_min": 1593536400000,
+     "ts_nondecr": true
+    },
+    "20201001": {
+     "md5": "4d4578facb1d98ede634f5fcc84aa7f6",
+     "n": 617512,
+     "nan_p0": 0,
+     "ts_max": 1609433100000,
+     "ts_min": 1601485200000,
+     "ts_nondecr": true
+    }
+   },
+   "bins_syms_by_month": {
+    "2020-01": 9,
+    "2020-02": 22,
+    "2020-03": 22,
+    "2020-04": 22,
+    "2020-05": 23,
+    "2020-06": 28,
+    "2020-07": 34,
+    "2020-08": 40,
+    "2020-09": 59,
+    "2020-10": 68,
+    "2020-11": 75,
+    "2020-12": 78
+   },
+   "closes_syms_not_in_781": [],
+   "excl_no_funding": {
+    "ids": [
+     843,
+     844,
+     845,
+     846,
+     847,
+     848,
+     849,
+     850
+    ],
+    "settle_tail": [],
+    "symbols": []
+   },
+   "featv2": {
+    "md5": "6b2de4ccf4f9a70d9044aa96b041583d",
+    "n": 347163,
+    "ts_max": 1609718400000,
+    "ts_min": 1577840400000
+   },
+   "gate": {
+    "nan_by_col": {},
+    "nan_cells": 0,
+    "nan_cells_by_month": {
+     "2020-01": 0,
+     "2020-02": 0,
+     "2020-03": 0,
+     "2020-04": 0,
+     "2020-05": 0,
+     "2020-06": 0,
+     "2020-07": 0,
+     "2020-08": 0,
+     "2020-09": 0,
+     "2020-10": 0,
+     "2020-11": 0,
+     "2020-12": 0
+    },
+    "nan_cells_score_window": 0,
+    "rows": 526620,
+    "rows_by_month": {
+     "2020-01": 44220,
+     "2020-02": 41760,
+     "2020-03": 44640,
+     "2020-04": 43200,
+     "2020-05": 44640,
+     "2020-06": 43200,
+     "2020-07": 44640,
+     "2020-08": 44640,
+     "2020-09": 43200,
+     "2020-10": 44640,
+     "2020-11": 43200,
+     "2020-12": 44640
+    },
+    "ts_max": 1609433940000,
+    "ts_min": 1577836800000
+   },
+   "market": {
+    "md5": "232ee1e588c12d58448495bf3ce75045",
+    "minutes_by_month": {
+     "2020-01": 44220,
+     "2020-02": 41760,
+     "2020-03": 44640,
+     "2020-04": 43200,
+     "2020-05": 44640,
+     "2020-06": 43200,
+     "2020-07": 44640,
+     "2020-08": 44640,
+     "2020-09": 43200,
+     "2020-10": 44640,
+     "2020-11": 43200,
+     "2020-12": 44640
+    },
+    "n": 526620,
+    "nan": 0
+   },
+   "net015": {
+    "20200101": {
+     "hi": 1585674000000,
+     "lo": 1577811600000,
+     "md5": "46bfc68bc245fd9fb780670fd0df8087",
+     "n_drop_dup_id_rows": 0,
+     "n_rows": 128525,
+     "n_tool1": 128525,
+     "nan": 0,
+     "oi_nan_rows": 128525,
+     "sha256": "07fb9c41c03680cf653f76cc65d823fc8da4133735e9c65bed36cd3e318f07f1",
+     "ts_max": 1585673100000,
+     "ts_min": 1577836800000
+    },
+    "20200401": {
+     "hi": 1593536400000,
+     "lo": 1585674000000,
+     "md5": "dcbcf5eb2a6824aa51acfedc237f98c5",
+     "n_drop_dup_id_rows": 0,
+     "n_rows": 192637,
+     "n_tool1": 192637,
+     "nan": 0,
+     "oi_nan_rows": 192637,
+     "sha256": "e03a53acf85c95a0d27bdab75d9519109249e9b9f970965463ea09ebec448491",
+     "ts_max": 1593535500000,
+     "ts_min": 1585674000000
+    },
+    "20200701": {
+     "hi": 1601485200000,
+     "lo": 1593536400000,
+     "md5": "9c51078dbdd80a1bd56b623776fa4c35",
+     "n_drop_dup_id_rows": 0,
+     "n_rows": 340459,
+     "n_tool1": 340459,
+     "nan": 0,
+     "oi_nan_rows": 340459,
+     "sha256": "5b36e4864df030fd5c8c755f0ede4783301928735a81fef6f80beb9075af80c8",
+     "ts_max": 1601484300000,
+     "ts_min": 1593536400000
+    },
+    "20201001": {
+     "hi": 1609434000000,
+     "lo": 1601485200000,
+     "md5": "627c136e07397de137d2ff8ca3333a3a",
+     "n_drop_dup_id_rows": 0,
+     "n_rows": 617512,
+     "n_tool1": 617512,
+     "nan": 0,
+     "oi_nan_rows": 617512,
+     "sha256": "ced06f4b56b5843b459cb6e317e54205d51d8cf558226b7fe4aded6af08a33e5",
+     "ts_max": 1609433100000,
+     "ts_min": 1601485200000
+    }
+   },
+   "oi": {
+    "hi": 1609779600000,
+    "lo": 1577552400000,
+    "md5": "cdb7e8be9089ef507b5a9d8074cdb42b",
+    "pin_rows_in_window": 1068,
+    "syms": [
+     1
+    ],
+    "ts_max": 1609779300000,
+    "ts_min": 1609459200000
+   },
+   "pred": {
+    "123": {
+     "md5": "ee4a787fac72ac643c4288e552af4896",
+     "n": 526620,
+     "nan": 0
+    },
+    "13": {
+     "md5": "591368e24a7edc76971e8573d228e676",
+     "n": 526620,
+     "nan": 0
+    },
+    "2024": {
+     "md5": "5dd6d7925b3fe265480416fe4aecc744",
+     "n": 526620,
+     "nan": 0
+    },
+    "21": {
+     "md5": "5a74386767cfe25a5577928d55aa0aa3",
+     "n": 526620,
+     "nan": 0
+    },
+    "42": {
+     "md5": "9bdb720f30640a6dcf590d9dc397028c",
+     "n": 526620,
+     "nan": 0
+    },
+    "7": {
+     "md5": "080d3d2b083f34afb25d6c798fef28fe",
+     "n": 526620,
+     "nan": 0
+    },
+    "777": {
+     "md5": "0f50847e482ca7060abaad70b023ff84",
+     "n": 526620,
+     "nan": 0
+    },
+    "99": {
+     "md5": "2b9bc7dbc4d4d13a95b92b2faa0c8b0c",
+     "n": 526620,
+     "nan": 0
+    }
+   },
+   "s1": {
+    "feat_cov": 0.9742256013378187,
+    "md5": "73c408fa9b10d5746ac2c715c319d414",
+    "nan_score": 0,
+    "pool": 102854,
+    "ticks": 2545
+   }
+  }
+ },
+ "dataset": {
+  "id": "chuyendinh/bcast-2020-2021h1-p1",
+  "manifest": {
+   "CLOSES_1H_vision1m.bin": {
+    "bytes": 5630142,
+    "md5": "5a1a9e45c6afd5e8720a52dd2ccbb230",
+    "src": "bcast-x20-a:out/CLOSES_1H_vision1m.bin"
+   },
+   "bins_predict_wf_20200101.bin": {
+    "bytes": 3341650,
+    "md5": "968aa154d7256619aa58fec7b20816cd",
+    "src": "bcast-ch20-a:out/bins/predict_wf_20200101.bin"
+   },
+   "bins_predict_wf_20200401.bin": {
+    "bytes": 5008562,
+    "md5": "00836856087025f580a903033517ca35",
+    "src": "bcast-ch20-a:out/bins/predict_wf_20200401.bin"
+   },
+   "bins_predict_wf_20200701.bin": {
+    "bytes": 8851934,
+    "md5": "d3b23cb38d54228d161f9edc8c48ae4d",
+    "src": "bcast-ch20-a:out/bins/predict_wf_20200701.bin"
+   },
+   "bins_predict_wf_20201001.bin": {
+    "bytes": 16055312,
+    "md5": "4d4578facb1d98ede634f5fcc84aa7f6",
+    "src": "bcast-ch20-a:out/bins/predict_wf_20201001.bin"
+   },
+   "feat_v2_bc20.parquet": {
+    "bytes": 12980677,
+    "md5": "6b2de4ccf4f9a70d9044aa96b041583d",
+    "src": "bcast-ch20-a:out/feat_v2_bc20.parquet"
+   },
+   "funding_vision.pkl": {
+    "bytes": 759167,
+    "md5": "72268f723b242a8d1f6c46c47d93b9f0",
+    "src": "bcast-x20-a:out/funding_vision.pkl"
+   },
+   "gate.csv.gz": {
+    "bytes": 76469626,
+    "md5": "ac4eb8edb44ec659be1930b7ccb98918",
+    "src": "bcast-x20-a:out/gate/gate.csv.gz"
+   },
+   "lab_funding_label_20200101_to_20200401.pb": {
+    "bytes": 5308962,
+    "md5": "5986c089d27f08b9d45dc964b50799d9",
+    "src": "bcast-x20-a:out/lab/funding_label_20200101_to_20200401.pb"
+   },
+   "lab_funding_label_20200401_to_20200701.pb": {
+    "bytes": 8072376,
+    "md5": "9b219714427c572c2c29b81833a68938",
+    "src": "bcast-x20-a:out/lab/funding_label_20200401_to_20200701.pb"
+   },
+   "lab_funding_label_20200701_to_20201001.pb": {
+    "bytes": 14188394,
+    "md5": "c854bb146b1a05166c406e6085283792",
+    "src": "bcast-x20-a:out/lab/funding_label_20200701_to_20201001.pb"
+   },
+   "lab_funding_label_20201001_to_20210101.pb": {
+    "bytes": 25681821,
+    "md5": "b4a861a04503279b5a043c8d5e506882",
+    "src": "bcast-x20-a:out/lab/funding_label_20201001_to_20210101.pb"
+   },
+   "lab_funding_label_20210101_to_20210401.pb": {
+    "bytes": 1014394,
+    "md5": "6158eefb209223aab9e76e4d9d09793e",
+    "src": "bcast-x20-a:out/lab/funding_label_20210101_to_20210401.pb"
+   },
+   "lifecycle.pkl": {
+    "bytes": 44190,
+    "md5": "c70cef0d41239791a3c8b8b9a3781b81",
+    "src": "bcast-x20-a:out/lifecycle.pkl"
+   },
+   "market.bin": {
+    "bytes": 10532404,
+    "md5": "232ee1e588c12d58448495bf3ce75045",
+    "src": "bcast-ch20-a:out/market.bin"
+   },
+   "market_rebuilt.bin": {
+    "bytes": 10627204,
+    "md5": "f2ac10587db87279e1318444182487df",
+    "src": "bcast-x20-a:out/market_rebuilt.bin"
+   },
+   "net015_predict_wf_20200101.bin": {
+    "bytes": 3341650,
+    "md5": "46bfc68bc245fd9fb780670fd0df8087",
+    "src": "bcast-ch20-a:out/net015/predict_wf_20200101.bin"
+   },
+   "net015_predict_wf_20200401.bin": {
+    "bytes": 5008562,
+    "md5": "dcbcf5eb2a6824aa51acfedc237f98c5",
+    "src": "bcast-ch20-a:out/net015/predict_wf_20200401.bin"
+   },
+   "net015_predict_wf_20200701.bin": {
+    "bytes": 8851934,
+    "md5": "9c51078dbdd80a1bd56b623776fa4c35",
+    "src": "bcast-ch20-a:out/net015/predict_wf_20200701.bin"
+   },
+   "net015_predict_wf_20201001.bin": {
+    "bytes": 16055312,
+    "md5": "627c136e07397de137d2ff8ca3333a3a",
+    "src": "bcast-ch20-a:out/net015/predict_wf_20201001.bin"
+   },
+   "pred_s123.bin": {
+    "bytes": 8425924,
+    "md5": "ee4a787fac72ac643c4288e552af4896",
+    "src": "bcast-ch20-a:out/pred_s123/pred.bin"
+   },
+   "pred_s13.bin": {
+    "bytes": 8425924,
+    "md5": "591368e24a7edc76971e8573d228e676",
+    "src": "bcast-ch20-a:out/pred_s13/pred.bin"
+   },
+   "pred_s2024.bin": {
+    "bytes": 8425924,
+    "md5": "5dd6d7925b3fe265480416fe4aecc744",
+    "src": "bcast-ch20-a:out/pred_s2024/pred.bin"
+   },
+   "pred_s21.bin": {
+    "bytes": 8425924,
+    "md5": "5a74386767cfe25a5577928d55aa0aa3",
+    "src": "bcast-ch20-a:out/pred_s21/pred.bin"
+   },
+   "pred_s42.bin": {
+    "bytes": 8425924,
+    "md5": "9bdb720f30640a6dcf590d9dc397028c",
+    "src": "bcast-ch20-a:out/pred_s42/pred.bin"
+   },
+   "pred_s7.bin": {
+    "bytes": 8425924,
+    "md5": "080d3d2b083f34afb25d6c798fef28fe",
+    "src": "bcast-ch20-a:out/pred_s7/pred.bin"
+   },
+   "pred_s777.bin": {
+    "bytes": 8425924,
+    "md5": "0f50847e482ca7060abaad70b023ff84",
+    "src": "bcast-ch20-a:out/pred_s777/pred.bin"
+   },
+   "pred_s99.bin": {
+    "bytes": 8425924,
+    "md5": "2b9bc7dbc4d4d13a95b92b2faa0c8b0c",
+    "src": "bcast-ch20-a:out/pred_s99/pred.bin"
+   },
+   "s1_bcast20.parquet": {
+    "bytes": 412896,
+    "md5": "73c408fa9b10d5746ac2c715c319d414",
+    "src": "bcast-ch20-a:out/s1_bcast20.parquet"
+   },
+   "t1_features_20200101_to_20200401.t1c.gz": {
+    "bytes": 4656277,
+    "md5": "3719824fbe65a34f95841c39c2d255a0",
+    "src": "bcast-x20-a:out/t1/features_20200101_to_20200401.t1c.gz"
+   },
+   "t1_features_20200401_to_20200701.t1c.gz": {
+    "bytes": 8077918,
+    "md5": "19e8bf9b704295f7135a0d186343190c",
+    "src": "bcast-x20-a:out/t1/features_20200401_to_20200701.t1c.gz"
+   },
+   "t1_features_20200701_to_20201001.t1c.gz": {
+    "bytes": 11747925,
+    "md5": "5f4cd5ba867fb5e325deab291d0a165b",
+    "src": "bcast-x20-a:out/t1/features_20200701_to_20201001.t1c.gz"
+   },
+   "t1_features_20201001_to_20210101.t1c.gz": {
+    "bytes": 21916867,
+    "md5": "5f25fe3071888561be25b89d56d115be",
+    "src": "bcast-x20-a:out/t1/features_20201001_to_20210101.t1c.gz"
+   },
+   "t1_features_20210101_to_20210401.t1c.gz": {
+    "bytes": 285980,
+    "md5": "50937a9d7620450486b5fbbc11a08664",
+    "src": "bcast-x20-a:out/t1/features_20210101_to_20210401.t1c.gz"
+   },
+   "ticker_20200101.bin.gz": {
+    "bytes": 72249,
+    "md5": "ac2ebd834031bf541a87ddde2531b44e",
+    "src": "bcast-x20-a:out/ticker/ticker_20200101.bin.gz"
+   },
+   "ticker_20200102.bin.gz": {
+    "bytes": 73207,
+    "md5": "24d53fd8178816b1fc4f0937af0db4d7",
+    "src": "bcast-x20-a:out/ticker/ticker_20200102.bin.gz"
+   },
+   "ticker_20200103.bin.gz": {
+    "bytes": 77224,
+    "md5": "2df25759147d2a1b182adc53a2668855",
+    "src": "bcast-x20-a:out/ticker/ticker_20200103.bin.gz"
+   },
+   "ticker_20200104.bin.gz": {
+    "bytes": 74664,
+    "md5": "8f39d82e2a8a7c0ec6d9805d74159348",
+    "src": "bcast-x20-a:out/ticker/ticker_20200104.bin.gz"
+   },
+   "ticker_20200105.bin.gz": {
+    "bytes": 75078,
+    "md5": "84c7bbb02e02d5c87a29dfb96b512146",
+    "src": "bcast-x20-a:out/ticker/ticker_20200105.bin.gz"
+   },
+   "ticker_20200106.bin.gz": {
+    "bytes": 89028,
+    "md5": "e4328a2f2bd949e219f9ea1d202860f9",
+    "src": "bcast-x20-a:out/ticker/ticker_20200106.bin.gz"
+   },
+   "ticker_20200107.bin.gz": {
+    "bytes": 96838,
+    "md5": "c2d851d0e85798e37de2d1287c78f51c",
+    "src": "bcast-x20-a:out/ticker/ticker_20200107.bin.gz"
+   },
+   "ticker_20200108.bin.gz": {
+    "bytes": 111261,
+    "md5": "94566183612e5e5f6e7830bda5defd39",
+    "src": "bcast-x20-a:out/ticker/ticker_20200108.bin.gz"
+   },
+   "ticker_20200109.bin.gz": {
+    "bytes": 127269,
+    "md5": "bc8360d28aca13b54d4c63eb951d3454",
+    "src": "bcast-x20-a:out/ticker/ticker_20200109.bin.gz"
+   },
+   "ticker_20200110.bin.gz": {
+    "bytes": 136523,
+    "md5": "03f2962ec88d10e8acb6f99fc0fa0562",
+    "src": "bcast-x20-a:out/ticker/ticker_20200110.bin.gz"
+   },
+   "ticker_20200111.bin.gz": {
+    "bytes": 138135,
+    "md5": "a8aa7f8518d60c04a1edd4004304e58f",
+    "src": "bcast-x20-a:out/ticker/ticker_20200111.bin.gz"
+   },
+   "ticker_20200112.bin.gz": {
+    "bytes": 134343,
+    "md5": "d5f8d3491f8cdeb741062fd5a0070e09",
+    "src": "bcast-x20-a:out/ticker/ticker_20200112.bin.gz"
+   },
+   "ticker_20200113.bin.gz": {
+    "bytes": 129667,
+    "md5": "e0e3cb11f966763c5bf89b0aaeb55d60",
+    "src": "bcast-x20-a:out/ticker/ticker_20200113.bin.gz"
+   },
+   "ticker_20200114.bin.gz": {
+    "bytes": 145674,
+    "md5": "a381b3373217d76428da648cbe01f84f",
+    "src": "bcast-x20-a:out/ticker/ticker_20200114.bin.gz"
+   },
+   "ticker_20200115.bin.gz": {
+    "bytes": 161470,
+    "md5": "b1c82e045505aff38536d6799cf244e5",
+    "src": "bcast-x20-a:out/ticker/ticker_20200115.bin.gz"
+   },
+   "ticker_20200116.bin.gz": {
+    "bytes": 180490,
+    "md5": "d35e7fa6980cadfb2530d97a04ffb414",
+    "src": "bcast-x20-a:out/ticker/ticker_20200116.bin.gz"
+   },
+   "ticker_20200117.bin.gz": {
+    "bytes": 210096,
+    "md5": "c2e7280f3b3d7aeaf57229df8ce6a23f",
+    "src": "bcast-x20-a:out/ticker/ticker_20200117.bin.gz"
+   },
+   "ticker_20200118.bin.gz": {
+    "bytes": 213549,
+    "md5": "67e9b8201e8e50fbbc07a890a04af836",
+    "src": "bcast-x20-a:out/ticker/ticker_20200118.bin.gz"
+   },
+   "ticker_20200119.bin.gz": {
+    "bytes": 210534,
+    "md5": "77d9744c5ab6b905ef261c05e157d9ad",
+    "src": "bcast-x20-a:out/ticker/ticker_20200119.bin.gz"
+   },
+   "ticker_20200120.bin.gz": {
+    "bytes": 217341,
+    "md5": "e90a4bc26dee585c2cac1b9821ef6472",
+    "src": "bcast-x20-a:out/ticker/ticker_20200120.bin.gz"
+   },
+   "ticker_20200121.bin.gz": {
+    "bytes": 220065,
+    "md5": "5c4f4b2fa0ada46df4e56f653a5ee809",
+    "src": "bcast-x20-a:out/ticker/ticker_20200121.bin.gz"
+   },
+   "ticker_20200122.bin.gz": {
+    "bytes": 211456,
+    "md5": "ba3939d56e0f5a34f4224e712e55cd53",
+    "src": "bcast-x20-a:out/ticker/ticker_20200122.bin.gz"
+   },
+   "ticker_20200123.bin.gz": {
+    "bytes": 223096,
+    "md5": "a522b4d5cd47539de6001960fabb566e",
+    "src": "bcast-x20-a:out/ticker/ticker_20200123.bin.gz"
+   },
+   "ticker_20200124.bin.gz": {
+    "bytes": 225284,
+    "md5": "fe87feb6fae1477f26d3f5e863d29d4d",
+    "src": "bcast-x20-a:out/ticker/ticker_20200124.bin.gz"
+   },
+   "ticker_20200125.bin.gz": {
+    "bytes": 214549,
+    "md5": "bc43f2cecf637f8c5fc6959e3717f9d3",
+    "src": "bcast-x20-a:out/ticker/ticker_20200125.bin.gz"
+   },
+   "ticker_20200126.bin.gz": {
+    "bytes": 213723,
+    "md5": "490aad09c2c84deaaa846bd37c0a2616",
+    "src": "bcast-x20-a:out/ticker/ticker_20200126.bin.gz"
+   },
+   "ticker_20200127.bin.gz": {
+    "bytes": 224298,
+    "md5": "7a791f0c8a7d8562f81dae8af6782ccf",
+    "src": "bcast-x20-a:out/ticker/ticker_20200127.bin.gz"
+   },
+   "ticker_20200128.bin.gz": {
+    "bytes": 231017,
+    "md5": "31a0ab1c72e1a2fecd0eddc698601483",
+    "src": "bcast-x20-a:out/ticker/ticker_20200128.bin.gz"
+   },
+   "ticker_20200129.bin.gz": {
+    "bytes": 228217,
+    "md5": "a46dc3333572b97719e4e715553c98a1",
+    "src": "bcast-x20-a:out/ticker/ticker_20200129.bin.gz"
+   },
+   "ticker_20200130.bin.gz": {
+    "bytes": 231325,
+    "md5": "2f86649aaa0e81e391d2da0d14572d0e",
+    "src": "bcast-x20-a:out/ticker/ticker_20200130.bin.gz"
+   },
+   "ticker_20200131.bin.gz": {
+    "bytes": 244778,
+    "md5": "9b827353f297e6d135b8725900198ce5",
+    "src": "bcast-x20-a:out/ticker/ticker_20200131.bin.gz"
+   },
+   "ticker_20200201.bin.gz": {
+    "bytes": 245753,
+    "md5": "43c6bf7c5d89e8d6c4c133003ddab88f",
+    "src": "bcast-x20-a:out/ticker/ticker_20200201.bin.gz"
+   },
+   "ticker_20200202.bin.gz": {
+    "bytes": 246351,
+    "md5": "f6cb4bb5d1f70ac9cfce41bf5fee8923",
+    "src": "bcast-x20-a:out/ticker/ticker_20200202.bin.gz"
+   },
+   "ticker_20200203.bin.gz": {
+    "bytes": 259812,
+    "md5": "700a7d8d4cc185549a3ecfbda7ebd568",
+    "src": "bcast-x20-a:out/ticker/ticker_20200203.bin.gz"
+   },
+   "ticker_20200204.bin.gz": {
+    "bytes": 272821,
+    "md5": "87831fe0d9db0880cf3f623df223c19a",
+    "src": "bcast-x20-a:out/ticker/ticker_20200204.bin.gz"
+   },
+   "ticker_20200205.bin.gz": {
+    "bytes": 307104,
+    "md5": "2e73026448b684c8109b7b7bd7dcb2fa",
+    "src": "bcast-x20-a:out/ticker/ticker_20200205.bin.gz"
+   },
+   "ticker_20200206.bin.gz": {
+    "bytes": 329192,
+    "md5": "819fab666d6904c7135f26fbb5c5703b",
+    "src": "bcast-x20-a:out/ticker/ticker_20200206.bin.gz"
+   },
+   "ticker_20200207.bin.gz": {
+    "bytes": 344360,
+    "md5": "06477b87f55986b4c2a98f3998230a17",
+    "src": "bcast-x20-a:out/ticker/ticker_20200207.bin.gz"
+   },
+   "ticker_20200208.bin.gz": {
+    "bytes": 353795,
+    "md5": "66fc8fb9447615eda7110ba89af275e0",
+    "src": "bcast-x20-a:out/ticker/ticker_20200208.bin.gz"
+   },
+   "ticker_20200209.bin.gz": {
+    "bytes": 350817,
+    "md5": "bf64f0a167b67d76b738b71e2b622120",
+    "src": "bcast-x20-a:out/ticker/ticker_20200209.bin.gz"
+   },
+   "ticker_20200210.bin.gz": {
+    "bytes": 374757,
+    "md5": "e5d704589585f6fabc35f9c451d3bafa",
+    "src": "bcast-x20-a:out/ticker/ticker_20200210.bin.gz"
+   },
+   "ticker_20200211.bin.gz": {
+    "bytes": 397207,
+    "md5": "af52ee865aa2614a5074a50539e03604",
+    "src": "bcast-x20-a:out/ticker/ticker_20200211.bin.gz"
+   },
+   "ticker_20200212.bin.gz": {
+    "bytes": 439556,
+    "md5": "a32fa0ac6c714ef4a058831eb85785bb",
+    "src": "bcast-x20-a:out/ticker/ticker_20200212.bin.gz"
+   },
+   "ticker_20200213.bin.gz": {
+    "bytes": 474454,
+    "md5": "4f82b66f02757f854795e406d5399211",
+    "src": "bcast-x20-a:out/ticker/ticker_20200213.bin.gz"
+   },
+   "ticker_20200214.bin.gz": {
+    "bytes": 478770,
+    "md5": "ec920a7c9e473935720e691360253a98",
+    "src": "bcast-x20-a:out/ticker/ticker_20200214.bin.gz"
+   },
+   "ticker_20200215.bin.gz": {
+    "bytes": 487685,
+    "md5": "d6499e2fab0d2f537afcb1170cc3b3d9",
+    "src": "bcast-x20-a:out/ticker/ticker_20200215.bin.gz"
+   },
+   "ticker_20200216.bin.gz": {
+    "bytes": 517602,
+    "md5": "44f7e0b61bf6a7cb82a470bd5490ae78",
+    "src": "bcast-x20-a:out/ticker/ticker_20200216.bin.gz"
+   },
+   "ticker_20200217.bin.gz": {
+    "bytes": 537141,
+    "md5": "2abdf8004ff49bd1192b1fcac67b1428",
+    "src": "bcast-x20-a:out/ticker/ticker_20200217.bin.gz"
+   },
+   "ticker_20200218.bin.gz": {
+    "bytes": 530955,
+    "md5": "810fbac7edd644c46400049e359bdf8d",
+    "src": "bcast-x20-a:out/ticker/ticker_20200218.bin.gz"
+   },
+   "ticker_20200219.bin.gz": {
+    "bytes": 511963,
+    "md5": "db017211ecb843460002c32eb91b014f",
+    "src": "bcast-x20-a:out/ticker/ticker_20200219.bin.gz"
+   },
+   "ticker_20200220.bin.gz": {
+    "bytes": 543462,
+    "md5": "9f725c2443b00280ba4923e68f522153",
+    "src": "bcast-x20-a:out/ticker/ticker_20200220.bin.gz"
+   },
+   "ticker_20200221.bin.gz": {
+    "bytes": 545114,
+    "md5": "6273bc9132f66abd6fec925b8a542e67",
+    "src": "bcast-x20-a:out/ticker/ticker_20200221.bin.gz"
+   },
+   "ticker_20200222.bin.gz": {
+    "bytes": 537241,
+    "md5": "3be25992c61857099446887b29fa50c8",
+    "src": "bcast-x20-a:out/ticker/ticker_20200222.bin.gz"
+   },
+   "ticker_20200223.bin.gz": {
+    "bytes": 522881,
+    "md5": "20d606c610b7cb43a3bddbb341143f82",
+    "src": "bcast-x20-a:out/ticker/ticker_20200223.bin.gz"
+   },
+   "ticker_20200224.bin.gz": {
+    "bytes": 545647,
+    "md5": "57dc9914e0be6043a72b8f3798391a6f",
+    "src": "bcast-x20-a:out/ticker/ticker_20200224.bin.gz"
+   },
+   "ticker_20200225.bin.gz": {
+    "bytes": 554127,
+    "md5": "2ccf9c74526b9c7b7db5190f46da7fac",
+    "src": "bcast-x20-a:out/ticker/ticker_20200225.bin.gz"
+   },
+   "ticker_20200226.bin.gz": {
+    "bytes": 582873,
+    "md5": "09d3800ea809fbe8ed0d5b5c90ba6512",
+    "src": "bcast-x20-a:out/ticker/ticker_20200226.bin.gz"
+   },
+   "ticker_20200227.bin.gz": {
+    "bytes": 576226,
+    "md5": "28235619e6d13060b14af0f362d57595",
+    "src": "bcast-x20-a:out/ticker/ticker_20200227.bin.gz"
+   },
+   "ticker_20200228.bin.gz": {
+    "bytes": 569122,
+    "md5": "9f9a2b0e4f04d725466ba8d776115578",
+    "src": "bcast-x20-a:out/ticker/ticker_20200228.bin.gz"
+   },
+   "ticker_20200229.bin.gz": {
+    "bytes": 541551,
+    "md5": "9a8355c5279781d0225eabbe49e50ce7",
+    "src": "bcast-x20-a:out/ticker/ticker_20200229.bin.gz"
+   },
+   "ticker_20200301.bin.gz": {
+    "bytes": 546621,
+    "md5": "cde4556e1401523f20c0d59b70c0dfb0",
+    "src": "bcast-x20-a:out/ticker/ticker_20200301.bin.gz"
+   },
+   "ticker_20200302.bin.gz": {
+    "bytes": 536150,
+    "md5": "a95f519b2a881b9f003ab4cf0218bd02",
+    "src": "bcast-x20-a:out/ticker/ticker_20200302.bin.gz"
+   },
+   "ticker_20200303.bin.gz": {
+    "bytes": 526897,
+    "md5": "15d4397345df2ebea1f6eac26606f20b",
+    "src": "bcast-x20-a:out/ticker/ticker_20200303.bin.gz"
+   },
+   "ticker_20200304.bin.gz": {
+    "bytes": 513450,
+    "md5": "c34582533f4237a4eaf42d41e964b2de",
+    "src": "bcast-x20-a:out/ticker/ticker_20200304.bin.gz"
+   },
+   "ticker_20200305.bin.gz": {
+    "bytes": 522256,
+    "md5": "b855778360ef21495dbc23c00f84c01a",
+    "src": "bcast-x20-a:out/ticker/ticker_20200305.bin.gz"
+   },
+   "ticker_20200306.bin.gz": {
+    "bytes": 509724,
+    "md5": "85298c0473716e3c95ea186b23a511fc",
+    "src": "bcast-x20-a:out/ticker/ticker_20200306.bin.gz"
+   },
+   "ticker_20200307.bin.gz": {
+    "bytes": 496843,
+    "md5": "0a6026232672b29b0a135dadae2b204e",
+    "src": "bcast-x20-a:out/ticker/ticker_20200307.bin.gz"
+   },
+   "ticker_20200308.bin.gz": {
+    "bytes": 534530,
+    "md5": "5aec927714debad475e55a758fcc1d92",
+    "src": "bcast-x20-a:out/ticker/ticker_20200308.bin.gz"
+   },
+   "ticker_20200309.bin.gz": {
+    "bytes": 572873,
+    "md5": "c724968f950598652cf74832c6195948",
+    "src": "bcast-x20-a:out/ticker/ticker_20200309.bin.gz"
+   },
+   "ticker_20200310.bin.gz": {
+    "bytes": 544055,
+    "md5": "1a422f64c4101248bcd1fd6371e53f42",
+    "src": "bcast-x20-a:out/ticker/ticker_20200310.bin.gz"
+   },
+   "ticker_20200311.bin.gz": {
+    "bytes": 543053,
+    "md5": "83a46c0393ccbf01739e00386f357da1",
+    "src": "bcast-x20-a:out/ticker/ticker_20200311.bin.gz"
+   },
+   "ticker_20200312.bin.gz": {
+    "bytes": 606611,
+    "md5": "c570d5a9593b37ff4619ddc116d90995",
+    "src": "bcast-x20-a:out/ticker/ticker_20200312.bin.gz"
+   },
+   "ticker_20200313.bin.gz": {
+    "bytes": 629094,
+    "md5": "66e55a40dd55da896ee9f10a47cf447f",
+    "src": "bcast-x20-a:out/ticker/ticker_20200313.bin.gz"
+   },
+   "ticker_20200314.bin.gz": {
+    "bytes": 558937,
+    "md5": "32691449e084acfe3db90f8ba51d9d82",
+    "src": "bcast-x20-a:out/ticker/ticker_20200314.bin.gz"
+   },
+   "ticker_20200315.bin.gz": {
+    "bytes": 535628,
+    "md5": "9988d1eef0ad437e9b205452c4b85718",
+    "src": "bcast-x20-a:out/ticker/ticker_20200315.bin.gz"
+   },
+   "ticker_20200316.bin.gz": {
+    "bytes": 572264,
+    "md5": "ee4cb1933263ec0d8cbd9e1753b83205",
+    "src": "bcast-x20-a:out/ticker/ticker_20200316.bin.gz"
+   },
+   "ticker_20200317.bin.gz": {
+    "bytes": 548929,
+    "md5": "e389257275e9cc5ac5966d4b017fade5",
+    "src": "bcast-x20-a:out/ticker/ticker_20200317.bin.gz"
+   },
+   "ticker_20200318.bin.gz": {
+    "bytes": 528886,
+    "md5": "503211d1c5b1f81ec968926117369333",
+    "src": "bcast-x20-a:out/ticker/ticker_20200318.bin.gz"
+   },
+   "ticker_20200319.bin.gz": {
+    "bytes": 542894,
+    "md5": "e6e144c9e4752b3b2cfdeff196ed46b6",
+    "src": "bcast-x20-a:out/ticker/ticker_20200319.bin.gz"
+   },
+   "ticker_20200320.bin.gz": {
+    "bytes": 579124,
+    "md5": "a735da69e3e889c10a21d46bc84d1f5e",
+    "src": "bcast-x20-a:out/ticker/ticker_20200320.bin.gz"
+   },
+   "ticker_20200321.bin.gz": {
+    "bytes": 559362,
+    "md5": "e5a72ff6589e6c1c989bbf6b3bb16a52",
+    "src": "bcast-x20-a:out/ticker/ticker_20200321.bin.gz"
+   },
+   "ticker_20200322.bin.gz": {
+    "bytes": 543577,
+    "md5": "c5415f62aa6c1bbe440487ac0186034e",
+    "src": "bcast-x20-a:out/ticker/ticker_20200322.bin.gz"
+   },
+   "ticker_20200323.bin.gz": {
+    "bytes": 537740,
+    "md5": "e71a185ed63d85c03fff431e09a17666",
+    "src": "bcast-x20-a:out/ticker/ticker_20200323.bin.gz"
+   },
+   "ticker_20200324.bin.gz": {
+    "bytes": 529975,
+    "md5": "adae924f5bcc43d66f65f46bc0544f9a",
+    "src": "bcast-x20-a:out/ticker/ticker_20200324.bin.gz"
+   },
+   "ticker_20200325.bin.gz": {
+    "bytes": 516686,
+    "md5": "0f77c7456fe14a93d27fafe4405dbc84",
+    "src": "bcast-x20-a:out/ticker/ticker_20200325.bin.gz"
+   },
+   "ticker_20200326.bin.gz": {
+    "bytes": 491907,
+    "md5": "e61989fd8a5fd2a99a5991ad05bd3eb7",
+    "src": "bcast-x20-a:out/ticker/ticker_20200326.bin.gz"
+   },
+   "ticker_20200327.bin.gz": {
+    "bytes": 492953,
+    "md5": "41e9e384cafc590f3f4a4960caafa96a",
+    "src": "bcast-x20-a:out/ticker/ticker_20200327.bin.gz"
+   },
+   "ticker_20200328.bin.gz": {
+    "bytes": 503441,
+    "md5": "17682146451676981481b0dbf0a26d5c",
+    "src": "bcast-x20-a:out/ticker/ticker_20200328.bin.gz"
+   },
+   "ticker_20200329.bin.gz": {
+    "bytes": 470479,
+    "md5": "7ce0ba7cacc3385783bdea7fc0df70ed",
+    "src": "bcast-x20-a:out/ticker/ticker_20200329.bin.gz"
+   },
+   "ticker_20200330.bin.gz": {
+    "bytes": 484707,
+    "md5": "89433e5f00f49f786127ba9249603204",
+    "src": "bcast-x20-a:out/ticker/ticker_20200330.bin.gz"
+   },
+   "ticker_20200331.bin.gz": {
+    "bytes": 467951,
+    "md5": "00467b1e10d70f31fd84d0487e072808",
+    "src": "bcast-x20-a:out/ticker/ticker_20200331.bin.gz"
+   },
+   "ticker_20200401.bin.gz": {
+    "bytes": 467153,
+    "md5": "2230c00b0847a4436c53173df13f1dfb",
+    "src": "bcast-x20-a:out/ticker/ticker_20200401.bin.gz"
+   },
+   "ticker_20200402.bin.gz": {
+    "bytes": 492179,
+    "md5": "ef251ff153d68f4295065a162e1698d1",
+    "src": "bcast-x20-a:out/ticker/ticker_20200402.bin.gz"
+   },
+   "ticker_20200403.bin.gz": {
+    "bytes": 490908,
+    "md5": "bd3f2134b31efd24aa639263fa43abe3",
+    "src": "bcast-x20-a:out/ticker/ticker_20200403.bin.gz"
+   },
+   "ticker_20200404.bin.gz": {
+    "bytes": 473267,
+    "md5": "7bdcd9cf9783dec4653642392aa2e7b4",
+    "src": "bcast-x20-a:out/ticker/ticker_20200404.bin.gz"
+   },
+   "ticker_20200405.bin.gz": {
+    "bytes": 452400,
+    "md5": "f7c77a8bdd33ee666afb4a0a00dbe7d0",
+    "src": "bcast-x20-a:out/ticker/ticker_20200405.bin.gz"
+   },
+   "ticker_20200406.bin.gz": {
+    "bytes": 507548,
+    "md5": "7efe8ca9c28bacae25ae7911672576bb",
+    "src": "bcast-x20-a:out/ticker/ticker_20200406.bin.gz"
+   },
+   "ticker_20200407.bin.gz": {
+    "bytes": 533358,
+    "md5": "14b3ecb922ba368fdb698a50533cf739",
+    "src": "bcast-x20-a:out/ticker/ticker_20200407.bin.gz"
+   },
+   "ticker_20200408.bin.gz": {
+    "bytes": 520199,
+    "md5": "6c37b8ef093a218110aad4332571f4aa",
+    "src": "bcast-x20-a:out/ticker/ticker_20200408.bin.gz"
+   },
+   "ticker_20200409.bin.gz": {
+    "bytes": 511615,
+    "md5": "bb6714682f84645d381551b8fdf8cc0f",
+    "src": "bcast-x20-a:out/ticker/ticker_20200409.bin.gz"
+   },
+   "ticker_20200410.bin.gz": {
+    "bytes": 533636,
+    "md5": "3dd0f0f845fe1e49532202170b23c6fa",
+    "src": "bcast-x20-a:out/ticker/ticker_20200410.bin.gz"
+   },
+   "ticker_20200411.bin.gz": {
+    "bytes": 503118,
+    "md5": "7633e4fcdbad05d5609f706c63c5f53f",
+    "src": "bcast-x20-a:out/ticker/ticker_20200411.bin.gz"
+   },
+   "ticker_20200412.bin.gz": {
+    "bytes": 499437,
+    "md5": "0a355dcb30eca1045d977ccbf5f9cb8d",
+    "src": "bcast-x20-a:out/ticker/ticker_20200412.bin.gz"
+   },
+   "ticker_20200413.bin.gz": {
+    "bytes": 514386,
+    "md5": "3dd790232a4f956e46629ea75deba734",
+    "src": "bcast-x20-a:out/ticker/ticker_20200413.bin.gz"
+   },
+   "ticker_20200414.bin.gz": {
+    "bytes": 497068,
+    "md5": "6f13e0ab15d187b945c368d1351344c6",
+    "src": "bcast-x20-a:out/ticker/ticker_20200414.bin.gz"
+   },
+   "ticker_20200415.bin.gz": {
+    "bytes": 480258,
+    "md5": "ffda067031a1b9ebfcc42cfca6d73e7f",
+    "src": "bcast-x20-a:out/ticker/ticker_20200415.bin.gz"
+   },
+   "ticker_20200416.bin.gz": {
+    "bytes": 518603,
+    "md5": "d7086fb1c3db27619dc95bda9003f7fe",
+    "src": "bcast-x20-a:out/ticker/ticker_20200416.bin.gz"
+   },
+   "ticker_20200417.bin.gz": {
+    "bytes": 479749,
+    "md5": "9443f5960395c7749c85118a02dcaa9f",
+    "src": "bcast-x20-a:out/ticker/ticker_20200417.bin.gz"
+   },
+   "ticker_20200418.bin.gz": {
+    "bytes": 467321,
+    "md5": "d1a42a49ff0d21b6a23eef8acc4e9589",
+    "src": "bcast-x20-a:out/ticker/ticker_20200418.bin.gz"
+   },
+   "ticker_20200419.bin.gz": {
+    "bytes": 485615,
+    "md5": "bea044aa38a54b8005c994f7a8a8d649",
+    "src": "bcast-x20-a:out/ticker/ticker_20200419.bin.gz"
+   },
+   "ticker_20200420.bin.gz": {
+    "bytes": 515666,
+    "md5": "582de31a7eda2584e2b3323eb1a73bfb",
+    "src": "bcast-x20-a:out/ticker/ticker_20200420.bin.gz"
+   },
+   "ticker_20200421.bin.gz": {
+    "bytes": 489285,
+    "md5": "5ba803461d59b20f816e34c1f53aacfa",
+    "src": "bcast-x20-a:out/ticker/ticker_20200421.bin.gz"
+   },
+   "ticker_20200422.bin.gz": {
+    "bytes": 459584,
+    "md5": "fec8bfa459f88be5550e064d238db1d0",
+    "src": "bcast-x20-a:out/ticker/ticker_20200422.bin.gz"
+   },
+   "ticker_20200423.bin.gz": {
+    "bytes": 489378,
+    "md5": "7bf808a2f70382711fe31538da6d1e47",
+    "src": "bcast-x20-a:out/ticker/ticker_20200423.bin.gz"
+   },
+   "ticker_20200424.bin.gz": {
+    "bytes": 491976,
+    "md5": "255aa902cd1572b88444a5098fcaed59",
+    "src": "bcast-x20-a:out/ticker/ticker_20200424.bin.gz"
+   },
+   "ticker_20200425.bin.gz": {
+    "bytes": 472513,
+    "md5": "b88a64c6c3ba05d866d2157f60ab3c89",
+    "src": "bcast-x20-a:out/ticker/ticker_20200425.bin.gz"
+   },
+   "ticker_20200426.bin.gz": {
+    "bytes": 471081,
+    "md5": "6dc21dfd5e2aff29ffe985a8ee5ae93f",
+    "src": "bcast-x20-a:out/ticker/ticker_20200426.bin.gz"
+   },
+   "ticker_20200427.bin.gz": {
+    "bytes": 482454,
+    "md5": "b20458181eb4dd56981c673a56a72463",
+    "src": "bcast-x20-a:out/ticker/ticker_20200427.bin.gz"
+   },
+   "ticker_20200428.bin.gz": {
+    "bytes": 471292,
+    "md5": "8642bebc9d4aa7de2493731665a0d262",
+    "src": "bcast-x20-a:out/ticker/ticker_20200428.bin.gz"
+   },
+   "ticker_20200429.bin.gz": {
+    "bytes": 511205,
+    "md5": "c1e367476d87c3847de0f57b634c6030",
+    "src": "bcast-x20-a:out/ticker/ticker_20200429.bin.gz"
+   },
+   "ticker_20200430.bin.gz": {
+    "bytes": 551329,
+    "md5": "75cc9d028fccbc3bee84e2131225a66b",
+    "src": "bcast-x20-a:out/ticker/ticker_20200430.bin.gz"
+   },
+   "ticker_20200501.bin.gz": {
+    "bytes": 522173,
+    "md5": "ad155cab8563d705758bcce3b37605fd",
+    "src": "bcast-x20-a:out/ticker/ticker_20200501.bin.gz"
+   },
+   "ticker_20200502.bin.gz": {
+    "bytes": 490707,
+    "md5": "7798a435142980bef0cdbb6a2c636531",
+    "src": "bcast-x20-a:out/ticker/ticker_20200502.bin.gz"
+   },
+   "ticker_20200503.bin.gz": {
+    "bytes": 501915,
+    "md5": "f0007622f8a7a7005bd4d35dcb70e82e",
+    "src": "bcast-x20-a:out/ticker/ticker_20200503.bin.gz"
+   },
+   "ticker_20200504.bin.gz": {
+    "bytes": 529574,
+    "md5": "5eee299b46f0b63838767dd81f0cf848",
+    "src": "bcast-x20-a:out/ticker/ticker_20200504.bin.gz"
+   },
+   "ticker_20200505.bin.gz": {
+    "bytes": 495911,
+    "md5": "99c773fbf557bb58c9cac102b70d57de",
+    "src": "bcast-x20-a:out/ticker/ticker_20200505.bin.gz"
+   },
+   "ticker_20200506.bin.gz": {
+    "bytes": 481346,
+    "md5": "a33205de6e3fe6ebd821703e9cbffffc",
+    "src": "bcast-x20-a:out/ticker/ticker_20200506.bin.gz"
+   },
+   "ticker_20200507.bin.gz": {
+    "bytes": 497640,
+    "md5": "2c952e895c182d5c52c34f87a58e2b35",
+    "src": "bcast-x20-a:out/ticker/ticker_20200507.bin.gz"
+   },
+   "ticker_20200508.bin.gz": {
+    "bytes": 495395,
+    "md5": "f7a019116fa847625b0d83e748bf879f",
+    "src": "bcast-x20-a:out/ticker/ticker_20200508.bin.gz"
+   },
+   "ticker_20200509.bin.gz": {
+    "bytes": 519371,
+    "md5": "9ff08d7ba4edfb63e6b4f021940fcd75",
+    "src": "bcast-x20-a:out/ticker/ticker_20200509.bin.gz"
+   },
+   "ticker_20200510.bin.gz": {
+    "bytes": 553892,
+    "md5": "b135567986fd3c6a976025ec0ede7e9d",
+    "src": "bcast-x20-a:out/ticker/ticker_20200510.bin.gz"
+   },
+   "ticker_20200511.bin.gz": {
+    "bytes": 543511,
+    "md5": "f5f42ab051ae0c0c3481ec212def8f08",
+    "src": "bcast-x20-a:out/ticker/ticker_20200511.bin.gz"
+   },
+   "ticker_20200512.bin.gz": {
+    "bytes": 515702,
+    "md5": "0127b44eecf74372c401522e7dd864fb",
+    "src": "bcast-x20-a:out/ticker/ticker_20200512.bin.gz"
+   },
+   "ticker_20200513.bin.gz": {
+    "bytes": 487003,
+    "md5": "d34f4909b0dcf647401b2ca264e1df2c",
+    "src": "bcast-x20-a:out/ticker/ticker_20200513.bin.gz"
+   },
+   "ticker_20200514.bin.gz": {
+    "bytes": 497422,
+    "md5": "68a47f8785b2333ebc866a4fe409ba4c",
+    "src": "bcast-x20-a:out/ticker/ticker_20200514.bin.gz"
+   },
+   "ticker_20200515.bin.gz": {
+    "bytes": 496110,
+    "md5": "349e028e828c3730420060485f926ad5",
+    "src": "bcast-x20-a:out/ticker/ticker_20200515.bin.gz"
+   },
+   "ticker_20200516.bin.gz": {
+    "bytes": 474293,
+    "md5": "da2eeb3e75c827e332b4391a0c4e4694",
+    "src": "bcast-x20-a:out/ticker/ticker_20200516.bin.gz"
+   },
+   "ticker_20200517.bin.gz": {
+    "bytes": 453186,
+    "md5": "987478ce4d4291d24dd2f6a0dea1a86e",
+    "src": "bcast-x20-a:out/ticker/ticker_20200517.bin.gz"
+   },
+   "ticker_20200518.bin.gz": {
+    "bytes": 480507,
+    "md5": "45c26f586a1812140cc15631c9b75232",
+    "src": "bcast-x20-a:out/ticker/ticker_20200518.bin.gz"
+   },
+   "ticker_20200519.bin.gz": {
+    "bytes": 469460,
+    "md5": "f1e3fe7d3612c7261094dfc84c859689",
+    "src": "bcast-x20-a:out/ticker/ticker_20200519.bin.gz"
+   },
+   "ticker_20200520.bin.gz": {
+    "bytes": 472583,
+    "md5": "5a42476f755afbfa2afe3e094d942723",
+    "src": "bcast-x20-a:out/ticker/ticker_20200520.bin.gz"
+   },
+   "ticker_20200521.bin.gz": {
+    "bytes": 499079,
+    "md5": "b2adf12e5a9f0700af42869a855e2111",
+    "src": "bcast-x20-a:out/ticker/ticker_20200521.bin.gz"
+   },
+   "ticker_20200522.bin.gz": {
+    "bytes": 507744,
+    "md5": "61448fa567a51e96d1d92ca8535ebd71",
+    "src": "bcast-x20-a:out/ticker/ticker_20200522.bin.gz"
+   },
+   "ticker_20200523.bin.gz": {
+    "bytes": 484472,
+    "md5": "e0a17e18dbdab5433a7d1e6be6a18b4a",
+    "src": "bcast-x20-a:out/ticker/ticker_20200523.bin.gz"
+   },
+   "ticker_20200524.bin.gz": {
+    "bytes": 478431,
+    "md5": "e5649fc51f646e3adaf9658ff564fabd",
+    "src": "bcast-x20-a:out/ticker/ticker_20200524.bin.gz"
+   },
+   "ticker_20200525.bin.gz": {
+    "bytes": 497251,
+    "md5": "a97ca0fbce926b331c8086e24356a1fa",
+    "src": "bcast-x20-a:out/ticker/ticker_20200525.bin.gz"
+   },
+   "ticker_20200526.bin.gz": {
+    "bytes": 484794,
+    "md5": "50ae80f5942265ffe37380796c65fc87",
+    "src": "bcast-x20-a:out/ticker/ticker_20200526.bin.gz"
+   },
+   "ticker_20200527.bin.gz": {
+    "bytes": 490478,
+    "md5": "0802ebefffd8000c9ba46c593b934605",
+    "src": "bcast-x20-a:out/ticker/ticker_20200527.bin.gz"
+   },
+   "ticker_20200528.bin.gz": {
+    "bytes": 496031,
+    "md5": "54c55c7bbc58fa837574ca5330a4b5c0",
+    "src": "bcast-x20-a:out/ticker/ticker_20200528.bin.gz"
+   },
+   "ticker_20200529.bin.gz": {
+    "bytes": 499192,
+    "md5": "80c994ff0b2b05abb7c50d3a47d1fe2e",
+    "src": "bcast-x20-a:out/ticker/ticker_20200529.bin.gz"
+   },
+   "ticker_20200530.bin.gz": {
+    "bytes": 533123,
+    "md5": "f4e9f277be0f74b3d173c17ce96e3d01",
+    "src": "bcast-x20-a:out/ticker/ticker_20200530.bin.gz"
+   },
+   "ticker_20200531.bin.gz": {
+    "bytes": 563504,
+    "md5": "0976868649fe74b708f9e526613fb8d6",
+    "src": "bcast-x20-a:out/ticker/ticker_20200531.bin.gz"
+   },
+   "ticker_20200601.bin.gz": {
+    "bytes": 563152,
+    "md5": "fbdd1793604479e56bc8ac300ab79512",
+    "src": "bcast-x20-a:out/ticker/ticker_20200601.bin.gz"
+   },
+   "ticker_20200602.bin.gz": {
+    "bytes": 553821,
+    "md5": "728688989f81493a87c8071bb9e75282",
+    "src": "bcast-x20-a:out/ticker/ticker_20200602.bin.gz"
+   },
+   "ticker_20200603.bin.gz": {
+    "bytes": 534646,
+    "md5": "38474a284a6f1d6e98865488a2ccc5ac",
+    "src": "bcast-x20-a:out/ticker/ticker_20200603.bin.gz"
+   },
+   "ticker_20200604.bin.gz": {
+    "bytes": 544148,
+    "md5": "f908dfb8c1e1207f004e29cab50f2a7f",
+    "src": "bcast-x20-a:out/ticker/ticker_20200604.bin.gz"
+   },
+   "ticker_20200605.bin.gz": {
+    "bytes": 530977,
+    "md5": "05d6d0e129a7d003ebcc16c466d1f297",
+    "src": "bcast-x20-a:out/ticker/ticker_20200605.bin.gz"
+   },
+   "ticker_20200606.bin.gz": {
+    "bytes": 498248,
+    "md5": "4c493a056d42bb490cabee62c0d7beb4",
+    "src": "bcast-x20-a:out/ticker/ticker_20200606.bin.gz"
+   },
+   "ticker_20200607.bin.gz": {
+    "bytes": 504876,
+    "md5": "6a410b878973481bd2f48bd36c8b5210",
+    "src": "bcast-x20-a:out/ticker/ticker_20200607.bin.gz"
+   },
+   "ticker_20200608.bin.gz": {
+    "bytes": 476910,
+    "md5": "a8e649a7cde93f71292abc735dcab7f2",
+    "src": "bcast-x20-a:out/ticker/ticker_20200608.bin.gz"
+   },
+   "ticker_20200609.bin.gz": {
+    "bytes": 480605,
+    "md5": "b72ccf14514754ee323f610796429579",
+    "src": "bcast-x20-a:out/ticker/ticker_20200609.bin.gz"
+   },
+   "ticker_20200610.bin.gz": {
+    "bytes": 484493,
+    "md5": "ca9a5e39e4a1d4b0a55009b7cac0ae2a",
+    "src": "bcast-x20-a:out/ticker/ticker_20200610.bin.gz"
+   },
+   "ticker_20200611.bin.gz": {
+    "bytes": 525613,
+    "md5": "069b526a7f683791db988e98d660829a",
+    "src": "bcast-x20-a:out/ticker/ticker_20200611.bin.gz"
+   },
+   "ticker_20200612.bin.gz": {
+    "bytes": 515881,
+    "md5": "65ff725af899766431a0643f708c0e1c",
+    "src": "bcast-x20-a:out/ticker/ticker_20200612.bin.gz"
+   },
+   "ticker_20200613.bin.gz": {
+    "bytes": 481568,
+    "md5": "2632307e395fd6dfd3ee3ded376d637e",
+    "src": "bcast-x20-a:out/ticker/ticker_20200613.bin.gz"
+   },
+   "ticker_20200614.bin.gz": {
+    "bytes": 475053,
+    "md5": "fd8b575c8b64128a890e703a692b5f9f",
+    "src": "bcast-x20-a:out/ticker/ticker_20200614.bin.gz"
+   },
+   "ticker_20200615.bin.gz": {
+    "bytes": 545982,
+    "md5": "87ad78d15e78618a4fa4d45526d03fcf",
+    "src": "bcast-x20-a:out/ticker/ticker_20200615.bin.gz"
+   },
+   "ticker_20200616.bin.gz": {
+    "bytes": 515163,
+    "md5": "464ace19460af6a4649ff35ca431e81d",
+    "src": "bcast-x20-a:out/ticker/ticker_20200616.bin.gz"
+   },
+   "ticker_20200617.bin.gz": {
+    "bytes": 519901,
+    "md5": "99d0ddd9f6a6111bafb6cc3b8eb8467d",
+    "src": "bcast-x20-a:out/ticker/ticker_20200617.bin.gz"
+   },
+   "ticker_20200618.bin.gz": {
+    "bytes": 522687,
+    "md5": "846b1f8e678937a08ec060873fedc78e",
+    "src": "bcast-x20-a:out/ticker/ticker_20200618.bin.gz"
+   },
+   "ticker_20200619.bin.gz": {
+    "bytes": 546736,
+    "md5": "0f5c10292afbe0cbf9d9037b50524aac",
+    "src": "bcast-x20-a:out/ticker/ticker_20200619.bin.gz"
+   },
+   "ticker_20200620.bin.gz": {
+    "bytes": 501370,
+    "md5": "d8a732fd52d43b10cdfb4628462e6eb0",
+    "src": "bcast-x20-a:out/ticker/ticker_20200620.bin.gz"
+   },
+   "ticker_20200621.bin.gz": {
+    "bytes": 495375,
+    "md5": "9bd780de039a5d7f55fcf98e701b8f38",
+    "src": "bcast-x20-a:out/ticker/ticker_20200621.bin.gz"
+   },
+   "ticker_20200622.bin.gz": {
+    "bytes": 550246,
+    "md5": "47ae17d3b3260a04a177fd5dd32adf0e",
+    "src": "bcast-x20-a:out/ticker/ticker_20200622.bin.gz"
+   },
+   "ticker_20200623.bin.gz": {
+    "bytes": 563222,
+    "md5": "5c4f70140d7875f0547afbcf24d774d7",
+    "src": "bcast-x20-a:out/ticker/ticker_20200623.bin.gz"
+   },
+   "ticker_20200624.bin.gz": {
+    "bytes": 588519,
+    "md5": "4ae4c728d14f6e61969ed61834d4508d",
+    "src": "bcast-x20-a:out/ticker/ticker_20200624.bin.gz"
+   },
+   "ticker_20200625.bin.gz": {
+    "bytes": 565218,
+    "md5": "748a27ce2df3a93d9ece879442eb0f25",
+    "src": "bcast-x20-a:out/ticker/ticker_20200625.bin.gz"
+   },
+   "ticker_20200626.bin.gz": {
+    "bytes": 575620,
+    "md5": "82971bd82f2d2f722aa96675ecde84df",
+    "src": "bcast-x20-a:out/ticker/ticker_20200626.bin.gz"
+   },
+   "ticker_20200627.bin.gz": {
+    "bytes": 576472,
+    "md5": "eb6f49d4b7cb002b04282c417991a3ab",
+    "src": "bcast-x20-a:out/ticker/ticker_20200627.bin.gz"
+   },
+   "ticker_20200628.bin.gz": {
+    "bytes": 566833,
+    "md5": "d40e4ab79f714cc465e0fe4e508a9f95",
+    "src": "bcast-x20-a:out/ticker/ticker_20200628.bin.gz"
+   },
+   "ticker_20200629.bin.gz": {
+    "bytes": 575829,
+    "md5": "d96a0162df067f93efc321d86246fce0",
+    "src": "bcast-x20-a:out/ticker/ticker_20200629.bin.gz"
+   },
+   "ticker_20200630.bin.gz": {
+    "bytes": 559227,
+    "md5": "6c7d3ec7b7ed82a602f08b82463ca495",
+    "src": "bcast-x20-a:out/ticker/ticker_20200630.bin.gz"
+   },
+   "ticker_20200701.bin.gz": {
+    "bytes": 577905,
+    "md5": "6aaabf1be6d7d72e0c9d90f7b8612583",
+    "src": "bcast-x20-a:out/ticker/ticker_20200701.bin.gz"
+   },
+   "ticker_20200702.bin.gz": {
+    "bytes": 637638,
+    "md5": "0e26413738ab72cd0f1f8afe6f002d5a",
+    "src": "bcast-x20-a:out/ticker/ticker_20200702.bin.gz"
+   },
+   "ticker_20200703.bin.gz": {
+    "bytes": 615752,
+    "md5": "d76ba7936cef877d091d2455eeca0a8f",
+    "src": "bcast-x20-a:out/ticker/ticker_20200703.bin.gz"
+   },
+   "ticker_20200704.bin.gz": {
+    "bytes": 614832,
+    "md5": "bcd61804fa09ab8a7a26545c277a3f59",
+    "src": "bcast-x20-a:out/ticker/ticker_20200704.bin.gz"
+   },
+   "ticker_20200705.bin.gz": {
+    "bytes": 634844,
+    "md5": "1b9219b33d6fce0635b59041bb06adbd",
+    "src": "bcast-x20-a:out/ticker/ticker_20200705.bin.gz"
+   },
+   "ticker_20200706.bin.gz": {
+    "bytes": 668595,
+    "md5": "0ed79c1f723e4f001179dcff477f1d9b",
+    "src": "bcast-x20-a:out/ticker/ticker_20200706.bin.gz"
+   },
+   "ticker_20200707.bin.gz": {
+    "bytes": 664631,
+    "md5": "68bba076a87275fa5382a9643af10fbf",
+    "src": "bcast-x20-a:out/ticker/ticker_20200707.bin.gz"
+   },
+   "ticker_20200708.bin.gz": {
+    "bytes": 713170,
+    "md5": "8ff952a02be2f5466a9d11716e757744",
+    "src": "bcast-x20-a:out/ticker/ticker_20200708.bin.gz"
+   },
+   "ticker_20200709.bin.gz": {
+    "bytes": 711427,
+    "md5": "3476de43fc27f9847d85f563f7048700",
+    "src": "bcast-x20-a:out/ticker/ticker_20200709.bin.gz"
+   },
+   "ticker_20200710.bin.gz": {
+    "bytes": 703980,
+    "md5": "c319c99a745b736efa28b3db5ec7243a",
+    "src": "bcast-x20-a:out/ticker/ticker_20200710.bin.gz"
+   },
+   "ticker_20200711.bin.gz": {
+    "bytes": 700199,
+    "md5": "cce0611b95edc02564b3b42d7e6f0e15",
+    "src": "bcast-x20-a:out/ticker/ticker_20200711.bin.gz"
+   },
+   "ticker_20200712.bin.gz": {
+    "bytes": 697005,
+    "md5": "e78f441a4a65cb2dc2512588b5d16fb9",
+    "src": "bcast-x20-a:out/ticker/ticker_20200712.bin.gz"
+   },
+   "ticker_20200713.bin.gz": {
+    "bytes": 737609,
+    "md5": "177b030478b2d109b53e74cf32ccbe6a",
+    "src": "bcast-x20-a:out/ticker/ticker_20200713.bin.gz"
+   },
+   "ticker_20200714.bin.gz": {
+    "bytes": 721571,
+    "md5": "0f3c5100530c2effe33c907227b4fcd0",
+    "src": "bcast-x20-a:out/ticker/ticker_20200714.bin.gz"
+   },
+   "ticker_20200715.bin.gz": {
+    "bytes": 699075,
+    "md5": "f5032919509ebeb2b99173c64933400b",
+    "src": "bcast-x20-a:out/ticker/ticker_20200715.bin.gz"
+   },
+   "ticker_20200716.bin.gz": {
+    "bytes": 725414,
+    "md5": "b2a312795c64360c60fd4c9d43ef4d46",
+    "src": "bcast-x20-a:out/ticker/ticker_20200716.bin.gz"
+   },
+   "ticker_20200717.bin.gz": {
+    "bytes": 692166,
+    "md5": "1027751970bd244fa20e9f2779d27343",
+    "src": "bcast-x20-a:out/ticker/ticker_20200717.bin.gz"
+   },
+   "ticker_20200718.bin.gz": {
+    "bytes": 683214,
+    "md5": "d1356f7cb67863a308829347ff24d8e0",
+    "src": "bcast-x20-a:out/ticker/ticker_20200718.bin.gz"
+   },
+   "ticker_20200719.bin.gz": {
+    "bytes": 670254,
+    "md5": "cf9e3961fc39d3adff99ba5557739aa5",
+    "src": "bcast-x20-a:out/ticker/ticker_20200719.bin.gz"
+   },
+   "ticker_20200720.bin.gz": {
+    "bytes": 676169,
+    "md5": "38fb41eb075b6d22e93fdc9129fdca89",
+    "src": "bcast-x20-a:out/ticker/ticker_20200720.bin.gz"
+   },
+   "ticker_20200721.bin.gz": {
+    "bytes": 703297,
+    "md5": "b9c71b86e1b4cd326589fd192ae21f84",
+    "src": "bcast-x20-a:out/ticker/ticker_20200721.bin.gz"
+   },
+   "ticker_20200722.bin.gz": {
+    "bytes": 697383,
+    "md5": "580deb6967eea07975330f43fec9f5b4",
+    "src": "bcast-x20-a:out/ticker/ticker_20200722.bin.gz"
+   },
+   "ticker_20200723.bin.gz": {
+    "bytes": 700684,
+    "md5": "653721debb190f79044b7d77f9856af2",
+    "src": "bcast-x20-a:out/ticker/ticker_20200723.bin.gz"
+   },
+   "ticker_20200724.bin.gz": {
+    "bytes": 704432,
+    "md5": "698f53aeac61f4b347e3f042261320c0",
+    "src": "bcast-x20-a:out/ticker/ticker_20200724.bin.gz"
+   },
+   "ticker_20200725.bin.gz": {
+    "bytes": 722984,
+    "md5": "6eb4871d378edb14ec62e9e7ed8051b8",
+    "src": "bcast-x20-a:out/ticker/ticker_20200725.bin.gz"
+   },
+   "ticker_20200726.bin.gz": {
+    "bytes": 731992,
+    "md5": "81b152927b5cd6cd24ff74a22be465a0",
+    "src": "bcast-x20-a:out/ticker/ticker_20200726.bin.gz"
+   },
+   "ticker_20200727.bin.gz": {
+    "bytes": 796294,
+    "md5": "ab08d25b668f5d0b9f8b34ce1c238347",
+    "src": "bcast-x20-a:out/ticker/ticker_20200727.bin.gz"
+   },
+   "ticker_20200728.bin.gz": {
+    "bytes": 797476,
+    "md5": "b00996f27d69d85e10d574b5ff7cbf87",
+    "src": "bcast-x20-a:out/ticker/ticker_20200728.bin.gz"
+   },
+   "ticker_20200729.bin.gz": {
+    "bytes": 798542,
+    "md5": "30093d1556e66dcb932bd1df075a5dd7",
+    "src": "bcast-x20-a:out/ticker/ticker_20200729.bin.gz"
+   },
+   "ticker_20200730.bin.gz": {
+    "bytes": 783795,
+    "md5": "f20ca086259ea5a1c72e13dec9180ee7",
+    "src": "bcast-x20-a:out/ticker/ticker_20200730.bin.gz"
+   },
+   "ticker_20200731.bin.gz": {
+    "bytes": 793489,
+    "md5": "47e324437e75f0619caae16746232a77",
+    "src": "bcast-x20-a:out/ticker/ticker_20200731.bin.gz"
+   },
+   "ticker_20200801.bin.gz": {
+    "bytes": 855169,
+    "md5": "2ebb94cc6f1722fbed04a570951ad9f2",
+    "src": "bcast-x20-a:out/ticker/ticker_20200801.bin.gz"
+   },
+   "ticker_20200802.bin.gz": {
+    "bytes": 888113,
+    "md5": "250cb9d9597c8b47d77688412e98ba79",
+    "src": "bcast-x20-a:out/ticker/ticker_20200802.bin.gz"
+   },
+   "ticker_20200803.bin.gz": {
+    "bytes": 841799,
+    "md5": "a25eac9743302cac48b161692595d4da",
+    "src": "bcast-x20-a:out/ticker/ticker_20200803.bin.gz"
+   },
+   "ticker_20200804.bin.gz": {
+    "bytes": 846696,
+    "md5": "77a784e36a5453bce67e5f9053129c96",
+    "src": "bcast-x20-a:out/ticker/ticker_20200804.bin.gz"
+   },
+   "ticker_20200805.bin.gz": {
+    "bytes": 841777,
+    "md5": "aa068ff9d12f70967d949ba04b590d4b",
+    "src": "bcast-x20-a:out/ticker/ticker_20200805.bin.gz"
+   },
+   "ticker_20200806.bin.gz": {
+    "bytes": 851418,
+    "md5": "96703dc2fb8e5df08e6457e13fe1304a",
+    "src": "bcast-x20-a:out/ticker/ticker_20200806.bin.gz"
+   },
+   "ticker_20200807.bin.gz": {
+    "bytes": 855528,
+    "md5": "35d4809c40361047d7228d96084e0f59",
+    "src": "bcast-x20-a:out/ticker/ticker_20200807.bin.gz"
+   },
+   "ticker_20200808.bin.gz": {
+    "bytes": 839542,
+    "md5": "ad65eaade161061e7f2d4fb75fcf8b40",
+    "src": "bcast-x20-a:out/ticker/ticker_20200808.bin.gz"
+   },
+   "ticker_20200809.bin.gz": {
+    "bytes": 865918,
+    "md5": "2a3cbbff36b703c6edf5947d8f4975a5",
+    "src": "bcast-x20-a:out/ticker/ticker_20200809.bin.gz"
+   },
+   "ticker_20200810.bin.gz": {
+    "bytes": 893969,
+    "md5": "6c6dc69d296d10f5474ef1c3cb6d0eb5",
+    "src": "bcast-x20-a:out/ticker/ticker_20200810.bin.gz"
+   },
+   "ticker_20200811.bin.gz": {
+    "bytes": 912863,
+    "md5": "b83f9741d2f4ad7b4aced21013b3cb58",
+    "src": "bcast-x20-a:out/ticker/ticker_20200811.bin.gz"
+   },
+   "ticker_20200812.bin.gz": {
+    "bytes": 927669,
+    "md5": "5556309d3ec913cec123cbfc0a25f426",
+    "src": "bcast-x20-a:out/ticker/ticker_20200812.bin.gz"
+   },
+   "ticker_20200813.bin.gz": {
+    "bytes": 969907,
+    "md5": "759d975d14e06b924c923f382a8e5529",
+    "src": "bcast-x20-a:out/ticker/ticker_20200813.bin.gz"
+   },
+   "ticker_20200814.bin.gz": {
+    "bytes": 992609,
+    "md5": "8228b276cd316999cc7b510286d41d95",
+    "src": "bcast-x20-a:out/ticker/ticker_20200814.bin.gz"
+   },
+   "ticker_20200815.bin.gz": {
+    "bytes": 990107,
+    "md5": "552ddc609e75be3366cc7d15b4ca242f",
+    "src": "bcast-x20-a:out/ticker/ticker_20200815.bin.gz"
+   },
+   "ticker_20200816.bin.gz": {
+    "bytes": 988342,
+    "md5": "13ca5c9f7bbdcb051d827cd56f2456d8",
+    "src": "bcast-x20-a:out/ticker/ticker_20200816.bin.gz"
+   },
+   "ticker_20200817.bin.gz": {
+    "bytes": 996500,
+    "md5": "3223f59ddd22ac0d4843dbb6df34b900",
+    "src": "bcast-x20-a:out/ticker/ticker_20200817.bin.gz"
+   },
+   "ticker_20200818.bin.gz": {
+    "bytes": 1000236,
+    "md5": "0701750d4e6f5aabb77955e1a5677bfd",
+    "src": "bcast-x20-a:out/ticker/ticker_20200818.bin.gz"
+   },
+   "ticker_20200819.bin.gz": {
+    "bytes": 1020986,
+    "md5": "bdb2b4bd28c9277273bf9ba1ac2c4724",
+    "src": "bcast-x20-a:out/ticker/ticker_20200819.bin.gz"
+   },
+   "ticker_20200820.bin.gz": {
+    "bytes": 981968,
+    "md5": "e897f6b6e77116d2d539e02532a70d47",
+    "src": "bcast-x20-a:out/ticker/ticker_20200820.bin.gz"
+   },
+   "ticker_20200821.bin.gz": {
+    "bytes": 1037082,
+    "md5": "28457e6ea1e0503713522bdb0be8bc9f",
+    "src": "bcast-x20-a:out/ticker/ticker_20200821.bin.gz"
+   },
+   "ticker_20200822.bin.gz": {
+    "bytes": 1028815,
+    "md5": "2ea58bc172b5d07cf8427e152e266643",
+    "src": "bcast-x20-a:out/ticker/ticker_20200822.bin.gz"
+   },
+   "ticker_20200823.bin.gz": {
+    "bytes": 1010505,
+    "md5": "da0dd0aca29a851b6405c6d288e95b63",
+    "src": "bcast-x20-a:out/ticker/ticker_20200823.bin.gz"
+   },
+   "ticker_20200824.bin.gz": {
+    "bytes": 1000031,
+    "md5": "c2d788bf08491dd62b53fca0c3d2936e",
+    "src": "bcast-x20-a:out/ticker/ticker_20200824.bin.gz"
+   },
+   "ticker_20200825.bin.gz": {
+    "bytes": 1031295,
+    "md5": "b104a19a9ebd4306522a2504a6d2ca8f",
+    "src": "bcast-x20-a:out/ticker/ticker_20200825.bin.gz"
+   },
+   "ticker_20200826.bin.gz": {
+    "bytes": 1020048,
+    "md5": "69d350d32881e67f644245d45ad4c3be",
+    "src": "bcast-x20-a:out/ticker/ticker_20200826.bin.gz"
+   },
+   "ticker_20200827.bin.gz": {
+    "bytes": 1023064,
+    "md5": "698e25c466c8b3d9ea0fb8525e7efe0d",
+    "src": "bcast-x20-a:out/ticker/ticker_20200827.bin.gz"
+   },
+   "ticker_20200828.bin.gz": {
+    "bytes": 1006039,
+    "md5": "49ba3c7ae7f16358a47ff8f0c266d043",
+    "src": "bcast-x20-a:out/ticker/ticker_20200828.bin.gz"
+   },
+   "ticker_20200829.bin.gz": {
+    "bytes": 988795,
+    "md5": "98d191b2f2d0754c6c0f7334f5563e3d",
+    "src": "bcast-x20-a:out/ticker/ticker_20200829.bin.gz"
+   },
+   "ticker_20200830.bin.gz": {
+    "bytes": 1003563,
+    "md5": "2b1ecc610c38c71195355be8fd91ca5c",
+    "src": "bcast-x20-a:out/ticker/ticker_20200830.bin.gz"
+   },
+   "ticker_20200831.bin.gz": {
+    "bytes": 1019011,
+    "md5": "9da971a690c6b7d183de821290a59fc2",
+    "src": "bcast-x20-a:out/ticker/ticker_20200831.bin.gz"
+   },
+   "ticker_20200901.bin.gz": {
+    "bytes": 1109754,
+    "md5": "2595c3ee4388b6cbfa2136ef3c5fd420",
+    "src": "bcast-x20-a:out/ticker/ticker_20200901.bin.gz"
+   },
+   "ticker_20200902.bin.gz": {
+    "bytes": 1132627,
+    "md5": "ea6ef727b78583cc9cc892eadf25aefd",
+    "src": "bcast-x20-a:out/ticker/ticker_20200902.bin.gz"
+   },
+   "ticker_20200903.bin.gz": {
+    "bytes": 1209472,
+    "md5": "cbd7c168f1f1d2dc2aa9899d210c9696",
+    "src": "bcast-x20-a:out/ticker/ticker_20200903.bin.gz"
+   },
+   "ticker_20200904.bin.gz": {
+    "bytes": 1279994,
+    "md5": "cc2ff782f3ebf36ffe2c531b0baab340",
+    "src": "bcast-x20-a:out/ticker/ticker_20200904.bin.gz"
+   },
+   "ticker_20200905.bin.gz": {
+    "bytes": 1349719,
+    "md5": "03d0ea590a4eb51a7bbb9148d6ba4108",
+    "src": "bcast-x20-a:out/ticker/ticker_20200905.bin.gz"
+   },
+   "ticker_20200906.bin.gz": {
+    "bytes": 1324886,
+    "md5": "cd8270366ae41eba0ebe0a24c6f7c860",
+    "src": "bcast-x20-a:out/ticker/ticker_20200906.bin.gz"
+   },
+   "ticker_20200907.bin.gz": {
+    "bytes": 1305391,
+    "md5": "acdb4958b395f846ef18a5068df5c6d9",
+    "src": "bcast-x20-a:out/ticker/ticker_20200907.bin.gz"
+   },
+   "ticker_20200908.bin.gz": {
+    "bytes": 1292441,
+    "md5": "8511a03f22c66995ef508ea9d7f91a38",
+    "src": "bcast-x20-a:out/ticker/ticker_20200908.bin.gz"
+   },
+   "ticker_20200909.bin.gz": {
+    "bytes": 1254717,
+    "md5": "e5fca3b92b218999260af313f688bbd2",
+    "src": "bcast-x20-a:out/ticker/ticker_20200909.bin.gz"
+   },
+   "ticker_20200910.bin.gz": {
+    "bytes": 1264145,
+    "md5": "3d842b1124a8a1484fb9f6ab4528985e",
+    "src": "bcast-x20-a:out/ticker/ticker_20200910.bin.gz"
+   },
+   "ticker_20200911.bin.gz": {
+    "bytes": 1261378,
+    "md5": "4abc76f9b25b8639a691c3ba187b7ba1",
+    "src": "bcast-x20-a:out/ticker/ticker_20200911.bin.gz"
+   },
+   "ticker_20200912.bin.gz": {
+    "bytes": 1256207,
+    "md5": "f6455ff2459d827dc66692e5622eb608",
+    "src": "bcast-x20-a:out/ticker/ticker_20200912.bin.gz"
+   },
+   "ticker_20200913.bin.gz": {
+    "bytes": 1276665,
+    "md5": "34575aca2ea4923d8cbcd15f327fea0d",
+    "src": "bcast-x20-a:out/ticker/ticker_20200913.bin.gz"
+   },
+   "ticker_20200914.bin.gz": {
+    "bytes": 1312278,
+    "md5": "531cbccaea71e5c9dd53f5e1b0edb0d3",
+    "src": "bcast-x20-a:out/ticker/ticker_20200914.bin.gz"
+   },
+   "ticker_20200915.bin.gz": {
+    "bytes": 1345348,
+    "md5": "da95102fad96abb7d13fe12ace88f84f",
+    "src": "bcast-x20-a:out/ticker/ticker_20200915.bin.gz"
+   },
+   "ticker_20200916.bin.gz": {
+    "bytes": 1357141,
+    "md5": "c5f6ab23c9e55d754b06b06d653cb5bf",
+    "src": "bcast-x20-a:out/ticker/ticker_20200916.bin.gz"
+   },
+   "ticker_20200917.bin.gz": {
+    "bytes": 1372268,
+    "md5": "c8e9f6f5da2a86f3e31a456c0bfedf63",
+    "src": "bcast-x20-a:out/ticker/ticker_20200917.bin.gz"
+   },
+   "ticker_20200918.bin.gz": {
+    "bytes": 1379609,
+    "md5": "f6b5437228d77de55539400001dc21d3",
+    "src": "bcast-x20-a:out/ticker/ticker_20200918.bin.gz"
+   },
+   "ticker_20200919.bin.gz": {
+    "bytes": 1337539,
+    "md5": "11d6ad7be1b0eae77d0f6f41b93ea90a",
+    "src": "bcast-x20-a:out/ticker/ticker_20200919.bin.gz"
+   },
+   "ticker_20200920.bin.gz": {
+    "bytes": 1348829,
+    "md5": "d5e351dc33d453744a38f2f103595950",
+    "src": "bcast-x20-a:out/ticker/ticker_20200920.bin.gz"
+   },
+   "ticker_20200921.bin.gz": {
+    "bytes": 1421980,
+    "md5": "6412a743dc4d1dfcb15de70e4a0b5f1a",
+    "src": "bcast-x20-a:out/ticker/ticker_20200921.bin.gz"
+   },
+   "ticker_20200922.bin.gz": {
+    "bytes": 1388004,
+    "md5": "a8da81399ee036a7e6da0e54e108125b",
+    "src": "bcast-x20-a:out/ticker/ticker_20200922.bin.gz"
+   },
+   "ticker_20200923.bin.gz": {
+    "bytes": 1411709,
+    "md5": "95612582c2e10c187411ede1ba542aec",
+    "src": "bcast-x20-a:out/ticker/ticker_20200923.bin.gz"
+   },
+   "ticker_20200924.bin.gz": {
+    "bytes": 1424967,
+    "md5": "dc9cc9d4614450c72a5d290df1e1bf34",
+    "src": "bcast-x20-a:out/ticker/ticker_20200924.bin.gz"
+   },
+   "ticker_20200925.bin.gz": {
+    "bytes": 1441890,
+    "md5": "19bdd0f4c86047a044ac077d36ccd5a1",
+    "src": "bcast-x20-a:out/ticker/ticker_20200925.bin.gz"
+   },
+   "ticker_20200926.bin.gz": {
+    "bytes": 1417377,
+    "md5": "23a2e5c2af81318e694c9432c630558a",
+    "src": "bcast-x20-a:out/ticker/ticker_20200926.bin.gz"
+   },
+   "ticker_20200927.bin.gz": {
+    "bytes": 1396639,
+    "md5": "98f1f425b7080f8d3dbdff4734d50aae",
+    "src": "bcast-x20-a:out/ticker/ticker_20200927.bin.gz"
+   },
+   "ticker_20200928.bin.gz": {
+    "bytes": 1446277,
+    "md5": "ea1815c15158e9a86a4c030df960a838",
+    "src": "bcast-x20-a:out/ticker/ticker_20200928.bin.gz"
+   },
+   "ticker_20200929.bin.gz": {
+    "bytes": 1486311,
+    "md5": "b64c79119bdb88a9e6244ee046c05795",
+    "src": "bcast-x20-a:out/ticker/ticker_20200929.bin.gz"
+   },
+   "ticker_20200930.bin.gz": {
+    "bytes": 1476103,
+    "md5": "0a86d4eec2cfad61aeb8d185730f67de",
+    "src": "bcast-x20-a:out/ticker/ticker_20200930.bin.gz"
+   },
+   "ticker_20201001.bin.gz": {
+    "bytes": 1488908,
+    "md5": "3a63e9440fde3db45d9ab3f808bc71d3",
+    "src": "bcast-x20-a:out/ticker/ticker_20201001.bin.gz"
+   },
+   "ticker_20201002.bin.gz": {
+    "bytes": 1534693,
+    "md5": "7e6ce939d1fc548a9a582885cf9c3895",
+    "src": "bcast-x20-a:out/ticker/ticker_20201002.bin.gz"
+   },
+   "ticker_20201003.bin.gz": {
+    "bytes": 1418678,
+    "md5": "7141c2bebe710a709c0cdf7e80f828c7",
+    "src": "bcast-x20-a:out/ticker/ticker_20201003.bin.gz"
+   },
+   "ticker_20201004.bin.gz": {
+    "bytes": 1429032,
+    "md5": "2f69b8a4078441f9c9d8a65fb3cf808c",
+    "src": "bcast-x20-a:out/ticker/ticker_20201004.bin.gz"
+   },
+   "ticker_20201005.bin.gz": {
+    "bytes": 1436938,
+    "md5": "d3fe7d36ff6f61fe1971c8a9eb09cd98",
+    "src": "bcast-x20-a:out/ticker/ticker_20201005.bin.gz"
+   },
+   "ticker_20201006.bin.gz": {
+    "bytes": 1495869,
+    "md5": "afd86e8208c56035d78f89c87edc492b",
+    "src": "bcast-x20-a:out/ticker/ticker_20201006.bin.gz"
+   },
+   "ticker_20201007.bin.gz": {
+    "bytes": 1504082,
+    "md5": "1a0bb9f7848ea547e6cbe860c3896be2",
+    "src": "bcast-x20-a:out/ticker/ticker_20201007.bin.gz"
+   },
+   "ticker_20201008.bin.gz": {
+    "bytes": 1492852,
+    "md5": "65e129be919b8ad51657cc179c87eebc",
+    "src": "bcast-x20-a:out/ticker/ticker_20201008.bin.gz"
+   },
+   "ticker_20201009.bin.gz": {
+    "bytes": 1478700,
+    "md5": "84457df26cbc29d513b8588416a86624",
+    "src": "bcast-x20-a:out/ticker/ticker_20201009.bin.gz"
+   },
+   "ticker_20201010.bin.gz": {
+    "bytes": 1482450,
+    "md5": "61cdf65ac6172e38281138ad61ede3d2",
+    "src": "bcast-x20-a:out/ticker/ticker_20201010.bin.gz"
+   },
+   "ticker_20201011.bin.gz": {
+    "bytes": 1469228,
+    "md5": "4301d0edb969a7c023159abdc892d05d",
+    "src": "bcast-x20-a:out/ticker/ticker_20201011.bin.gz"
+   },
+   "ticker_20201012.bin.gz": {
+    "bytes": 1499776,
+    "md5": "c16e2d1568e9df5e1f706b3e03dd607f",
+    "src": "bcast-x20-a:out/ticker/ticker_20201012.bin.gz"
+   },
+   "ticker_20201013.bin.gz": {
+    "bytes": 1506305,
+    "md5": "5f8e5b1c8f92fbbf736b257d06e073a6",
+    "src": "bcast-x20-a:out/ticker/ticker_20201013.bin.gz"
+   },
+   "ticker_20201014.bin.gz": {
+    "bytes": 1536966,
+    "md5": "16998f1e4b5e7f5b3e8b88f31bf9865b",
+    "src": "bcast-x20-a:out/ticker/ticker_20201014.bin.gz"
+   },
+   "ticker_20201015.bin.gz": {
+    "bytes": 1554638,
+    "md5": "fe149f9f92a7c5a4178fee1f6351e8b6",
+    "src": "bcast-x20-a:out/ticker/ticker_20201015.bin.gz"
+   },
+   "ticker_20201016.bin.gz": {
+    "bytes": 1591339,
+    "md5": "3304df8df99fced9fc3e2e533268fc46",
+    "src": "bcast-x20-a:out/ticker/ticker_20201016.bin.gz"
+   },
+   "ticker_20201017.bin.gz": {
+    "bytes": 1533678,
+    "md5": "2c862a7bca0d214305d940c25ef95c9f",
+    "src": "bcast-x20-a:out/ticker/ticker_20201017.bin.gz"
+   },
+   "ticker_20201018.bin.gz": {
+    "bytes": 1491817,
+    "md5": "079d56c2dd067f26c34c69e767ce5c12",
+    "src": "bcast-x20-a:out/ticker/ticker_20201018.bin.gz"
+   },
+   "ticker_20201019.bin.gz": {
+    "bytes": 1585146,
+    "md5": "853bfc45f57a0db4d04410a7253650ae",
+    "src": "bcast-x20-a:out/ticker/ticker_20201019.bin.gz"
+   },
+   "ticker_20201020.bin.gz": {
+    "bytes": 1646538,
+    "md5": "2ae0ef1ea9ca01c22422d3a404edccee",
+    "src": "bcast-x20-a:out/ticker/ticker_20201020.bin.gz"
+   },
+   "ticker_20201021.bin.gz": {
+    "bytes": 1670798,
+    "md5": "165c2e728bffe82753c4a43b4724f64a",
+    "src": "bcast-x20-a:out/ticker/ticker_20201021.bin.gz"
+   },
+   "ticker_20201022.bin.gz": {
+    "bytes": 1676709,
+    "md5": "ac101e276b53d2c5df1d351021f25b66",
+    "src": "bcast-x20-a:out/ticker/ticker_20201022.bin.gz"
+   },
+   "ticker_20201023.bin.gz": {
+    "bytes": 1643831,
+    "md5": "1bcbdb3d2938f1e59b575f3d23d3fe67",
+    "src": "bcast-x20-a:out/ticker/ticker_20201023.bin.gz"
+   },
+   "ticker_20201024.bin.gz": {
+    "bytes": 1589010,
+    "md5": "3db6f83aaff4a26ca54183a7918d80a0",
+    "src": "bcast-x20-a:out/ticker/ticker_20201024.bin.gz"
+   },
+   "ticker_20201025.bin.gz": {
+    "bytes": 1606684,
+    "md5": "6a981fcaac71435c8935050f4ea43afb",
+    "src": "bcast-x20-a:out/ticker/ticker_20201025.bin.gz"
+   },
+   "ticker_20201026.bin.gz": {
+    "bytes": 1689143,
+    "md5": "b85be38c1bc10cbab58b3f594fe0fe83",
+    "src": "bcast-x20-a:out/ticker/ticker_20201026.bin.gz"
+   },
+   "ticker_20201027.bin.gz": {
+    "bytes": 1683786,
+    "md5": "449f84f69a903f0b4c9990600a3b96ce",
+    "src": "bcast-x20-a:out/ticker/ticker_20201027.bin.gz"
+   },
+   "ticker_20201028.bin.gz": {
+    "bytes": 1721705,
+    "md5": "4c5ed6413243108f3c6af255f5bebe84",
+    "src": "bcast-x20-a:out/ticker/ticker_20201028.bin.gz"
+   },
+   "ticker_20201029.bin.gz": {
+    "bytes": 1692621,
+    "md5": "66527adccabf5cd9f1c8841f7f110d12",
+    "src": "bcast-x20-a:out/ticker/ticker_20201029.bin.gz"
+   },
+   "ticker_20201030.bin.gz": {
+    "bytes": 1729848,
+    "md5": "96b8fd7673f511204c9a79e3f847c34b",
+    "src": "bcast-x20-a:out/ticker/ticker_20201030.bin.gz"
+   },
+   "ticker_20201031.bin.gz": {
+    "bytes": 1624922,
+    "md5": "e51061b0d0260fa3fbf4d87036e28332",
+    "src": "bcast-x20-a:out/ticker/ticker_20201031.bin.gz"
+   },
+   "ticker_20201101.bin.gz": {
+    "bytes": 1586661,
+    "md5": "19d3e03295f73d0245ab94c98cbb8a03",
+    "src": "bcast-x20-a:out/ticker/ticker_20201101.bin.gz"
+   },
+   "ticker_20201102.bin.gz": {
+    "bytes": 1651075,
+    "md5": "d03b336d2af862ddea46dfd1faadae59",
+    "src": "bcast-x20-a:out/ticker/ticker_20201102.bin.gz"
+   },
+   "ticker_20201103.bin.gz": {
+    "bytes": 1671815,
+    "md5": "4fe176d135fc0fb392a0ffe0c3436059",
+    "src": "bcast-x20-a:out/ticker/ticker_20201103.bin.gz"
+   },
+   "ticker_20201104.bin.gz": {
+    "bytes": 1690180,
+    "md5": "48f08cee26c9d671c957a96ed151a3fe",
+    "src": "bcast-x20-a:out/ticker/ticker_20201104.bin.gz"
+   },
+   "ticker_20201105.bin.gz": {
+    "bytes": 1735430,
+    "md5": "818cb37b15bcf5e1e68658a931e7dfe8",
+    "src": "bcast-x20-a:out/ticker/ticker_20201105.bin.gz"
+   },
+   "ticker_20201106.bin.gz": {
+    "bytes": 1824750,
+    "md5": "d81c62ffc93d07cf00beec7449f22a5b",
+    "src": "bcast-x20-a:out/ticker/ticker_20201106.bin.gz"
+   },
+   "ticker_20201107.bin.gz": {
+    "bytes": 1898047,
+    "md5": "acc5c67b607b47e2f9a636f5570d5695",
+    "src": "bcast-x20-a:out/ticker/ticker_20201107.bin.gz"
+   },
+   "ticker_20201108.bin.gz": {
+    "bytes": 1809775,
+    "md5": "c9355232d2aa461b638c856a6bc92473",
+    "src": "bcast-x20-a:out/ticker/ticker_20201108.bin.gz"
+   },
+   "ticker_20201109.bin.gz": {
+    "bytes": 1804449,
+    "md5": "35eba2f204a3148dc3d1a81dbc01af6e",
+    "src": "bcast-x20-a:out/ticker/ticker_20201109.bin.gz"
+   },
+   "ticker_20201110.bin.gz": {
+    "bytes": 1789660,
+    "md5": "64ceef8483bb82b11b9ef1d438ad778d",
+    "src": "bcast-x20-a:out/ticker/ticker_20201110.bin.gz"
+   },
+   "ticker_20201111.bin.gz": {
+    "bytes": 1799339,
+    "md5": "052671f02001905cec374ad6b348f4fa",
+    "src": "bcast-x20-a:out/ticker/ticker_20201111.bin.gz"
+   },
+   "ticker_20201112.bin.gz": {
+    "bytes": 1780069,
+    "md5": "166ce3a43d6f213c47fbb34b7eba043f",
+    "src": "bcast-x20-a:out/ticker/ticker_20201112.bin.gz"
+   },
+   "ticker_20201113.bin.gz": {
+    "bytes": 1785920,
+    "md5": "a90c64b825cecb237ebba6b46f0bd49c",
+    "src": "bcast-x20-a:out/ticker/ticker_20201113.bin.gz"
+   },
+   "ticker_20201114.bin.gz": {
+    "bytes": 1788385,
+    "md5": "500c0619349136ccc96e5145f71bde9d",
+    "src": "bcast-x20-a:out/ticker/ticker_20201114.bin.gz"
+   },
+   "ticker_20201115.bin.gz": {
+    "bytes": 1803279,
+    "md5": "9de54a9ed91d7c855746f6d21831cea9",
+    "src": "bcast-x20-a:out/ticker/ticker_20201115.bin.gz"
+   },
+   "ticker_20201116.bin.gz": {
+    "bytes": 1811484,
+    "md5": "15edffc1efcda8a37fbed6b2f806d09f",
+    "src": "bcast-x20-a:out/ticker/ticker_20201116.bin.gz"
+   },
+   "ticker_20201117.bin.gz": {
+    "bytes": 1852075,
+    "md5": "0e8b24adc35a5afc0390f4f041a42ee6",
+    "src": "bcast-x20-a:out/ticker/ticker_20201117.bin.gz"
+   },
+   "ticker_20201118.bin.gz": {
+    "bytes": 1902831,
+    "md5": "296fbe3b4a0bc7adfa972c045460be6d",
+    "src": "bcast-x20-a:out/ticker/ticker_20201118.bin.gz"
+   },
+   "ticker_20201119.bin.gz": {
+    "bytes": 1890595,
+    "md5": "c1b7cdcc6c883b7cca89753702bdf69b",
+    "src": "bcast-x20-a:out/ticker/ticker_20201119.bin.gz"
+   },
+   "ticker_20201120.bin.gz": {
+    "bytes": 1926040,
+    "md5": "0fff3bfcc3111540bed941b6da43ffac",
+    "src": "bcast-x20-a:out/ticker/ticker_20201120.bin.gz"
+   },
+   "ticker_20201121.bin.gz": {
+    "bytes": 2018825,
+    "md5": "b5f1dfead55168eeacec769408bce5cc",
+    "src": "bcast-x20-a:out/ticker/ticker_20201121.bin.gz"
+   },
+   "ticker_20201122.bin.gz": {
+    "bytes": 2049659,
+    "md5": "1aa081c6e7f6ff557b941769e7960f46",
+    "src": "bcast-x20-a:out/ticker/ticker_20201122.bin.gz"
+   },
+   "ticker_20201123.bin.gz": {
+    "bytes": 2048846,
+    "md5": "936894fac466b2f120dbc386ea55a0c3",
+    "src": "bcast-x20-a:out/ticker/ticker_20201123.bin.gz"
+   },
+   "ticker_20201124.bin.gz": {
+    "bytes": 2139788,
+    "md5": "3a60c0083376615ed477b8cc338e61a0",
+    "src": "bcast-x20-a:out/ticker/ticker_20201124.bin.gz"
+   },
+   "ticker_20201125.bin.gz": {
+    "bytes": 2139838,
+    "md5": "a3ed4861b0ca20fc83144a46def548bf",
+    "src": "bcast-x20-a:out/ticker/ticker_20201125.bin.gz"
+   },
+   "ticker_20201126.bin.gz": {
+    "bytes": 2194078,
+    "md5": "fadc45a395267bb4fa2385520a35c094",
+    "src": "bcast-x20-a:out/ticker/ticker_20201126.bin.gz"
+   },
+   "ticker_20201127.bin.gz": {
+    "bytes": 2057922,
+    "md5": "d915452d88b4a08511da567ab181cf0a",
+    "src": "bcast-x20-a:out/ticker/ticker_20201127.bin.gz"
+   },
+   "ticker_20201128.bin.gz": {
+    "bytes": 1994574,
+    "md5": "76ce70e1b56806becc48f0b38ba52afe",
+    "src": "bcast-x20-a:out/ticker/ticker_20201128.bin.gz"
+   },
+   "ticker_20201129.bin.gz": {
+    "bytes": 1979970,
+    "md5": "300fd490782e06edec3f86d0a92fb95a",
+    "src": "bcast-x20-a:out/ticker/ticker_20201129.bin.gz"
+   },
+   "ticker_20201130.bin.gz": {
+    "bytes": 2025132,
+    "md5": "557502ab32bd2bf240629e154aae1a65",
+    "src": "bcast-x20-a:out/ticker/ticker_20201130.bin.gz"
+   },
+   "ticker_20201201.bin.gz": {
+    "bytes": 2082262,
+    "md5": "32ad978211a32910d5fbe4b7ed2700c0",
+    "src": "bcast-x20-a:out/ticker/ticker_20201201.bin.gz"
+   },
+   "ticker_20201202.bin.gz": {
+    "bytes": 2050409,
+    "md5": "9ee8e5873b09d96c56fb0337ff9b282c",
+    "src": "bcast-x20-a:out/ticker/ticker_20201202.bin.gz"
+   },
+   "ticker_20201203.bin.gz": {
+    "bytes": 1987179,
+    "md5": "4bac1d3e75fc046839d4888817649f92",
+    "src": "bcast-x20-a:out/ticker/ticker_20201203.bin.gz"
+   },
+   "ticker_20201204.bin.gz": {
+    "bytes": 2025995,
+    "md5": "3fd15606f0d192e079631f00fcd0377a",
+    "src": "bcast-x20-a:out/ticker/ticker_20201204.bin.gz"
+   },
+   "ticker_20201205.bin.gz": {
+    "bytes": 1978633,
+    "md5": "260949005ab7e253ed08a9bc3558e1dd",
+    "src": "bcast-x20-a:out/ticker/ticker_20201205.bin.gz"
+   },
+   "ticker_20201206.bin.gz": {
+    "bytes": 1947986,
+    "md5": "b33a6695f6c965dc0bd29634d70c53c7",
+    "src": "bcast-x20-a:out/ticker/ticker_20201206.bin.gz"
+   },
+   "ticker_20201207.bin.gz": {
+    "bytes": 1912286,
+    "md5": "f2532eab85544056206f2b254d8419ef",
+    "src": "bcast-x20-a:out/ticker/ticker_20201207.bin.gz"
+   },
+   "ticker_20201208.bin.gz": {
+    "bytes": 1999849,
+    "md5": "fa17b1f0fd012995d25be3e00b506986",
+    "src": "bcast-x20-a:out/ticker/ticker_20201208.bin.gz"
+   },
+   "ticker_20201209.bin.gz": {
+    "bytes": 2051296,
+    "md5": "69c78b349071d938f731e81f75c5c313",
+    "src": "bcast-x20-a:out/ticker/ticker_20201209.bin.gz"
+   },
+   "ticker_20201210.bin.gz": {
+    "bytes": 1981119,
+    "md5": "9ace7ba3c33bbc464e6afa08962bae29",
+    "src": "bcast-x20-a:out/ticker/ticker_20201210.bin.gz"
+   },
+   "ticker_20201211.bin.gz": {
+    "bytes": 2013822,
+    "md5": "92fdc4f2e9deb9064b4ae44e20e439fe",
+    "src": "bcast-x20-a:out/ticker/ticker_20201211.bin.gz"
+   },
+   "ticker_20201212.bin.gz": {
+    "bytes": 1925854,
+    "md5": "6e040b2d230e37f7c027c06288d9c088",
+    "src": "bcast-x20-a:out/ticker/ticker_20201212.bin.gz"
+   },
+   "ticker_20201213.bin.gz": {
+    "bytes": 1932072,
+    "md5": "06e307f05903ea1b6a56634faed4a126",
+    "src": "bcast-x20-a:out/ticker/ticker_20201213.bin.gz"
+   },
+   "ticker_20201214.bin.gz": {
+    "bytes": 1932934,
+    "md5": "c269e2a9fd9d9cfafc9cce7546e483fe",
+    "src": "bcast-x20-a:out/ticker/ticker_20201214.bin.gz"
+   },
+   "ticker_20201215.bin.gz": {
+    "bytes": 1946301,
+    "md5": "0bd18f15ca060d4eab31814cedc02a85",
+    "src": "bcast-x20-a:out/ticker/ticker_20201215.bin.gz"
+   },
+   "ticker_20201216.bin.gz": {
+    "bytes": 2000744,
+    "md5": "743d3c6948b8dd885421be3cd7d7897e",
+    "src": "bcast-x20-a:out/ticker/ticker_20201216.bin.gz"
+   },
+   "ticker_20201217.bin.gz": {
+    "bytes": 2094754,
+    "md5": "eaea358fc957412db5e35a678e6ef4e5",
+    "src": "bcast-x20-a:out/ticker/ticker_20201217.bin.gz"
+   },
+   "ticker_20201218.bin.gz": {
+    "bytes": 2043537,
+    "md5": "d91d75670fc5cdf1f0629d70a69e0aa0",
+    "src": "bcast-x20-a:out/ticker/ticker_20201218.bin.gz"
+   },
+   "ticker_20201219.bin.gz": {
+    "bytes": 2019293,
+    "md5": "d714f2ed6a40916c0f953532ace28aa1",
+    "src": "bcast-x20-a:out/ticker/ticker_20201219.bin.gz"
+   },
+   "ticker_20201220.bin.gz": {
+    "bytes": 2032623,
+    "md5": "779b5a0813e3226c35ea6c0cbda0b430",
+    "src": "bcast-x20-a:out/ticker/ticker_20201220.bin.gz"
+   },
+   "ticker_20201221.bin.gz": {
+    "bytes": 2067941,
+    "md5": "c30139bf94e84ca0a3a11f0e1ab9d330",
+    "src": "bcast-x20-a:out/ticker/ticker_20201221.bin.gz"
+   },
+   "ticker_20201222.bin.gz": {
+    "bytes": 2090871,
+    "md5": "184b5939c3afb09f7891be359b5cde19",
+    "src": "bcast-x20-a:out/ticker/ticker_20201222.bin.gz"
+   },
+   "ticker_20201223.bin.gz": {
+    "bytes": 2140412,
+    "md5": "0de673142cec370c2d8bc40104d61e2f",
+    "src": "bcast-x20-a:out/ticker/ticker_20201223.bin.gz"
+   },
+   "ticker_20201224.bin.gz": {
+    "bytes": 2128634,
+    "md5": "13346797d0c7569bac567e4fa6bac82b",
+    "src": "bcast-x20-a:out/ticker/ticker_20201224.bin.gz"
+   },
+   "ticker_20201225.bin.gz": {
+    "bytes": 2097156,
+    "md5": "4e99c2065c0844f221ec95038600debc",
+    "src": "bcast-x20-a:out/ticker/ticker_20201225.bin.gz"
+   },
+   "ticker_20201226.bin.gz": {
+    "bytes": 2098746,
+    "md5": "d74a5319582db926f951734bc094c6b0",
+    "src": "bcast-x20-a:out/ticker/ticker_20201226.bin.gz"
+   },
+   "ticker_20201227.bin.gz": {
+    "bytes": 2164494,
+    "md5": "0d9d3cba956b6947d4f8bde2737eea59",
+    "src": "bcast-x20-a:out/ticker/ticker_20201227.bin.gz"
+   },
+   "ticker_20201228.bin.gz": {
+    "bytes": 2146174,
+    "md5": "55e8c9401ea9dc6e9ba94e3b1b9a7434",
+    "src": "bcast-x20-a:out/ticker/ticker_20201228.bin.gz"
+   },
+   "ticker_20201229.bin.gz": {
+    "bytes": 2166430,
+    "md5": "56e0400bb0a310e4b23d07c542043aac",
+    "src": "bcast-x20-a:out/ticker/ticker_20201229.bin.gz"
+   },
+   "ticker_20201230.bin.gz": {
+    "bytes": 2112618,
+    "md5": "645a2ee11466fdfe5ff54643b97cacc9",
+    "src": "bcast-x20-a:out/ticker/ticker_20201230.bin.gz"
+   },
+   "ticker_20201231.bin.gz": {
+    "bytes": 2076163,
+    "md5": "a9498e0dd02bafb42b6d61f517883349",
+    "src": "bcast-x20-a:out/ticker/ticker_20201231.bin.gz"
+   },
+   "ticker_20210101.bin.gz": {
+    "bytes": 2121866,
+    "md5": "8f1c6ee10102f3a57582e821edd77a99",
+    "src": "bcast-x20-a:out/ticker/ticker_20210101.bin.gz"
+   },
+   "ticker_20210102.bin.gz": {
+    "bytes": 2132221,
+    "md5": "8e9231173e1553765f15f00943b49dfa",
+    "src": "bcast-x20-a:out/ticker/ticker_20210102.bin.gz"
+   },
+   "ticker_20210103.bin.gz": {
+    "bytes": 2183138,
+    "md5": "02b255b329f6935c49699ca930b84093",
+    "src": "bcast-x20-a:out/ticker/ticker_20210103.bin.gz"
+   },
+   "ticker_raw_md5.json": {
+    "bytes": 21773,
+    "md5": "4fb976c2180a7ea2eb6c52500d116065",
+    "src": "bcast-x20-a:out/ticker_raw_md5.json"
+   },
+   "universe_by_month.json": {
+    "bytes": 6893,
+    "md5": "f45a76d981a265eda196416c34fdb382",
+    "src": "bcast-x20-a:out/universe_by_month.json"
+   },
+   "universe_excl.json": {
+    "bytes": 67,
+    "md5": "eb56c1ee3222fbf5a026a43458eb9633",
+    "src": "bcast-x20-a:out/universe_excl.json"
+   }
+  },
+  "note": "Kaggle tu giai nen .gz: ticker kiem bang ticker_raw_md5.json, gate/t1 bang raw_md5_nonticker",
+  "private": true,
+  "raw_md5_nonticker": {
+   "gate.csv": "42b081a7c482b8c6617bc39b35c51547",
+   "t1_features_20200101_to_20200401.t1c": "f484bc538049cf35956afea4b0be334a",
+   "t1_features_20200401_to_20200701.t1c": "7d106198d40c5d626eef63881ea9d7e6",
+   "t1_features_20200701_to_20201001.t1c": "e2b1e7cd1e682515d41526468c6ca95f",
+   "t1_features_20201001_to_20210101.t1c": "d8958421e410ee530008ed61339068f6",
+   "t1_features_20210101_to_20210401.t1c": "c336d72cb09093b383e0baf1fa3e0d47"
+  }
+ },
+ "excluded": {
+  "dup_id_843_850": "khong co symbol 2020",
+  "no_funding_vision": [],
+  "not_in_mapper": [
+   "LENDUSDT",
+   "BTCSTUSDT"
+  ],
+  "settle_tail": []
+ },
+ "exporter": {
+  "closes1h": {
+   "n": 402153,
+   "n_sym": 86
+  },
+  "funding_F": 0,
+  "funding_F_dev_pts": 0,
+  "ingest_rc": 0,
+  "jar_sha256": "99c5f040c9295a610fe815e7c6759ccfccbd1cca370dcfc3bcb935b33ec3a2fb",
+  "lifecycle": {
+   "max_ticker": 1612137540000,
+   "n": 698,
+   "n_dead_window": 0,
+   "n_window": 86
+  },
+  "manifest_n": 387,
+  "n_min_lt1440": [],
+  "n_ticker": 369,
+  "no_funding": [],
+  "ok": true,
+  "outputs": null,
+  "settle_tail": [],
+  "syms_by_day_max": 80,
+  "syms_by_day_min": 3,
+  "task_secs": {
+   "gate": 710.6,
+   "lab": 45.4,
+   "mkt": 48.6,
+   "t1": 65.8
+  },
+  "tasks": {
+   "gate": 0,
+   "lab": 0,
+   "mkt": 0,
+   "t1": 0
+  },
+  "uni_month": {
+   "2020-01": 11,
+   "2020-02": 24,
+   "2020-03": 24,
+   "2020-04": 24,
+   "2020-05": 25,
+   "2020-06": 30,
+   "2020-07": 36,
+   "2020-08": 42,
+   "2020-09": 61,
+   "2020-10": 70,
+   "2020-11": 77,
+   "2020-12": 80,
+   "2021-01": 86
+  }
+ },
+ "p3det_chain": {
+  "a": "bcast-ch20-a",
+  "b": "bcast-ch20-b",
+  "diff": [],
+  "n_a": 19,
+  "n_b": 19,
+  "n_equal": 19,
+  "pass_": true
+ },
+ "p3det_exporter": {
+  "a": "bcast-x20-a",
+  "b": "bcast-x20-b",
+  "diff": [],
+  "n_a": 387,
+  "n_b": 387,
+  "n_equal": 387,
+  "pass_": true
+ },
+ "prereg": "596c1ef8",
+ "tech": {
+  "chk": {
+   "date_first": true,
+   "date_last": true,
+   "fund": true,
+   "jar": true,
+   "mapper": true,
+   "market": true,
+   "n": true,
+   "ok": true,
+   "pred_base": true,
+   "time_run": true,
+   "tk": true
+  },
+  "date_first": "20200101",
+  "date_last": "20201231",
+  "files": [
+   "bcast-tech.log",
+   "bcast-tech.try1_fundselfcheck_fail.log",
+   "config.properties",
+   "logs/error.log",
+   "logs/full.log",
+   "logs/sim.out.gz",
+   "prof_run.properties",
+   "result.json",
+   "storage/BalanceIndex.data",
+   "storage/OrderTestDone.data",
+   "storage/printDone.csv",
+   "wfo_ds_fund/manifest.txt",
+   "wfo_ds_override/manifest.txt",
+   "wfo_ds_override/market.bin",
+   "wfo_ds_pred/manifest.txt"
+  ],
+  "jar_sha256": "b7c89f097241763bb240c24b411a66531b41dad12b1716f13237537386de62c2",
+  "java_rc": 1,
+  "markers": {
+   "fund_cnt": [
+    "0",
+    "2553522",
+    "526620",
+    "0"
+   ],
+   "fund_ok": [
+    "669d22065d7ac895423b210332d50b2c"
+   ],
+   "fund_self": true,
+   "mapper": false,
+   "market": true,
+   "nowrite": true,
+   "time_run": true,
+   "tk": true
+  },
+  "n_trades": 548,
+  "ok": true,
+  "overrides": {
+   "SIM_GATE_ROLLING_DAYS": 90,
+   "SIM_GATE_ROLLING_MODE": "ratio",
+   "SIM_GATE_ROLLING_PCT": 0.999950829,
+   "SIM_TS_MAX_GAP": 0.03,
+   "SIM_TS_MAX_GAP_WEAK": 0.03,
+   "TS_GIVEBACK_RATIO": 1.0
+  },
+  "pass": true,
+  "pred_md5_base": "22f69456381d9d1abd1592382c3b0319",
+  "pred_md5_used": "9bdb720f30640a6dcf590d9dc397028c",
+  "printDone_lines": 549,
+  "printDone_md5": "2b7ded8f4dd023b0267212ab65d16e83",
+  "profile_hash": "97a4e9a0c0a4d44e",
+  "secs": 131.8,
+  "symbol_mapper": 863,
+  "tag": "bcast-tech"
+ }
+}
