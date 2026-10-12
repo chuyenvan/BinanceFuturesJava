@@ -12,7 +12,10 @@ Dữ liệu: `CLOSES_1H.bin` md5 `6c7548801136655065edfd8e6cd7c0af` (10 322 386 
 `symbol_map.csv` md5 `c4439c3f8edc42de568d0d1ddd68f726`. Bỏ 590 bản ghi ts = 2026-01-01 00:00. Bị loại khỏi universe (có dữ liệu):
 BTCUSDT, ETHUSDT, BTCDOMUSDT, USDCUSDT.
 
-## 0. Kết luận theo luật §4
+> **Cập nhật: kết luận cuối là ĐÓNG hướng lead-lag giờ, theo luật §D của Addendum 1** (xem mục "Addendum 1" cuối file).
+> Hai điều kiện trượt: H2 có CI95 dưới < 0, và V3 chỉ ghép được 83,8 % chân. Mục 0–5 dưới đây giữ nguyên kết quả lần chấm 1.
+
+## 0. Kết luận theo luật §4 (lần chấm 1, đã thay bằng §D Addendum 1)
 
 | Điều kiện GO | Giá trị | Đạt |
 |---|---|---|
@@ -110,3 +113,84 @@ cd ~/src/BinanceFuturesJava            # nhánh research/leadlag-exist
 python3 research/analysis/leadlag_exist.py full /tmp/leadlag_exist.json   # ~90 s
 ```
 json có trường `runtime_s`, nên md5 của lần chạy lại sẽ khác. So số bằng các trường `h1` / `v1` / `v2` / `decision`.
+
+---
+
+# Addendum 1: H1c + H2 + V3 (pre-reg `docs/prereg/PREREG_LEADLAG_EXIST_ADD1.md`, commit `d3683a72`)
+
+Scorer bổ sung `research/analysis/leadlag_add1.py` commit **`5a82e411`**, commit TRƯỚC lần chấm. Scorer này gọi lại hàm của
+`leadlag_exist.py` @9e63a754 (không sửa). Lần chấm: `python3 research/analysis/leadlag_add1.py leadlag_add1.json
+ll_h2/leadlag_h2_legs.csv.gz`, chạy 60 s. Output `docs/result/leadlag_add1.json`, **md5 `322c73bea57771146f040e5e05b000cf`**.
+Trước đó có 1 lần smoke (t và chân trong 2022-01), **chỉ để debug**, không dùng kết quả. H1 tái lập khớp json lần 1 (sai lệch
+< 1e-9, cả 4 biến thể).
+
+## A1. Kết luận theo luật §D
+
+| Điều kiện GO (§D) | Giá trị | Đạt |
+|---|---|---|
+| H1 (lần 1) | đạt, tái lập khớp | CÓ |
+| H1c k3h4 (BTC đảo chiều): mean IC > 0 và CI nở dưới > 0 | 0,03752; cận dưới 0,03123 | CÓ |
+| H2 k3h4: Δ > +0,30 % và CI95 dưới > 0 | Δ +2,332 %; CI95 [−1,769 %; +6,433 %] | **KHÔNG** |
+| V3: ghép ≥ 95 % của 23 654 chân | 19 829 (83,83 %) | **KHÔNG** |
+
+**Kết luận: ĐÓNG hướng lead-lag giờ.** Không chạy thêm biến thể.
+
+## A2. H1c: IC trên tập giờ theo chiều BTC
+
+Tập "đảo chiều": sign(r_BTC(t, t+h]) ≠ sign(r_BTC(t−k, t]). Tập "cùng chiều" là phần còn lại. Bỏ 8–12 giờ có r_BTC = 0 hoặc
+thiếu. Bootstrap và CI nở 1,665 giống H1; cận dưới quyết định = min(cận nở chuẩn, cận nở percentile).
+
+| Biến thể | Đảo chiều: mean IC | CI nở 1,665 | giờ | Cùng chiều: mean IC | CI nở 1,665 | giờ |
+|---|---|---|---|---|---|---|
+| k1 h1 | 0,04487 | [0,03931; 0,05044] | 18 567 | −0,01426 | [−0,02083; −0,00768] | 16 390 |
+| k1 h4 | 0,03450 | [0,02854; 0,04046] | 18 269 | −0,01090 | [−0,01850; −0,00329] | 16 693 |
+| k3 h1 | 0,04447 | [0,03891; 0,05002] | 18 810 | −0,01426 | [−0,02083; −0,00769] | 16 151 |
+| **k3 h4 (quyết định)** | **0,03752** | **[0,03123; 0,04382]** | 18 633 | −0,00734 | [−0,01564; 0,00096] | 16 333 |
+
+Theo năm, k3h4 (2022 / 2023 / 2024 / 2025):
+- Đảo chiều: 0,04524 / 0,04072 / 0,03712 / 0,02653.
+- Cùng chiều: −0,01193 / −0,01295 / −0,00509 / +0,00026.
+
+## A3. H2: tercile theo năm trên chân EXEC
+
+**Ledger được khôi phục đúng quy trình EXEC.** Dùng bản sao `exec_legs.py` / `exec_fetch.py`, chỉ đổi thư mục làm việc W thành
+`~/claude_master/1013/ll_h2`.
+- `legs.pkl` md5 **`c55224e7bbc82cf5be83e9c2217d6b8e`**, trùng EXEC: 23 654 chân, 5 284 sự kiện, 528 symbol. md5 printDone của
+  8 seed khớp PREREG_EXEC §1.
+- Kline 1m: 2 241 job (sym, tháng) từ data.binance.vision, 0 Binance REST. Kết quả: 2 240 ok, sha256 khớp hết; 1 file thiếu
+  (AKROUSDT_2022-06, giống EXEC). Thời gian 238 s; tải khoảng 3,5 GB (ước từ /proc/net/dev); cache cắt cửa sổ 388 MB.
+- Cache đã xoá sau khi chấm. Manifest `ll_h2/kl_manifest.md5` (md5 `76968c5532a496625808574977a17214`, 2 240 file) được giữ lại.
+- `close_M` = close của nến 1m mở tại s_ms, lấy theo đúng cách `exec_measure.run_sym`: 23 654/23 654 chân có `close_M`.
+- Kiểm entry: printDone `entry` == close_M·(1+0,01675·sập) cho **23 462/23 654 (99,19 %)**, trùng V2 của EXEC.
+- Ledger nhỏ giữ ở `~/claude_master/1013/ll_h2/leadlag_h2_legs.csv.gz` (md5 `e3a63b58a55d69ff2fb78db925c43fdf`), không commit.
+
+| | Δ = mean ret(top) − mean ret(bottom) | CI95 (±1,96 sd) | CI95 percentile | n bottom / mid / top | mean ret bottom / mid / top | sự kiện |
+|---|---|---|---|---|---|---|
+| **Chính k=3h, h=4h** | **+2,332 %** | **[−1,769 %; +6,433 %]** | [−1,041 %; +6,622 %] | 6 624 / 6 606 / 6 599 | 1,299 % / 1,704 % / 3,631 % | 4 449 |
+| Phụ k=1h, h=1h (không quyết) | +3,196 % | [−0,408 %; +6,799 %] | [−0,211 %; +6,683 %] | 6 616 / 6 620 / 6 597 | 1,185 % / 1,634 % / 4,380 % | 4 450 |
+
+Δ theo năm (+07), k3h4: 2022 −0,724 %, 2023 −0,891 %, 2024 −0,216 %, **2025 +13,413 %**.
+Δ theo năm (+07), k1h1: 2022 +3,750 %, 2023 −1,101 %, 2024 +1,757 %, 2025 +9,996 %.
+
+## A4. V3: phủ chân (FAIL)
+
+Ghép được 19 829/23 654 = **83,83 %** (< 95 %). Phần thiếu:
+- 3 821 chân có g = NaN: β cần ≥ 500 điểm, σ cần ≥ 120 điểm.
+- 4 chân thiếu close 1H tại ceil(t_dec+4h).
+- 0 chân thiếu symbol, 0 thiếu kline, 0 thiếu nến M.
+
+Chẩn đoán, không dùng để quyết định: trong 3 825 chân không ghép, 3 783 chân thuộc coin có < 30 ngày dữ liệu tại t*.
+Tuổi coin p10/p50/p90 = 25 / 178 / 395 giờ.
+
+## A5. Các chỗ mơ hồ đã chọn ở Addendum (chốt trong scorer trước lần chấm)
+
+1. **g của H2** là g_k thô theo §2 (không phải g⊥), tính tại t* = giờ đóng gần nhất ≤ t_dec. Không áp điều kiện universe H1
+   (78 close, ≥ 30 ngày): chân chỉ bị loại khi g, close_M hoặc ret không tính được.
+2. **Tercile theo năm +07** của s_ms (cùng quy ước năm DEV của ledger EXEC). Cận q1/q2 = quantile 1/3 và 2/3 của g trong năm.
+   bottom: g ≤ q1; top: g > q2. Các chân cùng sự kiện (khác seed) luôn rơi cùng tercile. Mỗi chân là 1 đơn vị.
+3. **ret_h** = log(close_1H tại ceil(t_dec+h, giờ)) − log(close_M). Ngưỡng +0,30 % so trên đơn vị log-return (0,003).
+4. **Bootstrap H2:** moving block bootstrap theo ngày UTC của t_dec, từ ngày có chân đầu tiên (1 417 ngày), khối 10, NREP 2000,
+   seed 20261013. Tercile cố định, không gán lại trong bootstrap. Cận dưới quyết định = min(CI chuẩn, CI percentile), không nở.
+5. **H1c** dùng chính IC_t của H1 (cùng universe, cùng giờ) rồi lọc theo tập giờ. Giờ có r_BTC(t−k,t] = 0 hoặc r_BTC(t,t+h] = 0
+   bị loại khỏi cả hai tập.
+6. **Điều kiện V3** cũng đưa vào luật §D ("thiếu/hỏng bất kỳ ⇒ ĐÓNG").
