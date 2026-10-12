@@ -1,5 +1,6 @@
 package com.binance.chuyennd.aerospike;
 
+import com.binance.chuyennd.ai_ml.data.SymbolIdLimits;
 import com.aerospike.client.*;
 import com.aerospike.client.Record;
 import com.aerospike.client.cdt.MapOperation;
@@ -52,7 +53,7 @@ public class DataManagerAerospikeFloatSim {
     // 1. CẤU HÌNH SET NAME VÀ KEY
     public static final String AEROSPIKE_SET_NAME_MAPPER = "symbol_mapper"; // Set name mới
     public static final String MAPPER_KEY_GLOBAL = "global_id_map";         // Key chứa Map
-    private static final String MAPPER_BIN_NAME = "data";                    // Tên Bin chứa Map
+    public static final String MAPPER_BIN_NAME = "data";                    // Tên Bin chứa Map
     public static final String AEROSPIKE_SET_NAME_AI_PRED_1M = "ai_pred_1m";
     // 🔥 SET NAME MỚI CHO AI PREDICT
     public static final String AEROSPIKE_SET_NAME_DCA_PRED = "dca_pred_1m";
@@ -1242,12 +1243,12 @@ public class DataManagerAerospikeFloatSim {
                             byte[] protoAsBytes = Snappy.uncompress(snappyCompressedBytes);
                             MinuteDataFinal protoData = MinuteDataFinal.parseFrom(protoAsBytes);
 
-                            KlineObjectSimple[] klineArray = new KlineObjectSimple[1000];
+                            KlineObjectSimple[] klineArray = new KlineObjectSimple[SymbolIdLimits.CAPACITY]; // [LIVEFIX2] truoc: 1000
                             for (Map.Entry<String, KlineObjectOptimized> entry : protoData.getTickersMap().entrySet()) {
                                 String fullSymbol = entry.getKey().endsWith("USDT") ? entry.getKey() : entry.getKey() + "USDT";
                                 // Ép sang Short ngay lập tức
                                 short symbolId = SimpleSymbolMapper.getInstance().getId(fullSymbol);
-                                klineArray[symbolId] = convertProtoToKline(entry.getValue(), minuteTimestamp);
+                                klineArray[SymbolIdLimits.requireInRange("readDataFromAerospike1M_ShortKey", fullSymbol, symbolId)] = convertProtoToKline(entry.getValue(), minuteTimestamp);
                             }
                             chunkResult.put(minuteTimestamp, klineArray);
                         }

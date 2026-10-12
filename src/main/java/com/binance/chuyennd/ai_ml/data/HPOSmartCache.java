@@ -213,11 +213,11 @@ public class HPOSmartCache {
                 Map<Long, KlineObjectSimple[]> chunkResult = new HashMap<>();
                 for (int m = startMin; m < endMin; m++) {
                     long t = dayStart + m * 60000L;
-                    KlineObjectSimple[] arr = new KlineObjectSimple[1000];
+                    KlineObjectSimple[] arr = new KlineObjectSimple[SymbolIdLimits.CAPACITY]; // [LIVEFIX2] truoc: 1000
                     boolean any = false;
                     for (Short id : ids) {
                         KlineObjectSimple k = cmap.get(id).get(dayStart, m);
-                        if (k != null) { arr[id] = k; any = true; }
+                        if (k != null) { arr[SymbolIdLimits.requireInRange("HPOSmartCache", "id", id)] = k; any = true; }
                     }
                     if (any) chunkResult.put(t, arr);
                 }

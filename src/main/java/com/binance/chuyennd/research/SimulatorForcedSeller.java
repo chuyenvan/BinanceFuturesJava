@@ -1,5 +1,6 @@
 package com.binance.chuyennd.research;
 
+import com.binance.chuyennd.ai_ml.data.SymbolIdLimits;
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.hpo.BacktestIntegrityGuard;
 import com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper;
@@ -86,16 +87,16 @@ public class SimulatorForcedSeller {
 
     // ===================== TRANG THAI =====================
     /** Nen 15m dang gop do (theo symbolId). */
-    private final Bar15[] pending = new Bar15[1000];
+    private final Bar15[] pending = new Bar15[SymbolIdLimits.CAPACITY];
     /** Vong dem close 15m (theo symbolId). */
-    private final Ring[] ring = new Ring[1000];
-    private final long[] lastSignalTs = new long[1000];
-    private final Pending[] pendingLimit = new Pending[1000];
-    private final OrderTargetInfoTest[] running = new OrderTargetInfoTest[1000];
-    private final long[] exitAtMinute = new long[1000];
-    private final Trade[] runningTrade = new Trade[1000];
+    private final Ring[] ring = new Ring[SymbolIdLimits.CAPACITY];
+    private final long[] lastSignalTs = new long[SymbolIdLimits.CAPACITY];
+    private final Pending[] pendingLimit = new Pending[SymbolIdLimits.CAPACITY];
+    private final OrderTargetInfoTest[] running = new OrderTargetInfoTest[SymbolIdLimits.CAPACITY];
+    private final long[] exitAtMinute = new long[SymbolIdLimits.CAPACITY];
+    private final Trade[] runningTrade = new Trade[SymbolIdLimits.CAPACITY];
     @SuppressWarnings("unchecked")
-    private final List<OrderTargetInfoTest>[] symbol2OrdersEntry = new ArrayList[1000];
+    private final List<OrderTargetInfoTest>[] symbol2OrdersEntry = new ArrayList[SymbolIdLimits.CAPACITY];
 
     // ===== SELECTOR PRED (predict_wf_*.bin, WF leak-free). score = 1 - P(win) -> THAP = TOT =====
     private final String predDir;
@@ -106,8 +107,8 @@ public class SimulatorForcedSeller {
     private final Float scoreMax;       // loc cung: bo tin hieu co score > nguong (null = tat)
     private final boolean predRank;     // xep hang khi tranh cho trong tran von
     /** theo symbolId: moc ts tang dan + score tuong ung. */
-    private final long[][] predTs = new long[1000][];
-    private final float[][] predScore = new float[1000][];
+    private final long[][] predTs = new long[SymbolIdLimits.CAPACITY][];
+    private final float[][] predScore = new float[SymbolIdLimits.CAPACITY][];
     private float predMedian = 0.5f;
     private long nScoreHit = 0, nScoreMiss = 0, nSkipScoreMax = 0;
 

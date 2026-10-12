@@ -1,5 +1,6 @@
 package com.binance.chuyennd.ai_ml.features.export;
 
+import com.binance.chuyennd.ai_ml.data.SymbolIdLimits;
 import com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import org.slf4j.Logger;
@@ -11,7 +12,8 @@ public class HistoryManager {
     public static final Logger LOG = LoggerFactory.getLogger(HistoryManager.class);
 
     // 🔥 RING BUFFER CONSTANTS
-    private static final int MAX_COINS = 1000;
+    // [LIVEFIX2] tran chung (truoc: 1000 hardcode — id >= 1000 bi BO IM LANG)
+    static final int MAX_COINS = SymbolIdLimits.CAPACITY;
     private static final int RING_SIZE = 2048; // Phải là lũy thừa của 2 để dùng Bitwise
     private static final int RING_MASK = 2047; // Tương đương (RING_SIZE - 1)
 
@@ -31,7 +33,7 @@ public class HistoryManager {
     private final Set<String> symbolsLastUpdate = new HashSet<>();
     private final Set<Short> symbolsLastUpdateShort = new HashSet<>();
 
-    private HistoryManager() {}
+    HistoryManager() {} // package-private cho test (van dung getInstance o code chinh)
 
     public static HistoryManager getInstance() {
         if (INSTANCE == null) {
@@ -60,11 +62,19 @@ public class HistoryManager {
         for (Map.Entry<String, KlineObjectSimple> entry : snapshot.entrySet()) {
             String symbol = entry.getKey();
             short symbolId = SimpleSymbolMapper.getInstance().getId(symbol);
-            if (symbolId >= MAX_COINS) continue; // Bảo vệ mảng
-
-            symbolsLastUpdateShort.add(symbolId);
-            processKline(symbolId, entry.getValue());
+            acceptKline(symbol, symbolId, entry.getValue());
         }
+    }
+
+    /** [LIVEFIX2] than vong lap updateHistory (tach de test): id vuot tran ⇒ log ERROR + dem, khong bo im lang. */
+    boolean acceptKline(String symbol, short symbolId, KlineObjectSimple kline) {
+        if (symbolId >= MAX_COINS) { // Bảo vệ mảng
+            SymbolIdLimits.recordOverCap("HistoryManager.updateHistory", symbol, symbolId);
+            return false;
+        }
+        symbolsLastUpdateShort.add(symbolId);
+        processKline(symbolId, kline);
+        return true;
     }
 
     public void updateHistoryArray(KlineObjectSimple[] snapshot) {
