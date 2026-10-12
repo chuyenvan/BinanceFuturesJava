@@ -1,51 +1,45 @@
-# PREREG_BACKCAST_RESERVOIR — kho holdout backcast trước DEV (agent BCAST, 2026-10-12)
+# PREREG_BACKCAST_RESERVOIR — kho holdout backcast 2020 (agent BCAST, 2026-10-12)
 
-**TRẠNG THÁI: BẢN NHÁP — CHƯA HIỆU LỰC. B0 phát hiện RÒ RỈ MODEL ở 2021-01..2021-06 ⇒ DỪNG trước B1, chờ MASTER chọn phương án (§4).** Chưa dựng dữ liệu, chưa đẩy kernel Kaggle nào, chưa chạy sim nào trên 2020–2021H1. Kết quả B0: `docs/result/bcast/BCAST_B0.md` (+ `.json`).
+**TRẠNG THÁI: CÓ HIỆU LỰC từ commit này** (MASTER chọn **P1** sau B0 `a8ce5302`). Commit TRƯỚC mọi bước dựng (B1), trước mọi kernel Kaggle của BCAST. Tại thời điểm viết: chưa có dữ liệu kho nào được dựng; chưa sim; không ai nhìn kết quả chiến lược nào trên 2020 (§7). B0: `docs/result/bcast/BCAST_B0.md`.
 
-## 1. Phạm vi đề nghị ban đầu (MASTER)
-- Kho niêm phong 2020-01-01 → 2021-06-30 (trước DEV 2021-07-01), dựng từ Binance Vision `futures/um` bằng công cụ gốc như HO4-P1 (exporter jar `99c5f040`, dataset `ho4p1-jar-exp`; jar sim `b7c89f09`; chuỗi hạ nguồn `ho4p1_chain.py`; OI; funding Vision; CLOSES_1H từ 1m; universe point-in-time).
-- Mục đích DUY NHẤT: XÁC NHẬN ý tưởng đã chốt trên DEV. Không dùng để tìm/tune.
+## 1. Phạm vi (quyết định MASTER, nguyên ý)
+- Dựng dữ liệu **2020-01-01 → 2021-01-03 UTC** (3 ngày cuối chỉ cho 72 h nhìn trước nhãn pool S1).
+- **Cửa sổ chấm CHÍNH: 2020-05-01 00:00 → 2020-12-31 23:59 +07.** Báo kèm (không phải cửa sổ chính): biến thể kết thúc 2020-11-30 23:59 +07.
+- **2021H1 KHÔNG niêm phong, KHÔNG BAO GIỜ được chấm** (in-sample: gate 8 seed train từ 2021-01-01 UTC, net015 Tool1 từ 2021-01, S1 ledger từ 2021-04-01).
+- 2020-01-01 → 2020-04-30 = warm-up (feat_v2 cửa sổ ≤ 336 h ⇒ S1/bins đủ feature từ ~2020-01-15; bộ đệm GateRollingRatio 90 ngày đầy ~2020-05-01). COVID 2020-03-12 nằm trong warm-up, không chấm.
 
-## 2. Nguồn + luật universe (giữ nguyên HO4, ADDENDUM-6 §6.2 + quyết định MASTER HO4-P0b #1)
-- klines 1m monthly Vision (có từ 2020-01; 2019-12 KHÔNG có file nào), fundingRate monthly Vision (từ 2020-01), metrics daily Vision (OI: CHỈ BTCUSDT từ 2020-09-01, mọi symbol khác từ 2021-12-01 ⇒ 5 cột OI net015 + `rk_oi_delta24h` S1 = NaN toàn kho, như DEV 2021-07..11).
-- Universe = bộ lọc LIVE `TickerIngestor2AerospikeNew` (USDT, `^[A-Z0-9]+$`, không BTCDOM/USDC) ∩ mapper 863, áp point-in-time; đuôi settle (volume 0 ≥ 1 440 phút tới kline cuối) cắt; thiếu mapper ⇒ drop + liệt kê (KHÔNG cấp id mới; nếu MASTER muốn giữ: id lỗ 752/753 trong bản mapper CỤC BỘ của sim, assert duy nhất và < 1000, KHÔNG ghi Aerospike 242); thiếu funding Vision ⇒ ở lại dữ liệu, loại khỏi giao dịch.
-- Model đóng băng y HO4: gate 8 seed cut20260101, net015 ONNX `7921ceaf`, S1 `af706dc6`. Không retrain (trừ khi MASTER chọn §4-P2).
+## 2. Nguồn + công cụ (như HO4-P1; khác biệt khai ở mục 3)
+1. Vision `futures/um`: klines 1m monthly 2020-01..2021-01, fundingRate monthly 2020-01..2021-01. Exporter Kaggle = `ho4p1_exp_kernel.py` (jar exporter `99c5f040`, dataset `ho4p1-jar-exp`, Aerospike CE trong kernel, guard host 127.0.0.1) sinh lại bằng `research/analysis/bcast_mkexp.py` chỉ đổi: thư mục làm việc, chính sách slot Kaggle (§6). Tasks: `ExportMarketData2File` (TIME_RUN 20200101), `ExportGateDataset` 20200101→20210102, `ExportFeaturesForPythonTool` FF_UNFILTERED=1 20200101→20210102, `ExportFundingLabel` 20200101→20210104 (LABEL_STEP_MIN 15); ingest ticker 20200101→20210103; CLOSES_1H từ 1m; lifecycle từ kline cửa sổ.
+2. Chuỗi hạ nguồn Kaggle = hàm của `ho4p1_chain.py` + mode `bc20` (`research/analysis/bcast_chain.py`): p15 8 seed predict-only, market.bin = dump exporter [S_LO, END), net015 ONNX predict-only 4 fold quý +07 (20200101/20200401/20200701/20201001), feat_v2 KEEP9 từ CLOSES_1H Vision 1m, pool S1 (p15 s42 ≥ 0,008, nBars_72h ≥ 288), S1 predict-only, `x1_build_map`, loại symbol không funding. S_LO = 2020-01-01 00:00 +07, END = 2021-01-01 00:00 +07 (sim dừng 2021-01-01 06:59 +07, quy ước ADDENDUM-1 §2).
+3. Model đóng băng, không retrain: gate 8 seed (42/7/13/21/99/123/777/2024) `gate_s*_cut20260101p15.json`, net015 ONNX `7921ceaf`, S1 `af706dc6` (sha kiểm trong kernel).
 
-## 3. Luật mở kho (áp khi có hiệu lực)
-1. Mỗi ý tưởng có pre-reg riêng commit TRƯỚC khi mở: giả thuyết, cấu hình nền (b0/k24 như HO4), thước (E0/H-A kiểu PREREG_HOLDOUT2026H1 §1), ngưỡng, k biến thể (inflate √(2 ln k)), 8 seed ghép cặp, scorer commit trước.
-2. Mỗi ý tưởng mở kho ĐÚNG 1 lần; chạy lại chỉ khi lỗi hạ tầng với cfg y hệt. Kết quả FAIL không được "sửa rồi mở lại" trên cùng kho.
-3. Sổ mở kho (`docs/plan/BACKCAST_RESERVOIR.md` §log): ngày, ý tưởng, hash pre-reg, kernel, người đọc số. Kho coi như "đã tiêu" cho mọi ý tưởng cùng họ sau ~3–5 lần mở (MASTER chốt số).
-4. Trong vòng dựng: KHÔNG sim chiến lược để xem kết quả; KHÔNG PnL/tín hiệu thắng-thua; chỉ md5/NaN/phủ/khớp nguồn; 1 sim kỹ thuật, printDone niêm phong (chmod 700, chỉ md5 + số dòng + exit code).
+## 3. Khác HO4 (khai trước)
+(a) Không có đoạn DEV ghép trước: pred.bin/market.bin/funding.bin chỉ gồm kho. (b) OI = file ghim `oi_percoin_full.bin` (`e3887f63`) cắt theo cửa sổ, KHÔNG dựng lại OI (Vision metrics trước 2021-12 chỉ có BTCUSDT từ 2020-09) ⇒ 5 cột OI net015 + `ls_global`/`rk_oi_delta24h` S1 = NaN trừ BTC (nếu ghim không có hàng 2020 thì NaN toàn bộ — chỉ báo). (c) Gate/Tool1 không có lead-in trước 2020-01-01 (dữ liệu không tồn tại) ⇒ những ngày đầu là warm-up. (d) Sim kỹ thuật: TIME_RUN=20200101 qua bản copy config.properties trong kernel; ticker CHỈ từ exporter kho (không gắn dataset ticker DEV).
 
-## 4. RÒ RỈ (B0) + phương án chờ MASTER chọn
-Đo (chỉ đọc meta/manifest/tài liệu, không đọc giá trị dự đoán):
-| Model đóng băng | Dữ liệu train sớm nhất | Nguồn bằng chứng | Chồng kho 2020-01→2021-06 |
-|---|---|---|---|
-| gate p15 8 seed cut20260101 | `train_ts_min` = 2021-01-01 07:00 +07 (= 00:00 UTC), nhãn năm 2021–2025, n 2 629 005 | `~/claude_master/1003/ho1/gate/manifest_gate.json` (cả 8 seed) | **2021-01-01 → 2021-06-30 (6 tháng)** |
-| net015 ONNX f15 `7921ceaf` (cut20251001) | Tool1 export bắt đầu `features_20210101_to_20210401.t1c` (sha `eca5b024…`), fold đầu dự đoán 2022-01 ⇒ train expanding từ 2021-01 | `docs/experiment/G3_X26_RECOVERY.md` §3.4, `G015X26_PROVENANCE.md` | **2021-01 → 2021-06** |
-| S1 `af706dc6` (cut20251231) | ledger `cand_dev_x1` T0 = 2021-04-01 (`x1_ledger.py:19`) | `RESULT_S1REFRESH.md` | **2021-04 → 2021-06** |
-| pred.bin DEV (đoạn sim) | 2 499 840 dòng = 1 736 ngày ⇒ từ 2021-04-01 +07 | manifest_gate.json | (không phải train) |
-| store/ticker DEV | ticker 1 826 ngày = 2021-01-01..2025-12-31; store gate từ 2021-01-01 | b2.log, `ticker_min_days` | không có 2020 |
+## 4. Universe (point-in-time, luật HO4 ADDENDUM-6 §6.2 + HO4-P0b quyết định #1)
+- Bộ lọc LIVE `TickerIngestor2AerospikeNew` (USDT, `^[A-Z0-9]+$`, không BTCDOM/USDC) ∩ mapper 863; đuôi settle (volume 0 ≥ 1 440 phút kéo tới kline cuối) cắt từ phút đầu đuôi.
+- **Loại LENDUSDT, BTCSTUSDT** (không có trong mapper 863) — liệt kê, KHÔNG cấp id mới.
+- Thiếu funding Vision (QTUMUSDT 2020-02, LENDUSDT 2020-11, ICPUSDT 2021-05/06): luật HO4 = symbol không có funding Vision trong cửa sổ ⇒ ở lại dữ liệu, loại khỏi giao dịch (xoá khỏi bins); thiếu tháng lẻ ⇒ giữ, ghi chú.
 
-⇒ **2021H1 KHÔNG sạch** (nhãn/outcome đã vào train của cả 3 họ model). **2020-01-01 → 2020-12-31 UTC sạch về model** (không model nào thấy outcome 2020; chỉ dòng train 2021-01 đầu tiên dùng giá 2020-12 làm lookback feature, ≤ 30 ngày).
+## 5. Kiểm (cổng B1/B2) — chốt trước, chỉ mức dữ liệu, KHÔNG PnL
+- **B1 toàn vẹn:** mọi task exporter rc=0; ticker 369 ngày UTC (20200101..20210103) md5 raw == exporter; market.bin/pred.bin×8/bins×4/net015×4: NaN 0 (p15, p0, market), ts tăng (pred/market) / không giảm (bins); store gate 33 cột: NaN theo tháng báo cáo, **phải = 0 trong cửa sổ chấm**; danh sách symbol loại + lý do; MANIFEST md5 mọi file.
+- **B2 P3-DET (cổng):** exporter chạy 2 lần độc lập (`bcast-x20-a`, `-b`) ⇒ MANIFEST trùng md5 100% file; chuỗi hạ nguồn chạy riêng trên a và b (`bcast-ch20-a`, `-b`) ⇒ MANIFEST trùng 100% (pred×8, market, net015×4, bins×4, S1, feat_v2). FAIL ⇒ DỪNG, báo MASTER, không vá.
+- **B2 phủ:** số symbol/tháng (ticker, gate, bins) báo cáo.
+- **B2 sim kỹ thuật DUY NHẤT:** `bcast-tech` = B0 (profile `r4_kg0_k16_f015_g155` + B0OV), seed 42, phí gốc, jar sim `b7c89f09`, bundle `sim-ho26a-bundle`, TIME_RUN=20200101, SIM_END_DATE=20210101; funding.bin dựng trong kernel (khối FUND_REBUILD_HO4, lo = S_LO, tự kiểm DEV giữ nguyên). Chỉ ghi: exit (java_rc, ok), mapper ≥ 800, TICKER 369/369, FUND_HO4_OK, pred md5, n dòng printDone, md5 printDone, date_first/date_last. Output cất `~/kaggle_sim/sealed/bcast-tech` chmod 700; KHÔNG mở printDone/equity, không đọc trường equity/b của result.json, không grep dòng `Update … b:` của log.
+- Kaggle: BCAST tối đa 1 kernel cùng lúc; đẩy chỉ khi toàn tài khoản < 2 kernel đang chạy và không có kernel `bcast-*` đang chạy.
 
-- **P1 (đề xuất): thu kho về 2020.** Dựng dữ liệu 2020-01-01 → 2021-01-03 UTC (72 h lookahead nhãn pool S1); **cửa sổ chấm 2020-05-01 00:00 → 2020-12-31 23:59 +07** (≈ 8 tháng; 23:59 +07 = 16:59 UTC < `train_ts_min` gate). Biến thể chặt (MASTER chọn): kết thúc 2020-11-30 để tránh cả phần giá 2020-12 làm lookback cho dòng train 2021-01. 2021H1: KHÔNG niêm phong, chỉ dựng nếu cần nối tiếp sim sang DEV, không bao giờ chấm.
-- **P2 (không đề xuất): retrain 3 họ model với train ≥ 2021-07-01** (recipe gate có; S1 cần env T0; trainer net015 08-14 mất, phải viết lại nhãn `retEnd_4h > 0.015`) ⇒ kho xác nhận "bộ model bcast", không phải model live; 2021H1 vẫn nhiễm tầng thiết kế (FS đọc giá từ 2020-12, feat_v2 DEV từ 2021-01, store gate 2021-01).
-- **P3 (không đề xuất):** giữ 2021H1, khai "in-sample model" — vô giá trị cho xác nhận.
+## 6. Luật mở kho (MASTER)
+1. Mỗi ý tưởng mở kho **đúng 1 lần**, có pre-reg riêng commit TRƯỚC (giả thuyết, cấu hình, thước, ngưỡng, k biến thể với inflate √(2 ln k), 8 seed ghép cặp, scorer commit trước khi đọc). Chạy lại chỉ khi lỗi hạ tầng, cfg y hệt.
+2. **Thước chính: E0 tuyệt đối của ý tưởng** (mean ΣPnL cửa sổ chấm > 0 và ≥ 6/8 seed > 0, trên bản stress) **+ Δ ghép cặp seed so với nền cùng kho** (mean ΔΣPnL, ΔmaxDD MTM; ngưỡng do pre-reg ý tưởng chốt).
+3. **Nền chuẩn cùng kho, đúng 2 bản chi phí:** b0 và k24 (định nghĩa như HO4: B0 = K16 G2+FLAT3 B0OV; K24 = B0 + SELECTOR_RANK_TOPK=24 + GATE_QUOTA_SKIP_WHEN_FULL=true) × {phí gốc; stress `SIM_CRASH_ENTRY_PENALTY=0.005`} × 8 seed. Bối cảnh chi phí: EXEC `2c812222` cho thấy penalty 1,675 % phạt thừa ~20×; chi phí thực chân sập ≈ +7 bps, cận trên P0max 50 bps ⇒ stress kho = 0,005.
+4. Nền chuẩn chỉ chạy CÙNG lúc với ý tưởng đầu tiên mở kho (cũng tính là mở kho), dùng lại cho ý tưởng sau; không chạy nền để "xem trước".
+5. Sổ mở kho trong `docs/plan/BACKCAST_RESERVOIR.md` §log. Kho coi như tiêu cho cùng họ ý tưởng sau ~3–5 lần mở (MASTER chốt).
 
-## 5. Ai đã nhìn gì trên 2020-01 → 2021-06 (tính tới commit này)
-| Ai / job | Đã nhìn | Mức |
-|---|---|---|
-| Train gate (DEV WFO, HO1 B2), net015 G015x26, S1 x1 | feature + NHÃN 2021-01..06 (S1 từ 2021-04) | outcome ⇒ rò |
-| DATA_EXTENT_SURVEY (2026-06) | thống kê BTC theo năm 2020 (return +302 %, vol 76 %, ngày tệ nhất −40 % 2020-03-12), độ phủ Vision | chế độ thị trường, KHÔNG chiến lược |
-| FS (PREREG_FS) | giá 1h 2020-12.. để dựng feature; chấm chỉ 2022-01..2024-06 | lookback, KHÔNG chấm |
-| NBETS / GS / G015CUT / S1CUT | tính MDE / bàn khả năng lùi DEV về 2020-01 | không số chiến lược |
-| AUDIT_OI_FEAT_PARITY, D1_DATA_AUDIT | độ phủ OI/LS raw 242 từ 2020-09 | dữ liệu |
-| BCAST (agent này) | liệt kê file Vision (tên/tháng), meta train model | dữ liệu |
-Không job nào (theo grep docs `2020-0x/1x`, `TIME_RUN=2020`) chạy sim/PnL chiến lược trên 2020.
+## 7. Rủi ro (khai trước — kho YẾU, chỉ bằng chứng PHỤ, KHÔNG thay holdout)
+- Universe 25 (2020-05) → 80 (2020-12) symbol vs DEV 117–600 ⇒ breadth/basket/rank lệch phân phối train; **H-A k24-vs-b0 khó phân biệt** (top-24 ≈ toàn universe đầu kho).
+- OI NaN toàn kho (trừ BTC nếu ghim có). COVID 2020-03-12 trong warm-up, không chấm.
+- Chế độ 2020 (bull, vol năm ~76 %) khác DEV. Vision có thể thiếu symbol niêm yết 2019–20 (không kiểm được — cấm REST).
+- Model đóng băng chưa từng thấy 2020 nhưng tầng thiết kế (DATA_EXTENT_SURVEY) đã nhìn thống kê BTC năm 2020.
 
-## 6. Rủi ro khai trước (nếu P1)
-- Universe nhỏ: 24–25 symbol (2020-04/05) → 80 (2020-12) so với 117+ DEV đầu, 600 cuối ⇒ breadth/basket/rank lệch phân phối train; K24 (top-24) gần như = toàn universe ở 2020-05 ⇒ H-A kiểu k24-vs-b0 mất sức phân biệt đầu kho.
-- OI NaN toàn kho (như DEV 2021-07..11). COVID 2020-03-12 nằm trong warm-up, không chấm.
-- Vision có thể thiếu symbol đã niêm yết 2019–20 (DATA_EXTENT: REST có 3 symbol từ 2019-09-08) — không kiểm được (cấm REST).
-- Chế độ 2020 (bull, vol cao) khác DEV ⇒ kho đo độ bền theo chế độ, không thay holdout 2026.
+## 8. Ai đã nhìn gì trên 2020 (tính tới commit này)
+DATA_EXTENT_SURVEY (2026-06): thống kê BTC năm 2020 (return, vol, ngày tệ nhất), độ phủ Vision. FS: giá 1h từ 2020-12 làm lookback, chấm chỉ 2022-01..2024-06. NBETS/GS/G015CUT/S1CUT: MDE, khả năng lùi DEV. AUDIT_OI_FEAT_PARITY/D1_DATA_AUDIT: độ phủ OI raw. BCAST: liệt kê file Vision, meta train model. Không job nào chạy sim/PnL chiến lược trên 2020 (grep docs + research). Train 3 họ model: thấy 2021H1 (không thấy 2020).
