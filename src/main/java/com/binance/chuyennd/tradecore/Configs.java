@@ -960,6 +960,9 @@ public class Configs {
         } catch (Exception e) {
             System.err.println("SIM env override parse error: " + e);
         }
+        // [ENTRY-COST-BUCKET 2026-10-12] docs/result/EXEC_RESULT.md §6(a). Doc NGOAI try/catch tren (no nuot loi)
+        //   => cau hinh sai/thieu = fail-fast luc load. Khong khai SIM_ENTRY_COST_MODE => off => byte-identical.
+        EntryCost.configure(Cfg::get, CRASH_ENTRY_PENALTY);
     }
 
     /**
