@@ -33,6 +33,7 @@ public class DumpConfig {
             rows.add(String.format("%s=%s|%s|%s", f.getName(), s,
                     Modifier.isFinal(f.getModifiers()) ? "final" : "MUTABLE", f.getType().getSimpleName()));
         }
+        rows.addAll(EntryCost.dumpRows()); // [ENTRY-COST-BUCKET] rong khi off => hash khong doi
         Collections.sort(rows);
         StringBuilder sb = new StringBuilder();
         System.out.println("# ===== CAU HINH HIEU DUNG (effective config) =====");

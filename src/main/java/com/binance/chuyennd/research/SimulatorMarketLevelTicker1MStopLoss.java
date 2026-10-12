@@ -108,6 +108,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     public long nselAddLegDone = 0;            // leg0 tầng THÊM thật sự mở
     public final java.util.TreeMap<String, Long> nselLegsByTypeTier = new java.util.TreeMap<>();
     public final java.util.TreeMap<String, Long> crashPenByTypeTier = new java.util.TreeMap<>();
+    // [ENTRY-COST-BUCKET 2026-10-12] thuan log: so chan + tong USD chi phi VAO (= qty*(entry-close)) theo bucket/nam.
+    public final long[] entryCostLegs = new long[4];
+    public final double[] entryCostUsd = new double[4];
+    public final java.util.TreeMap<Integer, long[]> entryCostLegsByYear = new java.util.TreeMap<>();
+    public final java.util.TreeMap<Integer, double[]> entryCostUsdByYear = new java.util.TreeMap<>();
     /** [NSEL] chế độ gọi createOrder: thường / chân CORE_ADD (gate LÕI đã kiểm bằng queryOnly ở vòng selector). */
     static final int NSEL_MODE_NORMAL = 0;
     static final int NSEL_MODE_CORE_ADD = 2;
@@ -667,6 +672,20 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             LOG.info("[CRASH-PENALTY] SUMMARY penalty={} total={} byYear={} byTypeTier={}",
                     Configs.CRASH_ENTRY_PENALTY, crashPenTotal, crashPenByYear, crashPenByTypeTier);
         }
+        // [ENTRY-COST-BUCKET] thong ke chi phi VAO theo bucket (NC,C1,C2,C4) — tong + theo nam GMT+7.
+        if (com.binance.chuyennd.tradecore.EntryCost.isBucket()) {
+            long legsAll = 0;
+            double usdAll = 0;
+            for (int i = 0; i < 4; i++) { legsAll += entryCostLegs[i]; usdAll += entryCostUsd[i]; }
+            LOG.info("[ENTRY-COST] SUMMARY mode=bucket buckets=NC,C1,C2,C4 cost=[{},{},{},{}] legs={} usd={} legsTotal={} usdTotal={}",
+                    com.binance.chuyennd.tradecore.EntryCost.cost(0), com.binance.chuyennd.tradecore.EntryCost.cost(1),
+                    com.binance.chuyennd.tradecore.EntryCost.cost(2), com.binance.chuyennd.tradecore.EntryCost.cost(3),
+                    java.util.Arrays.toString(entryCostLegs), fmtUsd(entryCostUsd), legsAll, String.format("%.2f", usdAll));
+            for (java.util.Map.Entry<Integer, long[]> e : entryCostLegsByYear.entrySet()) {
+                LOG.info("[ENTRY-COST] YEAR {} legs={} usd={}", e.getKey(), java.util.Arrays.toString(e.getValue()),
+                        fmtUsd(entryCostUsdByYear.get(e.getKey())));
+            }
+        }
         // [NSEL 2026-10-08] docs/prereg/PREREG_NSEL.md §2 — LUON in (ke ca OFF: counter would chay voi queryOnly).
         //   add_rej_cap = THEM qua gate nhung khong mo duoc chan (budget/U_MAX, CONC, grid, D3D4...).
         LOG.info("[NSEL] {} core_on_held_would={} core_on_held_by_add_would={} core_add_on={} core_add_attempt={} "
@@ -807,6 +826,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     static boolean coreAddClusterEligible(List<OrderTargetInfoTest> legs, int maxPerCluster) {
         return clusterLeg0Tier(legs) == com.binance.chuyennd.ai_ml.onnx.entry.NselGate.TIER_ADD
                 && countCoreAdd(legs) < maxPerCluster;
+    }
+
+    /** [ENTRY-COST-BUCKET] in mang USD 2 chu so thap phan (log SUMMARY). */
+    static String fmtUsd(double[] a) {
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < a.length; i++) sb.append(i == 0 ? "" : ",").append(String.format("%.2f", a[i]));
+        return sb.append(']').toString();
     }
 
     /**
@@ -1540,6 +1566,14 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         else entryOther++;
 
         Float entry = ticker.priceClose;
+        // [ENTRY-COST-BUCKET 2026-10-12] docs/result/EXEC_RESULT.md §6(a): gia tham chieu = close nen quyet dinh M
+        //   (dong tren). bucket => entry = close*(1+cost_bucket), MOI loai chan; THAY crash penalty (Configs cam
+        //   bat dong thoi) + THAY slip phia VAO (calTp chi tru 1 chan). off => nhanh khong chay => byte-identical.
+        int entryCostBucket = -1;
+        if (com.binance.chuyennd.tradecore.EntryCost.isBucket()) {
+            entryCostBucket = com.binance.chuyennd.tradecore.EntryCost.bucketOf(ticker.priceClose, ticker.priceOpen);
+            entry = com.binance.chuyennd.tradecore.EntryCost.applyEntry(entry, entryCostBucket);
+        }
         // [CRASH-PENALTY 2026-09-29, port NSEL 2026-10-08 tu efd85d6d] docs/prereg/PREREG_CRASH_PENALTY.md — "leg sap" =
         //   nen quyet dinh bar_ret <= -1%. Phat vao GIA VAO (BUY vao DAT hon), MOI loai chan (PREDICT/BIG_DOWN/DCA/
         //   CORE_ADD, ca tang THEM). Default penalty=0 => nhanh KHONG chay => byte-identical. Counter + log dem o cho
@@ -1760,6 +1794,14 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                     symbolStr, Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime),
                     String.format("%.4f", (ticker.priceClose - ticker.priceOpen) / ticker.priceOpen),
                     Configs.CRASH_ENTRY_PENALTY, entry, typeTier);
+        }
+        if (entryCostBucket >= 0) {
+            int y = Integer.parseInt(Utils.sdfMonth.format(new Date(ticker.startTime)).substring(0, 4));
+            double usd = (double) quantity * ((double) entry - (double) ticker.priceClose);
+            entryCostLegs[entryCostBucket]++;
+            entryCostUsd[entryCostBucket] += usd;
+            entryCostLegsByYear.computeIfAbsent(y, k -> new long[4])[entryCostBucket]++;
+            entryCostUsdByYear.computeIfAbsent(y, k -> new double[4])[entryCostBucket] += usd;
         }
     }
 

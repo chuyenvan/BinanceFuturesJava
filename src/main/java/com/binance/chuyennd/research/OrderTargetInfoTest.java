@@ -288,7 +288,10 @@ public class OrderTargetInfoTest implements Serializable {
 
         // 🔥 SLIPPAGE 2 chân
         if (Configs.APPLY_SLIPPAGE) {
-            float slip = orderInfo.quantity * orderInfo.priceEntry * Configs.SLIPPAGE_RATE * 2f;
+            // [ENTRY-COST-BUCKET] bucket: chi phi VAO da nam trong priceEntry => chi con 1 chan slip (phia RA).
+            float slip = com.binance.chuyennd.tradecore.EntryCost.isBucket()
+                    ? orderInfo.quantity * orderInfo.priceEntry * Configs.SLIPPAGE_RATE
+                    : orderInfo.quantity * orderInfo.priceEntry * Configs.SLIPPAGE_RATE * 2f;
             tp = tp - slip;
         }
 
