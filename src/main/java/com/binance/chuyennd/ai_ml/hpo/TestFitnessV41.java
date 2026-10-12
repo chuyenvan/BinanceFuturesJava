@@ -35,6 +35,7 @@ public class TestFitnessV41 {
     private static final long T0 = 1704067200000L;
 
     public static void main(String[] args) {
+        com.binance.chuyennd.tradecore.EntryCost.requireOff("TestFitnessV41"); // [ENTRY-COST-BUCKET]
         LOG.info("===== TestFitnessV41 GATE tầng 1 (A-E) =====");
         int pass = 0, fail = 0;
         if (caseA()) pass++; else fail++;

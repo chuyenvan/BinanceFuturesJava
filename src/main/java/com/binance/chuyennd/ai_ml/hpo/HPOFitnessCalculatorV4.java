@@ -120,6 +120,7 @@ public class HPOFitnessCalculatorV4 {
      * @return FitnessReport đủ metrics mọi nhánh (trừ ZERO_TRADES — không có lệnh để đo)
      */
     public static FitnessReport evaluateDetailed(TreeMap<Long, OrderTargetInfoTest> allOrderDone, int windowDaysActual) {
+        com.binance.chuyennd.tradecore.EntryCost.requireOff("HPOFitnessCalculatorV4"); // [ENTRY-COST-BUCKET]
         FitnessReport r = new FitnessReport();
         if (allOrderDone == null || allOrderDone.isEmpty()) {
             r.finalFitness = REJECT_BASE; r.note = "ZERO_TRADES"; return r;

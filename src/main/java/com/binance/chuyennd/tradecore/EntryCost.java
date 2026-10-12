@@ -61,6 +61,13 @@ public final class EntryCost {
         return ref * (1f + COST[b]);
     }
 
+    /** Fail-fast cho duong CHUA ho tro bucket (van tru SLIPPAGE_RATE x2, khong biet bucket). */
+    public static void requireOff(String who) {
+        float forceConfigsInit = Configs.CRASH_ENTRY_PENALTY; // dam bao Configs da nap (=> configure da chay)
+        if (bucket) throw new IllegalStateException("[ENTRY-COST] " + K_MODE + "=bucket KHONG ho tro trong "
+                + who + " (tinh slip x2, khong biet bucket) — dung lai (penalty=" + forceConfigsInit + ")");
+    }
+
     /** Tro ve OFF (chi cho unit test — tranh ro trang thai sang test khac). */
     public static void reset() {
         bucket = false;

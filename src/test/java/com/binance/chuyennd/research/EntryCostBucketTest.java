@@ -179,6 +179,21 @@ public class EntryCostBucketTest {
         assertEquals(5, EntryCost.dumpRows().size());
     }
 
+    // ---------- (d2) duong chua ho tro bucket: fail-fast ----------
+    @Test
+    public void unsupportedPathsFailFastOnlyInBucket() {
+        EntryCost.requireOff("x");   // off: no-op
+        assertEquals("ZERO_TRADES", com.binance.chuyennd.ai_ml.hpo.HPOFitnessCalculatorV4
+                .evaluateDetailed(new java.util.TreeMap<>(), 30).note);
+        EntryCost.configure(bucketCfg("0.0007", "0.0018", "0.0019", "0.0032"), 0f);
+        try {
+            com.binance.chuyennd.ai_ml.hpo.HPOFitnessCalculatorV4.evaluateDetailed(new java.util.TreeMap<>(), 30);
+            fail("bucket phai fail-fast o HPOFitnessCalculatorV4");
+        } catch (IllegalStateException expected) {
+            assertTrue(expected.getMessage().contains("HPOFitnessCalculatorV4"));
+        }
+    }
+
     // ---------- (d) fail-fast ----------
     private static void expectFail(Function<String, String> g, float pen) {
         try {

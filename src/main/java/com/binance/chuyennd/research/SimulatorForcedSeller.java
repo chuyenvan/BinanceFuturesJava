@@ -233,6 +233,7 @@ public class SimulatorForcedSeller {
                     + "TUYET DOI khong doc so loi nhuan tu lan chay nay nhu ket qua that. ***");
         }
         BacktestIntegrityGuard.assertProductionGrade(diag);
+        com.binance.chuyennd.tradecore.EntryCost.requireOff("SimulatorForcedSeller"); // [ENTRY-COST-BUCKET]
 
         SimulatorForcedSeller sim = new SimulatorForcedSeller();
         sim.run(startTime, endTime);
