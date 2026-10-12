@@ -1,6 +1,6 @@
 # HO4-P1 — sửa race, P3-DET tất định, dựng holdout 2026 từ Vision, đẩy 32 kernel (agent HO4-P1, 2026-10-11)
 
-Pre-reg: `docs/prereg/PREREG_HOLDOUT2026H1.md` ADDENDUM-6 **`af6d6c94`** (+ §6.2a `923d7643`, bổ sung `95da70a9`; đều commit TRƯỚC phép đo/chạy tương ứng; khai: chưa nhìn số sim cửa sổ 2026 nào từ dữ liệu Vision). KHÔNG chấm, KHÔNG mở printDone/equity 2026. JSON `docs/result/ho4/HO4_P1.json` (+ `ho4p1_*.json`). Script `research/analysis/ho4p1_*.py`. Oracle `~/claude_master/1011/ho4p1/` (cache ≤ 500 MB; dữ liệu nặng chỉ trên Kaggle).
+Pre-reg: `docs/prereg/PREREG_HOLDOUT2026H1.md` ADDENDUM-6 **`af6d6c94`** (+ §6.2a `923d7643`, bổ sung `95da70a9`) + ADDENDUM-7 **`106dd923`** (§7.5 `0b798c10`; đều commit TRƯỚC phép đo/chạy tương ứng; khai: chưa nhìn số sim cửa sổ 2026 nào từ dữ liệu Vision). KHÔNG chấm, KHÔNG mở printDone/equity 2026. JSON `docs/result/ho4/HO4_P1.json` (+ `ho4p1_*.json`). Script `research/analysis/ho4p1_*.py`. Oracle `~/claude_master/1011/ho4p1/` (cache ≤ 500 MB; dữ liệu nặng chỉ trên Kaggle).
 
 ## Kết luận (rủi ro trước)
 - **P3-DET PASS** (exporter 229/229, OI raw+gz, chuỗi hạ nguồn 8/8 md5 trùng giữa 2 lần chạy độc lập). **S5 chạy lại quý chứa 2026-03 PASS** (q1 vs q1r 137/137; chain 17/17). Dữ liệu 2026 dựng đủ (393 120 phút = 273 ngày × 1 440, NaN 0, ts đơn điệu; đoạn DEV pred 8 seed trùng md5 HO1). C1/C2 + 32 kernel do orchestrator nền chạy (trạng thái ở cuối).
@@ -44,7 +44,54 @@ Pre-reg: `docs/prereg/PREREG_HOLDOUT2026H1.md` ADDENDUM-6 **`af6d6c94`** (+ §6.
 - Chạy lại quý chứa 2026-03: **q1 vs q1r 137/137 md5**; **chain-y26 vs chain-y26r 17/17 md5** ⇒ PASS.
 - **C1** B0 K16 s42 phí gốc (`SIM_END_DATE=20251231`, artefact mới): n 2 517 = `de-p1`; mọi cột trùng trừ 5 ô in float32 trùng bit (4 volume + 1 quantity, như HO2) ⇒ **PASS**. **C2** K24+skipFull: md5 **`ad26fd55f0bb5db32038ec8b357cf8e7`** == `gqsf-a1` (n 3 541) ⇒ **PASS**. Cả 2: `TICKER_HO4P1 ok=273 bad=0 miss=0 extra=0 other=0`; `FUND_HO4_SELFCHECK keys_equal=True 257 433/257 433 diff=0`; funding.bin prefix 2 301 064 bản ghi (byte bundle) + 393 120 bản ghi 2026 dựng lại.
 
-## S6 — 32 kernel (orchestrator nền, KHÔNG chấm)
-- `ho4p1_queue.py` PID trong `~/claude_master/1011/ho4p1/q/queue.pid`; log `q/queue_py.log`; trạng thái `q/queue_status.tsv` (slug/status/md5/n/parity/giờ); state `q/state.json` (resume). ≤ 2 kernel song song toàn tài khoản; retry 1 lần chỉ lỗi hạ tầng (cfg y hệt); parity tự động mỗi kernel: jar `b7c89f09`, override (y hệt `ho26-*`), pred md5 theo seed (`arts.json`), ticker 2026 273/273, FUND selfcheck, mapper ≥ 800, penalty, UNSEAL.
-- Pha 1 bắt đầu 20:02; 20:46 `ho4-b0-b-s42`, `ho4-b0-s-s42` COMPLETE + parity PASS (~43′/kernel) ⇒ ETA 32 kernel ≈ 07:45 2026-10-12; (`ho4-b0-b-s42` …), thứ tự xen kẽ theo seed (4 kernel/seed). Out `~/kaggle_sim/out/ho4-<cfg>-<b|s>-s<seed>`. Pha 2 sau đó: 2 sim DEV P3-DEV (`ho4p1_simdev.py compare` để so).
-- Chấm = 2 scorer độc lập vòng sau (commit trước khi đọc output); luật E0/H-A cho 9 tháng / H1 / Q3 + độ nhạy H1 HO4 vs HO26 (ADDENDUM-6 §6.7).
+## S6 — 32 kernel (orchestrator nền, KHÔNG chấm) — XONG 2026-10-12 13:45
+- **32/32 PASS parity tự động** (jar `b7c89f09`, override y hệt `ho26-*`, pred md5 theo seed, ticker 2026 273/273, FUND selfcheck, mapper, penalty, UNSEAL), mỗi kernel 1 lần đẩy. Sự cố: orchestrator chết 04:44 do đĩa Oracle đầy (Errno 28) khi tải `ho4-k24-b-s13` ⇒ khởi động lại resume 06:19: tải lại output Kaggle (KHÔNG chạy lại kernel) → PASS; `ho4-b0-s-s99` thu về → PASS. Thêm vào `ho4p1_queue.py`: tạm dừng đẩy khi đĩa < 1 G; sau PASS thay `wfo_ds_override/market.bin` bằng hardlink tới bản chuẩn (chỉ khi md5 `0fcc44d8…`) ⇒ ~4 MB/kernel; `q/max_own` chừa 1 slot cho kernel đo `ho4p1-dupfx`.
+| kernel | md5 printDone | n | parity | push |
+|---|---|---|---|---|
+| `ho4-b0-b-s42` | `42e5470c` | 2801 | PASS | 1 |
+| `ho4-b0-s-s42` | `4653469e` | 2805 | PASS | 1 |
+| `ho4-k24-b-s42` | `7cc8864c` | 3944 | PASS | 1 |
+| `ho4-k24-s-s42` | `6989a312` | 3923 | PASS | 1 |
+| `ho4-b0-b-s7` | `c645978b` | 2850 | PASS | 1 |
+| `ho4-b0-s-s7` | `8156920c` | 2852 | PASS | 1 |
+| `ho4-k24-b-s7` | `c09b8ba5` | 4045 | PASS | 1 |
+| `ho4-k24-s-s7` | `a8f20075` | 3990 | PASS | 1 |
+| `ho4-b0-b-s13` | `0d529515` | 2805 | PASS | 1 |
+| `ho4-b0-s-s13` | `ff327b85` | 2791 | PASS | 1 |
+| `ho4-k24-b-s13` | `d10d96e1` | 4007 | PASS | 1 |
+| `ho4-k24-s-s13` | `b4d3b21b` | 3978 | PASS | 1 |
+| `ho4-b0-b-s21` | `7718106c` | 2843 | PASS | 1 |
+| `ho4-b0-s-s21` | `558a297b` | 2841 | PASS | 1 |
+| `ho4-k24-b-s21` | `ca27d690` | 4031 | PASS | 1 |
+| `ho4-k24-s-s21` | `903dfb7e` | 4011 | PASS | 1 |
+| `ho4-b0-b-s99` | `f59f4757` | 2908 | PASS | 1 |
+| `ho4-b0-s-s99` | `464a031b` | 2879 | PASS | 1 |
+| `ho4-k24-b-s99` | `9fe76b2d` | 4093 | PASS | 1 |
+| `ho4-k24-s-s99` | `f65bce89` | 4073 | PASS | 1 |
+| `ho4-b0-b-s123` | `c94fe2e2` | 2857 | PASS | 1 |
+| `ho4-b0-s-s123` | `4b08280a` | 2845 | PASS | 1 |
+| `ho4-k24-b-s123` | `c9f97a82` | 4012 | PASS | 1 |
+| `ho4-k24-s-s123` | `8019a46b` | 3956 | PASS | 1 |
+| `ho4-b0-b-s777` | `027bb7be` | 2777 | PASS | 1 |
+| `ho4-b0-s-s777` | `50463503` | 2746 | PASS | 1 |
+| `ho4-k24-b-s777` | `e021060a` | 3916 | PASS | 1 |
+| `ho4-k24-s-s777` | `9948b2b5` | 3898 | PASS | 1 |
+| `ho4-b0-b-s2024` | `f7febc07` | 2822 | PASS | 1 |
+| `ho4-b0-s-s2024` | `6633da12` | 2814 | PASS | 1 |
+| `ho4-k24-b-s2024` | `5c0476bd` | 4000 | PASS | 1 |
+| `ho4-k24-s-s2024` | `cf8ea475` | 4032 | PASS | 1 |
+- md5/n chỉ để kiểm toàn vẹn; KHÔNG mở/chấm printDone/equity 2026. Out `~/kaggle_sim/out/<kernel>/`.
+
+## Pha 2 — P3-DEV sim (chỉ báo, không cổng) — `docs/result/ho4/ho4p1_p3dev_sim.json`
+| sim | n mới / ref | dòng trước S trùng | khớp lệnh trên S (2025-07..12) | dpnl_rel |
+|---|---|---|---|---|
+| `ho4p1-dev-k24-s-s42` vs `ho26-k24-s-s42` | 3488 / 3517 | True (3056) | 284/461 = 61.6 % | 0.632 |
+| `ho4p1-dev-b0-s-s42` vs `ho26-b0-s-s42` | 2474 / 2492 | True (2151) | 205/341 = 60.1 % | 0.035 |
+Đọc: phần trước S trùng từng dòng; trên S lệch do dữ liệu Vision/universe live vs DEV (khớp P3-DEV thành phần: gate 61 %, Tool1 56–72 %) — lệch có chủ đích, chỉ báo.
+
+## LIVEFIX2 L5 parity (`~/claude_master/1011/livefix/l5/lf2_parity.py`) — `docs/result/ho4/ho4p1_l5_parity.json`
+- Kernel `lf2-c2-s42` (jar LIVEFIX2 sha `db181d41…`, `SYMBOL_MAPPER_DUP_POLICY=WARN`, cấu hình y hệt `ho4p1-c2`): **PASS**, md5 printDone `ad26fd55f0bb5db32038ec8b357cf8e7` (kỳ vọng `ad26fd55f0bb5db32038ec8b357cf8e7`), n 3541; chk {'ok': True, 'jar': True, 'mapper': True, 'ov': True, 'ov_log': True, 'pred': True, 'n': True, 'tk': True, 'fund': True, 'market': True, 'pen': True, 'unseal': True, 'warn_policy': True}.
+
+## ADDENDUM-7 (`106dd923`, kết quả §7.5 `0b798c10`; commit trước khi scorer đọc số; chưa nhìn số sim 2026)
+- (a) Exporter Java: ghi/đọc ticker theo **tên** (`readDataFromAerospike1M` → `Map<String,…>`) ⇒ **market.bin không ảnh hưởng** (kernel `ho4p1-dupfx`: md5 A == B). `ExportGateDataset` đi qua `HistoryManager`/`CoinRankManager` (ring buffer + rổ top-50 % theo **id**) ⇒ **gate bị lệch**: 16/41 cột, 118 561/119 521 phút (99,2 %) đổi từ 2026-07-10 (breadth |Δ| trung vị 0,4–1 %, funding rổ 3–5 %, basket 0,1–1,8 %, nhãn 52 % phút). Sai lệch đã biết (MASTER chấp nhận, trùng live trước sửa mapper); không chạy lại sim. Chi tiết `ho4p1_dupfx.json`.
+- (b) STGUSDT cắt đuôi từ 09-24 (pin 09-03 còn TRADING; volume 0 trên Vision và 242) ⇒ giữ luật, ghi chú. (c) MAPAUD (`d5c48dd9`): 129/130 đuôi settle đúng, 1 không rõ (STGUSDT), volume cắt = 0.

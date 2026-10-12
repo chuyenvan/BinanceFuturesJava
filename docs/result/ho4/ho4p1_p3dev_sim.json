@@ -1,0 +1,33 @@
+{
+ "ho4p1-dev-k24-s-s42": {
+  "n_new": 3488,
+  "n_ref": 3517,
+  "md5_new": "04b4ea503d7ca581c236df34a2fc11f4",
+  "md5_ref": "16679656a66f4b4f4c0fa91810067dca",
+  "pre_rows_equal": true,
+  "n_pre": 3056,
+  "md5_equal": false,
+  "n_new_S": 432,
+  "n_ref_S": 461,
+  "matched": 284,
+  "match_frac": 0.6160520607375272,
+  "dpnl_rel": 0.6323411970876585,
+  "pass": false
+ },
+ "ho4p1-dev-b0-s-s42": {
+  "n_new": 2474,
+  "n_ref": 2492,
+  "md5_new": "edec455a11190c61d476d289633c60f1",
+  "md5_ref": "0c3fa34d5b08687e109360d5674a4db9",
+  "pre_rows_equal": true,
+  "n_pre": 2151,
+  "md5_equal": false,
+  "n_new_S": 323,
+  "n_ref_S": 341,
+  "matched": 205,
+  "match_frac": 0.6011730205278593,
+  "dpnl_rel": 0.03533933996936954,
+  "pass": false
+ },
+ "pass": false
+}

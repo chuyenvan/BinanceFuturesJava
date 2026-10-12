@@ -2,7 +2,9 @@
  "prereg": [
   "af6d6c94",
   "923d7643",
-  "95da70a9"
+  "95da70a9",
+  "106dd923",
+  "0b798c10"
  ],
  "s1": {
   "fix": "76c5bc40",
@@ -1868,5 +1870,1024 @@
    "pass_all": true
   }
  },
- "queue_status": "slug\tstatus\tmd5_printDone\tn\tparity\ttime\nho4p1-c1\tCOMPLETE\tff3ce513edf2316088a4b5ac464f76dc\t2517\tPASS\t2026-10-11 19:57:36\nho4p1-c2\tCOMPLETE\tad26fd55f0bb5db32038ec8b357cf8e7\t3541\tPASS\t2026-10-11 20:01:55\nho4-b0-b-s42\tCOMPLETE\t42e5470c3784962fc4c2f3ba4d526252\t2801\tPASS\t2026-10-11 20:46:01\nho4-b0-s-s42\tCOMPLETE\t4653469e36f01fdffb875b6cce9d5ad5\t2805\tPASS\t2026-10-11 20:46:20\n"
+ "kernels32": {
+  "ho4-b0-b-s42": {
+   "state": "PASS",
+   "md5": "42e5470c3784962fc4c2f3ba4d526252",
+   "n": 2801,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-b0-s-s42": {
+   "state": "PASS",
+   "md5": "4653469e36f01fdffb875b6cce9d5ad5",
+   "n": 2805,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-k24-b-s42": {
+   "state": "PASS",
+   "md5": "7cc8864ca12bdd69f0165c9c9d5c74c5",
+   "n": 3944,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-k24-s-s42": {
+   "state": "PASS",
+   "md5": "6989a3128daa249372be802fb06a8c27",
+   "n": 3923,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-b0-b-s7": {
+   "state": "PASS",
+   "md5": "c645978bf5d0704d714eed8dd6259e6d",
+   "n": 2850,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-b0-s-s7": {
+   "state": "PASS",
+   "md5": "8156920c027f26d96e2ab2390fd98f50",
+   "n": 2852,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-k24-b-s7": {
+   "state": "PASS",
+   "md5": "c09b8ba54d14a4a7355df077f374d4a9",
+   "n": 4045,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-k24-s-s7": {
+   "state": "PASS",
+   "md5": "a8f200756408f997b56c4f2fbfb0bf33",
+   "n": 3990,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-b0-b-s13": {
+   "state": "PASS",
+   "md5": "0d52951549775ccca948e10d33303dab",
+   "n": 2805,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-b0-s-s13": {
+   "state": "PASS",
+   "md5": "ff327b857e578fb8017d1294e273b568",
+   "n": 2791,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-k24-b-s13": {
+   "state": "PASS",
+   "md5": "d10d96e1d8ddd27dfab076021aee70dd",
+   "n": 4007,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-k24-s-s13": {
+   "state": "PASS",
+   "md5": "b4d3b21b2b37ff19f6e55ddead6e0385",
+   "n": 3978,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-b0-b-s21": {
+   "state": "PASS",
+   "md5": "7718106cc90369a40bb3285a31ce0fca",
+   "n": 2843,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-b0-s-s21": {
+   "state": "PASS",
+   "md5": "558a297bb43fd793c6e2f178b99589d2",
+   "n": 2841,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-k24-b-s21": {
+   "state": "PASS",
+   "md5": "ca27d6909d68ea6e7fa5c350d77d1c20",
+   "n": 4031,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-k24-s-s21": {
+   "state": "PASS",
+   "md5": "903dfb7eac8a351be5feb1e9e32a1797",
+   "n": 4011,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-b0-b-s99": {
+   "state": "PASS",
+   "md5": "f59f4757b5b7da2b92451bd5988d72f3",
+   "n": 2908,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-b0-s-s99": {
+   "state": "PASS",
+   "md5": "464a031be0f2d83971a35c0faa74237f",
+   "n": 2879,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-k24-b-s99": {
+   "state": "PASS",
+   "md5": "9fe76b2d32230071f18784b8f6fce911",
+   "n": 4093,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-k24-s-s99": {
+   "state": "PASS",
+   "md5": "f65bce8946150c49d4c59455a6515c57",
+   "n": 4073,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-b0-b-s123": {
+   "state": "PASS",
+   "md5": "c94fe2e282796e10e4498fa8ce72bbe1",
+   "n": 2857,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-b0-s-s123": {
+   "state": "PASS",
+   "md5": "4b08280a42734c7a8b10f9cdb622513c",
+   "n": 2845,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-k24-b-s123": {
+   "state": "PASS",
+   "md5": "c9f97a82f05a0d3b09e33d97a2e9a7f2",
+   "n": 4012,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-k24-s-s123": {
+   "state": "PASS",
+   "md5": "8019a46b3bc6082510b57e9c6540f9f2",
+   "n": 3956,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-b0-b-s777": {
+   "state": "PASS",
+   "md5": "027bb7bea34b4ea203311321e3b15e56",
+   "n": 2777,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-b0-s-s777": {
+   "state": "PASS",
+   "md5": "504635039f2dc682becec795ccbfbd5f",
+   "n": 2746,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-k24-b-s777": {
+   "state": "PASS",
+   "md5": "e021060a621e5322de7d3544ba6b1345",
+   "n": 3916,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-k24-s-s777": {
+   "state": "PASS",
+   "md5": "9948b2b506433f778dd8e1a0339eaa60",
+   "n": 3898,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-b0-b-s2024": {
+   "state": "PASS",
+   "md5": "f7febc07b2702ac217a38b625a7e08e5",
+   "n": 2822,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-b0-s-s2024": {
+   "state": "PASS",
+   "md5": "6633da128788da4803d2cbe343384f46",
+   "n": 2814,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-k24-b-s2024": {
+   "state": "PASS",
+   "md5": "5c0476bd7ca2c0ba3a2bba1ca3c9ac60",
+   "n": 4000,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  },
+  "ho4-k24-s-s2024": {
+   "state": "PASS",
+   "md5": "cf8ea47534f6c7eb7cdba882c2cb6e22",
+   "n": 4032,
+   "pushes": 1,
+   "kstatus": "COMPLETE",
+   "chk": {
+    "ok": true,
+    "jar": true,
+    "mapper": true,
+    "ov": true,
+    "ov_log": true,
+    "pred": true,
+    "n": true,
+    "tk": true,
+    "fund": true,
+    "market": true,
+    "pen": true,
+    "unseal": true
+   }
+  }
+ },
+ "p3_dev_sim": {
+  "ho4p1-dev-k24-s-s42": {
+   "n_new": 3488,
+   "n_ref": 3517,
+   "md5_new": "04b4ea503d7ca581c236df34a2fc11f4",
+   "md5_ref": "16679656a66f4b4f4c0fa91810067dca",
+   "pre_rows_equal": true,
+   "n_pre": 3056,
+   "md5_equal": false,
+   "n_new_S": 432,
+   "n_ref_S": 461,
+   "matched": 284,
+   "match_frac": 0.6160520607375272,
+   "dpnl_rel": 0.6323411970876585,
+   "pass": false
+  },
+  "ho4p1-dev-b0-s-s42": {
+   "n_new": 2474,
+   "n_ref": 2492,
+   "md5_new": "edec455a11190c61d476d289633c60f1",
+   "md5_ref": "0c3fa34d5b08687e109360d5674a4db9",
+   "pre_rows_equal": true,
+   "n_pre": 2151,
+   "md5_equal": false,
+   "n_new_S": 323,
+   "n_ref_S": 341,
+   "matched": 205,
+   "match_frac": 0.6011730205278593,
+   "dpnl_rel": 0.03533933996936954,
+   "pass": false
+  },
+  "pass": false
+ },
+ "dupfx": {
+  "dup_pairs": {
+   "APPUSDT/SHAZUSDT": {
+    "both": 107460,
+    "first_a": 1783673100000,
+    "first_b": 1784624400000,
+    "n_a": 123315,
+    "n_b": 107460
+   },
+   "BNCUSDT/SOXSUSDT": {
+    "both": 114655,
+    "first_a": 1783607100000,
+    "first_b": 1784192700000,
+    "n_a": 124415,
+    "n_b": 114655
+   },
+   "FWDIUSDT/TZAUSDT": {
+    "both": 114650,
+    "first_a": 1783607400000,
+    "first_b": 1784193000000,
+    "n_a": 124410,
+    "n_b": 114650
+   },
+   "GEVUSDT/SOFIUSDT": {
+    "both": 107455,
+    "first_a": 1783672200000,
+    "first_b": 1784624700000,
+    "n_a": 123330,
+    "n_b": 107455
+   },
+   "MINIMAXUSDT/VRTUSDT": {
+    "both": 113580,
+    "first_a": 1784257200000,
+    "first_b": 1783672500000,
+    "n_a": 113580,
+    "n_b": 123325
+   },
+   "MUUUSDT/XBIUSDT": {
+    "both": 114660,
+    "first_a": 1784192400000,
+    "first_b": 1783606800000,
+    "n_a": 114660,
+    "n_b": 124420
+   },
+   "PANWUSDT/SKHYUSDT": {
+    "both": 107450,
+    "first_a": 1784625000000,
+    "first_b": 1783698600000,
+    "n_a": 107450,
+    "n_b": 122890
+   },
+   "SNOWUSDT/ZHIPUUSDT": {
+    "both": 113575,
+    "first_a": 1783672800000,
+    "first_b": 1784257500000,
+    "n_a": 123320,
+    "n_b": 113575
+   }
+  },
+  "dupfx": {
+   "cols": {
+    "advanceDeclineRatio": {
+     "col_med_abs": 1.00840342,
+     "first_ts": 1783681200000,
+     "max_abs": 15.5,
+     "med_abs": 0.008853080000000069,
+     "n": 117533
+    },
+    "basketMomentum15M": {
+     "col_med_abs": 0.00103446,
+     "first_ts": 1784196000000,
+     "max_abs": 0.0005368500000000001,
+     "med_abs": 1.8119999999999942e-05,
+     "n": 109843
+    },
+    "basketMomentum1H": {
+     "col_med_abs": 0.00216101,
+     "first_ts": 1784196000000,
+     "max_abs": 0.00123075,
+     "med_abs": 3.775000000000002e-05,
+     "n": 109853
+    },
+    "basketRsi14": {
+     "col_med_abs": 49.92118073,
+     "first_ts": 1784196000000,
+     "max_abs": 0.6192779600000051,
+     "med_abs": 0.07160187000000207,
+     "n": 109860
+    },
+    "basketVolSpike": {
+     "col_med_abs": 1.10236931,
+     "first_ts": 1784196000000,
+     "max_abs": 85.04731143000001,
+     "med_abs": 0.006397490000000006,
+     "n": 109861
+    },
+    "btcDominance": {
+     "col_med_abs": 0.16113767,
+     "first_ts": 1783681200000,
+     "max_abs": 0.06876419,
+     "med_abs": 0.0013417450000000192,
+     "n": 117810
+    },
+    "fundingRateAvg24H": {
+     "col_med_abs": 2.734e-05,
+     "first_ts": 1783681200000,
+     "max_abs": 2.6350000000000004e-05,
+     "med_abs": 9.499999999999994e-07,
+     "n": 117844
+    },
+    "fundingRateRaw": {
+     "col_med_abs": 3.178e-05,
+     "first_ts": 1783681200000,
+     "max_abs": 5.3500000000000006e-05,
+     "med_abs": 1.0700000000000008e-06,
+     "n": 118260
+    },
+    "fundingRateTrend": {
+     "col_med_abs": 1.963e-05,
+     "first_ts": 1783681200000,
+     "max_abs": 3.413e-05,
+     "med_abs": 9.999999999999997e-07,
+     "n": 118077
+    },
+    "label_max24h": {
+     "col_med_abs": 0.07925781,
+     "first_ts": 1783629660000,
+     "max_abs": 0.06711625,
+     "med_abs": 0.0006698750000000003,
+     "n": 62730
+    },
+    "label_oldbasket": {
+     "col_med_abs": 0.00842302,
+     "first_ts": 1783629660000,
+     "max_abs": 0.006356450000000001,
+     "med_abs": 6.975999999999944e-05,
+     "n": 62632
+    },
+    "label_ret15m": {
+     "col_med_abs": 0.00188937,
+     "first_ts": 1783629660000,
+     "max_abs": 0.004214220000000001,
+     "med_abs": 9.261999999999986e-05,
+     "n": 62697
+    },
+    "label_ret60m": {
+     "col_med_abs": 0.00389803,
+     "first_ts": 1783629660000,
+     "max_abs": 0.005775720000000001,
+     "med_abs": 0.00018253000000000008,
+     "n": 62724
+    },
+    "marketBreadthStrength": {
+     "col_med_abs": 0.40184048,
+     "first_ts": 1783681200000,
+     "max_abs": 0.013899510000000004,
+     "med_abs": 0.0020291199999999954,
+     "n": 118346
+    },
+    "percentAboveMA20": {
+     "col_med_abs": 0.49244714,
+     "first_ts": 1783681200000,
+     "max_abs": 0.015496289999999996,
+     "med_abs": 0.0021411599999999753,
+     "n": 118360
+    },
+    "volumeRatioUpDown": {
+     "col_med_abs": 1.01474547,
+     "first_ts": 1783681200000,
+     "max_abs": 506.62572478999994,
+     "med_abs": 0.009590509999999997,
+     "n": 117810
+    }
+   },
+   "first_diff_ts": 1783629660000,
+   "gate_md5": [
+    "cda89e1f1d46852330fc6cd6b222cdbc",
+    "e71bc77a6352fc045580eb34888b8566"
+   ],
+   "market_md5": [
+    "6568d15f6bfb1542461248a7c35bff97",
+    "6568d15f6bfb1542461248a7c35bff97"
+   ],
+   "n_cols": 41,
+   "n_cols_diff": 16,
+   "n_rows_diff": 118561,
+   "only_a": 0,
+   "only_b": 0,
+   "rows": [
+    119521,
+    119521
+   ],
+   "rows_by_month": {
+    "2026-07": 31680,
+    "2026-08": 44640,
+    "2026-09": 43200,
+    "2026-10": 1
+   },
+   "rows_diff_by_month": {
+    "2026-07": 30720,
+    "2026-08": 44640,
+    "2026-09": 43200,
+    "2026-10": 1
+   }
+  },
+  "kernel": "chuyendinh/ho4p1-dupfx",
+  "note": "chi muc feature, khong sim; chua nhin so sim 2026",
+  "prereg": "ADDENDUM-7 106dd923",
+  "remap_dups": {
+   "SHAZUSDT": [
+    848,
+    869
+   ],
+   "SKHYUSDT": [
+    850,
+    871
+   ],
+   "SOFIUSDT": [
+    849,
+    870
+   ],
+   "SOXSUSDT": [
+    844,
+    865
+   ],
+   "TZAUSDT": [
+    845,
+    866
+   ],
+   "VRTUSDT": [
+    846,
+    867
+   ],
+   "XBIUSDT": [
+    843,
+    864
+   ],
+   "ZHIPUUSDT": [
+    847,
+    868
+   ]
+  },
+  "tasks": [
+   [
+    "mktA",
+    0,
+    82.2,
+    {
+     "market_A.bin": {
+      "bytes": 2736004,
+      "md5": "6568d15f6bfb1542461248a7c35bff97"
+     }
+    }
+   ],
+   [
+    "gateA",
+    0,
+    2871.6,
+    {
+     "gate/gateA.csv.gz": {
+      "bytes": 17929925,
+      "md5": "cda89e1f1d46852330fc6cd6b222cdbc"
+     }
+    }
+   ],
+   [
+    "mktB",
+    0,
+    87.6,
+    {
+     "market_B.bin": {
+      "bytes": 2736004,
+      "md5": "6568d15f6bfb1542461248a7c35bff97"
+     }
+    }
+   ],
+   [
+    "gateB",
+    0,
+    3112.9,
+    {
+     "gate/gateB.csv.gz": {
+      "bytes": 17945361,
+      "md5": "e71bc77a6352fc045580eb34888b8566"
+     }
+    }
+   ]
+  ]
+ },
+ "l5_parity": {
+  "verdict": "PASS",
+  "md5": "ad26fd55f0bb5db32038ec8b357cf8e7",
+  "want": "ad26fd55f0bb5db32038ec8b357cf8e7",
+  "n": 3541,
+  "chk": {
+   "ok": true,
+   "jar": true,
+   "mapper": true,
+   "ov": true,
+   "ov_log": true,
+   "pred": true,
+   "n": true,
+   "tk": true,
+   "fund": true,
+   "market": true,
+   "pen": true,
+   "unseal": true,
+   "warn_policy": true
+  },
+  "jar_sha": "db181d41bd6837752638a63de99a2023cee7ad4b897d6e64924ac3d6c8f21577",
+  "at": "2026-10-12 14:39:26"
+ },
+ "queue_status": "slug\tstatus\tmd5_printDone\tn\tparity\ttime\nho4p1-c1\tCOMPLETE\tff3ce513edf2316088a4b5ac464f76dc\t2517\tPASS\t2026-10-11 19:57:36\nho4p1-c2\tCOMPLETE\tad26fd55f0bb5db32038ec8b357cf8e7\t3541\tPASS\t2026-10-11 20:01:55\nho4-b0-b-s42\tCOMPLETE\t42e5470c3784962fc4c2f3ba4d526252\t2801\tPASS\t2026-10-11 20:46:01\nho4-b0-s-s42\tCOMPLETE\t4653469e36f01fdffb875b6cce9d5ad5\t2805\tPASS\t2026-10-11 20:46:20\nho4-k24-b-s42\tCOMPLETE\t7cc8864ca12bdd69f0165c9c9d5c74c5\t3944\tPASS\t2026-10-11 21:34:26\nho4-k24-s-s42\tCOMPLETE\t6989a3128daa249372be802fb06a8c27\t3923\tPASS\t2026-10-11 21:36:33\nho4-b0-b-s7\tCOMPLETE\tc645978bf5d0704d714eed8dd6259e6d\t2850\tPASS\t2026-10-11 22:18:52\nho4-b0-s-s7\tCOMPLETE\t8156920c027f26d96e2ab2390fd98f50\t2852\tPASS\t2026-10-11 22:22:58\nho4-k24-b-s7\tCOMPLETE\tc09b8ba54d14a4a7355df077f374d4a9\t4045\tPASS\t2026-10-11 23:05:17\nho4-k24-s-s7\tCOMPLETE\ta8f200756408f997b56c4f2fbfb0bf33\t3990\tPASS\t2026-10-11 23:13:26\nho4-b0-b-s13\tCOMPLETE\t0d52951549775ccca948e10d33303dab\t2805\tPASS\t2026-10-11 23:49:43\nho4-b0-s-s13\tCOMPLETE\tff327b857e578fb8017d1294e273b568\t2791\tPASS\t2026-10-11 23:55:50\nho4-k24-s-s13\tCOMPLETE\tb4d3b21b2b37ff19f6e55ddead6e0385\t3978\tPASS\t2026-10-12 00:42:12\nho4-b0-b-s21\tCOMPLETE\t7718106cc90369a40bb3285a31ce0fca\t2843\tPASS\t2026-10-12 01:28:32\nho4-b0-s-s21\tCOMPLETE\t558a297bb43fd793c6e2f178b99589d2\t2841\tPASS\t2026-10-12 02:12:50\nho4-k24-b-s21\tCOMPLETE\tca27d6909d68ea6e7fa5c350d77d1c20\t4031\tPASS\t2026-10-12 03:03:12\nho4-k24-s-s21\tCOMPLETE\t903dfb7eac8a351be5feb1e9e32a1797\t4011\tPASS\t2026-10-12 03:49:33\nho4-b0-b-s99\tCOMPLETE\tf59f4757b5b7da2b92451bd5988d72f3\t2908\tPASS\t2026-10-12 04:33:53\nho4-k24-b-s13\tCOMPLETE\td10d96e1d8ddd27dfab076021aee70dd\t4007\tFAIL\t2026-10-12 04:44:01\nho4-k24-b-s13\tCOMPLETE\td10d96e1d8ddd27dfab076021aee70dd\t4007\tPASS\t2026-10-12 06:19:35\nho4-b0-s-s99\tCOMPLETE\t464a031be0f2d83971a35c0faa74237f\t2879\tPASS\t2026-10-12 06:19:54\nho4-k24-b-s99\tCOMPLETE\t9fe76b2d32230071f18784b8f6fce911\t4093\tPASS\t2026-10-12 06:51:26\nho4-k24-s-s99\tCOMPLETE\tf65bce8946150c49d4c59455a6515c57\t4073\tPASS\t2026-10-12 07:13:48\nho4-b0-b-s123\tCOMPLETE\tc94fe2e282796e10e4498fa8ce72bbe1\t2857\tPASS\t2026-10-12 08:00:01\nho4-b0-s-s123\tCOMPLETE\t4b08280a42734c7a8b10f9cdb622513c\t2845\tPASS\t2026-10-12 08:42:15\nho4-k24-b-s123\tCOMPLETE\tc9f97a82f05a0d3b09e33d97a2e9a7f2\t4012\tPASS\t2026-10-12 09:14:26\nho4-b0-b-s777\tCOMPLETE\t027bb7bea34b4ea203311321e3b15e56\t2777\tPASS\t2026-10-12 09:56:30\nho4-k24-s-s123\tCOMPLETE\t8019a46b3bc6082510b57e9c6540f9f2\t3956\tPASS\t2026-10-12 10:04:37\nho4-b0-s-s777\tCOMPLETE\t504635039f2dc682becec795ccbfbd5f\t2746\tPASS\t2026-10-12 10:38:52\nho4-k24-b-s777\tCOMPLETE\te021060a621e5322de7d3544ba6b1345\t3916\tPASS\t2026-10-12 10:53:01\nho4-k24-s-s777\tCOMPLETE\t9948b2b506433f778dd8e1a0339eaa60\t3898\tPASS\t2026-10-12 11:27:16\nho4-b0-b-s2024\tCOMPLETE\tf7febc07b2702ac217a38b625a7e08e5\t2822\tPASS\t2026-10-12 11:35:22\nho4-b0-s-s2024\tCOMPLETE\t6633da128788da4803d2cbe343384f46\t2814\tPASS\t2026-10-12 12:11:38\nho4-k24-b-s2024\tCOMPLETE\t5c0476bd7ca2c0ba3a2bba1ca3c9ac60\t4000\tPASS\t2026-10-12 12:23:48\nho4-k24-s-s2024\tCOMPLETE\tcf8ea47534f6c7eb7cdba882c2cb6e22\t4032\tPASS\t2026-10-12 13:06:14\nho4p1-dev-b0-s-s42\tCOMPLETE\tNone\tNone\tP3-DEV\t2026-10-12 13:38:52\nho4p1-dev-k24-s-s42\tCOMPLETE\tNone\tNone\tP3-DEV\t2026-10-12 13:45:12\n"
 }

@@ -1,0 +1,23 @@
+{
+ "verdict": "PASS",
+ "md5": "ad26fd55f0bb5db32038ec8b357cf8e7",
+ "want": "ad26fd55f0bb5db32038ec8b357cf8e7",
+ "n": 3541,
+ "chk": {
+  "ok": true,
+  "jar": true,
+  "mapper": true,
+  "ov": true,
+  "ov_log": true,
+  "pred": true,
+  "n": true,
+  "tk": true,
+  "fund": true,
+  "market": true,
+  "pen": true,
+  "unseal": true,
+  "warn_policy": true
+ },
+ "jar_sha": "db181d41bd6837752638a63de99a2023cee7ad4b897d6e64924ac3d6c8f21577",
+ "at": "2026-10-12 14:39:26"
+}

@@ -143,3 +143,9 @@ S4 đang chạy: `ho4p1-x26-q1` XONG (88′, 0 symbol thiếu funding Vision, 11
 - `ho4-b0-b-s42`, `ho4-b0-s-s42` COMPLETE + parity PASS (~43′/kernel). ETA 32 kernel ≈ 07:45 ngày 2026-10-12 (+ pha 2 ~45′). Theo dõi: `~/claude_master/1011/ho4p1/q/queue_status.tsv`, `q/queue_py.log`, PID `q/queue.pid`. Resume: chạy lại lệnh khởi động trong docstring `ho4p1_queue.py` (state.json).
 - Dọn cache: xoá worktree `ho4race_wt` (đã merge) và jar hardlink stage (dataset `ho4p1-jar-exp` đã có).
 - Việc vòng sau: 2 scorer độc lập (commit trước khi đọc output) chấm E0/H-A cho 9 tháng / H1 / Q3 + độ nhạy H1 HO4 vs HO26; P3-DEV sim so bằng `python3 research/analysis/ho4p1_simdev.py compare` sau pha 2.
+
+### HO4-P1 cập nhật 2026-10-12 14:39 — 32/32 kernel PASS, pha 2 xong, L5 PASS, ADDENDUM-7
+- Orchestrator chết 04:44 (đĩa đầy) → resume 06:19 (tải lại output Kaggle, không chạy lại kernel); thêm guard đĩa ≥ 1 G + hardlink market.bin chuẩn sau PASS. 32/32 holdout PASS parity tự động (1 lần đẩy mỗi kernel), xong 13:45.
+- Pha 2 P3-DEV sim (chỉ báo): dòng trước S trùng; trên S khớp lệnh 61.6 % (K24) / 60.1 % (B0).
+- LIVEFIX2 L5 `lf2-c2-s42`: PASS md5 `ad26fd55f0bb5db32038ec8b357cf8e7` (kỳ vọng `ad26fd55…`).
+- ADDENDUM-7 `106dd923` (+§7.5 `0b798c10`): market.bin không ảnh hưởng bởi id trùng (md5 A == B); gate 16/41 cột / 99,2 % phút lệch từ 07-10 (sai lệch đã biết); STGUSDT giữ luật; MAPAUD 129/130. Chưa nhìn số sim 2026; chấm = 2 scorer vòng sau.
