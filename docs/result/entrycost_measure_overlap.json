@@ -1,0 +1,379 @@
+{
+ "D": {
+  "42": {
+   "goc": {
+    "n_b": 3529,
+    "n_ref": 3541,
+    "common": 3445,
+    "frac": 0.9728890144027111,
+    "sym_only_bucket": [],
+    "sym_only_ref": []
+   },
+   "stress": {
+    "n_b": 3529,
+    "n_ref": 3517,
+    "common": 3155,
+    "frac": 0.8940209691130632,
+    "sym_only_bucket": [],
+    "sym_only_ref": [
+     "PHA",
+     "PUMP"
+    ]
+   }
+  },
+  "7": {
+   "goc": {
+    "n_b": 3542,
+    "n_ref": 3557,
+    "common": 3464,
+    "frac": 0.9738543716615126,
+    "sym_only_bucket": [],
+    "sym_only_ref": []
+   },
+   "stress": {
+    "n_b": 3542,
+    "n_ref": 3508,
+    "common": 3198,
+    "frac": 0.9028797289666854,
+    "sym_only_bucket": [],
+    "sym_only_ref": [
+     "BERA",
+     "INIT",
+     "PHA"
+    ]
+   }
+  },
+  "13": {
+   "goc": {
+    "n_b": 3549,
+    "n_ref": 3554,
+    "common": 3475,
+    "frac": 0.977771525042206,
+    "sym_only_bucket": [],
+    "sym_only_ref": []
+   },
+   "stress": {
+    "n_b": 3549,
+    "n_ref": 3529,
+    "common": 3213,
+    "frac": 0.9053254437869822,
+    "sym_only_bucket": [],
+    "sym_only_ref": [
+     "ILV",
+     "INIT"
+    ]
+   }
+  },
+  "21": {
+   "goc": {
+    "n_b": 3546,
+    "n_ref": 3550,
+    "common": 3422,
+    "frac": 0.963943661971831,
+    "sym_only_bucket": [
+     "HOME",
+     "SPK",
+     "SYRUP"
+    ],
+    "sym_only_ref": []
+   },
+   "stress": {
+    "n_b": 3546,
+    "n_ref": 3529,
+    "common": 3249,
+    "frac": 0.916243654822335,
+    "sym_only_bucket": [],
+    "sym_only_ref": [
+     "BERA",
+     "RED"
+    ]
+   }
+  },
+  "99": {
+   "goc": {
+    "n_b": 3657,
+    "n_ref": 3666,
+    "common": 3586,
+    "frac": 0.9781778505182761,
+    "sym_only_bucket": [
+     "HOME"
+    ],
+    "sym_only_ref": []
+   },
+   "stress": {
+    "n_b": 3657,
+    "n_ref": 3628,
+    "common": 3309,
+    "frac": 0.9048400328137818,
+    "sym_only_bucket": [],
+    "sym_only_ref": [
+     "HYPER",
+     "INIT",
+     "PHA",
+     "PUMP"
+    ]
+   }
+  },
+  "123": {
+   "goc": {
+    "n_b": 3558,
+    "n_ref": 3565,
+    "common": 3451,
+    "frac": 0.9680224403927069,
+    "sym_only_bucket": [],
+    "sym_only_ref": []
+   },
+   "stress": {
+    "n_b": 3558,
+    "n_ref": 3515,
+    "common": 3294,
+    "frac": 0.9258010118043845,
+    "sym_only_bucket": [],
+    "sym_only_ref": [
+     "EUL",
+     "MET",
+     "PHA"
+    ]
+   }
+  },
+  "777": {
+   "goc": {
+    "n_b": 3440,
+    "n_ref": 3464,
+    "common": 3355,
+    "frac": 0.9685334872979214,
+    "sym_only_bucket": [],
+    "sym_only_ref": []
+   },
+   "stress": {
+    "n_b": 3440,
+    "n_ref": 3452,
+    "common": 3118,
+    "frac": 0.90324449594438,
+    "sym_only_bucket": [],
+    "sym_only_ref": [
+     "KMNO"
+    ]
+   }
+  },
+  "2024": {
+   "goc": {
+    "n_b": 3526,
+    "n_ref": 3514,
+    "common": 3383,
+    "frac": 0.9594441293250142,
+    "sym_only_bucket": [
+     "1000X",
+     "AIOT",
+     "CLO",
+     "SCRT"
+    ],
+    "sym_only_ref": []
+   },
+   "stress": {
+    "n_b": 3526,
+    "n_ref": 3548,
+    "common": 3161,
+    "frac": 0.890924464487035,
+    "sym_only_bucket": [],
+    "sym_only_ref": [
+     "EUL",
+     "H",
+     "LA",
+     "MET",
+     "PHA",
+     "PUMP",
+     "S"
+    ]
+   }
+  }
+ },
+ "H": {
+  "42": {
+   "goc": {
+    "n_b": 406,
+    "n_ref": 403,
+    "common": 392,
+    "frac": 0.9655172413793104,
+    "sym_only_bucket": [],
+    "sym_only_ref": []
+   },
+   "stress": {
+    "n_b": 406,
+    "n_ref": 406,
+    "common": 369,
+    "frac": 0.9088669950738916,
+    "sym_only_bucket": [],
+    "sym_only_ref": [
+     "AR",
+     "B2",
+     "DENT",
+     "GIGGLE",
+     "MOVR"
+    ]
+   }
+  },
+  "7": {
+   "goc": {
+    "n_b": 490,
+    "n_ref": 488,
+    "common": 480,
+    "frac": 0.9795918367346939,
+    "sym_only_bucket": [],
+    "sym_only_ref": []
+   },
+   "stress": {
+    "n_b": 490,
+    "n_ref": 482,
+    "common": 469,
+    "frac": 0.9571428571428572,
+    "sym_only_bucket": [],
+    "sym_only_ref": [
+     "ESP"
+    ]
+   }
+  },
+  "13": {
+   "goc": {
+    "n_b": 456,
+    "n_ref": 453,
+    "common": 439,
+    "frac": 0.9627192982456141,
+    "sym_only_bucket": [],
+    "sym_only_ref": [
+     "STEEM"
+    ]
+   },
+   "stress": {
+    "n_b": 456,
+    "n_ref": 449,
+    "common": 430,
+    "frac": 0.9429824561403509,
+    "sym_only_bucket": [],
+    "sym_only_ref": [
+     "AAOI",
+     "STEEM"
+    ]
+   }
+  },
+  "21": {
+   "goc": {
+    "n_b": 485,
+    "n_ref": 481,
+    "common": 472,
+    "frac": 0.9731958762886598,
+    "sym_only_bucket": [
+     "GIGGLE"
+    ],
+    "sym_only_ref": []
+   },
+   "stress": {
+    "n_b": 485,
+    "n_ref": 482,
+    "common": 465,
+    "frac": 0.9587628865979382,
+    "sym_only_bucket": [],
+    "sym_only_ref": [
+     "BZ",
+     "DRIFT"
+    ]
+   }
+  },
+  "99": {
+   "goc": {
+    "n_b": 430,
+    "n_ref": 427,
+    "common": 412,
+    "frac": 0.958139534883721,
+    "sym_only_bucket": [
+     "MOVR"
+    ],
+    "sym_only_ref": [
+     "AIO"
+    ]
+   },
+   "stress": {
+    "n_b": 430,
+    "n_ref": 445,
+    "common": 395,
+    "frac": 0.8876404494382022,
+    "sym_only_bucket": [],
+    "sym_only_ref": [
+     "AIO",
+     "ARIA",
+     "ASTR",
+     "BMT",
+     "CHESS",
+     "ENJ",
+     "ESP",
+     "ORDI",
+     "PRL",
+     "RAVE",
+     "TAKE",
+     "ZBT"
+    ]
+   }
+  },
+  "123": {
+   "goc": {
+    "n_b": 446,
+    "n_ref": 447,
+    "common": 441,
+    "frac": 0.9865771812080537,
+    "sym_only_bucket": [],
+    "sym_only_ref": []
+   },
+   "stress": {
+    "n_b": 446,
+    "n_ref": 441,
+    "common": 428,
+    "frac": 0.9596412556053812,
+    "sym_only_bucket": [],
+    "sym_only_ref": [
+     "ONE"
+    ]
+   }
+  },
+  "777": {
+   "goc": {
+    "n_b": 452,
+    "n_ref": 452,
+    "common": 429,
+    "frac": 0.9491150442477876,
+    "sym_only_bucket": [],
+    "sym_only_ref": []
+   },
+   "stress": {
+    "n_b": 452,
+    "n_ref": 446,
+    "common": 418,
+    "frac": 0.9247787610619469,
+    "sym_only_bucket": [],
+    "sym_only_ref": [
+     "DENT"
+    ]
+   }
+  },
+  "2024": {
+   "goc": {
+    "n_b": 487,
+    "n_ref": 486,
+    "common": 475,
+    "frac": 0.9753593429158111,
+    "sym_only_bucket": [],
+    "sym_only_ref": []
+   },
+   "stress": {
+    "n_b": 487,
+    "n_ref": 484,
+    "common": 467,
+    "frac": 0.9589322381930184,
+    "sym_only_bucket": [],
+    "sym_only_ref": [
+     "ROBO",
+     "ZBT"
+    ]
+   }
+  }
+ }
+}
