@@ -77,9 +77,15 @@ def fetch_done(typ, ym):
         return False
 
 
+ENC = os.environ.get("VZ_ENC", "plaindelta")
+BUILD_VERSION = 2
+
+
 def build_done(ds, ym):
-    """True only when the build state exists AND the output parquet is present,
-    non-empty and its size matches the recorded one (guards pilot/empty builds)."""
+    """A month counts as built only when its state is valid for the CURRENT code:
+    state records enc=plaindelta + build_version, rows>0, and the output parquet
+    exists, is non-empty and matches the recorded byte size. Merely having a
+    parquet file on disk is not enough."""
     sp = os.path.join(VZ, "state", "build", ds, ym + ".json")
     op = os.path.join(VZ, "out", ds, ym[:4], ym + ".parquet")
     if not (os.path.exists(sp) and os.path.exists(op)):
@@ -87,6 +93,8 @@ def build_done(ds, ym):
     try:
         d = json.load(open(sp))
     except Exception:  # noqa: BLE001
+        return False
+    if d.get("enc") != ENC or int(d.get("build_version", 0)) < BUILD_VERSION:
         return False
     sz = os.path.getsize(op)
     if d.get("rows", 0) <= 0 or sz < 2000:

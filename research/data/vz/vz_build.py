@@ -89,6 +89,10 @@ FUNDING_POS = ["calc_time", "funding_interval_hours", "last_funding_rate"]
 
 COUNT = {"micro_fixed": 0, "dupes": 0, "files": 0, "rows_in": 0}
 
+# bumped when the on-disk parquet encoding changes; recorded in the build state
+# so a month is only considered done when it was built with the current scheme.
+BUILD_VERSION = 2  # 2 = VZ_ENC=plaindelta (ts DELTA_BINARY_PACKED, floats plain)
+
 
 def parquet_enc(ds):
     """Parquet encoding for every dataset (VZ_PHASE1 section 1.2).
@@ -312,6 +316,8 @@ def main():
            "dupes_dropped": COUNT["dupes"], "files": COUNT["files"],
            "rows_in": COUNT["rows_in"], "micro_fixed_files": COUNT["micro_fixed"],
            "stale_rows": n_stale,
+           "enc": os.environ.get("VZ_ENC", "plaindelta"),
+           "build_version": BUILD_VERSION,
            "parquet_bytes": size, "sha256": sha, "seconds": round(dur, 1)}
     st_path = os.path.join(STATE_DIR, "build", ds, ym + ".json")
     os.makedirs(os.path.dirname(st_path), exist_ok=True)

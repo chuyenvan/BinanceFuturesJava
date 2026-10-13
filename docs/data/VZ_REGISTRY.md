@@ -143,3 +143,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 - Bug: 2024-08 là tháng pilot — fetch state "done" nhưng ZIP đã bị xoá ⇒ build/V6 không có input ⇒ metrics5m parquet rỗng (969 B) ⇒ V6 FAIL (không phải lỗi dữ liệu).
 - Fix driver `vz_phase1.py`: `ensure_fetch()` phát hiện state done nhưng ZIP thiếu (đếm < n_ok) ⇒ xoá state + FETCH LẠI; `build_done()` chặt hơn (rows>0, file tồn tại, size == parquet_bytes).
 - Reset 2024-08 cho metrics5m + funding (xoá state fetch/build + parquet + report) để BUILD LẠI mã hoá mới rồi V6 PASS. Rà toàn bộ state build: chỉ 1 anomaly (metrics5m 2024-08).
+
+## 11. Siết điều kiện "tháng XONG" (2026-10-14 06:10)
+- `vz_build.py` ghi thêm `enc` (=plaindelta) + `build_version`=2 vào build state.
+- `vz_phase1.py` `build_done()`: tháng chỉ XONG khi state có `enc==plaindelta` + `build_version>=2` + rows>0 + parquet tồn tại & size == parquet_bytes (không dựa vào việc file parquet có sẵn).
+- Backfill 30 state build sẵn có: XÁC MINH mã hoá thật trong parquet (ts=DELTA_BINARY_PACKED, float=PLAIN, zstd) rồi mới ghi `enc` — đủ 30/30 đúng, 0 phải build lại.
+- Xoá thủ công 2 file pilot mã hoá cũ (metrics5m/funding 2024-08) + report + state → build lại.
+- Dọn: `~/vz/tmp/tmpiomm0faf`, `~/vz/tmp/_v6`, `~/vz/pilot_v1` (908MB). Đĩa trống 37 GB.
