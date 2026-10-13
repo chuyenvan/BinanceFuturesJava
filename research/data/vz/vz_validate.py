@@ -167,7 +167,7 @@ def v4(parquet, ym, sample_n=2000):
 
 
 def v5(basis_parquet, kline_parquet):
-    # global p99 over the month; stale zero-volume symbols reported separately
+    # global p99 over the month on ACTIVE rows; stale rows/symbols reported separately.
     kb = {}
     for df in rowgroup_iter(kline_parquet, columns=["ts", "sym", "close", "quote_volume"]):
         if df.empty:
@@ -176,6 +176,8 @@ def v5(basis_parquet, kline_parquet):
     act_m, act_p, all_m, all_p = [], [], [], []
     stale = []
     sym_max = []
+    n_active_rows = 0
+    n_stale_rows = 0
     for df in rowgroup_iter(basis_parquet, columns=["ts", "sym", "prem_close", "mark_close"]):
         if df.empty:
             continue
@@ -191,9 +193,11 @@ def v5(basis_parquet, kline_parquet):
         all_m.append(mr.values)
         all_p.append(j["prem_close"].abs().values)
         a = j[j["quote_volume"] > 0]
+        n_stale_rows += len(j) - len(a)
         if len(a) == 0:
             stale.append(sym)
             continue
+        n_active_rows += len(a)
         amr = (a["mark_close"] / a["close"] - 1).abs()
         act_m.append(amr.values)
         act_p.append(a["prem_close"].abs().values)
@@ -209,7 +213,8 @@ def v5(basis_parquet, kline_parquet):
         "global_mark_p99_active": round(gmark, 6),
         "global_prem_p99_active": round(gprem, 6),
         "global_mark_p99_allrows": round(float(np.percentile(olm, 99)), 6),
-        "n_rows_active": int(len(am)),
+        "n_rows_active": int(n_active_rows),
+        "n_stale_rows": int(n_stale_rows),
         "n_stale_syms_excluded": len(stale),
         "stale_syms": sorted(stale),
         "sym_mark_p99_top": sym_max[:10],
@@ -234,6 +239,7 @@ def v6(ds, ym):
     tmp_out = os.path.join(TMP_DIR, "_v6", ds, year)
     os.makedirs(tmp_out, exist_ok=True)
     mod.OUT_DIR = os.path.join(TMP_DIR, "_v6")
+    mod.KLINE_DIR = OUT_DIR  # basis V6 rebuild reads the real kline parquet
     mod.COUNT = {"micro_fixed": 0, "dupes": 0, "files": 0, "rows_in": 0}
     import io
     old = sys.stdout
@@ -261,7 +267,10 @@ def main():
         v23 = v2_v3(parquet)
         res["V2"] = v23["v2"]
         res["V3"] = v23["v3"]
-        res["V4"] = v4(parquet, ym)
+        if year == "2020":  # sealed reservoir: V4 internal CLOSES_1H starts 2021
+            res["V4"] = {"status": "SKIP", "reason": "sealed 2020 (no internal CLOSES_1H)"}
+        else:
+            res["V4"] = v4(parquet, ym)
     if ds == "basis1m":
         res["V5"] = v5(parquet, os.path.join(OUT_DIR, "kline1m", year, ym + ".parquet"))
     res["V6"] = v6(ds, ym)
@@ -269,10 +278,24 @@ def main():
     res["parquet_bytes"] = os.path.getsize(parquet)
     res["seconds"] = round(time.time() - t0, 1)
     os.makedirs(REPORT_DIR, exist_ok=True)
-    out = os.path.join(REPORT_DIR, "%s-%s.validate.json" % (ds, year))
+    # per-month report
+    out = os.path.join(REPORT_DIR, "%s-%s.validate.json" % (ds, ym))
     with open(out, "w") as fh:
         json.dump(res, fh, indent=1)
-    log.info("ds=%s month=%s -> %s", ds, ym, out)
+    # per-year aggregate (status per month, no bulk data)
+    agg = os.path.join(REPORT_DIR, "%s-%s.validate.json" % (ds, year))
+    cur = {"ds": ds, "year": year, "months": {}}
+    if os.path.exists(agg):
+        with open(agg) as fh:
+            cur = json.load(fh)
+    cur.setdefault("months", {})[ym] = {
+        k: res.get(k, {}).get("status")
+        for k in ["V1", "V2", "V3", "V4", "V5", "V6"] if k in res
+    }
+    cur["parquet_bytes"] = cur.get("parquet_bytes", 0) + res["parquet_bytes"]
+    with open(agg, "w") as fh:
+        json.dump(cur, fh, indent=1)
+    log.info("ds=%s month=%s -> %s (+%s)", ds, ym, out, agg)
     for k in ["V1", "V2", "V3", "V4", "V5", "V6"]:
         if k in res:
             log.info("  %s %s", k, res[k].get("status"))

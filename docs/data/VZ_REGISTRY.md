@@ -1,7 +1,7 @@
 # VZ_REGISTRY — sổ đăng ký kho dữ liệu Binance Vision (Kaggle)
 
 Thiết kế: `docs/plan/VZ_DATA_LAKE.md`. Branch code: `data/vz-lake` (worktree `~/claude_master/vz_wt`).
-Owner thực thi: OpenClaw (UniDeep). Ngày: 2026-10-13. Trạng thái: **Phase 0 (pilot 2024-08) XONG — DỪNG chờ MASTER duyệt Phase 1.**
+Owner thực thi: OpenClaw (UniDeep). Ngày: 2026-10-13. Trạng thái: **Phase 1a XONG — cổng §1.6 ĐẠT — đang chạy 1b (theo năm).**
 
 ---
 
@@ -99,5 +99,36 @@ Build ≈ 6 h + V6 (rebuild) ≈ 6 h ⇒ tổng pipeline ~31 h. Vẫn nằm tron
 
 `research/data/vz/`: `vz_common.py` · `vz_inventory.py` · `vz_fetch.py` · `vz_build.py` · `vz_validate.py` · `vz_upload.sh`.
 Dữ liệu: `~/vz/{manifest,tmp,out,reports,state,logs}`.
+
+## 8. Phase 1a — tối ưu mã hoá + đo lại (2024-08, kline1m + basis1m)
+
+Mã hoá thực dùng (VZ_ENC=plaindelta, mặc định): `ts`=DELTA_BINARY_PACKED (tắt dictionary cho ts),
+`sym`=dictionary, **các cột float để PLAIN**, zstd **level 9**, row group = 1 symbol.
+
+⚑ **LỆCH THIẾT KẾ (quan trọng) — §1.2 `use_byte_stream_split` phản tác dụng:** đo trên 40 symbol 2024-08:
+| biến thể | kline MB | basis MB |
+|---|---|---|
+| v1 (zstd6, default) | 63.91 | 62.27 |
+| **plain + DELTA ts + zstd9** | **46.34** | **46.12** |
+| §1.2 literal (byte_stream_split + DELTA ts) | 76.11 | 49.69 |
+
+BSS làm kline **+19%** (76.11 vs 46.34). Xác nhận: pyarrow **bỏ qua** `use_byte_stream_split` nếu không kèm `column_encoding`;
+khi bật kèm thì high-entropy mantissa planes làm zstd nén kém hơn. Nguồn lợi thật = **DELTA_BINARY_PACKED trên `ts`**.
+⇒ Để đạt cổng §1.6, dùng plain+delta (BSS vẫn chọn được qua `VZ_ENC=bss`). Cần MASTER chốt.
+
+| ds | rows | sym | stale rows | v1 bytes | **v2 bytes** | Δ |
+|---|---|---|---|---|---|---|
+| kline1m | 12 812 300 | 297 | 907 987 | 430 529 122 | **306 618 954** | −28,8% |
+| basis1m | 12 908 417 | 299 | 1 004 630 | 521 172 458 | **332 170 464** | −36,3% |
+
+- **So nội dung v1↔v2: PASS tuyệt đối** (bit-exact float64) — kline 12.81M dòng, basis 12.91M dòng, 0 lệch; chỉ khác cột mới `active` + bỏ `prem_open`.
+- **Validate**: kline V1 V2 V3 V4 V6 PASS; basis V1 V5 V6 PASS. V4 khớp CLOSES_1H 183/183 (≤5,28e-8); V5 p99 active mark 0,19% · prem 0,25%; stale 684 759 dòng / 14 symbol (thông tin).
+- **Version 2** `chuyendinh/vz-pilot-202408` (kline 292MB, basis 317MB; metrics/funding giữ mã hoá v1). Tải ngược sha256 **TOÀN BỘ 2 file khớp**.
+- **Kernel đọc kiểm** `chuyendinh/vz-readcheck-202408` (CPU, private, 1 slot): pandas 2.3.3 / **pyarrow 23.0.1** đọc OK; schema `active:bool` đúng; md5 cột ts kline `45e696981c22…` / basis `a637ae7eb593…` **khớp local**.
+
+### Cổng §1.6 (sau 1a)
+- Ngoại suy VZ (kline+basis mã hoá mới; metrics/funding mã hoá cũ): kline 22,04 + basis 22,82 + metrics 8,31 + funding 0,04 = **53,2 GB ≤ 55 GB** ✓
+- Dataset private đang dùng ≈ **16,7 GB** ⇒ 16,7 + 53,2 + 40 (dự phòng Phase 2) = **109,9 GB ≤ 180 GB** ✓
+- **KẾT LUẬN: ĐẠT ⇒ tự sang 1b (không chờ).**
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

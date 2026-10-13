@@ -22,10 +22,14 @@ S3_ENDPOINT = "https://s3-ap-northeast-1.amazonaws.com/data.binance.vision"
 ROOT = os.path.expanduser("~/vz")
 MANIFEST_DIR = os.path.join(ROOT, "manifest")
 TMP_DIR = os.path.join(ROOT, "tmp")
-OUT_DIR = os.path.join(ROOT, "out")
+OUT_DIR = os.environ.get("VZ_OUT_DIR", os.path.join(ROOT, "out"))
 REPORT_DIR = os.path.join(ROOT, "reports")
 STATE_DIR = os.path.join(ROOT, "state")
 LOG_DIR = os.path.join(ROOT, "logs")
+
+# Sealed backcast reservoir governance (docs/plan/BACKCAST_RESERVOIR.md):
+# the 2020 dataset group is sealed -> only V1,V2,V3,V5,V6, no stats beyond counts.
+SEALED_YEAR = "2020"
 
 # S3 type -> (path base under data/futures/um, interval subdir or None, granularity)
 P = "data/futures/um/"
