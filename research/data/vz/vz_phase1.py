@@ -190,21 +190,24 @@ def verify_all(full_id, upload):
     """download the dataset back and compare sha256 of every parquet."""
     import tempfile
     import shutil
+    # per-file download (CLI 1.6.17 full-dataset download returns 404 for these)
     w = tempfile.mkdtemp(dir=os.path.join(VZ, "tmp"))
-    subprocess.run(["kaggle", "datasets", "download", "-d", full_id, "-p", w, "--unzip"],
-                   check=True, env=os.environ)
     ok = True
     for f in sorted(os.listdir(upload)):
         if not f.endswith(".parquet"):
             continue
-        hits = [os.path.join(root, f) for root, _d, fs in os.walk(w) if f in fs]
-        if not hits:
-            log.error("verify %s missing remotely", f)
+        r = subprocess.run(["kaggle", "datasets", "download", "-d", full_id,
+                            "-f", f, "-p", w, "--unzip"],
+                           capture_output=True, text=True, env=os.environ)
+        got = os.path.join(w, f)
+        if r.returncode != 0 or not os.path.exists(got):
+            log.error("verify %s download failed rc=%d %s", f, r.returncode, r.stderr[-200:])
             ok = False
             continue
-        if sha256(os.path.join(upload, f)) != sha256(hits[0]):
+        if sha256(os.path.join(upload, f)) != sha256(got):
             log.error("verify %s sha256 MISMATCH", f)
             ok = False
+        os.remove(got)
     shutil.rmtree(w, ignore_errors=True)
     return ok
 
@@ -307,4 +310,12 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except Exception as e:  # noqa: BLE001
+        log.exception("PHASE1b FATAL")
+        try:
+            notify("[VZ P1] 1b DUNG do loi: %s (xem ~/vz/logs/phase1b.log)" % str(e)[:300])
+        except Exception:  # noqa: BLE001
+            pass
+        sys.exit(1)
