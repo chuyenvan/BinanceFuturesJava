@@ -138,3 +138,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 - Fix: `np.nanpercentile` + lọc finite trước (hàm `p99`), thêm `n_nan_active_rows` vào report. Ngưỡng §1.5 giữ nguyên (mark<1%, prem<2%, trên dòng ACTIVE).
 - Xác nhận: basis1m 2024-02 → V5 PASS (p99 prem 0,0026; mark 0,0017).
 - Mã hoá chốt: `VZ_ENC=plaindelta` (float plain + ts DELTA_BINARY_PACKED), KHÔNG đổi nữa.
+
+## 10. Fix idempotency tháng pilot (2026-10-13 22:51)
+- Bug: 2024-08 là tháng pilot — fetch state "done" nhưng ZIP đã bị xoá ⇒ build/V6 không có input ⇒ metrics5m parquet rỗng (969 B) ⇒ V6 FAIL (không phải lỗi dữ liệu).
+- Fix driver `vz_phase1.py`: `ensure_fetch()` phát hiện state done nhưng ZIP thiếu (đếm < n_ok) ⇒ xoá state + FETCH LẠI; `build_done()` chặt hơn (rows>0, file tồn tại, size == parquet_bytes).
+- Reset 2024-08 cho metrics5m + funding (xoá state fetch/build + parquet + report) để BUILD LẠI mã hoá mới rồi V6 PASS. Rà toàn bộ state build: chỉ 1 anomaly (metrics5m 2024-08).

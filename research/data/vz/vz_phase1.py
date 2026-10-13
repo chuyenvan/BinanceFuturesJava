@@ -78,7 +78,48 @@ def fetch_done(typ, ym):
 
 
 def build_done(ds, ym):
-    return os.path.exists(os.path.join(VZ, "state", "build", ds, ym + ".json"))
+    """True only when the build state exists AND the output parquet is present,
+    non-empty and its size matches the recorded one (guards pilot/empty builds)."""
+    sp = os.path.join(VZ, "state", "build", ds, ym + ".json")
+    op = os.path.join(VZ, "out", ds, ym[:4], ym + ".parquet")
+    if not (os.path.exists(sp) and os.path.exists(op)):
+        return False
+    try:
+        d = json.load(open(sp))
+    except Exception:  # noqa: BLE001
+        return False
+    sz = os.path.getsize(op)
+    if d.get("rows", 0) <= 0 or sz < 2000:
+        return False
+    return d.get("parquet_bytes", sz) == sz
+
+
+def zips_present(typ, ym):
+    d = os.path.join(VZ, "tmp", typ, ym)
+    if not os.path.isdir(d):
+        return 0
+    return sum(1 for f in os.listdir(d) if f.endswith(".zip"))
+
+
+def ensure_fetch(typ, ym):
+    """Fetch if needed. Also refetch when the fetch state says done but the zips
+    are gone (e.g. the pilot month, whose zips were deleted after parsing)."""
+    p = os.path.join(VZ, "state", typ, ym + ".json")
+    done, n_ok = False, 0
+    if os.path.exists(p):
+        try:
+            d = json.load(open(p))
+            done, n_ok = bool(d.get("fetch_done")), int(d.get("n_ok", 0))
+        except Exception:  # noqa: BLE001
+            done = False
+    present = zips_present(typ, ym)
+    if done and present > 0 and present >= n_ok:
+        return
+    if os.path.exists(p):
+        os.remove(p)
+        log.warning("zips missing for %s %s (state done n_ok=%d present=%d) -> refetch",
+                    typ, ym, n_ok, present)
+    run([PY, "vz_fetch.py", typ, ym])
 
 
 def report_ok(ds, ym):
@@ -93,15 +134,16 @@ def report_ok(ds, ym):
 
 def do_month(year, ym):
     for ds in DS_ORDER:
-        for typ in NEEDED[ds]:
-            if not fetch_done(typ, ym):
-                run([PY, "vz_fetch.py", typ, ym])
-        if not build_done(ds, ym):
-            run([PY, "vz_build.py", ds, ym])
+        bd = build_done(ds, ym)
         r = report_ok(ds, ym)
-        if r is None or not r["ok"]:
-            run([PY, "vz_validate.py", ds, ym])
-            r = report_ok(ds, ym)
+        if bd and r and r["ok"]:
+            continue
+        for typ in NEEDED[ds]:
+            ensure_fetch(typ, ym)
+        if not bd:
+            run([PY, "vz_build.py", ds, ym])
+        run([PY, "vz_validate.py", ds, ym])  # build or stale/failed report -> validate
+        r = report_ok(ds, ym)
         if not r["ok"]:
             raise RuntimeError("VALIDATE FAIL %s %s -> %s" % (ds, ym, r["status"]))
     # drop zips for the month
