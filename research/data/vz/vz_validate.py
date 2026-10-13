@@ -168,6 +168,14 @@ def v4(parquet, ym, sample_n=2000):
 
 def v5(basis_parquet, kline_parquet):
     # global p99 over the month on ACTIVE rows; stale rows/symbols reported separately.
+    def p99(arr):
+        # ignore non-finite values (a few NaN mark/prem rows must not NaN the p99)
+        a = np.asarray(arr, dtype="float64")
+        a = a[np.isfinite(a)]
+        if a.size == 0:
+            return float("nan")
+        return float(np.nanpercentile(a, 99))
+
     kb = {}
     for df in rowgroup_iter(kline_parquet, columns=["ts", "sym", "close", "quote_volume"]):
         if df.empty:
@@ -201,19 +209,21 @@ def v5(basis_parquet, kline_parquet):
         amr = (a["mark_close"] / a["close"] - 1).abs()
         act_m.append(amr.values)
         act_p.append(a["prem_close"].abs().values)
-        sym_max.append((round(float(amr.quantile(0.99)), 5), sym))
+        sym_max.append((round(p99(amr.values), 5), sym))
     am = np.concatenate(act_m) if act_m else np.array([0.0])
     ap = np.concatenate(act_p) if act_p else np.array([0.0])
     olm = np.concatenate(all_m) if all_m else np.array([0.0])
-    gmark = float(np.percentile(am, 99))
-    gprem = float(np.percentile(ap, 99))
+    n_nan_active = int(np.size(am) - np.isfinite(am).sum())
+    gmark = p99(am)
+    gprem = p99(ap)
     sym_max.sort(reverse=True)
     return {
         "status": "PASS" if gmark < 0.01 and gprem < 0.02 else "FAIL",
         "global_mark_p99_active": round(gmark, 6),
         "global_prem_p99_active": round(gprem, 6),
-        "global_mark_p99_allrows": round(float(np.percentile(olm, 99)), 6),
+        "global_mark_p99_allrows": round(p99(olm), 6),
         "n_rows_active": int(n_active_rows),
+        "n_nan_active_rows": n_nan_active,
         "n_stale_rows": int(n_stale_rows),
         "n_stale_syms_excluded": len(stale),
         "stale_syms": sorted(stale),

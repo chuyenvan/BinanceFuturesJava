@@ -132,3 +132,9 @@ khi bật kèm thì high-entropy mantissa planes làm zstd nén kém hơn. Ngu�
 - **KẾT LUẬN: ĐẠT ⇒ tự sang 1b (không chờ).**
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+## 9. Fix V5 NaN (2026-10-13)
+- Bug: `np.percentile` trong V5 trả NaN khi bất kỳ dòng active nào có mark/prem NaN (basis1m 2024-02 chỉ 186 NaN/10.599.908 dòng) ⇒ FAIL GIẢ.
+- Fix: `np.nanpercentile` + lọc finite trước (hàm `p99`), thêm `n_nan_active_rows` vào report. Ngưỡng §1.5 giữ nguyên (mark<1%, prem<2%, trên dòng ACTIVE).
+- Xác nhận: basis1m 2024-02 → V5 PASS (p99 prem 0,0026; mark 0,0017).
+- Mã hoá chốt: `VZ_ENC=plaindelta` (float plain + ts DELTA_BINARY_PACKED), KHÔNG đổi nữa.
