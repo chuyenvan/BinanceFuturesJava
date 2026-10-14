@@ -17,7 +17,7 @@ Ngày 2026-10-14 · `research/vz-e1` · dữ liệu `vz-*-2024` (Vision), net sa
 
 ## 1. Số phép thử
 
-**Tổng số phép thử đã tính outcome (từ sổ `docs/research/VZ_EXPLORE_LEDGER.md`): 38** (30 của T2–T6 + 8 của T9). (T2 mô tả thuần = 0; (c) H-E T9 bổ sung thống kê trên cùng dữ liệu T6 = 0 phép thử mới.) Hệ số nở CI khi xác nhận (k = 30): sqrt(2 ln 30) = 2.608; nếu tính cả k = 38: 2.696.
+**Tổng số phép thử đã tính outcome (từ sổ `docs/research/VZ_EXPLORE_LEDGER.md`): 38** (30 của T2–T6 + 8 của T9). (T2 mô tả thuần = 0; (c) H-E T9 bổ sung thống kê trên cùng dữ liệu T6 = 0 phép thử mới.) Hệ số nở CI khi xác nhận (k = 30): sqrt(2 ln 30) = 2.608; nếu tính cả k = 38: 2.696. **Cập nhật 10-14 (Q1–Q4):** + Q2 4 phép thử + Q4 8 phép thử (Q1 tính lại chi phí = 0; Q3 BLOCKED = 0) ⇒ **tổng 50** (xem §6c).
 
 ## 2. H-A (T2) — profile quanh phút sập (0 phép thử)
 
@@ -153,6 +153,62 @@ Bản stress (bucket stress) — đổi rất ít, không đổi kết luận:
 - **Không hỗ trợ:** A1 (ΔOI60) trên chân; A3 (prem z7) tuy 240′ −3,4 % nhưng CI chứa 0; hold-to-exit (trung vị 12 h) **không** cho thấy edge nào tách 0 ở bất kỳ biến thể (a).
 - **Giới hạn mẫu (a):** 3 628/6 709 chân vào lệnh ngoài định nghĩa sự kiện crash E1 ⇒ mẫu thật chỉ ~3,0 nghìn chân, **power thấp hơn cả dự liệu ±0,8 %**.
 - **KHÔNG gọi GO**, không đề xuất pre-reg xác nhận.
+
+## 6c. Q1–Q4 (MASTER 10-14) — phí, tuổi symbol trên chân hệ, chi phí vào theo phút, H-F imbalance
+
+### 6c.1 Q1 — giả định phí (0 phép thử mới; tính lại mọi bảng net T3–T9)
+`SIM_RATE_FEE = 0,000982` là phí **KHỨ HỒI (2 chân)** và sim trừ **ĐÚNG MỘT LẦN** trên notional: `OrderTargetInfoTest.calTp`
+dòng 282–283 (BUY) / 285–286 (SELL) trừ `quantity·priceEntry·RATE_FEE` một lần; `tradecore/Configs.java:103`
+("đã sửa thành 2 chân"), `:185`; `docs/result/RESULT_AUDIT_PNL.md:126` ("2× mốc taker thật 0,05 %/chân × 2 = 0,001").
+⇒ E1 cũ cộng `2 × 0,000982` là **đếm gấp đôi**: đã sửa (`e1_common.FEE_ROUNDTRIP`, `cost_of` cộng **một lần**), tính lại T3–T9
+(`e1_recompute_costs.py`, `reports/fee_recompute.json`). **Spread nhóm bất biến** (max |Δ| ≤ 2,8e-17 ≤ 1e-9) — không đổi thước nào,
+chỉ **mức** net dịch đều **+0,000982**. Thêm "Addendum 1" vào `docs/prereg/PREREG_VZ_B4.md`; **luật GO không đổi** (dựa trên spread).
+
+Bảng kịch bản phí — net TB **sự kiện crash 2024** (đã trừ bucket EXEC thực; chỉ mô tả):
+
+| kịch bản khứ hồi | phí | net 60′ | net 240′ | net 24h |
+|---|---|---|---|---|
+| sim `SIM_RATE_FEE` (đang dùng) | 0,0982 % | −0,122 % | +0,043 % | +0,251 % |
+| taker/taker | 0,100 % | −0,124 % | +0,041 % | +0,249 % |
+| taker/taker BNB (−10 %) | 0,090 % | −0,114 % | +0,051 % | +0,259 % |
+| maker vào + taker ra | 0,070 % | −0,094 % | +0,071 % | +0,279 % |
+| maker vào + taker ra BNB | 0,063 % | −0,087 % | +0,078 % | +0,286 % |
+| *(bản cũ, SAI)* 2 × 0,000982 | 0,1964 % | −0,220 % | −0,055 % | +0,152 % |
+
+### 6c.2 Q2 — lọc tuổi symbol trên 6 709 chân hệ (4 biến thể)
+Tuổi lúc vào: chân khớp sự kiện E1 lấy tuổi chính xác (`sym_age_days`); chân không khớp lấy proxy (s_ms − sự kiện đầu của symbol trong 2024).
+Nhóm: 0–7 = 616, 8–30 = 437, 31–90 = 669, >90 = 570, **không rõ = 4 417** (2 292 chân có tuổi).
+net hold-to-exit TB: 0–7 **+3,99 %**, 8–30 +4,03 %, 31–90 +4,72 %, >90 **+6,56 %**, không rõ +3,03 %.
+net 240′ TB **giảm dần theo tuổi**: 0–7 **+4,22 %** → 8–30 +3,53 % → 31–90 +2,25 % → >90 **+1,31 %**.
+Loại chân ≤30 ngày (1 053 chân = 15,7 %) bỏ **17,2 %** Σ net_exit; ≤7 ngày (616 = 9,2 %) bỏ **10,0 %**; mean/leg phần bị loại
+**không xấu hơn** (+4,01 % vs +3,59 %). ⇒ hệ **phụ thuộc đáng kể vào coin mới** (17 % ΣPnL) nhưng các chân đó không kém ⇒ **không GO**.
+
+### 6c.3 Q3 — chi phí vào theo phút-trong-giờ: **BLOCKED**
+File per-leg EXEC `~/claude_master/1012/exec/legs.pkl` (`exec_legs.py`) **đã bị xoá**; chỉ còn `need.json`, log và `docs/result/exec_result.json` (aggregate); cache agg/kl đã xoá. Theo yêu cầu **KHÔNG tải lại aggTrades** (Phase 2 chưa mở) ⇒ không dựng được bảng chi phí vào theo phút-trong-giờ.
+
+### 6c.4 Q4 — H-F: imbalance tại mốc 15′ → return 4h/12h (8 biến thể)
+Sự kiện: phút :00/:15/:30/:45 (active, `quote_volume ≥ 50 000`); `imb = 2·taker_buy_quote/quote_volume − 1`; `imb_dev15 = imb − TB 15′ trước`.
+Outcome: log return close→+4h/+12h (bỏ nếu vượt 2024). Thước: IC Spearman cắt ngang mỗi mốc (TB) + spread quintile trên−dưới; CI bootstrap ngày (block 5, NREP 2000, seed 20261014).
+
+| biến thể | n/mốc | IC TB [CI95] | spread quintile [CI95] |
+|---|---|---|---|
+| M00 4h imb | 8 778 | −0,0032 [−0,0060, −0,0002] | +0,00006 [−0,00015, +0,00027] |
+| M00 4h imb_dev15 | 8 766 | −0,0034 [−0,0060, −0,0006] | −0,00010 [−0,00030, +0,00011] |
+| M00 12h imb | 8 770 | −0,0006 [−0,0036, +0,0026] | −0,00000 [−0,00035, +0,00038] |
+| M00 12h imb_dev15 | 8 758 | +0,0007 [−0,0022, +0,0038] | +0,00001 [−0,00038, +0,00041] |
+| M15 4h imb | 35 114 | −0,0064 [−0,0083, −0,0047] | −0,00019 [−0,00030, −0,00007] |
+| M15 4h imb_dev15 | 35 102 | −0,0054 [−0,0071, −0,0038] | −0,00022 [−0,00034, −0,00010] |
+| M15 12h imb | 35 082 | −0,0043 [−0,0059, −0,0026] | −0,00021 [−0,00043, +0,00001] |
+| M15 12h imb_dev15 | 35 070 | −0,0033 [−0,0049, −0,0016] | −0,00026 [−0,00047, −0,00004] |
+
+Đọc: ở nhóm M15 (mẫu lớn) imbalance **có** IC âm tách khỏi 0 (nghiêng taker mua ⇒ return tới hơi giảm, mean-reversion) nhưng **độ lớn không đáng kể kinh tế**:
+spread quintile chỉ **−2 đến −2,6 bps**, nhỏ hơn chi phí khứ hồi (~10 bps) một bậc; nhóm chỉ mốc :00 (M00) gần 0.
+Bản gốc dùng 10 giây đầu từ trade; ở đây xấp xỉ **bar 1 phút** (giới hạn đã ghi). **Không GO**.
+
+### 6c.5 Tổng kết Q1–Q4
+- Phép thử mới: **Q2 = 4, Q4 = 8** (Q1 = 0 tính lại chi phí; Q3 = 0, BLOCKED) ⇒ sổ **38 → 50**.
+- Ứng viên mới (≤2, **không GO**): (i) **tuổi symbol** — hệ lấy **17,2 %** ΣPnL từ coin ≤30 ngày và chân non **không tệ hơn** ⇒ yếu tố "listing mới" đáng mô tả, chưa phải alpha đã chứng minh; (ii) **H-F imbalance** — IC tồn tại nhưng **quá nhỏ so với chi phí** ⇒ loại.
+- **B4** (đảo chiều taker → net 24h) **vẫn là ứng viên chính**, chờ xác nhận 2022/2023/2025 (Q6 — WAITING).
 
 ## 7. Xếp hạng ≤ 3 ứng viên (KHÔNG gọi GO)
 
