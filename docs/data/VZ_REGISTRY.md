@@ -150,3 +150,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 - Backfill 30 state build sẵn có: XÁC MINH mã hoá thật trong parquet (ts=DELTA_BINARY_PACKED, float=PLAIN, zstd) rồi mới ghi `enc` — đủ 30/30 đúng, 0 phải build lại.
 - Xoá thủ công 2 file pilot mã hoá cũ (metrics5m/funding 2024-08) + report + state → build lại.
 - Dọn: `~/vz/tmp/tmpiomm0faf`, `~/vz/tmp/_v6`, `~/vz/pilot_v1` (908MB). Đĩa trống 37 GB.
+
+## 12. Sửa định nghĩa V2 sau một FAIL (2026-10-14)
+- FAIL kline1m 2024-09 (V2): V2 CŨ `missing_min_frac=0,001118 (0,1118%)` ⇒ FAIL. Định nghĩa cũ "số ngày có dữ liệu × 1440" phạt oan symbol niêm yết/gỡ giữa tháng.
+- ĐỊNH NGHĨA MỚI: phút kỳ vọng mỗi symbol/tháng = **mọi phút từ ts ĐẦU đến ts CUỐI có dữ liệu**. Giữ ngưỡng thiếu ≤ 0,1 %.
+- **2024-09: V2 MỚI `0,0` (0 phút thiếu / 13.168.462 phút kỳ vọng, 316 symbol) ⇒ PASS.**
+- Xác nhận nguyên nhân: UXLINKUSDT first=2024-09-15 15:00 · last=2024-09-30 23:59 (niêm yết mid-month, rows=span=22140, missing=0, cutFirst=900′). MATICUSDT first=2024-09-01 00:00 · last=2024-09-11 09:42 (gỡ/đổi tên, rows=span=14983, missing=0, cutLast=857′). Toàn bộ "thiếu" cũ nằm ở ngày niêm yết/gỡ.
+- BÁO THÊM (info, không FAIL): `cut_first_last_*` (phút cắt ngày đầu/cuối) + danh sách khoảng trống LIÊN TỤC > 60′ giữa khoảng niêm yết. Toàn 2024: **0 khoảng trống > 60′**.
+- Chạy lại V2 (không build lại, V6 giữ nguyên) cho kline1m 2024-01→09, ghi đè validate.json: tất cả V2 PASS (0,0).

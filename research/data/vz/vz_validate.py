@@ -56,18 +56,64 @@ def v1(ds, ym):
             "n_ok": ok, "n_bad": bad, "n_missing": missing}
 
 
-def v2_v3(parquet):
-    per = {}
-    viol = 0
-    checked = 0
-    for df in rowgroup_iter(parquet, columns=["ts", "sym", "open", "high", "low", "close",
-                                              "quote_volume", "taker_buy_quote", "n_trades"]):
+GAP_MIN = 60  # report continuous gaps longer than this many minutes
+
+
+def v2_stats(parquet):
+    """V2 (2026-10-14 definition): for each symbol the expected number of minutes
+    in the month is every minute between its first and last data ts (inclusive).
+    missing = span - rows. Info only (never FAIL): minutes cut on the first/last
+    day (listing/delisting) and continuous gaps > GAP_MIN inside the span."""
+    sym_stats = []
+    for df in rowgroup_iter(parquet, columns=["ts", "sym"]):
         if df.empty:
             continue
         sym = str(df["sym"].iloc[0])
-        day = (df["ts"] // 86400000).astype("int64")
-        cnt = day.value_counts()
-        per[sym] = cnt
+        ts = np.sort(df["ts"].to_numpy().astype("int64"))
+        n = int(len(ts))
+        if n == 0:
+            continue
+        first, last = int(ts[0]), int(ts[-1])
+        span = (last - first) // 60000 + 1
+        missing = int(span - n)
+        step = np.diff(ts)
+        gi = np.where(step > (GAP_MIN + 1) * 60000)[0]
+        gaps = [(sym, int(ts[i]) + 60000, int(step[i] // 60000 - 1)) for i in gi]
+        cut_first = int((first % 86400000) // 60000)
+        cut_last = 1440 - 1 - int((last % 86400000) // 60000)
+        sym_stats.append((sym, n, int(span), missing, cut_first, cut_last, gaps))
+    tot_missing = sum(s[3] for s in sym_stats)
+    tot_span = sum(s[2] for s in sym_stats)
+    miss_frac = (tot_missing / tot_span) if tot_span else 0.0
+    worst = sorted(((s[3], s[0]) for s in sym_stats), reverse=True)
+    gaps_all = [g for s in sym_stats for g in s[6]]
+    gaps_all.sort(key=lambda g: g[2], reverse=True)
+    cuts = sorted(((s[4] + s[5], s[0], s[4], s[5]) for s in sym_stats), reverse=True)
+    v2 = {
+        "status": "PASS" if miss_frac <= 0.001 else "FAIL",
+        "def": "expected=every minute between first and last data ts (per symbol,month)",
+        "missing_min_frac": round(miss_frac, 6),
+        "n_symbols": len(sym_stats),
+        "total_missing_min": tot_missing,
+        "total_expected_min": tot_span,
+        "top_missing": worst[:10],
+    }
+    info = {
+        "cut_first_last_total_min": sum(s[4] + s[5] for s in sym_stats),
+        "cut_first_last_top": cuts[:10],
+        "n_gaps_gt60": len(gaps_all),
+        "gaps_gt60": gaps_all[:200],
+    }
+    return v2, info
+
+
+def v3_check(parquet):
+    viol = 0
+    checked = 0
+    for df in rowgroup_iter(parquet, columns=["open", "high", "low", "close",
+                                              "quote_volume", "taker_buy_quote", "n_trades"]):
+        if df.empty:
+            continue
         d = df
         lo_ok = d["low"] <= np.minimum(d["open"], d["close"]) + 1e-12
         hi_ok = np.maximum(d["open"], d["close"]) <= d["high"] + 1e-12
@@ -77,30 +123,12 @@ def v2_v3(parquet):
         n_ok = d["n_trades"] >= 0
         viol += int((~lo_ok).sum() + (~hi_ok).sum() + (~t_ok).sum() + (~n_ok).sum())
         checked += len(d)
-    # V2
-    tot_missing = 0
-    tot_exp = 0
-    bad_days = 0
-    worst = []
-    for sym, cnt in per.items():
-        days = cnt.index.to_numpy()
-        sym_missing = 0
-        for dd, n in zip(days, cnt.to_numpy()):
-            if not (1 <= n <= 1440):
-                bad_days += 1
-            m = max(0, 1440 - int(n))
-            sym_missing += m
-            tot_missing += m
-            tot_exp += 1440
-        worst.append((sym_missing, sym))
-    miss_frac = (tot_missing / tot_exp) if tot_exp else 0.0
-    worst.sort(reverse=True)
-    return {
-        "v2": {"status": "PASS" if bad_days == 0 and miss_frac <= 0.001 else "FAIL",
-               "days_out_of_range": bad_days, "missing_min_frac": round(miss_frac, 6),
-               "top_missing": worst[:10]},
-        "v3": {"status": "PASS" if viol == 0 else "FAIL", "violations": viol, "rows": checked},
-    }
+    return {"status": "PASS" if viol == 0 else "FAIL", "violations": viol, "rows": checked}
+
+
+def v2_v3(parquet):
+    v2, info = v2_stats(parquet)
+    return {"v2": v2, "v3": v3_check(parquet), "v2_info": info}
 
 
 def load_closes(year, sample_n=2000, seed=42):
@@ -277,6 +305,7 @@ def main():
         v23 = v2_v3(parquet)
         res["V2"] = v23["v2"]
         res["V3"] = v23["v3"]
+        res["V2_info"] = v23["v2_info"]
         if year == "2020":  # sealed reservoir: V4 internal CLOSES_1H starts 2021
             res["V4"] = {"status": "SKIP", "reason": "sealed 2020 (no internal CLOSES_1H)"}
         else:
