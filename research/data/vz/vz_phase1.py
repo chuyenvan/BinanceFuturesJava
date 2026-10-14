@@ -186,6 +186,27 @@ def sha256(p):
     return h.hexdigest()
 
 
+def clear_staging(upload):
+    """Delete the uploaded parquet staging IMMEDIATELY after the round-trip sha256
+    check succeeded (B2). README/metadata/anomalies.csv stay (a few KB) so a later
+    `datasets version` can still find dataset-metadata.json."""
+    n = 0
+    for f in os.listdir(upload):
+        if f.endswith(".parquet"):
+            os.remove(os.path.join(upload, f))
+            n += 1
+    if n:
+        log.info("staging cleared: %d parquet removed from %s", n, upload)
+
+
+def stage_anomalies(ds, year, upload):
+    """Ship the dataset's anomalies.csv with the upload (consumers skip those rows)."""
+    src = os.path.join(VZ, "out", ds, year, "anomalies.csv")
+    if os.path.exists(src):
+        shutil.copy2(src, os.path.join(upload, "anomalies.csv"))
+        log.info("staged anomalies.csv (%d bytes) -> %s", os.path.getsize(src), upload)
+
+
 def combine_year(ds, year):
     """metrics5m/funding: concat monthly parquet of a year into one yearly file."""
     import pandas as pd
@@ -225,6 +246,9 @@ def write_readme_year(upload, slug, rg, meta):
         lines.append("| %s | %s | %d | %s |" % (
             f, meta["rows"].get(f, ""), os.path.getsize(p), sha256(p)))
     lines += ["", "validate: V1-V6 per month (see registry / Kaggle files).", ""]
+    if os.path.exists(os.path.join(upload, "anomalies.csv")):
+        lines += ["anomalies.csv: rows flagged by validate (V3). Consumers MUST skip "
+                  "these (sym, ts) rows; the underlying data is unchanged.", ""]
     open(os.path.join(upload, "README.md"), "w").write("\n".join(lines))
 
 
@@ -354,8 +378,11 @@ def registry_append(text):
 
 
 def git_commit(msg):
-    subprocess.run(["git", "add", "-A"], cwd=WT, check=False)
-    subprocess.run(["git", "commit", "-m", msg], cwd=WT, check=False)
+    """Commit ONLY the repo file this driver owns. Never `git add -A` (a stray data
+    file must never reach the repo) and never touch anything but the registry."""
+    files = ["docs/data/VZ_REGISTRY.md"]
+    subprocess.run(["git", "add", "--"] + files, cwd=WT, check=False)
+    subprocess.run(["git", "commit", "-m", msg, "--"] + files, cwd=WT, check=False)
     subprocess.run(["git", "push", "origin", "data/vz-lake"], cwd=WT, check=False)
 
 
@@ -394,6 +421,15 @@ def main():
             log.info("---- %s ----", ym)
             do_month(year, ym)
         # upload per ds
+        year_consumed = (
+            not any(os.path.exists(os.path.join(VZ, "out", "kline1m", year, ym + ".parquet"))
+                    for ym in months)
+            and not any(os.path.exists(os.path.join(VZ, "out", "basis1m", year, ym + ".parquet"))
+                        for ym in months))
+        if year_consumed:
+            log.info("YEAR %s: no local kline/basis left -> already uploaded+consumed, "
+                     "skip upload/registry/commit", year)
+            continue
         stats = year_stats(year, months)
         slug_year = "2020s" if year in SEALED else year
         gov = ("SEALED - chi dung theo docs/plan/BACKCAST_RESERVOIR.md" if year in SEALED
@@ -406,7 +442,8 @@ def main():
                 src = os.path.join(VZ, "out", ds, year, ym + ".parquet")
                 dst = os.path.join(upload, "%s-%s.parquet" % (ds, ym))
                 if os.path.exists(src) and not os.path.exists(dst):
-                    os.link(src, dst)
+                    os.link(src, dst)  # HARD LINK (cp -l): staging costs no extra bytes
+            stage_anomalies(ds, year, upload)
             meta = {"gov": gov, "rows": {}}
             write_readme_year(upload, "vz-%s-%s" % (ds, year), gov, meta)
             slug = "vz-%s-%s" % (ds, slug_year)
@@ -415,13 +452,17 @@ def main():
             if not ok:
                 raise RuntimeError("VERIFY FAIL %s" % full)
             log.info("UPLOAD+VERIFY OK %s", full)
+            clear_staging(upload)
             registry_append(
                 "\n## P1b %s (%s)\n- slug `%s`; files %d; bytes %d; rows %d; syms~%d; gov %s\n" % (
                     ds, year, full, len(months), stats[ds]["bytes"], stats[ds]["rows"],
                     stats[ds]["syms"], gov))
-            # delete local year (only kline/basis)
+            # delete local year (only kline/basis); anomalies.csv is kept (tiny,
+            # and it must survive for the next upload/round-trip check)
             import glob as _g
             for p in _g.glob(os.path.join(VZ, "out", ds, year, "*")):
+                if os.path.basename(p) == "anomalies.csv":
+                    continue
                 os.remove(p)
         # metrics5m / funding shared datasets
         for ds in ["metrics5m", "funding"]:
@@ -431,7 +472,11 @@ def main():
             upload = os.path.join(VZ, "upload", "vz-" + ds)
             meta = {"gov": gov, "rows": {}}
             write_readme_year(upload, "vz-" + ds, "all years", meta)
-            upload_auto("vz-" + ds, upload)
+            full = upload_auto("vz-" + ds, upload)
+            if not verify_all(full, upload):
+                raise RuntimeError("VERIFY FAIL %s" % full)
+            log.info("UPLOAD+VERIFY OK %s", full)
+            clear_staging(upload)
         git_commit("data(vz): Phase1b year %s - build+validate+upload vz-kline1m/basis1m-%s; metrics/funding updated" % (year, slug_year))
         ymsg = ("[VZ P1] nam %s xong: kline %s MB / basis %s MB; V1-V6 PASS; upload + verify sha256 OK; %.1f h" % (
             year, round(stats["kline1m"]["bytes"] / 1e6), round(stats["basis1m"]["bytes"] / 1e6),
