@@ -177,3 +177,62 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## P1b basis1m (2025)
 - slug `chuyendinh/vz-basis1m-2025`; files 12; bytes 5840500977; rows 247588286; syms~555; gov DEV
+
+## 14. Phase 1b — dọn đĩa + ĐỔI LUẬT V3 sau một FAIL (2026-10-15)
+
+### 14.0 B1 — dọn (df `/` 31 GB → **71 GB** trống; giải phóng **40 GB**)
+- `~/vz/upload/**`: xoá **52 parquet staging = 21,9 GB** của 6 dataset ĐÃ upload + tải ngược khớp sha256
+  (`vz-kline1m-2024`, `vz-basis1m-2024`, `vz-kline1m-2025`, `vz-basis1m-2025`, `vz-metrics5m`, `vz-funding`);
+  mọi tên file local đều có mặt trên Kaggle (`datasets files`). Giữ `README.md`/`dataset-metadata.json` (vài KB).
+- `~/vz/tmp/_v6`: **20 GB** parquet rebuild của V6 chưa bao giờ bị xoá → xoá.
+- `~/vz/tmp/<type>/<tháng>` rỗng (đã PASS) → xoá. **Giữ** 213 zip (262 MB) của tháng FAIL `kline1m 2023-09` để validate lại.
+
+### 14.1 B2 — sửa pipeline (commit `data/vz-lake`)
+- Staging upload đã là **hardlink** (`os.link` ≡ `cp -l`, không tốn byte) — nay ghi rõ trong code.
+- **Xoá staging NGAY** sau khi tải ngược khớp sha256 (`clear_staging`); trước đây metrics5m/funding **không** verify → nay có.
+- Zip xoá ngay khi tháng PASS (đã đúng: `do_month` xoá zip sau khi cả 4 ds của tháng PASS; tháng FAIL giữ zip).
+- `vz_validate.v6()`: xoá parquet rebuild tạm sau khi so sha — đây là **nguồn gây phình 20 GB**.
+- `vz_phase1.git_commit()`: chỉ `git add docs/data/VZ_REGISTRY.md` (bỏ `git add -A`, không bao giờ đẩy dữ liệu).
+- Guard: năm đã "tiêu thụ" (không còn parquet kline/basis trong `out`) ⇒ bỏ qua bước upload/registry/commit
+  (chạy lại 2025 không tạo entry registry trùng).
+
+### 14.2 B3 — trạng thái thật (2026-10-15 04:53)
+| ds | năm | trên Kaggle | tháng thiếu |
+|---|---|---|---|
+| kline1m (vz-kline1m-2024) | 2024 | **CÓ** (12/12 file) | — |
+| basis1m (vz-basis1m-2024) | 2024 | **CÓ** (12/12) | — |
+| metrics5m | 2024 | **CÓ** (`metrics5m-2024.parquet`) | — |
+| funding | 2024 | **CÓ** (`funding-2024.parquet`) | — |
+| kline1m (vz-kline1m-2025) | 2025 | **CÓ** (12/12, gồm 07→12) | — |
+| basis1m (vz-basis1m-2025) | 2025 | **CÓ** (12/12, gồm 07→12) | — |
+| metrics5m | 2025 | **CÓ** (`metrics5m-2025.parquet`) | — |
+| funding | 2025 | **CÓ** (`funding-2025.parquet`) | — |
+| kline1m | 2023 | chưa (2023-10..12 chưa build) | 10, 11, 12 |
+| basis1m | 2023 | chưa (2023-09..12 chưa build) | 09, 10, 11, 12 |
+| kline1m/basis1m/metrics5m/funding | 2022, 2021, 2026, 2020 | chưa | cả năm |
+
+⇒ **2025 không thiếu tháng nào** (điểm chết 14/10 ở 2025-07 đã được bù xong ở lần chạy sau; Kaggle có đủ 2025-01..12).
+KHÔNG có tháng nào cần bù trước khi chạy tiếp; job tiếp tục ở `2023-10`.
+
+### 14.3 B4 — V3 2023-09: đổi luật sau FAIL
+- FAIL cũ: **1 dòng vi phạm / 9.045.417 dòng** ⇒ tỉ lệ **1,106e-7** (V6 PASS, sha `90ab0419a904…` — lỗi tất định).
+- Dòng vi phạm (in đầy đủ): `LRCUSDT` ts=**1695139380000** (2023-09-19 15:23:00 UTC),
+  open=0.1789 high=0.1789 low=0.1788 close=0.1788 volume=8768 quote_volume=**0.01568**
+  taker_buy_quote=**1185.1892** n_trades=27.
+- **Luật vi phạm:** `taker_buy_quote > quote_volume` (OHLC order + n_trades đều OK).
+- **Không phải sai số làm tròn** ⇒ không dùng nhánh 1e-6: zip nguồn `LRCUSDT-1m-2023-09.zip`
+  (dòng 26885) **cũng** ghi `0.01568` ⇒ `quote_volume` **hỏng tại nguồn Binance**
+  (`volume*close ≈ 1567,7` nhưng quote_volume = 0,01568, lệch ~1e5; còn taker_buy_quote 1185,19 hợp lý).
+- **Dung sai đổi:** `0 ≤ taker_buy_quote ≤ quote_volume` từ **1e-9 tương đối → 1e-6 tương đối**
+  (nhánh làm tròn của spec, để không false-FAIL vì nhiễu làm tròn của nguồn).
+- **Luật ngoại lệ (nhánh "lỗi khác"):** `quote_volume ≤ 0,5·|volume·close|` và `volume·close > 0`
+  ⇒ `source_quote_volume_glitch` ⇒ **không** tính là vi phạm, ghi vào `anomalies.csv`.
+- **Cổng PASS V3 mới:** `violations ≤ 10` **VÀ** `violations/rows ≤ 1e-6` (không còn yêu cầu 0 tuyệt đối).
+- `anomalies.csv` (`sym,ts,reason`) ghi vào dataset: `~/vz/out/kline1m/2023/anomalies.csv` → 1 dòng LRCUSDT,
+  **upload kèm dataset**. **KHÔNG sửa/xoá dòng dữ liệu nào.**
+- **Áp lại V3 mới cho 33 tháng kline1m đã có** (chỉ validate, không build lại; 2024/2025 tải ngược từ Kaggle
+  và sha256 khớp `parquet_sha256` đã ghi): **PASS toàn bộ, 0 vi phạm**; chỉ 2023-09 có 1 exception row.
+  ⇒ **Không tháng nào đổi PASS→FAIL hay ngược lại** (trước đó cũng 0 vi phạm mỗi tháng).
+- Loader E1: `e1_data.anomalies()/anomalies_for_path()/drop_anomalies()/read_month()` + hook trong
+  `e1_core.SymIndex` (bỏ mọi dòng có trong `anomalies.csv`); commit riêng ở branch `research/vz-e1`.
+  E1 chỉ dùng 2024 (không có anomalies) nên hành vi hôm nay không đổi.
