@@ -162,3 +162,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ## 13. Fix upload/verify too early (2026-10-14 10:10)
 - Job dừng ở UPLOAD: verify `datasets.get` 403 khi dataset còn "being created" ⇒ abort. XÁC MINH không phải lỗi thật: `vz-kline1m-2024` = ready, 12 file khớp 12 local.
 - Fix `vz_phase1.py`: `upload_auto()` → sau create/version **POLL `datasets status` tới ready** (backoff, tối đa ~20'), 403/timeout chỉ CHỜ; `remote_names()` retry khi 403. Bỏ qua upload nếu dataset đã có đủ file. Thêm guard đĩa <30 GB (chỉ khi còn việc cần làm).
+
+## P1b kline1m (2024)
+- slug `chuyendinh/vz-kline1m-2024`; files 12; bytes 3833848788; rows 155015111; syms~370; gov DEV
+
+## P1b kline1m (2024)
+- slug `chuyendinh/vz-kline1m-2024`; files 12; bytes 3833848788; rows 155015111; syms~370; gov DEV
+
+## P1b basis1m (2024)
+- slug `chuyendinh/vz-basis1m-2024`; files 12; bytes 4084338069; rows 153683583; syms~374; gov DEV
