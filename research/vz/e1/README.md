@@ -42,3 +42,30 @@ python3 e1_confirm.py --prereg ../../../docs/prereg/PREREG_VZ_SMOKE.md --smoke-c
 - Lookback 30 ngày cuối 2023 (được phép cho feature) không dùng được vì `vz-basis1m-2023`
   chưa upload ⇒ `prem_z7` là NaN ở ~1 ngày đầu tháng 1.
 - Không có liquidation thật (Vision không có), metrics là 5′.
+
+## T7 — runner xác nhận B4 (chỉ chạy khi lake đủ năm)
+
+`e1_confirm.py` đọc khối YAML của pre-reg `docs/prereg/PREREG_VZ_B4.md` (TỪ CHỐI nếu file chưa
+commit / còn dirty / thiếu key), rồi với các năm xác nhận 2022/2023/2025:
+
+- dựng lại sự kiện E1 **từng năm** từ lake (kline1m) bằng đúng `e1_core.candidates` +
+  `e1_core.compute_features` (commit 6b2ae088); feature chỉ dùng ≤ 30 ngày cuối **năm trước**;
+- tính `net_60/240/1440` (thực + stress) theo công thức e1_core; giữ sự kiện chỉ khi `ts+1440′`
+  nằm trong năm (KHÔNG đọc năm sau);
+- đánh giá `V2_tss_reversal_q5` với **edges đóng băng** `configs/t3_thresholds.json`
+  (kiểm tra trùng khớp pre-reg, KHÔNG tính lại quintile);
+- luật GO 3 điều kiện ⇒ `~/vz_e1/reports/e1_confirm_B4.json` kèm md5 output + hash pre-reg.
+
+Guard: thiếu bất kỳ tháng kline1m nào của năm (hoặc tháng lookback) ⇒ REFUSE rõ ràng, không đọc,
+không bịa. `--fetch` (tuỳ chọn) mới tải tháng thiếu từ dataset Kaggle của năm (sau khi Phase 1
+upload); mặc định chỉ dùng bản local (raw cache hoặc export Phase 1).
+
+```bash
+# chạy ĐÚNG MỘT LẦN khi lake đủ (local):
+python3 e1_confirm.py --prereg ../../../docs/prereg/PREREG_VZ_B4.md --years 2022,2023,2025
+# nếu bản local đã dọn, cho phép tải từ Kaggle:
+python3 e1_confirm.py --prereg ../../../docs/prereg/PREREG_VZ_B4.md --years 2022,2023,2025 --fetch
+# smoke trên 2024 (được phép):
+python3 e1_confirm.py --prereg ../../../docs/prereg/PREREG_VZ_SMOKE.md --smoke-check
+python3 e1_confirm.py --prereg ../../../docs/prereg/PREREG_VZ_SMOKE.md --smoke-engine
+```

@@ -323,6 +323,127 @@ def _load_index(month, store):
     return store[month]
 
 
+# ------------------------------------------------------------------ multi-year engine
+# Reuses the 2024 event definition (`candidates`) and feature code
+# (`compute_features`, unchanged) to build one confirmation year from kline1m.
+KLINE_COLS_NEED = ["ts", "sym", "open", "high", "low", "close", "volume",
+                   "quote_volume", "taker_buy_quote", "active"]
+FWD_MAX_MS = 1440 * 60_000  # 24h, so a Dec event's ts+1440' resolves inside the year
+
+
+def year_months(year):
+    return ["%04d-%02d" % (year, m) for m in range(1, 13)]
+
+
+def _load_kline_index(month, store, fetch=True):
+    """Kline-only SymIndex for a month, cached in `store` (no basis/metrics)."""
+    if month not in store:
+        store[month] = SymIndex(e1_data.month_path(month, "kline", fetch=fetch))
+    return store[month]
+
+
+def _features_kline(fr):
+    """e1_core.compute_features on a kline-only frame (basis columns as NaN).
+
+    B4 (V2_tss_reversal_q5) consumes only `tss_reversal` = taker_sell_share - tss_5,
+    both from kline; the basis-derived columns stay NaN and are unused.
+    """
+    fr = fr.sort_values("ts", kind="stable").reset_index(drop=True)
+    for c in ("prem_close", "mark_close", "index_close"):
+        if c not in fr.columns:
+            fr[c] = np.nan
+    return compute_features(fr)
+
+
+def month_events_year(month, indexes, lookback_ms):
+    """Crash events for one month with net 60'/240'/1440' (real + stress)."""
+    m_start, m_end = month_bounds(month)
+    cand = candidates(indexes["cur"], m_start, m_end)
+    if cand.empty:
+        return pd.DataFrame()
+    rows = []
+    for sym, grp in cand.groupby("sym", sort=False):
+        kparts = []
+        for key, lo, hi in (("prev", m_start - lookback_ms, None),
+                            ("cur", m_start - lookback_ms, None),
+                            ("next", m_end, m_end + FWD_MAX_MS)):
+            sidx = indexes.get(key)
+            if sidx is None:
+                continue
+            d = sidx.read_sym(sym, KLINE_COLS_NEED, ts_lo=lo, ts_hi=hi)
+            if d is not None:
+                kparts.append(d)
+        if not kparts:
+            continue
+        fr = _features_kline(pd.concat(kparts, ignore_index=True))
+        ts_a = fr.ts.to_numpy(np.int64)
+        cl_a = fr.close.to_numpy(np.float64)
+        for ts in grp.ts.to_numpy(np.int64):
+            k = int(np.searchsorted(ts_a, ts))
+            if k >= len(ts_a) or ts_a[k] != ts:
+                continue
+            c0 = cl_a[k]
+            r = fr.iloc[k]
+            row = {"sym": sym, "ts": int(ts), "open": float(r.open), "close": float(c0),
+                   "high": float(r.high), "low": float(r.low),
+                   "quote_volume": float(r.quote_volume),
+                   "taker_sell_share": float(r.taker_sell_share), "tss_5": float(r.tss_5)}
+            row["tss_reversal"] = row["taker_sell_share"] - row["tss_5"]
+            for h in (60, 240, 1440):
+                jj = _asof(ts_a, ts + h * 60_000)
+                row["gross_%d" % h] = (float(np.log(cl_a[jj] / c0))
+                                       if jj > k and ts_a[jj] == ts + h * 60_000
+                                       and cl_a[jj] > 0 and c0 > 0 else np.nan)
+            rows.append(row)
+    ev = pd.DataFrame(rows)
+    if ev.empty:
+        return ev
+    ev["bar_ret"] = ev.close / ev.open - 1.0
+    ev["bucket"] = [bucket_of(c, o) for c, o in zip(ev.close, ev.open)]
+    for h in (60, 240, 1440):
+        ev["net_%d" % h] = ev["gross_%d" % h] - [cost_of(b) for b in ev.bucket]
+        ev["net_stress_%d" % h] = ev["gross_%d" % h] - [cost_of(b, True) for b in ev.bucket]
+    ev["month"] = month
+    ev["day"] = (ev.ts // 86_400_000).astype(np.int64)
+    return ev
+
+
+def build_year_events(year, lookback_days=30, prior_lookback=True, release=True,
+                      fetch=True):
+    """E1 crash events for one year, kline only, net 60'/240'/1440' (real + stress).
+
+    `prior_lookback=False` keeps the feature frame inside `year` (used by the
+    2024 smoke so no data outside 2024 is read). An event whose ts+1440' runs
+    past the year end keeps net_1440 = NaN; the next year is never read.
+    """
+    months = year_months(year)
+    lookback_ms = int(lookback_days * 86_400_000)
+    indexes = {}
+    parts = []
+    for mi, month in enumerate(months):
+        if mi == 0:
+            prev = ("%04d-12" % (year - 1)) if prior_lookback else None
+        else:
+            prev = months[mi - 1]
+        local = {}
+        if prev is not None:
+            local["prev"] = _load_kline_index(prev, indexes, fetch=fetch)
+        local["cur"] = _load_kline_index(month, indexes, fetch=fetch)
+        if mi + 1 < len(months):
+            local["next"] = _load_kline_index(months[mi + 1], indexes, fetch=fetch)
+        d = month_events_year(month, local, lookback_ms)
+        if len(d):
+            parts.append(d)
+        if release and prev is not None:
+            e1_data.release(prev)
+            indexes.pop(prev, None)
+        log.info("year %d %s events=%d", year, month, len(d))
+    ev = pd.concat(parts, ignore_index=True) if parts else pd.DataFrame()
+    if len(ev):
+        ev = ev.sort_values(["ts", "sym"], kind="stable").reset_index(drop=True)
+    return ev
+
+
 def build(months=MONTHS_2024):
     ensure_dirs()
     t0 = time.time()

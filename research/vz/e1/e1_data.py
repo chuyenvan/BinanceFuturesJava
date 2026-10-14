@@ -39,12 +39,67 @@ def _kaggle(ds, fname, dest_dir):
     return dest
 
 
+# dataset slug per year (2024 == DS_KLINE / DS_BASIS above)
+KLINE_SLUG = "chuyendinh/vz-kline1m-%s"
+BASIS_SLUG = "chuyendinh/vz-basis1m-%s"
+
+
+def kline_slug(month):
+    return KLINE_SLUG % month[:4]
+
+
+def basis_slug(month):
+    return BASIS_SLUG % month[:4]
+
+
 def kline_month(month):
-    return _kaggle(DS_KLINE, "kline1m-%s.parquet" % month, RAW)
+    return _kaggle(kline_slug(month), "kline1m-%s.parquet" % month, RAW)
 
 
 def basis_month(month):
-    return _kaggle(DS_BASIS, "basis1m-%s.parquet" % month, RAW)
+    return _kaggle(basis_slug(month), "basis1m-%s.parquet" % month, RAW)
+
+
+def local_month(month, kind="kline"):
+    """Local parquet for one month: the raw cache first, then the Phase-1 export.
+
+    Returns None when neither exists. The confirmation runner checks this to
+    REFUSE (read nothing, invent nothing) when a dataset is not in the lake yet.
+    """
+    for p in (os.path.join(RAW, "%s1m-%s.parquet" % (kind, month)),
+              os.path.expanduser("~/vz/out/%s1m/%s/%s.parquet"
+                                 % (kind, month[:4], month))):
+        if os.path.exists(p) and os.path.getsize(p) > 0 and _valid_parquet(p):
+            return p
+    return None
+
+
+def month_path(month, kind="kline", fetch=True):
+    """Local path for a month (raw cache or Phase-1 export); download if fetch."""
+    p = local_month(month, kind)
+    if p is not None:
+        return p
+    if not fetch:
+        raise FileNotFoundError("no local %s for %s (fetch disabled)" % (kind, month))
+    return kline_month(month) if kind == "kline" else basis_month(month)
+
+
+def kaggle_files(slug):
+    """Names of the files in a Kaggle dataset (metadata listing only; no download).
+
+    Returns None when the listing is unavailable. Used to tell "dataset not
+    uploaded yet" apart from "not cached" before any download is attempted.
+    """
+    r = subprocess.run(["kaggle", "datasets", "files", slug],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        return None
+    names = set()
+    for line in r.stdout.splitlines():
+        tok = line.split()
+        if tok and (tok[0].endswith(".parquet") or tok[0].endswith(".md")):
+            names.add(tok[0])
+    return names or None
 
 
 def metrics_year(year="2024"):

@@ -94,12 +94,13 @@ def _combo(cfg, a, b, ev):
     return lv
 
 
-def evaluate_variant(name, cfg, ev):
+def evaluate_variant(name, cfg, ev, cols=("net_60", "net_240",
+                                          "net_stress_60", "net_stress_240")):
     _, feat, nq, hi_lv, lo_lv = VAR_BY_NAME[name]
     lv = levels_for(cfg, feat, nq, ev)
     out = {"variant": name, "feature": feat, "n": int((lv > 0).sum()),
            "levels_present": sorted(int(x) for x in np.unique(lv) if x > 0)}
-    for col in ("net_60", "net_240", "net_stress_60", "net_stress_240"):
+    for col in cols:
         boot, lvs = day_level_boot(ev[col].to_numpy(np.float64),
                                    ev["day"].to_numpy(np.int64), lv)
         levels = [int(x) for x in lvs if x > 0]
