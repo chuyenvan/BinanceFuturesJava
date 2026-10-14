@@ -236,6 +236,8 @@ def dataset_status(full_id):
     out = (r.stdout + r.stderr).lower()
     if "ready" in out:
         return "ready"
+    if any(s in out for s in ("forbidden", "denied", "not found", "404", "404 -")):
+        return "absent"
     if "error" in out or "failed" in out or "invalid" in out:
         return "error"
     return "pending"
@@ -258,18 +260,21 @@ def wait_ready(full_id, max_s=1200):
     raise RuntimeError("dataset %s not ready within %ds" % (full_id, max_s))
 
 
-def remote_names(full_id, tries=6):
+def remote_names(full_id, tries=4):
     for _ in range(tries):
         try:
             r = _kaggle(["datasets", "files", full_id])
         except subprocess.TimeoutExpired:
             r = None
         if r is not None:
-            names = [l.split()[0] for l in r.stdout.splitlines()
-                     if l.strip().endswith(".parquet")]
+            names = []
+            for line in r.stdout.splitlines():
+                parts = line.split()
+                if parts and parts[0].endswith(".parquet"):
+                    names.append(parts[0])
             if names:
                 return names
-        time.sleep(20)
+        time.sleep(15)
     return []
 
 
@@ -279,9 +284,17 @@ def upload_auto(slug, upload):
     too early), skip re-uploading."""
     full = "chuyendinh/" + slug
     local = sorted(f for f in os.listdir(upload) if f.endswith(".parquet"))
-    have = set(remote_names(full))
-    if have and set(local) <= have:
-        log.info("upload SKIP %s: all %d files already remote", full, len(local))
+    st = dataset_status(full)
+    if st == "ready":
+        have = set(remote_names(full))
+        if have and set(local) <= have:
+            log.info("upload SKIP %s: all %d files already remote", full, len(local))
+            wait_ready(full)
+            return full
+        log.info("upload %s ready but incomplete -> version", full)
+        rc = run(["bash", UPLOAD, slug, upload, "version"], check=False)
+        if rc != 0:
+            raise RuntimeError("upload version failed for %s" % slug)
     else:
         rc = run(["bash", UPLOAD, slug, upload, "version"], check=False)
         if rc != 0:
