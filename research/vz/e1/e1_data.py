@@ -5,8 +5,11 @@ vz-funding (file 2024). No other year, no Binance REST.
 Keeps the working set small: kline/basis are fetched per month and released on
 request so the disk guard (>= 30 GB on /) is respected while Phase 1 runs.
 """
+import csv
 import os
 import subprocess
+
+import pandas as pd
 
 from e1_common import (DS_BASIS, DS_FUNDING, DS_KLINE, DS_METRICS, RAW,
                        setup_logging)
@@ -116,3 +119,75 @@ def release(month):
               os.path.join(RAW, "basis1m-%s.parquet" % month)):
         if os.path.exists(p):
             os.remove(p)
+
+
+# ---------------------------------------------------------------- anomalies
+# The Phase-1 validate step ships `anomalies.csv` (sym, ts, reason) with each
+# kline/basis dataset. Those rows are kept verbatim in the lake (never edited or
+# deleted) but MUST be skipped by every consumer. Absent file == no anomalies.
+ANOM = "anomalies.csv"
+_ANOM_BY_SLUG = {}
+
+
+def _anomalies_slug(slug):
+    """{(sym, ts)} flagged for a dataset slug; cached, {} when the dataset ships none."""
+    if slug in _ANOM_BY_SLUG:
+        return _ANOM_BY_SLUG[slug]
+    bad = set()
+    d = os.path.join(RAW, "anomalies", slug.replace("/", "_"))
+    dest = os.path.join(d, ANOM)
+    if not os.path.exists(dest):
+        os.makedirs(d, exist_ok=True)
+        r = subprocess.run(["kaggle", "datasets", "download", "-d", slug, "-f", ANOM,
+                            "-p", d], capture_output=True, text=True)
+        if r.returncode != 0 or not os.path.exists(dest):
+            log.info("no anomalies.csv in %s (no anomalies)", slug)
+            _ANOM_BY_SLUG[slug] = bad
+            return bad
+    try:
+        with open(dest, newline="") as fh:
+            for row in csv.DictReader(fh):
+                bad.add((row["sym"], int(row["ts"])))
+    except Exception as e:  # noqa: BLE001
+        log.warning("unreadable %s: %s", dest, e)
+    log.info("anomalies %s: %d rows to skip", slug, len(bad))
+    _ANOM_BY_SLUG[slug] = bad
+    return bad
+
+
+def anomalies(month, kind="kline"):
+    """{(sym, ts)} rows to skip for a month, from that dataset's anomalies.csv."""
+    return _anomalies_slug(kline_slug(month) if kind == "kline" else basis_slug(month))
+
+
+def anomalies_for_path(path):
+    """Anomalies for a local month parquet (`kline1m-YYYY-MM.parquet`); {} otherwise."""
+    b = os.path.basename(path)
+    for kind, pref in (("kline", "kline1m-"), ("basis", "basis1m-")):
+        if b.startswith(pref) and b.endswith(".parquet"):
+            month = b[len(pref):-len(".parquet")]
+            try:
+                return anomalies(month, kind)
+            except Exception as e:  # noqa: BLE001
+                log.warning("anomalies lookup failed for %s: %s", path, e)
+                return set()
+    return set()
+
+
+def drop_anomalies(df, month, kind="kline"):
+    """Drop the rows listed in the dataset's anomalies.csv (no-op when there are none)."""
+    bad = anomalies(month, kind)
+    if not bad or df is None or len(df) == 0:
+        return df
+    keep = pd.Series([(str(s), int(t)) not in bad
+                      for s, t in zip(df["sym"], df["ts"])], index=df.index)
+    n = int((~keep).sum())
+    if n:
+        log.info("drop %d anomaly row(s) from %s (%s)", n, month, kind)
+    return df[keep]
+
+
+def read_month(month, kind="kline", columns=None, fetch=True):
+    """Read one month's kline/basis frame with anomalies.csv rows already removed."""
+    df = pd.read_parquet(month_path(month, kind, fetch=fetch), columns=columns)
+    return drop_anomalies(df, month, kind)

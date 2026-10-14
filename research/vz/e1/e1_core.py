@@ -56,6 +56,9 @@ class SymIndex:
 
     def __init__(self, path):
         self.path = path
+        # rows listed in the dataset's anomalies.csv (validate/V3) are skipped here,
+        # the single choke point every kline/basis read goes through
+        self.bad = e1_data.anomalies_for_path(path)
         self.pf = pq.ParquetFile(path)
         md = self.pf.metadata
         self.nrg = md.num_row_groups
@@ -90,6 +93,12 @@ class SymIndex:
             d = d[d.ts >= ts_lo]
         if ts_hi is not None:
             d = d[d.ts <= ts_hi]
+        if self.bad and len(d):
+            keep = np.fromiter(((str(s), int(t)) not in self.bad
+                                for s, t in zip(d["sym"], d["ts"])), bool, len(d))
+            if not keep.all():
+                log.info("anomalies: dropped %d row(s) of %s", int((~keep).sum()), sym)
+                d = d[keep]
         return d if len(d) else None
 
 
