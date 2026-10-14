@@ -171,3 +171,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## P1b basis1m (2024)
 - slug `chuyendinh/vz-basis1m-2024`; files 12; bytes 4084338069; rows 153683583; syms~374; gov DEV
+
+## P1b kline1m (2025)
+- slug `chuyendinh/vz-kline1m-2025`; files 12; bytes 5938274507; rows 256801320; syms~611; gov DEV
+
+## P1b basis1m (2025)
+- slug `chuyendinh/vz-basis1m-2025`; files 12; bytes 5840500977; rows 247588286; syms~555; gov DEV
