@@ -19,6 +19,8 @@ def day_level_boot(values, days, levels, block=BOOT_BLOCK_DAYS, nrep=BOOT_NREP,
     values = np.asarray(values, dtype=np.float64)
     days = np.asarray(days, dtype=np.int64)
     levels = np.asarray(levels, dtype=np.int64)
+    keep = np.isfinite(values)
+    values, days, levels = values[keep], days[keep], levels[keep]
     uniq_days = np.unique(days)
     day_pos = {d: i for i, d in enumerate(uniq_days)}
     dps = np.array([day_pos[d] for d in days], dtype=np.int64)
