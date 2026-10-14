@@ -158,3 +158,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 - Xác nhận nguyên nhân: UXLINKUSDT first=2024-09-15 15:00 · last=2024-09-30 23:59 (niêm yết mid-month, rows=span=22140, missing=0, cutFirst=900′). MATICUSDT first=2024-09-01 00:00 · last=2024-09-11 09:42 (gỡ/đổi tên, rows=span=14983, missing=0, cutLast=857′). Toàn bộ "thiếu" cũ nằm ở ngày niêm yết/gỡ.
 - BÁO THÊM (info, không FAIL): `cut_first_last_*` (phút cắt ngày đầu/cuối) + danh sách khoảng trống LIÊN TỤC > 60′ giữa khoảng niêm yết. Toàn 2024: **0 khoảng trống > 60′**.
 - Chạy lại V2 (không build lại, V6 giữ nguyên) cho kline1m 2024-01→09, ghi đè validate.json: tất cả V2 PASS (0,0).
+
+## 13. Fix upload/verify too early (2026-10-14 10:10)
+- Job dừng ở UPLOAD: verify `datasets.get` 403 khi dataset còn "being created" ⇒ abort. XÁC MINH không phải lỗi thật: `vz-kline1m-2024` = ready, 12 file khớp 12 local.
+- Fix `vz_phase1.py`: `upload_auto()` → sau create/version **POLL `datasets status` tới ready** (backoff, tối đa ~20'), 403/timeout chỉ CHỜ; `remote_names()` retry khi 403. Bỏ qua upload nếu dataset đã có đủ file. Thêm guard đĩa <30 GB (chỉ khi còn việc cần làm).

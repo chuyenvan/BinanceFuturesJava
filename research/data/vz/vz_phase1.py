@@ -12,6 +12,7 @@ import hashlib
 import json
 import logging
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -141,6 +142,15 @@ def report_ok(ds, ym):
 
 
 def do_month(year, ym):
+    need_work = False
+    for ds in DS_ORDER:
+        r0 = report_ok(ds, ym)
+        if not (build_done(ds, ym) and r0 and r0["ok"]):
+            need_work = True
+            break
+    free = shutil.disk_usage("/").free
+    if need_work and free < 30 * 1024**3:
+        raise RuntimeError("DISK LOW: %.1f GB free < 30 GB before %s" % (free / 1024**3, ym))
     for ds in DS_ORDER:
         bd = build_done(ds, ym)
         r = report_ok(ds, ym)
@@ -213,16 +223,74 @@ def write_readme_year(upload, slug, rg, meta):
     open(os.path.join(upload, "README.md"), "w").write("\n".join(lines))
 
 
+def _kaggle(args, timeout=90):
+    return subprocess.run(["kaggle"] + args, capture_output=True, text=True,
+                          env=os.environ, timeout=timeout)
+
+
+def dataset_status(full_id):
+    try:
+        r = _kaggle(["datasets", "status", full_id])
+    except subprocess.TimeoutExpired:
+        return "timeout"
+    out = (r.stdout + r.stderr).lower()
+    if "ready" in out:
+        return "ready"
+    if "error" in out or "failed" in out or "invalid" in out:
+        return "error"
+    return "pending"
+
+
+def wait_ready(full_id, max_s=1200):
+    """Poll datasets status until ready. Transient 403/timeout while the dataset is
+    still being created just wait and retry; only fail after max_s or a real error."""
+    t0 = time.time()
+    delay = 10
+    while time.time() - t0 < max_s:
+        st = dataset_status(full_id)
+        if st == "ready":
+            return True
+        if st == "error":
+            raise RuntimeError("dataset %s status error" % full_id)
+        log.info("wait_ready %s: %s (%.0fs)", full_id, st, time.time() - t0)
+        time.sleep(delay)
+        delay = min(delay * 1.5, 60)
+    raise RuntimeError("dataset %s not ready within %ds" % (full_id, max_s))
+
+
+def remote_names(full_id, tries=6):
+    for _ in range(tries):
+        try:
+            r = _kaggle(["datasets", "files", full_id])
+        except subprocess.TimeoutExpired:
+            r = None
+        if r is not None:
+            names = [l.split()[0] for l in r.stdout.splitlines()
+                     if l.strip().endswith(".parquet")]
+            if names:
+                return names
+        time.sleep(20)
+    return []
+
+
 def upload_auto(slug, upload):
-    """version the dataset if it exists, otherwise create it. Returns the mode used."""
-    rc = run(["bash", UPLOAD, slug, upload, "version"], check=False)
-    if rc != 0:
-        log.warning("version failed for %s -> create", slug)
-        rc = run(["bash", UPLOAD, slug, upload, "create"], check=False)
+    """Ensure the dataset holds all local parquet files, then wait until ready.
+    If it already has every file (e.g. a previous create succeeded but verify ran
+    too early), skip re-uploading."""
+    full = "chuyendinh/" + slug
+    local = sorted(f for f in os.listdir(upload) if f.endswith(".parquet"))
+    have = set(remote_names(full))
+    if have and set(local) <= have:
+        log.info("upload SKIP %s: all %d files already remote", full, len(local))
+    else:
+        rc = run(["bash", UPLOAD, slug, upload, "version"], check=False)
         if rc != 0:
-            raise RuntimeError("upload create failed for %s" % slug)
-        return "create"
-    return "version"
+            log.warning("version failed for %s -> create", slug)
+            rc = run(["bash", UPLOAD, slug, upload, "create"], check=False)
+            if rc != 0:
+                raise RuntimeError("upload create failed for %s" % slug)
+    wait_ready(full)
+    return full
 
 
 def remote_files(full_id):
@@ -324,8 +392,7 @@ def main():
             meta = {"gov": gov, "rows": {}}
             write_readme_year(upload, "vz-%s-%s" % (ds, year), gov, meta)
             slug = "vz-%s-%s" % (ds, slug_year)
-            full = "chuyendinh/" + slug
-            upload_auto(slug, upload)
+            full = upload_auto(slug, upload)
             ok = verify_all(full, upload)
             if not ok:
                 raise RuntimeError("VERIFY FAIL %s" % full)
