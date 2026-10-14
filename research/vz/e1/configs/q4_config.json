@@ -1,0 +1,24 @@
+{
+ "date": "2026-10-14",
+ "family": "H-F",
+ "title": "imbalance at the 15' clock marks -> 4h/12h return (2024)",
+ "moc_minutes": {"M00": [0], "M15": [0, 15, 30, 45]},
+ "horizons_h": [4, 12],
+ "features": {
+  "imb": "2*taker_buy_quote/quote_volume - 1 at the moc minute",
+  "imb_dev15": "imb - mean(imb over the 15 minutes before the moc)"
+ },
+ "event_rule": "moc minute x active symbol with quote_volume(moc) >= 50000 USDT",
+ "min_quote_volume": 50000,
+ "measure": {
+  "ic": "cross-sectional Spearman IC(feature, forward log-ret) computed per moc, then averaged",
+  "spread": "quintile (by feature, per moc) top - bottom mean forward log-ret, averaged over mocs"
+ },
+ "cost": {"bucket": "NC (0.0007) + round-trip fee (0.000982, Q1)", "note": "uniform shift: does not change IC/spread"},
+ "bootstrap": {"block_days": 5, "nrep": 2000, "seed": 20261014},
+ "n_variants": 8,
+ "variants": ["M00_4h_imb", "M00_4h_imb_dev15", "M00_12h_imb", "M00_12h_imb_dev15",
+              "M15_4h_imb", "M15_4h_imb_dev15", "M15_12h_imb", "M15_12h_imb_dev15"],
+ "limit": "original uses the first 10s of trades; here approximated by the 1-minute bar -> stated as a limitation. Events whose ts+horizon leaves 2024 are dropped (2025 not read).",
+ "go": "no GO (exploration 2024 only)"
+}
