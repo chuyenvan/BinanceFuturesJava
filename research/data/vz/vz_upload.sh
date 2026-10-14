@@ -28,7 +28,7 @@ else
 fi
 
 echo "[verify] remote file list"
-kaggle datasets files "$FULL_ID" | tee /tmp/vz_remote_files.txt
+kaggle datasets files "$FULL_ID" | tee /tmp/vz_remote_files.txt || true
 
 echo "[verify] download one parquet back and compare sha256"
 WORK=$(mktemp -d)

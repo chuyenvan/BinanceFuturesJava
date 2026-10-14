@@ -294,14 +294,14 @@ def upload_auto(slug, upload):
         log.info("upload %s ready but incomplete -> version", full)
         rc = run(["bash", UPLOAD, slug, upload, "version"], check=False)
         if rc != 0:
-            raise RuntimeError("upload version failed for %s" % slug)
+            log.warning("version rc=%s cho %s -> se cho wait_ready/verify", rc, slug)
     else:
         rc = run(["bash", UPLOAD, slug, upload, "version"], check=False)
         if rc != 0:
             log.warning("version failed for %s -> create", slug)
             rc = run(["bash", UPLOAD, slug, upload, "create"], check=False)
             if rc != 0:
-                raise RuntimeError("upload create failed for %s" % slug)
+                log.warning("create rc=%s cho %s -> se cho wait_ready/verify", rc, slug)
     wait_ready(full)
     return full
 
