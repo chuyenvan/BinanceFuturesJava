@@ -26,6 +26,41 @@ MASTER 2026-10-14. Đọc trước: `docs/plan/VZ_DATA_LAKE.md`, `VZ_PHASE1.md`,
    - V-d đếm: số sự kiện crash theo tháng 2024 + phân bố bucket NC/C1/C2/C4 (sự kiện crash luôn ≥ C1).
 6. Output `e1_events_2024.parquet` (sự kiện + feature + outcome) để T2–T6 dùng chung.
 
+### T1-V (cập nhật MASTER 2026-10-14) — V-b cũ SAI CÁCH, thay bằng V-b1/V-b2
+
+**Lỗi lần 1 (đã sửa)**: V-b cũ ghép ledger theo cột `t_star`. Nhưng `t_star` trong ledger là
+**sàn GIỜ của `t_dec`** (`leadlag_add1.py`: `tstar = t_dec // H * H`), KHÔNG phải phút sự kiện.
+Phút sự kiện là **`s_ms`**. Vì vậy 8,51 % là kết quả của việc so sai cột, không phải sai nguồn.
+
+**Nguồn `close_M` (đã ghi trong code)**: `close_M` = close của nến 1m Vision có **GIỜ MỞ = `s_ms`**,
+đọc từ `kl/*.npz` do `ll_h2/exec_fetch.py` tải từ `data.binance.vision` (hàm `leadlag_add1.load_cm`,
+`oM = kx[im,0]`, `cM = kx[im,3]`). ⇒ ledger dùng **Vision kline 1m**, KHÔNG phải ticker nội bộ.
+
+**Chẩn đoán 3 quy ước** (6 713 chân 2024; 6 709 ghép được, 4 chân thiếu bar `nobarM`):
+
+| quy ước | tỉ lệ khớp \|Δ\|/close ≤ 1e-6 |
+|---|---|
+| **(a) giờ MỞ nến = `s_ms`** | **6 709/6 709 = 100,000 %** |
+| (b) giờ ĐÓNG nến = `s_ms` (mở tại `s_ms`−60′) | 22/6 709 = 0,328 % |
+| (c) dịch −2′ / +1′ / +2′ | 7 / 88 / 30 = 0,104 % / 1,312 % / 0,447 % |
+
+**⇒ KẾT QUẢ MỚI**
+
+| mục | giá trị | ngưỡng | kết luận |
+|---|---|---|---|
+| **V-b1 (GIÁ)** | **100,000 %** (6 709/6 709), trung vị lệch 0 | ≥ 99,5 % | **PASS** |
+| **V-b2 (TIMING) — trùng đúng phút** | 1 089/3 081 = **35,35 %** | ≥ 95 % | FAIL (theo nghĩa hẹp) |
+| V-b2 — **trùng hoặc CÙNG cụm 30′** | **3 081/3 081 = 100,000 %** | ≥ 95 % | **PASS** |
+
+Phần KHÔNG trùng đúng phút (1 992 chân) chia theo lý do: **gộp cụm <30′ = 1 992**
+(1 486 “trực tiếp” + 506 “dây chuyền” do gộp bắc cầu), **lọc `quote_volume` = 0**, **khác = 0**.
+⇒ 100 % chân EXEC có phút sập **đều nằm trên CẤU TRÚC SỰ KIỆN CRASH của E1**; khác biệt duy nhất là
+luật gộp cụm 30′ của định nghĩa sự kiện (giữ phút đầu), KHÔNG phải lỗi dữ liệu.
+
+**QUYẾT ĐỊNH (MASTER 2026-10-14)**: dùng **V-b1/V-b2 mới**; **MỞ LẠI T2–T6**. E1 **ĐÃ xác minh liên kết
+với chân của hệ** ở mức GIÁ (V-b1) và CẤU TRÚC (V-b2). Vẫn KHÔNG chỉnh định nghĩa sự kiện/feature để
+V-b đạt; H-B (T3) đo **chỉ trên SỰ KIỆN E1**.
+
 ## T2 — H-A mô tả (0 phép thử)
 - Profile theo thời gian sự kiện −60′ → +240′ (median, IQR) của: taker_sell_share, volume z, prem_close, ΔOI tích luỹ, giá tích luỹ; tách theo bucket C1/C2/C4 và theo BTC cùng sập hay không (BTC ret 15′ ≤ −1%).
 - Output json + 1 trang md có bảng; không chọn ngưỡng nào ở đây.

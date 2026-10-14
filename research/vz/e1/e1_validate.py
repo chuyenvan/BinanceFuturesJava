@@ -1,8 +1,12 @@
 """VZ E1 - T1-V validation harness (b, c, d).
 
-V-b  reproduce the EXEC legs ledger over 2024: VZ kline close at the leg minute
-     must equal the ledger close_M (|d|/close <= 1e-6) in >= 99.5% of joined
-     legs; also report the share of 2024 EXEC legs that fall on an E1 crash event.
+V-b  MASTER 2026-10-14 (supersedes the first V-b): the ledger's close_M is the
+     Vision 1m bar whose OPEN time equals the leg's `s_ms` (ll_h2/exec_fetch.py
+     kl + leadlag_add1.load_cm); the ledger's own `t_star` column is the HOUR
+     floor of t_dec, not the event minute. V-b1 = price match >= 99.5% under that
+     single written convention; V-b2 = >= 95% of EXEC legs whose VZ same-minute
+     bar has bar_ret <= -1% must coincide with an E1 crash event. Implemented in
+     e1_vb.py (run_vb here delegates to it).
 V-c  run the core build twice and compare the output md5 (determinism).
 V-d  crash events per month 2024 + bucket distribution (crash is always >= C1).
 """
@@ -40,54 +44,10 @@ def load_ledger_2024():
 
 
 def run_vb():
-    md5, legs = load_ledger_2024()
-    log.info("ledger md5=%s legs2024=%d", md5, len(legs))
-    key = {}
-    for s, t in zip(legs.sym, legs.ts):
-        key[(s, t)] = np.nan
-    matched = 0
-    close_delta = []
-    for month in e1_core.MONTHS_2024:
-        f = e1_data.kline_month(month)
-        t = pq.read_table(f, columns=["ts", "sym", "close"]).to_pandas()
-        t = t[t.sym.isin(set(legs.sym.unique()))]
-        for s, ts, c in zip(t.sym.to_numpy(), t.ts.to_numpy(np.int64), t.close.to_numpy()):
-            k = (s, int(ts))
-            if k in key:
-                key[k] = c
-        del t
-        e1_data.release(month)
-        log.info("vb month %s scanned", month)
-    legs["vz_close"] = [key.get((s, int(t)), np.nan)
-                        for s, t in zip(legs.sym, legs.ts)]
-    joined = legs[np.isfinite(legs.vz_close.to_numpy())]
-    if len(joined):
-        rel = (np.abs(joined.vz_close - joined.cM) / joined.cM).to_numpy()
-        close_delta = rel
-        frac_ok = float((rel <= 1e-6).mean())
-    else:
-        frac_ok = 0.0
-    # share of 2024 legs on an E1 crash event
-    evp = os.path.join(OUT, "e1_events_2024.parquet")
-    on_event = 0
-    if os.path.exists(evp):
-        ev = pq.read_table(evp, columns=["sym", "ts"]).to_pandas()
-        evset = set(zip(ev.sym.to_numpy(), ev.ts.to_numpy(np.int64)))
-        on_event = int(sum(1 for s, t in zip(legs.sym, legs.ts) if (s, int(t)) in evset))
-    out = {
-        "ledger_md5": md5, "ledger_md5_prefix_ok": md5.startswith(LEDGER_MD5_PREFIX),
-        "legs_2024": int(len(legs)),
-        "joined": int(len(joined)),
-        "joined_frac": float(len(joined) / len(legs)),
-        "close_match_1e-6_frac": frac_ok,
-        "close_match_1e-6_pass": bool(frac_ok >= 0.995),
-        "legs_on_e1_crash_event": on_event,
-        "legs_on_e1_crash_event_frac": float(on_event / len(legs)),
-        "joined_missing": int(len(legs) - len(joined)),
-    }
-    write_json(os.path.join(REPORT, "e1_t1v_b_repro.json"), out)
-    log.info("V-b %s", out)
-    return out
+    """Delegate to e1_vb (MASTER 2026-10-14: V-b1 price + V-b2 timing)."""
+    import e1_vb
+    _, df = e1_vb.run()
+    return e1_vb.run_b1b2(df)
 
 
 def run_vc():
