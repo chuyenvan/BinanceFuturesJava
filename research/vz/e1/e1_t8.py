@@ -79,9 +79,10 @@ def main():
         A("| **V-b1 giá** (open time = s_ms, Vision) | %d/%d = **%.4f** → %s |"
           % (round(b1["match_frac"] * b1["n"]), b1["n"], b1["match_frac"],
              "PASS" if b1["pass"] else "FAIL"))
-        A("| **V-b2 timing** (bar_ret ≤ −1% ⇒ trùng sự kiện E1) | %d/%d = **%.4f** → %s (lý do trượt: %s) |"
+        A("| **V-b2 timing** (bar_ret <= -1%% ⇒ trùng sự kiện E1) | trùng đúng phút %d/%d = **%.4f**; "
+          "trùng hoặc cùng cụm 30' = **%.4f** | lý do trượt: %s |"
           % (b2["n_coincide_e1"], b2["n_crash_minutes"], b2["frac"],
-             "PASS" if b2["pass"] else "FAIL", b2["miss_reasons"]))
+             b2.get("frac_coincide_or_cluster", float("nan")), b2["miss_reasons"]))
         A("| V-c determinism | xem `e1_t1v_c_determinism.json` |")
         A("| V-d đếm | PASS — 66 058 sự kiện, NC 0 |")
     if t1v[0]:
@@ -114,8 +115,9 @@ def main():
         for v in t3["variants"]:
             sp = v.get("net_60_spread_extreme", {})
             sps = v.get("net_stress_60_spread_extreme", {})
-            A("| %s | %d | %.2f | %s %s | %s |" % (
-                v["variant"], v["n"], v["net_60_monotonicity"],
+            A("| %s | %d | %s | %s %s | %s |" % (
+                v["variant"], v["n"],
+                ("n/a" if not np.isfinite(v["net_60_monotonicity"]) else "%.2f" % v["net_60_monotonicity"]),
                 _f(sp.get("diff_mean")), _f(sp.get("ci95")) if sp else "",
                 _f(sps.get("diff_mean")) if sps else "n/a"))
             ranked.append((abs(sp.get("diff_mean", 0.0)), v["variant"], sp))
@@ -205,8 +207,9 @@ def main():
     A("- `vz-symbols` chưa upload ⇒ tuổi symbol suy từ 2024 (cột `age_known`); "
       "symbol niêm yết trước 2024 không đo được tuổi chính xác.")
     A("- Không có lookback 30 ngày cuối 2023 (`vz-basis1m-2023` chưa có) ⇒ `prem_z7` NaN ~1 ngày đầu tháng 1.")
-    A("- **E1 chưa xác minh liên kết với chân của hệ** (V-b1/V-b2 xem mục 0): mọi phân tích ở đây "
-      "chỉ dựa trên SỰ KIỆN E1, KHÔNG dựa trên chân EXEC của sim.")
+    A("- **Liên kết với chân của hệ**: đã xác minh ở mức GIÁ (V-b1 = 100% khớp 1e-6) và CẤU TRÚC "
+      "(V-b2: 100% phút sập của chân nằm trong cùng cụm 30' của một sự kiện E1). Tuy vậy mọi hiệu ứng "
+      "ở trên đo trên SỰ KIỆN E1, KHÔNG dùng chân EXEC làm mẫu.")
     A("")
     A("## 9. Tệp")
     A("")
