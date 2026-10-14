@@ -121,6 +121,11 @@ def ensure_fetch(typ, ym):
             done, n_ok = bool(d.get("fetch_done")), int(d.get("n_ok", 0))
         except Exception:  # noqa: BLE001
             done = False
+    _ds = {"kline1m": "kline1m", "premiumIndex1m": "basis1m", "markPrice1m": "basis1m",
+           "indexPrice1m": "basis1m", "metrics": "metrics5m",
+           "fundingRate": "funding"}.get(typ)
+    if _ds and build_done(_ds, ym):
+        return  # thang da build xong -> khong tai lai zip
     present = zips_present(typ, ym)
     if done and present > 0 and present >= n_ok:
         return
