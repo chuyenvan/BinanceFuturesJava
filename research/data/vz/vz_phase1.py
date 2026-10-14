@@ -408,6 +408,29 @@ def year_stats(year, months):
     return stats
 
 
+def remote_year_done(year, months):
+    """True when every dataset of the year is already on Kaggle with ALL its files.
+
+    The lake IS Kaggle: after upload+verify the local month files are deleted on
+    purpose, so a rerun must consult the remote state instead of the (empty) local
+    one. Without this, re-running a finished year refetches/rebuilds every month
+    from scratch and pushes a duplicate dataset version.
+    """
+    slug_year = "2020s" if year in SEALED else year
+    checks = [("vz-kline1m-%s" % slug_year, ["kline1m-%s.parquet" % ym for ym in months]),
+              ("vz-basis1m-%s" % slug_year, ["basis1m-%s.parquet" % ym for ym in months]),
+              ("vz-metrics5m", ["metrics5m-%s.parquet" % year]),
+              ("vz-funding", ["funding-%s.parquet" % year])]
+    for slug, files in checks:
+        full = "chuyendinh/" + slug
+        if dataset_status(full) != "ready":
+            return False
+        have = set(remote_names(full))
+        if not have or not set(files) <= have:
+            return False
+    return True
+
+
 def main():
     only = sys.argv[1:] or None
     t_start = time.time()
@@ -417,6 +440,10 @@ def main():
             continue
         log.info("############ YEAR %s ############", year)
         y0 = time.time()
+        if remote_year_done(year, months):
+            log.info("YEAR %s: all datasets already on Kaggle with every file -> skip "
+                     "(nothing left to do)", year)
+            continue
         for ym in months:
             log.info("---- %s ----", ym)
             do_month(year, ym)
