@@ -44,14 +44,16 @@ Chi phí: bucket EXEC thực + phí 2 chân (SIM_RATE_FEE=0.000982). Bootstrap b
 
 | # | task | họ | biến thể | n (kế hoạch) | kết quả chính | ngày |
 |---|---|---|---|---|---|---|
-| 31 | T9 | H-B-chan | A1_doi60_q5 | 6709 chân | PRE-REG (chưa đo) | 2026-10-14 |
-| 32 | T9 | H-B-chan | A2_tss_reversal_q5 | 6709 chân | PRE-REG (chưa đo) | 2026-10-14 |
-| 33 | T9 | H-B-chan | A3_premz7_q5 | 6709 chân | PRE-REG (chưa đo) | 2026-10-14 |
-| 34 | T9 | H-B-chan | A4_combo_doi15low_premlow_t3 | 6709 chân | PRE-REG (chưa đo) | 2026-10-14 |
-| 35 | T9 | H-B-4h | B1_doi60_h4 | 66058 sự kiện | PRE-REG (chưa đo) | 2026-10-14 |
-| 36 | T9 | H-B-24h | B2_doi60_h24 | 66058 sự kiện | PRE-REG (chưa đo) | 2026-10-14 |
-| 37 | T9 | H-B-4h | B3_tssrev_h4 | 66058 sự kiện | PRE-REG (chưa đo) | 2026-10-14 |
-| 38 | T9 | H-B-24h | B4_tssrev_h24 | 66058 sự kiện | PRE-REG (chưa đo) | 2026-10-14 |
+| 31 | T9 | H-B-chan | A1_doi60_q5 | 3062 chân | net60=-0.00982 CI=[-0.04040,0.01921] mono=-0.20; net240=-0.00266 CI=[-0.02836,0.01616]; exit=-0.01911 CI=[-0.10540,0.04070] mono=-0.30 | 2026-10-14 |
+| 32 | T9 | H-B-chan | A2_tss_reversal_q5 | 3067 chân | net60=+0.01913 CI=[-0.00017,0.04262] mono=+1.00; net240=+0.01387 CI=[-0.01195,0.03963] mono=+0.90; exit=-0.02405 | 2026-10-14 |
+| 33 | T9 | H-B-chan | A3_premz7_q5 | 3012 chân | net60=-0.00848 CI=[-0.03740,0.02816] mono=-0.60; net240=-0.03402 CI=[-0.06535,0.00487]; exit=-0.00007 | 2026-10-14 |
+| 34 | T9 | H-B-chan | A4_combo_doi15low_premlow_t3 | 3012 chân | net60=+0.01066 CI=[-0.03281,0.04868] mono=-0.40; net240=+0.02899 CI=[-0.02667,0.06365]; exit=+0.00787 | 2026-10-14 |
+| 35 | T9 | H-B-4h | B1_doi60_h4 | 65906 sự kiện | net240=-0.00542 CI=[-0.00960,-0.00136] mono=-0.70 (stress -0.00530) | 2026-10-14 |
+| 36 | T9 | H-B-24h | B2_doi60_h24 | 65906 sự kiện | net1440=-0.00566 CI=[-0.01282,0.00141] mono=-0.30 (stress -0.00554) | 2026-10-14 |
+| 37 | T9 | H-B-4h | B3_tssrev_h4 | 66015 sự kiện | net240=-0.00399 CI=[-0.00758,-0.00049] mono=-0.30 (stress -0.00403) | 2026-10-14 |
+| 38 | T9 | H-B-24h | B4_tssrev_h24 | 66015 sự kiện | net1440=-0.01306 CI=[-0.02254,-0.00364] mono=-1.00 (stress -0.01310) | 2026-10-14 |
+
+> **T9 hoàn tất (2026-10-14)** — outcome điền vào chính dòng PRE-REG 31–38, KHÔNG thêm dòng nào. Ghép mẫu (a): chỉ **3 081/6 709** chân EXEC có `s_ms` là phút ứng viên crash E1 (3 628 chân vào lệnh ở phút `bar_ret > -1 %`, trung vị -0,91 %) ⇒ (a) chạy trên 3 012–3 067 chân, power thấp hơn ±0,8 %. Hold-to-exit: ledger **không có cột giá thoát**; dùng thời điểm thật `e_ms` (ll_h2/legs.pkl, join seed,row) + Vision close(`e_ms`) — kiểm chứng lệch trung vị -0,19 %. (b): 3/4 tách khỏi 0 (chiều âm, cùng dấu T3) nhưng sẽ chết sau nở CI k=8. (c) median drift âm (1/3/7 ngày, CI không chứa 0), tỉ lệ dương 0,34–0,40 = 0 phép thử mới. **KHÔNG gọi GO.** Báo cáo: `docs/result/VZ_EXPLORE_2024.md` §6b.
 
 > T9 (c) H-E listing drift: bổ sung median/CI95/tỉ lệ dương cho cùng dữ liệu T6 — **0 phép thử mới**.
 
