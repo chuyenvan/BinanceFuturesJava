@@ -40,4 +40,19 @@ Chi phí: bucket EXEC thực + phí 2 chân (SIM_RATE_FEE=0.000982). Bootstrap b
 | 29 | T6 | H-E | listing_drift_30d | 105 | mean=0.04086 CI=[-0.07184206241237498, 0.16692903991489333] | 2026-10-14 |
 | 30 | T6 | H-E | predelist_30d | 14 | median=0.00000 | 2026-10-14 |
 
+> **T9 PRE-REG (MASTER 10-14, commit TRƯỚC khi tính outcome)** — 8 biến thể, config `research/vz/e1/configs/t9_config.json` (edges LẤY NGUYÊN từ `configs/t3_thresholds.json`) + code `research/vz/e1/e1_t9.py`. (a) trên 6 709 chân EXEC 2024 ghép sự kiện E1 theo cụm 30′ (feature của sự kiện, net đo trên chính chân: 60′/240′/hold-to-exit) = 4 biến thể × 3 mốc; (b) trên sự kiện E1, mốc 4h/24h cho ΔOI60 + đảo chiều taker = 4 biến thể. Dòng `n`/`kết quả` ở các dòng 31–38 được ĐIỀN sau khi đo, KHÔNG thêm dòng mới. (c) H-E listing drift (median/CI/tỉ lệ dương) KHÔNG tính là phép thử mới.
+
+| # | task | họ | biến thể | n (kế hoạch) | kết quả chính | ngày |
+|---|---|---|---|---|---|---|
+| 31 | T9 | H-B-chan | A1_doi60_q5 | 6709 chân | PRE-REG (chưa đo) | 2026-10-14 |
+| 32 | T9 | H-B-chan | A2_tss_reversal_q5 | 6709 chân | PRE-REG (chưa đo) | 2026-10-14 |
+| 33 | T9 | H-B-chan | A3_premz7_q5 | 6709 chân | PRE-REG (chưa đo) | 2026-10-14 |
+| 34 | T9 | H-B-chan | A4_combo_doi15low_premlow_t3 | 6709 chân | PRE-REG (chưa đo) | 2026-10-14 |
+| 35 | T9 | H-B-4h | B1_doi60_h4 | 66058 sự kiện | PRE-REG (chưa đo) | 2026-10-14 |
+| 36 | T9 | H-B-24h | B2_doi60_h24 | 66058 sự kiện | PRE-REG (chưa đo) | 2026-10-14 |
+| 37 | T9 | H-B-4h | B3_tssrev_h4 | 66058 sự kiện | PRE-REG (chưa đo) | 2026-10-14 |
+| 38 | T9 | H-B-24h | B4_tssrev_h24 | 66058 sự kiện | PRE-REG (chưa đo) | 2026-10-14 |
+
+> T9 (c) H-E listing drift: bổ sung median/CI95/tỉ lệ dương cho cùng dữ liệu T6 — **0 phép thử mới**.
+
 > **MASTER 2026-10-14 chốt**: V-b cũ SO SAI CỘT (t_star = sàn giờ của t_dec, không phải phút sự kiện = s_ms). Chẩn đoán 3 quy ước: giờ-mở = 100,000%; giờ-đóng 0,328%; dịch ±1-2′ ≤1,3%. ⇒ **V-b1 GIÁ 100% PASS**. V-b2 TIMING: trùng đúng phút 35,35% nhưng **trùng hoặc cùng cụm 30′ = 100%** (1 992 lý do gộp cụm, 0 lọc quote_volume, 0 khác). MỞ LẠI T2–T6 (T3 chỉ trên sự kiện E1). Xem docs/plan/VZ_E1_TASKS.md (T1-V) + docs/result/VZ_EXPLORE_2024.md.

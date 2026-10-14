@@ -96,5 +96,12 @@ Thước chính: chênh net ret 60′ và 240′ giữa nhóm cực trên/dướ
 - `docs/result/VZ_EXPLORE_2024.md`: mỗi họ: n sự kiện, bảng hiệu ứng net (thực + stress) với CI, đơn điệu, ổn định theo quý 2024; tổng số phép thử từ ledger; **xếp hạng tối đa 3 ứng viên** kèm lý do cơ chế + rủi ro (không gọi GO). Nêu rõ giới hạn (1 năm, không liquidation thật, metrics 5′, trễ 7 s).
 - Cập nhật `docs/data/VZ_REGISTRY.md` nếu dùng dataset mới. Không merge vào module (MASTER review).
 
+## T9 (MASTER 10-14) — chân EXEC × sự kiện + chân trời dài (≤ 8 biến thể)
+- Pre-reg: `research/vz/e1/configs/t9_config.json` (commit TRƯỚC outcome; edges lấy nguyên từ `configs/t3_thresholds.json`). Code: `research/vz/e1/e1_t9.py`.
+- (a) 6 709 chân EXEC 2024 ghép sự kiện E1 theo cụm 30′ (feature của sự kiện; net đo **trên chính chân**: entry = Vision close tại `s_ms`, mốc 60′/240′/hold-to-exit). 4 biến thể: ΔOI60-q5, taker-reversal-q5, prem-z7-q5, combo ΔOI15 thấp × prem thấp (tercile×tercile, mã `prem*10+doi15`, hi=11/lo=33).
+- (b) Trên sự kiện E1: net 4h (đã có) và 24h (`net_1440`, tính mới cùng công thức `e1_core`) cho ΔOI60 + đảo chiều taker = 4 biến thể.
+- (c) H-E listing drift: báo thêm median, CI95, tỉ lệ dương — KHÔNG tính phép thử mới.
+- Kết quả: 1 mục trong `docs/result/VZ_EXPLORE_2024.md`; ledger 8 dòng PRE-REG (31–38) điền outcome tại chỗ. **KHÔNG gọi GO** (power (a) thấp, CI ~ ±0,8 %).
+
 ## Lệnh giao OpenClaw (owner dán)
 > Đọc `~/src/BinanceFuturesJava/docs/plan/VZ_E1_TASKS.md` (và 3 file plan VZ liên quan). Làm T0 → T1 (dừng nếu T1-V FAIL) → T2 → T3 → T4 → T5 → T6 → T7 → T8 đúng luật chung; song song được với việc nạp dữ liệu Phase 1 nhưng ưu tiên Phase 1 về đĩa/kernel. Báo ngắn sau T1-V và sau T8. Không đọc dữ liệu 2022/2023/2025/2026/2020s.
