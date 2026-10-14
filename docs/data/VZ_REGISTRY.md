@@ -236,3 +236,17 @@ KHÔNG có tháng nào cần bù trước khi chạy tiếp; job tiếp tục �
 - Loader E1: `e1_data.anomalies()/anomalies_for_path()/drop_anomalies()/read_month()` + hook trong
   `e1_core.SymIndex` (bỏ mọi dòng có trong `anomalies.csv`); commit riêng ở branch `research/vz-e1`.
   E1 chỉ dùng 2024 (không có anomalies) nên hành vi hôm nay không đổi.
+
+## 15. Chạy tiếp Phase 1b (2026-10-15 05:13)
+
+- `python3 vz_phase1.py 2025 2023 2022 2021 2026 2020` (setsid nohup, PID **3664150**, PGID 3664150);
+  `df /` lúc khởi động **71 GB trống** (≥ 45 GB yêu cầu; sàn 30 GB).
+- **YEAR 2025 bị bỏ qua đúng** (`remote_year_done`): 4 dataset 2025 (kline1m/basis1m/metrics5m/funding)
+  đã `ready` trên Kaggle với đủ file ⇒ không refetch/rebuild/version trùng.
+- Lần chạy đầu cùng ngày (05:11) **đã bị dừng**: driver không thấy out/ của 2024/2025 (đã xoá sau upload)
+  ⇒ tưởng chưa làm ⇒ refetch lại 2025-01. Đã kill (PID 3663740) và sửa bằng guard `remote_year_done`.
+- Hệ quả phụ đã khắc phục: `state/kline1m/2025-01.json` bị `ensure_fetch` xoá rồi tiến trình bị kill
+  giữa lúc fetch ⇒ phục hồi từ dòng log gốc (`DONE ok=391 missing=0 bad=0 bytes=564942581 in 68.7s`)
+  + xoá 241 zip tạm của 2025-01 (tháng đã PASS).
+- Resume đúng điểm chết: 2023-01..08 skip (đã build+validate), 2023-09 bắt đầu fetch lại nguồn basis
+  (premiumIndex1m/markPrice1m/indexPrice1m) rồi build basis1m 2023-09, tiếp 2023-10..12 → upload năm 2023.
