@@ -58,3 +58,5 @@ Chi phí: bucket EXEC thực + phí 2 chân (SIM_RATE_FEE=0.000982). Bootstrap b
 > T9 (c) H-E listing drift: bổ sung median/CI95/tỉ lệ dương cho cùng dữ liệu T6 — **0 phép thử mới**.
 
 > **MASTER 2026-10-14 chốt**: V-b cũ SO SAI CỘT (t_star = sàn giờ của t_dec, không phải phút sự kiện = s_ms). Chẩn đoán 3 quy ước: giờ-mở = 100,000%; giờ-đóng 0,328%; dịch ±1-2′ ≤1,3%. ⇒ **V-b1 GIÁ 100% PASS**. V-b2 TIMING: trùng đúng phút 35,35% nhưng **trùng hoặc cùng cụm 30′ = 100%** (1 992 lý do gộp cụm, 0 lọc quote_volume, 0 khác). MỞ LẠI T2–T6 (T3 chỉ trên sự kiện E1). Xem docs/plan/VZ_E1_TASKS.md (T1-V) + docs/result/VZ_EXPLORE_2024.md.
+
+> Q1 (2026-10-14): sua gia dinh phi - SIM_RATE_FEE=0.000982 la phi KHU HOI (2 chan), sim tru MOT lan; E1 cu cong 2x => da sua e1_common.cost_of (FEE_ROUNDTRIP). Tinh lai chi phi T3-T9, 0 phep thu moi. Spread nhom bat bien (max |Δ| <= 2.8e-17).

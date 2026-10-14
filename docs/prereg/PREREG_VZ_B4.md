@@ -53,3 +53,23 @@ Không triển khai gì trực tiếp. Bước sau (pre-reg riêng): đo trên t
 
 ## Thực thi
 OpenClaw: chuyển các tham số trên vào khối YAML theo `docs/prereg/PREREG_VZ_TEMPLATE.md` NGAY TRONG FILE NÀY, commit, rồi chạy `e1_confirm.py --prereg docs/prereg/PREREG_VZ_B4.md --years 2022,2023,2025` khi lake đủ 3 năm (+ lookback). Không sửa nội dung giả thuyết/luật khi chuyển YAML.
+
+## Addendum 1 (trước khi chạy xác nhận) — công thức phí sửa theo Q1
+
+`SIM_RATE_FEE = 0,000982` là phí **KHỨ HỒI (2 chân)** và sim trừ nó **ĐÚNG MỘT LẦN** trên notional:
+`research/OrderTargetInfoTest.java` dòng 282–283 (BUY) và 285–286 (SELL) trừ `quantity·priceEntry·Configs.RATE_FEE`
+một lần; `tradecore/Configs.java:103` ("Phí giao dịch sàn đã sửa thành 2 chân"), `Configs.java:185`
+("RATE_FEE 2 chan 0.002"); `docs/result/RESULT_AUDIT_PNL.md:126` gọi 0,002 là "2× mốc taker thật
+(0,05 %/chân × 2 = 0,001)"; `docs/result/RESULT_COST_TRUTH.md:28` mô hình vòng = fee phẳng + slip.
+
+Bản E1 cũ cộng `2 × 0,000982` (hoá ra đếm phí 4 chân) ⇒ **đã sửa** thành cộng **một lần**
+(`e1_common.FEE_ROUNDTRIP = RATE_FEE`; tham số `cost_of(bucket, stress, fee_roundtrip=FEE_ROUNDTRIP)`).
+Công thức net giữ nguyên dạng `net_h = log(close(ts+h)/close(ts)) − (bucket EXEC + phí khứ hồi)`
+(đúng cách sim tính: chi phí vào đã nằm trong giá, calTp chỉ trừ thêm phí khứ hồi + 1 chân slip phía ra).
+
+Các bảng mức net T3–T9 đã tính lại (`e1_recompute_costs.py`, `reports/fee_recompute.json`): spread giữa
+nhóm **bất biến** (max |Δ| ≤ 2,8e-17 ≤ 1e-9), chỉ mức mean/CI/hit-rate dịch đều **+0,000982**.
+
+**Luật GO KHÔNG đổi** (dựa trên spread giữa nhóm, bất biến với dịch phí đều): (1) gộp 3 năm spread net 24h < 0
+và mean + 2,70·se < 0; (2) mỗi năm 2022/2023/2025 spread net 24h < 0; (3) bản stress cùng chiều (gộp < 0).
+Ngưỡng/biến thể/định nghĩa sự kiện/công thức net (dạng) không đổi.

@@ -34,9 +34,18 @@ BUCKET_NAMES = ("NC", "C1", "C2", "C4")
 BUCKET_COST = (0.0007, 0.0018, 0.0019, 0.0032)
 # stress bucket costs (task spec)
 BUCKET_COST_STRESS = (0.0023, 0.0033, 0.0041, 0.0101)
-# 2-leg fee from ho4p1-c2 prof_run.properties (SIM_RATE_FEE)
+# 2-leg fee from ho4p1-c2 prof_run.properties (SIM_RATE_FEE).
+# SIM_RATE_FEE is the ROUND-TRIP (2-leg) exchange fee and the sim subtracts it ONCE:
+#   OrderTargetInfoTest.calTp() lines 282-283 (BUY) and 285-286 (SELL) subtract
+#   `quantity * priceEntry * Configs.RATE_FEE` a single time;
+#   Configs.java:103 "Phi giao dich san da sua thanh 2 chan" and Configs.java:185
+#   "RATE_FEE 2 chan 0.002"; docs/result/RESULT_AUDIT_PNL.md:126 calls 0.002
+#   "2x moc taker that (0,05%/chan x 2 = 0,001)"; docs/result/RESULT_COST_TRUTH.md:28
+#   models the round trip as fee 0,20% (flat) + slip.
+# => E1 must add it ONCE. The old `2 * RATE_FEE` was a double count (fee counted 4 legs).
 RATE_FEE = 0.000982
-FEE_2LEG = 2.0 * RATE_FEE
+FEE_ROUNDTRIP = RATE_FEE          # round-trip fee, added once (default = how the sim charges)
+FEE_2LEG = FEE_ROUNDTRIP          # legacy alias; was wrongly 2 * RATE_FEE
 
 # event definition
 CRASH_BAR_RET = -0.01          # close/open-1 <= -1%
@@ -95,10 +104,15 @@ def bucket_of(close, open_):
     return 3
 
 
-def cost_of(bucket, stress=False):
-    """Round-trip cost (fraction) = bucket entry cost + 2-leg fee."""
+def cost_of(bucket, stress=False, fee_roundtrip=None):
+    """Round-trip cost (fraction) = bucket entry cost + ROUND-TRIP fee (added once).
+
+    `fee_roundtrip` defaults to FEE_ROUNDTRIP (= SIM_RATE_FEE, the 2-leg fee the sim
+    subtracts once). Pass it explicitly for the fee-scenario table.
+    """
     base = BUCKET_COST_STRESS if stress else BUCKET_COST
-    return float(base[int(bucket)] + FEE_2LEG)
+    fee = FEE_ROUNDTRIP if fee_roundtrip is None else float(fee_roundtrip)
+    return float(base[int(bucket)] + fee)
 
 
 def md5_file(path, chunk=1 << 20):
