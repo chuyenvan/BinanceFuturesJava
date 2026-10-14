@@ -60,3 +60,7 @@ Chi phí: bucket EXEC thực + phí 2 chân (SIM_RATE_FEE=0.000982). Bootstrap b
 > **MASTER 2026-10-14 chốt**: V-b cũ SO SAI CỘT (t_star = sàn giờ của t_dec, không phải phút sự kiện = s_ms). Chẩn đoán 3 quy ước: giờ-mở = 100,000%; giờ-đóng 0,328%; dịch ±1-2′ ≤1,3%. ⇒ **V-b1 GIÁ 100% PASS**. V-b2 TIMING: trùng đúng phút 35,35% nhưng **trùng hoặc cùng cụm 30′ = 100%** (1 992 lý do gộp cụm, 0 lọc quote_volume, 0 khác). MỞ LẠI T2–T6 (T3 chỉ trên sự kiện E1). Xem docs/plan/VZ_E1_TASKS.md (T1-V) + docs/result/VZ_EXPLORE_2024.md.
 
 > Q1 (2026-10-14): sua gia dinh phi - SIM_RATE_FEE=0.000982 la phi KHU HOI (2 chan), sim tru MOT lan; E1 cu cong 2x => da sua e1_common.cost_of (FEE_ROUNDTRIP). Tinh lai chi phi T3-T9, 0 phep thu moi. Spread nhom bat bien (max |Δ| <= 2.8e-17).
+| 39 | Q2 | H-E | net_exit_by_age | 6709 | means={'0-7': 0.03993, '8-30': 0.04026, '31-90': 0.04715, '>90': 0.06557, 'unknown': 0.03032} | 2026-10-14 |
+| 40 | Q2 | H-E | net_240_by_age | 6709 | means={'0-7': 0.04218, '8-30': 0.03531, '31-90': 0.02247, '>90': 0.01315, 'unknown': 0.0251} | 2026-10-14 |
+| 41 | Q2 | H-E | drop_le30_netexit | 1053 | shareSum=0.1722 mean_dropped=0.04006 mean_kept=0.03586 | 2026-10-14 |
+| 42 | Q2 | H-E | drop_le7_netexit | 616 | shareSum=0.1004 mean_dropped=0.03993 mean_kept=0.03618 | 2026-10-14 |
