@@ -2,6 +2,30 @@
 
 Nguồn giả thuyết: khám phá 2024 (`docs/result/VZ_EXPLORE_2024.md` §6b.2, branch research/vz-e1 6b2ae088), biến thể B4_tssrev_h24: spread quintile cao − thấp = −1,31 % [−2,25; −0,36], mono −1,00. Tổng phép thử khám phá k = 38.
 
+## Khối YAML (máy đọc)
+
+```yaml
+name: B4
+family: H-B
+variant: V2_tss_reversal_q5
+thresholds:
+  tss_reversal:
+    nq: 5
+    edges: [0.0653215038194228, 0.12279905054056256, 0.17445347601643468, 0.24196095258927172]
+measure:
+  primary: net_1440
+  secondary: net_240
+  statistic: spread_extreme
+go_rule: >
+  GO ⇔ cả ba: (1) gộp 3 năm spread net 24h < 0 và cận trên CI95 nở √(2 ln 38) = 2,70
+  (mean + 2,70·se) < 0; (2) mỗi năm 2022, 2023, 2025 spread net 24h < 0;
+  (3) bản stress cùng chiều (gộp < 0). Ngược lại ⇒ ĐÓNG giả thuyết; không thử chân trời/biên khác.
+k_tests: 38
+years: [2022, 2023, 2025]
+cost: {bucket_real: true, fee_2leg: 0.000982, stress: true}
+bootstrap: {block_days: 5, nrep: 2000, seed: 20261014}
+```
+
 ## Giả thuyết
 H: trên sự kiện `crash` E1 (định nghĩa e1_core, KHÔNG đổi), quintile cao nhất của `tss_reversal` (taker_sell_share phút sự kiện − TB 5′ trước) có net 24h thấp hơn quintile thấp nhất.
 
