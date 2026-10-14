@@ -108,14 +108,15 @@ def v2_stats(parquet):
     return v2, info
 
 
-# --- V3 (revised 2026-10-15 after a FAIL on kline1m 2023-09) ---
+# --- V3 (revised 2026-10-15, twice: after a FAIL on kline1m 2023-09, then MASTER 10-15) ---
 # 1. taker_buy_quote <= quote_volume: tolerance loosened from 1e-9 to 1e-6 RELATIVE.
 #    Binance's own quote_volume carries rounding noise; a 1e-9 bound false-FAILs on it.
-# 2. Any row that still violates (or matches the source-glitch exception below) is
-#    written to the dataset's anomalies.csv. Data rows are NEVER edited or dropped
-#    here; downstream consumers skip the listed rows.
+# 2. EVERY bad row (including the source-glitch rows below) is written to the dataset's
+#    anomalies.csv. Data rows are NEVER edited or dropped here; downstream consumers
+#    skip the listed rows.
 # 3. V3 PASSes when a month has <= V3_MAX_ROWS violating rows AND
-#    violations/rows <= V3_MAX_FRAC.
+#    violations/rows <= V3_MAX_FRAC. Source-glitch rows COUNT toward that cap
+#    (MASTER 2026-10-15) -- they are still written to anomalies.csv.
 V3_TAKER_RTOL = 1e-6
 V3_MAX_ROWS = 10
 V3_MAX_FRAC = 1e-6
@@ -158,9 +159,10 @@ def v3_check(parquet, ds=None, ym=None):
     """OHLC ordering + 0 <= taker_buy_quote <= quote_volume(1+rtol) + n_trades >= 0.
 
     A row whose quote_volume is corrupt at the source (inconsistent with
-    volume*close by orders of magnitude, Binance single-minute glitch) is logged
-    as an EXCEPTION, not a violation: the lake keeps the row verbatim and every
-    consumer skips it via anomalies.csv.
+    volume*close by orders of magnitude, Binance single-minute glitch) is tagged
+    source_quote_volume_glitch and STILL COUNTS as a violation (MASTER 2026-10-15);
+    it is also written to anomalies.csv so consumers skip it. The lake keeps the
+    row verbatim.
     """
     viol = 0
     n_exc = 0
@@ -195,11 +197,11 @@ def v3_check(parquet, ds=None, ym=None):
             if not n_ok[i]:
                 reasons.append(V3_REASON["ntrades"])
             if not t_ok[i]:
+                viol += 1                     # glitch rows count toward the cap too
                 if glitch[i]:
                     n_exc += 1
                     reasons.append(V3_REASON["glitch"])
                 else:
-                    viol += 1
                     reasons.append(V3_REASON["taker"])
             for r in reasons:
                 flagged.append((syms[i], int(tss[i]), r))
@@ -368,6 +370,9 @@ def v6(ds, ym):
     os.makedirs(tmp_out, exist_ok=True)
     mod.OUT_DIR = os.path.join(TMP_DIR, "_v6")
     mod.KLINE_DIR = OUT_DIR  # basis V6 rebuild reads the real kline parquet
+    # NEVER let the throwaway rebuild clobber the real per-month build state
+    # (2026-10-15: a zips-less rebuild wrote rows=0 into state/build/<ds>/<ym>.json).
+    mod.STATE_DIR = os.path.join(TMP_DIR, "_v6")
     mod.COUNT = {"micro_fixed": 0, "dupes": 0, "files": 0, "rows_in": 0}
     import io
     old = sys.stdout
