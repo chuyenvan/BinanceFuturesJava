@@ -401,10 +401,21 @@ def _v6_ledger_write(ds, ym, sha, source="validate"):
 
 
 def _v6_refetch(ds, ym):
-    """Re-download the raw zips for one ds/month; returns the types that failed."""
+    """Re-download the raw zips for one ds/month; returns the types that failed.
+
+    vz_fetch skips a month whose fetch state says done, so the state entry is
+    moved aside first -- otherwise the re-fetch is a no-op and V6 falls through
+    to an empty rebuild (2026-10-15: that produced a bogus FAIL for 2026-02).
+    """
     here = os.path.dirname(os.path.abspath(__file__))
     failed = []
     for typ in V6_NEEDED.get(ds, []):
+        st = os.path.join(STATE_DIR, typ, ym + ".json")
+        if os.path.exists(st):
+            try:
+                os.replace(st, st + ".v6refetch")
+            except Exception:  # noqa: BLE001
+                pass
         try:
             r = subprocess.run([sys.executable, os.path.join(here, "vz_fetch.py"), typ, ym],
                                cwd=here, capture_output=True, text=True)
