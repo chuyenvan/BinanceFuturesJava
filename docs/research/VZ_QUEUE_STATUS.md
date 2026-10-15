@@ -19,4 +19,5 @@ Mỗi Q xong ghi 1 dòng: Q | trạng thái | commit | số chính. Trạng thá
 ## QUEUE_1015 — P1..P5 (MASTER 10-15)
 | P | trạng thái | commit | số chính |
 |---|---|---|---|
+| P2 | RUNNING | (commit này) | Collector liquidations forward đã chạy nền trên Oracle (pid 3750693, `setsid nohup`) + cron watchdog 5′. **Root cause file cũ 0 dòng thực chất đã chạy nhưng không ghi dòng nào từ 2026-09-12**: endpoint raw `wss://fstream.binance.com/ws/!forceOrder@arr` bị host Oracle nhận HTTP-101 nhưng **0 frame** (cả `/ws/<sym>@aggTrade` cũng 0); chỉ endpoint **combined** `wss://fstream.binance.com/market/stream?streams=!forceOrder@arr` mới stream. File mới ghi `~/collect/liq/YYYY-MM-DD.csv.gz` (UTC), heartbeat 5′, reconnect backoff, watchdog stale 300s. Số event 1h: đang chờ. |
 | P1 | DONE (lõi) + 3 mục xác minh tiếp | (commit này) | Mọi `vz-*` (10) + `bcast-2020-2021h1-p1` + `sim-ho26(-a)-bundle` + `ho4p1-code`/`ho4p1-jar-exp` + `sim-jar-ecost` + `wfo-ticker-2021..2025` **đều CÒN ĐỦ** trên Kaggle (đã xác minh). Chưa map 2 jar nền (b7c89f09/0944841c) + "bundle Vision A/B" + dataset template sim ⇒ chuyển bước xác minh. Output `docs/data/KAGGLE_REQUIRED.md` |
