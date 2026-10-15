@@ -294,5 +294,21 @@ mạnh hơn 60′/240′) ⇒ **thiên lệch chọn (selection bias)**. Đã b�
 - `~/vz_e1/reports/audit_b4_events.json` (B2-outcome/B4/B5/C1/C2/C3)
 - `~/vz_e1/reports/audit_b4_repro.json` (A1/A2, 3 biến thể convention)
 - `~/vz_e1/reports/audit_b4_a2.json`, `~/vz_e1/reports/audit_b4_defs.json` (C4/D1)
+- `~/vz_e1/reports/audit_b4_b2.json` (B2 kiểm chéo độc lập, xem Addendum)
 - `~/vz_e1/reports/e1_confirm_B4_AUDIT.json` md5 `1c7881deb0418b5b8269c893ec1c8ee1` (A1, có cờ `audit: true`)
 - log: `~/vz_e1/logs/audit_b4_driver.out`, `audit_b4_events4.out`, `audit_b4_repro.out`, `q6_confirm.out`
+
+## Addendum — kiểm chéo độc lập B2 (2026-10-15 18:32)
+
+`research/vz/e1/e1_audit_b4_b2fix.py` (chạy → `~/vz_e1/reports/audit_b4_b2.json`) là **bản cài đặt thứ hai, độc lập**
+của phép đọc tay `close(ts+1440′)`, viết lại từ đầu (cache theo `(month, sym)`, tra tháng của sự kiện trước rồi mới sang
+tháng sau, sự kiện vắt năm bắt buộc runner = NaN). Kết quả **trùng khớp** phần B2 ở trên:
+`n_compared` = 995 / 992 / 995 / 996 (2022/2023/2024/2025), **max|Δ gross_1440| = 0,0 cả 4 năm**, 0 dòng lệch > 1e-12;
+0 / 8 / 5 / 4 sự kiện vắt năm có runner = NaN đúng luật ⇒ **B2 PASS qua hai đường code khác nhau**.
+
+Hai artefact của checker đầu tiên (đã sửa, ghi lại để lần sau khỏi mất thời gian):
+1. cache khung "tháng sau" **theo tháng** ⇒ symbol thứ hai của cùng tháng dùng lại khung nạp cho symbol khác → báo "hand
+   read misses ts+1440'" giả (18–23 dòng/năm);
+2. `sym` trong parquet lake là **dictionary-encoded** (pandas categorical): `groupby("sym")` với `observed=False` sinh
+   **nhóm rỗng** cho mọi category không xuất hiện → cache ra mảng rỗng ⇒ cùng triệu chứng. Dùng `observed=True`
+   (hoặc `astype(str)` trước khi groupby).
