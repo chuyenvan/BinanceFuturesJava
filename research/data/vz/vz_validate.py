@@ -7,6 +7,7 @@ import json
 import os
 import random
 import struct
+import subprocess
 import sys
 import time
 
@@ -358,6 +359,62 @@ def v5(basis_parquet, kline_parquet):
     }
 
 
+V6_NEEDED = {"kline1m": ["kline1m"],
+             "basis1m": ["premiumIndex1m", "markPrice1m", "indexPrice1m"],
+             "metrics5m": ["metrics"], "funding": ["fundingRate"]}
+
+
+def _v6_src_files(ds, ym):
+    """Number of raw source files still present for one ds/month (0 == consumed)."""
+    n = 0
+    for typ in V6_NEEDED.get(ds, []):
+        d = os.path.join(TMP_DIR, typ, ym)
+        if os.path.isdir(d):
+            n += len([f for f in os.listdir(d) if not f.startswith(".")])
+    return n
+
+
+def _v6_ledger_path(ds, ym):
+    return os.path.join(STATE_DIR, "v6", ds, ym + ".json")
+
+
+def _v6_ledger_read(ds, ym):
+    p = _v6_ledger_path(ds, ym)
+    if not os.path.exists(p):
+        return None
+    try:
+        return json.load(open(p))
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _v6_ledger_write(ds, ym, sha, source="validate"):
+    p = _v6_ledger_path(ds, ym)
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    rec = {"ds": ds, "month": ym, "sha256": sha, "status": "PASS",
+           "source": source, "ts": time.strftime("%Y-%m-%d %H:%M:%S")}
+    tmp = p + ".tmp"
+    with open(tmp, "w") as fh:
+        json.dump(rec, fh, ensure_ascii=False, indent=1)
+    os.replace(tmp, p)
+    return rec
+
+
+def _v6_refetch(ds, ym):
+    """Re-download the raw zips for one ds/month; returns the types that failed."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    failed = []
+    for typ in V6_NEEDED.get(ds, []):
+        try:
+            r = subprocess.run([sys.executable, os.path.join(here, "vz_fetch.py"), typ, ym],
+                               cwd=here, capture_output=True, text=True)
+            if r.returncode != 0:
+                failed.append(typ)
+        except Exception:  # noqa: BLE001
+            failed.append(typ)
+    return failed
+
+
 def v6(ds, ym):
     # rebuild from zips to temp and compare sha
     import importlib.util
@@ -370,6 +427,22 @@ def v6(ds, ym):
     if not os.path.exists(orig):
         return {"status": "FAIL", "reason": "orig missing"}
     gold = sha256_file(orig)
+    # 2026-10-15 (MASTER): N/A is allowed ONLY against a recorded prior V6 PASS for
+    # exactly this parquet sha256. A successful build deletes the month's zips, so
+    # a later V6 cannot rebuild; trusting state/build's sha alone is NOT proof that
+    # a rebuild ever matched. No ledger entry -> re-fetch the month's raw sources
+    # and run V6 for real.
+    if _v6_src_files(ds, ym) == 0:
+        led = _v6_ledger_read(ds, ym)
+        if led and led.get("sha256") == gold:
+            return {"status": "N/A", "sha_orig": gold, "sha_rebuild": None,
+                    "reason": "prior V6 PASS on record for sha256 %s (%s, %s)"
+                              % (gold[:16], led.get("source", "ledger"), led.get("ts"))}
+        failed = _v6_refetch(ds, ym)
+        if failed or _v6_src_files(ds, ym) == 0:
+            return {"status": "FAIL", "sha_orig": gold, "sha_rebuild": None,
+                    "reason": "no prior V6 PASS record; re-fetch of the month's zips failed (%s)"
+                              % (",".join(failed) or "no source files after fetch")}
     # rebuild
     sys.argv = ["vz_build.py", ds, ym]
     # redirect OUT to a temp dir
@@ -389,26 +462,6 @@ def v6(ds, ym):
     finally:
         sys.stdout = old
     got_path = os.path.join(tmp_out, ym + ".parquet")
-    # 2026-10-15: a SUCCESSFUL build deletes the month's source zips (phase1 drops
-    # them right after validation). A later re-run therefore cannot rebuild; it
-    # yields rows=0 and used to report FAIL -- a bogus verdict that made
-    # vz_phase1 abort ("VALIDATE FAIL kline1m 2026-02"). With no source rows read
-    # the honest verdict is N/A; integrity is instead asserted by matching the
-    # parquet sha256 against the one recorded at build time.
-    if not os.path.exists(got_path) or mod.COUNT.get("rows_in", 0) == 0:
-        rec = os.path.join(STATE_DIR, "build", ds, ym + ".json")
-        sha_state = None
-        if os.path.exists(rec):
-            try:
-                sha_state = json.load(open(rec)).get("sha256")
-            except Exception:  # noqa: BLE001
-                sha_state = None
-        same = bool(sha_state) and sha_state == gold
-        return {"status": "N/A", "sha_orig": gold, "sha_rebuild": None,
-                "reason": ("source zips consumed after build; parquet sha256 unchanged since build ("
-                           + gold[:16] + ")") if same else
-                          ("source zips consumed after build; parquet sha256 " + gold[:16]
-                           + (" != state " + str(sha_state)[:16] if sha_state else "; state json missing"))}
     got = sha256_file(got_path)
     # the rebuild is throwaway (20 GB accumulated here on the 2026-10-14 run): drop it
     try:
@@ -417,7 +470,10 @@ def v6(ds, ym):
             _sh.rmtree(os.path.join(TMP_DIR, "_v6", ds), ignore_errors=True)
     except Exception:  # noqa: BLE001
         pass
-    return {"status": "PASS" if got == gold else "FAIL", "sha_orig": gold, "sha_rebuild": got}
+    ok = got == gold
+    if ok:
+        _v6_ledger_write(ds, ym, gold)
+    return {"status": "PASS" if ok else "FAIL", "sha_orig": gold, "sha_rebuild": got}
 
 
 def main():
