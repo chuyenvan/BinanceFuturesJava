@@ -35,6 +35,25 @@ python3 e1_confirm.py --prereg ../../../docs/prereg/PREREG_VZ_SMOKE.md --smoke-c
   `active`, `quote_volume ≥ 50 000`, gộp < 30′/symbol (giữ phút đầu).
 - Ledger: `docs/research/VZ_EXPLORE_LEDGER.md` (mỗi biến thể đã tính outcome = 1 dòng).
 
+## Bộ nhớ (MASTER 10-15 mục 2) — loader đọc theo THÁNG
+
+`e1_data.read_month_frame` đọc metrics5m/funding theo từng tháng (slice file năm theo
+row group, hoặc export tháng của Phase 1) + chỉ cột dùng đến; `e1_core` giữ window
+`[tháng trước, tháng này, tháng sau]` cho asof (ts-60' → ts+240'), `del` + `gc.collect()`
+sau mỗi tháng. `e1_core.candidates` / `month_dayvol` cũng đọc từng row group.
+
+Đo peak RSS (1 tháng, dưới trần RAM):
+
+```bash
+systemd-run --user --scope -q -p MemoryMax=3G -p MemorySwapMax=1G \
+    /usr/bin/time -v python3 e1_load_probe.py --month 2024-01
+```
+
+Peak 2024-01 = 1 342 800 kB, 2024-12 (tháng lớn nhất) = 1 802 120 kB (< 2,5 GB).
+Kiểm chứng không đổi kết quả (`--write` rồi `--compare`, so với
+`~/vz_e1/out/e1_{events,panel,dayvol}_2024.parquet`): 2024-01 và 2024-12 **bit-identical**
+(event set, feature, panel, dayvol).
+
 ## Giới hạn đã ghi nhận
 
 - `vz-symbols` chưa upload ⇒ tuổi symbol suy từ dữ liệu 2024 (`age_known`); symbol niêm yết

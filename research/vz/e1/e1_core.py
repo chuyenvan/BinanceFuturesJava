@@ -14,6 +14,7 @@ processed symbol by symbol (pass 1 = candidate minutes, pass 2 = per-symbol
 feature frame). RSS stays low while Phase 1 runs.
 """
 import argparse
+import gc
 import os
 import time
 
@@ -121,25 +122,51 @@ def compute_features(fr):
     return fr
 
 
-def load_metrics():
-    df = pq.read_table(e1_data.metrics_year("2024"),
-                       columns=["ts", "sym", "oi", "oi_value"]).to_pandas()
-    df = df.sort_values(["sym", "ts"], kind="stable")
+# only the columns the engine consumes; metrics5m-2024 has 29.1M rows (~1.1 GB
+# in pandas for 4 cols) - the whole year must never be resident at once.
+METRICS_COLS = ["ts", "sym", "oi", "oi_value"]
+FUNDING_COLS = ["ts", "sym", "rate"]
+
+
+def _sym_records(df, value_cols):
+    """{str(sym): (ts, col1, col2, ...)} numpy arrays for a (sym, ts)-sorted frame."""
     out = {}
-    for sym, g in df.groupby("sym", sort=False):
-        out[sym] = (g.ts.to_numpy(np.int64), g.oi.to_numpy(np.float64),
-                    g.oi_value.to_numpy(np.float64))
-    log.info("metrics5m symbols=%d rows=%d", len(out), len(df))
+    for sym, g in df.groupby("sym", sort=False, observed=True):
+        out[str(sym)] = tuple([g.ts.to_numpy(np.int64)]
+                              + [g[c].to_numpy(np.float64) for c in value_cols])
+    return out
+
+
+def load_metrics(months):
+    """metrics5m for `months` (ONE month at a time, only ts/oi/oi_value).
+
+    Returns {sym: (ts, oi, oi_value)}. Callers pass just the months whose window
+    they need (current month + neighbours), so the year file is never read whole.
+    """
+    months = [m for m in (months or []) if m]
+    if not months:
+        return {}
+    parts = [e1_data.metrics_month(m, columns=METRICS_COLS) for m in months]
+    df = pd.concat(parts, ignore_index=True) if len(parts) > 1 else parts[0]
+    del parts
+    df = df.sort_values(["sym", "ts"], kind="stable")
+    out = _sym_records(df, ("oi", "oi_value"))
+    log.info("metrics %s symbols=%d rows=%d", ",".join(months), len(out), len(df))
     del df
     return out
 
 
-def load_funding():
-    df = pd.read_parquet(e1_data.funding_year("2024")).sort_values(["sym", "ts"], kind="stable")
-    out = {}
-    for sym, g in df.groupby("sym", sort=False):
-        out[sym] = (g.ts.to_numpy(np.int64), g.rate.to_numpy(np.float64))
-    log.info("funding symbols=%d rows=%d", len(out), len(df))
+def load_funding(months):
+    """funding for `months` (ONE month at a time, only ts/rate) -> {sym: (ts, rate)}."""
+    months = [m for m in (months or []) if m]
+    if not months:
+        return {}
+    parts = [e1_data.funding_month(m, columns=FUNDING_COLS) for m in months]
+    df = pd.concat(parts, ignore_index=True) if len(parts) > 1 else parts[0]
+    del parts
+    df = df.sort_values(["sym", "ts"], kind="stable")
+    out = _sym_records(df, ("rate",))
+    log.info("funding %s symbols=%d rows=%d", ",".join(months), len(out), len(df))
     del df
     return out
 
@@ -153,9 +180,24 @@ def _metrics_at(metrics, sym, ts):
     return None if k < 0 else (ts_a, oi_a, oiv_a, k)
 
 
+def _iter_ts_window(index, columns, m_start, m_end):
+    """Yield a month's rows ONE ROW GROUP AT A TIME (pandas), filtered on ts.
+
+    The lake is (sym, ts)-sorted with one row group per symbol-month, so this
+    never materialises a whole month in RAM. Rows/order are identical to a
+    single `pq.read_table(path, columns=...)` + ts filter.
+    """
+    for i in range(index.nrg):
+        d = index.pf.read_row_group(i, columns=columns).to_pandas()
+        d = d[(d.ts >= m_start) & (d.ts < m_end)]
+        if len(d):
+            yield d
+
+
 def candidates(cur_index, m_start, m_end):
-    cand = pq.read_table(cur_index.path, columns=CAND_COLS).to_pandas()
-    cand = cand[(cand.ts >= m_start) & (cand.ts < m_end)]
+    parts = list(_iter_ts_window(cur_index, CAND_COLS, m_start, m_end))
+    cand = pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(columns=CAND_COLS)
+    del parts
     cand = cand[cand.active.fillna(False).astype(bool) & (cand.quote_volume >= MIN_QUOTE_VOLUME)]
     br32 = ((cand.close.astype(np.float32) - cand.open.astype(np.float32))
             / cand.open.astype(np.float32))
@@ -173,13 +215,27 @@ def candidates(cur_index, m_start, m_end):
 
 
 def month_dayvol(cur_index, m_start, m_end):
-    """Per (symbol, UTC day) quote volume sum - liquidity terciles for T5."""
-    t = pq.read_table(cur_index.path, columns=["ts", "sym", "quote_volume"]).to_pandas()
-    t = t[(t.ts >= m_start) & (t.ts < m_end)]
-    t["day"] = (t.ts // 86_400_000).astype(np.int64)
-    g = t.groupby(["sym", "day"], as_index=False).quote_volume.sum()
-    del t
-    return g
+    """Per (symbol, UTC day) quote volume sum - liquidity terciles for T5.
+
+    Summed row group by row group (a (sym, day) never spans two groups), then
+    expanded to the full symbol x day grid exactly like the categorical groupby
+    did: days a symbol did not trade are present with 0.0, not dropped.
+    """
+    parts = []
+    for d in _iter_ts_window(cur_index, ["ts", "sym", "quote_volume"], m_start, m_end):
+        d["day"] = (d.ts // 86_400_000).astype(np.int64)
+        parts.append(d.groupby(["sym", "day"], as_index=False, observed=True).quote_volume.sum())
+        del d
+    if not parts:
+        return pd.DataFrame(columns=["sym", "day", "quote_volume"])
+    partial = pd.concat(parts, ignore_index=True)
+    del parts
+    partial["sym"] = pd.Categorical(partial["sym"].astype(str),
+                                    categories=[str(s) for s in cur_index.dict])
+    g = partial.groupby(["sym", "day"], as_index=False, observed=False).quote_volume.sum()
+    g["sym"] = g["sym"].astype(str)
+    del partial
+    return g[["sym", "day", "quote_volume"]]
 
 
 def month_events(month, metrics, funding, indexes):
@@ -456,9 +512,6 @@ def build_year_events(year, lookback_days=30, prior_lookback=True, release=True,
 def build(months=MONTHS_2024):
     ensure_dirs()
     t0 = time.time()
-    log.info("loading metrics + funding")
-    metrics = load_metrics()
-    funding = load_funding()
     indexes = {}
     first_seen = {}
     events_parts, panel_parts, dayvol_parts = [], [], []
@@ -478,7 +531,18 @@ def build(months=MONTHS_2024):
             t = cur.rg_ts_min[rg]
             if t >= 0 and (s not in first_seen or t < first_seen[s]):
                 first_seen[s] = int(t)
+        # metrics/funding: current month + neighbours (asof lookups run from
+        # ts-60' to ts+240', so they can cross either month edge), read per month
+        # with the column subset used. At the 2024 edges prev/next is None, which
+        # is exactly what the old whole-year frame gave (the year file starts
+        # 2024-01-01 and ends 2024-12-31, no 2023/2025 read).
+        window = [prev, month, nxt]
+        metrics = load_metrics(window)
+        funding = load_funding(window)
         ev, panel = month_events(month, metrics, funding, local)
+        # release the month's RAM before the next iteration
+        del metrics, funding
+        gc.collect()
         if len(ev):
             events_parts.append(ev)
             panel_parts.append(panel)
@@ -488,6 +552,7 @@ def build(months=MONTHS_2024):
         if prev is not None:
             e1_data.release(prev)
             indexes.pop(prev, None)
+        gc.collect()
     ev = pd.concat(events_parts, ignore_index=True) if events_parts else pd.DataFrame()
     ev = ev.sort_values(["ts", "sym"], kind="stable").reset_index(drop=True)
     ev["bar_ret"] = ev.close / ev.open - 1.0

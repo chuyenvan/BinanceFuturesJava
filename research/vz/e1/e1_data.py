@@ -2,8 +2,10 @@
 
 Allowed: chuyendinh/vz-kline1m-2024, vz-basis1m-2024, vz-metrics5m(file 2024),
 vz-funding (file 2024). No other year, no Binance REST.
-Keeps the working set small: kline/basis are fetched per month and released on
-request so the disk guard (>= 30 GB on /) is respected while Phase 1 runs.
+Keeps the working set small: kline/basis AND metrics/funding are read per month
+with only the columns a caller needs, so the year files (metrics5m-2024: 29.1M
+rows / 1.1 GB) are never resident whole; the disk guard (>= 30 GB on /) is
+respected while Phase 1 runs.
 """
 import csv
 import os
@@ -111,6 +113,106 @@ def metrics_year(year="2024"):
 
 def funding_year(year="2024"):
     return _kaggle(DS_FUNDING, "funding-%s.parquet" % year, RAW)
+
+
+# ------------------------------------------------- metrics/funding per MONTH
+# metrics5m / funding ship one file per YEAR in RAW (metrics5m-2024: 29.1M rows,
+# 1.1 GB) plus a Phase-1 per-month export under ~/vz/out. Reading a whole year is
+# ~10x the RAM of one month, so every E1 consumer reads ONE MONTH AT A TIME with
+# only the columns it uses. The per-month export and the year-file slice were
+# verified row-identical for 2024-01 (metrics 2 197 176 rows, funding 29 258).
+EXPORT_ROOT = os.path.expanduser("~/vz/out")
+MONTH_KIND_DIR = {"metrics": "metrics5m", "funding": "funding"}
+
+
+def month_ts_bounds(month):
+    """[start, end) epoch-ms of a `YYYY-MM` month (UTC)."""
+    y, m = int(month[:4]), int(month[5:7])
+    start = int(pd.Timestamp(year=y, month=m, day=1, tz="UTC").timestamp() * 1000)
+    end = int(pd.Timestamp(year=y + (1 if m == 12 else 0),
+                           month=1 if m == 12 else m + 1, day=1,
+                           tz="UTC").timestamp() * 1000)
+    return start, end
+
+
+def month_export(kind, month):
+    """Phase-1 per-month export for `kind` in {metrics, funding}; None if absent."""
+    p = os.path.join(EXPORT_ROOT, MONTH_KIND_DIR[kind], month[:4], "%s.parquet" % month)
+    if os.path.exists(p) and os.path.getsize(p) > 0 and _valid_parquet(p):
+        return p
+    return None
+
+
+def slice_month(path, month, columns=None):
+    """Rows of `month` from a year-wide parquet, ONE ROW GROUP AT A TIME.
+
+    Each row group is decoded, filtered on `ts` and released, so a whole year
+    never sits in RAM: peak ~= biggest row group + the month's rows.
+    """
+    import pyarrow.parquet as pq
+    lo, hi = month_ts_bounds(month)
+    pf = pq.ParquetFile(path)
+    parts = []
+    for i in range(pf.metadata.num_row_groups):
+        st = pf.metadata.row_group(i).column(0).statistics
+        if st is not None and st.has_min_max and (st.max < lo or st.min >= hi):
+            continue
+        d = pf.read_row_group(i, columns=columns).to_pandas()
+        d = d[(d["ts"] >= lo) & (d["ts"] < hi)]
+        if len(d):
+            parts.append(d)
+    if not parts:
+        return pd.DataFrame(columns=columns)
+    return pd.concat(parts, ignore_index=True)
+
+
+def read_month_frame(kind, month, columns=None, fetch=True, source="auto"):
+    """ONE month of the year-wide `metrics`/`funding` dataset, only `columns`.
+
+    source "auto": per-month slice of the RAW year file first (that is what the
+    canonical 2024 outputs were built from), else the Phase-1 per-month export.
+    "export"/"year" force one path. The year file is streamed row group by row
+    group, so a whole year never sits in RAM.
+
+    NB the per-month export is a Phase-1 snapshot and can lag the raw year file
+    (2024-12: export 2 958 186 rows vs raw 2 958 187, one missing minute of
+    metrics), so it is the fallback, not the default.
+    """
+    if source in ("auto", "year"):
+        try:
+            ypath = month_path_year(kind, month[:4], fetch=fetch)
+            return slice_month(ypath, month, columns=columns)
+        except FileNotFoundError:
+            if source == "year":
+                raise
+    p = month_export(kind, month)
+    if p is None:
+        raise FileNotFoundError("no %s data for %s (no year file, no export)" % (kind, month))
+    return pd.read_parquet(p, columns=columns)
+
+
+def month_path_year(kind, year, fetch=True):
+    """Year-wide file for `kind` in {metrics, funding} (downloading only if fetch)."""
+    if kind == "metrics":
+        return metrics_year(year) if fetch else _local_year(DS_METRICS, "metrics5m", year)
+    return funding_year(year) if fetch else _local_year(DS_FUNDING, "funding", year)
+
+
+def _local_year(ds, prefix, year):
+    p = os.path.join(RAW, "%s-%s.parquet" % (prefix, year))
+    if os.path.exists(p) and os.path.getsize(p) > 0 and _valid_parquet(p):
+        return p
+    raise FileNotFoundError("no local %s for %s (fetch disabled)" % (prefix, year))
+
+
+def metrics_month(month, columns=None, fetch=True, source="auto"):
+    """One month of metrics5m (see read_month_frame)."""
+    return read_month_frame("metrics", month, columns=columns, fetch=fetch, source=source)
+
+
+def funding_month(month, columns=None, fetch=True, source="auto"):
+    """One month of funding (see read_month_frame)."""
+    return read_month_frame("funding", month, columns=columns, fetch=fetch, source=source)
 
 
 def release(month):
