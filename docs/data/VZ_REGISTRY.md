@@ -271,3 +271,9 @@ KHÔNG có tháng nào cần bù trước khi chạy tiếp; job tiếp tục �
 - **Gate Q6 (B4) = đủ 2022 + 2023 + 2025 + `2021-12`.**
 
 **Commit:** (kèm commit của mục này).
+
+## P1b kline1m (2022)
+- slug `chuyendinh/vz-kline1m-2022`; files 12; bytes 1871312246; rows 75973640; syms~154; gov DEV
+
+## P1b basis1m (2022)
+- slug `chuyendinh/vz-basis1m-2022`; files 12; bytes 2085386761; rows 77447227; syms~153; gov DEV
