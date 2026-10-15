@@ -254,6 +254,13 @@ def load_closes(year, sample_n=2000, seed=42):
 
 def v4(parquet, ym, sample_n=2000):
     year = int(ym[:4])
+    # MASTER 2026-10-15: months outside the internal CLOSES_1H coverage (ts > 2026-01-01 00:00)
+    # have NO clean internal reference -> V4 = N/A (NOT FAIL).
+    # NEVER compare against any data taken from 242.
+    if ym >= "2026-01":
+        return {"status": "N/A",
+                "reason": "outside internal CLOSES_1H coverage (ts > 2026-01-01 00:00); no 242 comparison",
+                "year": year}
     picked, symname = load_closes(year, sample_n)
     if not picked:
         return {"status": "FAIL", "reason": "internal CLOSES has no rows for %d" % year}

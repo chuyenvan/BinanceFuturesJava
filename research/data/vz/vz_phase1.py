@@ -144,7 +144,7 @@ def report_ok(ds, ym):
         return None
     d = json.load(open(p))
     st = [d[k]["status"] for k in ["V1", "V2", "V3", "V4", "V5", "V6"] if k in d]
-    ok = all(s in ("PASS", "SKIP") for s in st)
+    ok = all(s in ("PASS", "SKIP", "N/A") for s in st)
     return {"ok": ok, "status": st}
 
 
