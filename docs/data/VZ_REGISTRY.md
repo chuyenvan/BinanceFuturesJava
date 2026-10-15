@@ -277,3 +277,9 @@ KHÔNG có tháng nào cần bù trước khi chạy tiếp; job tiếp tục �
 
 ## P1b basis1m (2022)
 - slug `chuyendinh/vz-basis1m-2022`; files 12; bytes 2085386761; rows 77447227; syms~153; gov DEV
+
+## P1b kline1m (2021)
+- slug `chuyendinh/vz-kline1m-2021`; files 12; bytes 1712989711; rows 60001411; syms~138; gov DEV
+
+## P1b basis1m (2021)
+- slug `chuyendinh/vz-basis1m-2021`; files 12; bytes 1723111935; rows 61117704; syms~138; gov DEV
