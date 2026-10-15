@@ -30,7 +30,9 @@ YEARS = [
     ("2025", [f"2025-{m:02d}" for m in range(1, 13)]),
     ("2023", [f"2023-{m:02d}" for m in range(1, 13)]),
     ("2022", [f"2022-{m:02d}" for m in range(1, 13)]),
-    ("2021", [f"2021-{m:02d}" for m in range(1, 13)]),
+    # MASTER 10-15 (07:02): 2021-12 FIRST -- it is the <=30d lookback for 2022 events,
+    # needed before Q6/B4 confirmation; only then the rest of 2021 (01..11).
+    ("2021", ["2021-12"] + [f"2021-{m:02d}" for m in range(1, 12)]),
     ("2026", [f"2026-{m:02d}" for m in range(1, 10)]),
     ("2020", [f"2020-{m:02d}" for m in range(1, 13)]),
 ]

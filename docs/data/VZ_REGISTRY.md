@@ -256,3 +256,18 @@ KHÔNG có tháng nào cần bù trước khi chạy tiếp; job tiếp tục �
 
 ## P1b basis1m (2023)
 - slug `chuyendinh/vz-basis1m-2023`; files 12; bytes 2768436133; rows 102428541; syms~243; gov DEV
+
+## 16. Đổi thứ tự 2021 — build `2021-12` TRƯỚC (MASTER 10-15 07:02)
+
+- **Quyết định:** sau khi xong **2022**, build NGAY tháng **`2021-12`** (đủ 4 ds, V1–V6) **trước** các
+  tháng 2021 còn lại, rồi mới **2021-01→11 → 2026 → 2020s**.
+- **Lý do:** `2021-12` là **lookback ≤30 ngày cuối năm trước** cho sự kiện **2022** — runner `e1_confirm`
+  yêu cầu 13 tháng/năm cho 2022 (`PREREG_VZ_B4`, gate Q6). Lookback của 2023 (`2022-12`) và 2025 (`2024-12`)
+  **đã có sẵn**.
+- **Code:** `research/data/vz/vz_phase1.py` — `YEARS` mục `2021` đổi thành `["2021-12"] + ["2021-01".."2021-11"]`.
+- **Hiệu lực:** tiến trình đang chạy (PID 3664150) đã nạp `YEARS` lúc khởi động ⇒ sẽ **restart đúng 1 lần ở
+  ranh giới 2023→2022** (khi đang ở năm 2022, KHÔNG giữa upload) để nạp thứ tự mới; resume idempotent
+  (bỏ qua năm đã xong qua `remote_year_done`).
+- **Gate Q6 (B4) = đủ 2022 + 2023 + 2025 + `2021-12`.**
+
+**Commit:** (kèm commit của mục này).
