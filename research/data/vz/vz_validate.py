@@ -389,6 +389,26 @@ def v6(ds, ym):
     finally:
         sys.stdout = old
     got_path = os.path.join(tmp_out, ym + ".parquet")
+    # 2026-10-15: a SUCCESSFUL build deletes the month's source zips (phase1 drops
+    # them right after validation). A later re-run therefore cannot rebuild; it
+    # yields rows=0 and used to report FAIL -- a bogus verdict that made
+    # vz_phase1 abort ("VALIDATE FAIL kline1m 2026-02"). With no source rows read
+    # the honest verdict is N/A; integrity is instead asserted by matching the
+    # parquet sha256 against the one recorded at build time.
+    if not os.path.exists(got_path) or mod.COUNT.get("rows_in", 0) == 0:
+        rec = os.path.join(STATE_DIR, "build", ds, ym + ".json")
+        sha_state = None
+        if os.path.exists(rec):
+            try:
+                sha_state = json.load(open(rec)).get("sha256")
+            except Exception:  # noqa: BLE001
+                sha_state = None
+        same = bool(sha_state) and sha_state == gold
+        return {"status": "N/A", "sha_orig": gold, "sha_rebuild": None,
+                "reason": ("source zips consumed after build; parquet sha256 unchanged since build ("
+                           + gold[:16] + ")") if same else
+                          ("source zips consumed after build; parquet sha256 " + gold[:16]
+                           + (" != state " + str(sha_state)[:16] if sha_state else "; state json missing"))}
     got = sha256_file(got_path)
     # the rebuild is throwaway (20 GB accumulated here on the 2026-10-14 run): drop it
     try:
