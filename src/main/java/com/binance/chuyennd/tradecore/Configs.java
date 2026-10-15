@@ -420,6 +420,11 @@ public class Configs {
     //  Vi GATE_COUNT_ONLY khong bao gio tao order -> isSymbolRunning luon false -> tu dong BO filter von,
     //  dung y muon C1. Default false = OFF = khong ton RAM, byte-identical.
     public static final boolean ENTRY_UNIVERSE_DUMP = "1".equals(Cfg.get("SIM_ENTRY_UNIVERSE_DUMP"));
+    // [QUEUE_1015 P4 / T9-FIX 2026-10-15] SIM_EXPORT_CANDIDATES=<path>: xuat MOI ung vien duoc danh gia
+    //  trong vong selector ra CSV (ts,symbol,bar_ret,p15,thr_base,q_t,gate_pass,gate_reason,s1,rank,topk,entered).
+    //  Sua loi phuong phap T9: "chan he" (leg he thong vao lenh) khac "su kien crash".
+    //  Mac dinh TAT (rong) => khong mo file/khong ghi => byte-identical (parity md5 ad26fd55 nhu ECMEAS).
+    public static final String SIM_EXPORT_CANDIDATES = Cfg.getOr("SIM_EXPORT_CANDIDATES", "").trim();
     // [TICKLOG 2026-09-03] LOG QUYET DINH TUNG TICK CHO TUNG RUN (docs/prereg/PREREG_TICKLOG.md).
     //  Ly do: khong ton tai log quyet dinh theo tick cho tung run => ghep cap theo tick chi lam
     //  duoc cho gene selector/gate (docs/prereg/PREREG_GS.md muc 12.2). Doc qua cong Cfg, khai trong

@@ -171,6 +171,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         LOG.info("=== 🚀 BẮT ĐẦU SIMULATE TỪ {} ĐẾN {} ===", Utils.normalizeDateYYYYMMDDHHmm(startTime), Utils.normalizeDateYYYYMMDDHHmm(endTime));
         LOG.info("[SELECTOR-CFG] SELECTOR_RANK_TOPK={} SELECTOR_ONLY_ENTRY={} SELECTOR_LEG_CUT={} (TOPK<=0 => cutoff tuyet doi)",
                 Configs.SELECTOR_RANK_TOPK, Configs.SELECTOR_ONLY_ENTRY, Configs.SELECTOR_LEG_CUT);
+        // [P4/QUEUE_1015 2026-10-15] XUAT TAP UNG VIEN (mac dinh TAT: SIM_EXPORT_CANDIDATES rong/null).
+        //   OFF => khong mo file, khong ghi, khong doi quyet dinh => byte-identical (parity md5 ad26fd55).
+        if (!Configs.SIM_EXPORT_CANDIDATES.isEmpty()) {
+            boolean _ceo = CandExport.init(Configs.SIM_EXPORT_CANDIDATES);
+            LOG.info("[CAND-EXPORT] {} path={}", _ceo ? "ON" : "OFF(mo file loi)", Configs.SIM_EXPORT_CANDIDATES);
+        }
         // [TRAIL-LADDER 2026-09-23] docs/prereg/PREREG_TRAIL_LADDER.md — gap BAC THANG theo dinh.
         //   validateLadder() fail-fast (exit 2) neu mang LO/GAPS sai; OFF => khong lam gi => byte-identical.
         Configs.validateLadder();
@@ -457,12 +463,26 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         if (TickDecisionLog.ON && isSymbolRunning(targetId)) {
                                             TickDecisionLog.candAlreadyOpen(time, targetId, MarketLevelChange.PREDICT_SYMBOL_TRADE, symbolPred);
                                         }
+                                        // [P4/QUEUE_1015] ung vien bi bo TRUOC gate (dang giu san).
+                                        if (CandExport.ON && isSymbolRunning(targetId)) {
+                                            CandExport.direct(time, SimpleSymbolMapper.getInstance().getSymbol(targetId), symbolPred, selRank, "ALREADY_OPEN");
+                                        }
                                         if (!isSymbolRunning(targetId)) {
                                             KlineObjectSimple ticker = symbol2Ticker[targetId];
                                             if (Utils.isTickerAvailable(ticker)) {
                                                 createOrderBUY(targetId, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE, marketData, symbolPred, selRank);
+                                                // [P4/QUEUE_1015] chot dong: entered = co vi the moi sau loi goi.
+                                                if (CandExport.ON) {
+                                                    CandExport.finishOrFallback(isSymbolRunning(targetId), time,
+                                                            SimpleSymbolMapper.getInstance().getSymbol(targetId), symbolPred, selRank, "NO_GATE_EVAL");
+                                                }
                                             } else if (TickDecisionLog.ON) {
                                                 TickDecisionLog.candNoTicker(time, targetId, MarketLevelChange.PREDICT_SYMBOL_TRADE, symbolPred);
+                                                if (CandExport.ON) {
+                                                    CandExport.direct(time, SimpleSymbolMapper.getInstance().getSymbol(targetId), symbolPred, selRank, "NO_TICKER");
+                                                }
+                                            } else if (CandExport.ON) {
+                                                CandExport.direct(time, SimpleSymbolMapper.getInstance().getSymbol(targetId), symbolPred, selRank, "NO_TICKER");
                                             }
                                         } else if (nselOnHeld(targetId, symbol2Ticker[targetId], symbolPred, selRank, marketData)) {
                                             // [NSEL 2026-10-08] docs/prereg/PREREG_NSEL.md §2 CORE_ADD: coin đang giữ bởi cụm
@@ -615,6 +635,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
         if (TickDecisionLog.ON) {
             TickDecisionLog.close();
+        }
+        // [P4/QUEUE_1015] dong file xuat ung vien (no-op khi OFF).
+        if (CandExport.ON) {
+            CandExport.close();
+            LOG.info("[CAND-EXPORT] closed rows={}", CandExport.count());
         }
         long _tot = readMs + simMs;
         LOG.info("[PROFILE] days={} readMs={} simMs={} (read={}% sim={}%) totalLoopMs={}",
@@ -1523,6 +1548,14 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                         : aiRejectFilter.entryGate(predict, symbolPred,
                                 levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE, bookFull, selRank);
                 nselTier = filterResult.nselTier;
+                // [P4/QUEUE_1015 2026-10-15] mo dong UNG VIEN vong selector (chi leg PREDICT tu top-K).
+                //   OFF => khong lam gi => byte-identical. Ghi LAI gia tri gate vua tinh (side-channel).
+                if (CandExport.ON && levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE && selRank != null) {
+                    boolean _cdTopk = Configs.SELECTOR_RANK_TOPK <= 0 || selRank <= Configs.SELECTOR_RANK_TOPK;
+                    CandExport.begin(ticker.startTime, SimpleSymbolMapper.getInstance().getSymbol(symbolId),
+                            (ticker.priceClose - ticker.priceOpen) / ticker.priceOpen, symbolPred, selRank, _cdTopk,
+                            filterResult.decision == AIRejectFilter.FilterDecision.PASS, filterResult.reason, true);
+                }
 
                 ablationSignalSeen++;
                 if (filterResult.decision == AIRejectFilter.FilterDecision.REJECT) {

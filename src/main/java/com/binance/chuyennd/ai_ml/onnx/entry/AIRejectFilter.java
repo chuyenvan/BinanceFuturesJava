@@ -1,6 +1,7 @@
 package com.binance.chuyennd.ai_ml.onnx.entry;
 
 import com.binance.chuyennd.ai_ml.onnx.AiPredictionData;
+import com.binance.chuyennd.tradecore.CandExport;
 import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.tradecore.EntryGate;
 
@@ -113,6 +114,16 @@ public class AIRejectFilter {
             thrBase = Configs.MIN_MOMENTUM_15M;
         }
         FilterResult res = evaluate(prediction.predReturn15M, EntryGate.threshold(thrBase, sp));
+        // [P4/QUEUE_1015 2026-10-15] SIDE-CHANNEL chi doc cho SIM_EXPORT_CANDIDATES.
+        //   ON=false (mac dinh) => khong lam gi => byte-identical. Dung LAI dung gia tri vua tinh
+        //   cho chinh lan danh gia nay (KHONG goi lai GateRollingRatio.threshold vi ham do NAP buffer).
+        if (CandExport.ON && predictSymbolTrade) {
+            CandExport.LAST_P15 = prediction.predReturn15M;
+            CandExport.LAST_THR_BASE = thrBase;
+            CandExport.LAST_QT = EntryGate.threshold(thrBase, sp);
+            CandExport.LAST_PASS = res.decision == FilterDecision.PASS;
+            CandExport.LAST_REASON = res.reason;
+        }
         if (predictSymbolTrade && res.decision == FilterDecision.PASS) {
             GateRollingRatio.notePass(prediction.timestamp);
             if (LiveGateRollingRatio.isOn()) {
