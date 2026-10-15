@@ -39,3 +39,17 @@ jar sha256 (c3 & c3b): 0c2f4d72a5ae77c9b86526d5…  ✅ khớp bản triển kha
 
 ## 4. Ghi chú
 - Toàn bộ mục 1–3 là **đọc**; không start/stop/restart service nào (đúng lệnh).
+
+## 5. CẬP NHẬT — reboot #3 (18:33:42, cùng ngày)
+| mốc | thời gian (+07) |
+|---|---|
+| tick cuối trước crash (c3 & c3b) | **2026-10-15 18:32:30** |
+| service active lại | **2026-10-15 18:33:44** |
+| gate armed lại | **2026-10-15 18:33:48** (c3 & c3b, warm-up=**ARMED**) |
+| **downtime** | **≈ 74 s** (tick→active) · **≈ 78 s** (tick→gate armed) |
+- jar sha256 vẫn `0c2f4d72a5ae77c9b86526d5…` ✅ · `droppedChunks`/`backupCorruptFile`: KHÔNG có.
+- Boot list hôm nay: `-2` 12/10 06:11→**15/10 15:43:58** · `-1` 15:44:13→**18:33:28** · `0` 18:33:42→nay ⇒ **2 lần crash hôm nay**.
+
+⇒ **Đoạn LOẠI khỏi thước `PREREG_SHADOW2_PROMOTION` (cộng dồn)**:
+`[2026-10-15 15:43:52.8 , 15:44:19.2]` và `[2026-10-15 18:32:30 , 18:33:48]` (+07)
+— vì mỗi lần cắt chuỗi "4 tuần sạch" (~11–12).
