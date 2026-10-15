@@ -12,11 +12,17 @@ ENDPOINT (2026-10-15, verified on this Oracle host):
   HTTP-101 upgrade from this host but then delivers ZERO frames (same for
   `/ws/<sym>@aggTrade`); only the COMBINED `/market/stream` endpoint streams.
   That is why the previous collector (same filename, raw endpoint) never wrote a
-  single row (see ~/derivs_store/liq_ws.log, connected since 2026-09-12).
+  single row (see ~/derivs_store/liq_ws.log, "connected" since 2026-09-12).
+
+SELF-VERIFICATION DATA: on the first liquidation for a symbol the collector also
+  SUBSCRIBEs to `<sym>@kline_1m` on the same connection and stores the CLOSED 1m
+  candle to ~/collect/liq/kline1m/YYYY-MM-DD.csv.gz. This lets the 1h health
+  check verify that each liquidation price is inside the [low, high] of its own
+  1m candle without any REST call.
 
 LIMITATION (documented, per plan): Binance pushes at most the LATEST liquidation
-order per symbol per 1000 ms (snapshot semantics) => this feed is a SAMPLE of
-liquidations, NOT the complete set.
+  order per symbol per 1000 ms (snapshot semantics) => this feed is a SAMPLE of
+  liquidations, NOT the complete set.
 
 Robustness: exponential reconnect backoff, a watchdog thread that force-closes
 the socket if no frame/pong arrives within STALE_SEC, heartbeat line every
@@ -35,6 +41,7 @@ import datetime as dt
 import websocket
 
 STORE = os.path.expanduser("~/collect/liq")
+KDIR = os.path.join(STORE, "kline1m")
 URL = "wss://fstream.binance.com/market/stream?streams=!forceOrder@arr"
 LOG = os.path.join(STORE, "liq_ws.log")
 PIDFILE = os.path.join(STORE, "liq_ws.pid")
@@ -42,12 +49,15 @@ STALE_SEC = 300          # force reconnect if no frame/pong for this long
 HEARTBEAT_SEC = 300      # heartbeat log cadence (5')
 HDR = ("event_time,symbol,side,order_type,price,avg_price,orig_qty,"
        "filled_qty,status,trade_time")
+KHDR = "open_time,symbol,open,high,low,close,volume,trades,close_time"
 
 _state = {
     "total": 0,
     "last_day": None,
     "last_activity": time.time(),
     "last_hb": time.time(),
+    "ksub": 0,
+    "kline": 0,
 }
 _lock = threading.Lock()
 
@@ -62,29 +72,55 @@ def log(msg):
         pass
 
 
-def _path_for_day(day):
-    return os.path.join(STORE, day + ".csv.gz")
+def _day_str(ms):
+    return dt.datetime.utcfromtimestamp(ms / 1000).strftime("%Y-%m-%d")
 
 
-def _row(o, ev_time):
-    return ",".join(str(x) for x in [
-        ev_time, o.get("s"), o.get("S"), o.get("o"), o.get("p"),
-        o.get("ap"), o.get("q"), o.get("z"), o.get("X"), o.get("T"),
-    ])
+def _append_gz(path, fresh_header, row):
+    fresh = (not os.path.exists(path)) or os.path.getsize(path) == 0
+    with gzip.open(path, "at", newline="") as f:
+        if fresh:
+            f.write(fresh_header + "\n")
+        f.write(row + "\n")
 
 
 def write_event(o, ev_time):
     tt = o.get("T")
     base = tt or ev_time or int(time.time() * 1000)
-    day = dt.datetime.utcfromtimestamp(base / 1000).strftime("%Y-%m-%d")
-    path = _path_for_day(day)
-    fresh = (not os.path.exists(path)) or os.path.getsize(path) == 0
-    # gzip append = a new gzip member; Python/pandas read multi-member fine.
-    with gzip.open(path, "at", newline="") as f:
-        if fresh:
-            f.write(HDR + "\n")
-        f.write(_row(o, ev_time) + "\n")
+    day = _day_str(base)
+    _append_gz(os.path.join(STORE, day + ".csv.gz"), HDR, ",".join(str(x) for x in [
+        ev_time, o.get("s"), o.get("S"), o.get("o"), o.get("p"),
+        o.get("ap"), o.get("q"), o.get("z"), o.get("X"), o.get("T"),
+    ]))
     return day
+
+
+def write_kline(k):
+    day = _day_str(k["t"])
+    _append_gz(os.path.join(KDIR, day + ".csv.gz"), KHDR, ",".join(str(x) for x in [
+        k.get("t"), k.get("s"), k.get("o"), k.get("h"), k.get("l"),
+        k.get("c"), k.get("v"), k.get("n"), k.get("T"),
+    ]))
+
+
+def _subscribe_klines(ws, symbols):
+    """Subscribe sym@kline_1m for newly seen liquidation symbols."""
+    with _lock:
+        new = [s for s in symbols if s and s not in _state.setdefault("subs", set())]
+        for s in new:
+            _state["subs"].add(s)
+    if not new:
+        return
+    params = [s.lower() + "@kline_1m" for s in new]
+    try:
+        ws.send(json.dumps({"method": "SUBSCRIBE", "params": params, "id": 1}))
+        with _lock:
+            _state["ksub"] += len(params)
+    except Exception as e:
+        log("subscribe err " + str(e))
+        with _lock:
+            for s in new:
+                _state["subs"].discard(s)
 
 
 def on_message(ws, msg):
@@ -92,15 +128,23 @@ def on_message(ws, msg):
     try:
         d = json.loads(msg)
         data = d.get("data", d)          # combined-stream wrapper
-        if data.get("e") != "forceOrder":
-            return
-        o = data.get("o") or {}
-        day = write_event(o, data.get("E"))
-        with _lock:
-            _state["total"] += 1
-            _state["last_day"] = day
-    except Exception as e:
-        log("msg err " + str(e))
+        e = data.get("e")
+        if e == "forceOrder":
+            o = data.get("o") or {}
+            sym = o.get("s")
+            _subscribe_klines(ws, [sym])
+            day = write_event(o, data.get("E"))
+            with _lock:
+                _state["total"] += 1
+                _state["last_day"] = day
+        elif e == "kline":
+            k = data.get("k") or {}
+            if k.get("x"):               # closed candle only
+                write_kline(k)
+                with _lock:
+                    _state["kline"] += 1
+    except Exception as ex:
+        log("msg err " + str(ex))
 
 
 def on_pong(ws, msg):
@@ -121,6 +165,8 @@ def on_close(ws, a, b):
 
 def on_open(ws):
     _state["last_activity"] = time.time()
+    with _lock:
+        _state["subs"] = set()           # a reconnect drops all subscriptions
     log("connected " + URL)
 
 
@@ -138,7 +184,9 @@ def _watchdog(ws):
         if time.time() - _state["last_hb"] >= HEARTBEAT_SEC:
             _state["last_hb"] = time.time()
             with _lock:
-                log("heartbeat events=%d last_day=%s" % (_state["total"], _state["last_day"]))
+                log("heartbeat events=%d klines=%d ksub=%d last_day=%s" % (
+                    _state["total"], _state["kline"], _state["ksub"],
+                    _state["last_day"]))
 
 
 def _keepalive_sockopt():
@@ -150,14 +198,6 @@ def _keepalive_sockopt():
     return opts
 
 
-def _write_pid():
-    try:
-        with open(PIDFILE, "w") as f:
-            f.write(str(os.getpid()))
-    except Exception:
-        pass
-
-
 def _term(signum, frame):
     log("signal %d: exiting cleanly (events=%d)" % (signum, _state["total"]))
     sys.exit(0)
@@ -165,7 +205,13 @@ def _term(signum, frame):
 
 def main():
     os.makedirs(STORE, exist_ok=True)
-    _write_pid()
+    os.makedirs(KDIR, exist_ok=True)
+    _state["subs"] = set()
+    try:
+        with open(PIDFILE, "w") as f:
+            f.write(str(os.getpid()))
+    except Exception:
+        pass
     signal.signal(signal.SIGTERM, _term)
     signal.signal(signal.SIGINT, _term)
     backoff = 1
@@ -180,7 +226,6 @@ def main():
             t0 = time.time()
             ws.run_forever(ping_interval=60, ping_timeout=15,
                            sockopt=_keepalive_sockopt())
-            # a clean run_forever exit means the socket dropped
             if time.time() - t0 > 60:
                 backoff = 1
         except Exception as e:
