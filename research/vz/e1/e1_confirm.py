@@ -176,7 +176,7 @@ def eval_confirm(ev, cfg, variant, widen):
     return out
 
 
-def run_confirmation(prereg_path, yrs, pre, gs, fetch=False):
+def run_confirmation(prereg_path, yrs, pre, gs, fetch=False, audit_2024=False):
     variant = pre["variant"]
     if variant != B4_VARIANT:
         raise SystemExit("REFUSE: variant %s is not the frozen B4 variant %s"
@@ -215,6 +215,10 @@ def run_confirmation(prereg_path, yrs, pre, gs, fetch=False):
 
     res = {"prereg": pre, "prereg_commit": gs["commit"], "years": yrs, "variant": variant,
            "ci_widen_factor_sqrt2lnk": widen, "per_year": per_year, "pooled": pooled_res,
+           "audit": bool(audit_2024),
+           "audit_note": ("AUDIT, KHONG phai xac nhan: 2024 la nam kham pha (da dung 1 lan); "
+                           "lan chay nay chi de doi chieu runner xac nhan voi code kham pha T9. "
+                           "Khong dung de GO/NO-GO.") if audit_2024 else None,
            "go_rule": {
                "cond1_pooled_net1440_lt0_and_widened_ci_upper_lt0": c1,
                "cond2_each_year_net1440_lt0": c2,
@@ -222,7 +226,7 @@ def run_confirmation(prereg_path, yrs, pre, gs, fetch=False):
                "decision": "GO" if (c1 and c2 and c3) else "NO-GO"}}
     blob = json.dumps(res, sort_keys=True, default=str).encode()
     res["output_md5"] = hashlib.md5(blob).hexdigest()
-    name = str(pre["name"]).replace(" ", "_")
+    name = str(pre["name"]).replace(" ", "_") + ("_AUDIT" if audit_2024 else "")
     outpath = os.path.join(REPORT, "e1_confirm_%s.json" % name)
     write_json(outpath, res)
     log.info("confirm %s -> %s md5=%s decision=%s", name, outpath, res["output_md5"],
@@ -230,7 +234,7 @@ def run_confirmation(prereg_path, yrs, pre, gs, fetch=False):
     return res
 
 
-def run(prereg_path, years, fetch=False):
+def run(prereg_path, years, fetch=False, audit_2024=False):
     gs = git_state(prereg_path)
     if not gs["committed"]:
         raise SystemExit("REFUSE: pre-reg %s is not committed (git log empty)" % prereg_path)
@@ -248,7 +252,11 @@ def run(prereg_path, years, fetch=False):
         raise SystemExit("REFUSE: family %s evaluator not implemented in this runner (v1: H-B)"
                          % pre["family"])
 
-    if set(yrs) <= SMOKE_YEARS:
+    if audit_2024 and not set(yrs) <= SMOKE_YEARS:
+        raise SystemExit("REFUSE: --audit-2024 only runs the exploration year 2024 "
+                         "(got years=%s); confirmation years are 2022/2023/2025" % yrs)
+
+    if set(yrs) <= SMOKE_YEARS and not audit_2024:
         # 2024 smoke: reproduce the frozen T3 numbers bit-exactly (no lake rebuild).
         cfg = build_cfg(pre)
         ev = e1_t3.load_events()
@@ -262,10 +270,14 @@ def run(prereg_path, years, fetch=False):
         write_json(os.path.join(REPORT, "e1_confirm_%s.json" % name), res)
         return res
 
-    if set(yrs) & SMOKE_YEARS:
+    if set(yrs) & SMOKE_YEARS and not audit_2024:
         raise SystemExit("REFUSE: do not mix the 2024 smoke with confirmation years")
 
-    return run_confirmation(prereg_path, yrs, pre, gs, fetch=fetch)
+    if audit_2024:
+        log.warning("AUDIT MODE (+--audit-2024): running exploration year 2024 through the "
+                    "confirmation path. THIS IS NOT A CONFIRMATION - output file is suffixed "
+                    "_AUDIT and must not be used for GO/NO-GO.")
+    return run_confirmation(prereg_path, yrs, pre, gs, fetch=fetch, audit_2024=audit_2024)
 
 
 # ------------------------------------------------------------------ smoke tests
@@ -351,10 +363,14 @@ if __name__ == "__main__":
                     help="allow downloading missing months from the year's Kaggle dataset")
     ap.add_argument("--smoke-check", action="store_true")
     ap.add_argument("--smoke-engine", action="store_true")
+    ap.add_argument("--audit-2024", action="store_true",
+                    help="AUDIT ONLY: run the exploration year 2024 through the confirmation "
+                         "path to compare it with the T9 exploration code. Not a confirmation.")
     a = ap.parse_args()
     if a.smoke_check:
         print(json.dumps(smoke_check(a.prereg), default=str))
     elif a.smoke_engine:
         print(json.dumps(smoke_engine(), default=str))
     else:
-        print(json.dumps(run(a.prereg, a.years, fetch=a.fetch), default=str))
+        print(json.dumps(run(a.prereg, a.years, fetch=a.fetch, audit_2024=a.audit_2024),
+                         default=str))
