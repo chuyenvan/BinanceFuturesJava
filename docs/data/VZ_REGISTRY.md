@@ -250,3 +250,9 @@ KHÔNG có tháng nào cần bù trước khi chạy tiếp; job tiếp tục �
   + xoá 241 zip tạm của 2025-01 (tháng đã PASS).
 - Resume đúng điểm chết: 2023-01..08 skip (đã build+validate), 2023-09 bắt đầu fetch lại nguồn basis
   (premiumIndex1m/markPrice1m/indexPrice1m) rồi build basis1m 2023-09, tiếp 2023-10..12 → upload năm 2023.
+
+## P1b kline1m (2023)
+- slug `chuyendinh/vz-kline1m-2023`; files 12; bytes 2397646176; rows 104401093; syms~253; gov DEV
+
+## P1b basis1m (2023)
+- slug `chuyendinh/vz-basis1m-2023`; files 12; bytes 2768436133; rows 102428541; syms~243; gov DEV
