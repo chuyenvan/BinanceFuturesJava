@@ -15,3 +15,8 @@ Mỗi Q xong ghi 1 dòng: Q | trạng thái | commit | số chính. Trạng thá
 - Phase 1 sẽ build **`2021-12` TRƯỚC** (sau khi xong 2022), rồi 2021-01→11 → 2026 → 2020s.
 - **Gate Q6 (B4) = 2022 + 2023 + 2025 + `2021-12`** (2021-12 là lookback ≤30 ngày cho 2022). 2022-12, 2024-12 đã có.
 - Khi đủ gate ⇒ chạy `e1_confirm.py --prereg docs/prereg/PREREG_VZ_B4.md --years 2022,2023,2025` **đúng 1 lần**.
+
+## QUEUE_1015 — P1..P5 (MASTER 10-15)
+| P | trạng thái | commit | số chính |
+|---|---|---|---|
+| P1 | DONE (lõi) + 3 mục xác minh tiếp | (commit này) | Mọi `vz-*` (10) + `bcast-2020-2021h1-p1` + `sim-ho26(-a)-bundle` + `ho4p1-code`/`ho4p1-jar-exp` + `sim-jar-ecost` + `wfo-ticker-2021..2025` **đều CÒN ĐỦ** trên Kaggle (đã xác minh). Chưa map 2 jar nền (b7c89f09/0944841c) + "bundle Vision A/B" + dataset template sim ⇒ chuyển bước xác minh. Output `docs/data/KAGGLE_REQUIRED.md` |
