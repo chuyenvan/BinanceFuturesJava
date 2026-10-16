@@ -88,3 +88,4 @@ Chi phí: bucket EXEC thực + phí 2 chân (SIM_RATE_FEE=0.000982). Bootstrap b
 | R2X (10-16) | bookDepth | T2 F2 imb1 IC trong dot (2023+2025) | 69 dot | IC +0,123 [+0,071; +0,172] UNG VIEN; HO 2026 -0,021 [-0,085; +0,054] khong xac nhan | 2026-10-16 |
 | R2X (10-16) | bookDepth | T3 F3 bid5_rel IC trong dot | 69 dot | IC +0,038 [-0,016; +0,089] | 2026-10-16 |
 | R2X (10-16) | bookDepth | T4 trung vi F1 dot vs ret dot | 75 dot | rho +0,029 [-0,190; +0,281] | 2026-10-16 |
+| CARRY_OPP (10-16) | funding+spot/perp 1d | carry co hoi delta-neutral, 6 gate | 410 sym 2021-2026 | DEV CAGR +5,6% (2025 -0,05%), HO2026 -0,12%, 3 thanh ly -> NO-GO | 2026-10-16 |
