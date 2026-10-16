@@ -138,7 +138,7 @@ FAM = {"a": ["mom1", "mom3", "mom7", "mom14", "mom28", "mom56", "mom90", "rmom28
        "b": ["vol7", "vol30", "atr14", "dvol30"], "c": ["skew30", "max30", "min30", "up30"],
        "d": ["lqv30", "vs3", "vs7", "amih30"],
        "e": ["dhi7", "dhi30", "dhi90", "dhi365", "dlo7", "dlo30", "dlo90", "ma20", "ma50", "ma2050"],
-       "f": ["tbr1", "tbr3", "tbr7", "dtbr"], "g": ["f1", "f7", "fz", "df7", "doi1", "doi3", "doi7", "oiqv", "tls", "dtls7", "gls", "tkls"]}
+       "f": ["tbr1", "tbr3", "tbr7", "dtbr"], "g": ["f1", "f7", "fz", "df7", "doi1", "doi3", "doi7", "oiqv", "gls"]}  # addendum 1: bo tls/dtls7/tkls (2022 thieu)
 LONGLB = {"mom90", "dhi90", "dhi365", "dlo90", "vs7", "fz", "rmom28"}  # lookback > 56 ngay (addendum 0)
 
 
@@ -193,7 +193,7 @@ def checks(D, P, idx):
             if c not in LONGLB and byy.min() < thr:
                 ok = False
     res["V3"] = {"pass": ok, "cov": cov}
-    nu = P.groupby("day").size().reindex(idx[(idx >= "2021-03-01")]).fillna(0)
+    nu = P.groupby("day").size().reindex(idx[(idx >= "2021-03-02")]).fillna(0)  # addendum 1
     ffr = float(P[["ff1", "ff3", "ff7"]].max(axis=1).mean())
     res["V4"] = {"univ_min_from_2021_03": int(nu.min()), "ff_frac": ffr, "pass": nu.min() >= 30 and ffr <= 0.01}
     big = P[P.y1.abs() > 1.0][["day", "sym", "y1"]]

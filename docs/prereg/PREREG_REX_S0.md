@@ -67,3 +67,23 @@ Gọi CF là close đã ffill để xử lý coin delist.
 - họ g: OI/LS ≥ 85 %; riêng funding (f1, f7, df7) ≥ 98 %.
 
 Độ phủ tính trên dòng universe, theo từng năm. Họ a–f từ 2021-04; họ g từ 2022-01.
+
+
+## Addendum 1 (2026-10-16 22:45) — sau lần build đầu, S0 báo FAIL ở V3 và V4 (chưa có số đo hiệu suất nào)
+
+**V3 — độ phủ dữ liệu.** Vision metrics năm 2022 thiếu cột:
+
+| Cột | Độ phủ năm 2022 | Ghi chú |
+|---|---|---|
+| `toptrader_ls_sum` | 13,7 % | theo tháng: 0 % đến 83 % |
+| `taker_ls_vol` | 61 % | rỗng từ 2022-01 tới 2022-04 |
+
+⇒ **Bỏ** `tls`, `dtls7`, `tkls` khỏi họ g. Đây là quyết định dựa trên việc dữ liệu có sẵn hay không, không dựa trên hiệu suất.
+
+Họ g còn lại: f1, f7, fz, df7, doi1, doi3, doi7, oiqv, gls. Feature gls phủ 94 % năm 2022, đạt ngưỡng 85 %.
+
+**V4 — universe.** Chỉ có duy nhất ngày 2021-03-01 có universe = 0. Nguyên nhân: dữ liệu bắt đầu từ 2021-01-01, nên "tuổi niêm yết ≥ 60 ngày" chỉ đạt được từ 2021-03-02.
+
+⇒ V4 tính từ 2021-03-02. Ngày này nằm trong warm-up nên không ảnh hưởng DEV.
+
+**V5.** Có 34 dòng |y1| > 100 %. Tôi đã xem từng dòng: đều là pump thật (UNFI 2022-06, MYX, SIREN…), không phải lỗi dữ liệu, nên giữ nguyên.
