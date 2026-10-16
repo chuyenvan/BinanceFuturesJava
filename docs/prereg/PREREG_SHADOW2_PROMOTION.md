@@ -37,3 +37,66 @@ Báo theo tuần + theo ngày (MTM ngày, ghép cặp #2 − #1): ΣPnL, equity 
 3. Bất kỳ TRƯỢT ⇒ dừng đường promote; XÁM ⇒ gia hạn đúng 1 lần/khối 4 tuần, tối đa 12 tuần.
 
 **Chờ MASTER duyệt.**
+
+---
+
+## ADDENDUM 2026-10-16 — đổi đối tượng sang 242, bỏ thước #2/#1, sửa buffer gate (khai TRƯỚC khi có số forward)
+
+**A. Lý do.**
+- Owner đã chuyển 242 sang K24 + skipFull ngày 10-16 14:57. 242 vẫn chạy shadow: `c3_shadow`, `SHADOW_NO_PUSH=true`, `SIM_F_BASE=0.015`; jar f6313f59 (pxcache).
+- Cặp Oracle #2/#1 không còn dùng làm thước được, vì hai lý do:
+  1. **Dữ liệu đầu vào phía Oracle lệch.** Ở 10-08 22:20, p15 trên Oracle là 3,045%, trên 242 và backtest là 1,722% (`SHADOW_PARITY_FEAT_1016.md` §6).
+  2. **Buffer gate trên Oracle bị nhiễm.**
+     - So K16 của c3 với buffer native của 242 theo từng phút: 10-01…10-07 khớp 100%. Từ 10-08 chỉ khớp 0–71% mỗi ngày.
+     - Phút lệch nhiều nhất có r phía Oracle gấp khoảng 2 lần (10-08 22:20 và 10-10 12:04).
+     - Đuôi trên của buffer (q là giá trị lớn thứ ~14) gần như toàn record lỗi. Kết quả: q của K24 c3b (đã copy sang 242 lúc 14:57) là **0,01871**, trong khi native tương đương là **0,00723**, gấp **2,59 lần**.
+     - Hệ quả: ngưỡng gate trên 242 từ 14:57 cao gấp khoảng 2,6 lần mức sim dùng (thr [0,029..0,042], n_pass = 0).
+- Tiêu chí (ii) (R #2/#1) **bị bỏ**. Kết quả vận hành của shadow Oracle chỉ còn để tham khảo.
+
+**B. Đối tượng mới.** 242 với K24 + skipFull. Cửa sổ đánh giá bắt đầu khi đủ cả ba điều kiện:
+- đã swap buffer theo mục D;
+- kiểm 60 phút đạt;
+- buffer armed.
+
+Cửa sổ tối thiểu 4 tuần. Các tiêu chí (iii), (iv), (v) giữ nguyên, áp lên 242.
+
+**(i') Vận hành 242.** Suốt cửa sổ phải đạt tất cả:
+- 0 `OutOfMemoryError`; RSS java ≤ 3,6G (Xmx3g).
+- Restart chỉ có hai loại: theo lịch `ThreadAutoRestartProgram`, hoặc có chủ đích và đã ghi sổ ở mục C. systemd không theo dõi PID nên không dùng `NRestarts`.
+- `[GATE] topk=24` có mặt ở ≥ 95% số phút chạy.
+- `selector tick total` p95 ≤ 3000 ms.
+- `Update all position:44` (hoặc đúng số legacy hiện hành) có ở ≥ 99% số phút chạy.
+- 0 lệnh thật.
+- 0 thay đổi vị thế LEGACY do code shadow.
+
+**(ii') Parity theo tick với sim, trên cùng dữ liệu 242.** Tính offline bằng `devexport` (`--cluster 242`, mapper ns `ticker`), ONNX `Model_Regressor_Return15M`, replay buffer causal (`GateRatioBuffer`), và `sel_dump` (selectorScore, rank, gateValue).
+- P1 (p15): `|p15_live − p15_off| / |p15_off|` có median ≤ 1e-4, và ≤ 1e-3 ở ≥ 98% số phút. Phút vượt ngưỡng được liệt kê kèm breadth.
+- P2 (lật gate):
+  - Ca lật nặng: một cặp (phút, ứng viên) mà live và offline quyết khác nhau, đồng thời `|p15 − thr| / thr > 1%`. **Phải bằng 0.** Có bất kỳ ca nào ⇒ TRƯỢT, điều tra.
+  - Ca lật biên (≤ 1%): chỉ báo cáo.
+- P3 (q_t): q theo giờ từ log live (`gateValue·p15⁻¹` nhân hằng κ) so với q replay từ file buffer: sai lệch tương đối ≤ 1e-6 ở mọi giờ.
+- PnL vẫn chỉ báo cáo, không có ngưỡng. Thước so là sim K24 + ON (mục "PnL" ở trên).
+
+**C. Sổ vận hành 242 (10-16).**
+- Khoảng 14:57: đổi env sang `SELECTOR_RANK_TOPK=24` và `GATE_QUOTA_SKIP_WHEN_FULL=true`. Buffer copy từ c3b; buffer K16 sao lưu thành `run/gate_ratio_live.bin.bak_k16_20261016_1457`.
+- 15:36:02 → 16:03:25: **downtime 27 phút** khi swap jar 0c2f4d72 → f6313f59. Nguyên nhân: alias `cp -i` chặn ghi đè sau khi đã stop. Luật mới: dùng `\cp -f`, và chạy kiểm tra trước khi stop.
+- 16:18:50 → 16:18:53: restart để đổi heap `-Xms5g -Xmx5g` → `-Xms1g -Xmx3g`. Lý do: RAM available chỉ còn 81 MB. Tick đầu sau restart mất 22,6 s.
+- Chờ thực hiện: swap buffer (mục D).
+
+**D. Dựng lại buffer K24 native cho 242.** Phương pháp khai trước khi có số forward, không xét PnL.
+- Nguồn dùng: K16 native 242 (`bak_k16`, 10-01 13:00 → 10-16 13:23, 333.856 record).
+- Lấp gap 13:23 → 14:56 từ `sel_dump` hạng 1..16: r = κ·p15/gateValue, κ = 0,075159. κ khớp đúng hằng số trên 121 phút chồng (p5 = p95).
+- Mỗi phút thêm 8 record tổng hợp cho hạng 17..24: r = r₁₆·ρₖ.
+  - ρ đo trên 51 phút K24 native sau 14:57: ρ₁₇..₂₄ = 0,995 0,988 0,982 0,975 0,971 0,962 0,958 0,953.
+  - Trong mỗi phút, r giảm dần theo hạng: `max r(17..24)/r₁₆` = 1,000 trên 51 phút.
+  - Vì vậy record tổng hợp không vào được đuôi trên. Chúng chỉ đổi số lượng m, đúng như hạng 17..24 thật.
+- Ghép thêm K24 native từ 14:57 (record index ≥ 258.696 của file live).
+- Bỏ toàn bộ record có gốc Oracle.
+- Mốc bắt đầu chọn **10-01**, tức toàn bộ phần native hiện có, gần với cửa sổ 90 ngày của sim. Phương án đối chứng bắt đầu 10-08 cho q 0,00745; phương án này không được chọn và chỉ ghi lại để tham khảo.
+- Kết quả: q = 0,007228, n = 504.264 (`hyb_base.bin` md5 a11af646…).
+- Công cụ `GrrFix` (md5 6bbacdb4…, chỉ dùng một lần, không thuộc app) ghi file bằng chính `GateRatioPersist.writeFresh`. Đã tự kiểm: Java và Python đọc ra cùng q; skip sai ⇒ tool ném lỗi.
+- Script nằm ở `research/parity_1016/grr/`.
+- Sai khác so với sim cần khai rõ:
+  1. Tập held-symbol của live (gồm 44 LEGACY) bị loại khỏi top-K. Sim không có LEGACY.
+  2. Hạng 17..24 trước 14:57 là record tổng hợp.
+  3. Gap 94 phút được lấp qua κ.
