@@ -1,0 +1,20 @@
+{
+ "V1_causal": true,
+ "V2_mid_in_band": 1.0,
+ "V2_n": 297,
+ "V3_coverage": 0.9665551839464883,
+ "V3_ok": true,
+ "V2_ok": true,
+ "missing_syms": [],
+ "n_legs": 299,
+ "by_year": {
+  "2026": 299
+ },
+ "V2_raw_before_filter": 0.9663299663299664,
+ "V2_filtered_legs": 10,
+ "affected_bursts": {
+  "2026-06-02 23:26:00": "1/7",
+  "2026-09-09 22:09:00": "9/22"
+ },
+ "addendum": "R2X addendum 1"
+}

@@ -84,3 +84,7 @@ Chi phí: bucket EXEC thực + phí 2 chân (SIM_RATE_FEE=0.000982). Bootstrap b
 | A1 (10-16) | basis1m | T3 F1 IC trong dot | 957 chan/69 dot | IC +0,001 [-0,085; +0,071] | 2026-10-16 |
 | A1 (10-16) | basis1m | T4 F2 IC trong dot | 957/69 | IC -0,027 [-0,086; +0,041] | 2026-10-16 |
 | A1-TAIL (10-16) | basis1m | XAC NHAN veto F1 dot > 0,4% (nam le 2021/2023/2025) | 106 dot, 10 co | PnL co +3524, ret co +4,0% vs +3,9% -> BAC BO | 2026-10-16 |
+| R2X (10-16) | bookDepth | T1 F1 bid1_rel IC trong dot (2023+2025) | 69 dot | IC +0,073 [+0,011; +0,143] UNG VIEN (yeu duoi Bonferroni) | 2026-10-16 |
+| R2X (10-16) | bookDepth | T2 F2 imb1 IC trong dot (2023+2025) | 69 dot | IC +0,123 [+0,071; +0,172] UNG VIEN; HO 2026 -0,021 [-0,085; +0,054] khong xac nhan | 2026-10-16 |
+| R2X (10-16) | bookDepth | T3 F3 bid5_rel IC trong dot | 69 dot | IC +0,038 [-0,016; +0,089] | 2026-10-16 |
+| R2X (10-16) | bookDepth | T4 trung vi F1 dot vs ret dot | 75 dot | rho +0,029 [-0,190; +0,281] | 2026-10-16 |
