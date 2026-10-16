@@ -83,3 +83,25 @@ Ledger cộng 10 (CV1a, CV1b, CV2a, CV2b, CV3-LO, CV3-LS, CV3b-LO, CV3b-LS, CV4-
 - **D4:** correlation funding ngày của BTCUSDT giữa Bybit và Binance > 0,7.
 - **D5:** CV3 và CV4 mỗi cái có ≥ 200 tuần hợp lệ với N ≥ 20.
 - **D6 (assert trong code):** feature chỉ dùng dữ liệu ≤ mốc tín hiệu; vào lệnh sau mốc tín hiệu.
+
+
+## Addendum 1 (2026-10-16 21:40) — viết SAU lần chạy đầu, chỉ sửa kiểm dữ liệu và lọc dữ liệu ghép sai
+
+**Công khai:** kết quả lần chạy đầu (`cvx_run.log`) đã được nhìn thấy trước khi viết addendum này. Không tín hiệu nào sống sót ở lần chạy đó. Addendum này KHÔNG đổi luật tín hiệu, tham số hay tiêu chí sống sót.
+
+**1. Spec D3 sai.**
+- `KP` thô = ln(KRW/USDT) ≈ 7,2, vì công thức đã gộp cả tỷ giá; tỷ giá chỉ được khử khi trừ median ở bước sau. Do đó điều kiện "KP thô trong [−10 %, +25 %]" không bao giờ đúng.
+- D3 được thay bằng: `KPd` nằm trong [−10 %, +25 %] ở ≥ 99 % số ngày. Kết quả chẩn đoán: 100 % (q01 −4,9 %, q99 +7,2 %).
+- Thay đổi này không ảnh hưởng tới CV2.
+
+**2. CV3/CV3b có ghép token sai.** Một số coin cùng ticker trên Upbit và Binance nhưng là token khác nhau, hoặc khác mệnh giá (`upbit_match_diag.csv`):
+- META có median |lr| 11,2.
+- BTT 6,9 (khác mệnh giá BTT/BTTC).
+- STRAX 3,1; RAY 2,1; EDGE 1,9; SNT 0,18; SC 0,13.
+- Một số coin có giai đoạn ticker bị tái sử dụng: CVC, KAVA, ORBS.
+
+**Luật lọc cơ học** (dựa trên tính hợp lệ của dữ liệu, không dựa trên hiệu suất):
+- (a) Loại cả symbol nếu median |lr| > 5 % hoặc correlation lợi suất ngày Upbit vs Binance < 0,80.
+- (b) Loại coin-ngày có |lr| > 50 %.
+
+Áp dụng cho cả CV3 và CV3b, sau đó chạy lại toàn bộ `cv_run.py`. Các phần khác tất định nên không đổi. Báo cả kết quả lần đầu lẫn kết quả sau khi lọc.
