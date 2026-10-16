@@ -88,3 +88,42 @@ Lưu ý:
 - **D1:** BTC 1m đủ phút ở ≥ 99,9 % số phút.
 - **D2:** close 1d bằng close của phút 23:59 trong ngày (lệch ≤ 1e-6 tương đối).
 - **D3:** universe X theo ngày có ≥ 30 symbol, áp dụng từ 2021-03.
+
+## Addendum 1 (2026-10-16 20:40) — thêm họ G theo ý owner
+
+Viết TRƯỚC khi có kết quả, lúc dữ liệu còn đang tải.
+
+**Ý owner:** chọn coin đã giảm sâu và giảm lâu, chờ tín hiệu đảo chiều rồi mới long grid. Rủi ro lớn nhất của long grid là cú thọt sâu, nên phải né được hoặc có cơ chế thoát đủ tốt.
+
+**Universe:** perp USDT có trung vị quote volume 30 ngày ≥ 10 tr USD (thấp hơn họ X, vì coin đã giảm sâu thường thanh khoản kém), niêm yết ≥ 365 ngày, không gồm stablecoin.
+
+**Điều kiện "giảm dài" (D):**
+- close ≤ 0,35 × max close 365 ngày, **và**
+- ngày đạt max đó cách hiện tại ≥ 120 ngày.
+
+**Tín hiệu đảo chiều (R):** close > max close của 30 ngày trước đó **và** close > MA50.
+
+**Cơ chế grid:**
+- Vào ở close ngày có tín hiệu.
+- 5 tầng mua tại entry × (1 − 0,06k), k = 0..4. Mỗi tầng 1/5 slot. Tầng k = 0 khớp ngay; các tầng sau khớp khi low ngày ≤ giá tầng.
+- Mỗi tầng đã khớp chốt lời ở giá khớp × 1,10. Khớp khi high ngày ≥ mức đó; sau khi chốt, tầng được mở lại (vòng grid).
+- Mỗi ngày tối đa 1 lần khớp cho mỗi tầng. Trong cùng một ngày, nếu cả mua lẫn bán của một tầng đều có thể khớp, lấy kết quả **bất lợi**: chỉ mua.
+
+**Thoát toàn bộ khi gặp điều kiện đầu tiên:**
+- (a) close < entry × 0,70 (stop);
+- (b) close > entry × 1,50;
+- (c) đủ 90 ngày.
+
+**Danh mục:** tối đa 10 coin, slot = equity/10. Phí 0,05 % mỗi lần khớp. Long trả funding thật trên phần notional đang giữ.
+
+**Biến thể (ledger +3):**
+
+| Mã | Mô tả |
+|---|---|
+| G1 | D + R + đủ 3 đường thoát |
+| G1b | D, không cần R (vào ngay khi có D) |
+| G1c | D + R, bỏ thoát (a), tức không có stop |
+
+Tiêu chí sống sót giống họ S/X. Tính trên vốn: Sharpe theo ngày, E và C riêng.
+
+**Giới hạn:** mô phỏng grid bằng nến ngày nên chỉ là xấp xỉ. Biến thể nào sống sót phải làm lại bằng 1m ở tầng 2.
