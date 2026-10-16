@@ -89,3 +89,5 @@ Chi phí: bucket EXEC thực + phí 2 chân (SIM_RATE_FEE=0.000982). Bootstrap b
 | R2X (10-16) | bookDepth | T3 F3 bid5_rel IC trong dot | 69 dot | IC +0,038 [-0,016; +0,089] | 2026-10-16 |
 | R2X (10-16) | bookDepth | T4 trung vi F1 dot vs ret dot | 75 dot | rho +0,029 [-0,190; +0,281] | 2026-10-16 |
 | CARRY_OPP (10-16) | funding+spot/perp 1d | carry co hoi delta-neutral, 6 gate | 410 sym 2021-2026 | DEV CAGR +5,6% (2025 -0,05%), HO2026 -0,12%, 3 thanh ly -> NO-GO | 2026-10-16 |
+| SCREEN_WIDE T1 (10-16) | Vision 1m BTC/ETH + 1d 892 perp | 24 anomaly cong bo (S1-S8, X1-X10 LO/LS, G1/G1b/G1c) | E 2021-23 / C 2024-26 | song sot: X9_LO (khong ben, tre 1 ngay E 0,19); X1 mom21 sat nut (C 1,0/1,8) -> tang 2; S7 cuoi tuan yeu on dinh; G grid am | 2026-10-16 |
+| SCREEN_WIDE T1 (10-16) | Vision 1m BTC/ETH + 1d 892 perp | 24 anomaly cong bo (S1-S8, X1-X10 LO/LS, G1/G1b/G1c) | E 2021-23 / C 2024-26 | song sot: X9_LO (khong ben, tre 1 ngay E 0,19); X1 mom21 sat nut (C 1,0/1,8) -> tang 2; S7 cuoi tuan yeu on dinh; G grid am | 2026-10-16 |
