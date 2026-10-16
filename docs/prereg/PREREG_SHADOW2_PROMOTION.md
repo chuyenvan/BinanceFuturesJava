@@ -101,3 +101,17 @@ Cửa sổ tối thiểu 4 tuần. Các tiêu chí (iii), (iv), (v) giữ nguyê
   1. Tập held-symbol của live (gồm 44 LEGACY) bị loại khỏi top-K. Sim không có LEGACY.
   2. Hạng 17..24 trước 14:57 là record tổng hợp.
   3. Gap 94 phút được lấp qua κ.
+
+**C+ (sổ vận hành, tiếp).**
+- 17:21–17:22: owner swap buffer, thời gian dừng khoảng 3 s + warm-up.
+  - Dry-run và merge đều cho q = 0,007228.
+  - Load lại: n = 505.776, firstTs 20261001 13:00, trạng thái armed.
+  - Backup: `run/gate_ratio_live.bin.bak_oracle_20261016_1721`.
+- 18:01: log `[GATE-RATIO] q_t=0.007228 buffer=506688 eval=912 pass=0`, đúng giá trị dự kiến.
+  - Tick: p50 0,61 s, p95 1,19 s. Riêng tick đầu sau restart mất 23,2 s.
+  - RSS 2,68G, legacy 44, 0 ERROR, 0 lệnh thật.
+- ⇒ **Cửa sổ đánh giá (B) bắt đầu lúc 2026-10-16 18:01 (+07).**
+- Đã đề xuất cho owner (chưa thực hiện):
+  - restart có chủ đích để bật `-Xlog:gc`;
+  - tắt shadow c3b trên Oracle.
+- Classifier chặn tôi chạy hai việc trên, nên owner sẽ tự chạy; khi xong cần ghi vào sổ này.
