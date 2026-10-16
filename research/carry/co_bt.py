@@ -18,6 +18,8 @@ logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stdout,
 log = logging.getLogger("cobt")
 W = os.path.expanduser("~/claude_master/1016/carry")
 THR, NMAX, FEE1, REB_FEE, LIQ_PEN = 0.0001, 10, 0.0015, 0.0015, 0.015
+# [ADDENDUM 1 - truoc outcome] loai 17 sym lech perp/spot >20% so ngay (delist/ticker tai su dung/sai map)
+BAD_SYMS = frozenset("BTCSTUSDT BTSUSDT CTKUSDT CVCUSDT CVXUSDT DGBUSDT FTTUSDT GLMRUSDT IDEXUSDT MDTUSDT RADUSDT RAYUSDT SCUSDT SLPUSDT SNTUSDT STPTUSDT STRAXUSDT".split())
 
 
 def load_k(kind, s):
@@ -78,13 +80,15 @@ def check(P):
 
 
 def simulate(P, cap=2.0, fee1=FEE1, excl=frozenset(), start="2021-01-01", end="2026-09-30", tag=""):
-    P = P[(P.day >= start) & (P.day <= end) & ~P.sym.isin(excl)]
+    P = P[(P.day >= start) & (P.day <= end) & ~P.sym.isin(excl) & ~P.sym.isin(BAD_SYMS)].copy()
+    P["dev"] = (P.close_p / P.close_s - 1).abs()
+    P["valid"] = (P.qv_p > 0) & (P.qv_s > 0) & (P.dev <= 0.02)
     days = sorted(P.day.unique())
     by = {d: g.set_index("sym") for d, g in P.groupby("day")}
-    eq, hold, curve, nreb, nliq, ntr, inmk = 1.0, {}, [], 0, 0, 0, 0
+    eq, hold, curve, nreb, nliq, ntr, inmk, ninv = 1.0, {}, [], 0, 0, 0, 0, 0
     for d in days:
         g = by[d]
-        elig = g[(g.s > THR) & (g.liq_p >= 20e6) & (g.liq_s >= 5e6) & g.prev_close_p.notna()]
+        elig = g[(g.s > THR) & (g.liq_p >= 20e6) & (g.liq_s >= 5e6) & g.prev_close_p.notna() & g.valid]
         pnl = 0.0
         # dong cap khong con du dieu kien (tai mo cua ngay d)
         for s in list(hold):
@@ -101,6 +105,8 @@ def simulate(P, cap=2.0, fee1=FEE1, excl=frozenset(), start="2021-01-01", end="2
             if s not in g.index or pd.isna(g.at[s, "ret_p"]) or pd.isna(g.at[s, "ret_s"]):
                 continue
             h, r = hold[s], g.loc[s]
+            if r.qv_p <= 0 or r.dev > 0.10:  # du lieu vo hieu (delist/stale) -> dong tai gia hom truoc
+                pnl -= h["N"] * fee1; ninv += 1; del hold[s]; continue
             pnl += h["N"] * ((r.fund_day if pd.notna(r.fund_day) else 0.0) + r.ret_s - r.ret_p)
             if (r.high_p / h["ref"] - 1) * h["N"] >= h["M"]:
                 pnl -= h["N"] * (LIQ_PEN + fee1); nliq += 1; del hold[s]; continue
@@ -113,7 +119,7 @@ def simulate(P, cap=2.0, fee1=FEE1, excl=frozenset(), start="2021-01-01", end="2
     r = C.eq.pct_change().fillna(C.eq.iloc[0] - 1)
     yrs = (C.index[-1] - C.index[0]).days / 365.25
     out = {"tag": tag, "cap": cap, "fee_rt": 2 * fee1, "CAGR": float(C.eq.iloc[-1] ** (1 / yrs) - 1), "Sharpe": float(r.mean() / r.std() * np.sqrt(365)) if r.std() > 0 else 0.0,
-           "maxDD": float((C.eq / C.eq.cummax() - 1).min()), "pct_days_in": float(inmk / len(C)), "n_exits": ntr, "n_rebal": nreb, "n_liq": nliq,
+           "maxDD": float((C.eq / C.eq.cummax() - 1).min()), "pct_days_in": float(inmk / len(C)), "n_exits": ntr, "n_rebal": nreb, "n_liq": nliq, "n_invalid_close": ninv,
            "by_year": {int(y): float(g.eq.iloc[-1] / (C.eq[C.index < g.index[0]].iloc[-1] if (C.index < g.index[0]).any() else 1.0) - 1) for y, g in C.groupby(C.index.year)},
            "avg_pairs_when_in": float(C.n[C.n > 0].mean()) if (C.n > 0).any() else 0.0}
     return out, C
@@ -131,8 +137,11 @@ def crash_daily():
 def run():
     P = pd.read_parquet(W + "/panel.parquet")
     chk = json.load(open(W + "/check.json"))
-    if not chk["C2_ok"]:
-        log.error("C2 FAIL -> dung"); sys.exit(2)
+    Pc = P[~P.sym.isin(BAD_SYMS)].dropna(subset=["close_p", "close_s"])
+    c2b = float(((Pc.close_p / Pc.close_s - 1).abs() <= 0.02).mean())
+    chk["C2_after_addendum1"] = c2b
+    if c2b < 0.99:
+        log.error("C2 (sau addendum) FAIL -> dung"); sys.exit(2)
     v21 = P[P.day.dt.year == 2021].groupby("sym").qv_p.mean().sort_values(ascending=False)
     top30 = frozenset(v21.index[:30])
     res = {"check": chk, "top30_2021": sorted(top30)}

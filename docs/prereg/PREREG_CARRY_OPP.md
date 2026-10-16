@@ -65,3 +65,22 @@
 - **C2 kline:** close perp và close spot lệch nhau ≤ 2 % ở ≥ 99 % số ngày.
 - **C3 tín hiệu causal:** mọi funding dùng có fundingTime < t.
 - **C4 phủ:** có số liệu cho mọi ngày của mọi symbol hợp lệ, hoặc báo rõ chỗ thiếu.
+
+## Addendum 1 (2026-10-16, viết TRƯỚC khi chạy `run`; chưa tính outcome nào)
+
+**Kết quả kiểm C1–C2:**
+- C1 PASS: tổng funding BTC trung bình 11,9 %/năm cho 2021–2025, so với 11,6 % ở nghiên cứu 08-31.
+- C2 FAIL: chỉ 94,9 % số ngày có close perp và close spot lệch nhau ≤ 2 %.
+
+**Chẩn đoán** (`co_diag.py`, không đọc PnL):
+- Lỗi tập trung ở 17/410 symbol, mỗi symbol lệch > 2 % ở hơn 20 % số ngày: BTCST, BTS, CTK, CVC, CVX, DGB, FTT, GLMR, IDEX, MDT, RAD, RAY, SC, SLP, SNT, STPT, STRAX.
+- Nguyên nhân: perp đã bị delist nên giá đứng yên, ticker bị tái sử dụng, hoặc spot và perp là hai tài sản khác nhau.
+- Bỏ 17 symbol này thì C2 = **99,74 %** ⇒ PASS.
+- Phần lệch còn sót lại đa số là giá perp stale sau delist (ví dụ A2Z, CHESS, ALPACA).
+
+**Sửa (không đổi tín hiệu, ngưỡng hay tiêu chí GO):**
+1. Loại 17 symbol trên khỏi universe.
+2. Chỉ được vào cặp trong ngày hợp lệ: quote volume perp > 0, quote volume spot > 0, và |perp/spot − 1| ≤ 2 %.
+3. Nếu cặp đang giữ gặp ngày không hợp lệ (qv perp = 0 hoặc lệch > 10 %): đóng cặp theo giá ngày trước, tính phí, và đếm vào `n_invalid_close`. Đây là xấp xỉ cho rủi ro delist; ghi rõ là xấp xỉ.
+
+Chi tiết thực thi cũng nằm trong docstring của `co_bt.py` (commit a0947f84).
