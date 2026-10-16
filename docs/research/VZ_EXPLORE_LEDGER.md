@@ -74,3 +74,8 @@ Chi phí: bucket EXEC thực + phí 2 chân (SIM_RATE_FEE=0.000982). Bootstrap b
 | 50 | Q4 | H-F | M15_12h_imb_dev15 | 2494959 | IC=-0.0033 CI=[-0.004923301525064609, -0.0015918582453427535] spread=-0.00026 CI=[-0.00047155039560909474, -3.641533598832896e-05] | 2026-10-14 |
 
 > Q6 (2026-10-15): XAC NHAN B4 chay dung 1 lan (pre-reg 997f18f3, Addendum 1). spread net_1440: 2022 +0.00107, 2023 -0.00235, 2025 +0.00320, GOP +0.00144 (CI95 [-0.00181,+0.00464]); stress gop +0.00148; mono +0.40. Ca 3 dieu kien GO KHONG dat => NO-GO, DONG gia thuyet. md5 e9b6560cc292dc1bcb52425deccfc1ff. Report reports/e1_confirm_B4.json.
+
+| R2 (10-16) | bookDepth | T1 F1 bid1_rel IC trong dot | 626 chan/44 dot | IC +0,065 [-0,010; +0,164] | 2026-10-16 |
+| R2 (10-16) | bookDepth | T2 F2 imb1 IC trong dot | 626/44 | IC +0,055 [-0,042; +0,165] | 2026-10-16 |
+| R2 (10-16) | bookDepth | T3 F3 bid5_rel IC trong dot | 626/44 | IC -0,012 [-0,080; +0,054] | 2026-10-16 |
+| R2 (10-16) | bookDepth | T4 trung vi F1 dot vs ret dot | 44 dot | rho +0,069 [-0,188; +0,462] | 2026-10-16 |

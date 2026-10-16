@@ -1,0 +1,12 @@
+{
+ "V1_causal": true,
+ "V2_mid_vs_close_within1pct": 0.6964856230031949,
+ "V2_n": 626,
+ "V3_coverage": 1.0,
+ "V3_ok": true,
+ "V2_ok": true,
+ "missing_syms": [],
+ "n_legs": 626,
+ "V2_orig_ok": false,
+ "V2_amended": "mid in [low*0.998, high*1.002] of bars t0-1..t0 = 100% (addendum 1)"
+}
