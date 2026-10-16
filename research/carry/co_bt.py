@@ -115,12 +115,12 @@ def simulate(P, cap=2.0, fee1=FEE1, excl=frozenset(), start="2021-01-01", end="2
         inmk += int(len(hold) > 0)
         eq += pnl
         curve.append((d, eq, len(hold)))
-    C = pd.DataFrame(curve, columns=["day", "eq", "n"]).set_index("day")
-    r = C.eq.pct_change().fillna(C.eq.iloc[0] - 1)
+    C = pd.DataFrame(curve, columns=["day", "equity", "n"]).set_index("day")
+    r = C.equity.pct_change().fillna(C.equity.iloc[0] - 1)
     yrs = (C.index[-1] - C.index[0]).days / 365.25
-    out = {"tag": tag, "cap": cap, "fee_rt": 2 * fee1, "CAGR": float(C.eq.iloc[-1] ** (1 / yrs) - 1), "Sharpe": float(r.mean() / r.std() * np.sqrt(365)) if r.std() > 0 else 0.0,
-           "maxDD": float((C.eq / C.eq.cummax() - 1).min()), "pct_days_in": float(inmk / len(C)), "n_exits": ntr, "n_rebal": nreb, "n_liq": nliq, "n_invalid_close": ninv,
-           "by_year": {int(y): float(g.eq.iloc[-1] / (C.eq[C.index < g.index[0]].iloc[-1] if (C.index < g.index[0]).any() else 1.0) - 1) for y, g in C.groupby(C.index.year)},
+    out = {"tag": tag, "cap": cap, "fee_rt": 2 * fee1, "CAGR": float(C.equity.iloc[-1] ** (1 / yrs) - 1), "Sharpe": float(r.mean() / r.std() * np.sqrt(365)) if r.std() > 0 else 0.0,
+           "maxDD": float((C.equity / C.equity.cummax() - 1).min()), "pct_days_in": float(inmk / len(C)), "n_exits": ntr, "n_rebal": nreb, "n_liq": nliq, "n_invalid_close": ninv,
+           "by_year": {int(y): float(g.equity.iloc[-1] / (C.equity[C.index < g.index[0]].iloc[-1] if (C.index < g.index[0]).any() else 1.0) - 1) for y, g in C.groupby(C.index.year)},
            "avg_pairs_when_in": float(C.n[C.n > 0].mean()) if (C.n > 0).any() else 0.0}
     return out, C
 
@@ -152,20 +152,20 @@ def run():
     for tag, kw in runs:
         o, C = simulate(P, tag=tag, **kw)
         if tag == "HO2026":
-            C = C[C.index >= "2026-01-01"]; C = C / C.eq.iloc[0]
+            C = C[C.index >= "2026-01-01"]; C = C / C.equity.iloc[0]
             yrs = (C.index[-1] - C.index[0]).days / 365.25
-            o["CAGR"] = float(C.eq.iloc[-1] ** (1 / yrs) - 1); o["ret_total"] = float(C.eq.iloc[-1] - 1)
-            o["maxDD"] = float((C.eq / C.eq.cummax() - 1).min())
+            o["CAGR"] = float(C.equity.iloc[-1] ** (1 / yrs) - 1); o["ret_total"] = float(C.equity.iloc[-1] - 1)
+            o["maxDD"] = float((C.equity / C.equity.cummax() - 1).min())
         curves[tag] = C; res[tag] = o
         log.info("%-15s CAGR %+.2f%% Sharpe %.2f maxDD %.2f%% in %.0f%% pairs %.1f exits %d reb %d liq %d | nam %s", tag, 100 * o["CAGR"], o["Sharpe"],
                  100 * o["maxDD"], 100 * o["pct_days_in"], o["avg_pairs_when_in"], o["n_exits"], o["n_rebal"], o["n_liq"],
                  {k: round(100 * v, 2) for k, v in o["by_year"].items()})
     cp, tm = crash_daily()
-    c = curves["DEV_main"].eq.pct_change().dropna()
+    c = curves["DEV_main"].equity.pct_change().dropna()
     j = pd.concat([c.rename("carry"), cp.rename("crash")], axis=1).fillna(0.0)
     j = j[(j.index >= "2021-07-09") & (j.index <= "2025-11-21")]
     res["corr_daily"] = float(j.carry.corr(j.crash))
-    cm = curves["DEV_main"].eq.resample("M").last().pct_change().dropna()
+    cm = curves["DEV_main"].equity.resample("M").last().pct_change().dropna()
     cm.index = cm.index.to_period("M")
     idle = [m for m in cm.index if m >= pd.Period("2021-08", "M") and m <= pd.Period("2025-11", "M") and tm.get(m, 0) == 0]
     res["idle_months"] = {"n": len(idle), "carry_ret_sum": float(cm.loc[idle].sum()) if idle else 0.0,
