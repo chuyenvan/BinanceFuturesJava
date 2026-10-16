@@ -27,3 +27,9 @@ ORT trên vector live tái tạo `p15_out` của shadow: max|Δ| 5,6e-9 (cả c3
 2. Tick quá hạn (vd > 10 s) ⇒ bỏ quyết định / tính lại đúng nến M (sửa ở live).
 3. Đo lại cùng phép này trên c3 (K16) và 242 cho các phút sập 10-08/10-13.
 4. Chưa đo: S1/selector (sel_dump vs offline), OI feature.
+
+## 6. Bổ sung 10-16 14:15 — 242 cùng phút 10-08 22:20 (chỉ đọc log 242)
+- 242 (cùng code, c3_shadow K16, đọc Aerospike local): tick 22:21:06 (nến 22:20) chạy **323 ms**, p15 = **1,7220 %** = đúng giá trị backtest (offline 1,7220 %) ⇒ n_pass 0. Tick nến 22:19: 1,4776 % = shadow = offline.
+- Hai shadow Oracle (c3 11,6 s, c3b 25,1 s) cùng ra **3,0452 %** ⇒ lệch nằm ở **dữ liệu đầu vào phía Oracle tại lúc tick** (đọc Aerospike 242 qua WAN, cache ticker làm mới :00/:30), không phải code feature/model. ⇒ Đợt 24 chân 10-08 22:20 của shadow #2 (và 16 chân của #1) là **artefact môi trường Oracle**; 242 và backtest không vào.
+- Độ trễ tick selector: c3 p50 0,43 s / p99 5,6 s; **c3b p50 7,6 s / p95 10,6 s / p99 14 s** (trễ nằm giữa dòng `[MAP] top` và `[GATE]`, tức tầng gate K24+skipFull); 242 ~0,3–0,7 s. c3b chậm kinh niên ⇒ nếu đem K24+skipFull lên live thì quyết định trễ ~7–14 s.
+- Hệ quả: (a) đo shadow #2 trên Oracle KHÔNG đại diện cho phút sập; (b) cần sửa đường dữ liệu shadow (chờ nến M settle / đọc theo mốc) và tìm điểm nghẽn tầng gate c3b trước release v1.
