@@ -56,3 +56,14 @@ Gọi CF là close đã ffill để xử lý coin delist.
 ## Đầu ra
 - `~/claude_master/rex/panel.parquet`, khoá (day, sym), gồm thô + rank + target + cờ universe.
 - `s0_checks.json`.
+
+
+## Addendum 0 (2026-10-16, TRƯỚC khi chạy) — làm rõ ngưỡng phủ S0-V3
+
+**Feature có lookback > 56 ngày** (mom90, dhi90, dhi365, dlo90, vs7, fz, rmom28) chắc chắn thiếu dữ liệu ở coin mới niêm yết 60–365 ngày. Các feature này chỉ BÁO độ phủ, không gate. Model xử lý NaN tự nhiên.
+
+**Ngưỡng gate cho các feature còn lại:**
+- họ a–f: ≥ 98 %;
+- họ g: OI/LS ≥ 85 %; riêng funding (f1, f7, df7) ≥ 98 %.
+
+Độ phủ tính trên dòng universe, theo từng năm. Họ a–f từ 2021-04; họ g từ 2022-01.
