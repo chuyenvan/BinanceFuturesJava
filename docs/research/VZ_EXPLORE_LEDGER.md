@@ -83,3 +83,4 @@ Chi phí: bucket EXEC thực + phí 2 chân (SIM_RATE_FEE=0.000982). Bootstrap b
 | A1 (10-16) | basis1m | T2 F2 perp_lead60 dot vs ret dot | 69 dot | rho +0,061 [-0,110; +0,236] | 2026-10-16 |
 | A1 (10-16) | basis1m | T3 F1 IC trong dot | 957 chan/69 dot | IC +0,001 [-0,085; +0,071] | 2026-10-16 |
 | A1 (10-16) | basis1m | T4 F2 IC trong dot | 957/69 | IC -0,027 [-0,086; +0,041] | 2026-10-16 |
+| A1-TAIL (10-16) | basis1m | XAC NHAN veto F1 dot > 0,4% (nam le 2021/2023/2025) | 106 dot, 10 co | PnL co +3524, ret co +4,0% vs +3,9% -> BAC BO | 2026-10-16 |

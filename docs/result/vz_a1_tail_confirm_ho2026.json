@@ -1,0 +1,36 @@
+{
+ "run": "ho4-k24-b-s42",
+ "years": [
+  2026
+ ],
+ "check": {
+  "V1": true,
+  "V2": 1.0,
+  "V3_lags": {
+   "lag-2": -0.0305376943027049,
+   "lag-1": -0.1665283270547271,
+   "lag0": 0.5337089406636834,
+   "lag1": -0.1510939273230756,
+   "lag2": -0.0273222451939861
+  },
+  "V3_ok": true,
+  "V4": 0.919732441471572,
+  "pass": true
+ },
+ "n_bursts": 24,
+ "n_flag": 0,
+ "frac_flag": 0.0,
+ "pnl_flag": 0.0,
+ "pnl_all": 13418.469571,
+ "ret_flag_mean": null,
+ "ret_unflag_mean": 0.029741357687857406,
+ "by_year": {
+  "2026": {
+   "n": 24,
+   "n_flag": 0,
+   "pnl_flag": 0.0
+  }
+ },
+ "flagged": [],
+ "verdict": "KHONG_KET_LUAN"
+}

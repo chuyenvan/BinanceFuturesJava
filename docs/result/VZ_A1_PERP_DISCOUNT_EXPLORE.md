@@ -45,3 +45,24 @@ Cả 4 phép thử đều có CI95 chứa 0, và dấu theo năm không nhất q
 
 - Giả thuyết đơn điệu "perp càng discount thì đợt càng tốt" bị bác ở mức khám phá.
 - Còn một giả thuyết hẹp hơn: veto đuôi phải, khi perp > index rõ rệt (spot dẫn sụp đổ). Giả thuyết này được đưa sang xác nhận độc lập, với ngưỡng cố định 0,4 % đặt trước khi mở năm lẻ.
+
+## Xác nhận A1-TAIL (pre-reg `PREREG_VZ_A1_TAIL_CONFIRM.md`, commit 8736082e) — **BÁC BỎ**
+
+**DEV năm lẻ 2021 + 2023 + 2025** (sim gqsf-a1, 106 đợt, 1 484 chân):
+- Kiểm dữ liệu PASS: V2 98,4 %, lag 0 = 0,416 (lớn nhất), V4 97,4 %.
+- Luật cờ F1 > 0,4 % bắt **10 đợt (9,4 %), cả 10 đều trong 2023**.
+  - ΣPnL đợt cờ **+3 524** (dương), trên tổng +47 189.
+  - ret TB đợt cờ +4,0 %, đợt không cờ +3,9 % ⇒ không khác nhau.
+- ⇒ **BÁC BỎ.** Luật veto mà áp vào sẽ cắt mất đợt có lãi.
+
+**HO 2026** (`ho4-k24-b-s42`, K24 + skipFull, phí gốc; 24 đợt):
+- Kiểm dữ liệu PASS, V4 92 %.
+- 0 đợt cờ; F1 lớn nhất chỉ 0,06 % ⇒ KHÔNG KẾT LUẬN.
+- Không có ngày sụp đổ hệ thống nào trong 2026-01 → 09.
+
+**Đọc:**
+- Năm 2023 có các đợt với F1 từ 0,5 % tới 6 %, đều rơi vào cú sập nhanh (ví dụ 2023-08-17 21:41–21:42, 2023-06-10). Perp đứng trên index ở các đợt này, đúng "chữ ký spot dẫn", nhưng các đợt đó vẫn **thắng**.
+- ⇒ Chữ ký "perp > index" không phân biệt được sụp đổ cơ bản với cú sập thanh lý. LUNA/FTX 2022 chỉ là trùng hợp n = 3.
+- Ghi nhận: F1 vài % ở 2023 là lớn. Kiểm lệch pha vẫn PASS, và đúng vào phút sập nhanh index đi trước perp, nên tôi **không** coi đây là lỗi dữ liệu và **không** chấm lại.
+
+**Kết luận chương A1:** ĐÓNG. Không còn ứng viên nào từ basis1m ở tầng đợt (4 phép thử khám phá NULL + 1 phép xác nhận đuôi bị bác). Ledger 58 → 59.
