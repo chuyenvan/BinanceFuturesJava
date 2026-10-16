@@ -86,3 +86,31 @@ Dự kiến dấu:
 1. Kernel Kaggle (CPU) chỉ xuất feature theo chân `(sym, t0, F1, F2, V2, V3)`. Kernel không đọc pnl.
 2. Ghép outcome trên Oracle bằng `research/vz/a1/a1_test.py`.
 3. Kết quả ghi `docs/result/VZ_A1_PERP_DISCOUNT_EXPLORE.md` + json, kèm cập nhật ledger.
+
+## Addendum 1 (2026-10-16, viết TRƯỚC khi tính outcome; `a1_test.py` chưa chạy)
+
+**V3 nguyên bản FAIL.** corr((mark − index)/index, prem_close) có trung vị 0,613 (ngưỡng đặt trước 0,8). V1, V2, V4 đều PASS: phủ 100 %, khớp giá 100 %.
+
+**Chẩn đoán.** Kernel v2/v3 chỉ đọc cột feature, không đụng outcome; F1/F2 giống hệt v1 (sai lệch tối đa 0).
+
+1. **Đặc tả V3 sai từ giả định.**
+   - Theo định nghĩa của Binance, mark price = index + trung bình trượt (~30′) của basis. Mark không phải premium tức thời.
+   - Đối chiếu thêm: corr giữa mark-basis và MA30 của prem chỉ 0,447. Nghĩa là mark-basis không phải thước đúng để kiểm premium.
+2. **Premium Index của Binance bị kẹp về 0** khi index nằm trong khoảng impact bid/ask.
+   - Lúc thị trường yên, prem ≈ 0, nên corr với basis giá cuối thấp (0,666; tách theo phân vị |prem|, corr tăng dần 0,63 → 0,72).
+   - Đây là ngữ nghĩa thật của chuỗi dữ liệu, không phải lỗi dữ liệu.
+3. **Không lệch pha thời gian.** corr giữa Δ(basis giá cuối) và Δprem dịch k phút cho trung vị:
+
+   | k | −2 | −1 | 0 | +1 | +2 |
+   |---|---|---|---|---|---|
+   | corr | −0,02 | −0,19 | **+0,51** | −0,17 | −0,03 |
+
+   Đỉnh rơi đúng k = 0, nên ts của prem khớp ts của kline và feature vẫn causal.
+4. **Giới hạn ghi nhận.** Tại nến quyết định, F1 (theo Premium Index) và F1b (theo basis giá cuối) chỉ tương quan Spearman 0,38.
+   - F1 là độ lệch impact-mid so với index, F1b là độ lệch giá khớp cuối. Hai thứ không đồng nhất.
+   - Kết quả T1/T3 chỉ được đọc theo đúng định nghĩa Premium Index.
+   - F1b **không** được dùng làm phép thử (giữ nguyên ledger 4 phép).
+
+**Sửa V3 (thay ngưỡng corr):** trung vị corr ở k = 0 phải lớn nhất trong k ∈ {−2..2} và > 0,3. Kết quả: 0,51 ⇒ PASS.
+
+Không đổi feature, phép thử hay tiêu chí ứng viên. File feature dùng để chấm: `a1_feat_v3.csv`, có F1/F2 trùng v1.
