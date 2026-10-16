@@ -22,3 +22,9 @@ Nền: `docs/plan/VZ_NEXT_1016.md` §R2, `docs/result/BURST_RISK_1016.md`. Commi
 - V1 causal: mọi snapshot dùng có timestamp ≤ t_dec.
 - V2 khớp giá: mid suy ra = notional(±1 %)/depth(±1 %) bình quân hai phía, so close kline phút quyết định (lake `vz-kline1m-2024`) — |Δ|/close ≤ 1 % ở ≥ 95 % chân.
 - V3 phủ: tỉ lệ chân có feature ≥ 80 %; báo symbol thiếu file.
+
+## Addendum 1 (2026-10-16, TRƯỚC khi tính outcome — chưa chạy `test`)
+- V2 nguyên bản FAIL: |mid/close − 1| ≤ 1 % chỉ 69,6 % chân (626). Chẩn đoán (`~/vz_bd/r2_diag.py`, không đụng outcome): mid nằm trong [low, high] của 2 nến (t0−1′, t0) ở **100 %** chân; snapshot trễ t_dec trung vị 29 s (p99 30 s); lệch chủ yếu ở nến sập ≤ −2 % (n 110, trung vị 2,6 %) vs nến thường (trung vị 0,48 %, 81,6 % ≤ 1 %). ⇒ dữ liệu khớp thời gian; ngưỡng 1 % so với close sai đặc tả cho nến sập (giá đi nhiều % trong 30 s cuối phút).
+- V2 sửa: mid ∈ [low·0,998; high·1,002] của nến t0−1′..t0 ở ≥ 95 % chân ⇒ PASS (100 %).
+- Giới hạn ghi nhận: sổ lệnh là trạng thái ~30 s TRƯỚC giá quyết định; ở nến sập, sổ có thể đã cũ so với giá vào.
+- Không đổi feature / phép thử / tiêu chí ứng viên.
