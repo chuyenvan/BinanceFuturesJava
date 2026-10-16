@@ -1,0 +1,15 @@
+  E = E & elig_extra.reindex(index=C.index, columns=C.columns).fillna(False)
+2026-10-17 03:46:19,022 TF20 DEV Sh +0.72 ann +5.1% dd -0.09 yr {2022: -0.0517, 2023: 0.1311, 2024: 0.07, 2025: 0.0045} alpha +2.2% beta 0.08 corrBTC +0.59 exp 0.08 turn 0.014 | BTC BH Sh +0.69 dd -0.67
+2026-10-17 03:46:19,022 TF20 VAL Sh -0.58 ann -3.4% dd -0.05 yr {2025: -0.0337} alpha -3.5% beta 0.08 corrBTC +0.58 exp 0.08 turn 0.013 | BTC BH Sh +0.02 dd -0.32
+2026-10-17 03:46:19,022 TF20 x2 DEV Sh +0.65 | cb week (0.10663027941595656, 158)
+2026-10-17 03:46:19,300 TFBTC DEV Sh +0.89 ann +12.9% dd -0.12 yr {2022: -0.1122, 2023: 0.2335, 2024: 0.2617, 2025: 0.003} alpha +5.9% beta 0.18 corrBTC +0.70 exp 0.22 turn 0.023 | BTC BH Sh +0.69 dd -0.67
+2026-10-17 03:46:19,300 TFBTC VAL Sh -0.55 ann -7.2% dd -0.12 yr {2025: -0.0715} alpha -7.4% beta 0.23 corrBTC +0.74 exp 0.28 turn 0.030 | BTC BH Sh +0.02 dd -0.32
+2026-10-17 03:46:19,300 TFBTC x2 DEV Sh +0.83 | cb week (0.12412349995736562, 158)
+2026-10-17 03:46:19,651 TF20R DEV Sh +0.68 ann +4.4% dd -0.08 yr {2022: -0.0374, 2023: 0.1069, 2024: 0.058, 2025: 0.0032} alpha +2.0% beta 0.06 corrBTC +0.53 exp 0.08 turn 0.030 | BTC BH Sh +0.69 dd -0.67
+2026-10-17 03:46:19,651 TF20R VAL Sh -0.91 ann -4.6% dd -0.06 yr {2025: -0.0459} alpha -4.7% beta 0.07 corrBTC +0.56 exp 0.07 turn 0.022 | BTC BH Sh +0.02 dd -0.32
+2026-10-17 03:46:19,651 TF20R x2 DEV Sh +0.51 | cb week (0.12994785370924247, 158)
+2026-10-17 03:46:19,651 TF_V2 {'checked': 20, 'errors': 0, 'pass': True} | V3 univ_min 20 | gates {'G1': False, 'G2': False, 'G3': True, 'G4': True, 'G5': True, 'G6': False, 'G7': True} | selector_adds False | VERDICT NO-GO
+2026-10-17 03:46:51,839 SENS open-norm DEV Sh +0.69 ann +6.1% dd -0.11 yr {2022: -0.0841, 2023: 0.1823, 2024: 0.0801, 2025: 0.0056} alpha +2.0% beta 0.11 exp 0.11 turn 0.026
+2026-10-17 03:46:51,841 SENS open-norm VAL Sh -0.52 ann -4.2% dd -0.07 yr {2025: -0.0414} alpha -4.3% beta 0.14 exp 0.11 turn 0.026
+2026-10-17 03:46:51,842 SENS open-norm 2025-04..12 (OOS cua paper) Sh -0.04 tong -0.3%
+2026-10-17 03:46:51,849 TF20 goc 2025-04..12 Sh -0.02 tong -0.1%
