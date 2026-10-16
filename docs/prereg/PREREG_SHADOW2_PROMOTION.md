@@ -115,3 +115,8 @@ Cửa sổ tối thiểu 4 tuần. Các tiêu chí (iii), (iv), (v) giữ nguyê
   - restart có chủ đích để bật `-Xlog:gc`;
   - tắt shadow c3b trên Oracle.
 - Classifier chặn tôi chạy hai việc trên, nên owner sẽ tự chạy; khi xong cần ghi vào sổ này.
+- 10-16 ~19:5x: owner tắt shadow c3b và c3b-redis trên Oracle (stop + disable). Trạng thái `failed` là do app thoát với mã khác 0 khi nhận SIGTERM. Shadow c3 vẫn chạy để tham khảo.
+- 10-16 20:00:01 → 20:00:05: restart có chủ đích để bật `-Xlog:gc` trên 242 (backup `bin/start.sh.bak_gclog_20261016_2000`).
+  - Sau restart: buffer 509.544 bản ghi, armed; tick đầu 22,6 s (warm-up), sau đó 0,8 s; legacy 44.
+  - Lần chạy lặp lại của owner dừng ở bước kiểm (grep = 0), không thực hiện restart thứ hai.
+  - Tính vào cửa sổ đánh giá như một restart có chủ đích, đã ghi sổ.
