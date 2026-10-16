@@ -22,7 +22,7 @@ EOF
 
 echo "[upload] dataset=$FULL_ID mode=$MODE dir=$SRC"
 if [ "$MODE" = "version" ]; then
-  kaggle datasets version -p "$SRC" -m "$(date -u +%Y-%m-%dT%H:%MZ) VZ upload" -r skip --delete-old-versions
+  kaggle datasets version -p "$SRC" -m "$(date -u +%Y-%m-%dT%H:%MZ) VZ upload" -r skip
 else
   kaggle datasets create -p "$SRC" -r skip
 fi

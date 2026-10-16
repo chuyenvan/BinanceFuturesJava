@@ -227,6 +227,15 @@ def combine_year(ds, year):
     return dst
 
 
+def combine_all_years(ds):
+    """Ghep MOI nam co thang trong out/<ds>/ thanh file nam trong staging (dataset dung chung)."""
+    ydirs = sorted(d for d in os.listdir(os.path.join(VZ, "out", ds)) if d.isdigit())
+    outs = [combine_year(ds, y) for y in ydirs]
+    outs = [o for o in outs if o]
+    log.info("combine_all_years %s -> %d file %s", ds, len(outs), ydirs)
+    return outs
+
+
 def glob_parquet(d):
     import glob
     return sorted(glob.glob(os.path.join(d, "*.parquet")))
@@ -494,9 +503,12 @@ def main():
                     continue
                 os.remove(p)
         # metrics5m / funding shared datasets
+        # [FIX 2026-10-16 MASTER] dataset dung chung: `kaggle datasets version` THAY TOAN BO file =>
+        #   staging PHAI chua MOI nam (truoc day chi nam hien tai => mat 2021-2025). Ghep lai moi nam
+        #   co trong out/<ds>/ (file thang duoc giu lai, khong xoa).
         for ds in ["metrics5m", "funding"]:
-            p = combine_year(ds, year)
-            if p is None:
+            p = combine_all_years(ds)
+            if not p:
                 continue
             upload = os.path.join(VZ, "upload", "vz-" + ds)
             meta = {"gov": gov, "rows": {}}
