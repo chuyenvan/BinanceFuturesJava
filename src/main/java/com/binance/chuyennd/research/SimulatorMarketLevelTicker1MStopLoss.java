@@ -111,6 +111,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     private java.util.ArrayDeque<Long> concBdOpenTimes = null;
     /** [CONC-PERCOIN] Dem so leg bi tran per-coin chan (de log SUMMARY). */
     private long concPerCoinBlocked = 0L;
+    /** [BURST-COOLDOWN 2026-10-16] docs/prereg/PREREG_BURST_COOLDOWN.md — tat mac dinh. */
+    private BurstCooldown burstCooldown = BurstCooldown.off();
     private boolean concPerCoinModeLogged = false;
     public int activeRunningCount = 0;
 
@@ -573,6 +575,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 Storage.writeObject2File(FILE_STORAGE_ORDER_DONE, allOrderDone);
                 Storage.writeObject2File("storage/BalanceIndex.data", BudgetManagerSimple.getInstance().balanceIndex);
                 TraceOrderDone.printOrderTestDone("storage/printDone.csv", allOrderDone);
+                if (burstCooldown.enabled()) {
+                    LOG.info("[BURST-COOLDOWN] N={} MIN={} triggers={} blocked={}", burstCooldown.n(),
+                            burstCooldown.minutes(), burstCooldown.triggers(), burstCooldown.blocked());
+                }
                 // [TRAIL-LADDER 2026-09-23] do-luong-only: file RIENG, KHONG them cot vao printDone.csv.
                 if (Configs.SIM_TRAIL_TRACE) {
                     TraceOrderDone.printTrailTrace("storage/trailTrace.csv", allOrderDone);
@@ -901,6 +907,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         BudgetManagerSimple.getInstance().resetInstance();
         concBdOpenTimes = null;   // [CONC-CAP] rolling window sach o moi lan khoi tao (sample WFO)
         concPerCoinBlocked = 0L;  // [CONC-PERCOIN] dem sach o moi lan khoi tao
+        burstCooldown = BurstCooldown.fromConfigs();  // [BURST-COOLDOWN] per-run sach
         concPerCoinModeLogged = false;
         allOrderDone = new TreeMap<>();
 
@@ -1357,6 +1364,14 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             ablationPassCount++;
         }
 
+        // [BURST-COOLDOWN 2026-10-16] docs/prereg/PREREG_BURST_COOLDOWN.md: SAU gate (buffer gate khong doi),
+        //   TRUOC budget. Chi chan PREDICT moi (khong DCA-signal); BIG_DOWN/DCA khong bi chan. Tat => false.
+        if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE && !dcaSignal
+                && burstCooldown.blocks(ticker.startTime)) {
+            if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_GATE_REJECT, symbolId, ticker, levelChange, symbolPred, predict);
+            return;
+        }
+
         // [D3D4-FILTER 2026-09-17] docs/prereg/PREREG_D3D4_FILTER_SIM.md: bo qua lenh moi (selector Best-N +
         //   BIG_DOWN) neu feature pump-dump > p90. KHONG ap DCA (shouldSkip loai). OFF => false ngay.
         if (PumpDumpFilter.shouldSkip(symbolId, ticker.startTime, levelChange, dcaSignal)) {
@@ -1567,6 +1582,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
 
         BudgetManagerSimple.getInstance().counterOrderCreated.incrementAndGet();
+        // [BURST-COOLDOWN] dem chan PREDICT THUC SU mo (sau moi return). Tat => khong lam gi.
+        if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE && !dcaSignal) burstCooldown.recordOpen(ticker.startTime);
 
         symbol2OrderRunning[symbolId] = mergeOrder(orders, ticker, symbol2OrderRunning[symbolId]);
         addActiveRunningId(symbolId); // Thêm ID vào mảng O(1)
@@ -1587,6 +1604,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         DcaProcessor.resetRoundCapStats();   // [DCA-ROUND-CAP] dem per-run sach
         concBdOpenTimes = null;   // [CONC-CAP] rolling window sach o moi lan khoi tao (sample WFO)
         concPerCoinBlocked = 0L;  // [CONC-PERCOIN] dem per-run sach
+        burstCooldown = BurstCooldown.fromConfigs();  // [BURST-COOLDOWN] per-run sach
         concPerCoinModeLogged = false;
         allOrderDone = new TreeMap<>();
 
