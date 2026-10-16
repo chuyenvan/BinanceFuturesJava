@@ -272,12 +272,124 @@ def score(a):
     log.info("JSON -> %s", JSON_OUT)
 
 
+GPU_CHK = "bcd-gpuchk-s7"
+
+
+def push_gpu(tag, ov, s):
+    """Nhu push() nhung kernel bat GPU (chi de lay them slot; sim chay CPU). Seed A1 khong dung GPU."""
+    assert s != "A1"
+    ks = GA.ks_mod()
+    dsn, md5 = G.pred_of(s)
+    ref = ks.kernel_ref(tag)
+    folder = os.path.join(ks.WORKDIR, ks.slug(tag))
+    os.makedirs(folder, exist_ok=True)
+    cfg = {"tag": tag, "profile": GA.PROFILE, "overrides": ov, "sim_end_date": "20251231", "xmx": "22g",
+           "timeout_s": 7200, "code_sha": CODE_SHA, "bins_ds": "", "jar_ds": JAR_DS, "market_ds": "",
+           "market_align": False, "extra_env": {}, "ticker_min_days": ks.TICKER_MIN_DAYS,
+           "pred_ds": dsn, "want_pred_md5": md5, "want_pred_base": GA.PRED0_MD5}
+    with open(os.path.join(folder, "run.py"), "w") as f:
+        f.write(GA.template().replace("__CFG_JSON__", repr(json.dumps(cfg))))
+    md = {"id": ref, "title": ref.split("/")[1], "code_file": "run.py", "language": "python",
+          "kernel_type": "script", "is_private": True, "enable_gpu": True, "enable_internet": True,
+          "dataset_sources": [ks.USER + "/" + GA.BUNDLE] + ks.TICKER_DS + [ks.USER + "/" + JAR_DS, ks.USER + "/" + dsn],
+          "competition_sources": [], "kernel_sources": []}
+    with open(os.path.join(folder, "kernel-metadata.json"), "w") as f:
+        json.dump(md, f, indent=1)
+    r = ks._api().kernels_push(folder)
+    log.info("PUSHED-GPU %s %s pred=%s ov=%s", tag, getattr(r, "url", r), dsn, json.dumps(ov))
+
+
+def gpu_ok():
+    """GPU host phai cho printDone giong byte run CPU (gqsf-s7) khi key vang."""
+    import reset_rule_score as R
+    p = GA.OUT % GPU_CHK + "storage/printDone.csv"
+    if not os.path.exists(p):
+        return None
+    ok = R.md5_of(GPU_CHK) == R.md5_of(OFF["S7"])
+    log.info("GPU-CHK md5 %s vs gqsf-s7 %s -> %s", R.md5_of(GPU_CHK), R.md5_of(OFF["S7"]), ok)
+    return ok
+
+
+def orch2(a):
+    """Song song: toi da a.cpu kernel CPU + a.gpu kernel GPU. GPU chi dung sau khi GPU-CHK PASS."""
+    ks = GA.ks_mod()
+    term = ks.TERMINAL
+    p0 = p0_check()
+    assert p0["ok"], "P0 chua PASS"
+    todo = [(arm, s) for s in SEEDS for arm in ARMS]
+    run_cpu, run_gpu, queue = [], [], []
+    for arm, s in todo:
+        t = tag_on(arm, s)
+        if os.path.exists(GA.OUT % t + "storage/printDone.csv"):
+            continue
+        try:
+            st = ks._status(ks.kernel_ref(t))
+        except Exception:  # noqa: BLE001
+            st = None
+        if st in ("RUNNING", "QUEUED"):
+            run_cpu.append(t)
+        elif st == "COMPLETE":
+            ks.fetch(t)
+        else:
+            queue.append((arm, s))
+    gchk = gpu_ok()
+    if gchk is None and a.gpu > 0:
+        try:
+            st = ks._status(ks.kernel_ref(GPU_CHK))
+        except Exception:  # noqa: BLE001
+            st = None
+        if st not in ("RUNNING", "QUEUED"):
+            push_gpu(GPU_CHK, dict(OV_BASE), "S7")
+        run_gpu.append(GPU_CHK)
+    log.info("ORCH2 start cpu_running=%s gpu_running=%s queue=%d", run_cpu, run_gpu, len(queue))
+    while queue or run_cpu or run_gpu:
+        while queue and len(run_cpu) < a.cpu:
+            arm, s = queue.pop(0)
+            push(tag_on(arm, s), ov_on(arm), s)
+            run_cpu.append(tag_on(arm, s))
+            time.sleep(45)
+        if gchk:
+            for i in range(len(queue) - 1, -1, -1):
+                if len(run_gpu) >= a.gpu:
+                    break
+                arm, s = queue[i]
+                if s == "A1":
+                    continue
+                queue.pop(i)
+                push_gpu(tag_on(arm, s), ov_on(arm), s)
+                run_gpu.append(tag_on(arm, s))
+                time.sleep(45)
+        time.sleep(120)
+        for lst in (run_cpu, run_gpu):
+            for t in list(lst):
+                try:
+                    st = ks._status(ks.kernel_ref(t))
+                except Exception as e:  # noqa: BLE001
+                    log.info("status %s loi %s", t, e)
+                    continue
+                if st in term:
+                    log.info("%s -> %s", t, st)
+                    try:
+                        ks.fetch(t)
+                    except Exception as e:  # noqa: BLE001
+                        log.error("fetch %s loi %s", t, e)
+                    lst.remove(t)
+                    if t == GPU_CHK:
+                        gchk = gpu_ok()
+                        if not gchk:
+                            log.error("GPU-CHK FAIL -> khong dung GPU")
+    parity_on()
+    log.info("ORCH2 XONG")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd")
     ap.add_argument("args", nargs="*")
     ap.add_argument("--workers", type=int, default=2)
     ap.add_argument("--no-p0-push", action="store_true")
+    ap.add_argument("--cpu", type=int, default=5)
+    ap.add_argument("--gpu", type=int, default=2)
     a = ap.parse_args()
     if a.cmd == "jards":
         jards(a)
@@ -285,6 +397,8 @@ def main():
         push(P0_TAG, dict(OV_BASE), "A1")
     elif a.cmd == "orch":
         orch(a)
+    elif a.cmd == "orch2":
+        orch2(a)
     elif a.cmd == "parity":
         p0_check()
         parity_on()
