@@ -79,3 +79,7 @@ Chi phí: bucket EXEC thực + phí 2 chân (SIM_RATE_FEE=0.000982). Bootstrap b
 | R2 (10-16) | bookDepth | T2 F2 imb1 IC trong dot | 626/44 | IC +0,055 [-0,042; +0,165] | 2026-10-16 |
 | R2 (10-16) | bookDepth | T3 F3 bid5_rel IC trong dot | 626/44 | IC -0,012 [-0,080; +0,054] | 2026-10-16 |
 | R2 (10-16) | bookDepth | T4 trung vi F1 dot vs ret dot | 44 dot | rho +0,069 [-0,188; +0,462] | 2026-10-16 |
+| A1 (10-16) | basis1m | T1 F1 prem_dis dot vs ret dot | 69 dot (2022+2024) | rho -0,048 [-0,249; +0,159] | 2026-10-16 |
+| A1 (10-16) | basis1m | T2 F2 perp_lead60 dot vs ret dot | 69 dot | rho +0,061 [-0,110; +0,236] | 2026-10-16 |
+| A1 (10-16) | basis1m | T3 F1 IC trong dot | 957 chan/69 dot | IC +0,001 [-0,085; +0,071] | 2026-10-16 |
+| A1 (10-16) | basis1m | T4 F2 IC trong dot | 957/69 | IC -0,027 [-0,086; +0,041] | 2026-10-16 |
