@@ -938,6 +938,11 @@ public class DetectEntrySignal2TradeNormal {
      * marginRunning/equity nhu khoi sizing trong createOrderBuyRequest (BudgetManager; so giay ShadowBookC3 khi
      * LiveProfileC3.on()) va CUNG ham {@link TradeUtils#managerBudget} (null = U &gt;= U_MAX). Chi goi khi key bat.
      */
+    /** [PXCACHE 2026-10-16] gia so giay dung chung trong 3 s (truoc: 1 scan Aerospike / ung vien). */
+    private final com.binance.chuyennd.tradecore.selector.TtlPriceCache bookPx =
+            new com.binance.chuyennd.tradecore.selector.TtlPriceCache(3000L,
+                    DataManagerAerospikeFloatSim::getAllPriceRealtimeLegacy, System::currentTimeMillis);
+
     private boolean liveBookFull(MarketLevelChange levelChange) {
         // [SHADOW2 2026-10-05] cung nguon nhu ban truoc, tach vao LiveBookU de unit test; ghi U cho dong [GATE].
         Float[] me = com.binance.chuyennd.tradecore.selector.LiveBookU.marginEquity(
@@ -945,7 +950,7 @@ public class DetectEntrySignal2TradeNormal {
                 BudgetManager.getInstance().marginRunning, BudgetManager.getInstance().balanceBasic,
                 () -> com.binance.chuyennd.tradecore.selector.LiveBookU.fromBook(
                         com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance(),
-                        DataManagerAerospikeFloatSim::getAllPriceRealtimeLegacy));
+                        bookPx::get));
         lastLiveU = com.binance.chuyennd.tradecore.selector.LiveBookU.u(me[0], me[1]);
         return TradeUtils.managerBudget(null, me[0], me[1], levelChange) == null;
     }
