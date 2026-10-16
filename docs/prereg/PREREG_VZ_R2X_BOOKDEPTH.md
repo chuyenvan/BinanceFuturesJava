@@ -48,3 +48,23 @@ Nếu không có feature nào đạt: **đóng họ bookDepth tại tick vào**.
 
 - Báo cáo HO 2026 trên `ho4-k24-b-s42`, chỉ báo cáo.
 - Viết pre-reg riêng cho luật sim (chọn / veto), chạy 8 seed DEV, kèm khai rõ rằng bookDepth không còn năm DEV sạch.
+
+## Addendum 1 (2026-10-16, viết TRƯỚC khi tính outcome; `test` chưa chạy)
+
+**V2 gộp FAIL:** 94,35 % chân đạt (n = 1 027), dưới ngưỡng 95 %. V1 và V3 PASS (phủ 95,9 %).
+
+**Chẩn đoán** (`r2x_diag.py`; chỉ đọc mid, snap và kline, không đọc pnl/ret):
+- Tách theo năm: 2023 đạt **99,83 %** (580 chân). 2025 chỉ đạt **87,25 %** (447 chân).
+- Có 58 chân fail. 52 chân lệch quá 3 % (trung vị 25 %, max 247 %). Phần lớn nằm trong cú sập **2025-10-10 15:02 → 2025-10-11 13:16**; ở các đợt này 22–86 % số chân fail.
+- Độ trễ snapshot của chân fail (28 s) không khác chân đạt (29 s).
+- ⇒ Lỗi không đến từ thời gian. Trong cú sập này sổ lệnh bị quét sạch. Snapshot bookDepth khi đó không khớp với giá (mid suy ra từ notional/depth vô nghĩa), nên feature tại những chân này không đo đúng thứ cần đo.
+
+**Sửa:**
+- Chân nào có mid nằm ngoài băng [low·0,998; high·1,002] thì F1, F2, F3 = NaN, tức coi là feature không tin được.
+- Ngoài việc này, không đổi feature, phép thử hay tiêu chí ứng viên.
+- V2 sau lọc = 100 % (đúng theo định nghĩa). Phải giữ V3 ≥ 80 % sau lọc.
+
+**Giới hạn (ghi rõ):**
+- Bộ lọc loại đúng những chân trong cú sập lớn nhất của 2025, tức ngày tệ nhất.
+- Vì vậy T4 (veto theo đợt) không thể học từ sự kiện đó.
+- Báo thêm danh sách các đợt bị ảnh hưởng (số chân bị lọc trên tổng). Ret của các đợt này chỉ báo cáo, không đưa vào phép thử.
