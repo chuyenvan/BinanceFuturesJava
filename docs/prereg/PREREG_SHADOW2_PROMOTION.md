@@ -50,7 +50,8 @@ Báo theo tuần + theo ngày (MTM ngày, ghép cặp #2 − #1): ΣPnL, equity 
      - So K16 của c3 với buffer native của 242 theo từng phút: 10-01…10-07 khớp 100%. Từ 10-08 chỉ khớp 0–71% mỗi ngày.
      - Phút lệch nhiều nhất có r phía Oracle gấp khoảng 2 lần (10-08 22:20 và 10-10 12:04).
      - Đuôi trên của buffer (q là giá trị lớn thứ ~14) gần như toàn record lỗi. Kết quả: q của K24 c3b (đã copy sang 242 lúc 14:57) là **0,01871**, trong khi native tương đương là **0,00723**, gấp **2,59 lần**.
-     - Hệ quả: ngưỡng gate trên 242 từ 14:57 cao gấp khoảng 2,6 lần mức sim dùng (thr [0,029..0,042], n_pass = 0).
+     - Hệ quả: ngưỡng gate thực trên 242 từ 14:57 cao gấp khoảng 2,6 lần mức sim dùng. Bằng chứng: log `[GATE-RATIO] q_t=0.018713` từ 15:01, trước switch là `q_t=0.007370`.
+    - **Lưu ý đọc log:** `thr=[..]` trong dòng `[GATE]` là ngưỡng tính trên BASE (`EntryGate.threshold(MIN_MOMENTUM_15M, sp)`), KHÔNG phải ngưỡng thực q_t·f·gs, nên không dùng làm thước. `gateValue` trong `sel_dump` là sp (giá trị đưa vào factor), không phải ngưỡng.
 - Tiêu chí (ii) (R #2/#1) **bị bỏ**. Kết quả vận hành của shadow Oracle chỉ còn để tham khảo.
 
 **B. Đối tượng mới.** 242 với K24 + skipFull. Cửa sổ đánh giá bắt đầu khi đủ cả ba điều kiện:
@@ -74,7 +75,7 @@ Cửa sổ tối thiểu 4 tuần. Các tiêu chí (iii), (iv), (v) giữ nguyê
 - P2 (lật gate):
   - Ca lật nặng: một cặp (phút, ứng viên) mà live và offline quyết khác nhau, đồng thời `|p15 − thr| / thr > 1%`. **Phải bằng 0.** Có bất kỳ ca nào ⇒ TRƯỢT, điều tra.
   - Ca lật biên (≤ 1%): chỉ báo cáo.
-- P3 (q_t): q theo giờ từ log live (`gateValue·p15⁻¹` nhân hằng κ) so với q replay từ file buffer: sai lệch tương đối ≤ 1e-6 ở mọi giờ.
+- P3 (q_t): `q_t` theo giờ lấy từ log live `[GATE-RATIO] q_t=`, so với q replay causal (`GateRatioBuffer`) từ file buffer: sai lệch tương đối ≤ 1e-6 ở mọi giờ. Ngưỡng thực của từng ứng viên = q_t·max(DYN_MIN, sp/0,15·1,2876)·gs, với sp = `gateValue` trong sel_dump và gs = 1,55. P2 dùng ngưỡng thực này.
 - PnL vẫn chỉ báo cáo, không có ngưỡng. Thước so là sim K24 + ON (mục "PnL" ở trên).
 
 **C. Sổ vận hành 242 (10-16).**
@@ -85,7 +86,7 @@ Cửa sổ tối thiểu 4 tuần. Các tiêu chí (iii), (iv), (v) giữ nguyê
 
 **D. Dựng lại buffer K24 native cho 242.** Phương pháp khai trước khi có số forward, không xét PnL.
 - Nguồn dùng: K16 native 242 (`bak_k16`, 10-01 13:00 → 10-16 13:23, 333.856 record).
-- Lấp gap 13:23 → 14:56 từ `sel_dump` hạng 1..16: r = κ·p15/gateValue, κ = 0,075159. κ khớp đúng hằng số trên 121 phút chồng (p5 = p95).
+- Lấp gap 13:23 → 14:56 từ `sel_dump` hạng 1..16: r = κ·p15/gateValue, κ = 0,075159. κ khớp đúng hằng số trên 121 phút chồng (p5 = p95), đúng bằng SCORE_BASE/(DYN_MULT·gs) = 0,15/(1,2876·1,55), nên khớp công thức r = p15/(f·gs) với gateValue = sp.
 - Mỗi phút thêm 8 record tổng hợp cho hạng 17..24: r = r₁₆·ρₖ.
   - ρ đo trên 51 phút K24 native sau 14:57: ρ₁₇..₂₄ = 0,995 0,988 0,982 0,975 0,971 0,962 0,958 0,953.
   - Trong mỗi phút, r giảm dần theo hạng: `max r(17..24)/r₁₆` = 1,000 trên 51 phút.
