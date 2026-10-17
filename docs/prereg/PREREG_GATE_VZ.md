@@ -98,3 +98,10 @@ IC Spearman p15 vs nhãn theo năm (arm vs baseline); tỉ phần gain của c�
 ## 10. Ngân sách và an toàn
 
 17 sim (+16 nếu 6.3), 2 kernel song song tối đa toàn tài khoản; không Binance REST từ Oracle; không chạm 242 (chỉ đọc code repo); kiểm `df -h` trước mỗi bước lớn (dừng nếu < 500 MB); KHÔNG build/upload jar mới. Dùng lại dataset riêng tư `sim-jar-gqsf` (build 10-04, thuộc nhóm jar cũ CÓ THỂ chứa PrivateConfig thật — đã nằm trên Kaggle từ trước; 10-16 đã khuyên owner xoay key) để ghép cặp đúng với baseline gqsf. Không đọc, không in chuỗi khoá.
+
+
+## Addendum 1 (2026-10-17 09:25, TRƯỚC khi có bất kỳ p15 VZ hay sim arm nào)
+
+- **Nguồn giá MTM:** ticker bin cục bộ (`~/kaggle_data_hpo`) đã bị xoá khi dọn đĩa ⇒ `reset_rule_score.run_mtm` không chạy được. Thay bằng `research/gvz/gvz_mtm.py`: giữ nguyên toàn bộ logic run_mtm/MTMState, CHỈ đổi nguồn close 1m sang kline1m Vision. Kiểm: tái lập cache `gqsf/mtm.json` cho `gqsf-s7` và `gqsf-a1` — dd_total, uw, dd_year, uw_year, dd_win **trùng tuyệt đối** (−22,748916…/116,4667; −22,207383…/117,3278). MTM của MỌI run (arm và baseline) tính bằng cùng module này. Thêm cửa sổ `dd_dev` = [2022-01-01, 2025-01-01) cho C3.
+- **D1 PASS:** G0 train lại từ store Kaggle trùng bit `gabl/p15_G0.npy` (max |Δ| = 0), pearson vs pred.bin min 0,9919 ⇒ store, recipe, môi trường (python3 hệ thống, xgboost 3.2.0) trùng vòng 10-04. Baseline seed 42 = `pred_B_S42` md5 b75efb61.
+- CAGR_DEV và lợi suất năm tính từ `equity` daily của sim (`gate_skipfull_driver.cagr_from/year_ret`), giống vòng gqsf.
