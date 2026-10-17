@@ -1,0 +1,359 @@
+{
+ "B_S42": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "mapper": true,
+   "topk24": true,
+   "key_on": true,
+   "ok": true,
+   "b0ov": true,
+   "log_key": true,
+   "skip_count": true,
+   "pred": true,
+   "end": true
+  },
+  "md5": "6159f184088d1dc4f3093d0f6999a030",
+  "n": 3552,
+  "eq": 151842,
+  "skip_full": 588,
+  "secs": 1405.0,
+  "date_last": "20251230"
+ },
+ "VA_S42": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "mapper": true,
+   "topk24": true,
+   "key_on": true,
+   "ok": true,
+   "b0ov": true,
+   "log_key": true,
+   "skip_count": true,
+   "pred": true,
+   "end": true
+  },
+  "md5": "5bd415019fde8ea400cbeb42dc9018ad",
+  "n": 3499,
+  "eq": 158835,
+  "skip_full": 0,
+  "secs": 2076.2,
+  "date_last": "20251230"
+ },
+ "VA_S7": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "mapper": true,
+   "topk24": true,
+   "key_on": true,
+   "ok": true,
+   "b0ov": true,
+   "log_key": true,
+   "skip_count": true,
+   "pred": true,
+   "end": true
+  },
+  "md5": "626066d7c607251ce41a10f9fe16b80a",
+  "n": 3600,
+  "eq": 147992,
+  "skip_full": 0,
+  "secs": 2257.0,
+  "date_last": "20251230"
+ },
+ "VA_S13": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "mapper": true,
+   "topk24": true,
+   "key_on": true,
+   "ok": true,
+   "b0ov": true,
+   "log_key": true,
+   "skip_count": true,
+   "pred": true,
+   "end": true
+  },
+  "md5": "767b68c6af57557c18d4e8587fcd81a2",
+  "n": 3592,
+  "eq": 136531,
+  "skip_full": 147,
+  "secs": 1461.5,
+  "date_last": "20251230"
+ },
+ "VA_S21": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "mapper": true,
+   "topk24": true,
+   "key_on": true,
+   "ok": true,
+   "b0ov": true,
+   "log_key": true,
+   "skip_count": true,
+   "pred": true,
+   "end": true
+  },
+  "md5": "249372406989b3c8280e57bd84aac51c",
+  "n": 3544,
+  "eq": 141895,
+  "skip_full": 0,
+  "secs": 2060.0,
+  "date_last": "20251230"
+ },
+ "VA_S99": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "mapper": true,
+   "topk24": true,
+   "key_on": true,
+   "ok": true,
+   "b0ov": true,
+   "log_key": true,
+   "skip_count": true,
+   "pred": true,
+   "end": true
+  },
+  "md5": "16019b9c07e65490c06e62012951323d",
+  "n": 3629,
+  "eq": 146531,
+  "skip_full": 0,
+  "secs": 1770.2,
+  "date_last": "20251230"
+ },
+ "VA_S123": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "mapper": true,
+   "topk24": true,
+   "key_on": true,
+   "ok": true,
+   "b0ov": true,
+   "log_key": true,
+   "skip_count": true,
+   "pred": true,
+   "end": true
+  },
+  "md5": "91fcff768424e01ae3e7517659c145c8",
+  "n": 3595,
+  "eq": 137475,
+  "skip_full": 0,
+  "secs": 2072.9,
+  "date_last": "20251230"
+ },
+ "VA_S777": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "mapper": true,
+   "topk24": true,
+   "key_on": true,
+   "ok": true,
+   "b0ov": true,
+   "log_key": true,
+   "skip_count": true,
+   "pred": true,
+   "end": true
+  },
+  "md5": "dc962d89fdcaf82fd9ed13188dac4f87",
+  "n": 3558,
+  "eq": 164417,
+  "skip_full": 0,
+  "secs": 1972.0,
+  "date_last": "20251230"
+ },
+ "VA_S2024": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "mapper": true,
+   "topk24": true,
+   "key_on": true,
+   "ok": true,
+   "b0ov": true,
+   "log_key": true,
+   "skip_count": true,
+   "pred": true,
+   "end": true
+  },
+  "md5": "c8db8288f1abc6dd2ae132f416f4863c",
+  "n": 3573,
+  "eq": 142591,
+  "skip_full": 0,
+  "secs": 2095.0,
+  "date_last": "20251230"
+ },
+ "VB_S42": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "mapper": true,
+   "topk24": true,
+   "key_on": true,
+   "ok": true,
+   "b0ov": true,
+   "log_key": true,
+   "skip_count": true,
+   "pred": true,
+   "end": true
+  },
+  "md5": "a3c7b2cf3b8bc1338b2ee5ca2e5ea307",
+  "n": 3576,
+  "eq": 157228,
+  "skip_full": 0,
+  "secs": 1839.8,
+  "date_last": "20251230"
+ },
+ "VB_S7": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "mapper": true,
+   "topk24": true,
+   "key_on": true,
+   "ok": true,
+   "b0ov": true,
+   "log_key": true,
+   "skip_count": true,
+   "pred": true,
+   "end": true
+  },
+  "md5": "4de9dfef2538a9fda4245a94600d64db",
+  "n": 3668,
+  "eq": 139818,
+  "skip_full": 237,
+  "secs": 2122.3,
+  "date_last": "20251230"
+ },
+ "VB_S13": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "mapper": true,
+   "topk24": true,
+   "key_on": true,
+   "ok": true,
+   "b0ov": true,
+   "log_key": true,
+   "skip_count": true,
+   "pred": true,
+   "end": true
+  },
+  "md5": "f7cac2dcb8d4c7e88c71f3ec1f74e127",
+  "n": 3725,
+  "eq": 155039,
+  "skip_full": 0,
+  "secs": 1942.1,
+  "date_last": "20251230"
+ },
+ "VB_S21": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "mapper": true,
+   "topk24": true,
+   "key_on": true,
+   "ok": true,
+   "b0ov": true,
+   "log_key": true,
+   "skip_count": true,
+   "pred": true,
+   "end": true
+  },
+  "md5": "b0ce143571fd457ded20d7eae8102c99",
+  "n": 3587,
+  "eq": 168150,
+  "skip_full": 0,
+  "secs": 1987.6,
+  "date_last": "20251230"
+ },
+ "VB_S99": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "mapper": true,
+   "topk24": true,
+   "key_on": true,
+   "ok": true,
+   "b0ov": true,
+   "log_key": true,
+   "skip_count": true,
+   "pred": true,
+   "end": true
+  },
+  "md5": "c5939c4046862a148401c461a92d8e0f",
+  "n": 3547,
+  "eq": 166150,
+  "skip_full": 0,
+  "secs": 1434.6,
+  "date_last": "20251230"
+ },
+ "VB_S123": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "mapper": true,
+   "topk24": true,
+   "key_on": true,
+   "ok": true,
+   "b0ov": true,
+   "log_key": true,
+   "skip_count": true,
+   "pred": true,
+   "end": true
+  },
+  "md5": "5278afbe976e6dc69827222963a7086a",
+  "n": 3594,
+  "eq": 142855,
+  "skip_full": 0,
+  "secs": 1831.0,
+  "date_last": "20251230"
+ },
+ "VB_S777": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "mapper": true,
+   "topk24": true,
+   "key_on": true,
+   "ok": true,
+   "b0ov": true,
+   "log_key": true,
+   "skip_count": true,
+   "pred": true,
+   "end": true
+  },
+  "md5": "fd092f89b50c1bf5333843d5eac7f12c",
+  "n": 3576,
+  "eq": 130983,
+  "skip_full": 0,
+  "secs": 2107.3,
+  "date_last": "20251230"
+ },
+ "VB_S2024": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "mapper": true,
+   "topk24": true,
+   "key_on": true,
+   "ok": true,
+   "b0ov": true,
+   "log_key": true,
+   "skip_count": true,
+   "pred": true,
+   "end": true
+  },
+  "md5": "7f5654572a309ba3753fb75146f60910",
+  "n": 3540,
+  "eq": 146433,
+  "skip_full": 0,
+  "secs": 2295.3,
+  "date_last": "20251230"
+ }
+}

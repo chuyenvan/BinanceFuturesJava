@@ -1,0 +1,7 @@
+{
+ "min_pearson_vs_pred0": 0.9919079542160034,
+ "max_abs_vs_gabl_G0": 0.0,
+ "n_diff_gt_1e6": 0,
+ "D1_pass_pearson": true,
+ "D1_bit_identical": true
+}
