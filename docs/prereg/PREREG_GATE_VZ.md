@@ -114,3 +114,7 @@ Lần kiểm 1: D2 PASS; D3/D5 FAIL. Nguyên nhân đã đo, đều là dữ li�
 - **D5 range:** 16 phút 2021-03-02 01:36–01:51 có vzTkr5/15 ≥ 0,999 và 1 phút 2025-08-29 06:33 vzTkrBtc15 = 1,0 — lỗi nguồn Vision (taker_buy ≈ volume). Giữ nguyên, không làm sạch (17/2,6 triệu dòng; XGB dựa ngưỡng). D5 range chuyển thành chỉ báo cáo.
 - D4 (báo cáo): bản build trùng tuyệt đối biến thể trễ 1 (|Δ| 3e-8), lệch biến thể trễ 0 tới 0,17 ⇒ căn đúng. IC Spearman với nhãn tháng 2022-06: trễ 0 0,090 vs trễ 1 0,085 — không có dấu hiệu rò rỉ theo nến.
 - Ghi nhận trước khi train (không dùng để chọn): IC Spearman toàn kỳ với nhãn — vzNtR15 +0,19, vzQvR60 +0,14 (ổn định 5/5 năm, nhưng có thể trùng thông tin với volumeSpike/volatility của V3FULL); vzLsTop +0,33 nhưng theo năm 0,23/−0,01/0,13/0,20/0,01 (không ổn định — nghi xu hướng cấp độ); taker ratio |IC| < 0,09.
+
+## Addendum 3 (2026-10-17 ~09:55) — quyết định owner về áp dụng (không đổi phép đo)
+
+Owner: "cứ chạy, không go-live; trừ khi K24 + skipFull có vấn đề sau shadow". ⇒ Kết quả vòng này chỉ là **ứng viên dự phòng**. Kể cả GO (gồm HO 2026) cũng KHÔNG đưa vào v1.1 và KHÔNG mở nhánh ingest live (mục 8), trừ khi shadow K24+skipFull trên 242 lộ vấn đề và owner yêu cầu. Quy tắc C1–C5, 6.3, mục 7 giữ nguyên.
