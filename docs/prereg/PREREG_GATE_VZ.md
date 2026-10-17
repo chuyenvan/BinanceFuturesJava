@@ -105,3 +105,12 @@ IC Spearman p15 vs nhãn theo năm (arm vs baseline); tỉ phần gain của c�
 - **Nguồn giá MTM:** ticker bin cục bộ (`~/kaggle_data_hpo`) đã bị xoá khi dọn đĩa ⇒ `reset_rule_score.run_mtm` không chạy được. Thay bằng `research/gvz/gvz_mtm.py`: giữ nguyên toàn bộ logic run_mtm/MTMState, CHỈ đổi nguồn close 1m sang kline1m Vision. Kiểm: tái lập cache `gqsf/mtm.json` cho `gqsf-s7` và `gqsf-a1` — dd_total, uw, dd_year, uw_year, dd_win **trùng tuyệt đối** (−22,748916…/116,4667; −22,207383…/117,3278). MTM của MỌI run (arm và baseline) tính bằng cùng module này. Thêm cửa sổ `dd_dev` = [2022-01-01, 2025-01-01) cho C3.
 - **D1 PASS:** G0 train lại từ store Kaggle trùng bit `gabl/p15_G0.npy` (max |Δ| = 0), pearson vs pred.bin min 0,9919 ⇒ store, recipe, môi trường (python3 hệ thống, xgboost 3.2.0) trùng vòng 10-04. Baseline seed 42 = `pred_B_S42` md5 b75efb61.
 - CAGR_DEV và lợi suất năm tính từ `equity` daily của sim (`gate_skipfull_driver.cagr_from/year_ret`), giống vòng gqsf.
+
+## Addendum 2 (2026-10-17 09:45, sau D2–D5 lần 1, TRƯỚC khi train arm VZ nào)
+
+Lần kiểm 1: D2 PASS; D3/D5 FAIL. Nguyên nhân đã đo, đều là dữ liệu/độ chính xác, không phải định nghĩa feature:
+- **Metrics 2021-01..11 chỉ có 1 symbol/tháng** (12/2021: 138 symbol) — file `rex/met/metrics5m-2021` có vài dòng trước mốc Vision 2021-12. Mục 3 đã chốt "VZ-B trước 2021-12 = NaN"; builder chưa áp ⇒ nay áp: VZ-B = NaN với T < 2021-12-02 (thêm 24h warm-up cho vzOiC24h, khớp cửa sổ D2 của VZ-B). Checker D3 cũng dùng mốc này theo T.
+- **D3 sau 2021-12:** 4 ô lệch đều là vzOiC1h/4h giá trị ~1e-5 lưu float32; |Δ| ≈ 6e-9 nhưng tương đối 3e-4. Dung sai D3 sửa thành |Δ| ≤ 1e-5·(0,01 + |b|). VZ-A: 0 ô lệch trên 30 dòng.
+- **D5 range:** 16 phút 2021-03-02 01:36–01:51 có vzTkr5/15 ≥ 0,999 và 1 phút 2025-08-29 06:33 vzTkrBtc15 = 1,0 — lỗi nguồn Vision (taker_buy ≈ volume). Giữ nguyên, không làm sạch (17/2,6 triệu dòng; XGB dựa ngưỡng). D5 range chuyển thành chỉ báo cáo.
+- D4 (báo cáo): bản build trùng tuyệt đối biến thể trễ 1 (|Δ| 3e-8), lệch biến thể trễ 0 tới 0,17 ⇒ căn đúng. IC Spearman với nhãn tháng 2022-06: trễ 0 0,090 vs trễ 1 0,085 — không có dấu hiệu rò rỉ theo nến.
+- Ghi nhận trước khi train (không dùng để chọn): IC Spearman toàn kỳ với nhãn — vzNtR15 +0,19, vzQvR60 +0,14 (ổn định 5/5 năm, nhưng có thể trùng thông tin với volumeSpike/volatility của V3FULL); vzLsTop +0,33 nhưng theo năm 0,23/−0,01/0,13/0,20/0,01 (không ổn định — nghi xu hướng cấp độ); taker ratio |IC| < 0,09.

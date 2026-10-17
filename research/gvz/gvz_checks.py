@@ -52,7 +52,7 @@ def recompute(T):
     r["vzNtR15"] = np.log(n15 / (d1440.n_trades.sum() / 96))
     g = ((T - 10 * M) // 300_000) * 300_000
     y = pd.Timestamp(g, unit="ms").year
-    if g >= pd.Timestamp("2021-12-02").value // 10**6:
+    if T >= pd.Timestamp("2021-12-02").value // 10**6:
         fs = [MET + "/metrics5m-%d.parquet" % yy for yy in sorted({y, pd.Timestamp(g - 86_400_000, unit="ms").year})]
         mt = pd.concat([pd.read_parquet(f, columns=["ts", "sym", "oi_value", "toptrader_ls_sum", "ls_cnt"],
                                         filters=[("ts", ">=", g - 86_400_000 - 300_000), ("ts", "<", g + 300_000)])
@@ -101,7 +101,7 @@ def main():
             elif np.isnan(a) or np.isnan(b):
                 e = np.inf
             else:
-                e = abs(a - b) / max(1e-6, abs(b))
+                e = abs(a - b) / (0.01 + abs(b))   # addendum 2: |a-b| <= 1e-5*(0.01+|b|) (float32 khi gia tri gan 0)
             worst = max(worst, e)
             if e > 1e-5:
                 rows.append((str(pd.Timestamp(int(T), unit="ms")), c, a, b, e))

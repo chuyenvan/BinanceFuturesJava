@@ -121,35 +121,53 @@ def kline(a, b):
 
 
 def met():
-    fs = sorted(glob.glob(MET + "/metrics5m-20*.parquet"))
+    # CHI 2021-2025 (pre-reg: 2026 khong doc toi buoc HO); doc tung nam, giu mang gon (RAM Oracle 23G)
+    fs = [MET + "/metrics5m-%d.parquet" % y for y in range(2021, 2026)]
     log.info("met files %s", [os.path.basename(x) for x in fs])
-    d = pd.concat([pd.read_parquet(x, columns=["ts", "sym", "oi_value", "toptrader_ls_sum", "ls_cnt"]) for x in fs],
-                  ignore_index=True)
-    d["g"] = (d["ts"].astype(np.int64) // 300_000) * 300_000
-    d = d.sort_values(["sym", "ts"]).drop_duplicates(["sym", "g"], keep="last")
-    d = d[np.isfinite(d["oi_value"]) & (d["oi_value"] > 0)]
-    g0, g1 = int(d["g"].min()), int(d["g"].max())
+    parts, symset = [], set()
+    for x in fs:
+        e = pd.read_parquet(x, columns=["ts", "sym", "oi_value", "toptrader_ls_sum", "ls_cnt"])
+        e["sym"] = e["sym"].astype(str)
+        e["g"] = (e["ts"].astype(np.int64) // 300_000) * 300_000
+        e = e.sort_values(["sym", "ts"]).drop_duplicates(["sym", "g"], keep="last")
+        e = e[np.isfinite(e["oi_value"]) & (e["oi_value"] > 0)]
+        symset |= set(e["sym"].unique())
+        parts.append((e["g"].to_numpy(np.int64), e["sym"].to_numpy(), e["oi_value"].to_numpy(np.float32),
+                      e["toptrader_ls_sum"].to_numpy(np.float32), e["ls_cnt"].to_numpy(np.float32)))
+        log.info("met %s rows=%d", os.path.basename(x), len(e))
+        del e
+    syms = np.array(sorted(symset))
+    sidx = {s: i for i, s in enumerate(syms)}
+    gg = np.concatenate([p[0] for p in parts])
+    sj = np.concatenate([np.fromiter((sidx[s] for s in p[1]), np.int32, len(p[1])) for p in parts])
+    ov = np.concatenate([p[2] for p in parts])
+    lsv = {"toptrader_ls_sum": np.concatenate([p[3] for p in parts]), "ls_cnt": np.concatenate([p[4] for p in parts])}
+    del parts
+    g0, g1 = int(gg.min()), int(gg.max())
     grid = np.arange(g0, g1 + 300_000, 300_000, dtype=np.int64)
     n = len(grid)
-    syms, sj = np.unique(d["sym"].to_numpy(), return_inverse=True)
-    gi = ((d["g"].to_numpy() - g0) // 300_000).astype(np.int64)
-    log.info("met rows=%d grid=%d syms=%d", len(d), n, len(syms))
+    gi = ((gg - g0) // 300_000).astype(np.int64)
+    log.info("met rows=%d grid=%d syms=%d", len(gg), n, len(syms))
     V = np.full((n, len(syms)), np.nan, np.float32)
-    V[gi, sj] = d["oi_value"].to_numpy(np.float32)
+    V[gi, sj] = ov
     f = {"g": grid}
+    fin = np.isfinite(V)
     for name, k in (("vzOiC1h", 12), ("vzOiC4h", 48), ("vzOiC24h", 288)):
-        P = np.full_like(V, np.nan)
-        P[k:] = V[:-k]
-        both = np.isfinite(V) & np.isfinite(P)
-        num = np.where(both, V, 0).sum(1, dtype=np.float64)
-        den = np.where(both, P, 0).sum(1, dtype=np.float64)
+        num = np.zeros(n)
+        den = np.zeros(n)
+        for a in range(k, n, 20000):                       # theo khoi hang, tranh mang tam (n,m) lon
+            b = min(n, a + 20000)
+            cur, prv = V[a:b], V[a - k:b - k]
+            both = fin[a:b] & fin[a - k:b - k]
+            num[a:b] = np.where(both, cur, 0).sum(1, dtype=np.float64)
+            den[a:b] = np.where(both, prv, 0).sum(1, dtype=np.float64)
         with np.errstate(invalid="ignore", divide="ignore"):
             f[name] = np.where((num > 0) & (den > 0), np.log(num / np.where(den > 0, den, 1)), np.nan)
-        del P, both
-    big = np.isfinite(V) & (V >= 1e6)
+    big = fin & (V >= 1e6)
+    del fin
     for name, col in (("vzLsTop", "toptrader_ls_sum"), ("vzLsAcc", "ls_cnt")):
         L = np.full((n, len(syms)), np.nan, np.float32)
-        L[gi, sj] = d[col].to_numpy(np.float32)
+        L[gi, sj] = lsv[col]
         L = np.where(big & np.isfinite(L) & (L > 0), L, np.nan)
         an = np.isnan(L).all(1)
         md = np.full(n, np.nan)
@@ -168,8 +186,11 @@ def merge():
     assert kl["timestamp"].is_unique and kl["timestamp"].is_monotonic_increasing
     m5 = pd.read_parquet(os.path.join(OUT, "met5.parquet")).set_index("g")
     g = ((kl["timestamp"].to_numpy() - 600_000) // 300_000) * 300_000
+    vb0 = pd.Timestamp("2021-12-02").value // 10**6     # addendum 2: metrics 2021-01..11 chi 1 symbol -> NaN (+24h warm-up)
     for k in VZB:
-        kl[k] = m5[k].reindex(g).to_numpy(np.float32)
+        x = m5[k].reindex(g).to_numpy(np.float32)
+        x[kl["timestamp"].to_numpy() < vb0] = np.nan
+        kl[k] = x
     kl.to_parquet(os.path.join(OUT, "vz_feat.parquet"), index=False)
     log.info("MERGE rows=%d %s..%s", len(kl), pd.to_datetime(kl.timestamp.iloc[0], unit="ms"),
              pd.to_datetime(kl.timestamp.iloc[-1], unit="ms"))
