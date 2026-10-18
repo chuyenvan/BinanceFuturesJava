@@ -55,3 +55,7 @@ Luật A(d1,d2): DD ≤ −d1 ⇒ nửa size lệnh mới; ≤ −d2 ⇒ ngừng
 ## 5. Giới hạn
 Hậu kiểm bậc 1: không tính lại sizing theo equity và không đổi điểm thoát ⇒ A ước lượng đúng hướng; B là số sim thật. DEV có 1 sự kiện
 cực đoan (LUNA 05/2022) chi phối maxDD ⇒ mọi so sánh DD là mẫu rất nhỏ.
+
+## ERRATA 2026-10-19 (xem ISO_RISK.md §0)
+Số R1 (BURST_COOLDOWN V1: DD −9,0 %, Calmar 3,06) dùng trong menu nhóm B là SAI — MTM tính khi ticker bin đã bị xoá (DD chỉ realized).
+Chấm lại bằng nguồn Vision: R1V1 CAGR22 24,2, maxDD22 −18,6, Calmar 1,30 (< OFF 1,65, 0/8 seed tốt hơn). Giới hạn đợt KHÔNG phải đòn bẩy giảm DD hiệu quả.

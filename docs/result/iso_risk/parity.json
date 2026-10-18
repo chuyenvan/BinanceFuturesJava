@@ -1,0 +1,562 @@
+{
+ "iso-b15-a1": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 3553,
+  "eq": 184914,
+  "triggers": null,
+  "blocked": null
+ },
+ "iso-b15-s7": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 3533,
+  "eq": 177998,
+  "triggers": null,
+  "blocked": null
+ },
+ "iso-b15-s13": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 3550,
+  "eq": 199702,
+  "triggers": null,
+  "blocked": null
+ },
+ "iso-b15-s21": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 3532,
+  "eq": 184379,
+  "triggers": null,
+  "blocked": null
+ },
+ "iso-b15-s99": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 3672,
+  "eq": 192111,
+  "triggers": null,
+  "blocked": null
+ },
+ "iso-b15-s123": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 3544,
+  "eq": 178304,
+  "triggers": null,
+  "blocked": null
+ },
+ "iso-b15-s777": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 3452,
+  "eq": 196518,
+  "triggers": null,
+  "blocked": null
+ },
+ "iso-b15-s2024": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 3512,
+  "eq": 178104,
+  "triggers": null,
+  "blocked": null
+ },
+ "iso-v1s2-a1": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 1819,
+  "eq": 92099,
+  "triggers": 52,
+  "blocked": 3205
+ },
+ "iso-v1s2-s7": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 1917,
+  "eq": 112253,
+  "triggers": 55,
+  "blocked": 3078
+ },
+ "iso-v1s2-s13": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2169,
+  "eq": 139898,
+  "triggers": 57,
+  "blocked": 2377
+ },
+ "iso-v1s2-s21": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2371,
+  "eq": 143022,
+  "triggers": 63,
+  "blocked": 1749
+ },
+ "iso-v1s2-s99": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2035,
+  "eq": 140572,
+  "triggers": 55,
+  "blocked": 3166
+ },
+ "iso-v1s2-s123": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2540,
+  "eq": 169000,
+  "triggers": 66,
+  "blocked": 1792
+ },
+ "iso-v1s2-s777": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2126,
+  "eq": 144396,
+  "triggers": 56,
+  "blocked": 2034
+ },
+ "iso-v1s2-s2024": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2304,
+  "eq": 138801,
+  "triggers": 64,
+  "blocked": 2877
+ },
+ "iso-v1s3-a1": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 1810,
+  "eq": 112481,
+  "triggers": 59,
+  "blocked": 3495
+ },
+ "iso-v1s3-s7": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 1994,
+  "eq": 134963,
+  "triggers": 56,
+  "blocked": 2939
+ },
+ "iso-v1s3-s13": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2157,
+  "eq": 161763,
+  "triggers": 58,
+  "blocked": 2800
+ },
+ "iso-v1s3-s21": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2435,
+  "eq": 171744,
+  "triggers": 65,
+  "blocked": 1729
+ },
+ "iso-v1s3-s99": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2178,
+  "eq": 180378,
+  "triggers": 62,
+  "blocked": 2913
+ },
+ "iso-v1s3-s123": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2565,
+  "eq": 204729,
+  "triggers": 68,
+  "blocked": 1735
+ },
+ "iso-v1s3-s777": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2321,
+  "eq": 178484,
+  "triggers": 64,
+  "blocked": 1717
+ },
+ "iso-v1s3-s2024": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2302,
+  "eq": 143330,
+  "triggers": 65,
+  "blocked": 3032
+ },
+ "iso-v1s4-a1": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2122,
+  "eq": 161978,
+  "triggers": 61,
+  "blocked": 2394
+ },
+ "iso-v1s4-s7": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 1995,
+  "eq": 153339,
+  "triggers": 59,
+  "blocked": 2915
+ },
+ "iso-v1s4-s13": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2265,
+  "eq": 217649,
+  "triggers": 62,
+  "blocked": 1918
+ },
+ "iso-v1s4-s21": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2397,
+  "eq": 199337,
+  "triggers": 69,
+  "blocked": 1662
+ },
+ "iso-v1s4-s99": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2242,
+  "eq": 194988,
+  "triggers": 63,
+  "blocked": 2404
+ },
+ "iso-v1s4-s123": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2447,
+  "eq": 212802,
+  "triggers": 65,
+  "blocked": 2012
+ },
+ "iso-v1s4-s777": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2144,
+  "eq": 179284,
+  "triggers": 62,
+  "blocked": 2583
+ },
+ "iso-v1s4-s2024": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2341,
+  "eq": 170641,
+  "triggers": 67,
+  "blocked": 2347
+ },
+ "iso-v1k32-a1": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 1855,
+  "eq": 68344,
+  "triggers": 50,
+  "blocked": 4069
+ },
+ "iso-v1k32-s7": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 1855,
+  "eq": 70036,
+  "triggers": 51,
+  "blocked": 4412
+ },
+ "iso-v1k32-s13": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 1900,
+  "eq": 83773,
+  "triggers": 51,
+  "blocked": 4880
+ },
+ "iso-v1k32-s21": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2073,
+  "eq": 82128,
+  "triggers": 50,
+  "blocked": 3413
+ },
+ "iso-v1k32-s99": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2094,
+  "eq": 91289,
+  "triggers": 57,
+  "blocked": 5402
+ },
+ "iso-v1k32-s123": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 1996,
+  "eq": 81292,
+  "triggers": 53,
+  "blocked": 3714
+ },
+ "iso-v1k32-s777": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2021,
+  "eq": 93348,
+  "triggers": 53,
+  "blocked": 4367
+ },
+ "iso-v1k32-s2024": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "keys": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 2080,
+  "eq": 91119,
+  "triggers": 56,
+  "blocked": 5273
+ }
+}
