@@ -41,3 +41,12 @@ CAGR22, maxDD MTM 2022–25 và toàn kỳ, Calmar22, UW22, lệnh/năm, ΣPnL t
 
 ## 7. Sản phẩm
 `research/analysis/iso_risk_driver.py`, `docs/result/ISO_RISK.md` + `iso_risk.json`, ledger.
+
+
+## Addendum 1 (2026-10-19 06:40 +07) — sửa nguồn giá MTM (lỗi pipeline, không đổi định nghĩa)
+
+- Phát hiện khi chạy `score` lần 1 (06:33): `reset_rule_score.TICKER` → symlink `~/kaggle_data_hpo` gãy (thư mục ticker bin đã bị xoá, đã ghi nhận 10-17 trong GATE_VZ add 1). Mọi MTM tính mới có `missing` 5–10k chân-ngày ⇒ equity chỉ còn phần realized, maxDD bị **đánh giá thấp**. Cache OFF (gqsf) có `missing = 0` (tính khi còn ticker) ⇒ so sánh lần 1 là táo-với-cam ⇒ **kết quả lần 1 VÔ HIỆU** (`iso_risk.json` 06:34 giữ lại làm bằng chứng, không dùng).
+- Cùng lỗi ảnh hưởng **BURST_COOLDOWN (10-16)**: MTM các arm V1/V2/V3 có `missing` > 0 ⇒ DD −9,0/−7,8/−6,6 đã báo là quá nông. Sẽ chấm lại bằng nguồn mới và báo cáo riêng.
+- Sửa: dùng `~/claude_master/gvz/gvz_mtm.py` (y nguyên `run_mtm`, chỉ thay nguồn giá bằng close kline1m Vision; đã tái lập cache gqsf ở GATE_VZ add 1) cho **mọi** key (OFF, R1V1, 5 arm) — không trộn nguồn.
+- Kiểm bắt buộc trước khi đọc: (P1) OFF tính lại bằng Vision khớp cache gqsf: |Δ dd_total| ≤ 0,05pp và |Δ CAGR22| ≤ 0,01pp cả 8 seed; (P2) `missing` mọi key ≤ 1 % số chân-ngày của OFF. FAIL ⇒ dừng, báo owner.
+- Luật E/GO/winner giữ nguyên như pre-reg gốc 5caf3c7f. Tôi đã thấy bảng lần 1 (vô hiệu) trước khi viết addendum — ghi nhận công khai; addendum không đổi ngưỡng hay arm nào.
