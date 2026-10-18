@@ -23,3 +23,8 @@ G4 (|dd| ≤ 40 mọi seed) đạt cả 3 arm.
 - So với giảm size thuần (cắt size để CAGR còn ~24 % ⇒ DD ≈ −22,6 × 24/37 ≈ −14,7 %), V1 cho DD −9 % ⇒ cooldown cải thiện hiệu quả rủi ro thật, không chỉ giảm phơi nhiễm.
 - Cooldown chặn nhiều hơn dự kiến (~43 chân/lần kích hoạt ở V1) vì K24 đánh giá lại ứng viên mỗi phút.
 - Nếu owner muốn hồ sơ rủi ro thấp hơn: đây là quyết định KHẨU VỊ (như K16 vs K24), không phải GO nghiên cứu; cần pre-reg riêng + HO 2026 + port live trước khi dùng.
+
+## ERRATA 2026-10-19 (ISO_RISK addendum 1 a4a10881, kết quả e65c456a nhánh research/vz-e1)
+MTM các arm ON tính lúc ticker bin đã bị xoá (symlink `~/kaggle_data_hpo` gãy, missing 5–7k chân-ngày) ⇒ DD/Calmar ON SAI (chỉ realized).
+Chấm lại bằng nguồn close kline1m Vision (OFF tái lập cache trùng tuyệt đối): V1 DD22 −18,6 Calmar 1,30; V2 −16,8 / 1,33; V3 −15,7 / 1,13
+(OFF −22,5 / 1,65). NO-GO giữ nguyên; rút lại nhận định "Calmar ×2".
