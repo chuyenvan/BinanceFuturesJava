@@ -1,0 +1,33 @@
+{
+ "prereg": "4852f57e",
+ "md5": {
+  "ec-s-s42": "d1d804beefe011b4cb74832b91311cc7",
+  "ecm-d-s7": "2815cfa47b707d1a004c114e42f229b0",
+  "ecm-d-s13": "42865f11d51f0b100a60d9e0a47f1731",
+  "ecm-d-s21": "eaf41b0a788e8203dcc2dff372e19f0e",
+  "ecm-d-s99": "5524f4fd3d2f51872e51e7b630a1a198",
+  "ecm-d-s123": "55605415e72739c1055296b2b41c7514",
+  "ecm-d-s777": "d768da3f4dcc222be163b7a2f34e1e50",
+  "ecm-d-s2024": "0a3ee036eb5d692af9c8a6a121b0109c",
+  "ecm-h-s42": "1942efa854d6d7fc4f278d844b69bdb1",
+  "ecm-h-s7": "fd36a7252207323cefe6bdad2c9cb1f1",
+  "ecm-h-s13": "12ad6a5b5b69054d01afda670bfa6cab",
+  "ecm-h-s21": "fab4711a89e70c200abe0eec48650644",
+  "ecm-h-s99": "dfd9d4cb49792c056c092707e5674809",
+  "ecm-h-s123": "0d0c0f2a1e1345d378ddfa5ffc43c19b",
+  "ecm-h-s777": "59b81e03f827aa626463d8d8297e915d",
+  "ecm-h-s2024": "d647c8db6f855b0f0b00a5a34441043d"
+ },
+ "months_missing": [
+  "2026-01",
+  "2026-02",
+  "2026-03",
+  "2026-04",
+  "2026-05",
+  "2026-06",
+  "2026-07",
+  "2026-08",
+  "2026-09"
+ ],
+ "n_legs": 60346
+}
