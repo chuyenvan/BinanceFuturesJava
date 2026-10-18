@@ -42,3 +42,16 @@ năm 2022 riêng (ΣPnL, maxDD).
 
 ## 7. Sản phẩm
 `research/killsw/`, `docs/result/KILLSW_MENU.md`, `docs/result/killsw/*.json`, ledger.
+
+## ADDENDUM 1 (2026-10-18, sau lần chạy đầu)
+
+- Lần chạy đầu (equity theo GIỜ) in kiểm hợp lệ và bảng biến thể cùng một log ⇒ MASTER đã thấy bảng giờ. Bảng đó KHÔNG được dùng;
+  addendum này không đổi biến thể/ngưỡng/luật nào ở §3–§6.
+- K1 PASS (|Δ| < 1e-9 USD), K3 PASS (CAGR22 trùng ECMEAS tới 1e-12 pp).
+- **K2 FAIL**: maxDD22 equity GIỜ nông hơn ECMEAS (phút) 1,9–2,3 pp ở 7/8 seed và 4,7 pp ở seed 777 (> 2,0 pp). Nguyên nhân: lấy mẫu
+  theo giờ bỏ lỡ đáy trong giờ (phút sập kiểu LUNA) — đúng loại sai lệch làm luật DD bị đánh giá sai.
+- Sửa PIPELINE: equity MTM theo PHÚT (close kline1m Vision, ffill ≤ 60 phút), trạng thái cập nhật mỗi phút, HALT 7 ngày = 10 080 phút;
+  lệnh có phút vào sau phút chuyển trạng thái mới nhận size mới. Giữ nguyên biến thể, ngưỡng, chỉ số, luật diễn giải và cách hiểu
+  "HALT chỉ kích lại khi DD đã từng > −d2 sau lần thoát HALT trước" (đã ghi trong docstring bản giờ trước khi chạy). K1–K3 chạy lại
+  trên bản phút, K2 vẫn ngưỡng 2,0 pp.
+- Bản giờ lưu `killsw/ks_hourly.json` chỉ để truy vết.
