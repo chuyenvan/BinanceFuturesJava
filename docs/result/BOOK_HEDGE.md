@@ -31,3 +31,8 @@ Tương quan lợi suất ngày book ↔ BTC: 0,28.
 - Funding bị bỏ qua (thường có lợi cho short trong 2023–2025) ⇒ PnL hedge có thể bị đánh giá thấp; slippage BTC bỏ qua (thanh khoản rất cao).
 - Mọi số là DEV đã dùng nhiều lần. Nếu muốn theo hướng này: pre-reg mới với h = 0,5 cố định, xác nhận một lần trên dữ liệu độc lập
   (HO4 2026, cần tải kline1m 2026 từ Vision) — không chỉnh h trên DEV.
+
+## ERRATA 2026-10-19 (BOOK_HEDGE_AUDIT, xem docs/result/BOOK_HEDGE_AUDIT.md)
+Harness dùng short notional-cố-định cân lại mỗi phút (khác pre-reg "cân lại khi N đổi"). Chấm lại bằng harness giữ số lượng:
+coin đơn lệch nhỏ (DD ±0,1–0,4pp); DYN sai nặng do LUNA (h0,5 DD −11,34 → −17,09, Calmar 2,96 → 1,77, NO-GO).
+Thêm bootstrap đường giá + cửa sổ 2023+ + impact 25 bps: chỉ ZIL h0,5 qua cả 4 (thăm dò, nhiều thiên lệch chọn); LINK/ADA/DOGE trượt bootstrap.

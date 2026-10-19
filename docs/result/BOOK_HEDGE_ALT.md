@@ -46,3 +46,8 @@ cái khác là **beta và độ nhạy pha sập**, không phải corr ngày.
 3. Không thử thêm coin khác trong họ này (đã là lần 3; thêm nữa là đốt ngân sách kiểm định).
 
 **Bổ sung:** kiểm capacity/impact → `docs/result/BOOK_HEDGE_ALT_CAPACITY.md` (GO bền tới 25 bps ở h1,0).
+
+## ERRATA 2026-10-19 (BOOK_HEDGE_AUDIT, xem docs/result/BOOK_HEDGE_AUDIT.md)
+Harness dùng short notional-cố-định cân lại mỗi phút (khác pre-reg "cân lại khi N đổi"). Chấm lại bằng harness giữ số lượng:
+coin đơn lệch nhỏ (DD ±0,1–0,4pp); DYN sai nặng do LUNA (h0,5 DD −11,34 → −17,09, Calmar 2,96 → 1,77, NO-GO).
+Thêm bootstrap đường giá + cửa sổ 2023+ + impact 25 bps: chỉ ZIL h0,5 qua cả 4 (thăm dò, nhiều thiên lệch chọn); LINK/ADA/DOGE trượt bootstrap.

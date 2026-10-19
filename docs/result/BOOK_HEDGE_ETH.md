@@ -19,3 +19,8 @@ ETH 2022 +403, 2023 −3 542, 2024 −5 334, 2025 −3 388 ⇒ chi phí hedge n�
 - ETH không tốt hơn BTC. Hai công cụ cho cùng một hiệu ứng ở h0,5 (DD −4,5…−4,7pp, Calmar +0,26…+0,27, ΣPnL −9…−11 %)
   ⇒ hiệu ứng có vẻ là của việc hedge nhân tố thị trường, không phải của riêng công cụ. Cả hai trượt luật DD (cần 7/8 seed ≥ 5pp).
 - Funding bỏ qua cho cả hai (so sánh công bằng). Ứng viên nếu đi tiếp: BTC h0,5 (thanh khoản cao nhất, funding thường có lợi hơn).
+
+## ERRATA 2026-10-19 (BOOK_HEDGE_AUDIT, xem docs/result/BOOK_HEDGE_AUDIT.md)
+Harness dùng short notional-cố-định cân lại mỗi phút (khác pre-reg "cân lại khi N đổi"). Chấm lại bằng harness giữ số lượng:
+coin đơn lệch nhỏ (DD ±0,1–0,4pp); DYN sai nặng do LUNA (h0,5 DD −11,34 → −17,09, Calmar 2,96 → 1,77, NO-GO).
+Thêm bootstrap đường giá + cửa sổ 2023+ + impact 25 bps: chỉ ZIL h0,5 qua cả 4 (thăm dò, nhiều thiên lệch chọn); LINK/ADA/DOGE trượt bootstrap.

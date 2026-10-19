@@ -41,3 +41,8 @@ BNB 5/8 (−0,132), SOL 0/8 (−0,974), PnL −54…−74 %. ⇒ **chỉ dùng h
 
 ## Nguồn
 `~/claude_master/bookhedge_dyn/book_hedge_bigcoin.py`, `book_hedge_bigcoin.json`; cache `dyn_minute.npz`.
+
+## ERRATA 2026-10-19 (BOOK_HEDGE_AUDIT, xem docs/result/BOOK_HEDGE_AUDIT.md)
+Harness dùng short notional-cố-định cân lại mỗi phút (khác pre-reg "cân lại khi N đổi"). Chấm lại bằng harness giữ số lượng:
+coin đơn lệch nhỏ (DD ±0,1–0,4pp); DYN sai nặng do LUNA (h0,5 DD −11,34 → −17,09, Calmar 2,96 → 1,77, NO-GO).
+Thêm bootstrap đường giá + cửa sổ 2023+ + impact 25 bps: chỉ ZIL h0,5 qua cả 4 (thăm dò, nhiều thiên lệch chọn); LINK/ADA/DOGE trượt bootstrap.
