@@ -1,0 +1,154 @@
+{
+ "tsx-x14-a1": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "topk24": true,
+   "skipfull": true,
+   "key": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 3531,
+  "eq": 157714,
+  "tsx": [
+   1870179,
+   174,
+   149
+  ]
+ },
+ "tsx-x14-s7": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "topk24": true,
+   "skipfull": true,
+   "key": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 3543,
+  "eq": 150581,
+  "tsx": [
+   1870795,
+   172,
+   153
+  ]
+ },
+ "tsx-x14-s13": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "topk24": true,
+   "skipfull": true,
+   "key": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 3531,
+  "eq": 160754,
+  "tsx": [
+   1695066,
+   165,
+   143
+  ]
+ },
+ "tsx-x14-s21": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "topk24": true,
+   "skipfull": true,
+   "key": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 3521,
+  "eq": 151116,
+  "tsx": [
+   1914378,
+   173,
+   155
+  ]
+ },
+ "tsx-x14-s99": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "topk24": true,
+   "skipfull": true,
+   "key": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 3646,
+  "eq": 164943,
+  "tsx": [
+   1778724,
+   179,
+   153
+  ]
+ },
+ "tsx-x14-s123": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "topk24": true,
+   "skipfull": true,
+   "key": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 3536,
+  "eq": 149817,
+  "tsx": [
+   1889216,
+   174,
+   153
+  ]
+ },
+ "tsx-x14-s777": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "topk24": true,
+   "skipfull": true,
+   "key": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 3449,
+  "eq": 170929,
+  "tsx": [
+   1453591,
+   162,
+   132
+  ]
+ },
+ "tsx-x14-s2024": {
+  "ok": true,
+  "checks": {
+   "jar": true,
+   "ok": true,
+   "topk24": true,
+   "skipfull": true,
+   "key": true,
+   "log": true,
+   "b0ov": true
+  },
+  "n": 3506,
+  "eq": 151999,
+  "tsx": [
+   1734785,
+   165,
+   145
+  ]
+ }
+}
