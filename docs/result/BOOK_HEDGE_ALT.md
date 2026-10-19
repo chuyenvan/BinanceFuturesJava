@@ -44,3 +44,5 @@ cái khác là **beta và độ nhạy pha sập**, không phải corr ngày.
 1. Pre-reg **xác nhận 1 lần** trên HO4 2026 với `h = 1,0` (winner) — cố định, không đổi trục.
 2. Trước đó: đo **capacity/impact** cho quy mô thực (không đổi kết quả thăm dò này).
 3. Không thử thêm coin khác trong họ này (đã là lần 3; thêm nữa là đốt ngân sách kiểm định).
+
+**Bổ sung:** kiểm capacity/impact → `docs/result/BOOK_HEDGE_ALT_CAPACITY.md` (GO bền tới 25 bps ở h1,0).
