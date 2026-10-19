@@ -161,6 +161,10 @@ public class Configs {
     //   BURST_COOLDOWN_MIN phut sau dot >= BURST_COOLDOWN_N chan PREDICT cung phut. 0 => tat => byte-identical.
     public static int BURST_COOLDOWN_N = 0;
     public static int BURST_COOLDOWN_MIN = 0;
+    // [TS-MKT-EXT 2026-10-19] docs/prereg/PREREG_TS_MKT_EXT.md: gia han LOSER_TIME_STOP toi da EXT_HOURS khi ngay UTC
+    //   cua tick thuoc LOSER_TS_EXT_DAYS (ca thi truong alt dang sap). 0 => tat => byte-identical.
+    public static int LOSER_TS_EXT_HOURS = 0;
+    public static java.util.Set<Long> LOSER_TS_EXT_DAYS = new java.util.HashSet<>();
     public static float U_MAX  = 0.60f;   // trần tổng margin/equity, U≥U_MAX → chặn (gene search [0.40, 0.80])
 
 
@@ -914,6 +918,20 @@ public class Configs {
             // [BURST-COOLDOWN 2026-10-16] docs/prereg/PREREG_BURST_COOLDOWN.md (khong khai => 0 => tat)
             if ((v = Cfg.get("SIM_BURST_COOLDOWN_N")) != null) BURST_COOLDOWN_N = Integer.parseInt(v.trim());
             if ((v = Cfg.get("SIM_BURST_COOLDOWN_MIN")) != null) BURST_COOLDOWN_MIN = Integer.parseInt(v.trim());
+            // [TS-MKT-EXT 2026-10-19] docs/prereg/PREREG_TS_MKT_EXT.md (khong khai => 0 => tat)
+            if ((v = Cfg.get("SIM_LOSER_TS_EXT_HOURS")) != null) LOSER_TS_EXT_HOURS = Integer.parseInt(v.trim());
+            if ((v = Cfg.get("SIM_LOSER_TS_EXT_DAYS")) != null) {
+                LOSER_TS_EXT_DAYS = new java.util.HashSet<>();
+                java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd");
+                for (String part : v.trim().split(",")) {
+                    String p = part.trim();
+                    if (p.isEmpty()) continue;
+                    String[] ab = p.split("-");
+                    long d0 = java.time.LocalDate.parse(ab[0].trim(), fmt).toEpochDay();
+                    long d1 = java.time.LocalDate.parse(ab[ab.length - 1].trim(), fmt).toEpochDay();
+                    for (long d = d0; d <= d1; d++) LOSER_TS_EXT_DAYS.add(d);
+                }
+            }
             if ((v = Cfg.get("SIM_PREDICT_SYMBOL_RATE_MAX")) != null) PREDICT_SYMBOL_RATE_MAX_THRESHOLD = Float.parseFloat(v);
             if ((v = Cfg.get("SIM_RATE_PROFIT_STOP_MARKET")) != null) RATE_PROFIT_STOP_MARKET = Float.parseFloat(v);
             if ((v = Cfg.get("SIM_MS_DOWN_BIG_AVG")) != null) MS_DOWN_BIG_AVG = Float.parseFloat(v);

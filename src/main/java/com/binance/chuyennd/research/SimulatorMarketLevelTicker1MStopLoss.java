@@ -112,6 +112,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     /** [CONC-PERCOIN] Dem so leg bi tran per-coin chan (de log SUMMARY). */
     private long concPerCoinBlocked = 0L;
     /** [BURST-COOLDOWN 2026-10-16] docs/prereg/PREREG_BURST_COOLDOWN.md — tat mac dinh. */
+    // [TS-MKT-EXT 2026-10-19] dem do-luong-only (khong anh huong quyet dinh)
+    static long tsxDeferTicks = 0L;
+    static long tsxDeferClusters = 0L;
+    static long tsxCutAfterDefer = 0L;
+    static final java.util.Set<String> tsxDeferred = new java.util.HashSet<>();
     private BurstCooldown burstCooldown = BurstCooldown.off();
     private boolean concPerCoinModeLogged = false;
     public int activeRunningCount = 0;
@@ -575,6 +580,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 Storage.writeObject2File(FILE_STORAGE_ORDER_DONE, allOrderDone);
                 Storage.writeObject2File("storage/BalanceIndex.data", BudgetManagerSimple.getInstance().balanceIndex);
                 TraceOrderDone.printOrderTestDone("storage/printDone.csv", allOrderDone);
+                if (Configs.LOSER_TS_EXT_HOURS > 0) {
+                    LOG.info("[TSX] extHours={} extDays={} deferTicks={} deferClusters={} cutAfterDefer={}",
+                            Configs.LOSER_TS_EXT_HOURS, Configs.LOSER_TS_EXT_DAYS.size(), tsxDeferTicks, tsxDeferClusters,
+                            tsxCutAfterDefer);
+                }
                 if (burstCooldown.enabled()) {
                     LOG.info("[BURST-COOLDOWN] N={} MIN={} triggers={} blocked={}", burstCooldown.n(),
                             burstCooldown.minutes(), burstCooldown.triggers(), burstCooldown.blocked());
@@ -1031,7 +1041,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 }
                 if (loserTsHours > 0 && orderMulti.priceSL == null) {
                     long anchor = orderMulti.clusterFirstLegTime > 0L ? orderMulti.clusterFirstLegTime : orderMulti.timeStart;
-                    if (time - anchor > loserTsHours * 3600000L) {
+                    if (time - anchor > loserTsHours * 3600000L
+                            && Configs.LOSER_TS_EXT_HOURS > 0
+                            && time - anchor <= (loserTsHours + (long) Configs.LOSER_TS_EXT_HOURS) * 3600000L
+                            && Configs.LOSER_TS_EXT_DAYS.contains(Math.floorDiv(time, 86400000L))) {
+                        // [TS-MKT-EXT] ca thi truong alt dang sap => hoan cat o tick nay (xet lai tick sau)
+                        tsxDeferTicks++;
+                        if (tsxDeferred.add(orderMulti.symbol + "|" + anchor)) tsxDeferClusters++;
+                    } else if (time - anchor > loserTsHours * 3600000L) {
+                        if (tsxDeferred.contains(orderMulti.symbol + "|" + anchor)) tsxCutAfterDefer++;
                         orderMulti.status = OrderTargetStatus.STOP_LOSS_DONE;
                         orderMulti.priceTP = Math.min(ticker.priceOpen, ticker.priceClose);
                         closeOrder(symbolId, orderMulti);
