@@ -1,0 +1,362 @@
+{
+ "2021-07": [],
+ "2021-08": [],
+ "2021-09": [],
+ "2021-10": [
+  "TRXUSDT",
+  "DOTUSDT",
+  "EOSUSDT",
+  "ETCUSDT",
+  "XLMUSDT"
+ ],
+ "2021-11": [
+  "C98USDT",
+  "TRXUSDT",
+  "ALGOUSDT",
+  "DOTUSDT",
+  "ETCUSDT"
+ ],
+ "2021-12": [
+  "XRPUSDT",
+  "ETCUSDT",
+  "LINKUSDT",
+  "DOTUSDT",
+  "TRXUSDT"
+ ],
+ "2022-01": [
+  "LINKUSDT",
+  "EOSUSDT",
+  "XTZUSDT",
+  "FILUSDT",
+  "AVAXUSDT"
+ ],
+ "2022-02": [
+  "LINKUSDT",
+  "DYDXUSDT",
+  "FILUSDT",
+  "FTMUSDT",
+  "SUSHIUSDT"
+ ],
+ "2022-03": [
+  "SUSHIUSDT",
+  "DYDXUSDT",
+  "XTZUSDT",
+  "FTMUSDT",
+  "LINKUSDT"
+ ],
+ "2022-04": [
+  "SOLUSDT",
+  "FTMUSDT",
+  "AVAXUSDT",
+  "GALAUSDT",
+  "DYDXUSDT"
+ ],
+ "2022-05": [
+  "LUNAUSDT",
+  "PEOPLEUSDT",
+  "SOLUSDT",
+  "AVAXUSDT",
+  "KNCUSDT"
+ ],
+ "2022-06": [
+  "GALAUSDT",
+  "FTMUSDT",
+  "1000SHIBUSDT",
+  "AVAXUSDT",
+  "MANAUSDT"
+ ],
+ "2022-07": [
+  "FTMUSDT",
+  "GALAUSDT",
+  "MANAUSDT",
+  "PEOPLEUSDT",
+  "AVAXUSDT"
+ ],
+ "2022-08": [
+  "GALAUSDT",
+  "FTMUSDT",
+  "MANAUSDT",
+  "PEOPLEUSDT",
+  "1000SHIBUSDT"
+ ],
+ "2022-09": [
+  "MANAUSDT",
+  "FTMUSDT",
+  "AVAXUSDT",
+  "APEUSDT",
+  "DOTUSDT"
+ ],
+ "2022-10": [
+  "MATICUSDT",
+  "CRVUSDT",
+  "AVAXUSDT",
+  "AAVEUSDT",
+  "APEUSDT"
+ ],
+ "2022-11": [
+  "EOSUSDT",
+  "BNBUSDT",
+  "TRBUSDT",
+  "APEUSDT",
+  "1000SHIBUSDT"
+ ],
+ "2022-12": [
+  "SOLUSDT",
+  "MATICUSDT",
+  "CHZUSDT",
+  "GMTUSDT",
+  "BNBUSDT"
+ ],
+ "2023-01": [
+  "SOLUSDT",
+  "MATICUSDT",
+  "XRPUSDT",
+  "ATOMUSDT",
+  "APTUSDT"
+ ],
+ "2023-02": [
+  "SOLUSDT",
+  "XRPUSDT",
+  "MATICUSDT",
+  "CHZUSDT",
+  "ATOMUSDT"
+ ],
+ "2023-03": [
+  "GMTUSDT",
+  "SOLUSDT",
+  "NEARUSDT",
+  "BNBUSDT",
+  "FTMUSDT"
+ ],
+ "2023-04": [
+  "SOLUSDT",
+  "GMTUSDT",
+  "LTCUSDT",
+  "APEUSDT",
+  "FTMUSDT"
+ ],
+ "2023-05": [
+  "LDOUSDT",
+  "MATICUSDT",
+  "EOSUSDT",
+  "AVAXUSDT",
+  "SOLUSDT"
+ ],
+ "2023-06": [
+  "LDOUSDT",
+  "MATICUSDT",
+  "ARBUSDT",
+  "EOSUSDT",
+  "AVAXUSDT"
+ ],
+ "2023-07": [
+  "LINAUSDT",
+  "LDOUSDT",
+  "MATICUSDT",
+  "EDUUSDT",
+  "ETCUSDT"
+ ],
+ "2023-08": [
+  "LTCUSDT",
+  "OPUSDT",
+  "ETCUSDT",
+  "LDOUSDT",
+  "INJUSDT"
+ ],
+ "2023-09": [
+  "INJUSDT",
+  "OPUSDT",
+  "LTCUSDT",
+  "ETCUSDT",
+  "MKRUSDT"
+ ],
+ "2023-10": [
+  "DYDXUSDT",
+  "OPUSDT",
+  "BLZUSDT",
+  "WLDUSDT",
+  "TOMOUSDT"
+ ],
+ "2023-11": [
+  "1000PEPEUSDT",
+  "RUNEUSDT",
+  "UNFIUSDT",
+  "APTUSDT",
+  "GALAUSDT"
+ ],
+ "2023-12": [
+  "DYDXUSDT",
+  "OPUSDT",
+  "1000PEPEUSDT",
+  "MATICUSDT",
+  "SOLUSDT"
+ ],
+ "2024-01": [
+  "BIGTIMEUSDT",
+  "BNBUSDT",
+  "1000PEPEUSDT",
+  "TIAUSDT",
+  "DYDXUSDT"
+ ],
+ "2024-02": [
+  "ORDIUSDT",
+  "BNBUSDT",
+  "TIAUSDT",
+  "DYDXUSDT",
+  "1000BONKUSDT"
+ ],
+ "2024-03": [
+  "BNBUSDT",
+  "STXUSDT",
+  "1000BONKUSDT",
+  "APTUSDT",
+  "DOGEUSDT"
+ ],
+ "2024-04": [
+  "WIFUSDT",
+  "APTUSDT",
+  "1000PEPEUSDT",
+  "BNBUSDT",
+  "DOGEUSDT"
+ ],
+ "2024-05": [
+  "FETUSDT",
+  "APTUSDT",
+  "ARBUSDT",
+  "WIFUSDT",
+  "SOLUSDT"
+ ],
+ "2024-06": [
+  "ARBUSDT",
+  "FETUSDT",
+  "MATICUSDT",
+  "WIFUSDT",
+  "FILUSDT"
+ ],
+ "2024-07": [
+  "XRPUSDT",
+  "MATICUSDT",
+  "WLDUSDT",
+  "ADAUSDT",
+  "1000SHIBUSDT"
+ ],
+ "2024-08": [
+  "1000SHIBUSDT",
+  "BNBUSDT",
+  "OPUSDT",
+  "MATICUSDT",
+  "FILUSDT"
+ ],
+ "2024-09": [
+  "NOTUSDT",
+  "CRVUSDT",
+  "FILUSDT",
+  "PEOPLEUSDT",
+  "BNBUSDT"
+ ],
+ "2024-10": [
+  "NOTUSDT",
+  "FILUSDT",
+  "PEOPLEUSDT",
+  "IOUSDT",
+  "SOLUSDT"
+ ],
+ "2024-11": [
+  "NOTUSDT",
+  "MEWUSDT",
+  "SOLUSDT",
+  "WIFUSDT",
+  "SUIUSDT"
+ ],
+ "2024-12": [
+  "1000PEPEUSDT",
+  "WIFUSDT",
+  "POPCATUSDT",
+  "PEOPLEUSDT",
+  "BOMEUSDT"
+ ],
+ "2025-01": [
+  "SUIUSDT",
+  "BNBUSDT",
+  "ORDIUSDT",
+  "WIFUSDT",
+  "BOMEUSDT"
+ ],
+ "2025-02": [
+  "SUIUSDT",
+  "BNBUSDT",
+  "PNUTUSDT",
+  "ORDIUSDT",
+  "WIFUSDT"
+ ],
+ "2025-03": [
+  "ACTUSDT",
+  "SUIUSDT",
+  "MOVEUSDT",
+  "ENAUSDT",
+  "BNBUSDT"
+ ],
+ "2025-04": [
+  "ARCUSDT",
+  "SWARMSUSDT",
+  "AI16ZUSDT",
+  "AAVEUSDT",
+  "ONDOUSDT"
+ ],
+ "2025-05": [
+  "ONDOUSDT",
+  "HBARUSDT",
+  "FARTCOINUSDT",
+  "ARCUSDT",
+  "SOLUSDT"
+ ],
+ "2025-06": [
+  "ADAUSDT",
+  "AAVEUSDT",
+  "ONDOUSDT",
+  "FARTCOINUSDT",
+  "TAOUSDT"
+ ],
+ "2025-07": [
+  "FARTCOINUSDT",
+  "TAOUSDT",
+  "ONDOUSDT",
+  "CRVUSDT",
+  "AVAXUSDT"
+ ],
+ "2025-08": [
+  "WIFUSDT",
+  "MOODENGUSDT",
+  "PNUTUSDT",
+  "WLDUSDT",
+  "OPUSDT"
+ ],
+ "2025-09": [
+  "BNBUSDT",
+  "LINKUSDT",
+  "ADAUSDT",
+  "ARBUSDT",
+  "SOLUSDT"
+ ],
+ "2025-10": [
+  "BNBUSDT",
+  "SOLUSDT",
+  "ADAUSDT",
+  "AAVEUSDT",
+  "LINKUSDT"
+ ],
+ "2025-11": [
+  "BNBUSDT",
+  "PENGUUSDT",
+  "SOLUSDT",
+  "TRXUSDT",
+  "BCHUSDT"
+ ],
+ "2025-12": [
+  "TAOUSDT",
+  "BNBUSDT",
+  "COAIUSDT",
+  "BCHUSDT",
+  "PENGUUSDT"
+ ]
+}
