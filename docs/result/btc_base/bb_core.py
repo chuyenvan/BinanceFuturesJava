@@ -281,6 +281,7 @@ def simulate(S, P, a0, var, rng_scramble=None):
     open_set = set(i for i in range(S.n) if S.pre[i] and S.b[i] > S.a[i] and S.a[i] == 0)
     events = sorted(set(opens_at) | set(closes_at) | ck_set | set(fk))
     first_alloc_done = False
+    eck = []
 
     def price(key, k):
         return Pb[k] if key == "b" else Pe[k]
@@ -419,6 +420,8 @@ def simulate(S, P, a0, var, rng_scramble=None):
                 dcash[k] -= f
                 dfee[k] += f
                 ev["funding"] += f
+        if k in ck_set:
+            eck.append((k, Eat(k)))
     # dung path
     U, N, R = S.paths(rho)
     qb = np.cumsum(dq["b"])
@@ -427,7 +430,10 @@ def simulate(S, P, a0, var, rng_scramble=None):
     V = qb * Pb + qe * Pe
     CB = S.base + np.cumsum(R)[:nm] + U
     E = CB + c + V
-    # kiem noi bo: E tai cac moc su kien == E trong vong lap (lay mau)
+    # kiem noi bo: E tai moi moc ngay trong vong lap == E dung vector hoa
+    ek = np.array([x[0] for x in eck], np.int64)
+    evv = np.array([x[1] for x in eck])
+    ev["eq_check_max"] = float(np.max(np.abs(E[ek] / evv - 1.0))) if len(ek) else 0.0
     return dict(E=E, CB=CB, V=V, N=N, qb=qb, qe=qe, cash=c, fee=dfee, rho=rho, ev=ev)
 
 
