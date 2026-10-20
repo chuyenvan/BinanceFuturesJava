@@ -1,0 +1,34 @@
+{
+ "tag": "tsx-ho-x14-s13",
+ "seed": 13,
+ "ok": true,
+ "chk": {
+  "ok": true,
+  "jar": true,
+  "mapper": true,
+  "ov": true,
+  "ov_log": true,
+  "pred": true,
+  "n": true,
+  "tk": true,
+  "fund": true,
+  "market": true,
+  "pen": true,
+  "unseal": true
+ },
+ "md5": "f6e604828cd48bc56170cfcc4d233938",
+ "n": 4007,
+ "tsx": [
+  336,
+  15,
+  99480,
+  15,
+  11
+ ],
+ "pre2026_same": true,
+ "pre_rows": [
+  3554,
+  3554
+ ],
+ "pass": true
+}

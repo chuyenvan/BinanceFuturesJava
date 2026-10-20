@@ -1,0 +1,25 @@
+{
+ "tag": "tsx-ho-p0-s42",
+ "seed": 42,
+ "ok": true,
+ "chk": {
+  "ok": true,
+  "jar": true,
+  "mapper": true,
+  "ov": true,
+  "ov_log": true,
+  "pred": true,
+  "n": true,
+  "tk": true,
+  "fund": true,
+  "market": true,
+  "pen": true,
+  "unseal": true
+ },
+ "md5": "7cc8864ca12bdd69f0165c9c9d5c74c5",
+ "n": 3944,
+ "tsx": null,
+ "p0_md5_ok": true,
+ "tsx_absent": true,
+ "pass": true
+}
