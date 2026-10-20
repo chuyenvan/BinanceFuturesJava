@@ -145,3 +145,92 @@ settlement có trong ≤ ~90 s). Lệch funding còn ≤ 1-2 phút quyết đị
   `LIVE_FEAT_DUMP>0` (đặt `LIVE_S1_DUMP=0` để tắt).
 - Cờ đề xuất khi deploy v1.1: `LIVE_FEAT_INPUT=snapshot`, `LIVE_RANK_TIEBREAK=symbol`, `LIVE_FUNDING_REFRESH_HOURLY=1`;
   `LIVE_MD_SOURCE` để mặc định (legacy) chờ MASTER quyết; backtest đối chiếu chạy với `SIM_RANK_TIEBREAK_SYMBOL=1`.
+
+## 6. Ba kiểm tra trước deploy (yêu cầu MASTER 2026-10-20, chỉ đọc 242)
+
+Code: nhánh `v1.1/collector-settle` commit `66cb6196` (trên `90482c38`), jar **`d7824f6d1a622d013c4579e70c85691a`**
+(`~/claude_master/v11_settle/jar/binance-java-sdk-1.2.4.jar_v11b_d7824f6d`); `mvn -o package` 345 test, 0 fail.
+Kết quả máy đọc: `~/claude_master/v11_settle/harness/md_cmp.json`, `md_py_validate.json`, `s6/fund_cmp.json`.
+
+### 6.1 Nguồn chuẩn MarketDataObject (momentum1M/15M, rate levelChange)
+
+Truy ngược:
+
+| tiêu thụ | đọc từ | sinh bởi |
+|---|---|---|
+| sim DEV/HO (`market.bin` của `wfo_ds_override`, md5 `0fcc44d8…`, 2.947.528 dòng 2021-01 → 2026-09-30) | ts < 2026-01-01: = DEV bundle `~/wfo_ds_x1_2021/market.bin` md5 `4ab691c9…` (bit-exact 100 %, 2.554.408 dòng); 2026: 393.120 phút regen từ Vision (`docs/result/ho4/HO4_P1.md` §market) | DEV bundle = `WfoDataset.export` (`:66` `getAllMarketDataFromAerospike()`) = store `market_data_object` (Oracle `aerospike-wfo`, ns `test`); store ghi bởi `ExportMarketData2File.exportMarketEntries` (Java: bỏ `diedSymbol` + `!isTickerAvailable`, buffer liên tục 15 nến, `calMarketData` float32) |
+| train gate p15 (`fold_20`, md5 `8ec99757…`) | `WFOGateRunner` → `ExportGateDataset.replayToCsv` (`:143` `getAllMarketDataFromAerospike()`) | cùng store |
+| train funding Tool1 (net015) | `ExportTool1Worker:59` `getAllMarketDataFromAerospike()` → `ExportFeaturesForPythonTool.extractFeatures(..., time2MarketData.get(time), ...)` | cùng store |
+
+Đo trực tiếp (harness `V11MdHarness`: Java `MarketDataInlineGenerator` trên ticker 242, bỏ 60′ warm-up):
+
+| ngày | died = `BTCDOM,USDC` vs store / DEV / sim | died = DIED_SYMBOLS dài của live 242 | md_inline.py CŨ | md_inline.py MỚI vs Java |
+|---|---|---|---|---|
+| 2021-03-01 (1.378′) | **100 % / 100 % / 100 %** bit-exact | 0 % | 85,8 % (≤1e-7) | **100 %** bit-exact |
+| 2024-06-01 (1.374′) | **99,85 % / 99,78 % / 99,78 %** | 0 % | 53,1 % | **100 %** bit-exact |
+| 2026-08-08..12 (6.907′) | store 0,01 % / sim(Vision) 49 % | 0 % / 1,3 % | — | — |
+
+(2026-08: ticker 242 trước KFIX 10-10 khác ticker đã sinh store/Vision — lệch do dữ liệu, không do công thức.)
+
+**Kết luận:** chuẩn = Java `calMarketData` / `MarketDataInlineGenerator` với died **{BTCDOM, USDC}**, lọc
+`isTickerAvailable`, float32, buffer liên tục. Train (gate + Tool1) và sim đọc **cùng một store** ⇒ ở cấp code nguồn train = nguồn sim.
+Live 242 khai DIED_SYMBOLS dài ⇒ cả rate legacy lẫn inline-mặc-định của live đều ≠ nguồn ⇒ v1.1 thêm
+`LIVE_MD_DIED_SYMBOLS` (mặc định `BTCDOM,USDC`) chỉ cho đường snapshot. `md_inline.py` KHÔNG phải nguồn (port audit,
+thiếu lọc isTickerAvailable + float64) ⇒ đã sửa (exact mặc định; 4 cột cũ ⇒ ValueError có chủ đích; `exact=False` = số cũ);
+3 caller devexport truyền 5 cột.
+
+Rủi ro provenance (chưa đóng): bản sao `gate15m_v2_full.csv` duy nhất còn lại (D:\claudedata\_TO_DELETE_20260810, 06-23,
+md5 `7ef6f92b…`, 189.765 dòng 15′) khớp store ở 2025 99,4 % nhưng 2021–2023 ≈ 0,1 %, 2024 34 % ⇒ store 2021–2024 đã được
+sinh lại sau 06-23. Store huấn luyện thật của `fold_20` (WFOGateRunner 08-06/08-18, `fs_full.csv`) không có trên Oracle/Windows
+⇒ chưa xác nhận fold_20 học momentum 2021–2024 từ bản store nào. Đề xuất: kiểm `fs_full.csv` trên Kaggle với `md_inline` mới.
+
+Phải tính lại (dùng md_inline cũ và/hoặc died 242): PARITY_1020 (`devexport_1020 --md-inline --died-config raw242`:
+momentum1M/15M/Acceleration + p15 offline ⇒ bảng P1), SHADOW_PARITY_FEAT_1016 (`devexport_1016`), kết quả dùng
+`devexport_202609 --md-inline` (RESULT_FEATDIFF_PASS2), HO3_B1B2 (`ho3_b2_market.py`, died đúng nhưng chưa lọc
+isTickerAvailable), KDOSE (`kdose_run.py` tự kiểm với md_inline cũ), `parity_check.py`, PARITY_242_VS_G2FLAT3,
+RESULT_PARITY_HARNESS_V2. Sim/backtest Java KHÔNG phải tính lại.
+
+### 6.2 45 feature funding / net015 ở chế độ snapshot
+
+v1.1 bổ sung (chỉ khi `LIVE_FEAT_INPUT=snapshot`): `extractFeatures` + `EntrySignalFilter.selectCoins` dùng snapshot đầy đủ
++ rate feature (inline, died nguồn); hạng cross-sectional #33–#35 tính trên TOÀN BỘ coin qua filter như
+`ExportFeaturesForPythonTool` (live trước đây chỉ xếp trên ứng viên). Backtest so sánh = vòng Tool1 (updateMarketHistory full
+→ getTopCoin → selectCoins → extractFeatures(store-equivalent md) → applyCrossSectional), mỗi phút. OI #41–45 = NaN ở cả hai.
+
+| cửa sổ | NEW2 vs Tool1: dòng (phút, coin) #1–#40 ≤1e-6 | phút khớp toàn bộ | net015 1−P(win) ≤1e-6 | legacy vs Tool1 (dòng / phút / net015) |
+|---|---|---|---|---|
+| 10-16 20:00 → 10-17 07:59 | **100 %** (24.051/24.051) | **100 %** (720) | **100 %** | 0 % / 0 % / 37,7 % (p99 |Δ| 0,025) |
+| 10-17 08:00 → 14:50 | **100 %** (9.985/9.985) | **100 %** (411) | **100 %** | 0 % / 0 % / 36,4 % (p99 0,021) |
+
+Mọi coin Tool1 đều là ứng viên live trong 2 cửa sổ (không coin nào cần thêm chỉ để xếp hạng). 33 feature gate NEW2 vs
+backtest (md nguồn): 100 %, p15 bit-exact 100 %, basket 100 %. **Chưa đo:** (a) OI #41–45 (live tra set `oi_feat_*` 242 tính
+sẵn; Tool1 dùng `ExportFundingOiPerCoin` trên metric thô 226 — hai pipeline khác, ngoài phạm vi snapshot); (b) gateValue
+sau quantile-map (phụ thuộc thứ tự S1, đo riêng với tie-break); (c) độ trễ cache funding live (harness dùng lịch sử đầy đủ;
+`LIVE_FUNDING_REFRESH_HOURLY=1` còn dư ≤1–2 phút/settlement).
+
+### 6.3 Legacy jar mới ≡ jar dc839568
+
+Harness LIVE (đường live hiện tại) build trên jar cũ vs jar mới, không bật cờ: 33 feature **bit-exact 100 %**, p15
+bit-exact 100 %, basket 100 %, funding-45 bit-exact 100 % (24.163 + 10.034 dòng), cả 2 cửa sổ. Khác biệt duy nhất khi không bật
+cờ: dòng `[GATE-RATIO]` thêm `q_t9`; S1 dump tự bật nếu `LIVE_FEAT_DUMP>0` (tắt bằng `LIVE_S1_DUMP=0`).
+
+### 6.4 Env đề xuất cuối (`/home/chuyennd/java/v_t_m/conf/env.sh`)
+
+```
+export LIVE_FEAT_INPUT=snapshot
+export LIVE_FEAT_MD=inline
+export LIVE_MD_DIED_SYMBOLS=BTCDOM,USDC
+export LIVE_MD_SOURCE=inline            # rate cho levelChange/BIG_DOWN/DCA = nguồn sim (đổi quyết định market-level)
+export LIVE_RANK_TIEBREAK=symbol
+export LIVE_FUNDING_REFRESH_HOURLY=1
+# LIVE_S1_DUMP: để mặc định (theo LIVE_FEAT_DUMP)
+```
+Backtest đối chiếu: `SIM_RANK_TIEBREAK_SYMBOL=1`. Nếu MASTER chưa muốn đổi quyết định market-level: `LIVE_MD_SOURCE=legacy`
+(feature vẫn khớp nguồn; BIG_DOWN/DCA giữ rate live cũ, KHÁC sim).
+
+### 6.5 Rủi ro mới
+- `LIVE_MD_SOURCE=inline` đổi tín hiệu BIG_DOWN/DCA về phía sim (rate tính trên 738 symbol với died nguồn).
+- Provenance train 2021–2024 (6.1) chưa đóng.
+- OI #41–45 và gateValue sau quantile-map chưa đo parity.
+- `md_inline.py` exact: caller 4 cột (ho3_b2_market, kdose_run, kline_242_div, featdiff_pass2_p15, parity_check) sẽ lỗi rõ cho tới khi truyền totalUsdt.
+- Thêm CPU nhỏ: funding cho coin qua filter nhưng không là ứng viên (0 coin trong 2 cửa sổ đo).

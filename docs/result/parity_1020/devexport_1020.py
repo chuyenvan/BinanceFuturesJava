@@ -724,7 +724,8 @@ def run(args):
                 s2, a2 = parse_minute(parsed[ts])
                 if not s2:
                     continue
-                snap = {sy: (float(a2[i, 0]), float(a2[i, 1]), float(a2[i, 2]), float(a2[i, 3]))
+                # [V11 §6] 5 cot (them totalUsdt) de md_inline loc isTickerAvailable nhu Java
+                snap = {sy: (float(a2[i, 0]), float(a2[i, 1]), float(a2[i, 2]), float(a2[i, 3]), float(a2[i, 4]))
                         for i, sy in enumerate(s2)}
                 r = inline_gen.update(snap)
                 if r is not None:
