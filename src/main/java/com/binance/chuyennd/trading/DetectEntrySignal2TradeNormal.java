@@ -88,6 +88,9 @@ public class DetectEntrySignal2TradeNormal {
     // [V11] LIVE_RANK_TIEBREAK=symbol: pool (score, symbol) khong mat coin trung score. Mac dinh legacy.
     private final boolean rankTieSymbol = com.binance.chuyennd.tradecore.selector.TieSafeRank.on();
     private final Map<String, Float> selectorRankScores = new HashMap<>();
+    // [V11 §6] snapshot + rate feature cua tick (null = legacy): funding-45 + EntrySignalFilter dung CUNG nguon Tool1.
+    private Map<String, KlineObjectSimple> featSnapTick = null;
+    private MarketDataObject featRateTick = null;
 
     // [PRED-GAP] Latest per-coin selector output = prob[0] = P(no-pump) = 1 - sel (P(maxFav>=6%)).
     // Cap nhat moi tick entry (15m, duyet MOI symbol) -> SL-loop (BinanceOrderTradingManager) doc de
@@ -287,6 +290,8 @@ public class DetectEntrySignal2TradeNormal {
                     marketRate = featRes.inlineRate;
                 }
             }
+            featSnapTick = featRes != null ? featRes.snapshot : null;
+            featRateTick = featRes != null ? featRes.featRate : null;
             Float rateBtcDown15M = Utils.rateOf2Double(btcTicker.priceClose, btcMax15M);
             MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(rateDownAvg, rateUpAvg, rateDown15MAvg);
             RedisHelper.getInstance().get().set(RedisConst.REDIS_KEY_LAST_TIME_CHECK_MARKET, Utils.toJson(System.currentTimeMillis()));
@@ -838,6 +843,9 @@ public class DetectEntrySignal2TradeNormal {
         Map<String, FundingMarketFeatures> symbol2FundingFeatures = new HashMap<>();
         Map<String, Float> symbol2FundingPred = new HashMap<>();
         final List<String> basket = CoinRankManager.getInstance().getTopCoin(time);
+        // [V11 §6] snapshot: funding-45 nhu ExportFeaturesForPythonTool (snapshot day du + rate feature). legacy => cu.
+        final Map<String, KlineObjectSimple> fSnap = featSnapTick != null ? featSnapTick : symbol2FinalTicker;
+        final MarketDataObject fRate = featSnapTick != null ? featRateTick : null;
         // [B4-SPEED] thay clear() (reload full-history MỖI tick ~250s) bằng cache-qua-tick + BatchRead
         // 1 lần cho mọi coin + refresh khi pipelineFreshTs tăng => lookup BIT-IDENTICAL, IO giảm ~1000x.
         liveOiProvider.beginTick(allSymbols);
@@ -879,10 +887,10 @@ public class DetectEntrySignal2TradeNormal {
                         Configs.LEVERAGE_ORDER, symbol, time, time, OrderSide.BUY
                 );
                 dummyOrder.lastEntry = ticker.priceClose;
-                MarketDataObject marketData = new MarketDataObject(rateDownAvg,
+                MarketDataObject marketData = fRate != null ? fRate : new MarketDataObject(rateDownAvg,
                         rateUpAvg, rateDown15MAvg);
                 FundingMarketFeatures feats = fundingExtractor.extractFeatures(
-                        time, dummyOrder, symbol2FinalTicker, marketData,
+                        time, dummyOrder, fSnap, marketData,
                         basket);
                 if (feats != null) {
                     // #41..#45 OI/LS/taker: lookup feature ĐÃ TÍNH SẴN trên Oracle từ 242 (fix reconcile
@@ -909,10 +917,24 @@ public class DetectEntrySignal2TradeNormal {
         long tExtractMs = (System.nanoTime() - tExtract0) / 1_000_000L;
         long tCs0 = System.nanoTime();
         try {
-            Set<String> csPop = EntrySignalFilter.selectCoins(symbol2FinalTicker, HistoryManager.getInstance());
+            Set<String> csPop = EntrySignalFilter.selectCoins(fSnap, HistoryManager.getInstance());
             List<FundingMarketFeatures> csList = new ArrayList<>();
             for (String sym : aiCandidates) {
                 if (csPop.contains(sym)) csList.add(symbol2FundingFeatures.get(sym));
+            }
+            if (featSnapTick != null && fundingExtractor != null) {
+                // [V11 §6] Tool1 xep hang tren TOAN BO coin qua EntrySignalFilter (ke ca coin khong la ung vien live).
+                for (String sym : csPop) {
+                    if (symbol2FundingFeatures.containsKey(sym)) continue;
+                    KlineObjectSimple tk = fSnap.get(sym);
+                    if (!Utils.isTickerAvailable(tk)) continue;
+                    OrderTargetInfoTest d0 = new OrderTargetInfoTest(OrderTargetStatus.REQUEST, tk.priceClose, null, 1.0f,
+                            Configs.LEVERAGE_ORDER, sym, time, time, OrderSide.BUY);
+                    d0.lastEntry = tk.priceClose;
+                    FundingMarketFeatures fx = fundingExtractor.extractFeatures(time, d0, fSnap,
+                            fRate != null ? fRate : new MarketDataObject(rateDownAvg, rateUpAvg, rateDown15MAvg), basket);
+                    if (fx != null) csList.add(fx);   // chi de xep hang #33..#35, khong du doan
+                }
             }
             FundingCrossSectional.apply(csList);
         } catch (Exception e) {

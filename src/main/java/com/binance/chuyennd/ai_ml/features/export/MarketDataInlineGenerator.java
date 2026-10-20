@@ -40,6 +40,17 @@ public class MarketDataInlineGenerator {
 
     private long emitted = 0, droppedCold = 0, droppedGap = 0, droppedDegenerate = 0;
 
+    /** [V11] tap died dung loc + calMarketData (mac dinh Constants.diedSymbol = hanh vi cu). */
+    private final java.util.Set<String> died;
+
+    public MarketDataInlineGenerator() {
+        this(Constants.diedSymbol);
+    }
+
+    public MarketDataInlineGenerator(java.util.Set<String> died) {
+        this.died = died;
+    }
+
     /**
      * Nuôi buffer trượt và tính + VALIDATE MarketDataObject cho phút hiện tại.
      *
@@ -60,7 +71,7 @@ public class MarketDataInlineGenerator {
 
         for (Map.Entry<String, KlineObjectSimple> e : snapshot.entrySet()) {
             String symbol = e.getKey();
-            if (Constants.diedSymbol.contains(symbol)) continue;
+            if (died.contains(symbol)) continue;
             KlineObjectSimple ticker = e.getValue();
             if (!Utils.isTickerAvailable(ticker)) continue;
 
@@ -101,7 +112,7 @@ public class MarketDataInlineGenerator {
             return null;
         }
 
-        MarketDataObject md = MarketBigChangeDetector.calMarketData(snapshot, symbol2MaxPrice, symbol2MinPrice);
+        MarketDataObject md = MarketBigChangeDetector.calMarketData(snapshot, symbol2MaxPrice, symbol2MinPrice, died);
 
         // GUARD 4: degenerate / NaN / Inf.
         if (md == null

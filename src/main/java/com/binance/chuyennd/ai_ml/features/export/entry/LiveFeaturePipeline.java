@@ -34,6 +34,9 @@ public final class LiveFeaturePipeline {
     public static final String K_TOL = "LIVE_FEAT_SETTLE_TOL";
     public static final String K_TIMEOUT = "LIVE_FEAT_SETTLE_TIMEOUT_MS";
     public static final String K_POLL = "LIVE_FEAT_SETTLE_POLL_MS";
+    /** [V11 §6] tap died cho MarketDataObject = cua NGUON sim/train (store/market.bin sinh voi DIED_SYMBOLS=BTCDOM,USDC). */
+    public static final String K_MD_DIED = "LIVE_MD_DIED_SYMBOLS";
+    public static final String MD_DIED_DEFAULT = "BTCDOM,USDC";
     public static final int TOL_DEFAULT = 3;
     public static final long TIMEOUT_DEFAULT = 3000L;
     public static final long POLL_DEFAULT = 250L;
@@ -84,9 +87,12 @@ public final class LiveFeaturePipeline {
         public final MarketDataObject inlineRate;
         public final int nSym;
         public final boolean partial;
+        /** [V11 §6] snapshot DAY DU phut quyet dinh (cho funding-45 + EntrySignalFilter). */
+        public final Map<String, KlineObjectSimple> snapshot;
 
         Result(long minute, MarketFeatures features, MarketDataObject featRate, MarketDataObject inlineRate,
-               int nSym, boolean partial) {
+               int nSym, boolean partial, Map<String, KlineObjectSimple> snapshot) {
+            this.snapshot = snapshot;
             this.minute = minute;
             this.features = features;
             this.featRate = featRate;
@@ -162,13 +168,27 @@ public final class LiveFeaturePipeline {
     }
 
     public static LiveFeaturePipeline forProd(ComprehensiveMarketFeatureExtractor ex) {
-        final MarketDataInlineGenerator g = new MarketDataInlineGenerator();
+        java.util.Set<String> died = parseDied(Cfg.getOr(K_MD_DIED, MD_DIED_DEFAULT));
+        final MarketDataInlineGenerator g = new MarketDataInlineGenerator(died);
         LiveFeaturePipeline p = new LiveFeaturePipeline(extractorSink(ex), g::update, featMdInlineCfg(),
                 (int) cfgLong(K_TOL, TOL_DEFAULT));
         LOG.warn("*** [FEAT-PIPE] LIVE_FEAT_INPUT=snapshot: feature gate tinh tren snapshot DAY DU phut M (= replayToCsv); "
-                        + "feat_md={} decision_md={} settle tol={} timeout={}ms poll={}ms",
-                p.featMdInline ? "inline" : "legacy", decisionMdInline() ? "inline" : "legacy", p.tol, timeoutMs(), pollMs());
+                        + "feat_md={} decision_md={} settle tol={} timeout={}ms poll={}ms md_died={}",
+                p.featMdInline ? "inline" : "legacy", decisionMdInline() ? "inline" : "legacy", p.tol, timeoutMs(), pollMs(),
+                new java.util.TreeSet<>(died));
         return p;
+    }
+
+    /** Cung quy uoc Constants.diedSymbol: tach dau phay, them USDT neu thieu. */
+    static java.util.Set<String> parseDied(String v) {
+        java.util.Set<String> out = new java.util.HashSet<>();
+        if (v == null) return out;
+        for (String x : v.split(",")) {
+            String t = x.trim();
+            if (t.isEmpty()) continue;
+            out.add(t.contains("USDT") ? t : t + "USDT");
+        }
+        return out;
     }
 
     static long align(long t) {
@@ -236,7 +256,7 @@ public final class LiveFeaturePipeline {
         if (snap == null || snap.isEmpty()) {
             nNoSnap++;
             LOG.error("[FEAT-PIPE] khong co snapshot phut {} trong cache -> bo tick", minute);
-            return new Result(minute, null, legacyRate, null, 0, true);
+            return new Result(minute, null, legacyRate, null, 0, true, null);
         }
         MarketDataObject inl = md.update(snap);
         MarketDataObject fr = legacyRate;
@@ -257,7 +277,7 @@ public final class LiveFeaturePipeline {
             LOG.info("[FEAT-PIPE] ticks={} partial={} md_null={} gap_minutes={} catchup={} no_snap={} nsym={}",
                     nTicks, nPartial, nMdNull, nGapMinutes, nCatchup, nNoSnap, snap.size());
         }
-        last = new Result(minute, f, fr, inl, snap.size(), partial);
+        last = new Result(minute, f, fr, inl, snap.size(), partial, snap);
         return last;
     }
 

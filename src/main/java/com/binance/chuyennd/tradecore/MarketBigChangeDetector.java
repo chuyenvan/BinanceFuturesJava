@@ -47,6 +47,15 @@ public class MarketBigChangeDetector {
 
     public static MarketDataObject calMarketData(Map<String, KlineObjectSimple> symbol2Ticker, Map<String, Float> symbol2PriceMax,
                                                  Map<String, Float> symbol2MinPrice) {
+        return calMarketData(symbol2Ticker, symbol2PriceMax, symbol2MinPrice, Constants.diedSymbol);
+    }
+
+    /**
+     * [V11 2026-10-20] docs/plan/V11_COLLECTOR_SETTLE.md §6 — CUNG cong thuc, tap died TUONG MINH. Live snapshot dung
+     * tap died cua NGUON sim/train (store market_data_object / market.bin), KHONG phai DIED_SYMBOLS cua live 242.
+     */
+    public static MarketDataObject calMarketData(Map<String, KlineObjectSimple> symbol2Ticker, Map<String, Float> symbol2PriceMax,
+                                                 Map<String, Float> symbol2MinPrice, java.util.Set<String> died) {
         TreeMap<Float, String> rateDown2Symbols = new TreeMap<>();
         TreeMap<Float, String> rateMin2Symbols = new TreeMap<>();
         TreeMap<Float, String> rateMax2Symbols = new TreeMap<>();
@@ -60,7 +69,7 @@ public class MarketBigChangeDetector {
         }
         for (Map.Entry<String, KlineObjectSimple> entry1 : symbol2Ticker.entrySet()) {
             String symbol = entry1.getKey();
-            if (Constants.diedSymbol.contains(symbol)) {
+            if (died.contains(symbol)) {
                 continue;
             }
             KlineObjectSimple ticker = entry1.getValue();
