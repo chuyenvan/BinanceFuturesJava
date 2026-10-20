@@ -89,6 +89,10 @@ public final class S1RankerLive {
     /** [B6-SPEED] Buffer OI prefetch nen cho gio ke (double-buffer, swap atomic o {@link #ensureOi}). */
     private volatile Map<String, TreeMap<Long, Float>[]> oiBuffer = null;
     private volatile long oiBufferHour = 0L;
+    /** [V11] thoi diem (ms) nap buffer prefetch / nap OI dang dung + nguon (prefetch|sync) — cho S1FeatDump. */
+    private volatile long oiBufferLoadedMs = 0L;
+    private volatile long oiLoadedMs = 0L;
+    private volatile String oiSrc = "none";
     /** Universe cua lan scoreAll gan nhat (de prefetch biet coin can nap). */
     private volatile Set<String> lastUniverse = new HashSet<>();
     private final ScheduledExecutorService prefetchBg = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -174,10 +178,12 @@ public final class S1RankerLive {
             ensureOi(closes.keySet(), lastClosedHour);
             Map<String, Double> lsg = new HashMap<>();
             Map<String, Double> oid = new HashMap<>();
+            Map<String, Long> oiRefTs = new HashMap<>();   // [V11] moc OI dung cho tung coin (dump)
             for (String sym : closes.keySet()) {
                 TreeMap<Long, Float>[] a = oiCache.get(sym);
                 Long ref = a == null ? null : floorTol(a[0], now);
                 if (ref == null && a != null) ref = floorTol(a[1], now);
+                oiRefTs.put(sym, ref);
                 oid.put(sym, ref == null ? Double.NaN : valOf(a[0], ref));
                 lsg.put(sym, ref == null ? Double.NaN : valOf(a[1], ref));
             }
@@ -190,6 +196,11 @@ public final class S1RankerLive {
             }
             float[] raw = predict(x);
             if (raw == null) return null;
+            try {   // [V11] dump 9 feature + OI (LIVE_S1_DUMP); loi dump khong anh huong score
+                S1FeatDump.maybeDump(now, syms, x, raw, oiRefTs, oiCacheHour, oiLoadedMs, oiSrc);
+            } catch (Throwable t) {
+                LOG.error("[S1-DUMP] loi: {}", t.toString());
+            }
             Map<String, Float> out = new HashMap<>();
             for (int i = 0; i < syms.length; i++) out.put(syms[i], -raw[i]);   // score thap = tot
             LOG.info("[S1] score {} coin tai {} (hist gio cuoi {}, {} coin du >= {} moc, ns={})",
@@ -323,6 +334,8 @@ public final class S1RankerLive {
             oiCache.clear();
             oiCache.putAll(buf);
             oiCacheHour = lastClosedHour;
+            oiLoadedMs = oiBufferLoadedMs;
+            oiSrc = "prefetch";
             LOG.info("[S1] swap OI prefetch cho {} coin tai gio {} (khong doc dong bo)", buf.size(), lastClosedHour);
             return;
         }
@@ -332,6 +345,8 @@ public final class S1RankerLive {
             oiCache.clear();
             oiCache.putAll(fresh);
             oiCacheHour = lastClosedHour;
+            oiLoadedMs = System.currentTimeMillis();
+            oiSrc = "sync";
             LOG.info("[S1] nap OI (delta24h + ls_global) cho {} coin trong {} ms", fresh.size(),
                     System.currentTimeMillis() - t0);
         }
@@ -356,6 +371,7 @@ public final class S1RankerLive {
             if (targetHour > oiCacheHour && targetHour > oiBufferHour && !uni.isEmpty()) {
                 Map<String, TreeMap<Long, Float>[]> fresh = loadOi(uni, targetHour);
                 if (!fresh.isEmpty()) {
+                    oiBufferLoadedMs = System.currentTimeMillis();
                     oiBuffer = fresh;
                     oiBufferHour = targetHour;
                     LOG.info("[S1] prefetch OI {} coin cho gio {} (nen)", fresh.size(), targetHour);

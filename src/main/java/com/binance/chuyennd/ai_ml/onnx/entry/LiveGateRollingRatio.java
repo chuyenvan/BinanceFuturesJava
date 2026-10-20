@@ -452,8 +452,15 @@ public final class LiveGateRollingRatio {
     }
 
     private static void logHour() {
-        LOG.info("[GATE-RATIO] q_t={} buffer={} eval={} pass={}",
-                String.format("%.6f", buffer.currentQ()), buffer.size(), hourEval, hourPass);
+        double q = buffer.currentQ();
+        // [V11] giu q_t=%.6f (parser cu) + them q_t9=%.9g de kiem duoc 1e-6
+        LOG.info("[GATE-RATIO] q_t={} q_t9={} buffer={} eval={} pass={}",
+                String.format("%.6f", q), fmtQ9(q), buffer.size(), hourEval, hourPass);
+    }
+
+    /** [V11] 9 chu so co nghia, Locale.ROOT (dau cham thap phan). */
+    static String fmtQ9(double q) {
+        return String.format(java.util.Locale.ROOT, "%.9g", q);
     }
 
     private static synchronized void installShutdownHook() {

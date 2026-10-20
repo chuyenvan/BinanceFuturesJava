@@ -1868,6 +1868,43 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     // Tranh re-sort mang DA sort: quicksort pivot=high suy bien O(n^2) (~19s lan dau -> ~147s moi lan sau).
     private static TreeMap<Long, long[]> fundingPreSorted = null;
 
+    /** [V11 2026-10-20] docs/plan/V11_COLLECTOR_SETTLE.md — {@code SIM_RANK_TIEBREAK_SYMBOL=1}: sort pool theo (score,
+     *  ten symbol) — cung quy uoc live {@code LIVE_RANK_TIEBREAK=symbol} va build_map.py rank("first"). Mac dinh 0 =
+     *  quicksort cu (KHONG on dinh: coin trung score phu thuoc thu tu mang vao). */
+    static final boolean SIM_RANK_TIE_SYMBOL =
+            "1".equals(com.binance.chuyennd.tradecore.Cfg.getOr("SIM_RANK_TIEBREAK_SYMBOL", "0").trim());
+
+    /** id -> hang theo ten symbol (A-Z); id trung (mapper) lay ten nho nhat — khop getSymbol. */
+    static int[] symbolNameRank(java.util.Map<String, Short> all) {
+        int maxId = 0;
+        for (Short v : all.values()) if (v != null && v > maxId) maxId = v;
+        int[] r = new int[maxId + 1];
+        java.util.Arrays.fill(r, Integer.MAX_VALUE);
+        java.util.List<String> names = new java.util.ArrayList<>(all.keySet());
+        java.util.Collections.sort(names);
+        for (int i = 0; i < names.size(); i++) {
+            Short id = all.get(names.get(i));
+            if (id != null && id >= 0 && r[id] == Integer.MAX_VALUE) r[id] = i;
+        }
+        return r;
+    }
+
+    /** Sort (score float tang, hang ten symbol, id) — on dinh, tat dinh. Ma hoa: 32 bit cao = id, 32 bit thap = float. */
+    static void sortByFloatThenName(long[] arr, int[] nameRank) {
+        Long[] b = new Long[arr.length];
+        for (int i = 0; i < arr.length; i++) b[i] = arr[i];
+        java.util.Arrays.sort(b, (x, y) -> {
+            int c = Float.compare(Float.intBitsToFloat((int) x.longValue()), Float.intBitsToFloat((int) y.longValue()));
+            if (c != 0) return c;
+            int ix = (short) (x.longValue() >> 32), iy = (short) (y.longValue() >> 32);
+            int rx = ix >= 0 && ix < nameRank.length ? nameRank[ix] : Integer.MAX_VALUE;
+            int ry = iy >= 0 && iy < nameRank.length ? nameRank[iy] : Integer.MAX_VALUE;
+            if (rx != ry) return Integer.compare(rx, ry);
+            return Integer.compare(ix, iy);
+        });
+        for (int i = 0; i < arr.length; i++) arr[i] = b[i];
+    }
+
     // 🔥 PRE-CALCULATE TỐI ƯU HÓA: Dùng Primitive QuickSort & Đa luồng (0 sinh rác Object)
     public static void preprocessFundingData(TreeMap<Long, long[]> time2FundingPre) {
         if (time2FundingPre == null || time2FundingPre == fundingPreSorted) return; // idempotent, ket qua khong doi
@@ -1875,10 +1912,13 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         long start = System.currentTimeMillis();
 
         // Dùng parallelStream để vắt kiệt 100% các lõi CPU của VPS/Kaggle
+        final int[] nameRank = SIM_RANK_TIE_SYMBOL ? symbolNameRank(SimpleSymbolMapper.getInstance().getAllMappings()) : null;
+        if (nameRank != null) LOG.warn("*** [SIM-RANK] SIM_RANK_TIEBREAK_SYMBOL=1: sort pool (score, ten symbol)");
         time2FundingPre.values().parallelStream().forEach(preds -> {
             if (preds == null || preds.length <= 1) return;
             // Sort nguyên thủy trực tiếp trên mảng long[]
-            quickSortByFloatPred(preds, 0, preds.length - 1);
+            if (nameRank != null) sortByFloatThenName(preds, nameRank);
+            else quickSortByFloatPred(preds, 0, preds.length - 1);
         });
         fundingPreSorted = time2FundingPre; // danh dau map nay da sort -> cac sample sau bo qua
 

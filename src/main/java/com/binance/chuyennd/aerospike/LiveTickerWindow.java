@@ -49,6 +49,11 @@ public final class LiveTickerWindow {
     private final int rereadMinutes;
     private final LiveKlineAudit audit = new LiveKlineAudit();
     private long lastStatsMinute = Long.MIN_VALUE;
+    /** [V11 F-repair] true => nen doc lai khac thi GHI DE TAI CHO object dang co (ring HistoryManager / buffer
+     *  MarketDataInlineGenerator giu cung object nen cung thay ban settle). Mac dinh false = hanh vi cu. */
+    private volatile boolean inPlaceReread = false;
+    /** [V11] phut ket thuc cua cua so o lan doc gan nhat (phut quyet dinh). */
+    private long lastEndMinute = Long.MIN_VALUE;
 
     public LiveTickerWindow() {
         this(DataManagerAerospikeFloatSim::readDataFromAerospikeCustom, rereadFromEnv());
@@ -90,6 +95,7 @@ public final class LiveTickerWindow {
         long[] w = windowBounds(now, minutesToRead);
         long startMinute = w[0];
         long endMinute = w[1];
+        lastEndMinute = endMinute;
 
         boolean full = windowMinutes != minutesToRead
                 || loadedThroughMinute == Long.MIN_VALUE
@@ -173,8 +179,10 @@ public final class LiveTickerWindow {
             long m = e.getKey();
             for (Map.Entry<String, KlineObjectSimple> k : e.getValue().entrySet()) {
                 TreeMap<Long, KlineObjectSimple> t = bySymbol.computeIfAbsent(k.getKey(), s -> new TreeMap<>());
-                if (!LiveKlineAudit.same(t.get(m), k.getValue())) {
-                    t.put(m, k.getValue());
+                KlineObjectSimple cur = t.get(m);
+                if (!LiveKlineAudit.same(cur, k.getValue())) {
+                    if (inPlaceReread && cur != null) copyInto(cur, k.getValue());   // [V11 F-repair]
+                    else t.put(m, k.getValue());
                     n++;
                 }
             }
@@ -192,6 +200,83 @@ public final class LiveTickerWindow {
             }
             audit.finalizeMinute(m, latest);
         }
+    }
+
+    /** [V11 F-repair] Bat ghi de tai cho khi doc lai (chi duong LIVE_FEAT_INPUT=snapshot). */
+    public synchronized void setInPlaceReread(boolean on) {
+        inPlaceReread = on;
+    }
+
+    public synchronized long lastEndMinute() {
+        return lastEndMinute;
+    }
+
+    static void copyInto(KlineObjectSimple dst, KlineObjectSimple src) {
+        dst.priceOpen = src.priceOpen;
+        dst.maxPrice = src.maxPrice;
+        dst.minPrice = src.minPrice;
+        dst.priceClose = src.priceClose;
+        dst.totalUsdt = src.totalUsdt;
+    }
+
+    /**
+     * [V11 F-input] Snapshot DAY DU phut {@code minute} tu cache (CUNG object, KHONG loc died/isTickerAvailable) —
+     * tuong duong record phut ma backtest doc ({@code readDataFromAerospike1M}). Rong neu phut khong co trong cache.
+     */
+    public synchronized Map<String, KlineObjectSimple> minuteSnapshot(long minute) {
+        Map<String, KlineObjectSimple> out = new HashMap<>();
+        for (Map.Entry<String, TreeMap<Long, KlineObjectSimple>> e : bySymbol.entrySet()) {
+            KlineObjectSimple k = e.getValue().get(minute);
+            if (k != null) out.put(e.getKey(), k);
+        }
+        return out;
+    }
+
+    synchronized int countAt(long minute) {
+        int n = 0;
+        for (TreeMap<Long, KlineObjectSimple> m : bySymbol.values()) {
+            if (m.containsKey(minute)) n++;
+        }
+        return n;
+    }
+
+    /** [V11 F-settle] ham ngu tiem duoc cho test. */
+    interface Sleeper {
+        void sleep(long ms) throws InterruptedException;
+    }
+
+    /**
+     * [V11 F-settle] Cho phut {@code minute} co &gt;= {@code expected} symbol trong cache: doc lai record phut moi
+     * {@code pollMs} (merge nhu doc lai KFIX-B) toi khi du hoac het {@code timeoutMs}. Da du =&gt; tra ngay, 0 lan doc.
+     *
+     * @return {@code {have, polls, waitedMs}}
+     */
+    public long[] awaitMinuteComplete(long minute, int expected, long timeoutMs, long pollMs) {
+        return awaitMinuteComplete(minute, expected, timeoutMs, pollMs, Thread::sleep, System::currentTimeMillis);
+    }
+
+    long[] awaitMinuteComplete(long minute, int expected, long timeoutMs, long pollMs, Sleeper sleeper,
+                               java.util.function.LongSupplier clock) {
+        long t0 = clock.getAsLong();
+        int polls = 0;
+        int have = countAt(minute);
+        while (have < expected) {
+            long waited = clock.getAsLong() - t0;
+            if (waited >= timeoutMs) break;
+            try {
+                sleeper.sleep(Math.max(1L, Math.min(pollMs, timeoutMs - waited)));
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+            TreeMap<Long, Map<String, KlineObjectSimple>> again = reader.read(minute, 1);
+            polls++;
+            synchronized (this) {
+                audit.countOverwrite(mergeReread(again));
+            }
+            have = countAt(minute);
+        }
+        return new long[]{have, polls, clock.getAsLong() - t0};
     }
 
     /** Số symbol đang giữ trong cache (diagnostic). */

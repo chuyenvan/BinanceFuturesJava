@@ -66,6 +66,34 @@ public class FundingFeeManager {
         refreshScheduler.scheduleAtFixedRate(this::refreshCache,
                 REFRESH_INTERVAL_MIN, REFRESH_INTERVAL_MIN, TimeUnit.MINUTES);
         LOG.info("🔄 FundingFeeManager: BẬT production refresh (mỗi {} phút).", REFRESH_INTERVAL_MIN);
+        // [V11 F-fund] docs/plan/V11_COLLECTOR_SETTLE.md: refresh them o giay 50 cua phut 0..2 moi gio (settlement dau gio;
+        //   FundingIngestor poll 30 s + flush 60 s) — truoc: chi 30' theo pha restart => co gio lech funding toi 30'.
+        if (hourlyAlignOn()) {
+            long d = delayToSecond50(System.currentTimeMillis());
+            refreshScheduler.scheduleAtFixedRate(() -> {
+                if (hourlyDue(System.currentTimeMillis())) refreshCache();
+            }, d, 60_000L, TimeUnit.MILLISECONDS);
+            LOG.info("🔄 [V11] FundingFeeManager: BAT refresh theo gio (giay 50 phut 0-2 moi gio), lan dau sau {} ms.", d);
+        }
+    }
+
+    /** [V11 F-fund] cong {@code LIVE_FUNDING_REFRESH_HOURLY} (1/true = bat, mac dinh 0). */
+    public static final String K_HOURLY = "LIVE_FUNDING_REFRESH_HOURLY";
+
+    static boolean hourlyAlignOn() {
+        String v = com.binance.chuyennd.tradecore.Cfg.getOr(K_HOURLY, "0").trim();
+        return "1".equals(v) || "true".equalsIgnoreCase(v);
+    }
+
+    /** Thuan: phut-trong-gio 0..2 (UTC == GMT+7 theo phut). */
+    static boolean hourlyDue(long nowMs) {
+        return (nowMs / 60_000L) % 60L <= 2L;
+    }
+
+    /** Thuan: ms toi giay 50 ke tiep cua phut. */
+    static long delayToSecond50(long nowMs) {
+        long d = 50_000L - Math.floorMod(nowMs, 60_000L);
+        return d > 0 ? d : d + 60_000L;
     }
 
     /**

@@ -82,6 +82,12 @@ public class DetectEntrySignal2TradeNormal {
     private final LiveOiFeatProvider liveOiProvider = new LiveOiFeatProvider();
     // [B6-SPEED] Cửa sổ nến 1m trượt: đọc CHỈ phút mới mỗi tick (bỏ đọc lại 1000' ~1.8–2.4s/tick).
     private final LiveTickerWindow tickerWindow = new LiveTickerWindow();
+    // [V11 2026-10-20] docs/plan/V11_COLLECTOR_SETTLE.md — LIVE_FEAT_INPUT=snapshot: feature gate tinh tren snapshot
+    //   DAY DU phut M nhu replayToCsv (+ cho du symbol, sua tai cho khi doc lai). null = legacy (byte-identical).
+    private com.binance.chuyennd.ai_ml.features.export.entry.LiveFeaturePipeline featPipeline = null;
+    // [V11] LIVE_RANK_TIEBREAK=symbol: pool (score, symbol) khong mat coin trung score. Mac dinh legacy.
+    private final boolean rankTieSymbol = com.binance.chuyennd.tradecore.selector.TieSafeRank.on();
+    private final Map<String, Float> selectorRankScores = new HashMap<>();
 
     // [PRED-GAP] Latest per-coin selector output = prob[0] = P(no-pump) = 1 - sel (P(maxFav>=6%)).
     // Cap nhat moi tick entry (15m, duyet MOI symbol) -> SL-loop (BinanceOrderTradingManager) doc de
@@ -264,6 +270,23 @@ public class DetectEntrySignal2TradeNormal {
             Float rateUpAvg = -MarketBigChangeDetector.calRateChangeAvg(rateUp2Symbols, 100);
             Float rateDown15MAvg = MarketBigChangeDetector.calRateChangeAvg(rateDown15M2Symbols, 100);
             MarketDataObject marketRate = new MarketDataObject(rateDownAvg, rateUpAvg, rateDown15MAvg);
+            // [V11 F-input/F-settle/F-md] feature gate tren snapshot DAY DU phut quyet dinh. legacy => featRes null.
+            com.binance.chuyennd.ai_ml.features.export.entry.LiveFeaturePipeline.Result featRes = null;
+            if (featPipeline != null) {
+                try {
+                    featRes = featPipeline.onTick(featSource(), tickerWindow.lastEndMinute(), marketRate);
+                } catch (Exception e) {
+                    LOG.error("[FEAT-PIPE] loi tick: {}", e.toString());
+                }
+                if (featRes != null && featRes.inlineRate != null
+                        && com.binance.chuyennd.ai_ml.features.export.entry.LiveFeaturePipeline.decisionMdInline()) {
+                    // LIVE_MD_SOURCE=inline (mac dinh TAT): rate cho levelChange/candidates = MarketDataInlineGenerator
+                    rateDownAvg = featRes.inlineRate.rateDownAvg;
+                    rateUpAvg = featRes.inlineRate.rateUpAvg;
+                    rateDown15MAvg = featRes.inlineRate.rateDown15MAvg;
+                    marketRate = featRes.inlineRate;
+                }
+            }
             Float rateBtcDown15M = Utils.rateOf2Double(btcTicker.priceClose, btcMax15M);
             MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(rateDownAvg, rateUpAvg, rateDown15MAvg);
             RedisHelper.getInstance().get().set(RedisConst.REDIS_KEY_LAST_TIME_CHECK_MARKET, Utils.toJson(System.currentTimeMillis()));
@@ -276,7 +299,7 @@ public class DetectEntrySignal2TradeNormal {
             LOG.info("Market level change: {} level: {} symbols:{}", Utils.normalizeDateYYYYMMDDHHmm(time), levelChange, symbol2FinalTicker.size());
 
             // --- CẬP NHẬT HISTORY CHO FUNDING EXTRACTOR ---
-            if (fundingExtractor != null) {
+            if (fundingExtractor != null && featPipeline == null) {   // [V11] snapshot: pipeline da nuoi HistoryManager
                 fundingExtractor.updateMarketHistory(symbol2FinalTicker);
             }
             long tHistMs = (System.nanoTime() - tTop0) / 1_000_000L;
@@ -291,7 +314,14 @@ public class DetectEntrySignal2TradeNormal {
                     Map<String, KlineObjectSimple> currentMarketMap = new HashMap<>(symbol2FinalTicker);
 
                     // 2. Trích xuất Features cho Entry Model
-                    features = featureEntryExtractor.extractAllFeatures(timestamp, currentMarketMap, marketRate);
+                    if (featPipeline != null) {
+                        if (featRes == null || featRes.features == null) {
+                            throw new IllegalStateException("[FEAT-PIPE] khong co feature snapshot phut nay");
+                        }
+                        features = featRes.features;
+                    } else {
+                        features = featureEntryExtractor.extractAllFeatures(timestamp, currentMarketMap, marketRate);
+                    }
 
                     // 3. Dự báo Entry Model
                     predictData = aiBrain.predictAll(features);
@@ -560,6 +590,26 @@ public class DetectEntrySignal2TradeNormal {
     public static final java.util.concurrent.ConcurrentHashMap<String, Integer> LATEST_SEL_RANK =
             new java.util.concurrent.ConcurrentHashMap<>();
 
+    /** [V11] Nguon phut cho LiveFeaturePipeline = cache LiveTickerWindow (snapshot + cho du symbol). */
+    private com.binance.chuyennd.ai_ml.features.export.entry.LiveFeaturePipeline.MinuteSource featSource() {
+        final LiveTickerWindow w = tickerWindow;
+        return new com.binance.chuyennd.ai_ml.features.export.entry.LiveFeaturePipeline.MinuteSource() {
+            @Override
+            public Map<String, KlineObjectSimple> snapshot(long minute) {
+                return w.minuteSnapshot(minute);
+            }
+
+            @Override
+            public com.binance.chuyennd.ai_ml.features.export.entry.LiveFeaturePipeline.SettleInfo await(long minute, int expected) {
+                long[] r = w.awaitMinuteComplete(minute, expected,
+                        com.binance.chuyennd.ai_ml.features.export.entry.LiveFeaturePipeline.timeoutMs(),
+                        com.binance.chuyennd.ai_ml.features.export.entry.LiveFeaturePipeline.pollMs());
+                return new com.binance.chuyennd.ai_ml.features.export.entry.LiveFeaturePipeline.SettleInfo(
+                        (int) r[0], expected, r[2], (int) r[1]);
+            }
+        };
+    }
+
     /**
      * [C3-SHADOW] Pool xep theo score S1 (thap = tot) tren DUNG tap coin ma selector live da
      * cham diem trong tick nay. Tra null khi model/lich su chua san sang -> caller giu duong cu.
@@ -569,6 +619,11 @@ public class DetectEntrySignal2TradeNormal {
         Map<String, Float> s1 = com.binance.chuyennd.tradecore.selector.S1RankerLive.getInstance()
                 .scoreAll(selPnp.keySet(), time);
         if (s1 == null || s1.isEmpty()) return null;
+        if (rankTieSymbol) {   // [V11] (score, symbol), khong mat coin trung score
+            int lost = com.binance.chuyennd.tradecore.selector.TieSafeRank.lostInLegacy(s1);
+            if (lost > 0) LOG.info("[S1] tie-break symbol: {} coin trung score (legacy se mat)", lost);
+            return com.binance.chuyennd.tradecore.selector.TieSafeRank.build(s1);
+        }
         TreeMap<Float, String> pool = new TreeMap<>();
         for (Map.Entry<String, Float> e : s1.entrySet()) {
             if (e.getValue() != null && !e.getValue().isNaN()) pool.put(e.getValue(), e.getKey());
@@ -767,6 +822,7 @@ public class DetectEntrySignal2TradeNormal {
             KlineObjectSimple> symbol2FinalTicker, Float rateDownAvg, Float rateUpAvg, Float rateDown15MAvg, long time) {
         TreeMap<Float, String> sortedCandidates = new TreeMap<>();
         selectorRankPool.clear(); // [PARITY] reset pool day du moi tick
+        selectorRankScores.clear(); // [V11] diem tang-1 theo symbol (tie-break)
         selPnp.clear();           // [C3-SHADOW] reset ban do pNoPump moi tick
         selFeat45.clear();        // [L4] reset feature 45 moi tick
         selMapPred.clear();       // [L4] reset ban do gia tri moi tick
@@ -908,7 +964,8 @@ public class DetectEntrySignal2TradeNormal {
                     if (tier1Broken) continue;
                     tier1Score = tier1Net015[i];
                 }
-                selectorRankPool.put(tier1Score, sym); // [PARITY] pool day du (truoc loc maxThres) cho rank-mode
+                if (rankTieSymbol) selectorRankScores.put(sym, tier1Score);   // [V11] dung pool sau vong lap
+                else selectorRankPool.put(tier1Score, sym); // [PARITY] pool day du (truoc loc maxThres) cho rank-mode
                 // FILTER: Reject neu Fail Prob > maxThres
                 if (tier1Score > maxThres) {
 //                    LOG.info("[FILTER AI SYMBOL] {}: Prediction FAIL too high ({})", sym, probs[0]);
@@ -916,6 +973,10 @@ public class DetectEntrySignal2TradeNormal {
                     // Tu dong sap xep: Key cang be (ProbFail thap) cang dung dau
                     sortedCandidates.put(tier1Score, sym);
                 }
+            }
+            if (rankTieSymbol) {   // [V11] pool day du (score, symbol) — khong mat coin trung score
+                selectorRankPool.clear();
+                selectorRankPool.putAll(com.binance.chuyennd.tradecore.selector.TieSafeRank.build(selectorRankScores));
             }
         }
         try {
@@ -1404,7 +1465,15 @@ public class DetectEntrySignal2TradeNormal {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers =
                     DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(
                             System.currentTimeMillis() - minutesWranup * Utils.TIME_MINUTE, minutesWranup);
-            this.featureEntryExtractor.initDataFromTickerMap(time2Tickers);
+            if (com.binance.chuyennd.ai_ml.features.export.entry.LiveFeaturePipeline.snapshotMode()) {
+                // [V11 F-input] seed = replay TUNG phut (updateHistory + getTopCoin) 1 luot, khong nap 2 luot.
+                this.featPipeline = com.binance.chuyennd.ai_ml.features.export.entry.LiveFeaturePipeline
+                        .forProd(this.featureEntryExtractor);
+                this.featPipeline.seed(time2Tickers);
+                this.tickerWindow.setInPlaceReread(true);   // [V11 F-repair]
+            } else {
+                this.featureEntryExtractor.initDataFromTickerMap(time2Tickers);
+            }
 
             LOG.info("AI System Initialized Successfully. {} {} {}", time2Tickers.size(), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.firstKey()), Utils.normalizeDateYYYYMMDDHHmm(time2Tickers.lastKey()));
 
@@ -1415,7 +1484,7 @@ public class DetectEntrySignal2TradeNormal {
                 this.fundingExtractor = new FundingDataCollectionManager.FundingFeatureExtractorV2();
 
                 // Đồng bộ history cho Funding Extractor luôn
-                initDataFromTickerMap(time2Tickers);
+                if (featPipeline == null) initDataFromTickerMap(time2Tickers);   // [V11] snapshot: pipeline da nuoi
                 LOG.info("✅ Funding AI System Ready!");
             } else {
                 LOG.warn("⚠️ Funding Model not found at: {}. Running without AI Filter for Funding!", MODEL_FUNDING_PATH);

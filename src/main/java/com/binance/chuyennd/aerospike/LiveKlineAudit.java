@@ -44,9 +44,12 @@ public final class LiveKlineAudit {
                 && Float.floatToIntBits(a.totalUsdt) == Float.floatToIntBits(b.totalUsdt);
     }
 
-    /** Tick đọc lần đầu phút M (nến dùng để quyết định). Giữ tham chiếu (cache thay object khi ghi đè, không sửa tại chỗ). */
+    /** Tick đọc lần đầu phút M (nến dùng để quyết định). [V11] chụp BẢN SAO giá trị: LiveTickerWindow có thể ghi đè
+     *  tại chỗ object nến (inPlaceReread) — giữ tham chiếu sẽ làm thước luôn "đúng". */
     public synchronized void onDecisionRead(long minute, Map<String, KlineObjectSimple> candles) {
-        decided.put(minute, new HashMap<>(candles));
+        Map<String, KlineObjectSimple> cp = new HashMap<>(candles.size() * 2);
+        for (Map.Entry<String, KlineObjectSimple> e : candles.entrySet()) cp.put(e.getKey(), copyOf(e.getValue()));
+        decided.put(minute, cp);
         currentDecisionMinute = minute;
     }
 
@@ -62,6 +65,18 @@ public final class LiveKlineAudit {
     /** Symbol PASS gate (không bị gate REJECT) ở tick quyết định phút hiện tại. */
     public synchronized void markPass(String symbol) {
         if (currentDecisionMinute != Long.MIN_VALUE) pass.computeIfAbsent(currentDecisionMinute, m -> new HashSet<>()).add(symbol);
+    }
+
+    static KlineObjectSimple copyOf(KlineObjectSimple a) {
+        if (a == null) return null;
+        KlineObjectSimple c = new KlineObjectSimple();
+        c.startTime = a.startTime;
+        c.priceOpen = a.priceOpen;
+        c.maxPrice = a.maxPrice;
+        c.minPrice = a.minPrice;
+        c.priceClose = a.priceClose;
+        c.totalUsdt = a.totalUsdt;
+        return c;
     }
 
     void countOverwrite(int n) {
