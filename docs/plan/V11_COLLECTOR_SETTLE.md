@@ -123,3 +123,25 @@ settlement có trong ≤ ~90 s). Lệch funding còn ≤ 1-2 phút quyết đị
   từng phút (~33 lần updateRanking). Không thêm đọc Aerospike khi đủ; thiếu ⇒ ≤12 lần đọc 1 record/phút.
 - Hành vi đổi khi bật: p15/gate/S1-funding-45 đổi giá trị (về phía backtest) ⇒ reset cửa sổ promotion như owner đã quyết.
 - Funding refresh hourly: +3 × 887 get/giờ.
+
+## 5. Kết quả code + kiểm (2026-10-20, sau commit thiết kế 6d301418)
+
+- Code: nhánh `v1.1/collector-settle` commit `90482c38` (worktree Oracle `~/claude_master/v11_settle/wt`, không push).
+  Jar `2069db61e86e0c77afc03f87b6447b31` (bản sao `~/claude_master/v11_settle/jar/`). So với `dc839568`: chỉ đổi
+  LiveTickerWindow, LiveKlineAudit, LiveGateRollingRatio, FundingFeeManager, Simulator…StopLoss, S1RankerLive,
+  DetectEntrySignal2TradeNormal(+TickGate, +$1) và thêm LiveFeaturePipeline, TieSafeRank, S1FeatDump.
+- `mvn -o package`: 343 test, 0 fail, 1 skip (có sẵn). Test mới: LiveFeaturePipelineTest 4, LiveTickerWindowSettleTest 5,
+  TieSafeRankTest 4, V11SmallTest 4.
+- Kiểm offline (harness `V11FeatHarness` mode NEW2 = gọi CHÍNH LiveFeaturePipeline + LiveTickerWindow(in-place, await)
+  của jar mới, dữ liệu settle 242):
+
+| cửa sổ | NEW2 vs replayToCsv: ALL33 ≤1e-6 | p15 ≤1e-6 | basket | LIVE-emul vs live dump ALL33 / p15 | BT vs live dump p15 ≤1e-3 |
+|---|---|---|---|---|---|
+| 10-16 20:00 → 10-17 07:59 (720', restart 20:00:05) | 100 % | 100 % | 100 % | 92,2 % / 95,7 % | 39,4 % |
+| 10-17 08:00 → 14:50 (411', restart 08:00:32) | 100 % | 100 % | 100 % | 94,2 % / 99,5 % | 24,6 % |
+
+- Chưa kiểm: 45 feature funding/net015 so backtest; md_inline.py (Python) vẫn lệch Java (momentum15M 6,5 % / 26 %).
+- Không bật cờ nào ⇒ hành vi giao dịch như cũ; khác duy nhất: dòng `[GATE-RATIO]` có thêm `q_t9`, và S1 dump TỰ BẬT khi
+  `LIVE_FEAT_DUMP>0` (đặt `LIVE_S1_DUMP=0` để tắt).
+- Cờ đề xuất khi deploy v1.1: `LIVE_FEAT_INPUT=snapshot`, `LIVE_RANK_TIEBREAK=symbol`, `LIVE_FUNDING_REFRESH_HOURLY=1`;
+  `LIVE_MD_SOURCE` để mặc định (legacy) chờ MASTER quyết; backtest đối chiếu chạy với `SIM_RANK_TIEBREAK_SYMBOL=1`.
