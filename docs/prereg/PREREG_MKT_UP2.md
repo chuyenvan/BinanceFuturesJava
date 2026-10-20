@@ -29,3 +29,16 @@ Logistic L2 C=1 + StandardScaler (chính), LightGBM depth3/200/0,05 (mô tả). 
 V1 không look-ahead (cắt dữ liệu sau t), V2 y3 đúng cửa sổ (kiểm 10 ngày từ kline), V3 purge, V4 giỏ B1/B2 đúng (in 3 ngày), V5 loại sạch 2026.
 
 ## Ước lượng trước (MASTER): P(≥1 label qua) ~15 %. Rủi ro: giỏ thanh khoản tương quan rất cao với ALT_EW (sẽ đo, mô tả); REX S2a (regime long top-20) đã NO-GO; B2 turnover cao.
+
+
+---
+
+## ADDENDUM 1 (2026-10-20, viết TRƯỚC khi tính bất cứ số nào) — kiểm "trùng gate cũ" + dùng alpha selector đúng cách
+
+Owner: 2 ý tưởng có thể trùng gate cũ. Gate cũ = sự kiện phút, "losers bật trong 15'" (mean-reversion sau sập). Một model 72h với feature mom/khoảng cách đáy có thể chỉ học lại "quá bán ⇒ bật" ở khung chậm hơn ⇒ không phải nguồn lãi mới.
+
+- **E4 (trùng lặp, cho L1/L2/L3 có E3 hoặc E5 đạt):** chuỗi PnL ngày của lớp mới vs chuỗi PnL ngày crash-buy (Σ PnL cụm theo ngày UTC đóng cụm, TB 8 seed, `ec_a_clusters.parquet`) trên DEV-OOS:
+  (a) corr ngày; (b) % PnL lớp mới đến từ lô mở trong 0–3 ngày sau "ngày đợt" (ngày có ≥ 6 cụm crash-buy mở); (c) feature có hệ số |z| lớn nhất (LR, chuẩn hoá) — có phải mom1/mom7/khoảng cách min30 (dấu hiệu quá bán) không.
+  **Luật:** nếu corr > 0,5 HOẶC (b) > 50 % ⇒ coi là TRÙNG gate cũ ⇒ KHÔNG qua tầng A dù E3/E5 đạt. (c) chỉ mô tả.
+- **E5 (alpha selector dùng đúng: market-neutral, chỉ L3):** khi P_L3 > 0,55 mở lô 3 ngày: long B2 (S1TOP10) − short B1 (LIQ30) cùng notional; phí 0,20 % khứ hồi mỗi chân (0,40 %/lô); funding bỏ qua (ghi giới hạn). Đạt nếu Sharpe DEV-OOS > 0,5 VÀ > "luôn mở lô" long B2 − short B1 cùng phí VÀ VAL 2025 Sharpe > 0. So sánh mô tả với S1b REX (VAL −0,02).
+- Sửa luật tổng: label qua tầng A nếu E1 VÀ (E2 hoặc E3 hoặc E5) VÀ E4 không "TRÙNG" VÀ AUC VAL ≥ 0,53.
