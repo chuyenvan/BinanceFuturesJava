@@ -1,0 +1,502 @@
+{
+ "prereg": "PREREG_UP_TRIG.md ADDENDUM 1 @0205d8f3",
+ "run_s": 406.45246267318726,
+ "market_bin": {
+  "file": "/home/ubuntu/marketdump/market.bin",
+  "last_ts": "2026-08-13 08:12:00",
+  "n_2026": 312322,
+  "n_missing_2026_to_last": 10731,
+  "n_missing_lookback_2025_09_12": 5054
+ },
+ "series": {
+  "rc_from": "2026-08-13 08:13:00",
+  "n_rc_used": 70067,
+  "n_missing_after": 0
+ },
+ "overlap": {
+  "official_2026_07_01__08_12": {
+   "n_min": 59387,
+   "n_mb_only": 0,
+   "n_rc_only": 2533,
+   "up_abs_med": 1.9176164641976357e-05,
+   "up_abs_p99": 0.00015527174400631338,
+   "up_abs_max": 0.0029093362390995026,
+   "up_corr": 0.9972612367125405,
+   "up_exact_frac": 0.0005893545725495479,
+   "down_abs_med": 1.9038794562220573e-05,
+   "down_abs_p99": 0.00014766889216843992,
+   "down_abs_max": 0.0017485301941633224,
+   "down_corr": 0.9978565890643983,
+   "bigdown_mb": 0,
+   "bigdown_rc": 0
+  },
+  "extra_2026_01_01__08_12": {
+   "n_min": 311850,
+   "n_mb_only": 0,
+   "n_rc_only": 10710,
+   "up_abs_med": 2.3403321392834187e-05,
+   "up_abs_p99": 0.00024961517192423344,
+   "up_abs_max": 0.0029093362390995026,
+   "up_corr": 0.9972249369029493,
+   "up_exact_frac": 0.05149270482603816,
+   "down_abs_med": 2.2936321329325438e-05,
+   "down_abs_p99": 0.00024558239965699613,
+   "down_abs_max": 0.009500120766460896,
+   "down_corr": 0.9973642916846689,
+   "bigdown_mb": 9,
+   "bigdown_rc": 9
+  },
+  "flag_switch_xr_ge_0.99": {
+   "n_samples": 4128,
+   "n_flag_mb": 52,
+   "n_flag_rc": 54,
+   "n_switch": 6,
+   "frac_switch": 0.0014534883720930232,
+   "xr_abs_diff_med": 0.007837280583565628,
+   "xr_abs_diff_max": 0.30709172603692453
+  }
+ },
+ "kline": {
+  "months": {
+   "2025-12": {
+    "file": "/home/ubuntu/vz_e1/raw/kline1m-2025-12.parquet",
+    "downloaded": false,
+    "cols": [
+     "ts",
+     "sym",
+     "open",
+     "high",
+     "low",
+     "close",
+     "volume",
+     "quote_volume",
+     "n_trades",
+     "taker_buy_base",
+     "taker_buy_quote",
+     "active"
+    ],
+    "rows": 26951035,
+    "inactive": 3417496,
+    "ts_min": "2025-12-01 00:00:00",
+    "ts_max": "2025-12-31 23:59:00",
+    "nsym": 611,
+    "size": 568129844
+   },
+   "2026-01": {
+    "file": "/home/ubuntu/claude_master/up_trig/kl/kline1m-2026-01.parquet",
+    "downloaded": true,
+    "cols": [
+     "ts",
+     "sym",
+     "open",
+     "high",
+     "low",
+     "close",
+     "volume",
+     "quote_volume",
+     "n_trades",
+     "taker_buy_base",
+     "taker_buy_quote",
+     "active"
+    ],
+    "rows": 27522946,
+    "inactive": 3484072,
+    "ts_min": "2026-01-01 00:00:00",
+    "ts_max": "2026-01-31 23:59:00",
+    "nsym": 629,
+    "size": 588828660
+   },
+   "2026-02": {
+    "file": "/home/ubuntu/claude_master/up_trig/kl/kline1m-2026-02.parquet",
+    "downloaded": true,
+    "cols": [
+     "ts",
+     "sym",
+     "open",
+     "high",
+     "low",
+     "close",
+     "volume",
+     "quote_volume",
+     "n_trades",
+     "taker_buy_base",
+     "taker_buy_quote",
+     "active"
+    ],
+    "rows": 25674717,
+    "inactive": 3656673,
+    "ts_min": "2026-02-01 00:00:00",
+    "ts_max": "2026-02-28 23:59:00",
+    "nsym": 641,
+    "size": 535840380
+   },
+   "2026-03": {
+    "file": "/home/ubuntu/claude_master/up_trig/kl/kline1m-2026-03.parquet",
+    "downloaded": true,
+    "cols": [
+     "ts",
+     "sym",
+     "open",
+     "high",
+     "low",
+     "close",
+     "volume",
+     "quote_volume",
+     "n_trades",
+     "taker_buy_base",
+     "taker_buy_quote",
+     "active"
+    ],
+    "rows": 28898534,
+    "inactive": 4408974,
+    "ts_min": "2026-03-01 00:00:00",
+    "ts_max": "2026-03-31 23:59:00",
+    "nsym": 656,
+    "size": 592249140
+   },
+   "2026-04": {
+    "file": "/home/ubuntu/claude_master/up_trig/kl/kline1m-2026-04.parquet",
+    "downloaded": true,
+    "cols": [
+     "ts",
+     "sym",
+     "open",
+     "high",
+     "low",
+     "close",
+     "volume",
+     "quote_volume",
+     "n_trades",
+     "taker_buy_base",
+     "taker_buy_quote",
+     "active"
+    ],
+    "rows": 28776381,
+    "inactive": 4841063,
+    "ts_min": "2026-04-01 00:00:00",
+    "ts_max": "2026-04-30 23:59:00",
+    "nsym": 672,
+    "size": 588867815
+   },
+   "2026-05": {
+    "file": "/home/ubuntu/claude_master/up_trig/kl/kline1m-2026-05.parquet",
+    "downloaded": true,
+    "cols": [
+     "ts",
+     "sym",
+     "open",
+     "high",
+     "low",
+     "close",
+     "volume",
+     "quote_volume",
+     "n_trades",
+     "taker_buy_base",
+     "taker_buy_quote",
+     "active"
+    ],
+    "rows": 30628485,
+    "inactive": 5531556,
+    "ts_min": "2026-05-01 00:00:00",
+    "ts_max": "2026-05-31 23:59:00",
+    "nsym": 704,
+    "size": 619668594
+   },
+   "2026-06": {
+    "file": "/home/ubuntu/claude_master/up_trig/kl/kline1m-2026-06.parquet",
+    "downloaded": true,
+    "cols": [
+     "ts",
+     "sym",
+     "open",
+     "high",
+     "low",
+     "close",
+     "volume",
+     "quote_volume",
+     "n_trades",
+     "taker_buy_base",
+     "taker_buy_quote",
+     "active"
+    ],
+    "rows": 32045826,
+    "inactive": 6216716,
+    "ts_min": "2026-06-01 00:00:00",
+    "ts_max": "2026-06-30 23:59:00",
+    "nsym": 761,
+    "size": 645958033
+   },
+   "2026-07": {
+    "file": "/home/ubuntu/claude_master/up_trig/kl/kline1m-2026-07.parquet",
+    "downloaded": true,
+    "cols": [
+     "ts",
+     "sym",
+     "open",
+     "high",
+     "low",
+     "close",
+     "volume",
+     "quote_volume",
+     "n_trades",
+     "taker_buy_base",
+     "taker_buy_quote",
+     "active"
+    ],
+    "rows": 34946190,
+    "inactive": 7690109,
+    "ts_min": "2026-07-01 00:00:00",
+    "ts_max": "2026-07-31 23:59:00",
+    "nsym": 801,
+    "size": 660325293
+   },
+   "2026-08": {
+    "file": "/home/ubuntu/claude_master/up_trig/kl/kline1m-2026-08.parquet",
+    "downloaded": true,
+    "cols": [
+     "ts",
+     "sym",
+     "open",
+     "high",
+     "low",
+     "close",
+     "volume",
+     "quote_volume",
+     "n_trades",
+     "taker_buy_base",
+     "taker_buy_quote",
+     "active"
+    ],
+    "rows": 36394585,
+    "inactive": 8406499,
+    "ts_min": "2026-08-01 00:00:00",
+    "ts_max": "2026-08-31 23:59:00",
+    "nsym": 833,
+    "size": 688759476
+   },
+   "2026-09": {
+    "file": "/home/ubuntu/claude_master/up_trig/kl/kline1m-2026-09.parquet",
+    "downloaded": true,
+    "cols": [
+     "ts",
+     "sym",
+     "open",
+     "high",
+     "low",
+     "close",
+     "volume",
+     "quote_volume",
+     "n_trades",
+     "taker_buy_base",
+     "taker_buy_quote",
+     "active"
+    ],
+    "rows": 36738087,
+    "inactive": 8690024,
+    "ts_min": "2026-09-01 00:00:00",
+    "ts_max": "2026-09-30 23:59:00",
+    "nsym": 869,
+    "size": 708158290
+   }
+  },
+  "rows": 308576786,
+  "rows_inactive": 56343182
+ },
+ "V2": {
+  "n_check": 300,
+  "n_mismatch": 0,
+  "n_nan_xr": 717,
+  "window_n_min": 124273,
+  "ok": true
+ },
+ "V3": {
+  "n": 50,
+  "ok": true
+ },
+ "post": {
+  "printDone": "ho4-k24-b-s42",
+  "n_cb_legs_total": 280,
+  "n_cb_legs_ge_2025_12_31": 32,
+  "cb_start_range": [
+   "2021-09-07 14:47:00",
+   "2026-09-09 22:08:00"
+  ],
+  "pd_start_max": "2026-09-23 14:13:00",
+  "n_bigdown_minutes_2026": 15,
+  "frac_post": 0.033471200980392156,
+  "frac_post_bd": 0.033432904411764705,
+  "frac_post_cb": 0.033471200980392156,
+  "frac_cb_only": 3.829656862745098e-05,
+  "frac_bd_only": 0.0
+ },
+ "missing": {
+  "frac_coin_missing": 0.013545815461601274,
+  "n_sample_nan": 0,
+  "n_btc_nan": 0,
+  "frac_lt24": 0.0
+ },
+ "rule": {
+  "rule": "RISE24|24h|0.99|em|dedup24h",
+  "stats": {
+   "n": 133,
+   "n_day": 133,
+   "gross": 0.0010334345656437909,
+   "net": 3.343456564379086e-05,
+   "median_net": -0.0021424844463666277,
+   "win_net": 0.49624060150375937,
+   "t_cl": 0.008836624225312905,
+   "t_cl_gross": 0.2731326919373203
+  },
+  "excess_vs_btc": {
+   "n": 133,
+   "mean": -0.00048751821838537396,
+   "median": -0.0017731015880902608,
+   "t_cl": -0.14953734421773707,
+   "btc_gross_mean": 0.0015209527840291646
+  },
+  "c_n_ge20": true,
+  "c_net_pos": true,
+  "c_t_ge1_65": false,
+  "c_excess_pos": false,
+  "verdict": "INCONCLUSIVE -> DONG UP_TRIG"
+ },
+ "desc": {
+  "by_month": {
+   "2026-01": {
+    "n": 8,
+    "net": -0.012861998898287617,
+    "ex_btc": -0.008826148075362047
+   },
+   "2026-02": {
+    "n": 13,
+    "net": 0.004328855372597602,
+    "ex_btc": 0.007326541722026218
+   },
+   "2026-03": {
+    "n": 12,
+    "net": -0.004566262019789161,
+    "ex_btc": -0.00896376559447839
+   },
+   "2026-04": {
+    "n": 10,
+    "net": 0.015995814939339957,
+    "ex_btc": 0.0032896613081296296
+   },
+   "2026-05": {
+    "n": 12,
+    "net": 0.0028149911586357206,
+    "ex_btc": 0.0039987324102633255
+   },
+   "2026-06": {
+    "n": 21,
+    "net": 0.0022542931350818455,
+    "ex_btc": 0.008877088785019069
+   },
+   "2026-07": {
+    "n": 20,
+    "net": -0.007542794837153792,
+    "ex_btc": -0.008788560761607524
+   },
+   "2026-08": {
+    "n": 19,
+    "net": -0.0038384691555047846,
+    "ex_btc": -0.005104920087656177
+   },
+   "2026-09": {
+    "n": 18,
+    "net": 0.004920634687474768,
+    "ex_btc": 0.001308546484044593
+   }
+  },
+  "ex_top5": -0.004853655117971524,
+  "top5": [
+   0.09281141265233357,
+   0.11183519864082336,
+   0.12111047609647115,
+   0.14685816272099814,
+   0.15309940222035284
+  ],
+  "bottom5": [
+   -0.12521597043673197,
+   -0.10271253482500713,
+   -0.07642401055494945,
+   -0.07588930743673573,
+   -0.06897390182813008
+  ],
+  "trim1": -0.00017890560727478323,
+  "xr_quantiles": {
+   "0.1": 0.1374860632104429,
+   "0.5": 0.5934801244602489,
+   "0.9": 0.9279245390065091,
+   "0.99": 0.9937711932948716
+  },
+  "frac_xr_ge_0_99": 0.015318627450980392,
+  "frac_xr_ge_0_99_em": 0.013748468137254902,
+  "n_samples": 26112,
+  "n_samples_ge_q": 400,
+  "n_samples_ge_q_em": 359,
+  "n_samples_ge_q_post": 41,
+  "samples_ge_q_by_month": {
+   "2026-01": 26,
+   "2026-02": 40,
+   "2026-03": 24,
+   "2026-04": 24,
+   "2026-05": 24,
+   "2026-06": 108,
+   "2026-07": 39,
+   "2026-08": 40,
+   "2026-09": 75
+  },
+  "post_ge_0_99_samples": {
+   "n": 41,
+   "n_day": 13,
+   "gross": 0.003515264218429715,
+   "net": 0.002515264218429715,
+   "median_net": -0.011601346691449483,
+   "win_net": 0.43902439024390244,
+   "t_cl": 0.11939145302810383,
+   "t_cl_gross": 0.16685821701786877
+  },
+  "post_ge_0_99_dedup24h": {
+   "n": 9,
+   "n_day": 9,
+   "gross": 0.005385841632394845,
+   "net": 0.004385841632394845,
+   "median_net": -0.02338663782676061,
+   "win_net": 0.4444444444444444,
+   "t_cl": 0.18150293073188647,
+   "t_cl_gross": 0.2228867621477916
+  },
+  "post_ge_0_99_dedup24h_ex_btc": 0.0001683622974576436,
+  "em_ge_0_99_samples_nodedup": {
+   "n": 359,
+   "n_day": 153,
+   "gross": -0.001807270636328478,
+   "net": -0.002807270636328478,
+   "median_net": -0.001679271916548411,
+   "win_net": 0.49025069637883006,
+   "t_cl": -0.8877596817287573,
+   "t_cl_gross": -0.5715238082649062
+  },
+  "base_all_samples_RISE24": {
+   "n": 26112,
+   "n_day": 272,
+   "gross": -0.0006176385514378425,
+   "net": -0.0016176385514378427,
+   "median_net": -0.003503326783577601,
+   "win_net": 0.4582950367647059,
+   "t_cl": -1.094734233624045,
+   "t_cl_gross": -0.41798587556161665
+  },
+  "base_all_samples_BTC_gross_mean": 7.803761172017046e-05
+ },
+ "conventions": {
+  "time": "UTC",
+  "key": "nen open-time t; vao close nen t+1', ra close nen t+1'+24h",
+  "fee": 0.001,
+  "sample": "moi 15' tu 2026-01-01, bo mau co nen ra > 2026-09-30 23:59",
+  "rc_formula": "ut_v1.py (moi dong ke ca inactive, bo died, loc BTC/-0.15, bo >0.3, TreeMap unique, top100 cap 4/5, float32)",
+  "t_cl": "cum theo ngay UTC, CR1",
+  "excess": "RISE24 gross - BTC gross cung su kien"
+ }
+}
