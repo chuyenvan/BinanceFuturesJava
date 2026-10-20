@@ -1,0 +1,598 @@
+{
+ "prereg": "PREREG_UP_TRIG2.md@90be57a5",
+ "run_s": 467.6174998283386,
+ "V1_print3": {
+  "V1_RISE5": [
+   {
+    "t": "2021-08-12 05:15:00",
+    "xr": "0.9911472835011066",
+    "K": "nan",
+    "nsel": "5",
+    "nval": "5",
+    "gross": "-0.03139530494809151",
+    "btc": "-0.005454003810882568",
+    "s1day": "2021-08-11",
+    "coins": "IOTXUSDT,CTKUSDT,RLCUSDT,HOTUSDT,DENTUSDT"
+   },
+   {
+    "t": "2021-08-17 13:00:00",
+    "xr": "0.9925284347784705",
+    "K": "nan",
+    "nsel": "5",
+    "nval": "5",
+    "gross": "-0.13482177257537842",
+    "btc": "-0.03442120552062988",
+    "s1day": "2021-08-16",
+    "coins": "GRTUSDT,HNTUSDT,SNXUSDT,UNFIUSDT,DENTUSDT"
+   },
+   {
+    "t": "2021-08-21 11:15:00",
+    "xr": "0.9923149521369826",
+    "K": "nan",
+    "nsel": "5",
+    "nval": "5",
+    "gross": "0.056864190846681595",
+    "btc": "0.012143731117248535",
+    "s1day": "2021-08-20",
+    "coins": "AVAXUSDT,REEFUSDT,FTMUSDT,NKNUSDT,DODOUSDT"
+   }
+  ],
+  "V2_RISE10": [
+   {
+    "t": "2021-08-12 05:15:00",
+    "xr": "0.9911472835011066",
+    "K": "nan",
+    "nsel": "10",
+    "nval": "10",
+    "gross": "0.010610824450850487",
+    "btc": "-0.005454003810882568",
+    "s1day": "2021-08-11",
+    "coins": "IOTXUSDT,CTKUSDT,RLCUSDT,HOTUSDT,DENTUSDT,OGNUSDT,NKNUSDT,BAKEUSDT,KEEPUSDT,XLMUSDT"
+   },
+   {
+    "t": "2021-08-17 13:00:00",
+    "xr": "0.9925284347784705",
+    "K": "nan",
+    "nsel": "10",
+    "nval": "10",
+    "gross": "-0.10713404417037964",
+    "btc": "-0.03442120552062988",
+    "s1day": "2021-08-16",
+    "coins": "GRTUSDT,HNTUSDT,SNXUSDT,UNFIUSDT,DENTUSDT,ATOMUSDT,TRBUSDT,CTKUSDT,SKLUSDT,RENUSDT"
+   },
+   {
+    "t": "2021-08-21 11:15:00",
+    "xr": "0.9923149521369826",
+    "K": "nan",
+    "nsel": "10",
+    "nval": "10",
+    "gross": "0.03793562576174736",
+    "btc": "0.012143731117248535",
+    "s1day": "2021-08-20",
+    "coins": "AVAXUSDT,REEFUSDT,FTMUSDT,NKNUSDT,DODOUSDT,TLMUSDT,LRCUSDT,DOTUSDT,DENTUSDT,ALGOUSDT"
+   }
+  ],
+  "V3_S1REX10": [
+   {
+    "t": "2022-01-05 00:00:00",
+    "xr": "0.9931576983830895",
+    "K": "nan",
+    "nsel": "10",
+    "nval": "10",
+    "gross": "-0.0582856647670269",
+    "btc": "-0.05453670024871826",
+    "s1day": "2022-01-04",
+    "coins": "SKLUSDT,ARPAUSDT,ETCUSDT,OMGUSDT,HOTUSDT,AUDIOUSDT,DASHUSDT,BANDUSDT,ONTUSDT,SOLUSDT"
+   },
+   {
+    "t": "2022-01-06 04:00:00",
+    "xr": "0.9966265289761317",
+    "K": "nan",
+    "nsel": "10",
+    "nval": "10",
+    "gross": "-0.02986118756234646",
+    "btc": "-0.02541327476501465",
+    "s1day": "2022-01-05",
+    "coins": "OMGUSDT,IOSTUSDT,YFIIUSDT,DASHUSDT,ETCUSDT,SOLUSDT,ALPHAUSDT,RAYUSDT,TOMOUSDT,HOTUSDT"
+   },
+   {
+    "t": "2022-01-07 04:45:00",
+    "xr": "0.9976106749644776",
+    "K": "nan",
+    "nsel": "10",
+    "nval": "10",
+    "gross": "0.020762383937835693",
+    "btc": "0.009072422981262207",
+    "s1day": "2022-01-06",
+    "coins": "HOTUSDT,ETCUSDT,DYDXUSDT,EOSUSDT,BELUSDT,SKLUSDT,LTCUSDT,NKNUSDT,RAYUSDT,REEFUSDT"
+   }
+  ],
+  "V4_S1REX24": [
+   {
+    "t": "2022-01-05 00:00:00",
+    "xr": "0.9931576983830895",
+    "K": "nan",
+    "nsel": "24",
+    "nval": "24",
+    "gross": "-0.07017830014228821",
+    "btc": "-0.05453670024871826",
+    "s1day": "2022-01-04",
+    "coins": "SKLUSDT,ARPAUSDT,ETCUSDT,OMGUSDT,HOTUSDT,AUDIOUSDT,DASHUSDT,BANDUSDT,ONTUSDT,SOLUSDT,DOGEUSDT,LTCUSDT,REEFUSDT,ADAUSDT,EOSUSDT,ICXUSDT,RAYUSDT,NEOUSDT,BCHUSDT,SRMUSDT,1000SHIBUSDT,AXSUSDT,ALPHAUSDT,VETUSDT"
+   },
+   {
+    "t": "2022-01-06 04:00:00",
+    "xr": "0.9966265289761317",
+    "K": "nan",
+    "nsel": "24",
+    "nval": "24",
+    "gross": "-0.029907606542110443",
+    "btc": "-0.02541327476501465",
+    "s1day": "2022-01-05",
+    "coins": "OMGUSDT,IOSTUSDT,YFIIUSDT,DASHUSDT,ETCUSDT,SOLUSDT,ALPHAUSDT,RAYUSDT,TOMOUSDT,HOTUSDT,EOSUSDT,AUDIOUSDT,LTCUSDT,REEFUSDT,QTUMUSDT,ICXUSDT,ONTUSDT,THETAUSDT,IOTAUSDT,BCHUSDT,BELUSDT,BNBUSDT,LITUSDT,CTKUSDT"
+   },
+   {
+    "t": "2022-01-07 04:45:00",
+    "xr": "0.9976106749644776",
+    "K": "nan",
+    "nsel": "24",
+    "nval": "24",
+    "gross": "0.022945934906601906",
+    "btc": "0.009072422981262207",
+    "s1day": "2022-01-06",
+    "coins": "HOTUSDT,ETCUSDT,DYDXUSDT,EOSUSDT,BELUSDT,SKLUSDT,LTCUSDT,NKNUSDT,RAYUSDT,REEFUSDT,IOTXUSDT,ONTUSDT,MKRUSDT,SOLUSDT,TOMOUSDT,OMGUSDT,BCHUSDT,1000SHIBUSDT,BNBUSDT,ZILUSDT,BATUSDT,QTUMUSDT,AUDIOUSDT,1INCHUSDT"
+   }
+  ],
+  "V5_RISE_SCALED": [
+   {
+    "t": "2021-08-01 00:00:00",
+    "xr": "0.9704993695429781",
+    "K": "5.0",
+    "nsel": "5",
+    "nval": "5",
+    "gross": "-0.04849585145711899",
+    "btc": "-0.031748950481414795",
+    "s1day": "2021-07-31",
+    "coins": "SCUSDT,BATUSDT,STMXUSDT,GTCUSDT,IOTAUSDT"
+   },
+   {
+    "t": "2021-08-03 00:00:00",
+    "xr": "0.95625",
+    "K": "5.0",
+    "nsel": "5",
+    "nval": "5",
+    "gross": "-0.019842494279146194",
+    "btc": "-0.020540833473205566",
+    "s1day": "2021-08-02",
+    "coins": "KAVAUSDT,ICXUSDT,KNCUSDT,SRMUSDT,GRTUSDT"
+   },
+   {
+    "t": "2021-08-05 01:30:00",
+    "xr": "0.9611147681399647",
+    "K": "5.0",
+    "nsel": "5",
+    "nval": "5",
+    "gross": "0.02728905715048313",
+    "btc": "0.022243499755859375",
+    "s1day": "2021-08-04",
+    "coins": "STMXUSDT,BTTUSDT,LINAUSDT,TRXUSDT,OGNUSDT"
+   }
+  ]
+ },
+ "V2": {
+  "n": 1320,
+  "all_s1day_eq_tday_minus1": true
+ },
+ "V3": {
+  "n_E99": 856,
+  "n_orig": 856,
+  "same_set": true
+ },
+ "V4": {
+  "selection_uses": "TAB[*]['D'] only",
+  "C_used_only_for": "bien the da chon",
+  "y2026": "chi mo ta"
+ },
+ "check_rise24": {
+  "n": 856,
+  "max_abs_diff_RISE24_vs_orig": 8.977701266606186e-05
+ },
+ "s1": {
+  "file": "/home/ubuntu/claude_master/rex/pred_s1.parquet",
+  "day_min": "2022-01-01 00:00:00",
+  "day_max": "2025-12-31 00:00:00",
+  "n_sym": 460,
+  "direction": "lon = tot (s1_diag.log: decile 9 y cao nhat, decile 0 thap nhat; portfolio REX lay top score)",
+  "timing": "score ngay d dung de giu close d -> close d+1 trong REX (rex_s1.py portfolio) => biet tai cuoi ngay d; dung ngay (t UTC)-1"
+ },
+ "n_E99": 856,
+ "n_E95": 1499,
+ "table": {
+  "V1_RISE5": {
+   "D": {
+    "n": 382,
+    "net": 0.004361175922072322,
+    "median_net": 0.001749633858911693,
+    "win": 0.5078534031413613,
+    "t_cl": 1.0935146224206636,
+    "ex_top5": 0.0008891490845192822,
+    "ex_btc_gross": 0.004117897564295973,
+    "frac_coin_missing": 0.0020942408376963817,
+    "n_empty": 0,
+    "by_year": {
+     "2021": {
+      "n": 63,
+      "net": 0.008912411892964017
+     },
+     "2022": {
+      "n": 135,
+      "net": 0.0022817938140834923
+     },
+     "2023": {
+      "n": 184,
+      "net": 0.004328505913443601
+     }
+    }
+   },
+   "C": {
+    "n": 341,
+    "net": 0.010764165079106762,
+    "median_net": -0.00038836100045591595,
+    "win": 0.49853372434017595,
+    "t_cl": 1.8181449099827531,
+    "ex_top5": 0.0031061728589262365,
+    "ex_btc_gross": 0.008503227999450604,
+    "frac_coin_missing": 0.0017595307917888103,
+    "n_empty": 0,
+    "by_year": {
+     "2024": {
+      "n": 170,
+      "net": 0.013249870730718077
+     },
+     "2025": {
+      "n": 171,
+      "net": 0.008292995717855748
+     }
+    }
+   },
+   "2026": {
+    "n": 133,
+    "net": -0.002800959803780219,
+    "median_net": -0.014045203872025014,
+    "win": 0.45112781954887216,
+    "t_cl": -0.40178763748907087,
+    "ex_top5": -0.01134895025077276,
+    "ex_btc_gross": -0.0033219125878093834,
+    "frac_coin_missing": 0.016541353383458635,
+    "n_empty": 0,
+    "by_year": {
+     "2026": {
+      "n": 133,
+      "net": -0.002800959803780219
+     }
+    }
+   }
+  },
+  "V2_RISE10": {
+   "D": {
+    "n": 382,
+    "net": 0.004468845239540496,
+    "median_net": 0.004388504127040505,
+    "win": 0.5445026178010471,
+    "t_cl": 1.3126854265386576,
+    "ex_top5": 0.0012730957656006039,
+    "ex_btc_gross": 0.004161059708632648,
+    "frac_coin_missing": 0.003926701570680646,
+    "n_empty": 0,
+    "by_year": {
+     "2021": {
+      "n": 63,
+      "net": 0.008445123928820804
+     },
+     "2022": {
+      "n": 135,
+      "net": 0.0005889323256959432
+     },
+     "2023": {
+      "n": 184,
+      "net": 0.005954077228368513
+     }
+    }
+   },
+   "C": {
+    "n": 341,
+    "net": 0.010807967505611589,
+    "median_net": 0.0029244829677045345,
+    "win": 0.5190615835777126,
+    "t_cl": 2.4824413865136585,
+    "ex_top5": 0.006173714597781453,
+    "ex_btc_gross": 0.008547030425955431,
+    "frac_coin_missing": 0.001173020527859281,
+    "n_empty": 0,
+    "by_year": {
+     "2024": {
+      "n": 170,
+      "net": 0.011156450748700402
+     },
+     "2025": {
+      "n": 171,
+      "net": 0.010461522176225053
+     }
+    }
+   },
+   "2026": {
+    "n": 133,
+    "net": -0.0008772156838838823,
+    "median_net": -0.004114753868430853,
+    "win": 0.45864661654135336,
+    "t_cl": -0.16471755596496554,
+    "ex_top5": -0.008124205140371488,
+    "ex_btc_gross": -0.001398168467913047,
+    "frac_coin_missing": 0.015789473684210575,
+    "n_empty": 0,
+    "by_year": {
+     "2026": {
+      "n": 133,
+      "net": -0.0008772156838838823
+     }
+    }
+   }
+  },
+  "V3_S1REX10": {
+   "D": {
+    "n": 319,
+    "net": 0.0020169657867792415,
+    "median_net": 0.0006986489063128829,
+    "win": 0.5109717868338558,
+    "t_cl": 0.8103724002603323,
+    "ex_top5": -0.0003155108283013519,
+    "ex_btc_gross": 0.0012873487694721334,
+    "frac_coin_missing": 0.0028213166144200885,
+    "n_empty": 0,
+    "by_year": {
+     "2022": {
+      "n": 135,
+      "net": -0.0008198959185780647
+     },
+     "2023": {
+      "n": 184,
+      "net": 0.004098358885818569
+     }
+    }
+   },
+   "C": {
+    "n": 341,
+    "net": 0.0028556626312027733,
+    "median_net": 0.00205408239364624,
+    "win": 0.5249266862170088,
+    "t_cl": 1.152583739178067,
+    "ex_top5": 0.0009320536249281187,
+    "ex_btc_gross": 0.0005947255515466141,
+    "frac_coin_missing": 0.0002932551319647647,
+    "n_empty": 0,
+    "by_year": {
+     "2024": {
+      "n": 170,
+      "net": 0.006023192616179586
+     },
+     "2025": {
+      "n": 171,
+      "net": -0.000293343786610432
+     }
+    }
+   },
+   "2026": {
+    "n": 0,
+    "ex_btc_gross": null,
+    "frac_coin_missing": 1.0,
+    "n_empty": 133,
+    "by_year": {}
+   }
+  },
+  "V4_S1REX24": {
+   "D": {
+    "n": 319,
+    "net": 0.001803186833461437,
+    "median_net": 0.0018805434703826904,
+    "win": 0.5141065830721003,
+    "t_cl": 0.704142929485137,
+    "ex_top5": -0.0005229865815846405,
+    "ex_btc_gross": 0.0010249920909837732,
+    "frac_coin_missing": 0.0026123301985371272,
+    "n_empty": 0,
+    "by_year": {
+     "2022": {
+      "n": 135,
+      "net": -0.0013752104506862385
+     },
+     "2023": {
+      "n": 184,
+      "net": 0.00413516310172196
+     }
+    }
+   },
+   "C": {
+    "n": 341,
+    "net": 0.0028287363292572487,
+    "median_net": 0.0029513111114501953,
+    "win": 0.5395894428152492,
+    "t_cl": 1.0964923628550085,
+    "ex_top5": 0.0009033669695296504,
+    "ex_btc_gross": 0.0005677992496010898,
+    "frac_coin_missing": 0.00012218963831867047,
+    "n_empty": 0,
+    "by_year": {
+     "2024": {
+      "n": 170,
+      "net": 0.005884726589348301
+     },
+     "2025": {
+      "n": 171,
+      "net": -0.00020938264276309496
+     }
+    }
+   },
+   "2026": {
+    "n": 0,
+    "ex_btc_gross": null,
+    "frac_coin_missing": 1.0,
+    "n_empty": 133,
+    "by_year": {}
+   }
+  },
+  "V5_RISE_SCALED": {
+   "D": {
+    "n": 706,
+    "net": 0.0005139129603371154,
+    "median_net": -0.00020180239132605495,
+    "win": 0.4971671388101983,
+    "t_cl": 0.2415278193360831,
+    "ex_top5": -0.0008889858145357287,
+    "ex_btc_gross": 0.0012240649674790383,
+    "frac_coin_missing": 0.0025080616266570654,
+    "n_empty": 0,
+    "by_year": {
+     "2021": {
+      "n": 126,
+      "net": 0.003209070385152858
+     },
+     "2022": {
+      "n": 283,
+      "net": -0.004633551423906023
+     },
+     "2023": {
+      "n": 297,
+      "net": 0.004275335806175582
+     }
+    }
+   },
+   "C": {
+    "n": 576,
+    "net": -0.0032071036030158415,
+    "median_net": -0.006379302427172661,
+    "win": 0.4600694444444444,
+    "t_cl": -0.9544038911722587,
+    "ex_top5": -0.006726848930082145,
+    "ex_btc_gross": -0.0030912394776249938,
+    "frac_coin_missing": 0.0020593080724876645,
+    "n_empty": 0,
+    "by_year": {
+     "2024": {
+      "n": 289,
+      "net": -0.001124593320742546
+     },
+     "2025": {
+      "n": 287,
+      "net": -0.005304126152064561
+     }
+    }
+   },
+   "2026": {
+    "n": 217,
+    "net": -0.0024361383106123896,
+    "median_net": -0.0020149329900741577,
+    "win": 0.4700460829493088,
+    "t_cl": -0.47674745339871516,
+    "ex_top5": -0.007741889207299916,
+    "ex_btc_gross": -0.00227658605068377,
+    "frac_coin_missing": 0.017199017199017175,
+    "n_empty": 0,
+    "by_year": {
+     "2026": {
+      "n": 217,
+      "net": -0.0024361383106123896
+     }
+    }
+   }
+  }
+ },
+ "rule": {
+  "eligible_D": [
+   {
+    "var": "V2_RISE10",
+    "net": 0.004468845239540496,
+    "n": 382
+   },
+   {
+    "var": "V1_RISE5",
+    "net": 0.004361175922072322,
+    "n": 382
+   },
+   {
+    "var": "V3_S1REX10",
+    "net": 0.0020169657867792415,
+    "n": 319
+   },
+   {
+    "var": "V4_S1REX24",
+    "net": 0.001803186833461437,
+    "n": 319
+   },
+   {
+    "var": "V5_RISE_SCALED",
+    "net": 0.0005139129603371154,
+    "n": 706
+   }
+  ],
+  "selected": "V2_RISE10",
+  "D": {
+   "n": 382,
+   "net": 0.004468845239540496,
+   "median_net": 0.004388504127040505,
+   "win": 0.5445026178010471,
+   "t_cl": 1.3126854265386576,
+   "ex_top5": 0.0012730957656006039,
+   "ex_btc_gross": 0.004161059708632648,
+   "frac_coin_missing": 0.003926701570680646,
+   "n_empty": 0,
+   "by_year": {
+    "2021": {
+     "n": 63,
+     "net": 0.008445123928820804
+    },
+    "2022": {
+     "n": 135,
+     "net": 0.0005889323256959432
+    },
+    "2023": {
+     "n": 184,
+     "net": 0.005954077228368513
+    }
+   }
+  },
+  "C": {
+   "n": 341,
+   "net": 0.010807967505611589,
+   "median_net": 0.0029244829677045345,
+   "win": 0.5190615835777126,
+   "t_cl": 2.4824413865136585,
+   "ex_top5": 0.006173714597781453,
+   "ex_btc_gross": 0.008547030425955431,
+   "frac_coin_missing": 0.001173020527859281,
+   "n_empty": 0,
+   "by_year": {
+    "2024": {
+     "n": 170,
+     "net": 0.011156450748700402
+    },
+    "2025": {
+     "n": 171,
+     "net": 0.010461522176225053
+    }
+   }
+  },
+  "conds": {
+   "net_pos": true,
+   "t_gt2": true,
+   "pos_2024_2025": true,
+   "n_ge30": true,
+   "ex_btc_pos": true
+  },
+  "verdict": "DAT -> chi de xuat forward paper log"
+ },
+ "conventions": {
+  "events": "x_r/post tu ut_a_samples (2021-08..2025) va ut_ho_samples (2026); bo trung 24h rieng tung nguon",
+  "s1_basket": "top-K score ngay t-1 trong coin co gia vao (active close t+1'), tru BTC/ETH/BTCDOM/USDC; thieu gia ra -> bo coin, khong bu",
+  "rise": "nhu ut_a: r nen t, bo r>0.3, co gia (active) tai t",
+  "D_V3V4": "2022-01..2023-12"
+ }
+}
