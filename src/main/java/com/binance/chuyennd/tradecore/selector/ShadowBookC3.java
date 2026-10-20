@@ -159,6 +159,8 @@ public final class ShadowBookC3 {
         loadState();
         LOG.info("[SHADOW] so vi the giay khoi tao, ledger={} state={} open={} realized={} paperEquity={}",
                 ledgerPath, statePath, open.size(), realized, LiveProfileC3.paperEquity());
+        // [TS-MKT-EXT v1.1] co LIVE_TS_MKT_EXT (mac dinh TAT => khong lam gi). Chi so GIAY nay dung toi.
+        TsMktExt.startIfEnabled();
     }
 
     /**
@@ -396,7 +398,15 @@ public final class ShadowBookC3 {
                     c.priceSL = entry * (1f + trailRate(c.peakRate, c.symbolPred, c.symbol));
                     dirty = true;
                     LOG.info("[SHADOW] arm {} peak={} SL={}", c.symbol, c.peakRate, c.priceSL);
+                    TsMktExt.onArmed(c.symbol, c.tsFirstLeg, now);   // [TS-MKT-EXT] chi log; TAT => no-op
                 } else if (now - c.tsFirstLeg > LiveProfileC3.TIME_STOP_HOURS * 3600_000L) {
+                    // [TS-MKT-EXT v1.1] X14 (sim SimulatorMarketLevelTicker1MStopLoss:1044-1050): ngay UTC co co
+                    //   "ca thi truong alt dang sap" va tuoi <= 168h+336h => HOAN cat o nhip nay (xet lai nhip sau).
+                    //   CHI SO GIAY nay (vi the THAT/LEGACY khong di qua day; symbol LEGACY => khong hoan).
+                    //   Co LIVE_TS_MKT_EXT TAT => false ngay => y het v11b.
+                    if (TsMktExt.deferTimeStop(c.symbol, c.tsFirstLeg, now)) {
+                        continue;
+                    }
                     // (b) TIME-STOP 168h cho cum CHUA arm — port tu sim, live khong co
                     LOG.info("[SHADOW] would-CLOSE time-stop {} entry={} px={} gio_giu={}",
                             c.symbol, entry, px, (now - c.tsFirstLeg) / 3600_000L);
@@ -442,6 +452,7 @@ public final class ShadowBookC3 {
         saveState();
         LOG.info("[SHADOW] closed {} reason={} pnl={} legs={} realized={} open={}",
                 c.symbol, reason, pnl, c.legCount, realized, open.size());
+        TsMktExt.onClosed(c.symbol, c.tsFirstLeg, reason, now);   // [TS-MKT-EXT] chi log; TAT => no-op
     }
 
     /** Dong tom tat cho log dinh ky / health. */
