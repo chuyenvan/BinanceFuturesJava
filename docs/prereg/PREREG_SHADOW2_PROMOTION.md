@@ -133,6 +133,11 @@ Cửa sổ tối thiểu 4 tuần. Các tiêu chí (iii), (iv), (v) giữ nguyê
   - **Cửa sổ đánh giá (B) cũ, bắt đầu 10-16 18:01, KẾT THÚC tại 10-20 20:33:04.**
   - Từ thời điểm này là giai đoạn kiểm parity v1.1. Thời điểm bắt đầu cửa sổ chính thức chờ owner chốt gói v1.1 (có/không TS_MKT_EXT).
   - Tự-restart 12h kế tiếp dự kiến khoảng 10-21 08:33–08:35 (ngoài 00:50–01:20 / 12:50–13:20).
+- 10-21 05:55:29 (+07, PID 26221, log `MainClass` 05:55:31.018): owner restart v_t_m với env +`export LIVE_TS_MKT_EXT=1`
+  (backup `target/…jar.bak_v11b_d7824f6d_20261021` md5 d7824f6d, `conf/env.sh.bak_v11b_20261021`). **Jar KHÔNG đổi**: vẫn d7824f6d
+  (không có `target/*v11c*` trên 242, bước scp chưa chạy) ⇒ hành vi = v11b, TS_MKT_EXT chưa chạy. LEGACY 44, sổ giấy open=4 realized 88,09
+  (10-20 22:21 time-stop SUSDT −24,09), 0 ERROR. Restart có chủ đích, ghi sổ; **KHÔNG mở cửa sổ chính thức** (gói v1.1 chưa deploy).
+  Tự-restart kế ~10-21 17:56; lần sau ~10-22 05:57 sẽ rơi khung ±3' nếu không deploy lại. Chi tiết `docs/result/V11C_DEPLOY_1021.md`.
 
 ---
 
@@ -161,5 +166,8 @@ TS_MKT_EXT chỉ tác động sổ GIẤY c3_shadow (không vị thế THẬT/LE
 - Kỳ vọng thường gặp: 0 ngày cờ trong cửa sổ ⇒ (vi-b/c) = "chưa quan sát", **không chặn** (i')–(v); ghi rõ cơ chế chưa được kiểm forward.
 
 **D. Cửa sổ chính thức.** Cửa sổ đánh giá (B) của gói v1.1 bắt đầu **tại giờ restart deploy gói này trên 242**:
-`____-__-__ __:__:__ (+07)` (điền sau khi owner deploy và kiểm 15' của runbook ĐẠT). Tối thiểu 4 tuần như (B). Giai đoạn
+`____-__-__ __:__:__ (+07)` (điền sau khi owner deploy và kiểm 15' của runbook ĐẠT).
+  **Trạng thái 10-21 06:0x: CHƯA BẮT ĐẦU** — restart 10-21 05:55:29 chạy jar v11b d7824f6d (v11c chưa lên 242), không phải gói v1.1.
+  Khi owner chạy bước 1+4 runbook và kiểm 15' ĐẠT (md5 eea5adec, `[TS-EXT] BAT`, cờ 10-21), điền giờ start thật ở đây; đoạn
+  10-20 20:33:04 → giờ đó (kể cả 05:55:29 v11b + env thừa) = giai đoạn kiểm parity v11b, không tính. Tối thiểu 4 tuần như (B). Giai đoạn
 10-20 20:33:04 → giờ đó (v11b không TS_MKT_EXT) chỉ là giai đoạn kiểm parity v1.1, không tính vào cửa sổ.
