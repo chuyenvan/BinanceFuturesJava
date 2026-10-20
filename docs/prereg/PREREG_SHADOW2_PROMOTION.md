@@ -133,3 +133,33 @@ Cửa sổ tối thiểu 4 tuần. Các tiêu chí (iii), (iv), (v) giữ nguyê
   - **Cửa sổ đánh giá (B) cũ, bắt đầu 10-16 18:01, KẾT THÚC tại 10-20 20:33:04.**
   - Từ thời điểm này là giai đoạn kiểm parity v1.1. Thời điểm bắt đầu cửa sổ chính thức chờ owner chốt gói v1.1 (có/không TS_MKT_EXT).
   - Tự-restart 12h kế tiếp dự kiến khoảng 10-21 08:33–08:35 (ngoài 00:50–01:20 / 12:50–13:20).
+
+---
+
+## ADDENDUM 2026-10-20 (c) — gói v1.1 = v11b + TS_MKT_EXT X14; cửa sổ chính thức (khai TRƯỚC khi deploy gói)
+
+**A. Quyết định.** Owner 10-20: X14 (`docs/prereg/PREREG_TS_MKT_EXT.md` + addendum 1, HO 2026 CONFIRM `docs/result/TS_MKT_EXT_HO.md`) vào gói v1.1,
+chạy shadow trên 242. **Gói v1.1** = jar nhánh `v1.1/ts-mkt-ext` (trên `66cb6196` = v11b d7824f6d; jar `eea5adec…`, khác v11b đúng
+`ShadowBookC3` + lớp mới `AltEwIndex`/`TsMktExt`) + env v11b (6 dòng §6.4 `V11_COLLECTOR_SETTLE.md`) + `export LIVE_TS_MKT_EXT=1`.
+Spec live: `docs/plan/V11_TS_MKT_EXT_LIVE.md`; runbook `docs/runbooks/DEPLOY_V11_TS_MKT_EXT_242.md`.
+TS_MKT_EXT chỉ tác động sổ GIẤY c3_shadow (không vị thế THẬT/LEGACY).
+
+**B. Backtest đối chiếu (thước sim của (ii'), (iii), (iv) và PnL báo cáo) — chạy CÙNG cờ với live:**
+- `SIM_LOSER_TS_EXT_HOURS=336` và `SIM_LOSER_TS_EXT_DAYS=<khoảng ngày UTC>` tính bằng luật cờ đóng băng (ALT_EW cuối ngày d ≤ −30 % so max
+  EOD d−30..d ⇒ cờ d+1; `tsx_ho.py:flags()`) trên kline **Vision** của đúng kỳ chấm (cập nhật chuỗi trước mỗi lần chấm; ghi sha256 chuỗi).
+- `SIM_RANK_TIEBREAK_SYMBOL=1`; nguồn MarketDataObject chuẩn (Java `calMarketData`, died {BTCDOM,USDC} — `V11_COLLECTOR_SETTLE.md` §6);
+  jar sim chứa a8690d46 (`sim-jar-tsx` cc0f9d11 hoặc kế thừa có P0 byte-identical).
+- Không đổi ngưỡng/giờ/luật TS_MKT_EXT sau khi thấy số forward.
+
+**C. Tiêu chí bổ sung (vi) TS_MKT_EXT (CHẶN CỨNG phần an toàn, phần còn lại parity):**
+- (vi-a) 0 dòng `[TS-EXT] defer-START` cho symbol LEGACY, 0 thay đổi vị thế LEGACY do code TS-EXT (như (i')).
+- (vi-b) Cờ live mỗi ngày (`[TS-EXT] flag day=…`) = cờ tính lại offline từ Vision cùng luật cho ngày đó. Ngày `NA` (thiếu dữ liệu,
+  đã WARN) ghi sổ, không tính trượt; ngày ON/OFF lệch ⇒ TRƯỢT phần parity + điều tra (dữ liệu kline_1m_opt 242 vs Vision).
+  Đối chiếu thêm `[TS-EXT] day … sum_ew` với tổng EW Vision cùng ngày (báo cáo |Δ|).
+- (vi-c) Mọi cụm giấy chưa arm qua 168h: quyết định cắt/hoãn trong log khớp `decide()` với cờ của ngày (cắt ở nhịp đầu ngày OFF hoặc
+  khi > 504h; trễ tối đa ~22' khi PENDING sau 00:00 UTC — đã khai ở spec §3).
+- Kỳ vọng thường gặp: 0 ngày cờ trong cửa sổ ⇒ (vi-b/c) = "chưa quan sát", **không chặn** (i')–(v); ghi rõ cơ chế chưa được kiểm forward.
+
+**D. Cửa sổ chính thức.** Cửa sổ đánh giá (B) của gói v1.1 bắt đầu **tại giờ restart deploy gói này trên 242**:
+`____-__-__ __:__:__ (+07)` (điền sau khi owner deploy và kiểm 15' của runbook ĐẠT). Tối thiểu 4 tuần như (B). Giai đoạn
+10-20 20:33:04 → giờ đó (v11b không TS_MKT_EXT) chỉ là giai đoạn kiểm parity v1.1, không tính vào cửa sổ.

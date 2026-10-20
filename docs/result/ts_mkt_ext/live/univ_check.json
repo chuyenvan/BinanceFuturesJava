@@ -1,0 +1,36 @@
+{
+ "rows": 36738087,
+ "contrib_pairs": 26899684,
+ "contrib_pairs_not_live": 453714,
+ "not_live_contrib_syms": 11,
+ "not_live_top": {
+  "\u725b\u6765USDT": 43199,
+  "\u9f99\u867eUSDT": 43199,
+  "USDCUSDT": 43001,
+  "\u6211\u8e0f\u9a6c\u6765\u4e86USDT": 42997,
+  "\u5e01\u5b89\u4eba\u751fUSDT": 42827,
+  "PROMPTUSDT": 42565,
+  "1000000BOBUSDT": 42524,
+  "PUMPBTCUSDT": 42505,
+  "BTCDOMUSDT": 42018,
+  "\u54c8\u57fa\u7c73USDT": 35498,
+  "STGUSDT": 33381
+ },
+ "0930_contrib_syms_total": 737,
+ "0930_contrib_syms_not_live": [
+  "1000000BOBUSDT",
+  "BTCDOMUSDT",
+  "PROMPTUSDT",
+  "PUMPBTCUSDT",
+  "USDCUSDT",
+  "\u54c8\u57fa\u7c73USDT",
+  "\u5e01\u5b89\u4eba\u751fUSDT",
+  "\u6211\u8e0f\u9a6c\u6765\u4e86USDT",
+  "\u725b\u6765USDT",
+  "\u9f99\u867eUSDT"
+ ],
+ "S_day_absdiff_max": 0.0018984722603470824,
+ "S_day_absdiff_mean": 0.000609163875944651,
+ "S_month_sum_full": 0.1468563111346881,
+ "S_month_sum_liveuniv": 0.1523475122882857
+}
