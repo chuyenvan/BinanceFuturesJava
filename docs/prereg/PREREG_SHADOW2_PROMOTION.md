@@ -120,3 +120,16 @@ Cửa sổ tối thiểu 4 tuần. Các tiêu chí (iii), (iv), (v) giữ nguyê
   - Sau restart: buffer 509.544 bản ghi, armed; tick đầu 22,6 s (warm-up), sau đó 0,8 s; legacy 44.
   - Lần chạy lặp lại của owner dừng ở bước kiểm (grep = 0), không thực hiện restart thứ hai.
   - Tính vào cửa sổ đánh giá như một restart có chủ đích, đã ghi sổ.
+- 10-17 14:51:18: restart có chủ đích (owner) để khôi phục `JAVA_TOOL_OPTIONS` (`-Xms1g -Xmx3g` + `-Xlog:gc`). Lý do: lần restart
+  theo lịch 10-17 08:00:32 chạy với heap mặc định 1956M và không có gc log (SHADOW_AUDIT_1020). Ghi bổ sung 10-20 (trước đây thiếu trong sổ).
+- 10-20 20:33:04 (+07): deploy v11b do owner chạy. Process cũ log tick cuối 20:32:06 (phút 20:31), phút 20:32 không có tick.
+  Process mới PID 6547 start 20:33:04, tick đầu 20:34:07 (phút 20:33, 28,5 s warm-up).
+  - Jar `dc839568` → `d7824f6d` (nhánh `v1.1/collector-settle` `66cb6196`). Backup: `target/binance-java-sdk-1.2.4.jar.bak_v10_dc839568_20261020`
+    (md5 dc839568 đã kiểm) và `conf/env.sh.bak_v10_20261020`.
+  - env.sh thêm đúng 6 dòng: `LIVE_FEAT_INPUT=snapshot`, `LIVE_FEAT_MD=inline`, `LIVE_MD_DIED_SYMBOLS=BTCDOM,USDC`, `LIVE_MD_SOURCE=inline`,
+    `LIVE_RANK_TIEBREAK=symbol`, `LIVE_FUNDING_REFRESH_HOURLY=1`. `LIVE_PROFILE=c3_shadow`, `SHADOW_NO_PUSH=true` và `JAVA_TOOL_OPTIONS`
+    (MaxHeap 3G, gc.log) không đổi. LEGACY 44, sổ giấy open=5 realized 112,18 không đổi.
+  - Lý do: PARITY_1020 P1 TRƯỢT; v1.1 sửa đường input feature live = backtest (docs/plan/V11_COLLECTOR_SETTLE.md §1–§6).
+  - **Cửa sổ đánh giá (B) cũ, bắt đầu 10-16 18:01, KẾT THÚC tại 10-20 20:33:04.**
+  - Từ thời điểm này là giai đoạn kiểm parity v1.1. Thời điểm bắt đầu cửa sổ chính thức chờ owner chốt gói v1.1 (có/không TS_MKT_EXT).
+  - Tự-restart 12h kế tiếp dự kiến khoảng 10-21 08:33–08:35 (ngoài 00:50–01:20 / 12:50–13:20).
