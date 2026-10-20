@@ -30,3 +30,21 @@ Selector S1 của K24 chỉ có điểm lúc gate mở ⇒ KHÔNG dùng (ghi gi�
 V1 look-ahead rateUpAvg: tính lại rateUpAvg từ kline1m cho 20 phút ngẫu nhiên theo đúng công thức (100 coin tăng mạnh nhất, cap 4/5 universe, bỏ coin >+30 %), khớp market.bin (sai số nhỏ cho phép do universe; báo). V2 x_r chỉ dùng dữ liệu < t. V3 giá vào là close t+1, ra close t+1+H. V4 không dùng C để chọn.
 
 ## Ước lượng trước (MASTER): P(qua) ~10 %. Lý do: phút rateUpAvg cao thường là nhịp bật sau sập (đã thuộc gate cũ) hoặc pump ngắn; momentum alt đã NO-GO nhiều lần.
+
+
+---
+
+## ADDENDUM 1 (2026-10-20) — xác nhận HOLDOUT 2026 (9 tháng), viết TRƯỚC khi tính bất kỳ số 2026 nào
+
+Owner 10-20 duyệt: chạy luật đã chọn trên 2026-01-01 → 2026-09-30, 1 lần, không tune.
+
+1. **Luật đóng băng (từ tầng A, 4a2ba2bb):** giỏ RISE24 (24 coin return 1m tại t cao nhất, trừ BTC/ETH/BTCDOM/USDC, bỏ > +30 %), giữ 24h, vào close t+1', ra close t+1'+24h, phí 0,10 % khứ hồi; sự kiện = mẫu 15' có x_r ≥ 0,99 (x_r = ECDF rateUpAvg trong 90 ngày trước t), chỉ nhóm "êm", bỏ trùng trong 24h.
+2. **Nguồn rateUpAvg/rateDownAvg 2026:** `~/marketdump/market.bin` tới hết dữ liệu (2026-08-13); phần sau đó TÍNH LẠI từ kline1m Kaggle `vz-kline1m-2026` theo đúng công thức đã kiểm V1 (open-time t). Kiểm chồng lấn: tính lại cho 2026-07-01..08-12 và so với market.bin (báo median/max sai số, corr; và tỉ lệ mẫu đổi trạng thái x_r ≥ 0,99). Lookback 90 ngày đầu 2026 dùng market.bin 2025.
+3. **"Sau sập" 2026:** có phút rateDownAvg < −0,03157 trong 24h trước HOẶC chân BIG_DOWN trong printDone `~/kaggle_sim/out/ho4-k24-b-s42/storage/printDone.csv`.
+4. **Giá:** kline1m 2026 từ Kaggle (tải từng tháng về Oracle, xoá sau khi dùng); mẫu có t+1'+24h > 2026-09-30 23:59 bị bỏ.
+5. **Kết luận (TB net mỗi sự kiện, t-stat cluster theo ngày):**
+   - CONFIRM: n ≥ 20 VÀ net TB > 0 VÀ t ≥ 1,65 VÀ TB (RISE24 − BTC cùng sự kiện, gross) > 0.
+   - REJECT: net TB ≤ 0.
+   - Còn lại: INCONCLUSIVE.
+   Báo thêm (mô tả): theo tháng, nhóm "sau sập" 2026, bỏ top-5 sự kiện.
+6. CONFIRM ⇒ viết prereg tầng B (sim, tương tác vốn với crash-buy). REJECT/INCONCLUSIVE ⇒ ĐÓNG UP_TRIG (không đổi giỏ/H/q).
