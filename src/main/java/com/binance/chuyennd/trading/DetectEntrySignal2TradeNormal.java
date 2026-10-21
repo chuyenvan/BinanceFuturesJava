@@ -1305,6 +1305,13 @@ public class DetectEntrySignal2TradeNormal {
                     && !com.binance.chuyennd.tradecore.selector.LiveProfileC3.shadowUseRedisQueue()
                     && com.binance.chuyennd.tradecore.selector.LiveProfileC3.forceNoPush()) {
                 BinanceOrderTradingManager.shadowHandleOrder(orderTrade);
+                // [EXEC-PROBE] LIVE_EXEC_PROBE (mac dinh 0) => chi MOT phep doc boolean. Bat => chi xep hang su kien
+                //   (khong I/O tren luong nay, khong doi bien nao); leg CHI tinh khi so giay da ghi (legCount > 0).
+                if (com.binance.chuyennd.ops.ExecProbe.on()) {
+                    com.binance.chuyennd.ops.ExecProbe.onPaperLeg(symbol, String.valueOf(levelChange),
+                            com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance().legCount(symbol) - 1,
+                            quantity, ticker.priceClose, ticker.priceOpen, ticker.startTime);
+                }
             } else {
                 RedisHelper.getInstance().get().rpush(RedisConst.REDIS_KEY_BINANCE_TD_ORDER_MANAGER_QUEUE, Utils.toJson(orderTrade));
             }

@@ -412,6 +412,11 @@ public final class ShadowBookC3 {
                             c.symbol, entry, px, (now - c.tsFirstLeg) / 3600_000L);
                     c.priceSL = null;
                     closing.add(c);
+                    // [EXEC-PROBE] co TAT => 1 phep doc boolean; BAT => chi xep hang (khong doi cum/quyet dinh)
+                    if (com.binance.chuyennd.ops.ExecProbe.on()) {
+                        com.binance.chuyennd.ops.ExecProbe.onPaperExit(c.symbol, REASON_TIME_STOP, c.qty, px, px,
+                                c.legCount, now);
+                    }
                     closeAt(c, px, REASON_TIME_STOP, now);
                     continue;
                 }
@@ -427,6 +432,11 @@ public final class ShadowBookC3 {
                     LOG.info("[SHADOW] would-CLOSE trailing {} entry={} SL={} px={} peak={}",
                             c.symbol, entry, c.priceSL, px, c.peakRate);
                     closing.add(c);
+                    // [EXEC-PROBE] gia sim = SL (ledger), gia nhip = px; co TAT => 1 phep doc boolean
+                    if (com.binance.chuyennd.ops.ExecProbe.on()) {
+                        com.binance.chuyennd.ops.ExecProbe.onPaperExit(c.symbol, REASON_TRAILING, c.qty, c.priceSL, px,
+                                c.legCount, now);
+                    }
                     closeAt(c, c.priceSL, REASON_TRAILING, now);
                 }
             }
