@@ -245,3 +245,36 @@ Lịch này khớp với dự kiến đã ghi ở phần "DEPLOY LẦN 2" (chu k
   Log `Total ram used` cả chu kỳ khớp số trên (671 → 568 MB).
   ⇒ **live set giảm đơn điệu −103 M trong 12h, không có dấu hiệu leak heap.**
 - **Process mới 27434:** Full GC 20:00:34 1771→677 M (2270), 20:30:33 814→599 (2007), 21:00:33 1417→599 (2007); pause max 0,94 s. Cùng mẫu với process cũ: đỉnh sau warm-up rồi giảm dần.
+
+---
+
+## RSS — lần đo #3 (10-22 01:56:35 +07, PID 27434 giờ thứ ~6,0; chỉ đọc qua ssh+pipe)
+| | PID | RSS | VSZ | etimes |
+|---|---|---|---|---|
+| trading (start 10-21 19:54:30) | 27434 | **2 732 700 kB (2,61 GiB)** | 7,48 G | 21 724 s (6,03 h) |
+| collector (start 10-21 21:06:30) | 4217 | 2 204 616 kB (2,10 GiB) | 5,92 G | 17 404 s (4,83 h) |
+
+- Host: used 5 463 M, buff/cache 2 216 M, **MemAvailable 2 039 M**; swap dùng 243 M / 8 063 M.
+- Full GC (System.gc) của PID 27434, 11 lần (after / committed / pause):
+
+  | giờ | after | committed | pause |
+  |---|---|---|---|
+  | 20:00:34 | 677 M | 2 270 M | 0,94 s |
+  | 20:30:33 | 599 | 2 007 | 0,94 s |
+  | 21:00:33 | 599 | 2 007 | 0,85 s |
+  | 22:00:33 | 593 | 1 990 | 0,63 s |
+  | 22:30:33 | 592 | 1 990 | 0,73 s |
+  | 23:00:33 | 591 | 1 987 | 1,14 s |
+  | 23:30:34 | 590 | 1 980 | 0,71 s |
+  | 00:00:33 | 588 | 1 974 | 0,75 s |
+  | 00:30:33 | 587 | 1 967 | 0,95 s |
+  | 01:00:33 | 585 | 1 964 | 0,69 s |
+  | 01:30:33 | **584** | **1 960** | 0,87 s |
+
+  Pause max 1,14 s.
+- **So với #2** (h 1,3: RSS 2 769 828 kB, heap sau GC 599 M, committed 2 007 M):
+  - RSS **−37 MB** (2,64 → 2,61 GiB);
+  - heap sau Full GC **−15 M** (599 → 584);
+  - committed **−47 M** (2 007 → 1 960).
+- Cùng pha h≈6 với PID 7535 (lần đo #1, 13:41): RSS 2,58 → 2,61 GiB (+26 MB), live set 583 → 584 M ⇒ hai chu kỳ gần như trùng nhau.
+- ⇒ Từ h 1,3 tới h 6, cả heap lẫn RSS đều **phẳng/giảm nhẹ**: chưa thấy dấu hiệu leak heap hay native. Lần đo #4 nên làm ở giờ ~11 (khoảng 06:54 +07), **trước** tự-restart ~07:54:4x.
