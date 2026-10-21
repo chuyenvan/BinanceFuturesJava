@@ -1,0 +1,3363 @@
+{
+ "cost_per_side": 0.0015,
+ "v1": {
+  "ok": true,
+  "checks": {
+   "total": true,
+   "maxdd": true,
+   "switches": true,
+   "off_days": true,
+   "bh_total": true,
+   "bh_maxdd": true,
+   "grid": true,
+   "n_c1c2": true,
+   "episodes": true,
+   "trades": true,
+   "cost_fn_consistent": true,
+   "headline": true
+  },
+  "T": {
+   "total": 0.7537613511117416,
+   "cagr": 0.32429654953554166,
+   "maxdd": -0.3533047135371574,
+   "peak_date": "2019-06-26",
+   "trough_date": "2019-10-25",
+   "steps": 730
+  },
+  "BH": {
+   "total": -0.47621283489060007,
+   "cagr": -0.27626858220096595,
+   "maxdd": -0.8118477145881701,
+   "peak_date": "2018-01-06",
+   "trough_date": "2018-12-15",
+   "steps": 730
+  },
+  "switches": 35,
+  "off_days": 523
+ },
+ "toos_sha256": "d36af81313e95829b285064c03995e8b81bb79ad16565db30cc60a14a560cfaf",
+ "periods": [
+  {
+   "name": "A_BTC_2014_2017",
+   "asset": "BTC (Bitstamp USD)",
+   "first": "2013-07-01",
+   "last": "2017-07-31",
+   "t0": "2013-12-31",
+   "end": "2017-07-31",
+   "steps": 1308,
+   "hist_days_to_t0": 184,
+   "primary": {
+    "T": {
+     "total": 3.9750403124033484,
+     "cagr": 0.5647410546922274,
+     "maxdd": -0.41594976033693465,
+     "peak_date": "2017-06-11",
+     "trough_date": "2017-07-26",
+     "steps": 1308
+    },
+    "BH": {
+     "total": 2.895536476705706,
+     "cagr": 0.4615005128397387,
+     "maxdd": -0.8135307427875201,
+     "peak_date": "2014-01-06",
+     "trough_date": "2015-01-14",
+     "steps": 1308
+    },
+    "c1": true,
+    "c2": true,
+    "c3": false,
+    "switches": 28,
+    "off_days": 594,
+    "n_decision_days": 1309,
+    "episodes": [
+     {
+      "entry": "2014-05-22",
+      "exit": "2014-05-23",
+      "ret": -0.014696421753528033,
+      "open": false
+     },
+     {
+      "entry": "2014-05-25",
+      "exit": "2014-05-26",
+      "ret": 0.01086770262797132,
+      "open": false
+     },
+     {
+      "entry": "2014-05-30",
+      "exit": "2014-05-31",
+      "ret": 0.007921772735421717,
+      "open": false
+     },
+     {
+      "entry": "2014-06-01",
+      "exit": "2014-06-02",
+      "ret": 0.04476982366352833,
+      "open": false
+     },
+     {
+      "entry": "2014-06-03",
+      "exit": "2014-06-04",
+      "ret": -0.046958682756597536,
+      "open": false
+     },
+     {
+      "entry": "2014-11-12",
+      "exit": "2014-11-13",
+      "ret": -0.016316008372646018,
+      "open": false
+     },
+     {
+      "entry": "2015-03-01",
+      "exit": "2015-03-02",
+      "ret": 0.06102982632190934,
+      "open": false
+     },
+     {
+      "entry": "2015-03-03",
+      "exit": "2015-03-04",
+      "ret": -0.03925666660152127,
+      "open": false
+     },
+     {
+      "entry": "2015-03-09",
+      "exit": "2015-03-10",
+      "ret": 0.007005095588714871,
+      "open": false
+     },
+     {
+      "entry": "2015-03-11",
+      "exit": "2015-03-12",
+      "ret": -0.0071309202649118,
+      "open": false
+     },
+     {
+      "entry": "2015-06-16",
+      "exit": "2015-08-24",
+      "ret": -0.1639338545063369,
+      "open": false
+     },
+     {
+      "entry": "2015-10-06",
+      "exit": "2017-01-11",
+      "ret": 2.1483458593591545,
+      "open": false
+     },
+     {
+      "entry": "2017-02-04",
+      "exit": "2017-07-15",
+      "ret": 0.9015150545054869,
+      "open": false
+     },
+     {
+      "entry": "2017-07-20",
+      "exit": null,
+      "ret": -0.008172888300791215,
+      "open": true
+     }
+    ],
+    "trades": [
+     {
+      "date": "2014-05-22",
+      "action": "BUY",
+      "price": 529.99
+     },
+     {
+      "date": "2014-05-23",
+      "action": "SELL",
+      "price": 523.77
+     },
+     {
+      "date": "2014-05-25",
+      "action": "BUY",
+      "price": 573.9
+     },
+     {
+      "date": "2014-05-26",
+      "action": "SELL",
+      "price": 581.88
+     },
+     {
+      "date": "2014-05-30",
+      "action": "BUY",
+      "price": 621.0
+     },
+     {
+      "date": "2014-05-31",
+      "action": "SELL",
+      "price": 627.8
+     },
+     {
+      "date": "2014-06-01",
+      "action": "BUY",
+      "price": 630.99
+     },
+     {
+      "date": "2014-06-02",
+      "action": "SELL",
+      "price": 661.22
+     },
+     {
+      "date": "2014-06-03",
+      "action": "BUY",
+      "price": 670.14
+     },
+     {
+      "date": "2014-06-04",
+      "action": "SELL",
+      "price": 640.59
+     },
+     {
+      "date": "2014-11-12",
+      "action": "BUY",
+      "price": 426.63
+     },
+     {
+      "date": "2014-11-13",
+      "action": "SELL",
+      "price": 420.93
+     },
+     {
+      "date": "2015-03-01",
+      "action": "BUY",
+      "price": 258.34
+     },
+     {
+      "date": "2015-03-02",
+      "action": "SELL",
+      "price": 274.93
+     },
+     {
+      "date": "2015-03-03",
+      "action": "BUY",
+      "price": 281.0
+     },
+     {
+      "date": "2015-03-04",
+      "action": "SELL",
+      "price": 270.78
+     },
+     {
+      "date": "2015-03-09",
+      "action": "BUY",
+      "price": 287.12
+     },
+     {
+      "date": "2015-03-10",
+      "action": "SELL",
+      "price": 290.0
+     },
+     {
+      "date": "2015-03-11",
+      "action": "BUY",
+      "price": 296.54
+     },
+     {
+      "date": "2015-03-12",
+      "action": "SELL",
+      "price": 295.31
+     },
+     {
+      "date": "2015-06-16",
+      "action": "BUY",
+      "price": 250.09
+     },
+     {
+      "date": "2015-08-24",
+      "action": "SELL",
+      "price": 209.72
+     },
+     {
+      "date": "2015-10-06",
+      "action": "BUY",
+      "price": 246.57
+     },
+     {
+      "date": "2017-01-11",
+      "action": "SELL",
+      "price": 778.62
+     },
+     {
+      "date": "2017-02-04",
+      "action": "BUY",
+      "price": 1033.18
+     },
+     {
+      "date": "2017-07-15",
+      "action": "SELL",
+      "price": 1970.51
+     },
+     {
+      "date": "2017-07-20",
+      "action": "BUY",
+      "price": 2875.03
+     }
+    ],
+    "dd_ratio": 0.5112895413290772,
+    "ep_stats": {
+     "n": 14,
+     "wins": 7,
+     "max_ret": 2.1483458593591545,
+     "max_entry": "2015-10-06",
+     "max_exit": "2017-01-11",
+     "rest_compounded": 0.580207681952712,
+     "share_log": 0.714817541386968,
+     "median": -6.29123380984642e-05,
+     "min": -0.1639338545063369,
+     "n_le2d": 10
+    }
+   },
+   "grid": [
+    {
+     "thr": 0.65,
+     "P": 120,
+     "R": 20,
+     "T_total": 2.409027998584046,
+     "T_maxdd": -0.6288134972589565,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 24,
+     "off_days": 320
+    },
+    {
+     "thr": 0.65,
+     "P": 120,
+     "R": 30,
+     "T_total": 3.471365668119768,
+     "T_maxdd": -0.5701838260880203,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": false,
+     "c2": true,
+     "c3": false,
+     "both": false,
+     "switches": 16,
+     "off_days": 400
+    },
+    {
+     "thr": 0.65,
+     "P": 120,
+     "R": 40,
+     "T_total": 3.40748403392024,
+     "T_maxdd": -0.5859628129763526,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": false,
+     "c2": true,
+     "c3": false,
+     "both": false,
+     "switches": 11,
+     "off_days": 413
+    },
+    {
+     "thr": 0.65,
+     "P": 180,
+     "R": 20,
+     "T_total": 2.159743051795726,
+     "T_maxdd": -0.6559564857069178,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 38,
+     "off_days": 402
+    },
+    {
+     "thr": 0.65,
+     "P": 180,
+     "R": 30,
+     "T_total": 5.750684289150284,
+     "T_maxdd": -0.4316231528461748,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 24,
+     "off_days": 518
+    },
+    {
+     "thr": 0.65,
+     "P": 180,
+     "R": 40,
+     "T_total": 5.90538812415417,
+     "T_maxdd": -0.35185817068464764,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": true,
+     "c2": true,
+     "c3": true,
+     "both": true,
+     "switches": 19,
+     "off_days": 532
+    },
+    {
+     "thr": 0.65,
+     "P": 240,
+     "R": 20,
+     "T_total": 3.656031533470272,
+     "T_maxdd": -0.4930355332139582,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": false,
+     "c2": true,
+     "c3": false,
+     "both": false,
+     "switches": 46,
+     "off_days": 507
+    },
+    {
+     "thr": 0.65,
+     "P": 240,
+     "R": 30,
+     "T_total": 5.5444789941104995,
+     "T_maxdd": -0.4316231528461748,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 32,
+     "off_days": 546
+    },
+    {
+     "thr": 0.65,
+     "P": 240,
+     "R": 40,
+     "T_total": 5.694457271145097,
+     "T_maxdd": -0.35185817068464764,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": true,
+     "c2": true,
+     "c3": true,
+     "both": true,
+     "switches": 27,
+     "off_days": 560
+    },
+    {
+     "thr": 0.7,
+     "P": 120,
+     "R": 20,
+     "T_total": 2.182918653441473,
+     "T_maxdd": -0.5483729765073664,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 30,
+     "off_days": 405
+    },
+    {
+     "thr": 0.7,
+     "P": 120,
+     "R": 30,
+     "T_total": 2.464818791665184,
+     "T_maxdd": -0.5003679952035418,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 22,
+     "off_days": 486
+    },
+    {
+     "thr": 0.7,
+     "P": 120,
+     "R": 40,
+     "T_total": 2.469405268362747,
+     "T_maxdd": -0.5005447512035344,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 17,
+     "off_days": 513
+    },
+    {
+     "thr": 0.7,
+     "P": 180,
+     "R": 20,
+     "T_total": 3.152569620175509,
+     "T_maxdd": -0.41594976033693454,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 42,
+     "off_days": 553
+    },
+    {
+     "thr": 0.7,
+     "P": 180,
+     "R": 30,
+     "T_total": 3.9750403124033484,
+     "T_maxdd": -0.41594976033693465,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 28,
+     "off_days": 594
+    },
+    {
+     "thr": 0.7,
+     "P": 180,
+     "R": 40,
+     "T_total": 3.981625911199214,
+     "T_maxdd": -0.387112240568417,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": true,
+     "c2": true,
+     "c3": true,
+     "both": true,
+     "switches": 23,
+     "off_days": 621
+    },
+    {
+     "thr": 0.7,
+     "P": 240,
+     "R": 20,
+     "T_total": 2.9371706694930886,
+     "T_maxdd": -0.44135151914011694,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 50,
+     "off_days": 580
+    },
+    {
+     "thr": 0.7,
+     "P": 240,
+     "R": 30,
+     "T_total": 3.5929188612045655,
+     "T_maxdd": -0.41594976033693465,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 36,
+     "off_days": 620
+    },
+    {
+     "thr": 0.7,
+     "P": 240,
+     "R": 40,
+     "T_total": 3.5989986352410597,
+     "T_maxdd": -0.38711224056841687,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": true,
+     "c2": true,
+     "c3": true,
+     "both": true,
+     "switches": 31,
+     "off_days": 647
+    },
+    {
+     "thr": 0.75,
+     "P": 120,
+     "R": 20,
+     "T_total": 1.9465320743983026,
+     "T_maxdd": -0.4367881589719863,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": true,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 38,
+     "off_days": 513
+    },
+    {
+     "thr": 0.75,
+     "P": 120,
+     "R": 30,
+     "T_total": 2.255272429375584,
+     "T_maxdd": -0.3762718507455397,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": true,
+     "c2": false,
+     "c3": true,
+     "both": false,
+     "switches": 28,
+     "off_days": 586
+    },
+    {
+     "thr": 0.75,
+     "P": 120,
+     "R": 40,
+     "T_total": 1.9519272840600936,
+     "T_maxdd": -0.3889481499825903,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": true,
+     "c2": false,
+     "c3": true,
+     "both": false,
+     "switches": 23,
+     "off_days": 656
+    },
+    {
+     "thr": 0.75,
+     "P": 180,
+     "R": 20,
+     "T_total": 2.3784661768233617,
+     "T_maxdd": -0.35422655947564363,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": true,
+     "c2": false,
+     "c3": true,
+     "both": false,
+     "switches": 50,
+     "off_days": 638
+    },
+    {
+     "thr": 0.75,
+     "P": 180,
+     "R": 30,
+     "T_total": 2.999864577150269,
+     "T_maxdd": -0.3762718507455396,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": true,
+     "c2": true,
+     "c3": true,
+     "both": true,
+     "switches": 34,
+     "off_days": 670
+    },
+    {
+     "thr": 0.75,
+     "P": 180,
+     "R": 40,
+     "T_total": 2.62713402149884,
+     "T_maxdd": -0.3889481499825903,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": true,
+     "c2": false,
+     "c3": true,
+     "both": false,
+     "switches": 29,
+     "off_days": 740
+    },
+    {
+     "thr": 0.75,
+     "P": 240,
+     "R": 20,
+     "T_total": 2.54399939253063,
+     "T_maxdd": -0.34700143507220904,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": true,
+     "c2": false,
+     "c3": true,
+     "both": false,
+     "switches": 58,
+     "off_days": 684
+    },
+    {
+     "thr": 0.75,
+     "P": 240,
+     "R": 30,
+     "T_total": 3.1958441759372613,
+     "T_maxdd": -0.3762718507455397,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": true,
+     "c2": true,
+     "c3": true,
+     "both": true,
+     "switches": 42,
+     "off_days": 716
+    },
+    {
+     "thr": 0.75,
+     "P": 240,
+     "R": 40,
+     "T_total": 2.8048511058073395,
+     "T_maxdd": -0.38894814998259053,
+     "BH_total": 2.895536476705706,
+     "BH_maxdd": -0.8135307427875201,
+     "c1": true,
+     "c2": false,
+     "c3": true,
+     "both": false,
+     "switches": 37,
+     "off_days": 786
+    }
+   ],
+   "grid_summary": {
+    "n_cells": 27,
+    "n_c1c2": 12,
+    "n_c1": 19,
+    "n_c2": 15,
+    "n_c3": 12,
+    "threshold_cells": 19,
+    "cond_sub": false
+   },
+   "pass": false,
+   "verdict": "FAIL",
+   "warm_start": {
+    "T": {
+     "total": 3.9750403124033484,
+     "cagr": 0.5647410546922274,
+     "maxdd": -0.41594976033693465,
+     "peak_date": "2017-06-11",
+     "trough_date": "2017-07-26",
+     "steps": 1308
+    },
+    "BH": {
+     "total": 2.895536476705706,
+     "cagr": 0.4615005128397387,
+     "maxdd": -0.8135307427875201,
+     "peak_date": "2014-01-06",
+     "trough_date": "2015-01-14",
+     "steps": 1308
+    },
+    "c1": true,
+    "c2": true,
+    "c3": false,
+    "switches": 27,
+    "off_days": 594,
+    "state_at_t0": "OFF",
+    "switches_before_t0": 1,
+    "trades": [
+     {
+      "date": "2014-05-22",
+      "action": "BUY",
+      "price": 529.99
+     },
+     {
+      "date": "2014-05-23",
+      "action": "SELL",
+      "price": 523.77
+     },
+     {
+      "date": "2014-05-25",
+      "action": "BUY",
+      "price": 573.9
+     },
+     {
+      "date": "2014-05-26",
+      "action": "SELL",
+      "price": 581.88
+     },
+     {
+      "date": "2014-05-30",
+      "action": "BUY",
+      "price": 621.0
+     },
+     {
+      "date": "2014-05-31",
+      "action": "SELL",
+      "price": 627.8
+     },
+     {
+      "date": "2014-06-01",
+      "action": "BUY",
+      "price": 630.99
+     },
+     {
+      "date": "2014-06-02",
+      "action": "SELL",
+      "price": 661.22
+     },
+     {
+      "date": "2014-06-03",
+      "action": "BUY",
+      "price": 670.14
+     },
+     {
+      "date": "2014-06-04",
+      "action": "SELL",
+      "price": 640.59
+     },
+     {
+      "date": "2014-11-12",
+      "action": "BUY",
+      "price": 426.63
+     },
+     {
+      "date": "2014-11-13",
+      "action": "SELL",
+      "price": 420.93
+     },
+     {
+      "date": "2015-03-01",
+      "action": "BUY",
+      "price": 258.34
+     },
+     {
+      "date": "2015-03-02",
+      "action": "SELL",
+      "price": 274.93
+     },
+     {
+      "date": "2015-03-03",
+      "action": "BUY",
+      "price": 281.0
+     },
+     {
+      "date": "2015-03-04",
+      "action": "SELL",
+      "price": 270.78
+     },
+     {
+      "date": "2015-03-09",
+      "action": "BUY",
+      "price": 287.12
+     },
+     {
+      "date": "2015-03-10",
+      "action": "SELL",
+      "price": 290.0
+     },
+     {
+      "date": "2015-03-11",
+      "action": "BUY",
+      "price": 296.54
+     },
+     {
+      "date": "2015-03-12",
+      "action": "SELL",
+      "price": 295.31
+     },
+     {
+      "date": "2015-06-16",
+      "action": "BUY",
+      "price": 250.09
+     },
+     {
+      "date": "2015-08-24",
+      "action": "SELL",
+      "price": 209.72
+     },
+     {
+      "date": "2015-10-06",
+      "action": "BUY",
+      "price": 246.57
+     },
+     {
+      "date": "2017-01-11",
+      "action": "SELL",
+      "price": 778.62
+     },
+     {
+      "date": "2017-02-04",
+      "action": "BUY",
+      "price": 1033.18
+     },
+     {
+      "date": "2017-07-15",
+      "action": "SELL",
+      "price": 1970.51
+     },
+     {
+      "date": "2017-07-20",
+      "action": "BUY",
+      "price": 2875.03
+     }
+    ]
+   },
+   "fee_hi": {
+    "cost": 0.003,
+    "T": {
+     "total": 3.7775919144126346,
+     "cagr": 0.5471578877880945,
+     "maxdd": -0.4176992946273923,
+     "peak_date": "2017-06-11",
+     "trough_date": "2017-07-26",
+     "steps": 1308
+    },
+    "BH": {
+     "total": 2.8897106494723483,
+     "cagr": 0.46089026158381197,
+     "maxdd": -0.8135307427875201,
+     "peak_date": "2014-01-06",
+     "trough_date": "2015-01-14",
+     "steps": 1308
+    },
+    "c1": true,
+    "c2": true,
+    "c3": false,
+    "switches": 28,
+    "n_c1c2_cells": 10
+   },
+   "v3": [
+    {
+     "tag": "A_BTC_2014_2017",
+     "cut_idx": 729,
+     "n_days": 547,
+     "truncate_ok": true,
+     "scramble_ok": true
+    },
+    {
+     "tag": "A_BTC_2014_2017",
+     "cut_idx": 1095,
+     "n_days": 913,
+     "truncate_ok": true,
+     "scramble_ok": true
+    },
+    {
+     "tag": "A_BTC_2014_2017",
+     "cut_idx": 1369,
+     "n_days": 1187,
+     "truncate_ok": true,
+     "scramble_ok": true
+    }
+   ],
+   "data_sha256": "a14a876539c0617b898711b99eddab4399cac1bf7ab4eb64c44601fabdb33721",
+   "main": true
+  },
+  {
+   "name": "B1_ETH_2018_2019",
+   "asset": "ETHUSDT spot",
+   "first": "2017-08-17",
+   "last": "2019-12-31",
+   "t0": "2017-12-31",
+   "end": "2019-12-31",
+   "steps": 730,
+   "hist_days_to_t0": 137,
+   "primary": {
+    "T": {
+     "total": 0.6345920901943591,
+     "cagr": 0.278511669948444,
+     "maxdd": -0.4032552382315202,
+     "peak_date": "2018-01-13",
+     "trough_date": "2019-04-25",
+     "steps": 730
+    },
+    "BH": {
+     "total": -0.8242914654694435,
+     "cagr": -0.5808239814462706,
+     "maxdd": -0.9396550481981527,
+     "peak_date": "2018-01-13",
+     "trough_date": "2018-12-15",
+     "steps": 730
+    },
+    "c1": true,
+    "c2": true,
+    "c3": false,
+    "switches": 33,
+    "off_days": 583,
+    "n_decision_days": 731,
+    "episodes": [
+     {
+      "entry": "2017-12-31",
+      "exit": "2018-02-02",
+      "ret": 0.25280967347039307,
+      "open": false
+     },
+     {
+      "entry": "2018-04-19",
+      "exit": "2018-04-20",
+      "ret": 0.08290474662210223,
+      "open": false
+     },
+     {
+      "entry": "2018-04-22",
+      "exit": "2018-04-23",
+      "ret": 0.0358139994800688,
+      "open": false
+     },
+     {
+      "entry": "2018-04-24",
+      "exit": "2018-04-25",
+      "ret": -0.12176975279405355,
+      "open": false
+     },
+     {
+      "entry": "2018-05-03",
+      "exit": "2018-05-04",
+      "ret": 0.005950656813239696,
+      "open": false
+     },
+     {
+      "entry": "2018-05-05",
+      "exit": "2018-05-06",
+      "ret": -0.03365385113300179,
+      "open": false
+     },
+     {
+      "entry": "2018-12-23",
+      "exit": "2018-12-24",
+      "ret": 0.06654677365490924,
+      "open": false
+     },
+     {
+      "entry": "2019-01-01",
+      "exit": "2019-01-02",
+      "ret": 0.08953740489194328,
+      "open": false
+     },
+     {
+      "entry": "2019-01-05",
+      "exit": "2019-01-06",
+      "ret": 0.003723819492249536,
+      "open": false
+     },
+     {
+      "entry": "2019-02-17",
+      "exit": "2019-02-18",
+      "ret": 0.08600810933133007,
+      "open": false
+     },
+     {
+      "entry": "2019-02-20",
+      "exit": "2019-02-21",
+      "ret": -0.02146601574329432,
+      "open": false
+     },
+     {
+      "entry": "2019-02-23",
+      "exit": "2019-02-24",
+      "ret": -0.16531913581557445,
+      "open": false
+     },
+     {
+      "entry": "2019-03-29",
+      "exit": "2019-03-30",
+      "ret": -0.00849382122279052,
+      "open": false
+     },
+     {
+      "entry": "2019-04-02",
+      "exit": "2019-04-03",
+      "ret": -0.023447194036573582,
+      "open": false
+     },
+     {
+      "entry": "2019-04-05",
+      "exit": "2019-07-14",
+      "ret": 0.3665926127498682,
+      "open": false
+     },
+     {
+      "entry": "2019-09-17",
+      "exit": "2019-09-18",
+      "ret": 0.008373337799305824,
+      "open": false
+     },
+     {
+      "entry": "2019-09-19",
+      "exit": "2019-09-20",
+      "ret": -0.012999956113777134,
+      "open": false
+     }
+    ],
+    "trades": [
+     {
+      "date": "2017-12-31",
+      "action": "BUY",
+      "price": 733.98
+     },
+     {
+      "date": "2018-02-02",
+      "action": "SELL",
+      "price": 922.3
+     },
+     {
+      "date": "2018-04-19",
+      "action": "BUY",
+      "price": 568.14
+     },
+     {
+      "date": "2018-04-20",
+      "action": "SELL",
+      "price": 617.09
+     },
+     {
+      "date": "2018-04-22",
+      "action": "BUY",
+      "price": 620.92
+     },
+     {
+      "date": "2018-04-23",
+      "action": "SELL",
+      "price": 645.09
+     },
+     {
+      "date": "2018-04-24",
+      "action": "BUY",
+      "price": 701.58
+     },
+     {
+      "date": "2018-04-25",
+      "action": "SELL",
+      "price": 618.0
+     },
+     {
+      "date": "2018-05-03",
+      "action": "BUY",
+      "price": 779.0
+     },
+     {
+      "date": "2018-05-04",
+      "action": "SELL",
+      "price": 785.99
+     },
+     {
+      "date": "2018-05-05",
+      "action": "BUY",
+      "price": 819.5
+     },
+     {
+      "date": "2018-05-06",
+      "action": "SELL",
+      "price": 794.3
+     },
+     {
+      "date": "2018-12-23",
+      "action": "BUY",
+      "price": 129.03
+     },
+     {
+      "date": "2018-12-24",
+      "action": "SELL",
+      "price": 138.03
+     },
+     {
+      "date": "2019-01-01",
+      "action": "BUY",
+      "price": 139.1
+     },
+     {
+      "date": "2019-01-02",
+      "action": "SELL",
+      "price": 152.01
+     },
+     {
+      "date": "2019-01-05",
+      "action": "BUY",
+      "price": 152.83
+     },
+     {
+      "date": "2019-01-06",
+      "action": "SELL",
+      "price": 153.86
+     },
+     {
+      "date": "2019-02-17",
+      "action": "BUY",
+      "price": 133.75
+     },
+     {
+      "date": "2019-02-18",
+      "action": "SELL",
+      "price": 145.69
+     },
+     {
+      "date": "2019-02-20",
+      "action": "BUY",
+      "price": 148.44
+     },
+     {
+      "date": "2019-02-21",
+      "action": "SELL",
+      "price": 145.69
+     },
+     {
+      "date": "2019-02-23",
+      "action": "BUY",
+      "price": 157.79
+     },
+     {
+      "date": "2019-02-24",
+      "action": "SELL",
+      "price": 132.1
+     },
+     {
+      "date": "2019-03-29",
+      "action": "BUY",
+      "price": 143.25
+     },
+     {
+      "date": "2019-03-30",
+      "action": "SELL",
+      "price": 142.46
+     },
+     {
+      "date": "2019-04-02",
+      "action": "BUY",
+      "price": 163.31
+     },
+     {
+      "date": "2019-04-03",
+      "action": "SELL",
+      "price": 159.96
+     },
+     {
+      "date": "2019-04-05",
+      "action": "BUY",
+      "price": 164.77
+     },
+     {
+      "date": "2019-07-14",
+      "action": "SELL",
+      "price": 225.85
+     },
+     {
+      "date": "2019-09-17",
+      "action": "BUY",
+      "price": 207.84
+     },
+     {
+      "date": "2019-09-18",
+      "action": "SELL",
+      "price": 210.21
+     },
+     {
+      "date": "2019-09-19",
+      "action": "BUY",
+      "price": 220.24
+     },
+     {
+      "date": "2019-09-20",
+      "action": "SELL",
+      "price": 218.03
+     }
+    ],
+    "dd_ratio": 0.42915242035339174,
+    "ep_stats": {
+     "n": 17,
+     "wins": 10,
+     "max_ret": 0.3665926127498682,
+     "max_entry": "2019-04-05",
+     "max_exit": "2019-07-14",
+     "rest_compounded": 0.1961078048747973,
+     "share_log": 0.6355815310842522,
+     "median": 0.005950656813239696,
+     "min": -0.16531913581557445,
+     "n_le2d": 15
+    }
+   },
+   "grid": [
+    {
+     "thr": 0.65,
+     "P": 120,
+     "R": 20,
+     "T_total": 0.056163443925228984,
+     "T_maxdd": -0.5753204184258602,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": false,
+     "c2": true,
+     "c3": false,
+     "both": false,
+     "switches": 41,
+     "off_days": 533
+    },
+    {
+     "thr": 0.65,
+     "P": 120,
+     "R": 30,
+     "T_total": 0.6330103983808522,
+     "T_maxdd": -0.433517549993337,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 27,
+     "off_days": 571
+    },
+    {
+     "thr": 0.65,
+     "P": 120,
+     "R": 40,
+     "T_total": 0.371101234546217,
+     "T_maxdd": -0.4268093704864454,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 17,
+     "off_days": 581
+    },
+    {
+     "thr": 0.65,
+     "P": 180,
+     "R": 20,
+     "T_total": 0.034624108537356646,
+     "T_maxdd": -0.5287777938463698,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 47,
+     "off_days": 566
+    },
+    {
+     "thr": 0.65,
+     "P": 180,
+     "R": 30,
+     "T_total": 0.327923560551725,
+     "T_maxdd": -0.44946962923756717,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 31,
+     "off_days": 577
+    },
+    {
+     "thr": 0.65,
+     "P": 180,
+     "R": 40,
+     "T_total": 0.2621672425308852,
+     "T_maxdd": -0.4723493655542479,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 19,
+     "off_days": 583
+    },
+    {
+     "thr": 0.65,
+     "P": 240,
+     "R": 20,
+     "T_total": -0.111423639814626,
+     "T_maxdd": -0.5338458987373533,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 53,
+     "off_days": 602
+    },
+    {
+     "thr": 0.65,
+     "P": 240,
+     "R": 30,
+     "T_total": 0.1404736022511215,
+     "T_maxdd": -0.433517549993337,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 37,
+     "off_days": 613
+    },
+    {
+     "thr": 0.65,
+     "P": 240,
+     "R": 40,
+     "T_total": 0.08399945937738584,
+     "T_maxdd": -0.4561131996891322,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 25,
+     "off_days": 619
+    },
+    {
+     "thr": 0.7,
+     "P": 120,
+     "R": 20,
+     "T_total": 0.6848391427864962,
+     "T_maxdd": -0.4555801502495692,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 43,
+     "off_days": 558
+    },
+    {
+     "thr": 0.7,
+     "P": 120,
+     "R": 30,
+     "T_total": 0.941787705101115,
+     "T_maxdd": -0.36559963616355196,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": true,
+     "both": true,
+     "switches": 29,
+     "off_days": 578
+    },
+    {
+     "thr": 0.7,
+     "P": 120,
+     "R": 40,
+     "T_total": 0.6051767177296907,
+     "T_maxdd": -0.40908715800996076,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 19,
+     "off_days": 587
+    },
+    {
+     "thr": 0.7,
+     "P": 180,
+     "R": 20,
+     "T_total": 0.36883496537705707,
+     "T_maxdd": -0.48922094386594717,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 49,
+     "off_days": 575
+    },
+    {
+     "thr": 0.7,
+     "P": 180,
+     "R": 30,
+     "T_total": 0.6345920901943591,
+     "T_maxdd": -0.4032552382315202,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 33,
+     "off_days": 583
+    },
+    {
+     "thr": 0.7,
+     "P": 180,
+     "R": 40,
+     "T_total": 0.5536501139314229,
+     "T_maxdd": -0.42805561896022515,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 21,
+     "off_days": 589
+    },
+    {
+     "thr": 0.7,
+     "P": 240,
+     "R": 20,
+     "T_total": 0.21459889569919866,
+     "T_maxdd": -0.4560427541416243,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 53,
+     "off_days": 609
+    },
+    {
+     "thr": 0.7,
+     "P": 240,
+     "R": 30,
+     "T_total": 0.4504113336422746,
+     "T_maxdd": -0.36559963616355196,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": true,
+     "both": true,
+     "switches": 37,
+     "off_days": 617
+    },
+    {
+     "thr": 0.7,
+     "P": 240,
+     "R": 40,
+     "T_total": 0.3785896477039761,
+     "T_maxdd": -0.3909043713551984,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": true,
+     "both": true,
+     "switches": 25,
+     "off_days": 623
+    },
+    {
+     "thr": 0.75,
+     "P": 120,
+     "R": 20,
+     "T_total": 0.8267799444719706,
+     "T_maxdd": -0.4097150062339465,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 43,
+     "off_days": 575
+    },
+    {
+     "thr": 0.75,
+     "P": 120,
+     "R": 30,
+     "T_total": 1.1053753714638574,
+     "T_maxdd": -0.3386861043120666,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": true,
+     "both": true,
+     "switches": 29,
+     "off_days": 595
+    },
+    {
+     "thr": 0.75,
+     "P": 120,
+     "R": 40,
+     "T_total": 0.7404062861646883,
+     "T_maxdd": -0.35930516969528403,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": true,
+     "both": true,
+     "switches": 19,
+     "off_days": 604
+    },
+    {
+     "thr": 0.75,
+     "P": 180,
+     "R": 20,
+     "T_total": 0.20897326097056235,
+     "T_maxdd": -0.45151581037424116,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 53,
+     "off_days": 623
+    },
+    {
+     "thr": 0.75,
+     "P": 180,
+     "R": 30,
+     "T_total": 0.4436934909056818,
+     "T_maxdd": -0.35920421336520014,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": true,
+     "both": true,
+     "switches": 37,
+     "off_days": 631
+    },
+    {
+     "thr": 0.75,
+     "P": 180,
+     "R": 40,
+     "T_total": 0.37220446011149244,
+     "T_maxdd": -0.3858353302111971,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": true,
+     "both": true,
+     "switches": 25,
+     "off_days": 637
+    },
+    {
+     "thr": 0.75,
+     "P": 240,
+     "R": 20,
+     "T_total": 0.3169238812742057,
+     "T_maxdd": -0.41021658261045635,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": false,
+     "both": true,
+     "switches": 53,
+     "off_days": 626
+    },
+    {
+     "thr": 0.75,
+     "P": 240,
+     "R": 30,
+     "T_total": 0.5726025519270033,
+     "T_maxdd": -0.3386861043120667,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": true,
+     "both": true,
+     "switches": 37,
+     "off_days": 634
+    },
+    {
+     "thr": 0.75,
+     "P": 240,
+     "R": 40,
+     "T_total": 0.4947301829165969,
+     "T_maxdd": -0.3441775274114265,
+     "BH_total": -0.8242914654694435,
+     "BH_maxdd": -0.9396550481981527,
+     "c1": true,
+     "c2": true,
+     "c3": true,
+     "both": true,
+     "switches": 25,
+     "off_days": 640
+    }
+   ],
+   "grid_summary": {
+    "n_cells": 27,
+    "n_c1c2": 26,
+    "n_c1": 26,
+    "n_c2": 27,
+    "n_c3": 9,
+    "threshold_cells": 19,
+    "cond_sub": true
+   },
+   "pass": false,
+   "verdict": "FAIL",
+   "warm_start": {
+    "T": {
+     "total": 0.6345920901943591,
+     "cagr": 0.278511669948444,
+     "maxdd": -0.4032552382315202,
+     "peak_date": "2018-01-13",
+     "trough_date": "2019-04-25",
+     "steps": 730
+    },
+    "BH": {
+     "total": -0.8242914654694435,
+     "cagr": -0.5808239814462706,
+     "maxdd": -0.9396550481981527,
+     "peak_date": "2018-01-13",
+     "trough_date": "2018-12-15",
+     "steps": 730
+    },
+    "c1": true,
+    "c2": true,
+    "c3": false,
+    "switches": 33,
+    "off_days": 583,
+    "state_at_t0": "ON",
+    "switches_before_t0": 2,
+    "trades": [
+     {
+      "date": "2017-12-31",
+      "action": "BUY",
+      "price": 733.98
+     },
+     {
+      "date": "2018-02-02",
+      "action": "SELL",
+      "price": 922.3
+     },
+     {
+      "date": "2018-04-19",
+      "action": "BUY",
+      "price": 568.14
+     },
+     {
+      "date": "2018-04-20",
+      "action": "SELL",
+      "price": 617.09
+     },
+     {
+      "date": "2018-04-22",
+      "action": "BUY",
+      "price": 620.92
+     },
+     {
+      "date": "2018-04-23",
+      "action": "SELL",
+      "price": 645.09
+     },
+     {
+      "date": "2018-04-24",
+      "action": "BUY",
+      "price": 701.58
+     },
+     {
+      "date": "2018-04-25",
+      "action": "SELL",
+      "price": 618.0
+     },
+     {
+      "date": "2018-05-03",
+      "action": "BUY",
+      "price": 779.0
+     },
+     {
+      "date": "2018-05-04",
+      "action": "SELL",
+      "price": 785.99
+     },
+     {
+      "date": "2018-05-05",
+      "action": "BUY",
+      "price": 819.5
+     },
+     {
+      "date": "2018-05-06",
+      "action": "SELL",
+      "price": 794.3
+     },
+     {
+      "date": "2018-12-23",
+      "action": "BUY",
+      "price": 129.03
+     },
+     {
+      "date": "2018-12-24",
+      "action": "SELL",
+      "price": 138.03
+     },
+     {
+      "date": "2019-01-01",
+      "action": "BUY",
+      "price": 139.1
+     },
+     {
+      "date": "2019-01-02",
+      "action": "SELL",
+      "price": 152.01
+     },
+     {
+      "date": "2019-01-05",
+      "action": "BUY",
+      "price": 152.83
+     },
+     {
+      "date": "2019-01-06",
+      "action": "SELL",
+      "price": 153.86
+     },
+     {
+      "date": "2019-02-17",
+      "action": "BUY",
+      "price": 133.75
+     },
+     {
+      "date": "2019-02-18",
+      "action": "SELL",
+      "price": 145.69
+     },
+     {
+      "date": "2019-02-20",
+      "action": "BUY",
+      "price": 148.44
+     },
+     {
+      "date": "2019-02-21",
+      "action": "SELL",
+      "price": 145.69
+     },
+     {
+      "date": "2019-02-23",
+      "action": "BUY",
+      "price": 157.79
+     },
+     {
+      "date": "2019-02-24",
+      "action": "SELL",
+      "price": 132.1
+     },
+     {
+      "date": "2019-03-29",
+      "action": "BUY",
+      "price": 143.25
+     },
+     {
+      "date": "2019-03-30",
+      "action": "SELL",
+      "price": 142.46
+     },
+     {
+      "date": "2019-04-02",
+      "action": "BUY",
+      "price": 163.31
+     },
+     {
+      "date": "2019-04-03",
+      "action": "SELL",
+      "price": 159.96
+     },
+     {
+      "date": "2019-04-05",
+      "action": "BUY",
+      "price": 164.77
+     },
+     {
+      "date": "2019-07-14",
+      "action": "SELL",
+      "price": 225.85
+     },
+     {
+      "date": "2019-09-17",
+      "action": "BUY",
+      "price": 207.84
+     },
+     {
+      "date": "2019-09-18",
+      "action": "SELL",
+      "price": 210.21
+     },
+     {
+      "date": "2019-09-19",
+      "action": "BUY",
+      "price": 220.24
+     },
+     {
+      "date": "2019-09-20",
+      "action": "SELL",
+      "price": 218.03
+     }
+    ]
+   },
+   "fee_hi": {
+    "cost": 0.003,
+    "T": {
+     "total": 0.5533175824293943,
+     "cagr": 0.24632162078229003,
+     "maxdd": -0.42779960739623213,
+     "peak_date": "2018-01-13",
+     "trough_date": "2019-04-25",
+     "steps": 730
+    },
+    "BH": {
+     "total": -0.8245542399478042,
+     "cagr": -0.5811375404118964,
+     "maxdd": -0.9396550481981527,
+     "peak_date": "2018-01-13",
+     "trough_date": "2018-12-15",
+     "steps": 730
+    },
+    "c1": true,
+    "c2": true,
+    "c3": false,
+    "switches": 33,
+    "n_c1c2_cells": 25
+   },
+   "v3": [
+    {
+     "tag": "B1_ETH_2018_2019",
+     "cut_idx": 256,
+     "n_days": 121,
+     "truncate_ok": true,
+     "scramble_ok": true
+    },
+    {
+     "tag": "B1_ETH_2018_2019",
+     "cut_idx": 501,
+     "n_days": 366,
+     "truncate_ok": true,
+     "scramble_ok": true
+    },
+    {
+     "tag": "B1_ETH_2018_2019",
+     "cut_idx": 682,
+     "n_days": 547,
+     "truncate_ok": true,
+     "scramble_ok": true
+    }
+   ],
+   "data_sha256": "b2e86675f6f15178362164d2183f9677f112bb606e821abdd4be357be081e134",
+   "main": false
+  },
+  {
+   "name": "B2_ETH_2021_2025",
+   "asset": "ETHUSDT spot",
+   "first": "2021-01-01",
+   "last": "2025-12-31",
+   "t0": "2021-06-30",
+   "end": "2025-12-31",
+   "steps": 1645,
+   "hist_days_to_t0": 181,
+   "primary": {
+    "T": {
+     "total": 0.2952823023302944,
+     "cagr": 0.05908770319295775,
+     "maxdd": -0.5280565362759257,
+     "peak_date": "2021-09-05",
+     "trough_date": "2022-08-10",
+     "steps": 1645
+    },
+    "BH": {
+     "total": 0.3038692681641251,
+     "cagr": 0.06064158146100018,
+     "maxdd": -0.7930253453633335,
+     "peak_date": "2021-11-08",
+     "trough_date": "2022-06-18",
+     "steps": 1645
+    },
+    "c1": false,
+    "c2": false,
+    "c3": false,
+    "switches": 69,
+    "off_days": 702,
+    "n_decision_days": 1646,
+    "episodes": [
+     {
+      "entry": "2021-07-29",
+      "exit": "2021-07-30",
+      "ret": 0.030011763530739977,
+      "open": false
+     },
+     {
+      "entry": "2021-07-31",
+      "exit": "2021-08-01",
+      "ret": 0.006710421911827025,
+      "open": false
+     },
+     {
+      "entry": "2021-08-02",
+      "exit": "2021-08-03",
+      "ret": -0.040432940750482094,
+      "open": false
+     },
+     {
+      "entry": "2021-08-04",
+      "exit": "2021-08-05",
+      "ret": 0.0344034132669051,
+      "open": false
+     },
+     {
+      "entry": "2021-08-06",
+      "exit": "2021-09-21",
+      "ret": -0.0463294365336121,
+      "open": false
+     },
+     {
+      "entry": "2021-10-14",
+      "exit": "2022-01-07",
+      "ret": -0.15858398578210686,
+      "open": false
+     },
+     {
+      "entry": "2022-03-23",
+      "exit": "2022-03-24",
+      "ret": 0.02155523631548739,
+      "open": false
+     },
+     {
+      "entry": "2022-03-26",
+      "exit": "2022-03-27",
+      "ret": 0.04476243504377786,
+      "open": false
+     },
+     {
+      "entry": "2022-03-28",
+      "exit": "2022-03-31",
+      "ret": -0.018374213999140965,
+      "open": false
+     },
+     {
+      "entry": "2022-04-01",
+      "exit": "2022-04-06",
+      "ret": -0.08572309441695558,
+      "open": false
+     },
+     {
+      "entry": "2022-07-16",
+      "exit": "2022-07-17",
+      "ret": -0.015643275507876142,
+      "open": false
+     },
+     {
+      "entry": "2022-07-18",
+      "exit": "2022-07-19",
+      "ret": -0.02741235513021001,
+      "open": false
+     },
+     {
+      "entry": "2022-07-24",
+      "exit": "2022-07-25",
+      "ret": -0.10091124501205873,
+      "open": false
+     },
+     {
+      "entry": "2022-07-27",
+      "exit": "2022-07-28",
+      "ret": 0.05111704104376291,
+      "open": false
+     },
+     {
+      "entry": "2022-08-05",
+      "exit": "2022-08-06",
+      "ret": -0.029522056928770635,
+      "open": false
+     },
+     {
+      "entry": "2022-08-08",
+      "exit": "2022-08-09",
+      "ret": -0.04467551788436741,
+      "open": false
+     },
+     {
+      "entry": "2022-08-10",
+      "exit": "2022-08-11",
+      "ret": 0.011322948786787634,
+      "open": false
+     },
+     {
+      "entry": "2022-08-12",
+      "exit": "2022-08-13",
+      "ret": 0.009870019918546191,
+      "open": false
+     },
+     {
+      "entry": "2022-10-23",
+      "exit": "2022-10-24",
+      "ret": -0.01804339012665579,
+      "open": false
+     },
+     {
+      "entry": "2022-10-25",
+      "exit": "2022-10-26",
+      "ret": 0.06964852432259039,
+      "open": false
+     },
+     {
+      "entry": "2022-10-29",
+      "exit": "2022-10-30",
+      "ret": -0.020915793732450894,
+      "open": false
+     },
+     {
+      "entry": "2022-11-04",
+      "exit": "2022-11-05",
+      "ret": -0.01378520504606462,
+      "open": false
+     },
+     {
+      "entry": "2022-12-13",
+      "exit": "2022-12-14",
+      "ret": -0.012998088371988903,
+      "open": false
+     },
+     {
+      "entry": "2023-01-10",
+      "exit": "2024-08-04",
+      "ret": 1.0072066321386135,
+      "open": false
+     },
+     {
+      "entry": "2024-09-27",
+      "exit": "2024-09-28",
+      "ret": -0.010107373205324177,
+      "open": false
+     },
+     {
+      "entry": "2024-10-20",
+      "exit": "2024-10-21",
+      "ret": -0.032108120696806575,
+      "open": false
+     },
+     {
+      "entry": "2024-11-07",
+      "exit": "2025-02-04",
+      "ret": -0.059562453782259994,
+      "open": false
+     },
+     {
+      "entry": "2025-05-02",
+      "exit": "2025-05-03",
+      "ret": -0.007693150319033393,
+      "open": false
+     },
+     {
+      "entry": "2025-05-08",
+      "exit": "2025-05-09",
+      "ret": 0.059176410545797475,
+      "open": false
+     },
+     {
+      "entry": "2025-05-10",
+      "exit": "2025-05-11",
+      "ret": -0.02949501646501662,
+      "open": false
+     },
+     {
+      "entry": "2025-05-13",
+      "exit": "2025-05-14",
+      "ret": -0.029028325363327112,
+      "open": false
+     },
+     {
+      "entry": "2025-05-28",
+      "exit": "2025-05-29",
+      "ret": -0.02166331536406607,
+      "open": false
+     },
+     {
+      "entry": "2025-06-10",
+      "exit": "2025-06-11",
+      "ret": -0.018851149139095025,
+      "open": false
+     },
+     {
+      "entry": "2025-07-10",
+      "exit": "2025-11-04",
+      "ret": 0.11043090295113123,
+      "open": false
+     }
+    ],
+    "trades": [
+     {
+      "date": "2021-07-29",
+      "action": "BUY",
+      "price": 2382.92
+     },
+     {
+      "date": "2021-07-30",
+      "action": "SELL",
+      "price": 2461.81
+     },
+     {
+      "date": "2021-07-31",
+      "action": "BUY",
+      "price": 2531.05
+     },
+     {
+      "date": "2021-08-01",
+      "action": "SELL",
+      "price": 2555.69
+     },
+     {
+      "date": "2021-08-02",
+      "action": "BUY",
+      "price": 2606.93
+     },
+     {
+      "date": "2021-08-03",
+      "action": "SELL",
+      "price": 2509.04
+     },
+     {
+      "date": "2021-08-04",
+      "action": "BUY",
+      "price": 2724.78
+     },
+     {
+      "date": "2021-08-05",
+      "action": "SELL",
+      "price": 2826.99
+     },
+     {
+      "date": "2021-08-06",
+      "action": "BUY",
+      "price": 2891.58
+     },
+     {
+      "date": "2021-09-21",
+      "action": "SELL",
+      "price": 2765.9
+     },
+     {
+      "date": "2021-10-14",
+      "action": "BUY",
+      "price": 3790.82
+     },
+     {
+      "date": "2022-01-07",
+      "action": "SELL",
+      "price": 3199.24
+     },
+     {
+      "date": "2022-03-23",
+      "action": "BUY",
+      "price": 3036.0
+     },
+     {
+      "date": "2022-03-24",
+      "action": "SELL",
+      "price": 3110.76
+     },
+     {
+      "date": "2022-03-26",
+      "action": "BUY",
+      "price": 3145.0
+     },
+     {
+      "date": "2022-03-27",
+      "action": "SELL",
+      "price": 3295.65
+     },
+     {
+      "date": "2022-03-28",
+      "action": "BUY",
+      "price": 3332.92
+     },
+     {
+      "date": "2022-03-31",
+      "action": "SELL",
+      "price": 3281.51
+     },
+     {
+      "date": "2022-04-01",
+      "action": "BUY",
+      "price": 3455.21
+     },
+     {
+      "date": "2022-04-06",
+      "action": "SELL",
+      "price": 3168.51
+     },
+     {
+      "date": "2022-07-16",
+      "action": "BUY",
+      "price": 1355.85
+     },
+     {
+      "date": "2022-07-17",
+      "action": "SELL",
+      "price": 1338.65
+     },
+     {
+      "date": "2022-07-18",
+      "action": "BUY",
+      "price": 1581.04
+     },
+     {
+      "date": "2022-07-19",
+      "action": "SELL",
+      "price": 1542.32
+     },
+     {
+      "date": "2022-07-24",
+      "action": "BUY",
+      "price": 1597.7
+     },
+     {
+      "date": "2022-07-25",
+      "action": "SELL",
+      "price": 1440.79
+     },
+     {
+      "date": "2022-07-27",
+      "action": "BUY",
+      "price": 1635.74
+     },
+     {
+      "date": "2022-07-28",
+      "action": "SELL",
+      "price": 1724.52
+     },
+     {
+      "date": "2022-08-05",
+      "action": "BUY",
+      "price": 1736.81
+     },
+     {
+      "date": "2022-08-06",
+      "action": "SELL",
+      "price": 1690.6
+     },
+     {
+      "date": "2022-08-08",
+      "action": "BUY",
+      "price": 1777.05
+     },
+     {
+      "date": "2022-08-09",
+      "action": "SELL",
+      "price": 1702.76
+     },
+     {
+      "date": "2022-08-10",
+      "action": "BUY",
+      "price": 1853.57
+     },
+     {
+      "date": "2022-08-11",
+      "action": "SELL",
+      "price": 1880.19
+     },
+     {
+      "date": "2022-08-12",
+      "action": "BUY",
+      "price": 1958.28
+     },
+     {
+      "date": "2022-08-13",
+      "action": "SELL",
+      "price": 1983.55
+     },
+     {
+      "date": "2022-10-23",
+      "action": "BUY",
+      "price": 1364.2
+     },
+     {
+      "date": "2022-10-24",
+      "action": "SELL",
+      "price": 1343.61
+     },
+     {
+      "date": "2022-10-25",
+      "action": "BUY",
+      "price": 1459.74
+     },
+     {
+      "date": "2022-10-26",
+      "action": "SELL",
+      "price": 1566.1
+     },
+     {
+      "date": "2022-10-29",
+      "action": "BUY",
+      "price": 1619.55
+     },
+     {
+      "date": "2022-10-30",
+      "action": "SELL",
+      "price": 1590.44
+     },
+     {
+      "date": "2022-11-04",
+      "action": "BUY",
+      "price": 1644.78
+     },
+     {
+      "date": "2022-11-05",
+      "action": "SELL",
+      "price": 1626.98
+     },
+     {
+      "date": "2022-12-13",
+      "action": "BUY",
+      "price": 1320.69
+     },
+     {
+      "date": "2022-12-14",
+      "action": "SELL",
+      "price": 1307.44
+     },
+     {
+      "date": "2023-01-10",
+      "action": "BUY",
+      "price": 1335.62
+     },
+     {
+      "date": "2024-08-04",
+      "action": "SELL",
+      "price": 2688.92
+     },
+     {
+      "date": "2024-09-27",
+      "action": "BUY",
+      "price": 2694.43
+     },
+     {
+      "date": "2024-09-28",
+      "action": "SELL",
+      "price": 2675.21
+     },
+     {
+      "date": "2024-10-20",
+      "action": "BUY",
+      "price": 2746.91
+     },
+     {
+      "date": "2024-10-21",
+      "action": "SELL",
+      "price": 2666.7
+     },
+     {
+      "date": "2024-11-07",
+      "action": "BUY",
+      "price": 2895.47
+     },
+     {
+      "date": "2025-02-04",
+      "action": "SELL",
+      "price": 2731.19
+     },
+     {
+      "date": "2025-05-02",
+      "action": "BUY",
+      "price": 1842.2
+     },
+     {
+      "date": "2025-05-03",
+      "action": "SELL",
+      "price": 1833.52
+     },
+     {
+      "date": "2025-05-08",
+      "action": "BUY",
+      "price": 2207.39
+     },
+     {
+      "date": "2025-05-09",
+      "action": "SELL",
+      "price": 2345.04
+     },
+     {
+      "date": "2025-05-10",
+      "action": "BUY",
+      "price": 2583.23
+     },
+     {
+      "date": "2025-05-11",
+      "action": "SELL",
+      "price": 2514.57
+     },
+     {
+      "date": "2025-05-13",
+      "action": "BUY",
+      "price": 2679.71
+     },
+     {
+      "date": "2025-05-14",
+      "action": "SELL",
+      "price": 2609.74
+     },
+     {
+      "date": "2025-05-28",
+      "action": "BUY",
+      "price": 2681.6
+     },
+     {
+      "date": "2025-05-29",
+      "action": "SELL",
+      "price": 2631.39
+     },
+     {
+      "date": "2025-06-10",
+      "action": "BUY",
+      "price": 2816.4
+     },
+     {
+      "date": "2025-06-11",
+      "action": "SELL",
+      "price": 2771.61
+     },
+     {
+      "date": "2025-07-10",
+      "action": "BUY",
+      "price": 2951.29
+     },
+     {
+      "date": "2025-11-04",
+      "action": "SELL",
+      "price": 3287.05
+     }
+    ],
+    "dd_ratio": 0.6658759891639916,
+    "ep_stats": {
+     "n": 34,
+     "wins": 12,
+     "max_ret": 1.0072066321386135,
+     "max_entry": "2023-01-10",
+     "max_exit": "2024-08-04",
+     "rest_compounded": -0.3546841258937984,
+     "share_log": 2.6929525530874265,
+     "median": -0.016843332817265966,
+     "min": -0.15858398578210686,
+     "n_le2d": 27
+    }
+   },
+   "grid": [
+    {
+     "thr": 0.65,
+     "P": 120,
+     "R": 20,
+     "T_total": -0.24099151911762828,
+     "T_maxdd": -0.8099979276826698,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 51,
+     "off_days": 475
+    },
+    {
+     "thr": 0.65,
+     "P": 120,
+     "R": 30,
+     "T_total": 0.2355646443121775,
+     "T_maxdd": -0.7147940222633923,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 39,
+     "off_days": 504
+    },
+    {
+     "thr": 0.65,
+     "P": 120,
+     "R": 40,
+     "T_total": 0.13938650554557497,
+     "T_maxdd": -0.7294236053355356,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 31,
+     "off_days": 546
+    },
+    {
+     "thr": 0.65,
+     "P": 180,
+     "R": 20,
+     "T_total": -0.13924255743703284,
+     "T_maxdd": -0.6734721488374604,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 77,
+     "off_days": 611
+    },
+    {
+     "thr": 0.65,
+     "P": 180,
+     "R": 30,
+     "T_total": -0.13397563946734437,
+     "T_maxdd": -0.6341250556479686,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 61,
+     "off_days": 639
+    },
+    {
+     "thr": 0.65,
+     "P": 180,
+     "R": 40,
+     "T_total": -0.09762819434376746,
+     "T_maxdd": -0.6065109031798217,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 47,
+     "off_days": 651
+    },
+    {
+     "thr": 0.65,
+     "P": 240,
+     "R": 20,
+     "T_total": 0.05893070182335913,
+     "T_maxdd": -0.6622536434073023,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 85,
+     "off_days": 626
+    },
+    {
+     "thr": 0.65,
+     "P": 240,
+     "R": 30,
+     "T_total": 0.20351857941340712,
+     "T_maxdd": -0.5959112820439159,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 61,
+     "off_days": 645
+    },
+    {
+     "thr": 0.65,
+     "P": 240,
+     "R": 40,
+     "T_total": 0.14270421013853696,
+     "T_maxdd": -0.5770832886665899,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 47,
+     "off_days": 655
+    },
+    {
+     "thr": 0.7,
+     "P": 120,
+     "R": 20,
+     "T_total": 0.01182680737420716,
+     "T_maxdd": -0.7578562097939404,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 69,
+     "off_days": 549
+    },
+    {
+     "thr": 0.7,
+     "P": 120,
+     "R": 30,
+     "T_total": 0.3260545037685323,
+     "T_maxdd": -0.6489214572496882,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": true,
+     "c3": false,
+     "both": false,
+     "switches": 51,
+     "off_days": 571
+    },
+    {
+     "thr": 0.7,
+     "P": 120,
+     "R": 40,
+     "T_total": 0.3077126742066192,
+     "T_maxdd": -0.6599135540011679,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": true,
+     "c3": false,
+     "both": false,
+     "switches": 37,
+     "off_days": 581
+    },
+    {
+     "thr": 0.7,
+     "P": 180,
+     "R": 20,
+     "T_total": 0.4966140195783848,
+     "T_maxdd": -0.5322798633215987,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": true,
+     "c3": false,
+     "both": false,
+     "switches": 93,
+     "off_days": 680
+    },
+    {
+     "thr": 0.7,
+     "P": 180,
+     "R": 30,
+     "T_total": 0.2952823023302944,
+     "T_maxdd": -0.5280565362759257,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 69,
+     "off_days": 702
+    },
+    {
+     "thr": 0.7,
+     "P": 180,
+     "R": 40,
+     "T_total": 0.15939627680360546,
+     "T_maxdd": -0.5757812967520421,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 55,
+     "off_days": 715
+    },
+    {
+     "thr": 0.7,
+     "P": 240,
+     "R": 20,
+     "T_total": 0.36949288899792543,
+     "T_maxdd": -0.5322798633215987,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": true,
+     "c3": false,
+     "both": false,
+     "switches": 97,
+     "off_days": 682
+    },
+    {
+     "thr": 0.7,
+     "P": 240,
+     "R": 30,
+     "T_total": 0.2672053558861911,
+     "T_maxdd": -0.5280565362759257,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 71,
+     "off_days": 703
+    },
+    {
+     "thr": 0.7,
+     "P": 240,
+     "R": 40,
+     "T_total": 0.13426483857369687,
+     "T_maxdd": -0.5757812967520421,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 57,
+     "off_days": 716
+    },
+    {
+     "thr": 0.75,
+     "P": 120,
+     "R": 20,
+     "T_total": -0.14707576078970186,
+     "T_maxdd": -0.6303770153364313,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 91,
+     "off_days": 694
+    },
+    {
+     "thr": 0.75,
+     "P": 120,
+     "R": 30,
+     "T_total": -0.05972243716415937,
+     "T_maxdd": -0.6331986300167542,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 71,
+     "off_days": 725
+    },
+    {
+     "thr": 0.75,
+     "P": 120,
+     "R": 40,
+     "T_total": 0.0587204959174179,
+     "T_maxdd": -0.5796080100554722,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 55,
+     "off_days": 751
+    },
+    {
+     "thr": 0.75,
+     "P": 180,
+     "R": 20,
+     "T_total": 0.10211770752538984,
+     "T_maxdd": -0.558225053313429,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 113,
+     "off_days": 788
+    },
+    {
+     "thr": 0.75,
+     "P": 180,
+     "R": 30,
+     "T_total": -0.12396436267803168,
+     "T_maxdd": -0.5469245853798363,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 89,
+     "off_days": 819
+    },
+    {
+     "thr": 0.75,
+     "P": 180,
+     "R": 40,
+     "T_total": -0.10741959474760487,
+     "T_maxdd": -0.4840560516618778,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 73,
+     "off_days": 844
+    },
+    {
+     "thr": 0.75,
+     "P": 240,
+     "R": 20,
+     "T_total": -0.12399290529897089,
+     "T_maxdd": -0.5582250533134285,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 119,
+     "off_days": 795
+    },
+    {
+     "thr": 0.75,
+     "P": 240,
+     "R": 30,
+     "T_total": -0.303740917818519,
+     "T_maxdd": -0.5459888678343605,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 93,
+     "off_days": 829
+    },
+    {
+     "thr": 0.75,
+     "P": 240,
+     "R": 40,
+     "T_total": -0.2905914014708061,
+     "T_maxdd": -0.5867839072614919,
+     "BH_total": 0.3038692681641251,
+     "BH_maxdd": -0.7930253453633335,
+     "c1": false,
+     "c2": false,
+     "c3": false,
+     "both": false,
+     "switches": 77,
+     "off_days": 854
+    }
+   ],
+   "grid_summary": {
+    "n_cells": 27,
+    "n_c1c2": 0,
+    "n_c1": 0,
+    "n_c2": 4,
+    "n_c3": 0,
+    "threshold_cells": 19,
+    "cond_sub": false
+   },
+   "pass": false,
+   "verdict": "FAIL",
+   "warm_start": {
+    "T": {
+     "total": 0.2952823023302944,
+     "cagr": 0.05908770319295775,
+     "maxdd": -0.5280565362759257,
+     "peak_date": "2021-09-05",
+     "trough_date": "2022-08-10",
+     "steps": 1645
+    },
+    "BH": {
+     "total": 0.3038692681641251,
+     "cagr": 0.06064158146100018,
+     "maxdd": -0.7930253453633335,
+     "peak_date": "2021-11-08",
+     "trough_date": "2022-06-18",
+     "steps": 1645
+    },
+    "c1": false,
+    "c2": false,
+    "c3": false,
+    "switches": 68,
+    "off_days": 702,
+    "state_at_t0": "OFF",
+    "switches_before_t0": 1,
+    "trades": [
+     {
+      "date": "2021-07-29",
+      "action": "BUY",
+      "price": 2382.92
+     },
+     {
+      "date": "2021-07-30",
+      "action": "SELL",
+      "price": 2461.81
+     },
+     {
+      "date": "2021-07-31",
+      "action": "BUY",
+      "price": 2531.05
+     },
+     {
+      "date": "2021-08-01",
+      "action": "SELL",
+      "price": 2555.69
+     },
+     {
+      "date": "2021-08-02",
+      "action": "BUY",
+      "price": 2606.93
+     },
+     {
+      "date": "2021-08-03",
+      "action": "SELL",
+      "price": 2509.04
+     },
+     {
+      "date": "2021-08-04",
+      "action": "BUY",
+      "price": 2724.78
+     },
+     {
+      "date": "2021-08-05",
+      "action": "SELL",
+      "price": 2826.99
+     },
+     {
+      "date": "2021-08-06",
+      "action": "BUY",
+      "price": 2891.58
+     },
+     {
+      "date": "2021-09-21",
+      "action": "SELL",
+      "price": 2765.9
+     },
+     {
+      "date": "2021-10-14",
+      "action": "BUY",
+      "price": 3790.82
+     },
+     {
+      "date": "2022-01-07",
+      "action": "SELL",
+      "price": 3199.24
+     },
+     {
+      "date": "2022-03-23",
+      "action": "BUY",
+      "price": 3036.0
+     },
+     {
+      "date": "2022-03-24",
+      "action": "SELL",
+      "price": 3110.76
+     },
+     {
+      "date": "2022-03-26",
+      "action": "BUY",
+      "price": 3145.0
+     },
+     {
+      "date": "2022-03-27",
+      "action": "SELL",
+      "price": 3295.65
+     },
+     {
+      "date": "2022-03-28",
+      "action": "BUY",
+      "price": 3332.92
+     },
+     {
+      "date": "2022-03-31",
+      "action": "SELL",
+      "price": 3281.51
+     },
+     {
+      "date": "2022-04-01",
+      "action": "BUY",
+      "price": 3455.21
+     },
+     {
+      "date": "2022-04-06",
+      "action": "SELL",
+      "price": 3168.51
+     },
+     {
+      "date": "2022-07-16",
+      "action": "BUY",
+      "price": 1355.85
+     },
+     {
+      "date": "2022-07-17",
+      "action": "SELL",
+      "price": 1338.65
+     },
+     {
+      "date": "2022-07-18",
+      "action": "BUY",
+      "price": 1581.04
+     },
+     {
+      "date": "2022-07-19",
+      "action": "SELL",
+      "price": 1542.32
+     },
+     {
+      "date": "2022-07-24",
+      "action": "BUY",
+      "price": 1597.7
+     },
+     {
+      "date": "2022-07-25",
+      "action": "SELL",
+      "price": 1440.79
+     },
+     {
+      "date": "2022-07-27",
+      "action": "BUY",
+      "price": 1635.74
+     },
+     {
+      "date": "2022-07-28",
+      "action": "SELL",
+      "price": 1724.52
+     },
+     {
+      "date": "2022-08-05",
+      "action": "BUY",
+      "price": 1736.81
+     },
+     {
+      "date": "2022-08-06",
+      "action": "SELL",
+      "price": 1690.6
+     },
+     {
+      "date": "2022-08-08",
+      "action": "BUY",
+      "price": 1777.05
+     },
+     {
+      "date": "2022-08-09",
+      "action": "SELL",
+      "price": 1702.76
+     },
+     {
+      "date": "2022-08-10",
+      "action": "BUY",
+      "price": 1853.57
+     },
+     {
+      "date": "2022-08-11",
+      "action": "SELL",
+      "price": 1880.19
+     },
+     {
+      "date": "2022-08-12",
+      "action": "BUY",
+      "price": 1958.28
+     },
+     {
+      "date": "2022-08-13",
+      "action": "SELL",
+      "price": 1983.55
+     },
+     {
+      "date": "2022-10-23",
+      "action": "BUY",
+      "price": 1364.2
+     },
+     {
+      "date": "2022-10-24",
+      "action": "SELL",
+      "price": 1343.61
+     },
+     {
+      "date": "2022-10-25",
+      "action": "BUY",
+      "price": 1459.74
+     },
+     {
+      "date": "2022-10-26",
+      "action": "SELL",
+      "price": 1566.1
+     },
+     {
+      "date": "2022-10-29",
+      "action": "BUY",
+      "price": 1619.55
+     },
+     {
+      "date": "2022-10-30",
+      "action": "SELL",
+      "price": 1590.44
+     },
+     {
+      "date": "2022-11-04",
+      "action": "BUY",
+      "price": 1644.78
+     },
+     {
+      "date": "2022-11-05",
+      "action": "SELL",
+      "price": 1626.98
+     },
+     {
+      "date": "2022-12-13",
+      "action": "BUY",
+      "price": 1320.69
+     },
+     {
+      "date": "2022-12-14",
+      "action": "SELL",
+      "price": 1307.44
+     },
+     {
+      "date": "2023-01-10",
+      "action": "BUY",
+      "price": 1335.62
+     },
+     {
+      "date": "2024-08-04",
+      "action": "SELL",
+      "price": 2688.92
+     },
+     {
+      "date": "2024-09-27",
+      "action": "BUY",
+      "price": 2694.43
+     },
+     {
+      "date": "2024-09-28",
+      "action": "SELL",
+      "price": 2675.21
+     },
+     {
+      "date": "2024-10-20",
+      "action": "BUY",
+      "price": 2746.91
+     },
+     {
+      "date": "2024-10-21",
+      "action": "SELL",
+      "price": 2666.7
+     },
+     {
+      "date": "2024-11-07",
+      "action": "BUY",
+      "price": 2895.47
+     },
+     {
+      "date": "2025-02-04",
+      "action": "SELL",
+      "price": 2731.19
+     },
+     {
+      "date": "2025-05-02",
+      "action": "BUY",
+      "price": 1842.2
+     },
+     {
+      "date": "2025-05-03",
+      "action": "SELL",
+      "price": 1833.52
+     },
+     {
+      "date": "2025-05-08",
+      "action": "BUY",
+      "price": 2207.39
+     },
+     {
+      "date": "2025-05-09",
+      "action": "SELL",
+      "price": 2345.04
+     },
+     {
+      "date": "2025-05-10",
+      "action": "BUY",
+      "price": 2583.23
+     },
+     {
+      "date": "2025-05-11",
+      "action": "SELL",
+      "price": 2514.57
+     },
+     {
+      "date": "2025-05-13",
+      "action": "BUY",
+      "price": 2679.71
+     },
+     {
+      "date": "2025-05-14",
+      "action": "SELL",
+      "price": 2609.74
+     },
+     {
+      "date": "2025-05-28",
+      "action": "BUY",
+      "price": 2681.6
+     },
+     {
+      "date": "2025-05-29",
+      "action": "SELL",
+      "price": 2631.39
+     },
+     {
+      "date": "2025-06-10",
+      "action": "BUY",
+      "price": 2816.4
+     },
+     {
+      "date": "2025-06-11",
+      "action": "SELL",
+      "price": 2771.61
+     },
+     {
+      "date": "2025-07-10",
+      "action": "BUY",
+      "price": 2951.29
+     },
+     {
+      "date": "2025-11-04",
+      "action": "SELL",
+      "price": 3287.05
+     }
+    ]
+   },
+   "fee_hi": {
+    "cost": 0.003,
+    "T": {
+     "total": 0.16967757039170883,
+     "cagr": 0.03538728229111454,
+     "maxdd": -0.5475253414811166,
+     "peak_date": "2021-09-05",
+     "trough_date": "2022-10-25",
+     "steps": 1645
+    },
+    "BH": {
+     "total": 0.3019193141239995,
+     "cagr": 0.06028942247199831,
+     "maxdd": -0.7930253453633335,
+     "peak_date": "2021-11-08",
+     "trough_date": "2022-06-18",
+     "steps": 1645
+    },
+    "c1": false,
+    "c2": false,
+    "c3": false,
+    "switches": 69,
+    "n_c1c2_cells": 0
+   },
+   "v3": [
+    {
+     "tag": "B2_ETH_2021_2025",
+     "cut_idx": 545,
+     "n_days": 366,
+     "truncate_ok": true,
+     "scramble_ok": true
+    },
+    {
+     "tag": "B2_ETH_2021_2025",
+     "cut_idx": 1094,
+     "n_days": 915,
+     "truncate_ok": true,
+     "scramble_ok": true
+    },
+    {
+     "tag": "B2_ETH_2021_2025",
+     "cut_idx": 1550,
+     "n_days": 1371,
+     "truncate_ok": true,
+     "scramble_ok": true
+    }
+   ],
+   "data_sha256": "122f05d5d1e44c6e4d3f600edfa49be48666ac20ccb4d9b15c2d4adc7f7fa17c",
+   "main": false
+  }
+ ],
+ "v2": {
+  "ok": true,
+  "note": "load_clean2: khong co ngay nam 2020 trong bat ky file nao; BTC Bitstamp max < 2017-08-01 + xcheck < 2018-01-01; ETH thang 2017-08..2019-12 va 2021-01..2025-12"
+ },
+ "v3_ok": true,
+ "verdict_A": "FAIL: T bi bac bo tren BTC 2014-2017",
+ "verdict_ETH": "ETH: FAIL ca 2 ky - T khong tong quat sang ETH"
+}

@@ -1,0 +1,38 @@
+{
+ "raw_name": "btcusd_1-min_data.csv",
+ "raw_bytes": 395107785,
+ "raw_sha256": "81cb6c9d7ffd58b182892650d2e2130f657692bb3d473af35f293333e55e0b38",
+ "inner_name": "btcusd_1-min_data.csv",
+ "rows_total_scanned": 7786222,
+ "rows_dropped_ge_hardcap_unseen": 4629743,
+ "rows_dropped_before_warmup": 787679,
+ "rows_kept": 2368800,
+ "nan_close_dropped": 0,
+ "dup_ts_dropped": 0,
+ "expected_days": 1492,
+ "rows_days": 1492,
+ "missing_days": [],
+ "max_missing_run": 0,
+ "qa": {
+  "nbars_median": 1440.0,
+  "days_nbars_lt720": 0,
+  "days_last_gap_gt360min": 0,
+  "last_gap_min_median": 1.0,
+  "last_gap_min_p99": 1.0,
+  "last_gap_min_max": 1.0,
+  "days_abs_ret_gt30pct": 2,
+  "max_abs_daily_ret": 0.40142025220997946,
+  "close_min": 66.34,
+  "close_max": 2954.22
+ },
+ "xcheck": {
+  "days": 137,
+  "missing_bitstamp": [],
+  "median_abs_rel": 0.004648053562289145,
+  "p95_abs_rel": 0.021882885305682435,
+  "max_abs_rel": 0.09917293233082702,
+  "days_gt3pct": 4
+ },
+ "clean_sha256": "a14a876539c0617b898711b99eddab4399cac1bf7ab4eb64c44601fabdb33721",
+ "minute_extract_sha256": "e6bcc05d0eb4b7e4daa84480eb519e88cde7e2f6368a66f93806bc1ebf3ed86e"
+}
