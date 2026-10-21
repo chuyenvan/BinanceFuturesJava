@@ -202,3 +202,46 @@ Như vậy sau khoảng 7 chu kỳ (~3,5 ngày) sẽ chạm khung cấm. Các kh
   - `/usr/local/sbin` chỉ có `h242-prestart.sh`.
   - ⇒ **Không tìm thấy "healthcheck cron */5 + Telegram"** như ghi chú harden242 mô tả. Hoặc nó chưa từng được cài, hoặc nằm ở chỗ khác (máy khác / Oracle) — cần owner xác nhận.
   - Telegram hiện chỉ đến từ `Reporter` trong app mỗi 30'. Nếu app chết thì báo cáo này cũng ngừng: không có cảnh báo, không có gì tự bật lại.
+
+---
+
+## Tự-restart 19:54 (kiểm 21:13 +07, chỉ đọc qua ssh+pipe)
+| mục | kết quả |
+|---|---|
+| reset | `Restart: Reset by Schedule` 19:54:31.590 (process cũ 7535); JVM mới **PID 27434**, `ps lstart` **2026-10-21 19:54:30**, ppid 1; log `MainClass` 19:54:32.266; `ThreadAutoRestartProgram` 19:54:43.098 |
+| jar (`/proc/27434/fd`) | md5 **eea5adecaff93d3fc350e4d13b3ecb2a** ✔ |
+| env | `LIVE_TS_MKT_EXT=1` + 6 key v11b, `LIVE_PROFILE=c3_shadow`, `SHADOW_NO_PUSH=true`, `JAVA_TOOL_OPTIONS=-Xms1g -Xmx3g -Xlog:gc…` ✔ (Utils.reset chép toàn bộ env) |
+| profile / LEGACY | `[LIVE_PROFILE=c3_shadow] BAT … SHADOW_NO_PUSH=true` ✔; `[LEGACY] managed 44` 80/80 dòng ✔ (trước reset 19:54:10 cũng 44) |
+| sổ giấy | open=4, realized 88,0877 — không đổi ✔ |
+| TS-EXT | `nap 30 ngay tu …/run/ts_ext_daily.csv`, `BAT … days_loaded=30`, rồi `flag day=2026-10-21 flag=OFF dd=-0.137179 … src=file final=true` tại 19:54:43.711 (6 ms sau BAT, **0 lần đọc Aerospike**, kết quả bit-exact với lần tính 07:57 từ aero) ✔. Status 20:00 và 21:00: `flagToday=OFF deferring=0`. Cache 31 dòng (dòng cuối 2026-10-20, 1440 phút) |
+| lỗi | **0 ERROR, 0 Exception** từ lúc start; lần này không có race ở tick đầu |
+| tick | lần đầu 28,4 s (warm-up), sau đó 1,41 / 0,86 / 0,94 / 0,56 s ✔ |
+
+**Lịch tự-restart kế tiếp:** thread bắt đầu lúc 19:54:43, cộng 12h ra giây 43 — nằm trong khoảng 30–45 nên reset ngay.
+
+| chu kỳ (tính từ bây giờ) | thời điểm |
+|---|---|
+| 1 | **10-22 ~07:54:4x** |
+| 2 | 10-22 ~19:55:3x |
+| 3 | 10-23 ~07:55:4x |
+| 4 | 10-23 ~19:56:3x |
+| 5 | 10-24 ~07:56:4x |
+| 6 | **10-24 ~19:57:3x ⇒ rơi khung ±3' đầu giờ** |
+
+Lịch này khớp với dự kiến đã ghi ở phần "DEPLOY LẦN 2" (chu kỳ 7 tính từ lần deploy).
+
+## RSS — lần đo #2 (21:13:38 +07)
+| | PID | RSS | VSZ | etimes |
+|---|---|---|---|---|
+| trading (mới, start 19:54:30) | 27434 | **2 769 828 kB (2,64 GiB)** | 7,48 G | 4 747 s (1,32 h) |
+| collector (tự-restart 21:06:30) | 4217 | 1 547 876 kB (1,48 GiB) | 5,91 G | 427 s |
+
+- Host: Mem used 4 845 M, buff/cache 2 801 M, **MemAvailable 2 656 M**; swap dùng 240 M / 8 063 M.
+- **RSS của PID 7535 ngay trước reset KHÔNG đo được.** Log không ghi RSS và process đã thoát. Điểm duy nhất có là 13:41 (h 5,8) = 2,58 GiB.
+  So sánh cùng pha giữa 2 process: 7535 ở h 5,8 là 2,58 GiB; 27434 ở h 1,3 là 2,64 GiB. Chưa đủ để kết luận về xu hướng native; cần đo 27434 ở h 6 và h 11 (khoảng 01:54 và 06:54 +07, 10-22).
+- **Process cũ 7535 (07:53:59 → 19:54:16), gc.log.0** — 2 333 GC, 21 Full GC (System.gc). Heap sau Full GC:
+  671 (08:00) → 603 → 603 → 593 → 591 → 589 → 588 → 587 → 587 → 585 → 583 (13:00) → 582 → 580 → 579 → 578 → 576 → 573 → 569 → 569 → 569 → **568 M (19:30, Full GC cuối)**.
+  Committed heap 2 247 → 1 907 M. Pause max 1,59 s; các lần sau 12:00 đều ≤ 1,13 s.
+  Log `Total ram used` cả chu kỳ khớp số trên (671 → 568 MB).
+  ⇒ **live set giảm đơn điệu −103 M trong 12h, không có dấu hiệu leak heap.**
+- **Process mới 27434:** Full GC 20:00:34 1771→677 M (2270), 20:30:33 814→599 (2007), 21:00:33 1417→599 (2007); pause max 0,94 s. Cùng mẫu với process cũ: đỉnh sau warm-up rồi giảm dần.
