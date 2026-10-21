@@ -1,0 +1,25 @@
+{
+ "tag": "b15-f015-a1",
+ "kind": "DEV",
+ "seed": "A1",
+ "md5": "dc62609b6d7169093c001f2ce0d198ed",
+ "n": 3531,
+ "chk": {
+  "jar": true,
+  "ok": true,
+  "keys": true,
+  "fbase": true,
+  "tsx": true,
+  "bitexact": true
+ },
+ "tsx": [
+  336,
+  214,
+  1870179,
+  174,
+  149
+ ],
+ "pc_blocked": 0,
+ "ref_md5": "dc62609b6d7169093c001f2ce0d198ed",
+ "passed": true
+}

@@ -1,0 +1,23 @@
+{
+ "tag": "b15-x14-s777",
+ "kind": "DEV",
+ "seed": "S777",
+ "md5": "bbd12d5f4aaa5cd366d4c6e896dde89e",
+ "n": 3443,
+ "chk": {
+  "jar": true,
+  "ok": true,
+  "keys": true,
+  "fbase": true,
+  "tsx": true
+ },
+ "tsx": [
+  336,
+  214,
+  1479979,
+  163,
+  136
+ ],
+ "pc_blocked": 0,
+ "passed": true
+}

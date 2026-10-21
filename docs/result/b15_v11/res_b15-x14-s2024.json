@@ -1,0 +1,23 @@
+{
+ "tag": "b15-x14-s2024",
+ "kind": "DEV",
+ "seed": "S2024",
+ "md5": "431a87cdebe4785cffc37dd10ded5fa7",
+ "n": 3496,
+ "chk": {
+  "jar": true,
+  "ok": true,
+  "keys": true,
+  "fbase": true,
+  "tsx": true
+ },
+ "tsx": [
+  336,
+  214,
+  1732676,
+  166,
+  147
+ ],
+ "pc_blocked": 0,
+ "passed": true
+}
