@@ -165,3 +165,40 @@ Như vậy sau khoảng 7 chu kỳ (~3,5 ngày) sẽ chạm khung cấm. Các kh
 - crontab root trống; `/etc/cron.hourly` chỉ có `0anacron`; không thấy healthcheck/watchdog nào.
 - JVM **không có** `-XX:+ExitOnOutOfMemoryError` hay `-XX:+HeapDumpOnOutOfMemoryError`.
 - Hệ quả: nếu JVM chết (OOM, crash, bị OOM-killer) thì **không có gì tự bật lại**. Reset 12h hiện tại không đóng vai watchdog. Nếu bỏ reset nên kèm watchdog (cron kiểm pid) và `ExitOnOutOfMemoryError`.
+
+---
+
+## RSS — lần đo #1 (10-21 13:41:45 +07, giờ thứ ~5,8 của PID 7535; chỉ đọc qua ssh+pipe)
+
+| | PID | RSS | VSZ | etimes | start |
+|---|---|---|---|---|---|
+| trading v_t_m (v11c) | 7535 | **2 706 588 kB (2,58 GiB)** | 7,48 G | 20 866 s (5,80 h) | 07:53:59 |
+| collector `BinanceDataIngestor` | 17517 | 2 192 012 kB (2,09 GiB) | 5,92 G | 16 875 s (4,69 h) | 09:00:30 (tự-restart 12h của collector) |
+
+- So với mốc 4' sau start (RSS 3,35 G, heap committed 2,6 G ngay sau warm-up): RSS hiện **thấp hơn ~0,64 G**, vì G1 trả bớt bộ nhớ sau các lần Full GC. Chưa có điểm đo cùng pha để kết luận về xu hướng native — cần các lần đo tiếp theo.
+- Host: Mem 7 821 M, used 5 469 M, buff/cache 2 233 M, **MemAvailable 2 006 M** (lúc 08:00 là 1 370 M); swap dùng 227 M / 8 063 M.
+- Full GC (System.gc mỗi 30') trong process này: 11 lần, từ 08:00:34 đến 13:00:33.
+
+| giờ | before→after (committed) | pause |
+|---|---|---|
+| 08:00:34 | 1622→**671** M (2247) | 1,59 s |
+| 08:30:34 | 1012→603 (2020) | 1,41 s |
+| 09:00:33 | 1461→603 (2020) | 1,02 s |
+| 09:30:32 | 734→593 (1987) | 0,82 s |
+| 10:00:33 | 1357→591 (1984) | 1,21 s |
+| 10:30:33 | 1185→589 (1977) | 1,17 s |
+| 11:00:33 | 1357→588 (1974) | 1,32 s |
+| 11:30:33 | 735→587 (1970) | 0,79 s |
+| 12:00:33 | 1364→587 (1967) | 0,92 s |
+| 12:30:33 | 742→585 (1964) | 0,94 s |
+| 13:00:33 | 1354→**583** M (1957) | 0,82 s |
+
+  Live set **giảm đơn điệu** 671 → 583 M, committed heap 2 247 → 1 957 M ⇒ không thấy leak heap; pause max 1,59 s.
+- **Healthcheck 242:**
+  - `systemctl list-timers --all` chỉ có `systemd-tmpfiles-clean.timer` và `systemd-readahead-done.timer`; không có timer h242-*.
+  - `h242-ingest.service` / `h242-trading.service` đều enabled, oneshot, không có `Restart=`, không có timer.
+  - `/etc/cron.d` chỉ có `0hourly` (01 * * * * run-parts cron.hourly → `0anacron`); `/etc/cron.daily` có `logrotate`, `man-db.cron`.
+  - `crontab -l -u root`: trống. App chạy bằng **root**, nên không có crontab user riêng.
+  - `/usr/local/sbin` chỉ có `h242-prestart.sh`.
+  - ⇒ **Không tìm thấy "healthcheck cron */5 + Telegram"** như ghi chú harden242 mô tả. Hoặc nó chưa từng được cài, hoặc nằm ở chỗ khác (máy khác / Oracle) — cần owner xác nhận.
+  - Telegram hiện chỉ đến từ `Reporter` trong app mỗi 30'. Nếu app chết thì báo cáo này cũng ngừng: không có cảnh báo, không có gì tự bật lại.
