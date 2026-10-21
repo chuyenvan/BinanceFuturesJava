@@ -70,6 +70,7 @@ public class BinanceOrderTradingManager {
         initData();
         startThreadListenQueueOrder2ManagerNew();
         startThreadManagerOrder();
+        com.binance.chuyennd.ops.OpsHooks.start();   // [V11D OPS] 1 dong log cau hinh + thread kill-switch (co tat => chi log)
         startThreadAutoRestartProgram();
     }
 
@@ -104,12 +105,20 @@ public class BinanceOrderTradingManager {
         new Thread(() -> {
             Thread.currentThread().setName("ThreadAutoRestartProgram");
             LOG.info("Start thread ThreadAutoRestartProgram");
+            // [V11D OPS 2026-10-21] LIVE_PERIODIC_RESET_HOURS: mac dinh 12 (= 43 200 000 ms, y het v11c); 0 = TAT reset
+            //   dinh ky. Duong reset cua Reporter (market check tre >15') KHONG doi.
+            final long resetPeriodMs = com.binance.chuyennd.ops.OpsConfig.periodicResetMs();
+            if (resetPeriodMs <= 0) {
+                LOG.warn("[OPS-RESET] {}=0 => TAT reset dinh ky (Reporter reset khi market check tre >15' van giu)",
+                        com.binance.chuyennd.ops.OpsConfig.KEY_RESET_HOURS);
+                return;
+            }
             while (true) {
                 try {
                     // [FIX 2026-10-01] 4h -> 12h: restart chi de reload state (ShadowBookC3.loadState),
                     //   giam cua so gian doan; dong bo nhip voi BinanceDataIngestor (da 12h).
                     //   Xem docs/audit/FIX_242_G2FLAT3_20261001.md + PROBE_242_20261001.md muc 3.
-                    Thread.sleep(Utils.TIME_HOUR * 12);
+                    Thread.sleep(resetPeriodMs);
                 } catch (InterruptedException ex) {
                     java.util.logging.Logger.getLogger(DetectEntrySignal2TradeNormal.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -291,10 +300,12 @@ public class BinanceOrderTradingManager {
         try {
             com.binance.chuyennd.tradecore.selector.ShadowBookC3 book =
                     com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance();
+            com.binance.chuyennd.ops.OpsHooks.onPaperBook(book);   // [V11D OPS] killsw C4/C6 khi so trong (chi doc)
             if (book.openCount() == 0) return;
             java.util.Map<String, Float> px = DataManagerAerospikeFloatSim.getAllPriceRealtimeLegacy(
                     new HashSet<>(book.openSymbols()));
             book.tick(px, System.currentTimeMillis());
+            com.binance.chuyennd.ops.OpsHooks.onPaperTick(book, px);   // [V11D OPS] killsw C4/C6 (chi doc)
         } catch (Exception e) {
             LOG.error("[SHADOW] loi nhip exit: {}", e.toString());
         }
@@ -405,6 +416,8 @@ public class BinanceOrderTradingManager {
         try {
             long startTime = System.currentTimeMillis();
             List<PositionRisk> positions = BinanceFuturesClientSingleton.getInstance().getAllPositionInfos();
+            // [V11D OPS] killsw C3 (dem loi API lien tiep; chi log). Co tat => no-op.
+            com.binance.chuyennd.ops.OpsHooks.onApiResult("positionRisk", positions != null && !positions.isEmpty());
             if (positions == null || positions.isEmpty()) {
                 LOG.info("Error get position from binance! {}", Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
                 return; // lock được nhả ở finally

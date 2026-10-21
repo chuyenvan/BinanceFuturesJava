@@ -190,6 +190,7 @@ public class DetectEntrySignal2TradeNormal {
     }
 
     private void checkMarketLevelChange2Trade(boolean selectorLeg) {
+        com.binance.chuyennd.ops.OpsHooks.onTickStart();   // [V11D OPS] heartbeat + killsw C5 (co tat => no-op, khong nem)
         try {
             LOG.info("Start check level change of market for trade! {}", new Date());
             long tTop0 = System.nanoTime();
@@ -295,6 +296,7 @@ public class DetectEntrySignal2TradeNormal {
             Float rateBtcDown15M = Utils.rateOf2Double(btcTicker.priceClose, btcMax15M);
             MarketLevelChange levelChange = MarketBigChangeDetector.getMarketStatus1M(rateDownAvg, rateUpAvg, rateDown15MAvg);
             RedisHelper.getInstance().get().set(RedisConst.REDIS_KEY_LAST_TIME_CHECK_MARKET, Utils.toJson(System.currentTimeMillis()));
+            com.binance.chuyennd.ops.OpsHooks.onMarketData(symbol2LastTickers);   // [V11D OPS] killsw C1 (chi DOC map)
             LOG.info("Check level market: {} DownAvg: {}% UpAvg:{}% DownAvg15M:{}%  btcRate: {}% btcRate15M: {}% {}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()),
                     Utils.formatDouble(rateDownAvg * 100, 3),
                     Utils.formatDouble(rateUpAvg * 100, 3),

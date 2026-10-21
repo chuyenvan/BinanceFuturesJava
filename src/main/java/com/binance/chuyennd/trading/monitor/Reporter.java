@@ -29,6 +29,9 @@ public class Reporter {
             if (StringUtils.isNotEmpty(timeLastCheck)){
                 long time = Long.parseLong(timeLastCheck);
                 if (System.currentTimeMillis() - time > 15 * Utils.TIME_MINUTE){
+                    // [V11D OPS] log them NGUYEN NHAN truoc khi reset (duong reset giu nguyen).
+                    LOG.warn("[OPS-RESET] cause=MARKET_CHECK_STALE age_s={} lastCheck={} thr_s=900 => Utils.reset",
+                            (System.currentTimeMillis() - time) / 1000L, Utils.normalizeDateYYYYMMDDHHmm(time));
                     Utils.reset("Reset by last check market over 15m: " + Utils.normalizeDateYYYYMMDDHHmm(time));
                 }
             }
