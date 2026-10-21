@@ -138,6 +138,12 @@ Cửa sổ tối thiểu 4 tuần. Các tiêu chí (iii), (iv), (v) giữ nguyê
   (không có `target/*v11c*` trên 242, bước scp chưa chạy) ⇒ hành vi = v11b, TS_MKT_EXT chưa chạy. LEGACY 44, sổ giấy open=4 realized 88,09
   (10-20 22:21 time-stop SUSDT −24,09), 0 ERROR. Restart có chủ đích, ghi sổ; **KHÔNG mở cửa sổ chính thức** (gói v1.1 chưa deploy).
   Tự-restart kế ~10-21 17:56; lần sau ~10-22 05:57 sẽ rơi khung ±3' nếu không deploy lại. Chi tiết `docs/result/V11C_DEPLOY_1021.md`.
+- **10-21 07:53:59 (+07, PID 7535, log `MainClass` 07:54:01.267): owner deploy v11c** — jar d7824f6d → **eea5adec** (md5 kiểm qua
+  `/proc/7535/fd`), env giữ đúng 1 dòng `LIVE_TS_MKT_EXT=1` + 6 key v11b, heap 3G + gc.log, c3_shadow, SHADOW_NO_PUSH=true, LEGACY 44,
+  sổ giấy open=4 realized 88,09 (không đổi). `[TS-EXT] BAT`; seed 30 ngày 07:54:19→07:57:09; `flag day=2026-10-21 flag=OFF dd=-0.137179`
+  (max30Day 09-27, minN 1436 do 10-10 thiếu 4'); cache 31 dòng; tick không chậm khi seed. 1 ERROR warm-up `[FEAT-PIPE] khong co feature
+  snapshot phut nay` ở tick đầu (07:54:12, không lặp). **CỬA SỔ PROMOTION CHÍNH THỨC gói v1.1 BẮT ĐẦU 2026-10-21 07:53:59 (+07).**
+  Tự-restart kế ~19:54:3x; ~chu kỳ 7 (~10-24 19:57) trôi vào khung ±3'. Chi tiết `docs/result/V11C_DEPLOY_1021.md`.
 
 ---
 
@@ -166,8 +172,10 @@ TS_MKT_EXT chỉ tác động sổ GIẤY c3_shadow (không vị thế THẬT/LE
 - Kỳ vọng thường gặp: 0 ngày cờ trong cửa sổ ⇒ (vi-b/c) = "chưa quan sát", **không chặn** (i')–(v); ghi rõ cơ chế chưa được kiểm forward.
 
 **D. Cửa sổ chính thức.** Cửa sổ đánh giá (B) của gói v1.1 bắt đầu **tại giờ restart deploy gói này trên 242**:
-`____-__-__ __:__:__ (+07)` (điền sau khi owner deploy và kiểm 15' của runbook ĐẠT).
-  **Trạng thái 10-21 06:0x: CHƯA BẮT ĐẦU** — restart 10-21 05:55:29 chạy jar v11b d7824f6d (v11c chưa lên 242), không phải gói v1.1.
+**`2026-10-21 07:53:59 (+07)`** (điền sau khi owner deploy và kiểm 15' của runbook ĐẠT).
+  **ĐIỀN 10-21 08:0x: CỬA SỔ PROMOTION CHÍNH THỨC gói v1.1 BẮT ĐẦU tại 2026-10-21 07:53:59 (+07)** (v11c eea5adec, owner deploy,
+  PID 7535; kiểm 15' ĐẠT — `docs/result/V11C_DEPLOY_1021.md` phần "DEPLOY LẦN 2").
+  (Lịch sử: 10-21 06:0x ghi "CHƯA BẮT ĐẦU" — restart 05:55:29 chạy jar v11b d7824f6d, v11c chưa lên 242, không phải gói v1.1.)
   Khi owner chạy bước 1+4 runbook và kiểm 15' ĐẠT (md5 eea5adec, `[TS-EXT] BAT`, cờ 10-21), điền giờ start thật ở đây; đoạn
   10-20 20:33:04 → giờ đó (kể cả 05:55:29 v11b + env thừa) = giai đoạn kiểm parity v11b, không tính. Tối thiểu 4 tuần như (B). Giai đoạn
 10-20 20:33:04 → giờ đó (v11b không TS_MKT_EXT) chỉ là giai đoạn kiểm parity v1.1, không tính vào cửa sổ.

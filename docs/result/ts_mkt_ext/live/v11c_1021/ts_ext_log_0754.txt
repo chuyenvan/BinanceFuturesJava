@@ -1,0 +1,33 @@
+21/10/2026 07:54:13.328 INFO  [ThreadManagerOrder] c.b.c.t.s.TsMktExt: [TS-EXT] BAT LIVE_TS_MKT_EXT=1 profile=c3_shadow baseH=168 extH=336 thr=-0.3 minN=1296 file=/home/chuyennd/java/v_t_m/run/ts_ext_daily.csv days_loaded=0
+21/10/2026 07:54:13.330 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] status now=2026-10-21T00:54:13.330Z flagToday=PENDING dd=NaN deferring=0 []
+21/10/2026 07:54:19.568 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-09-21 sum_ew=0.04567532695608914 n_min=1440 src=aero
+21/10/2026 07:54:25.594 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-09-22 sum_ew=0.027653154320506187 n_min=1440 src=aero
+21/10/2026 07:54:32.008 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-09-23 sum_ew=-0.04415777939526742 n_min=1440 src=aero
+21/10/2026 07:54:38.942 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-09-24 sum_ew=0.02695797108237761 n_min=1440 src=aero
+21/10/2026 07:54:44.622 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-09-25 sum_ew=0.025101924943577963 n_min=1440 src=aero
+21/10/2026 07:54:50.257 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-09-26 sum_ew=0.005297952819017789 n_min=1440 src=aero
+21/10/2026 07:54:56.186 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-09-27 sum_ew=0.005200458246243055 n_min=1440 src=aero
+21/10/2026 07:55:01.923 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-09-28 sum_ew=-0.046065867951467686 n_min=1440 src=aero
+21/10/2026 07:55:07.682 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-09-29 sum_ew=0.0019548213739429697 n_min=1440 src=aero
+21/10/2026 07:55:13.481 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-09-30 sum_ew=0.009169306793611831 n_min=1440 src=aero
+21/10/2026 07:55:19.114 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-10-01 sum_ew=-3.211663071260646E-4 n_min=1439 src=aero
+21/10/2026 07:55:24.755 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-10-02 sum_ew=1.9091027993350072E-4 n_min=1440 src=aero
+21/10/2026 07:55:30.415 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-10-03 sum_ew=0.007893041197997424 n_min=1440 src=aero
+21/10/2026 07:55:36.420 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-10-04 sum_ew=0.008332979950503853 n_min=1440 src=aero
+21/10/2026 07:55:42.256 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-10-05 sum_ew=0.007042038967535451 n_min=1440 src=aero
+21/10/2026 07:55:48.051 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-10-06 sum_ew=-0.007033010292019073 n_min=1440 src=aero
+21/10/2026 07:55:53.838 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-10-07 sum_ew=-0.035920719505141654 n_min=1440 src=aero
+21/10/2026 07:55:59.649 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-10-08 sum_ew=-0.03117472871755528 n_min=1440 src=aero
+21/10/2026 07:56:05.625 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-10-09 sum_ew=0.030043963274685313 n_min=1440 src=aero
+21/10/2026 07:56:11.543 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-10-10 sum_ew=0.007486243888304963 n_min=1436 src=aero
+21/10/2026 07:56:17.179 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-10-11 sum_ew=0.011930283084525893 n_min=1440 src=aero
+21/10/2026 07:56:22.975 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-10-12 sum_ew=-0.05825431318622551 n_min=1440 src=aero
+21/10/2026 07:56:29.100 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-10-13 sum_ew=0.0010397433259657595 n_min=1440 src=aero
+21/10/2026 07:56:34.871 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-10-14 sum_ew=-0.03878667628138383 n_min=1440 src=aero
+21/10/2026 07:56:40.557 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-10-15 sum_ew=0.0011768365191665827 n_min=1440 src=aero
+21/10/2026 07:56:46.374 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-10-16 sum_ew=-0.014789719239486342 n_min=1440 src=aero
+21/10/2026 07:56:52.140 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-10-17 sum_ew=-0.021145930181864128 n_min=1440 src=aero
+21/10/2026 07:56:57.787 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-10-18 sum_ew=-0.018217422886624906 n_min=1440 src=aero
+21/10/2026 07:57:03.451 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-10-19 sum_ew=0.008222807150767465 n_min=1440 src=aero
+21/10/2026 07:57:09.041 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] day 2026-10-20 sum_ew=0.02967805090968105 n_min=1440 src=aero
+21/10/2026 07:57:09.047 INFO  [TS-EXT] c.b.c.t.s.TsMktExt: [TS-EXT] flag day=2026-10-21 flag=OFF dd=-0.137179 altEwIdx=0.862821 P=-0.055820 max30=0.091729 max30Day=2026-09-27 minN=1436 src=aero:30d final=true

@@ -1,6 +1,6 @@
 # V11C_DEPLOY_1021 — kiểm sau restart owner 10-21 05:55 (chỉ đọc 242 qua ssh+pipe)
 
-Kết luận: **gói v1.1 (v11c) CHƯA được deploy.** Owner đã restart, nhưng jar đang chạy vẫn là **v11b `d7824f6d`**. Lý do: file `target/*v11c*`
+Kết luận lần 1 (05:55): **gói v1.1 (v11c) CHƯA được deploy.** — ĐÃ deploy ở lần 2 07:53:59, xem cuối file. Owner đã restart, nhưng jar đang chạy vẫn là **v11b `d7824f6d`**. Lý do: file `target/*v11c*`
 không có trên 242, tức bước 1 của runbook (scp jar) chưa chạy. Key `LIVE_TS_MKT_EXT=1` đã có trong env, nhưng v11b bỏ qua key này
 ⇒ hành vi hiện tại = v11b, an toàn, không cần rollback. **Cửa sổ promotion chính thức CHƯA bắt đầu.**
 
@@ -74,3 +74,94 @@ Nguồn: Kaggle monthly cho 2026-08/09, Vision UM 1m **daily** (data.binance.vis
 
 ## Ghi chú
 Mục 1–3 không có lệnh nào ghi file lên 242. Không chạy harness hay Java nào trỏ vào 242; không đọc Aerospike 242.
+
+---
+
+## DEPLOY LẦN 2 — 10-21 07:53:59: v11c ĐÃ CHẠY (kiểm 07:56–08:01, chỉ đọc)
+
+### A. Xác minh
+| mục | kết quả |
+|---|---|
+| PID / start | **7535**, `ps lstart` **2026-10-21 07:53:59**; log `MainClass` 07:54:01.267; `ThreadAutoRestartProgram` 07:54:12.532 |
+| jar process mở (`/proc/7535/fd` → `target/binance-java-sdk-1.2.4.jar`) | md5 **eea5adecaff93d3fc350e4d13b3ecb2a** ✔ |
+| env | `export LIVE_TS_MKT_EXT=1` có đúng 1 dòng trong `conf/env.sh`. Env của process có `LIVE_TS_MKT_EXT=1` và đủ 6 key v11b ✔ |
+| heap/gc | `JAVA_TOOL_OPTIONS=-Xms1g -Xmx3g -Xlog:gc:file=logs/gc.log…` ✔; gc.log mới bắt đầu lúc 07:54:00 |
+| profile | `[LIVE_PROFILE=c3_shadow] BAT … SHADOW_NO_PUSH=true` ✔ |
+| LEGACY | `[LEGACY] managed 44` trước (07:53:10) và sau (3/3 dòng) ✔ |
+| sổ giấy | open=4, realized 88,0877 — không đổi so với 05:55 ✔ |
+| v11b | `[FEAT-PIPE] snapshot … md_died=[BTCDOMUSDT, USDCUSDT]`, seed 2000' 738 symbol; S1-DUMP; `q_t9` ✔ |
+| lỗi | 1 ERROR lúc 07:54:12.843: `[FEAT-PIPE] khong co feature snapshot phut nay`, xảy ra ở tick đầu, **trước** khi TS-EXT khởi động (07:54:13). Toàn file full.log chỉ có 1 lần này, không lặp lại. Đây là race lúc warm-up, không thuộc TS-EXT. 0 Exception khác |
+
+**Giờ start 07:53:59: hợp lệ.**
+
+**Tự-restart.** Cơ chế: `sleep` 12h, sau đó chờ tới giây 30–45 của phút. Lịch sử log cho thấy mỗi chu kỳ trôi +8…+52 s, trung bình ~+32 s. Dự kiến:
+
+| chu kỳ | thời điểm |
+|---|---|
+| 1 | 10-21 19:54:3x |
+| 2 | 10-22 07:54:4x |
+| 3 | 10-22 19:55:3x |
+| 4 | 10-23 07:55:4x |
+| 5 | 10-23 19:56:3x |
+| 6 | 10-24 07:56:4x |
+| 7 | **10-24 ~19:57:3x ⇒ rơi vào khung ±3' đầu giờ** |
+
+Như vậy sau khoảng 7 chu kỳ (~3,5 ngày) sẽ chạm khung cấm. Các khung 00:50–01:20 / 12:50–13:20 / 06:57–07:25 / 18:57–19:25 không bị chạm trong tuần tới.
+
+### B. Checklist TS-EXT
+- `[TS-EXT] BAT LIVE_TS_MKT_EXT=1 profile=c3_shadow baseH=168 extH=336 thr=-0.3 minN=1296 file=/home/chuyennd/java/v_t_m/run/ts_ext_daily.csv days_loaded=0` ✔ (07:54:13).
+- **Seed:** 30 dòng `[TS-EXT] day 2026-09-21 … 2026-10-20 src=aero`, chạy 07:54:19 → 07:57:09 (~5,8 s/ngày, tổng **2'50"**). n_min = 1440, riêng 10-01 = 1439 và **10-10 = 1436** (store 242 thiếu 4 phút so với Vision); mọi ngày ≥ 1296 ✔.
+  `run/ts_ext_daily.csv` = **31 dòng** ✔.
+- **Cờ:** `[TS-EXT] flag day=2026-10-21 flag=OFF dd=-0.137179 altEwIdx=0.862821 P=-0.055820 max30=0.091729 max30Day=2026-09-27 minN=1436 src=aero:30d final=true` (07:57:09).
+  Final pass là do start lúc 00:54 UTC, sau hạn 00:20 UTC — đúng spec. Trong 2'50" seed cờ ở trạng thái PENDING, nhưng không có cụm nào nằm trong cửa sổ hoãn (`deferring=0`).
+- **Đối chiếu từng ngày với Vision** (`live242/cmp_days.csv`):
+  - 10-06…10-19, trừ 10-10: S_j live = Vision float32 cùng universe live, **bit-exact** (13 ngày, |Δ| ≤ 2e-16).
+  - 10-10: Δ 4,6e-4, do thiếu 4 phút.
+  - 09-21…10-05: |Δ| ≤ 1,5e-3 so với universe live-10-16 (universe tháng 9 của 242 khác) và ≤ 2,1e-3 so với Vision full.
+  - dd cho cờ 10-21: live **−0,13718**; tính bằng Vision + S_live(10-20) cho −0,13838 (universe live) / −0,13969 (full) ⇒ |Δdd| ≤ 0,0025; cả hai đều OFF ✔.
+  - Lưu ý: kỳ vọng "−0,16…−0,18" mà tôi đưa trước đó là dd(EOD 10-19), tức cờ của ngày 10-20. Ngày 10-20 S = +0,0297, nên dd(EOD 10-20) cải thiện lên −0,137.
+  - Vision 10-20 chưa phát hành (404 lúc 08:00), nên cờ 10-21 offline = "chưa có" (bản trên đã dùng S_live cho riêng ngày 10-20).
+- **PASS-TIMING:** tick đầu 27,1 s (warm-up, như mọi lần start). Trong lúc seed: 1,05 / 1,34 / 0,69 s ⇒ seed không làm chậm tick ✔.
+- **Cụm giấy:** 4 cụm mở cùng neo 1792031340000 (10-15 02:29 UTC) sẽ chạm 168h lúc **10-22 09:29 +07**. Cờ 10-22 được tính lúc ~07:03 +07 cùng ngày; nếu OFF thì 4 cụm này bị cắt đúng như v11b.
+
+### C. Sổ
+Đã ghi sổ C+ và ADDENDUM c mục D: **cửa sổ promotion chính thức gói v1.1 bắt đầu 2026-10-21 07:53:59 (+07)**.
+
+### D. Reset định kỳ 12h — chỉ đo, không đổi gì
+**1. Code**
+- `BinanceOrderTradingManager.java:103-125`: thread `ThreadAutoRestartProgram` chạy `while(true) { Thread.sleep(Utils.TIME_HOUR * 12) (:112); Utils.reset("Reset by Schedule") (:117) }`. Chu kỳ 12h hard-code, **không có env/cờ nào tắt được** — muốn bỏ phải sửa code.
+- `Utils.java:543-586` (`reset`):
+  1. chờ tới giây 30–45;
+  2. log `Restart:`;
+  3. tạo JVM mới bằng `ProcessBuilder(java.home/bin/java -cp <classpath> <sun.java.command>)`, chép toàn bộ env (nên `JAVA_TOOL_OPTIONS` — heap 3G và gc.log — vẫn giữ; còn `-server` và `-D` trên dòng lệnh thì mất, nhưng `JAVA_TOOL_OPTIONS` đã có lại `-D`), `inheritIO`;
+  4. `System.exit(0)` ⇒ chạy shutdown hook (flush buffer gate `GateRatioPersistFlush`).
+
+  Hàm này không flush gì khác, không đóng vị thế, không có reconnect riêng. Sổ giấy, LEGACY và cache TS-EXT đều được ghi đĩa ngay mỗi khi thay đổi, nên restart không mất state. JVM mới ghi lại pidfile (`Utils.java:595`).
+- Còn 1 đường reset khác: `Reporter.java:28-33` reset khi Redis `LAST_TIME_CHECK_MARKET` cũ hơn 15', chạy ở nhịp report 30'. Số lần xảy ra trong log 10-18 → nay: **0**.
+- `Utils.printMemoryUsage` (`Utils.java:654`) gọi `System.gc()` ở mỗi report 30', nên cứ 30' có một **Full GC 0,6–1,37 s stop-the-world** (lúc xx:00:34 / xx:30:34).
+
+**2. Dữ liệu.** gc.log của 5 process gần nhất (các process trước 10-19 14:52 đã bị rotation `filecount=5` xoá). Heap sau Full GC (System.gc) — thước đo trực tiếp của live set:
+
+| process | h≈1 | h≈6 | h≈11 | n Full | pause max |
+|---|---|---|---|---|---|
+| 10-19 14:52 → 02:53 | 659 M | 583 M | 572 M | 22 | 1,37 s |
+| 10-20 02:53 → 14:53 | 650 M | 586 M | 571 M | 23 | 1,24 s |
+| 10-20 14:53 → 20:32 (5,6h) | 624 M | 585 M | — | 12 | 1,15 s |
+| 10-20 20:33 → 05:55 (9,4h) | 567 M | 581 M | 573 M (h 9) | 16 | 1,35 s |
+| 10-21 05:55 → 07:53 | 616 M | — | — | 4 | 1,30 s |
+
+- Log `RAM SAU KHI [Total ram used]` (134 điểm, 10-18 08:00 → nay): 567–701 MB. Các đỉnh 650–700 M chỉ xuất hiện ngay sau start; sau đó **phẳng/giảm nhẹ** trong mỗi chu kỳ, không trôi lên qua 3,5 ngày.
+- Committed heap 1,9–2,5 G; Xmx 3 G.
+- RSS: chỉ có ảnh chụp hiện tại — 3,35 G sau 4'. Log không ghi RSS, nên **chưa đo được xu hướng RSS (native)** trong một chu kỳ.
+- Host: MemTotal 7,8 G, **MemAvailable 1,37 G**, swap đã dùng 225 M; collector `BinanceDataIngestor` RSS 2,27 G; cùng máy còn Aerospike + Redis.
+- Kết luận:
+  - **Không có dấu hiệu leak heap** (live set ~570–600 M, không tăng). Nếu bỏ reset, nguy cơ OOM trong heap thấp (live set ≈ 20 % Xmx).
+  - **Native/RSS chưa biết.** Ràng buộc thật là RAM host: chỉ 1,37 G trống; RSS tăng ~1 G là host bắt đầu swap hoặc bị OOM-killer.
+  - Đề xuất trước khi bỏ reset: lấy mẫu `ps -o rss` mỗi giờ qua pipe (chỉ đọc) trong ≥ 1 chu kỳ 12h; RSS phẳng thì bỏ được.
+  - Bỏ reset còn có lợi: tránh 1 lần tick hụt + warm-up 27 s mỗi 12h, và tránh lịch trôi vào khung cấm.
+
+**3. Cơ chế tự khởi động lại**
+- `h242-trading.service` / `h242-ingest.service`: `Type=oneshot`, `RemainAfterExit=yes`, `KillMode=none` — chỉ là boot starter, systemd **không theo dõi PID, không có `Restart=`**.
+- crontab root trống; `/etc/cron.hourly` chỉ có `0anacron`; không thấy healthcheck/watchdog nào.
+- JVM **không có** `-XX:+ExitOnOutOfMemoryError` hay `-XX:+HeapDumpOnOutOfMemoryError`.
+- Hệ quả: nếu JVM chết (OOM, crash, bị OOM-killer) thì **không có gì tự bật lại**. Reset 12h hiện tại không đóng vai watchdog. Nếu bỏ reset nên kèm watchdog (cron kiểm pid) và `ExitOnOutOfMemoryError`.
