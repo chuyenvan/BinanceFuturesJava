@@ -1,0 +1,13 @@
+203e7a0cb02ffaaea67cc8034bbfdfe8  /home/ubuntu/claude_master/audit_1021/kg/wfo-ds-dev-002/market.bin
+686d4242cee3178987db9a48dea07094  /home/ubuntu/claude_master/audit_1021/kg/wfo-ds-dev-002/manifest.txt
+68aab54d24cf6c23227d47621efa95ec  /home/ubuntu/claude_master/audit_1021/kg/funding-gate-wfo-pred/wfo_gate_pred.csv
+a1c78e2faeb34856a5e332e3530524a3  /home/ubuntu/claude_master/audit_1021/kg/gate-dataset-full/gate_dataset_full.csv
+12409f6b35c45ac3e83796490ba041b1  /home/ubuntu/claude_master/audit_1021/kg/md5.txt
+68aab54d24cf6c23227d47621efa95ec  /home/ubuntu/claude_master/audit_1021/kg/wfo-gate-pred-1m/wfo_gate_pred.csv
+-rw-rw-r-- 1 ubuntu ubuntu 57342684 Aug 29 15:04 /home/ubuntu/claude_master/audit_1021/kg/wfo-ds-dev-002/market.bin
+-rw-rw-r-- 1 ubuntu ubuntu 1427 Aug 29 15:04 /home/ubuntu/claude_master/audit_1021/kg/wfo-ds-dev-002/manifest.txt
+-rw-rw-r-- 1 ubuntu ubuntu 102066602 Aug  6 15:17 /home/ubuntu/claude_master/audit_1021/kg/funding-gate-wfo-pred/wfo_gate_pred.csv
+-rw-rw-r-- 1 ubuntu ubuntu 1059933426 Aug  8 02:33 /home/ubuntu/claude_master/audit_1021/kg/gate-dataset-full/gate_dataset_full.csv
+-rw-rw-r-- 1 ubuntu ubuntu 1120 Oct 21 22:27 /home/ubuntu/claude_master/audit_1021/kg/md5.txt
+-rw-rw-r-- 1 ubuntu ubuntu 102066602 Aug  9 15:27 /home/ubuntu/claude_master/audit_1021/kg/wfo-gate-pred-1m/wfo_gate_pred.csv
+DLDONE

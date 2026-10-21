@@ -1,0 +1,2005 @@
+{
+ "model_md5": "8ec9975726270782692bfe00b39bd37f",
+ "n_branch_nodes": 2227,
+ "cut_ms": 1775001600000,
+ "rows_NEW": 2889623,
+ "rows_OLD": 189765,
+ "rows_STORE": 2867134,
+ "fingerprint": {
+  "momentum1M": {
+   "n_thr": 47,
+   "n_unique_NEW": 576675,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 0.3404,
+   "hit_exact_OLD_on15grid": 0.3191,
+   "n_thr_only_OLD15": 7,
+   "n_thr_only_NEW15": 8,
+   "years_of_hit_rows_NEW": {
+    "2024": 31,
+    "2025": 33,
+    "2021": 27,
+    "2022": 23,
+    "2023": 24,
+    "2026": 12
+   }
+  },
+  "momentum5M": {
+   "n_thr": 43,
+   "n_unique_NEW": 699395,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 0.186,
+   "hit_exact_OLD_on15grid": 0.186,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 0,
+   "years_of_hit_rows_NEW": {
+    "2021": 33,
+    "2025": 22,
+    "2024": 25,
+    "2022": 19,
+    "2023": 21,
+    "2026": 7
+   }
+  },
+  "momentum15M": {
+   "n_thr": 103,
+   "n_unique_NEW": 1165600,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 0.1456,
+   "hit_exact_OLD_on15grid": 0.0777,
+   "n_thr_only_OLD15": 5,
+   "n_thr_only_NEW15": 12,
+   "years_of_hit_rows_NEW": {
+    "2021": 45,
+    "2024": 45,
+    "2022": 43,
+    "2025": 41,
+    "2026": 9,
+    "2023": 38
+   }
+  },
+  "momentum1H": {
+   "n_thr": 31,
+   "n_unique_NEW": 1383775,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 0.0968,
+   "hit_exact_OLD_on15grid": 0.0968,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 0,
+   "years_of_hit_rows_NEW": {
+    "2022": 10,
+    "2025": 5,
+    "2021": 17,
+    "2023": 6,
+    "2024": 9,
+    "2026": 2
+   }
+  },
+  "momentum4H": {
+   "n_thr": 22,
+   "n_unique_NEW": 1850122,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 0.0909,
+   "hit_exact_OLD_on15grid": 0.0909,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 0,
+   "years_of_hit_rows_NEW": {
+    "2021": 8,
+    "2023": 5,
+    "2025": 5,
+    "2024": 8,
+    "2022": 6
+   }
+  },
+  "momentum24H": {
+   "n_thr": 23,
+   "n_unique_NEW": 2347159,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 0.0435,
+   "hit_exact_OLD_on15grid": 0.0435,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 0,
+   "years_of_hit_rows_NEW": {
+    "2021": 10,
+    "2022": 8,
+    "2024": 3,
+    "2025": 1,
+    "2023": 4
+   }
+  },
+  "momentumAcceleration": {
+   "n_thr": 87,
+   "n_unique_NEW": 1195911,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 0.2299,
+   "hit_exact_OLD_on15grid": 0.1724,
+   "n_thr_only_OLD15": 9,
+   "n_thr_only_NEW15": 14,
+   "years_of_hit_rows_NEW": {
+    "2022": 32,
+    "2025": 29,
+    "2024": 40,
+    "2023": 28,
+    "2021": 33,
+    "2026": 7
+   }
+  },
+  "trendStrengthETH": {
+   "n_thr": 16,
+   "n_unique_NEW": 1573527,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 0.0625,
+   "hit_exact_OLD_on15grid": 0.0625,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 0,
+   "years_of_hit_rows_NEW": {
+    "2021": 8,
+    "2022": 6,
+    "2024": 5,
+    "2023": 7,
+    "2026": 2,
+    "2025": 2
+   }
+  },
+  "trendConsistency": {
+   "n_thr": 1,
+   "n_unique_NEW": 2,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 1.0,
+   "hit_exact_OLD_on15grid": 1.0,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 0,
+   "years_of_hit_rows_NEW": {
+    "2021": 1,
+    "2022": 1,
+    "2023": 1,
+    "2024": 1,
+    "2025": 1,
+    "2026": 1
+   }
+  },
+  "volatility1M": {
+   "n_thr": 3,
+   "n_unique_NEW": 263928,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 0.6667,
+   "hit_exact_OLD_on15grid": 0.6667,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 0,
+   "years_of_hit_rows_NEW": {
+    "2021": 2,
+    "2022": 1,
+    "2025": 1
+   }
+  },
+  "volatility15M": {
+   "n_thr": 10,
+   "n_unique_NEW": 250646,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 0.5,
+   "hit_exact_OLD_on15grid": 0.5,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 0,
+   "years_of_hit_rows_NEW": {
+    "2021": 8,
+    "2022": 6,
+    "2023": 4,
+    "2024": 3,
+    "2025": 5,
+    "2026": 1
+   }
+  },
+  "volatility1H": {
+   "n_thr": 29,
+   "n_unique_NEW": 244559,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 0.7241,
+   "hit_exact_OLD_on15grid": 0.7241,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 0,
+   "years_of_hit_rows_NEW": {
+    "2022": 23,
+    "2023": 16,
+    "2024": 20,
+    "2025": 16,
+    "2026": 12,
+    "2021": 24
+   }
+  },
+  "volatility24H": {
+   "n_thr": 43,
+   "n_unique_NEW": 227102,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 0.6279,
+   "hit_exact_OLD_on15grid": 0.6279,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 0,
+   "years_of_hit_rows_NEW": {
+    "2022": 31,
+    "2023": 27,
+    "2025": 29,
+    "2024": 28,
+    "2026": 17,
+    "2021": 32
+   }
+  },
+  "volatilityTermStructure": {
+   "n_thr": 15,
+   "n_unique_NEW": 2544064,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0667,
+   "hit_exact_NEW_on15grid": 0.0,
+   "hit_exact_OLD_on15grid": 0.0,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 0,
+   "years_of_hit_rows_NEW": {
+    "2021": 3,
+    "2023": 4,
+    "2022": 5,
+    "2025": 1,
+    "2024": 2
+   }
+  },
+  "advanceDeclineRatio": {
+   "n_thr": 18,
+   "n_unique_NEW": 22825,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 1.0,
+   "hit_exact_OLD_on15grid": 1.0,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 0,
+   "years_of_hit_rows_NEW": {
+    "2021": 11,
+    "2022": 10,
+    "2023": 16,
+    "2024": 16,
+    "2025": 18,
+    "2026": 16
+   }
+  },
+  "percentAboveMA20": {
+   "n_thr": 66,
+   "n_unique_NEW": 25064,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 0.9848,
+   "hit_exact_OLD_on15grid": 0.9697,
+   "n_thr_only_OLD15": 1,
+   "n_thr_only_NEW15": 2,
+   "years_of_hit_rows_NEW": {
+    "2025": 66,
+    "2021": 36,
+    "2022": 21,
+    "2024": 49,
+    "2023": 40,
+    "2026": 37
+   }
+  },
+  "volumeRatioUpDown": {
+   "n_thr": 19,
+   "n_unique_NEW": 2661796,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0526,
+   "hit_exact_NEW_on15grid": 0.0,
+   "hit_exact_OLD_on15grid": 0.0,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 0,
+   "years_of_hit_rows_NEW": {
+    "2021": 6,
+    "2024": 8,
+    "2025": 2,
+    "2023": 2,
+    "2026": 1
+   }
+  },
+  "marketBreadthStrength": {
+   "n_thr": 44,
+   "n_unique_NEW": 25047,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 1.0,
+   "hit_exact_OLD_on15grid": 0.9318,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 3,
+   "years_of_hit_rows_NEW": {
+    "2025": 44,
+    "2022": 15,
+    "2023": 27,
+    "2024": 30,
+    "2026": 23,
+    "2021": 20
+   }
+  },
+  "btcDominance": {
+   "n_thr": 59,
+   "n_unique_NEW": 2590726,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0339,
+   "hit_exact_NEW_on15grid": 0.0847,
+   "hit_exact_OLD_on15grid": 0.0339,
+   "n_thr_only_OLD15": 1,
+   "n_thr_only_NEW15": 4,
+   "years_of_hit_rows_NEW": {
+    "2022": 18,
+    "2024": 15,
+    "2025": 10,
+    "2021": 11,
+    "2023": 9,
+    "2026": 2
+   }
+  },
+  "rsi14": {
+   "n_thr": 17,
+   "n_unique_NEW": 2268377,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.1765,
+   "hit_exact_NEW_on15grid": 0.0,
+   "hit_exact_OLD_on15grid": 0.0,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 0,
+   "years_of_hit_rows_NEW": {
+    "2026": 1,
+    "2021": 3,
+    "2022": 4,
+    "2023": 6,
+    "2025": 3,
+    "2024": 2
+   }
+  },
+  "volumeSpike": {
+   "n_thr": 32,
+   "n_unique_NEW": 2626881,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.125,
+   "hit_exact_NEW_on15grid": 0.125,
+   "hit_exact_OLD_on15grid": 0.125,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 0,
+   "years_of_hit_rows_NEW": {
+    "2021": 4,
+    "2023": 6,
+    "2025": 10,
+    "2026": 1,
+    "2022": 8,
+    "2024": 6
+   }
+  },
+  "distMA20": {
+   "n_thr": 6,
+   "n_unique_NEW": 733871,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 0.0,
+   "hit_exact_OLD_on15grid": 0.0,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 0,
+   "years_of_hit_rows_NEW": {
+    "2026": 2,
+    "2021": 3,
+    "2024": 1
+   }
+  },
+  "fundingRateRaw": {
+   "n_thr": 27,
+   "n_unique_NEW": 27427,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 1.0,
+   "hit_exact_OLD_on15grid": 0.2593,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 20,
+   "years_of_hit_rows_NEW": {
+    "2022": 10,
+    "2023": 5,
+    "2024": 6,
+    "2026": 2,
+    "2025": 6,
+    "2021": 6
+   }
+  },
+  "fundingRateAvg24H": {
+   "n_thr": 43,
+   "n_unique_NEW": 33485,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 1.0,
+   "hit_exact_OLD_on15grid": 0.5814,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 18,
+   "years_of_hit_rows_NEW": {
+    "2022": 17,
+    "2025": 17,
+    "2023": 11,
+    "2021": 14,
+    "2026": 3,
+    "2024": 6
+   }
+  },
+  "fundingRateTrend": {
+   "n_thr": 15,
+   "n_unique_NEW": 21280,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 1.0,
+   "hit_exact_OLD_on15grid": 0.7333,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 4,
+   "years_of_hit_rows_NEW": {
+    "2022": 10,
+    "2024": 10,
+    "2025": 10,
+    "2023": 6,
+    "2026": 4,
+    "2021": 6
+   }
+  },
+  "hourOfDay": {
+   "n_thr": 14,
+   "n_unique_NEW": 24,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 1.0,
+   "hit_exact_OLD_on15grid": 1.0,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 0,
+   "years_of_hit_rows_NEW": {
+    "2021": 14,
+    "2022": 14,
+    "2023": 14,
+    "2024": 14,
+    "2025": 14,
+    "2026": 14
+   }
+  },
+  "dayOfWeek": {
+   "n_thr": 4,
+   "n_unique_NEW": 7,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 1.0,
+   "hit_exact_OLD_on15grid": 1.0,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 0,
+   "years_of_hit_rows_NEW": {
+    "2021": 4,
+    "2022": 4,
+    "2023": 4,
+    "2024": 4,
+    "2025": 4,
+    "2026": 4
+   }
+  },
+  "weekOfMonth": {
+   "n_thr": 3,
+   "n_unique_NEW": 6,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 1.0,
+   "hit_exact_OLD_on15grid": 1.0,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 0,
+   "years_of_hit_rows_NEW": {
+    "2021": 3,
+    "2022": 3,
+    "2023": 3,
+    "2024": 3,
+    "2025": 3,
+    "2026": 3
+   }
+  },
+  "monthOfYear": {
+   "n_thr": 9,
+   "n_unique_NEW": 12,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 1.0,
+   "hit_exact_OLD_on15grid": 1.0,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 0,
+   "years_of_hit_rows_NEW": {
+    "2021": 9,
+    "2022": 9,
+    "2023": 9,
+    "2024": 9,
+    "2025": 9,
+    "2026": 3
+   }
+  },
+  "basketMomentum15M": {
+   "n_thr": 83,
+   "n_unique_NEW": 1290097,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 0.0964,
+   "hit_exact_OLD_on15grid": 0.1687,
+   "n_thr_only_OLD15": 9,
+   "n_thr_only_NEW15": 3,
+   "years_of_hit_rows_NEW": {
+    "2021": 36,
+    "2025": 32,
+    "2022": 38,
+    "2023": 37,
+    "2024": 27,
+    "2026": 9
+   }
+  },
+  "basketMomentum1H": {
+   "n_thr": 28,
+   "n_unique_NEW": 1755858,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.0,
+   "hit_exact_NEW_on15grid": 0.0714,
+   "hit_exact_OLD_on15grid": 0.0,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 2,
+   "years_of_hit_rows_NEW": {
+    "2023": 2,
+    "2022": 8,
+    "2025": 10,
+    "2024": 5,
+    "2021": 7
+   }
+  },
+  "basketRsi14": {
+   "n_thr": 70,
+   "n_unique_NEW": 2423235,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.2143,
+   "hit_exact_NEW_on15grid": 0.1,
+   "hit_exact_OLD_on15grid": 0.0286,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 5,
+   "years_of_hit_rows_NEW": {
+    "2021": 10,
+    "2024": 21,
+    "2023": 19,
+    "2025": 16,
+    "2026": 3,
+    "2022": 11
+   }
+  },
+  "basketVolSpike": {
+   "n_thr": 29,
+   "n_unique_NEW": 2516904,
+   "hit_exact_NEW_full": 1.0,
+   "hit_mid_NEW_full": 0.1724,
+   "hit_exact_NEW_on15grid": 0.0,
+   "hit_exact_OLD_on15grid": 0.0,
+   "n_thr_only_OLD15": 0,
+   "n_thr_only_NEW15": 0,
+   "years_of_hit_rows_NEW": {
+    "2022": 5,
+    "2023": 8,
+    "2021": 7,
+    "2025": 5,
+    "2026": 2,
+    "2024": 6
+   }
+  }
+ },
+ "NEW_vs_OLD_15grid": {
+  "2021": {
+   "n": 35040,
+   "momentum1M": {
+    "ok": 0.0155,
+    "rel_med": 0.03429855175552391,
+    "rel_p99": 4.335832079109399,
+    "abs_p99": 0.001822656300000001
+   },
+   "momentum5M": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentum15M": {
+    "ok": 0.00676,
+    "rel_med": 0.018736356559543865,
+    "rel_p99": 1.0,
+    "abs_p99": 0.007541380100000001
+   },
+   "momentum1H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentum4H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentum24H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentumAcceleration": {
+    "ok": 0.00674,
+    "rel_med": 0.0178709258420875,
+    "rel_p99": 1.2866301665944864,
+    "abs_p99": 0.007541386200000001
+   },
+   "trendStrengthETH": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "trendConsistency": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility1M": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility15M": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility1H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility24H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatilityTermStructure": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "advanceDeclineRatio": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "percentAboveMA20": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volumeRatioUpDown": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "marketBreadthStrength": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "btcDominance": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "rsi14": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volumeSpike": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "distMA20": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "fundingRateRaw": {
+    "ok": 0.0494,
+    "rel_med": 0.06983563710542819,
+    "rel_p99": 5.696661828737301,
+    "abs_p99": 0.00027213
+   },
+   "fundingRateAvg24H": {
+    "ok": 0.05214,
+    "rel_med": 0.0644957718036097,
+    "rel_p99": 8.066225165562914,
+    "abs_p99": 0.00023132000000000003
+   },
+   "fundingRateTrend": {
+    "ok": 0.09332,
+    "rel_med": 0.14435372053612694,
+    "rel_p99": 15.747501240694856,
+    "abs_p99": 0.00012794
+   },
+   "hourOfDay": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "dayOfWeek": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "weekOfMonth": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "monthOfYear": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "basketMomentum15M": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "basketMomentum1H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "basketRsi14": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "basketVolSpike": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "row_all_ok": 0.0
+  },
+  "2022": {
+   "n": 35040,
+   "momentum1M": {
+    "ok": 0.02061,
+    "rel_med": 0.04737743215047881,
+    "rel_p99": 3.7235082013013474,
+    "abs_p99": 0.0011647252000000037
+   },
+   "momentum5M": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentum15M": {
+    "ok": 0.00662,
+    "rel_med": 0.0312786817431448,
+    "rel_p99": 1.0,
+    "abs_p99": 0.00523962
+   },
+   "momentum1H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentum4H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentum24H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentumAcceleration": {
+    "ok": 0.00662,
+    "rel_med": 0.0309525627767912,
+    "rel_p99": 1.2187282380640931,
+    "abs_p99": 0.0052396139000000005
+   },
+   "trendStrengthETH": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "trendConsistency": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility1M": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility15M": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility1H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility24H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatilityTermStructure": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "advanceDeclineRatio": {
+    "ok": 0.61841,
+    "rel_med": 0.0,
+    "rel_p99": 0.11111112000000002,
+    "abs_p99": 0.9642858500000004
+   },
+   "percentAboveMA20": {
+    "ok": 0.55648,
+    "rel_med": 0.0,
+    "rel_p99": 0.049479172369791664,
+    "abs_p99": 0.012071989999999977
+   },
+   "volumeRatioUpDown": {
+    "ok": 0.61989,
+    "rel_med": 0.0,
+    "rel_p99": 0.032967476384379024,
+    "abs_p99": 0.2831025656000036
+   },
+   "marketBreadthStrength": {
+    "ok": 0.55088,
+    "rel_med": 0.0,
+    "rel_p99": 0.05756933231190853,
+    "abs_p99": 0.012291490000000072
+   },
+   "btcDominance": {
+    "ok": 0.61104,
+    "rel_med": 0.0,
+    "rel_p99": 0.005453925609654918,
+    "abs_p99": 0.001518458800000006
+   },
+   "rsi14": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volumeSpike": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "distMA20": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "fundingRateRaw": {
+    "ok": 0.05979,
+    "rel_med": 0.16817025213971787,
+    "rel_p99": 16.473684210526315,
+    "abs_p99": 0.00030560000000000006
+   },
+   "fundingRateAvg24H": {
+    "ok": 0.0649,
+    "rel_med": 0.1609980928162746,
+    "rel_p99": 10.017857142857142,
+    "abs_p99": 0.00023642
+   },
+   "fundingRateTrend": {
+    "ok": 0.09683,
+    "rel_med": 0.2665350517180318,
+    "rel_p99": 22.104166666666664,
+    "abs_p99": 0.00015395
+   },
+   "hourOfDay": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "dayOfWeek": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "weekOfMonth": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "monthOfYear": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "basketMomentum15M": {
+    "ok": 0.56122,
+    "rel_med": 0.0,
+    "rel_p99": 0.31199739717986624,
+    "abs_p99": 0.00011176000000000034
+   },
+   "basketMomentum1H": {
+    "ok": 0.55334,
+    "rel_med": 0.0,
+    "rel_p99": 0.3176863273171377,
+    "abs_p99": 0.00021446160000000036
+   },
+   "basketRsi14": {
+    "ok": 0.54549,
+    "rel_med": 0.0,
+    "rel_p99": 0.008085905927603448,
+    "abs_p99": 0.38162289089999957
+   },
+   "basketVolSpike": {
+    "ok": 0.54538,
+    "rel_med": 0.0,
+    "rel_p99": 0.040217930229669685,
+    "abs_p99": 0.06774351019999962
+   },
+   "row_all_ok": 0.0
+  },
+  "2023": {
+   "n": 35040,
+   "momentum1M": {
+    "ok": 0.00471,
+    "rel_med": 0.09349738943423395,
+    "rel_p99": 10.46060441362322,
+    "abs_p99": 0.0010074812000000011
+   },
+   "momentum5M": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentum15M": {
+    "ok": 0.00274,
+    "rel_med": 0.03168033608735138,
+    "rel_p99": 1.0,
+    "abs_p99": 0.005058899900000001
+   },
+   "momentum1H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentum4H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentum24H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentumAcceleration": {
+    "ok": 0.00274,
+    "rel_med": 0.031041568096753347,
+    "rel_p99": 1.1586208982595296,
+    "abs_p99": 0.005058889900000001
+   },
+   "trendStrengthETH": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "trendConsistency": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility1M": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility15M": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility1H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility24H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatilityTermStructure": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "advanceDeclineRatio": {
+    "ok": 0.11455,
+    "rel_med": 0.01904761904761905,
+    "rel_p99": 0.12711677308447505,
+    "abs_p99": 1.0
+   },
+   "percentAboveMA20": {
+    "ok": 0.0109,
+    "rel_med": 0.010100964285714163,
+    "rel_p99": 0.06566608679463004,
+    "abs_p99": 0.013937230000000023
+   },
+   "volumeRatioUpDown": {
+    "ok": 0.11515,
+    "rel_med": 0.0012785301294979783,
+    "rel_p99": 0.047716699437809075,
+    "abs_p99": 0.44639878230001023
+   },
+   "marketBreadthStrength": {
+    "ok": 0.00668,
+    "rel_med": 0.010638292115540076,
+    "rel_p99": 0.07535316530387703,
+    "abs_p99": 0.014661977400000026
+   },
+   "btcDominance": {
+    "ok": 0.10634,
+    "rel_med": 0.0008807717967818889,
+    "rel_p99": 0.009984913522266646,
+    "abs_p99": 0.002452173400000014
+   },
+   "rsi14": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volumeSpike": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "distMA20": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "fundingRateRaw": {
+    "ok": 0.03467,
+    "rel_med": 0.1798015178050205,
+    "rel_p99": 20.363870753935508,
+    "abs_p99": 0.00024746
+   },
+   "fundingRateAvg24H": {
+    "ok": 0.04463,
+    "rel_med": 0.2007839721254356,
+    "rel_p99": 21.23529411764706,
+    "abs_p99": 0.00018053320000000007
+   },
+   "fundingRateTrend": {
+    "ok": 0.11147,
+    "rel_med": 0.2423742786479801,
+    "rel_p99": 44.59649122807017,
+    "abs_p99": 0.00016889999999999999
+   },
+   "hourOfDay": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "dayOfWeek": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "weekOfMonth": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "monthOfYear": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "basketMomentum15M": {
+    "ok": 0.03573,
+    "rel_med": 0.010116341056430878,
+    "rel_p99": 0.7413924979853929,
+    "abs_p99": 0.00014902710000000007
+   },
+   "basketMomentum1H": {
+    "ok": 0.01884,
+    "rel_med": 0.009816754184053294,
+    "rel_p99": 0.7122467252140995,
+    "abs_p99": 0.00029545860000000033
+   },
+   "basketRsi14": {
+    "ok": 0.00063,
+    "rel_med": 0.0016508159630536396,
+    "rel_p99": 0.009355020136500039,
+    "abs_p99": 0.4131569681000009
+   },
+   "basketVolSpike": {
+    "ok": 0.00017,
+    "rel_med": 0.00521776770943951,
+    "rel_p99": 0.05274938085025696,
+    "abs_p99": 0.09164438160000025
+   },
+   "row_all_ok": 0.0
+  },
+  "2024": {
+   "n": 35136,
+   "momentum1M": {
+    "ok": 0.35235,
+    "rel_med": 0.008400382534670035,
+    "rel_p99": 2.3159460399203167,
+    "abs_p99": 0.0016881905000000017
+   },
+   "momentum5M": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentum15M": {
+    "ok": 0.31495,
+    "rel_med": 0.004387353525739208,
+    "rel_p99": 1.0,
+    "abs_p99": 0.007545719500000009
+   },
+   "momentum1H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentum4H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentum24H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentumAcceleration": {
+    "ok": 0.31489,
+    "rel_med": 0.004276417058597914,
+    "rel_p99": 1.1964363587184743,
+    "abs_p99": 0.007545719500000009
+   },
+   "trendStrengthETH": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "trendConsistency": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility1M": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility15M": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility1H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility24H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatilityTermStructure": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "advanceDeclineRatio": {
+    "ok": 0.04497,
+    "rel_med": 0.02586194732315336,
+    "rel_p99": 0.12500001718750056,
+    "abs_p99": 2.3291669855000188
+   },
+   "percentAboveMA20": {
+    "ok": 0.03364,
+    "rel_med": 0.00819672034910578,
+    "rel_p99": 0.07672734300131884,
+    "abs_p99": 0.015372720000000006
+   },
+   "volumeRatioUpDown": {
+    "ok": 0.04508,
+    "rel_med": 0.0017485673023106278,
+    "rel_p99": 0.04728117687018708,
+    "abs_p99": 0.5903011334999897
+   },
+   "marketBreadthStrength": {
+    "ok": 0.0327,
+    "rel_med": 0.009313700346731534,
+    "rel_p99": 0.0846005799226823,
+    "abs_p99": 0.015716260000000037
+   },
+   "btcDominance": {
+    "ok": 0.037,
+    "rel_med": 0.001457983564296325,
+    "rel_p99": 0.010261268102855589,
+    "abs_p99": 0.002437772999999996
+   },
+   "rsi14": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volumeSpike": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "distMA20": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "fundingRateRaw": {
+    "ok": 0.0773,
+    "rel_med": 0.088704658965611,
+    "rel_p99": 11.873449131513645,
+    "abs_p99": 0.0001445
+   },
+   "fundingRateAvg24H": {
+    "ok": 0.06959,
+    "rel_med": 0.08904299583911228,
+    "rel_p99": 13.925311203319502,
+    "abs_p99": 9.117000000000001e-05
+   },
+   "fundingRateTrend": {
+    "ok": 0.20665,
+    "rel_med": 0.1731843575418993,
+    "rel_p99": 31.63415300546462,
+    "abs_p99": 9.665750000000022e-05
+   },
+   "hourOfDay": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "dayOfWeek": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "weekOfMonth": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "monthOfYear": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "basketMomentum15M": {
+    "ok": 0.04875,
+    "rel_med": 0.01047432133891565,
+    "rel_p99": 0.7357140738085645,
+    "abs_p99": 0.00018338249999999995
+   },
+   "basketMomentum1H": {
+    "ok": 0.03706,
+    "rel_med": 0.01093660141683284,
+    "rel_p99": 0.8193433798644397,
+    "abs_p99": 0.00034958200000000247
+   },
+   "basketRsi14": {
+    "ok": 0.02613,
+    "rel_med": 0.001764988429358385,
+    "rel_p99": 0.010498112830605229,
+    "abs_p99": 0.4467432024999973
+   },
+   "basketVolSpike": {
+    "ok": 0.02596,
+    "rel_med": 0.006447954872034553,
+    "rel_p99": 0.06774683371903682,
+    "abs_p99": 0.1130469620000004
+   },
+   "row_all_ok": 0.0
+  },
+  "2025": {
+   "n": 35040,
+   "momentum1M": {
+    "ok": 0.96461,
+    "rel_med": 0.0,
+    "rel_p99": 1.0,
+    "abs_p99": 0.0023526394000000016
+   },
+   "momentum5M": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentum15M": {
+    "ok": 0.96321,
+    "rel_med": 0.0,
+    "rel_p99": 1.0,
+    "abs_p99": 0.0112754362
+   },
+   "momentum1H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentum4H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentum24H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentumAcceleration": {
+    "ok": 0.96321,
+    "rel_med": 0.0,
+    "rel_p99": 1.0975078933639006,
+    "abs_p99": 0.0112754362
+   },
+   "trendStrengthETH": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "trendConsistency": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility1M": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility15M": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility1H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility24H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatilityTermStructure": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "advanceDeclineRatio": {
+    "ok": 0.00408,
+    "rel_med": 0.0209423922597156,
+    "rel_p99": 0.08343403538965545,
+    "abs_p99": 1.25
+   },
+   "percentAboveMA20": {
+    "ok": 0.00245,
+    "rel_med": 0.006414012297257197,
+    "rel_p99": 0.05280816409835694,
+    "abs_p99": 0.010962627600000049
+   },
+   "volumeRatioUpDown": {
+    "ok": 0.00585,
+    "rel_med": 0.0008375319077111364,
+    "rel_p99": 0.02810852631167572,
+    "abs_p99": 0.4099485743000037
+   },
+   "marketBreadthStrength": {
+    "ok": 0.00283,
+    "rel_med": 0.007512890684421165,
+    "rel_p99": 0.05434790624155711,
+    "abs_p99": 0.011375965900000024
+   },
+   "btcDominance": {
+    "ok": 0.00237,
+    "rel_med": 0.0006525544644043002,
+    "rel_p99": 0.00538074451259978,
+    "abs_p99": 0.0012678221999999817
+   },
+   "rsi14": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volumeSpike": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "distMA20": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "fundingRateRaw": {
+    "ok": 0.23271,
+    "rel_med": 0.029557049153777694,
+    "rel_p99": 5.131286465805843,
+    "abs_p99": 0.00011655
+   },
+   "fundingRateAvg24H": {
+    "ok": 0.22865,
+    "rel_med": 0.028509487458672534,
+    "rel_p99": 4.082041230692576,
+    "abs_p99": 7.403000000000005e-05
+   },
+   "fundingRateTrend": {
+    "ok": 0.39969,
+    "rel_med": 0.05360561582641983,
+    "rel_p99": 10.546742209631729,
+    "abs_p99": 6.481999999999999e-05
+   },
+   "hourOfDay": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "dayOfWeek": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "weekOfMonth": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "monthOfYear": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "basketMomentum15M": {
+    "ok": 0.02577,
+    "rel_med": 0.009676055013083606,
+    "rel_p99": 0.6858085379598263,
+    "abs_p99": 0.00015919009999999992
+   },
+   "basketMomentum1H": {
+    "ok": 0.01281,
+    "rel_med": 0.009623215698557081,
+    "rel_p99": 0.6408456058325098,
+    "abs_p99": 0.00030289199999999986
+   },
+   "basketRsi14": {
+    "ok": 0.00051,
+    "rel_med": 0.0014126345255843149,
+    "rel_p99": 0.007447400390040045,
+    "abs_p99": 0.3157335667999997
+   },
+   "basketVolSpike": {
+    "ok": 0.00017,
+    "rel_med": 0.0065432157189589096,
+    "rel_p99": 0.06494832021647487,
+    "abs_p99": 0.10844163860000008
+   },
+   "row_all_ok": 0.0
+  },
+  "2026": {
+   "n": 14469,
+   "momentum1M": {
+    "ok": 0.85251,
+    "rel_med": 0.0,
+    "rel_p99": 2956491199.9999976,
+    "abs_p99": 0.0031656983999999977
+   },
+   "momentum5M": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentum15M": {
+    "ok": 0.84954,
+    "rel_med": 0.0,
+    "rel_p99": 13710737999.999992,
+    "abs_p99": 0.0146850012
+   },
+   "momentum1H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentum4H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentum24H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "momentumAcceleration": {
+    "ok": 0.84954,
+    "rel_med": 0.0,
+    "rel_p99": 162.0984987979855,
+    "abs_p99": 0.014685001199999999
+   },
+   "trendStrengthETH": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "trendConsistency": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility1M": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility15M": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility1H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatility24H": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volatilityTermStructure": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "advanceDeclineRatio": {
+    "ok": 0.60329,
+    "rel_med": 0.0,
+    "rel_p99": 0.04157195624254377,
+    "abs_p99": 0.22053201999999913
+   },
+   "percentAboveMA20": {
+    "ok": 0.60232,
+    "rel_med": 0.0,
+    "rel_p99": 0.02372313317280877,
+    "abs_p99": 0.007837349999999965
+   },
+   "volumeRatioUpDown": {
+    "ok": 0.60495,
+    "rel_med": 0.0,
+    "rel_p99": 0.00787796025185922,
+    "abs_p99": 0.04420165800002222
+   },
+   "marketBreadthStrength": {
+    "ok": 0.60267,
+    "rel_med": 0.0,
+    "rel_p99": 0.02435413062970458,
+    "abs_p99": 0.00816536000000001
+   },
+   "btcDominance": {
+    "ok": 0.60274,
+    "rel_med": 0.0,
+    "rel_p99": 0.0024433190117650605,
+    "abs_p99": 0.000483587999999977
+   },
+   "rsi14": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "volumeSpike": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "distMA20": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "fundingRateRaw": {
+    "ok": 0.6393,
+    "rel_med": 0.0,
+    "rel_p99": 0.08355366613730791,
+    "abs_p99": 7.689999999999976e-06
+   },
+   "fundingRateAvg24H": {
+    "ok": 0.64089,
+    "rel_med": 0.0,
+    "rel_p99": 0.08653188526872703,
+    "abs_p99": 6.919999999999995e-06
+   },
+   "fundingRateTrend": {
+    "ok": 0.83219,
+    "rel_med": 0.0,
+    "rel_p99": 0.9015639097744299,
+    "abs_p99": 5.0155999999999745e-06
+   },
+   "hourOfDay": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "dayOfWeek": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "weekOfMonth": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "monthOfYear": {
+    "ok": 1.0,
+    "rel_med": 0.0,
+    "rel_p99": 0.0,
+    "abs_p99": 0.0
+   },
+   "basketMomentum15M": {
+    "ok": 0.61331,
+    "rel_med": 0.0,
+    "rel_p99": 0.34001656064409175,
+    "abs_p99": 9.441039999999999e-05
+   },
+   "basketMomentum1H": {
+    "ok": 0.60737,
+    "rel_med": 0.0,
+    "rel_p99": 0.312853754229332,
+    "abs_p99": 0.00017462959999999997
+   },
+   "basketRsi14": {
+    "ok": 0.60205,
+    "rel_med": 0.0,
+    "rel_p99": 0.0054670763054417894,
+    "abs_p99": 0.24854613880000187
+   },
+   "basketVolSpike": {
+    "ok": 0.60198,
+    "rel_med": 0.0,
+    "rel_p99": 0.04257282947697515,
+    "abs_p99": 0.06788697160000012
+   },
+   "row_all_ok": 0.46562
+  }
+ },
+ "NEW_vs_STORE_mom": {
+  "2021": {
+   "n": 511192,
+   "momentum1M": {
+    "ok": 0.99966,
+    "rel_med": 2.7015047365107834e-06,
+    "rel_p99": 0.0001784023757754504,
+    "abs_p99": 4.950867925456858e-09
+   },
+   "momentum15M": {
+    "ok": 0.99966,
+    "rel_med": 3.938504845015671e-07,
+    "rel_p99": 2.258656773358688e-06,
+    "abs_p99": 4.9519800901596375e-09
+   },
+   "row_all_ok": 0.99965
+  },
+  "2022": {
+   "n": 510528,
+   "momentum1M": {
+    "ok": 0.99934,
+    "rel_med": 3.7212418074972293e-06,
+    "rel_p99": 0.0002442000721057059,
+    "abs_p99": 4.953470576928205e-09
+   },
+   "momentum15M": {
+    "ok": 0.99934,
+    "rel_med": 5.57788015848159e-07,
+    "rel_p99": 3.096703563993047e-06,
+    "abs_p99": 4.953072458499519e-09
+   },
+   "row_all_ok": 0.99932
+  },
+  "2023": {
+   "n": 510767,
+   "momentum1M": {
+    "ok": 0.99933,
+    "rel_med": 4.322752132488886e-06,
+    "rel_p99": 0.0002866850827805034,
+    "abs_p99": 4.954139843601265e-09
+   },
+   "momentum15M": {
+    "ok": 0.99932,
+    "rel_med": 5.771047297587545e-07,
+    "rel_p99": 2.8108995021627148e-06,
+    "abs_p99": 4.953325617356244e-09
+   },
+   "row_all_ok": 0.99932
+  },
+  "2024": {
+   "n": 511798,
+   "momentum1M": {
+    "ok": 0.99956,
+    "rel_med": 2.6671630003865787e-06,
+    "rel_p99": 0.00016506071180822922,
+    "abs_p99": 4.952367819473354e-09
+   },
+   "momentum15M": {
+    "ok": 0.99953,
+    "rel_med": 3.9246494485389666e-07,
+    "rel_p99": 1.9877208893494937e-06,
+    "abs_p99": 4.952658593272707e-09
+   },
+   "row_all_ok": 0.99948
+  },
+  "2025": {
+   "n": 510527,
+   "momentum1M": {
+    "ok": 1.0,
+    "rel_med": 1.6487635359800628e-06,
+    "rel_p99": 6.218019049268928e-05,
+    "abs_p99": 4.950950166558807e-09
+   },
+   "momentum15M": {
+    "ok": 1.0,
+    "rel_med": 2.590092551008309e-07,
+    "rel_p99": 1.0904004503585492e-06,
+    "abs_p99": 4.9496772529245005e-09
+   },
+   "row_all_ok": 1.0
+  },
+  "2026": {
+   "n": 252067,
+   "momentum1M": {
+    "ok": 0.86913,
+    "rel_med": 1.5083337963466688e-06,
+    "rel_p99": 1.0,
+    "abs_p99": 0.0032197522744536397
+   },
+   "momentum15M": {
+    "ok": 0.86907,
+    "rel_med": 2.6054256495014053e-07,
+    "rel_p99": 1.0,
+    "abs_p99": 0.016541638039052488
+   },
+   "row_all_ok": 0.86907
+  }
+ },
+ "OLD_vs_STORE_mom": {
+  "2021": {
+   "n": 34067,
+   "momentum1M": {
+    "ok": 0.01556,
+    "rel_med": 0.0329767511781832,
+    "rel_p99": 2.2440176650960524,
+    "abs_p99": 0.00026814454036555883
+   },
+   "momentum15M": {
+    "ok": 0.00658,
+    "rel_med": 0.01813689801168512,
+    "rel_p99": 0.16793200401449726,
+    "abs_p99": 0.0008564932250047251
+   },
+   "row_all_ok": 0.00129
+  },
+  "2022": {
+   "n": 34047,
+   "momentum1M": {
+    "ok": 0.02044,
+    "rel_med": 0.04564722762542751,
+    "rel_p99": 2.45463172631559,
+    "abs_p99": 0.00033884997399827397
+   },
+   "momentum15M": {
+    "ok": 0.00614,
+    "rel_med": 0.029678804083129506,
+    "rel_p99": 0.16834948637468622,
+    "abs_p99": 0.0016012233551343552
+   },
+   "row_all_ok": 0.00135
+  },
+  "2023": {
+   "n": 33989,
+   "momentum1M": {
+    "ok": 0.00391,
+    "rel_med": 0.08674485969133727,
+    "rel_p99": 4.644415517340056,
+    "abs_p99": 0.00022419447318676764
+   },
+   "momentum15M": {
+    "ok": 0.00194,
+    "rel_med": 0.029885780064574253,
+    "rel_p99": 0.1477537671552843,
+    "abs_p99": 0.0006090733905873308
+   },
+   "row_all_ok": 0.00112
+  },
+  "2024": {
+   "n": 34106,
+   "momentum1M": {
+    "ok": 0.36258,
+    "rel_med": 0.007495606831435145,
+    "rel_p99": 1.0,
+    "abs_p99": 0.0001643158686587211
+   },
+   "momentum15M": {
+    "ok": 0.32402,
+    "rel_med": 0.003977649543081567,
+    "rel_p99": 0.09058070580078799,
+    "abs_p99": 0.0005062335535926201
+   },
+   "row_all_ok": 0.26031
+  },
+  "2025": {
+   "n": 33997,
+   "momentum1M": {
+    "ok": 0.99409,
+    "rel_med": 1.4485436512048046e-06,
+    "rel_p99": 0.00012648032743994289,
+    "abs_p99": 4.979007041487627e-09
+   },
+   "momentum15M": {
+    "ok": 0.99268,
+    "rel_med": 2.595013731624349e-07,
+    "rel_p99": 1.432551551962829e-06,
+    "abs_p99": 4.9858970641025735e-09
+   },
+   "row_all_ok": 0.99268
+  },
+  "2026": {
+   "n": 14025,
+   "momentum1M": {
+    "ok": 0.87358,
+    "rel_med": 1.3966230505135437e-06,
+    "rel_p99": 1.0,
+    "abs_p99": 0.0029758183844387533
+   },
+   "momentum15M": {
+    "ok": 0.87052,
+    "rel_med": 2.6105302435781444e-07,
+    "rel_p99": 1.0,
+    "abs_p99": 0.01378554042428732
+   },
+   "row_all_ok": 0.87045
+  }
+ },
+ "NEW_rows_not_in_store": 82744,
+ "NEW_rows_not_in_store_mom1M_zero_frac": 0.9969786328918109
+}

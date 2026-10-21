@@ -1,0 +1,56 @@
+2026-10-21 22:25:48,220 model nodes=4604 branch=2227 modes=['BRANCH_LT', 'LEAF']
+2026-10-21 22:25:48,221 load NEW /home/ubuntu/claude_master/gvz/store/gate_dataset_full.csv
+2026-10-21 22:26:00,138 NEW rows=2889623
+2026-10-21 22:26:00,842 OLD rows=189765
+2026-10-21 22:26:02,223 FP momentum1M               thr= 47 hitNEW=1.000 mid=0.000 | 15grid NEW=0.340 OLD=0.319 onlyOLD=7 onlyNEW=8 yrs={2024: 31, 2025: 33, 2021: 27, 2022: 23, 2023: 24, 2026: 12}
+2026-10-21 22:26:02,417 FP momentum5M               thr= 43 hitNEW=1.000 mid=0.000 | 15grid NEW=0.186 OLD=0.186 onlyOLD=0 onlyNEW=0 yrs={2021: 33, 2025: 22, 2024: 25, 2022: 19, 2023: 21, 2026: 7}
+2026-10-21 22:26:02,739 FP momentum15M              thr=103 hitNEW=1.000 mid=0.000 | 15grid NEW=0.146 OLD=0.078 onlyOLD=5 onlyNEW=12 yrs={2021: 45, 2024: 45, 2022: 43, 2025: 41, 2026: 9, 2023: 38}
+2026-10-21 22:26:02,960 FP momentum1H               thr= 31 hitNEW=1.000 mid=0.000 | 15grid NEW=0.097 OLD=0.097 onlyOLD=0 onlyNEW=0 yrs={2022: 10, 2025: 5, 2021: 17, 2023: 6, 2024: 9, 2026: 2}
+2026-10-21 22:26:03,193 FP momentum4H               thr= 22 hitNEW=1.000 mid=0.000 | 15grid NEW=0.091 OLD=0.091 onlyOLD=0 onlyNEW=0 yrs={2021: 8, 2023: 5, 2025: 5, 2024: 8, 2022: 6}
+2026-10-21 22:26:03,451 FP momentum24H              thr= 23 hitNEW=1.000 mid=0.000 | 15grid NEW=0.043 OLD=0.043 onlyOLD=0 onlyNEW=0 yrs={2021: 10, 2022: 8, 2024: 3, 2025: 1, 2023: 4}
+2026-10-21 22:26:03,747 FP momentumAcceleration     thr= 87 hitNEW=1.000 mid=0.000 | 15grid NEW=0.230 OLD=0.172 onlyOLD=9 onlyNEW=14 yrs={2022: 32, 2025: 29, 2024: 40, 2023: 28, 2021: 33, 2026: 7}
+2026-10-21 22:26:03,954 FP trendStrengthETH         thr= 16 hitNEW=1.000 mid=0.000 | 15grid NEW=0.062 OLD=0.062 onlyOLD=0 onlyNEW=0 yrs={2021: 8, 2022: 6, 2024: 5, 2023: 7, 2026: 2, 2025: 2}
+2026-10-21 22:26:03,982 FP trendConsistency         thr=  1 hitNEW=1.000 mid=0.000 | 15grid NEW=1.000 OLD=1.000 onlyOLD=0 onlyNEW=0 yrs={2021: 1, 2022: 1, 2023: 1, 2024: 1, 2025: 1, 2026: 1}
+2026-10-21 22:26:04,076 FP volatility1M             thr=  3 hitNEW=1.000 mid=0.000 | 15grid NEW=0.667 OLD=0.667 onlyOLD=0 onlyNEW=0 yrs={2021: 2, 2022: 1, 2025: 1}
+2026-10-21 22:26:04,184 FP volatility15M            thr= 10 hitNEW=1.000 mid=0.000 | 15grid NEW=0.500 OLD=0.500 onlyOLD=0 onlyNEW=0 yrs={2021: 8, 2022: 6, 2023: 4, 2024: 3, 2025: 5, 2026: 1}
+2026-10-21 22:26:04,322 FP volatility1H             thr= 29 hitNEW=1.000 mid=0.000 | 15grid NEW=0.724 OLD=0.724 onlyOLD=0 onlyNEW=0 yrs={2022: 23, 2023: 16, 2024: 20, 2025: 16, 2026: 12, 2021: 24}
+2026-10-21 22:26:04,484 FP volatility24H            thr= 43 hitNEW=1.000 mid=0.000 | 15grid NEW=0.628 OLD=0.628 onlyOLD=0 onlyNEW=0 yrs={2022: 31, 2023: 27, 2025: 29, 2024: 28, 2026: 17, 2021: 32}
+2026-10-21 22:26:04,742 FP volatilityTermStructure  thr= 15 hitNEW=1.000 mid=0.067 | 15grid NEW=0.000 OLD=0.000 onlyOLD=0 onlyNEW=0 yrs={2021: 3, 2023: 4, 2022: 5, 2025: 1, 2024: 2}
+2026-10-21 22:26:04,823 FP advanceDeclineRatio      thr= 18 hitNEW=1.000 mid=0.000 | 15grid NEW=1.000 OLD=1.000 onlyOLD=0 onlyNEW=0 yrs={2021: 11, 2022: 10, 2023: 16, 2024: 16, 2025: 18, 2026: 16}
+2026-10-21 22:26:04,987 FP percentAboveMA20         thr= 66 hitNEW=1.000 mid=0.000 | 15grid NEW=0.985 OLD=0.970 onlyOLD=1 onlyNEW=2 yrs={2025: 66, 2021: 36, 2022: 21, 2024: 49, 2023: 40, 2026: 37}
+2026-10-21 22:26:05,252 FP volumeRatioUpDown        thr= 19 hitNEW=1.000 mid=0.053 | 15grid NEW=0.000 OLD=0.000 onlyOLD=0 onlyNEW=0 yrs={2021: 6, 2024: 8, 2025: 2, 2023: 2, 2026: 1}
+2026-10-21 22:26:05,377 FP marketBreadthStrength    thr= 44 hitNEW=1.000 mid=0.000 | 15grid NEW=1.000 OLD=0.932 onlyOLD=0 onlyNEW=3 yrs={2025: 44, 2022: 15, 2023: 27, 2024: 30, 2026: 23, 2021: 20}
+2026-10-21 22:26:05,706 FP btcDominance             thr= 59 hitNEW=1.000 mid=0.034 | 15grid NEW=0.085 OLD=0.034 onlyOLD=1 onlyNEW=4 yrs={2022: 18, 2024: 15, 2025: 10, 2021: 11, 2023: 9, 2026: 2}
+2026-10-21 22:26:05,956 FP rsi14                    thr= 17 hitNEW=1.000 mid=0.176 | 15grid NEW=0.000 OLD=0.000 onlyOLD=0 onlyNEW=0 yrs={2026: 1, 2021: 3, 2022: 4, 2023: 6, 2025: 3, 2024: 2}
+2026-10-21 22:26:06,250 FP volumeSpike              thr= 32 hitNEW=1.000 mid=0.125 | 15grid NEW=0.125 OLD=0.125 onlyOLD=0 onlyNEW=0 yrs={2021: 4, 2023: 6, 2025: 10, 2026: 1, 2022: 8, 2024: 6}
+2026-10-21 22:26:06,390 FP distMA20                 thr=  6 hitNEW=1.000 mid=0.000 | 15grid NEW=0.000 OLD=0.000 onlyOLD=0 onlyNEW=0 yrs={2026: 2, 2021: 3, 2024: 1}
+2026-10-21 22:26:06,494 FP fundingRateRaw           thr= 27 hitNEW=1.000 mid=0.000 | 15grid NEW=1.000 OLD=0.259 onlyOLD=0 onlyNEW=20 yrs={2022: 10, 2023: 5, 2024: 6, 2026: 2, 2025: 6, 2021: 6}
+2026-10-21 22:26:06,643 FP fundingRateAvg24H        thr= 43 hitNEW=1.000 mid=0.000 | 15grid NEW=1.000 OLD=0.581 onlyOLD=0 onlyNEW=18 yrs={2022: 17, 2025: 17, 2023: 11, 2021: 14, 2026: 3, 2024: 6}
+2026-10-21 22:26:06,723 FP fundingRateTrend         thr= 15 hitNEW=1.000 mid=0.000 | 15grid NEW=1.000 OLD=0.733 onlyOLD=0 onlyNEW=4 yrs={2022: 10, 2024: 10, 2025: 10, 2023: 6, 2026: 4, 2021: 6}
+2026-10-21 22:26:06,783 FP hourOfDay                thr= 14 hitNEW=1.000 mid=0.000 | 15grid NEW=1.000 OLD=1.000 onlyOLD=0 onlyNEW=0 yrs={2021: 14, 2022: 14, 2023: 14, 2024: 14, 2025: 14, 2026: 14}
+2026-10-21 22:26:06,820 FP dayOfWeek                thr=  4 hitNEW=1.000 mid=0.000 | 15grid NEW=1.000 OLD=1.000 onlyOLD=0 onlyNEW=0 yrs={2021: 4, 2022: 4, 2023: 4, 2024: 4, 2025: 4, 2026: 4}
+2026-10-21 22:26:06,853 FP weekOfMonth              thr=  3 hitNEW=1.000 mid=0.000 | 15grid NEW=1.000 OLD=1.000 onlyOLD=0 onlyNEW=0 yrs={2021: 3, 2022: 3, 2023: 3, 2024: 3, 2025: 3, 2026: 3}
+2026-10-21 22:26:06,899 FP monthOfYear              thr=  9 hitNEW=1.000 mid=0.000 | 15grid NEW=1.000 OLD=1.000 onlyOLD=0 onlyNEW=0 yrs={2021: 9, 2022: 9, 2023: 9, 2024: 9, 2025: 9, 2026: 3}
+2026-10-21 22:26:07,202 FP basketMomentum15M        thr= 83 hitNEW=1.000 mid=0.000 | 15grid NEW=0.096 OLD=0.169 onlyOLD=9 onlyNEW=3 yrs={2021: 36, 2025: 32, 2022: 38, 2023: 37, 2024: 27, 2026: 9}
+2026-10-21 22:26:07,448 FP basketMomentum1H         thr= 28 hitNEW=1.000 mid=0.000 | 15grid NEW=0.071 OLD=0.000 onlyOLD=0 onlyNEW=2 yrs={2023: 2, 2022: 8, 2025: 10, 2024: 5, 2021: 7}
+2026-10-21 22:26:07,793 FP basketRsi14              thr= 70 hitNEW=1.000 mid=0.214 | 15grid NEW=0.100 OLD=0.029 onlyOLD=0 onlyNEW=5 yrs={2021: 10, 2024: 21, 2023: 19, 2025: 16, 2026: 3, 2022: 11}
+2026-10-21 22:26:08,069 FP basketVolSpike           thr= 29 hitNEW=1.000 mid=0.172 | 15grid NEW=0.000 OLD=0.000 onlyOLD=0 onlyNEW=0 yrs={2022: 5, 2023: 8, 2021: 7, 2025: 5, 2026: 2, 2024: 6}
+2026-10-21 22:26:08,253 NEWvsOLD 2021 n=35040 row_all_ok=0.0000 cot_lech(<99.9%)={'momentum1M': 0.0155, 'momentum15M': 0.00676, 'momentumAcceleration': 0.00674, 'fundingRateRaw': 0.0494, 'fundingRateAvg24H': 0.05214, 'fundingRateTrend': 0.09332}
+2026-10-21 22:26:08,300 NEWvsOLD 2022 n=35040 row_all_ok=0.0000 cot_lech(<99.9%)={'momentum1M': 0.02061, 'momentum15M': 0.00662, 'momentumAcceleration': 0.00662, 'advanceDeclineRatio': 0.61841, 'percentAboveMA20': 0.55648, 'volumeRatioUpDown': 0.61989, 'marketBreadthStrength': 0.55088, 'btcDominance': 0.61104, 'fundingRateRaw': 0.05979, 'fundingRateAvg24H': 0.0649, 'fundingRateTrend': 0.09683, 'basketMomentum15M': 0.56122, 'basketMomentum1H': 0.55334, 'basketRsi14': 0.54549, 'basketVolSpike': 0.54538}
+2026-10-21 22:26:08,350 NEWvsOLD 2023 n=35040 row_all_ok=0.0000 cot_lech(<99.9%)={'momentum1M': 0.00471, 'momentum15M': 0.00274, 'momentumAcceleration': 0.00274, 'advanceDeclineRatio': 0.11455, 'percentAboveMA20': 0.0109, 'volumeRatioUpDown': 0.11515, 'marketBreadthStrength': 0.00668, 'btcDominance': 0.10634, 'fundingRateRaw': 0.03467, 'fundingRateAvg24H': 0.04463, 'fundingRateTrend': 0.11147, 'basketMomentum15M': 0.03573, 'basketMomentum1H': 0.01884, 'basketRsi14': 0.00063, 'basketVolSpike': 0.00017}
+2026-10-21 22:26:08,398 NEWvsOLD 2024 n=35136 row_all_ok=0.0000 cot_lech(<99.9%)={'momentum1M': 0.35235, 'momentum15M': 0.31495, 'momentumAcceleration': 0.31489, 'advanceDeclineRatio': 0.04497, 'percentAboveMA20': 0.03364, 'volumeRatioUpDown': 0.04508, 'marketBreadthStrength': 0.0327, 'btcDominance': 0.037, 'fundingRateRaw': 0.0773, 'fundingRateAvg24H': 0.06959, 'fundingRateTrend': 0.20665, 'basketMomentum15M': 0.04875, 'basketMomentum1H': 0.03706, 'basketRsi14': 0.02613, 'basketVolSpike': 0.02596}
+2026-10-21 22:26:08,447 NEWvsOLD 2025 n=35040 row_all_ok=0.0000 cot_lech(<99.9%)={'momentum1M': 0.96461, 'momentum15M': 0.96321, 'momentumAcceleration': 0.96321, 'advanceDeclineRatio': 0.00408, 'percentAboveMA20': 0.00245, 'volumeRatioUpDown': 0.00585, 'marketBreadthStrength': 0.00283, 'btcDominance': 0.00237, 'fundingRateRaw': 0.23271, 'fundingRateAvg24H': 0.22865, 'fundingRateTrend': 0.39969, 'basketMomentum15M': 0.02577, 'basketMomentum1H': 0.01281, 'basketRsi14': 0.00051, 'basketVolSpike': 0.00017}
+2026-10-21 22:26:08,470 NEWvsOLD 2026 n=14469 row_all_ok=0.4656 cot_lech(<99.9%)={'momentum1M': 0.85251, 'momentum15M': 0.84954, 'momentumAcceleration': 0.84954, 'advanceDeclineRatio': 0.60329, 'percentAboveMA20': 0.60232, 'volumeRatioUpDown': 0.60495, 'marketBreadthStrength': 0.60267, 'btcDominance': 0.60274, 'fundingRateRaw': 0.6393, 'fundingRateAvg24H': 0.64089, 'fundingRateTrend': 0.83219, 'basketMomentum15M': 0.61331, 'basketMomentum1H': 0.60737, 'basketRsi14': 0.60205, 'basketVolSpike': 0.60198}
+2026-10-21 22:26:09,206 NEWvsSTORE 2021 n=511192 row_all_ok=0.9997 cot_lech(<99.9%)={}
+2026-10-21 22:26:09,247 NEWvsSTORE 2022 n=510528 row_all_ok=0.9993 cot_lech(<99.9%)={}
+2026-10-21 22:26:09,289 NEWvsSTORE 2023 n=510767 row_all_ok=0.9993 cot_lech(<99.9%)={}
+2026-10-21 22:26:09,333 NEWvsSTORE 2024 n=511798 row_all_ok=0.9995 cot_lech(<99.9%)={}
+2026-10-21 22:26:09,376 NEWvsSTORE 2025 n=510527 row_all_ok=1.0000 cot_lech(<99.9%)={}
+2026-10-21 22:26:09,396 NEWvsSTORE 2026 n=252067 row_all_ok=0.8691 cot_lech(<99.9%)={'momentum1M': 0.86913, 'momentum15M': 0.86907}
+2026-10-21 22:26:09,464 OLDvsSTORE 2021 n=34067 row_all_ok=0.0013 cot_lech(<99.9%)={'momentum1M': 0.01556, 'momentum15M': 0.00658}
+2026-10-21 22:26:09,468 OLDvsSTORE 2022 n=34047 row_all_ok=0.0014 cot_lech(<99.9%)={'momentum1M': 0.02044, 'momentum15M': 0.00614}
+2026-10-21 22:26:09,472 OLDvsSTORE 2023 n=33989 row_all_ok=0.0011 cot_lech(<99.9%)={'momentum1M': 0.00391, 'momentum15M': 0.00194}
+2026-10-21 22:26:09,476 OLDvsSTORE 2024 n=34106 row_all_ok=0.2603 cot_lech(<99.9%)={'momentum1M': 0.36258, 'momentum15M': 0.32402}
+2026-10-21 22:26:09,479 OLDvsSTORE 2025 n=33997 row_all_ok=0.9927 cot_lech(<99.9%)={'momentum1M': 0.99409, 'momentum15M': 0.99268}
+2026-10-21 22:26:09,481 OLDvsSTORE 2026 n=14025 row_all_ok=0.8704 cot_lech(<99.9%)={'momentum1M': 0.87358, 'momentum15M': 0.87052}
+2026-10-21 22:26:09,684 WROTE a1_fingerprint.json

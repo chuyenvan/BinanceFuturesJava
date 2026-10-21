@@ -1,0 +1,208 @@
+{
+ "n_train_rows": 2759040,
+ "per_feature": {
+  "momentum1M": {
+   "n_thr": 47,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.773,
+   "n_unique_train": 576675
+  },
+  "momentum5M": {
+   "n_thr": 43,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.7558,
+   "n_unique_train": 699395
+  },
+  "momentum15M": {
+   "n_thr": 103,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.733,
+   "n_unique_train": 1165600
+  },
+  "momentum1H": {
+   "n_thr": 31,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.4301,
+   "n_unique_train": 1383775
+  },
+  "momentum4H": {
+   "n_thr": 22,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.2576,
+   "n_unique_train": 1850122
+  },
+  "momentum24H": {
+   "n_thr": 23,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.1377,
+   "n_unique_train": 2347159
+  },
+  "momentumAcceleration": {
+   "n_thr": 87,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.7375,
+   "n_unique_train": 1195911
+  },
+  "trendStrengthETH": {
+   "n_thr": 16,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.5938,
+   "n_unique_train": 1573527
+  },
+  "trendConsistency": {
+   "n_thr": 1,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.8333,
+   "n_unique_train": 2
+  },
+  "volatility1M": {
+   "n_thr": 3,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.1667,
+   "n_unique_train": 263928
+  },
+  "volatility15M": {
+   "n_thr": 10,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.7333,
+   "n_unique_train": 250646
+  },
+  "volatility1H": {
+   "n_thr": 29,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.9023,
+   "n_unique_train": 244559
+  },
+  "volatility24H": {
+   "n_thr": 43,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.9341,
+   "n_unique_train": 227102
+  },
+  "volatilityTermStructure": {
+   "n_thr": 15,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 1.0,
+   "n_unique_train": 2544064
+  },
+  "advanceDeclineRatio": {
+   "n_thr": 18,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.7315,
+   "n_unique_train": 22825
+  },
+  "percentAboveMA20": {
+   "n_thr": 66,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.4419,
+   "n_unique_train": 25064
+  },
+  "volumeRatioUpDown": {
+   "n_thr": 19,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.5,
+   "n_unique_train": 2661796
+  },
+  "marketBreadthStrength": {
+   "n_thr": 44,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.4697,
+   "n_unique_train": 25047
+  },
+  "btcDominance": {
+   "n_thr": 59,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.3305,
+   "n_unique_train": 2590726
+  },
+  "rsi14": {
+   "n_thr": 17,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 1.0,
+   "n_unique_train": 2268377
+  },
+  "volumeSpike": {
+   "n_thr": 32,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.7656,
+   "n_unique_train": 2626881
+  },
+  "distMA20": {
+   "n_thr": 6,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.1389,
+   "n_unique_train": 733871
+  },
+  "fundingRateRaw": {
+   "n_thr": 27,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.3086,
+   "n_unique_train": 27427
+  },
+  "fundingRateAvg24H": {
+   "n_thr": 43,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.5233,
+   "n_unique_train": 33485
+  },
+  "fundingRateTrend": {
+   "n_thr": 15,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.7778,
+   "n_unique_train": 21280
+  },
+  "hourOfDay": {
+   "n_thr": 14,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.9881,
+   "n_unique_train": 24
+  },
+  "dayOfWeek": {
+   "n_thr": 4,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 1.0,
+   "n_unique_train": 7
+  },
+  "weekOfMonth": {
+   "n_thr": 3,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 1.0,
+   "n_unique_train": 6
+  },
+  "monthOfYear": {
+   "n_thr": 9,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 1.0,
+   "n_unique_train": 12
+  },
+  "basketMomentum15M": {
+   "n_thr": 83,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.6888,
+   "n_unique_train": 1290097
+  },
+  "basketMomentum1H": {
+   "n_thr": 28,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.2798,
+   "n_unique_train": 1755858
+  },
+  "basketRsi14": {
+   "n_thr": 70,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 1.0,
+   "n_unique_train": 2423235
+  },
+  "basketVolSpike": {
+   "n_thr": 29,
+   "hit_real": 1.0,
+   "hit_ctrl_mean": 0.8506,
+   "n_unique_train": 2516904
+  }
+ },
+ "pooled": {
+  "n_thr": 1059,
+  "hit_real": 1.0,
+  "hit_ctrl": 0.6577
+ }
+}
