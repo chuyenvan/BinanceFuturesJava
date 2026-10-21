@@ -179,3 +179,15 @@ TS_MKT_EXT chỉ tác động sổ GIẤY c3_shadow (không vị thế THẬT/LE
   Khi owner chạy bước 1+4 runbook và kiểm 15' ĐẠT (md5 eea5adec, `[TS-EXT] BAT`, cờ 10-21), điền giờ start thật ở đây; đoạn
   10-20 20:33:04 → giờ đó (kể cả 05:55:29 v11b + env thừa) = giai đoạn kiểm parity v11b, không tính. Tối thiểu 4 tuần như (B). Giai đoạn
 10-20 20:33:04 → giờ đó (v11b không TS_MKT_EXT) chỉ là giai đoạn kiểm parity v1.1, không tính vào cửa sổ.
+
+---
+
+## ADDENDUM d (2026-10-21, owner đồng ý)
+
+Thay đổi CHỈ VẬN HÀNH (không đổi logic quyết định, feature, sizing, entry/exit, gate, selector, TS_MKT_EXT; ví dụ: tắt reset 12h, cờ JVM
+ExitOnOutOfMemoryError, watchdog/systemd Restart=, logging) KHÔNG reset cửa sổ promotion bắt đầu 2026-10-21 07:53:59, với điều kiện:
+(1) so bytecode chứng minh chỉ class vận hành thay đổi + kiểm legacy-equivalence trên harness offline (không đọc 242);
+(2) ghi sổ C: giờ, md5 cũ/mới, diff env/config, lý do;
+(3) restart kèm theo được coi như một tự-restart (sự kiện vận hành).
+Bất kỳ thay đổi nào chạm logic quyết định ⇒ reset cửa sổ như cũ.
+Dự kiến áp dụng: v11d (tắt reset 12h + ExitOnOutOfMemoryError + watchdog), tuỳ kết quả đo RSS 10-21.
