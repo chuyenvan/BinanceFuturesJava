@@ -1,0 +1,167 @@
+{
+ "day0": "20210701",
+ "cap0": 35000.0,
+ "check": {
+  "OFF_A1": {
+   "tag": "gqsf-a1",
+   "md5": "ad26fd55f0bb5db32038ec8b357cf8e7",
+   "md5_ref": "ad26fd55f0bb5db32038ec8b357cf8e7",
+   "md5_ok": true,
+   "missing": 0,
+   "dd_total": -22.207382601031476,
+   "dd_win": -22.207382601031476,
+   "max_abs_diff_vs_ref": 0.0
+  },
+  "X14_A1": {
+   "tag": "tsx-x14-a1",
+   "md5": "dc62609b6d7169093c001f2ce0d198ed",
+   "md5_ref": "dc62609b6d7169093c001f2ce0d198ed",
+   "md5_ok": true,
+   "missing": 0,
+   "dd_total": -22.20293527769439,
+   "dd_win": -22.20293527769439,
+   "max_abs_diff_vs_ref": 0.0
+  },
+  "OFF_S7": {
+   "tag": "gqsf-s7",
+   "md5": "eca3d5da69c9755ada80b34559508c4e",
+   "md5_ref": "eca3d5da69c9755ada80b34559508c4e",
+   "md5_ok": true,
+   "missing": 0,
+   "dd_total": -22.748916107732363,
+   "dd_win": -22.748916107732363,
+   "max_abs_diff_vs_ref": 0.0
+  },
+  "X14_S7": {
+   "tag": "tsx-x14-s7",
+   "md5": "622b03e264fdd0b59a1673e144f4148f",
+   "md5_ref": "622b03e264fdd0b59a1673e144f4148f",
+   "md5_ok": true,
+   "missing": 0,
+   "dd_total": -22.744263704033884,
+   "dd_win": -22.744263704033884,
+   "max_abs_diff_vs_ref": 0.0
+  },
+  "OFF_S13": {
+   "tag": "gqsf-s13",
+   "md5": "6cde6eb317909cf2a6cc27a85d740afe",
+   "md5_ref": "6cde6eb317909cf2a6cc27a85d740afe",
+   "md5_ok": true,
+   "missing": 0,
+   "dd_total": -22.917714644044864,
+   "dd_win": -22.917714644044864,
+   "max_abs_diff_vs_ref": 0.0
+  },
+  "X14_S13": {
+   "tag": "tsx-x14-s13",
+   "md5": "77bd5374c8e3f625bf6ce1d630d25509",
+   "md5_ref": "77bd5374c8e3f625bf6ce1d630d25509",
+   "md5_ok": true,
+   "missing": 0,
+   "dd_total": -22.92164809966648,
+   "dd_win": -22.92164809966648,
+   "max_abs_diff_vs_ref": 0.0
+  },
+  "OFF_S21": {
+   "tag": "gqsf-s21",
+   "md5": "c3b73549898d6216d85321df7cc241f3",
+   "md5_ref": "c3b73549898d6216d85321df7cc241f3",
+   "md5_ok": true,
+   "missing": 0,
+   "dd_total": -24.67141174210382,
+   "dd_win": -24.67141174210382,
+   "max_abs_diff_vs_ref": 0.0
+  },
+  "X14_S21": {
+   "tag": "tsx-x14-s21",
+   "md5": "6f15b4d7c8e1474a17111ee8a4969a58",
+   "md5_ref": "6f15b4d7c8e1474a17111ee8a4969a58",
+   "md5_ok": true,
+   "missing": 0,
+   "dd_total": -24.663001207056823,
+   "dd_win": -24.663001207056823,
+   "max_abs_diff_vs_ref": 0.0
+  },
+  "OFF_S99": {
+   "tag": "gqsf-s99",
+   "md5": "bda372212cb2ae505041e564d8b3d4f1",
+   "md5_ref": "bda372212cb2ae505041e564d8b3d4f1",
+   "md5_ok": true,
+   "missing": 0,
+   "dd_total": -22.060731955615843,
+   "dd_win": -21.413108832898885,
+   "max_abs_diff_vs_ref": 0.0
+  },
+  "X14_S99": {
+   "tag": "tsx-x14-s99",
+   "md5": "53fa789df0c1595b64e79335966a2eb0",
+   "md5_ref": "53fa789df0c1595b64e79335966a2eb0",
+   "md5_ok": true,
+   "missing": 0,
+   "dd_total": -21.43104106662871,
+   "dd_win": -21.43104106662871,
+   "max_abs_diff_vs_ref": 0.0
+  },
+  "OFF_S123": {
+   "tag": "gqsf-s123",
+   "md5": "74c83292a9deb039a540144335989246",
+   "md5_ref": "74c83292a9deb039a540144335989246",
+   "md5_ok": true,
+   "missing": 0,
+   "dd_total": -23.17184672897864,
+   "dd_win": -23.17184672897864,
+   "max_abs_diff_vs_ref": 0.0
+  },
+  "X14_S123": {
+   "tag": "tsx-x14-s123",
+   "md5": "7134187dfd31ac03dfe622e35a665ad6",
+   "md5_ref": "7134187dfd31ac03dfe622e35a665ad6",
+   "md5_ok": true,
+   "missing": 0,
+   "dd_total": -23.17984779005633,
+   "dd_win": -23.17984779005633,
+   "max_abs_diff_vs_ref": 0.0
+  },
+  "OFF_S777": {
+   "tag": "gqsf-s777",
+   "md5": "bf91d854af2b4f08d7b4d618da0296d0",
+   "md5_ref": "bf91d854af2b4f08d7b4d618da0296d0",
+   "md5_ok": true,
+   "missing": 0,
+   "dd_total": -20.049241255626704,
+   "dd_win": -20.049241255626704,
+   "max_abs_diff_vs_ref": 0.0
+  },
+  "X14_S777": {
+   "tag": "tsx-x14-s777",
+   "md5": "1781c5f5a4a9e222d021103df21cb651",
+   "md5_ref": "1781c5f5a4a9e222d021103df21cb651",
+   "md5_ok": true,
+   "missing": 0,
+   "dd_total": -20.047277392778827,
+   "dd_win": -20.047277392778827,
+   "max_abs_diff_vs_ref": 0.0
+  },
+  "OFF_S2024": {
+   "tag": "gqsf-s2024",
+   "md5": "1b2af031751d8e338ac8d736bff505aa",
+   "md5_ref": "1b2af031751d8e338ac8d736bff505aa",
+   "md5_ok": true,
+   "missing": 0,
+   "dd_total": -23.241592372680685,
+   "dd_win": -23.191699190505222,
+   "max_abs_diff_vs_ref": 0.0
+  },
+  "X14_S2024": {
+   "tag": "tsx-x14-s2024",
+   "md5": "f7044b99580b5368f716927b7be8c825",
+   "md5_ref": "f7044b99580b5368f716927b7be8c825",
+   "md5_ok": true,
+   "missing": 0,
+   "dd_total": -23.185390822076023,
+   "dd_win": -23.185390822076023,
+   "max_abs_diff_vs_ref": 0.0
+  }
+ },
+ "ok": true
+}
