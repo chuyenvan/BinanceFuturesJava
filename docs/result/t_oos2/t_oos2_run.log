@@ -1,0 +1,40 @@
+2026-10-21 15:58:36,647 [V1_BTC_2018_2019] data 2017-08-17..2019-12-31 n=867 ; cham t0=2017-12-31 .. 2019-12-31 (730 buoc) ; lich su truoc t0 = 137 ngay close
+2026-10-21 15:58:36,650 [V1_BTC_2018_2019] T  : +75.4% / CAGR +32.4% / DD -35.3% ; sw=35 off=523
+2026-10-21 15:58:36,650 [V1_BTC_2018_2019] B&H: -47.6% / CAGR -27.6% / DD -81.2%
+2026-10-21 15:58:36,650 [V1_BTC_2018_2019] C1=True C2=True C3=True
+2026-10-21 15:58:36,719 [V1_BTC_2018_2019] GRID: 21/27 o dat C1&C2 (can >= 19)
+2026-10-21 15:58:36,719 [V1_BTC_2018_2019] VERDICT: PASS (khong bi bac bo)
+2026-10-21 15:58:36,795 [V1_BTC_2018_2019] PHI 0,30 %: T +66.2% / CAGR +28.9% / DD -37.7% | B&H -47.7% / CAGR -27.7% / DD -81.2% | C1/C2/C3=True/True/True | luoi 20/27
+2026-10-21 15:58:36,799 V1: {'ok': True, 'checks': {'total': True, 'maxdd': True, 'switches': True, 'off_days': True, 'bh_total': True, 'bh_maxdd': True, 'grid': True, 'n_c1c2': True, 'episodes': True, 'trades': True, 'cost_fn_consistent': True, 'headline': True}, 'T': {'total': 0.7537613511117416, 'cagr': 0.32429654953554166, 'maxdd': -0.3533047135371574, 'peak_date': '2019-06-26', 'trough_date': '2019-10-25', 'steps': 730}, 'BH': {'total': -0.47621283489060007, 'cagr': -0.27626858220096595, 'maxdd': -0.8118477145881701, 'peak_date': '2018-01-06', 'trough_date': '2018-12-15', 'steps': 730}, 'switches': 35, 'off_days': 523}
+2026-10-21 15:58:36,807 [A_BTC_2014_2017] data 2013-07-01..2017-07-31 n=1492 ; cham t0=2013-12-31 .. 2017-07-31 (1308 buoc) ; lich su truoc t0 = 184 ngay close
+2026-10-21 15:58:36,812 [A_BTC_2014_2017] T  : +397.5% / CAGR +56.5% / DD -41.6% ; sw=28 off=594
+2026-10-21 15:58:36,812 [A_BTC_2014_2017] B&H: +289.6% / CAGR +46.2% / DD -81.4%
+2026-10-21 15:58:36,812 [A_BTC_2014_2017] C1=True C2=True C3=False
+2026-10-21 15:58:36,936 [A_BTC_2014_2017] GRID: 12/27 o dat C1&C2 (can >= 19)
+2026-10-21 15:58:36,936 [A_BTC_2014_2017] VERDICT: FAIL
+2026-10-21 15:58:37,071 [A_BTC_2014_2017] PHI 0,30 %: T +377.8% / CAGR +54.7% / DD -41.8% | B&H +289.0% / CAGR +46.1% / DD -81.4% | C1/C2/C3=True/True/False | luoi 10/27
+2026-10-21 15:58:37,081 V3 A_BTC_2014_2017 cut=729 n=547 truncate=True scramble=True
+2026-10-21 15:58:37,089 V3 A_BTC_2014_2017 cut=1095 n=913 truncate=True scramble=True
+2026-10-21 15:58:37,097 V3 A_BTC_2014_2017 cut=1369 n=1187 truncate=True scramble=True
+2026-10-21 15:58:37,105 [B1_ETH_2018_2019] data 2017-08-17..2019-12-31 n=867 ; cham t0=2017-12-31 .. 2019-12-31 (730 buoc) ; lich su truoc t0 = 137 ngay close
+2026-10-21 15:58:37,108 [B1_ETH_2018_2019] T  : +63.5% / CAGR +27.9% / DD -40.3% ; sw=33 off=583
+2026-10-21 15:58:37,108 [B1_ETH_2018_2019] B&H: -82.4% / CAGR -58.1% / DD -94.0%
+2026-10-21 15:58:37,108 [B1_ETH_2018_2019] C1=True C2=True C3=False
+2026-10-21 15:58:37,176 [B1_ETH_2018_2019] GRID: 26/27 o dat C1&C2 (can >= 19)
+2026-10-21 15:58:37,176 [B1_ETH_2018_2019] VERDICT: FAIL
+2026-10-21 15:58:37,251 [B1_ETH_2018_2019] PHI 0,30 %: T +55.3% / CAGR +24.6% / DD -42.8% | B&H -82.5% / CAGR -58.1% / DD -94.0% | C1/C2/C3=True/True/False | luoi 25/27
+2026-10-21 15:58:37,257 V3 B1_ETH_2018_2019 cut=256 n=121 truncate=True scramble=True
+2026-10-21 15:58:37,261 V3 B1_ETH_2018_2019 cut=501 n=366 truncate=True scramble=True
+2026-10-21 15:58:37,266 V3 B1_ETH_2018_2019 cut=682 n=547 truncate=True scramble=True
+2026-10-21 15:58:37,275 [B2_ETH_2021_2025] data 2021-01-01..2025-12-31 n=1826 ; cham t0=2021-06-30 .. 2025-12-31 (1645 buoc) ; lich su truoc t0 = 181 ngay close
+2026-10-21 15:58:37,281 [B2_ETH_2021_2025] T  : +29.5% / CAGR +5.9% / DD -52.8% ; sw=69 off=702
+2026-10-21 15:58:37,281 [B2_ETH_2021_2025] B&H: +30.4% / CAGR +6.1% / DD -79.3%
+2026-10-21 15:58:37,282 [B2_ETH_2021_2025] C1=False C2=False C3=False
+2026-10-21 15:58:37,437 [B2_ETH_2021_2025] GRID: 0/27 o dat C1&C2 (can >= 19)
+2026-10-21 15:58:37,437 [B2_ETH_2021_2025] VERDICT: FAIL
+2026-10-21 15:58:37,607 [B2_ETH_2021_2025] PHI 0,30 %: T +17.0% / CAGR +3.5% / DD -54.8% | B&H +30.2% / CAGR +6.0% / DD -79.3% | C1/C2/C3=False/False/False | luoi 0/27
+2026-10-21 15:58:37,620 V3 B2_ETH_2021_2025 cut=545 n=366 truncate=True scramble=True
+2026-10-21 15:58:37,629 V3 B2_ETH_2021_2025 cut=1094 n=915 truncate=True scramble=True
+2026-10-21 15:58:37,638 V3 B2_ETH_2021_2025 cut=1550 n=1371 truncate=True scramble=True
+2026-10-21 15:58:37,641 VERDICT A: FAIL: T bi bac bo tren BTC 2014-2017 | ETH: FAIL ca 2 ky - T khong tong quat sang ETH
+2026-10-21 15:58:37,647 DONE v3_ok=True
