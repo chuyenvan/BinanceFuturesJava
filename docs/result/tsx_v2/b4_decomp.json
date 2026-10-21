@@ -1,0 +1,158 @@
+{
+ "-0.25/20": {
+  "channels": {
+   "bo_hoan": {
+    "n": 2.2,
+    "d": -196.3
+   },
+   "hoan_lau_hon": {
+    "n": 67.1,
+    "d": 3050.8
+   },
+   "hoan_ngan_hon": {
+    "n": 45.9,
+    "d": 391.4
+   },
+   "khac": {
+    "n": 376.0,
+    "d": 0.0
+   },
+   "moi_hoan": {
+    "n": 49.1,
+    "d": -192.6
+   }
+  },
+  "beyond_src_per_seed": 116.25,
+  "d_beyond_src": 2858.162653349588
+ },
+ "-0.25/30": {
+  "channels": {
+   "hoan_lau_hon": {
+    "n": 88.9,
+    "d": 3180.6
+   },
+   "khac": {
+    "n": 376.0,
+    "d": 0.0
+   },
+   "moi_hoan": {
+    "n": 75.5,
+    "d": 1561.0
+   }
+  },
+  "beyond_src_per_seed": 164.375,
+  "d_beyond_src": 4741.623859023887
+ },
+ "-0.25/45": {
+  "channels": {
+   "hoan_lau_hon": {
+    "n": 88.9,
+    "d": 3511.4
+   },
+   "khac": {
+    "n": 354.8,
+    "d": 0.0
+   },
+   "moi_hoan": {
+    "n": 96.8,
+    "d": -45.6
+   }
+  },
+  "beyond_src_per_seed": 185.625,
+  "d_beyond_src": 3465.74698096955
+ },
+ "-0.30/20": {
+  "channels": {
+   "bo_hoan": {
+    "n": 20.4,
+    "d": -1416.9
+   },
+   "hoan_ngan_hon": {
+    "n": 65.2,
+    "d": -722.5
+   },
+   "khac": {
+    "n": 454.8,
+    "d": 0.0
+   }
+  },
+  "beyond_src_per_seed": 0.0,
+  "d_beyond_src": 0.0
+ },
+ "-0.30/45": {
+  "channels": {
+   "hoan_lau_hon": {
+    "n": 74.2,
+    "d": 4419.4
+   },
+   "khac": {
+    "n": 406.1,
+    "d": 0.0
+   },
+   "moi_hoan": {
+    "n": 60.0,
+    "d": -1374.1
+   }
+  },
+  "beyond_src_per_seed": 134.25,
+  "d_beyond_src": 3045.288570364107
+ },
+ "-0.35/20": {
+  "channels": {
+   "bo_hoan": {
+    "n": 129.2,
+    "d": -4957.5
+   },
+   "hoan_ngan_hon": {
+    "n": 13.0,
+    "d": -438.9
+   },
+   "khac": {
+    "n": 398.1,
+    "d": 0.0
+   }
+  },
+  "beyond_src_per_seed": 0.0,
+  "d_beyond_src": 0.0
+ },
+ "-0.35/30": {
+  "channels": {
+   "bo_hoan": {
+    "n": 111.2,
+    "d": -3800.2
+   },
+   "hoan_ngan_hon": {
+    "n": 2.9,
+    "d": -117.0
+   },
+   "khac": {
+    "n": 426.2,
+    "d": 0.0
+   }
+  },
+  "beyond_src_per_seed": 0.0,
+  "d_beyond_src": 0.0
+ },
+ "-0.35/45": {
+  "channels": {
+   "bo_hoan": {
+    "n": 87.2,
+    "d": -1393.7
+   },
+   "hoan_lau_hon": {
+    "n": 24.1,
+    "d": 1414.3
+   },
+   "khac": {
+    "n": 393.1,
+    "d": 0.0
+   },
+   "moi_hoan": {
+    "n": 35.9,
+    "d": 1059.2
+   }
+  },
+  "beyond_src_per_seed": 60.0,
+  "d_beyond_src": 2473.5279528018064
+ }
+}
