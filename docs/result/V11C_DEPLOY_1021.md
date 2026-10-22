@@ -278,3 +278,103 @@ Lịch này khớp với dự kiến đã ghi ở phần "DEPLOY LẦN 2" (chu k
   - committed **−47 M** (2 007 → 1 960).
 - Cùng pha h≈6 với PID 7535 (lần đo #1, 13:41): RSS 2,58 → 2,61 GiB (+26 MB), live set 583 → 584 M ⇒ hai chu kỳ gần như trùng nhau.
 - ⇒ Từ h 1,3 tới h 6, cả heap lẫn RSS đều **phẳng/giảm nhẹ**: chưa thấy dấu hiệu leak heap hay native. Lần đo #4 nên làm ở giờ ~11 (khoảng 06:54 +07), **trước** tự-restart ~07:54:4x.
+
+---
+
+## RSS — lần đo #4 + trạng thái 10-23 (10-23 01:23:46 +07; chỉ đọc qua ssh+pipe)
+
+### 1. 242 hiện tại
+| mục | kết quả |
+|---|---|
+| PID trading | **20596**, ppid 1, `ps lstart` **2026-10-22 19:55:30** (log `MainClass` 19:55:32.351) |
+| jar (`/proc/20596/fd`) | md5 **eea5adecaff93d3fc350e4d13b3ecb2a** = v11c. **Không phải** 7767a560/dcae2e2b — v11d/exec-probe **chưa deploy**. `target/` không có file v11d/probe |
+| env LIVE_* / SIM_* | `LIVE_TS_MKT_EXT=1`; 6 key v11b (`FEAT_INPUT=snapshot`, `FEAT_MD=inline`, `MD_DIED_SYMBOLS=BTCDOM,USDC`, `MD_SOURCE=inline`, `RANK_TIEBREAK=symbol`, `FUNDING_REFRESH_HOURLY=1`); `LIVE_PROFILE=c3_shadow`, `SHADOW_NO_PUSH=true`; `LIVE_ENTRY_GRID_MIN=1`, `LIVE_FEAT_DUMP=3000`, `LIVE_FEAT_DUMP_ROTATE_MIN=10`, `LIVE_GATE_ROLLING_{DAYS=90,MODE=ratio,PCT=0.999950829}`; `SIM_BREAKER_MODE=OFF`, `SIM_FIX_B1/B2/B3=true`, `SIM_F_BASE=0.015`, `SIM_GATE_DYN_SCALE=1.55`, `SIM_LOSER_TIME_STOP_HOURS=168`, `SIM_MIN_MOMENTUM_15M=0.008`, `SIM_RATE_FEE=0.000982`, `SIM_RATE_PROFIT_STOP_MARKET=0.07`, `SIM_SLIPPAGE_RATE=0.000067`, `SIM_TS_GIVEBACK=1`, `SIM_TS_MAX_GAP=0.03`, `SIM_TS_MAX_GAP_WEAK=0.03`, `SIM_TS_PROFIT_MULTIPLIER=3.0`; `JAVA_TOOL_OPTIONS=-Xms1g -Xmx3g -Xlog:gc…` |
+| watchdog | **không có**: crontab root trống, `/etc/cron.d` chỉ có `0hourly`, không có timer h242-*, `h242-trading.service` Type=oneshot, không có `Restart=` |
+| LEGACY | `[LEGACY] managed 44` — 1 526/1 526 dòng từ 10-22 tới nay ✔ |
+| sổ giấy | 10-22 09:29:01: cả 4 cụm (WAL, TRUTH, APR, SNPS; neo 10-15 02:29 UTC) bị cắt `TIME_STOP_168H` (pnl −43,78 / −17,10 / −59,13 / −5,52), đúng như dự kiến vì cờ 10-22 = OFF. Hiện open=0, realized **−37,45** |
+| ERROR/Exception từ 10-22 | **0** |
+| TS-EXT | cờ 10-22 tính lúc **07:03:49** (`src=aero:1d final=false`, đúng lịch 00:03 UTC): **OFF dd=−0,130332**, P=−0,0936, max30=0,0461 (09-27), minN 1436. Lần tính lại từ file lúc 07:54:54 và 19:55:42 cho kết quả trùng. Cờ 10-23 **chưa tới lịch** (ngày UTC 10-23 bắt đầu 07:00 +07; tính lúc ~07:03 +07). Cache 32 dòng (đã thêm 10-21 S=+0,0079, 1440 phút). `deferring=0` suốt |
+
+**Các lần restart từ 10-21 19:54 tới nay** (đều là tự-restart `Reset by Schedule`, không có restart tay, không có watchdog):
+- 10-21 19:54:31 → PID 27434;
+- 10-22 07:54:43 → PID của chu kỳ 10-22 07:54;
+- 10-22 19:55:31 → PID 20596.
+
+**Tự-restart kế tiếp:** thread bắt đầu 19:55:41.994.
+
+| chu kỳ (tính từ bây giờ) | thời điểm |
+|---|---|
+| 1 | **10-23 ~07:55:42** |
+| 2 | 10-23 ~19:56:31 |
+| 3 | 10-24 ~07:56:43 |
+| 4 | **10-24 ~19:57:31 ⇒ rơi khung ±3' đầu giờ** |
+
+Collector `BinanceDataIngestor` restart 10-22 09:12:31 và 21:18:39 (Schedule), và **23:49:42 do `Reset by Price Error Count 54`** (PID 6186 hiện tại).
+
+### 2. RSS #4
+Lần đo giờ 11 của PID 27434 đã lỡ (process thoát lúc 10-22 07:54:43). Không có RSS nào trước reset.
+
+| | PID | RSS | VSZ | etimes |
+|---|---|---|---|---|
+| trading | 20596 | **2 708 544 kB (2,58 GiB)** | 7,48 G | 19 695 s (5,47 h) |
+| collector | 6186 | 2 192 132 kB (2,09 GiB) | 5,92 G | 5 644 s |
+
+Host: MemAvailable **2 067 M**; swap dùng 251 M / 8 063 M.
+
+**Heap sau Full GC theo từng chu kỳ** (gc.log* đọc qua pipe, lưu ở Oracle `~/claude_master/v11_tsx/off/live242/gc3/`):
+| process (chu kỳ) | n Full | đầu → cuối (after) | committed | pause max |
+|---|---|---|---|---|
+| 7535 (10-21 07:54→19:54) | 21 | 671 → 568 M | 2 247 → 1 907 | 1,59 s |
+| 27434 (10-21 19:54→10-22 07:54) | 22 | 677 → 599 (20:30) → 568 M (07:30) | 2 270 → 1 907 | 1,20 s |
+| 10-22 07:54→19:55 | 21 | 722 → 596 (08:30) → 570 M (19:30) | 2 417 → 1 914 | **1,81 s** |
+| 20596 (10-22 19:55→nay, h 5,5) | 9 | 645 → 598 → 586 M | 2 167 → 1 967 | 1,18 s |
+
+`Total ram used` trong log khớp với các số trên. Mỗi chu kỳ đều có cùng mẫu: đỉnh 645–727 M ngay sau start, rồi giảm đơn điệu về 568–570 M ở cuối chu kỳ.
+
+**Tổng hợp #1–#4:**
+| lần đo | PID | giờ trong chu kỳ | RSS |
+|---|---|---|---|
+| #1 | 7535 | h 5,8 | 2,58 GiB |
+| #2 | 27434 | h 1,3 | 2,64 GiB |
+| #3 | 27434 | h 6,0 | 2,61 GiB |
+| #4 | 20596 | h 5,5 | 2,58 GiB |
+
+⇒ **Không có dấu hiệu tăng heap theo chu kỳ** (live set cuối chu kỳ 568–570 M qua 3 chu kỳ), và **RSS ở giờ ~6 ổn định 2,58–2,61 GiB** giữa 3 process. Phần còn thiếu: RSS ở giờ 11–12 (cuối chu kỳ) **chưa có điểm đo nào**. Muốn khẳng định chắc về native trước khi bỏ reset cần đo 1 lần ở h≈11 (ví dụ 10-23 ~06:55, trước 07:55).
+
+### 3. gc.log trên 242
+| file | process | mtime | size |
+|---|---|---|---|
+| `gc.log` | 10-22 19:55 (hiện tại) | 10-23 01:23 | 178 316 |
+| `gc.log.0` | **10-21 07:53:59 (PID 7535, deploy v11c)** | 10-21 19:54 | 341 598 |
+| `gc.log.1` | 10-21 19:54 (27434) | 10-22 07:54 | 363 705 |
+| `gc.log.2` | 10-22 07:54 | 10-22 19:55 | 371 589 |
+| `gc.log.3` | 10-20 20:33 (v11b) | 10-21 05:55 | 253 078 |
+| `gc.log.4` | 10-21 05:55 (v11b + env thừa) | 10-21 07:53 | 58 099 |
+
+Rotation `filecount=5` ghi đè xoay vòng tại mỗi lần start JVM:
+- 10-23 ~07:55 ghi đè `.3`;
+- 10-23 ~19:56 ghi đè `.4`;
+- **10-24 ~07:56 ghi đè `.0` = gc log của process 10-21 07:53:59 sẽ mất lúc đó.**
+
+Bản sao đã có trên Oracle: `live242/gc2/gc.log.0_7535`, `live242/gc/` (5 file 10-19…10-21), `live242/gc3/` (3 file 10-21 19:54…nay).
+
+### 4. Oracle — tiến trình nghiên cứu chạy lâu (chỉ liệt kê, KHÔNG kill)
+**PID 758938** — `python3 …/research/tsx_v2_sim/run.py run`
+- cwd `~/claude_master/tsx2sim`, start **10-22 07:03:48**, ppid 1 (nohup).
+- Đã xong 65/66. Đang poll **1 kernel `tsx2-ho-v420-s7`**: nhận **404 liên tục từ 10-22 12:26:21** (47 lần; lần cuối 10-23 01:24:30), xen 7 lần 429.
+- Dòng `PUSHED tsx2-ho-v420-s7` lúc 12:21:16 **không có URL kernel** (các kernel khác có) ⇒ nhiều khả năng push không tạo được kernel ⇒ **treo ~13h**.
+
+**PID 766935** — `python3 …/research/tsx_v3/run.py run`
+- cha 766933 `bash /tmp/tsxv3_commit_1022.sh`, cwd `~/claude_master/tsx_v3`, start **10-22 10:30:31**.
+- state: 5/9 xong. 4 kernel ở trạng thái PUSHED nhưng nhận 404:
+  - `tsx3-v2-a1`: 58 lần;
+  - `tsx3-v2-s7`: 55 lần;
+  - `tsx3-v2-s13`: 46 lần;
+  - `tsx3-v2-s2024`: 25 lần, từ 12:48:37.
+- Kèm 429. ⇒ **treo ~12,5h**.
+
+**PID 768034** — `bash …/research/tsx_v3/pipe.sh`
+- cha 768032 `bash /tmp/tsxv3_launch_1022.sh`, start 10-22 10:40:05.
+- `need.txt` đang chờ 5 kernel trên (gồm cả `tsx2-ho-v420-s7`).
+
+Ngoài ra còn chạy `liq_ws.py` (PID 2178, collector liq, từ 10-15).
