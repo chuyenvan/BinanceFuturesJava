@@ -85,3 +85,18 @@ phân biệt (một đợt crash-buy = mọi cụm có cùng t0); theo năm = th
 `docs/result/TSX_V3_JAVA.md` + `docs/result/tsx_v3_java/` (flags.json, validate.json, dev.json, dev_rows.csv, batches.csv, ho.json, bảng) và
 script `research/tsx_v3_java/` (flags.py; score.py, ho_score.py, md.py viết sau commit này, chỉ hiện thực §3–§5, dựa trên `research/tsx_v3/score.py`).
 Commit; không push.
+
+## 7. ADDENDUM A (2026-10-22 11:5x, viết + commit TRƯỚC khi đọc bất kỳ chỉ số kết quả DEV nào ngoài smoke seed A1)
+- Lần chấm đầy đủ thứ nhất DỪNG ở validate: **VA5 FAIL** — L45 S99 tái dựng 244 cụm hoãn vs Java `deferClusters` 243, L45 S2024 235 vs 234;
+  mọi run khác (X14 8, C420 8, T25 8, L45 6) khớp tuyệt đối. VA1–VA4 PASS (X14 TB CAGR22 39,490 / DD22 −22,547; md5 DEV + HO bit-exact).
+  Script dừng trước khi ghi `dev.json`; agent chỉ đọc dòng VA1/VALIDATE của log, không đọc dòng ROW/RULE.
+- Chẩn đoán (`~/claude_master/tsx_v3_java/diag_va5.py`): cụm chung của 2 seed lệch là CHR t0 2022-01-06 05:30 (+07), tuổi 170,2h, thoát trailing
+  (STOP_MARKET_DONE), mark_day 2022-01-12 ∈ cờ L45, KHÔNG có trong P0 (gqsf) lẫn X14. Quy ước DEEP §1 suy "đã arm trước 168h" từ P0; cụm không có
+  trong P0 bị coi là chưa arm ⇒ đếm là hoãn. Java chỉ hoãn khi `priceSL == null` tại tick > 168h ⇒ cụm đã arm trước 168h thì không hoãn.
+  Trạng thái arm tại 168h KHÔNG quan sát được từ printDone ⇒ lệch là giới hạn đo, không phải lỗi sim.
+- Sửa đo (không đổi luật R1–R4, không đổi biến thể):
+  - Cụm MƠ HỒ = cụm hoãn tái dựng của biến thể không có trong P0 và không có trong X14, thoát `arm_trail`.
+  - VA5' (thay VA5 cho biến thể): n_chắc ≤ Java ≤ n_chắc + n_mơhồ (n_chắc = tái dựng − mơ hồ); X14 vẫn phải khớp tuyệt đối. Fail ⇒ dừng.
+  - Chỉ số mô tả cụm hoãn/vốn giam giữ tập bao gồm (quy ước DEEP), ghi kèm n_mơhồ.
+  - **R5 bảo thủ**: tính direct_sim + LOO trên CẢ HAI tập (bao gồm / loại cụm mơ hồ); R5 đạt chỉ khi đạt ở cả hai.
+- VA5 gốc được báo là FAIL trong kết quả (không xoá).
