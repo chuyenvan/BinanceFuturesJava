@@ -11,6 +11,7 @@ Script `research/tsx_v3_java/` (flags.py, score.py, ho_score.py, md.py, pipe.sh,
 - L45: KHÔNG (R1 5/8, R3 5/8, R5 LOO −531). C420: KHÔNG (R1 1/8, R3 1/8, R5 −490).
 - Minh bạch: luật TSX_V2_SIM (C1–C5) và TSX_V3 ((i)–(iv)) cho CÙNG verdict trên 3 arm này (T25 ứng viên; L45, C420 không). Theo TSX_V3, V2 (B3b) chưa
   chấm (pipeline TSX_V3 đang chạy) — nếu V2 cũng đạt thì luật TSX_V3 chọn V2 trước T25 (thứ tự "ít thay đổi nhất").
+- **HO 2026 W9 (mô tả, không chặn): T25 ΔPnL −389 median, ≥ 0 chỉ 2/8, ΔROI −0,28pp — ngược chiều DEV** ⇒ "ứng viên + CẢNH BÁO HO".
 - Trial ledger họ TS_MKT_EXT giữ **20** (3 arm đã được đếm ở TSX_V2_SIM; brief ghi 15 → 18).
 
 ## Trả lời câu hỏi owner: "giữ lâu ⇒ vốn giam ⇒ ít lệnh mới?" (TB 8 seed DEV, so X14)
@@ -45,9 +46,15 @@ Script `research/tsx_v3_java/` (flags.py, score.py, ho_score.py, md.py, pipe.sh,
 - Trùng lặp 3 prereg trên cùng run (TSX_V2_SIM, TSX_V3, TSX_V3_JAVA) — ghi trong prereg §0; ba luật cho cùng verdict trên T25/L45/C420.
 - VA2 phụ `tsx3-ctl-s13` (pipeline TSX_V3) chưa xong lúc chấm; pipeline TSX_V3 gặp 404/429 Kaggle khi poll (không thuộc phạm vi, không can thiệp).
 
-## HO 2026 W9
-
-ĐANG CHỜ: run HO tsx2-ho-* của pipeline TSX_V2_SIM chưa xong lúc commit này; pipe.sh tự chạy ecm_mtm_h + ho_score khi đủ.
+## HO 2026 W9 — CHỈ MÔ TẢ (8 seed, scorer HO4 `ecm_mtm_h.py`; X14 HO tái lập = ts_mkt_ext_ho.json, max |Δ| 0)
+- **T25: ΔPnL median −389 [−854 … +137], ≥ 0 chỉ 2/8; ΔROI −0,28pp; ΔmaxDD ≈ 0; cụm hoãn 14 → 24** ⇒ HO (đã bị nhìn nhiều lần) KHÔNG ủng hộ T25.
+  Theo luật TSX_V3 (v) đây là "ứng viên + CẢNH BÁO HO"; theo luật TSX_V3_JAVA HO không chặn, nhưng ghi rõ là tín hiệu ngược chiều.
+- L45: ΔPnL −562 [−838 … −503], 0/8; ΔROI −0,39pp; ΔmaxDD ≈ 0.
+- C420: ΔPnL = 0 tuyệt đối 8/8 — trong HO không cụm hoãn nào chạm 420h (bộ đếm `[TSX]` deferTicks trùng X14; `tsx3j-ho-v420-s7` md5 = X14 HO s7 c574b458).
+- Hạ tầng: 2 run HO của pipeline TSX_V2_SIM lỗi — `tsx2-ho-vt25-s123` ERROR 2 lần (Kaggle, result.json thiếu), `tsx2-ho-v420-s7` push 12:21
+  không tạo kernel (URL rỗng, 404 suốt 8h+, pipeline TSX_V2_SIM treo chờ). Đẩy lại đúng 1 lần chạy, cfg y hệt, tag mới (`research/tsx_v3_java/retry_ho.py`,
+  không đụng state TSX_V2_SIM): `tsx3j-ho-vt25-s123` PASS (md5 076669cb), `tsx3j-ho-v420-s7` PASS (1 push đầu không tạo kernel — không tính là lần chạy).
+  Parity = `post_ho` của TSX_V2_SIM (q.check, printDone trước 2025-12-24 = ho4-k24-b, dòng [TSX]). Không VOID seed nào.
 
 # Bảng (tự sinh, research/tsx_v3_java/md.py)
 
@@ -179,6 +186,17 @@ Script `research/tsx_v3_java/` (flags.py, score.py, ho_score.py, md.py, pipe.sh,
 | L45 | S123 | +0,46 | -23,18 → -23,18 | +0,020 | +4673 | +387 | +4286 | 757 → 756 | +0 | +3,84 | 1,02 → 1,81 | 3/14/26/2 |
 | L45 | S777 | -0,02 | -20,05 → -20,19 | -0,016 | +2937 | -56 | +2993 | 754 → 754 | +2 | +3,01 | 0,82 → 1,70 | 1/9/32/1 |
 | L45 | S2024 | +0,91 | -23,19 → -23,19 | +0,039 | +7145 | +1073 | +6072 | 752 → 751 | +2 | +4,77 | 0,97 → 1,81 | 4/8/31/3 |
+
+## HO 2026 W9 — CHỈ MÔ TẢ (8 seed; Δ = V − X14)
+
+| Arm | n | ΔPnL | ΔPnL ≥ 0 | ΔROI pp | ΔmaxDD pp | maxDD tệ nhất X14 → V | ROI X14 → V (median) | cụm hoãn X14 → V | Δ số leg |
+|---|---|---|---|---|---|---|---|---|---|
+| C420 | 8 | +0 [+0 … +0] | 8/8 | +0,00 [+0,00 … +0,00] | +0,00 [+0,00 … +0,00] | -6,67 → -6,67 | 12,68 → 12,68 | 14 → 14 | +0 [+0 … +0] |
+| T25 | 8 | -389 [-854 … +137] | 2/8 | -0,28 [-0,58 … +0,10] | +0,00 [-0,00 … +0,12] | -6,67 → -6,66 | 12,68 → 12,25 | 14 → 24 | +1 [+1 … +1] |
+| L45 | 8 | -562 [-838 … -503] | 0/8 | -0,39 [-0,57 … -0,36] | +0,00 [-0,00 … +0,00] | -6,67 → -6,66 | 12,68 → 12,21 | 14 → 14 | +1 [+1 … +1] |
+
+VOID HO: []; kiểm X14 HO tái lập max |Δ| 0.0e+00
+
 ## Cờ (ngày ON)
 
 | Arm | DEV | 2021H2 | 2022 | 2023 | 2024 | 2025 | HO 2026 |

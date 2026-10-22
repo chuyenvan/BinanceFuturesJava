@@ -1,0 +1,36 @@
+{
+ "tag": "tsx3j-ho-v420-s7",
+ "ok": true,
+ "chk": {
+  "ok": true,
+  "jar": true,
+  "mapper": true,
+  "ov": true,
+  "ov_log": true,
+  "pred": true,
+  "n": true,
+  "tk": true,
+  "fund": true,
+  "market": true,
+  "pen": true,
+  "unseal": true
+ },
+ "md5": "c574b458310a07210deda49db90773ff",
+ "n": 4045,
+ "tsx": [
+  252,
+  15,
+  91551,
+  14,
+  11
+ ],
+ "pre2026_same": true,
+ "pre_rows": [
+  3557,
+  3557
+ ],
+ "log_ok": true,
+ "passed": true,
+ "kstatus": "COMPLETE",
+ "src": "tsx2-ho-v420-s7"
+}

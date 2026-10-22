@@ -18,6 +18,8 @@ WJ, W2 = "/home/ubuntu/claude_master/tsx_v3_java", "/home/ubuntu/claude_master/t
 OUTD = "/home/ubuntu/claude_master/vz_e1_wt/docs/result/tsx_v3_java"
 SEEDS = [42, 7, 13, 21, 99, 123, 777, 2024]
 SRC = {"C420": "tsx2-ho-v420-s%d", "T25": "tsx2-ho-vt25-s%d", "L45": "tsx2-ho-vl45-s%d"}
+# run tsx2 loi ha tang -> day lai 1 lan bang retry_ho.py (tag moi, cfg y het; prereg §2)
+ALT = {"tsx2-ho-vt25-s123": "tsx3j-ho-vt25-s123", "tsx2-ho-v420-s7": "tsx3j-ho-v420-s7"}
 
 
 def mmm(v):
@@ -47,6 +49,14 @@ def main():
                 rj = json.load(open(W2 + "/res_%s.json" % t))
             except FileNotFoundError:
                 rj = {"passed": False}
+            if not rj.get("passed") and t in ALT:
+                log.warning("%s loi ha tang (passed=%s) -> dung retry %s", t, rj.get("passed"), ALT[t])
+                out.setdefault("retry_used", {})[t] = ALT[t]
+                t = ALT[t]
+                try:
+                    rj = json.load(open(WJ + "/res_%s.json" % t))
+                except FileNotFoundError:
+                    rj = {"passed": False}
             pr = T.GA.prof_run(t) if rj.get("passed") else {}
             kok = pr.get("SIM_LOSER_TS_EXT_DAYS") == FL[arm]["ho"]["ranges"] and pr.get("SIM_LOSER_TS_EXT_HOURS") == str(FL[arm]["ext_hours"])
             if not rj.get("passed") or not kok or t not in m:

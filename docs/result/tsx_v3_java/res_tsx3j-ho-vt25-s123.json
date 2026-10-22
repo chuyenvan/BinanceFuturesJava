@@ -1,0 +1,36 @@
+{
+ "tag": "tsx3j-ho-vt25-s123",
+ "ok": true,
+ "chk": {
+  "ok": true,
+  "jar": true,
+  "mapper": true,
+  "ov": true,
+  "ov_log": true,
+  "pred": true,
+  "n": true,
+  "tk": true,
+  "fund": true,
+  "market": true,
+  "pen": true,
+  "unseal": true
+ },
+ "md5": "076669cb825d2e2b1e96321ba722c7cd",
+ "n": 4011,
+ "tsx": [
+  336,
+  34,
+  172185,
+  25,
+  20
+ ],
+ "pre2026_same": true,
+ "pre_rows": [
+  3565,
+  3565
+ ],
+ "log_ok": true,
+ "passed": true,
+ "kstatus": "COMPLETE",
+ "src": "tsx2-ho-vt25-s123"
+}
