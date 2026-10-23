@@ -160,4 +160,4 @@ V3 lần đầu: Δ mean = 9,1e-12 (đạt < 1e-9) nhưng sai lệch TỪNG lệ
 - HO 2026: không chạy (không cần cho verdict; brief chỉ cho mô tả).
 
 ## Artefact (`docs/result/fundneg_t1/`)
-`results.json` (mọi số trên), `posthoc_desc.json` (Bảng 7), `checks.json` (V1/V2/V4/V5), `v3_independent_summary.json`, `universe.json` (48 tháng × 100 coin), `code_sha.txt`. Lệnh từng biến thể (`trades_*.parquet`, có cờ overlap) và ma trận control (`ctrl_*.npy`) KHÔNG commit (repo ignore *.csv/*.gz/*.parquet); `trades_*.parquet` giữ ở `~/claude_master/fundneg_t1_wk/out/` cho audit. Bảng trong file này sinh tự động bởi `research/fundneg_t1/gen_tables.py` từ JSON.
+`results.json` (mọi số trên), `posthoc_desc.json` (Bảng 7), `checks.json` (V1/V2/V4/V5), `v3_independent_summary.json`, `universe.json` (48 tháng × 100 coin), `code_sha.txt`. `trades_*.parquet` (lệnh từng biến thể, có cờ overlap, P0/P1/funding/MFE/MAE). Ma trận control (`ctrl_*.npy`, 100 seed) không commit — tái tạo bằng `run.py` (seed cố định). Bảng trong file này sinh tự động bởi `research/fundneg_t1/gen_tables.py` từ JSON.
