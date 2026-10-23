@@ -1,0 +1,15 @@
+{
+ "id": "chuyendinh/lob-t1-v2",
+ "title": "lob-t1-v2",
+ "code_file": "lob_t1.py",
+ "language": "python",
+ "kernel_type": "script",
+ "is_private": true,
+ "enable_gpu": false,
+ "enable_internet": true,
+ "dataset_sources": [
+  "alpha000x/crypto-lob-data"
+ ],
+ "competition_sources": [],
+ "kernel_sources": []
+}
