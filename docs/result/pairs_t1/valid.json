@@ -1,0 +1,135 @@
+{
+ "V1": {
+  "windows": [
+   {
+    "k": 10,
+    "formation_identical": true,
+    "trades_identical": true,
+    "m4_identical": true
+   },
+   {
+    "k": 60,
+    "formation_identical": true,
+    "trades_identical": true,
+    "m4_identical": true
+   },
+   {
+    "k": 120,
+    "formation_identical": true,
+    "trades_identical": true,
+    "m4_identical": true
+   },
+   {
+    "k": 180,
+    "formation_identical": true,
+    "trades_identical": true,
+    "m4_identical": true
+   },
+   {
+    "k": 240,
+    "formation_identical": true,
+    "trades_identical": true,
+    "m4_identical": true
+   }
+  ],
+  "PASS": true
+ },
+ "V2": {
+  "delisted_in_universe": [
+   "1000XUSDT",
+   "AGIXUSDT",
+   "AI16ZUSDT",
+   "ALPACAUSDT",
+   "ALPHAUSDT",
+   "AMBUSDT",
+   "ANCUSDT",
+   "ANTUSDT",
+   "AUDIOUSDT",
+   "BAKEUSDT",
+   "BALUSDT",
+   "BLZUSDT",
+   "BNXUSDT",
+   "BONDUSDT",
+   "BTTUSDT",
+   "COCOSUSDT",
+   "DARUSDT",
+   "DODOUSDT",
+   "EOSUSDT",
+   "FLMUSDT",
+   "FRONTUSDT",
+   "FTMUSDT",
+   "FTTUSDT",
+   "GALUSDT",
+   "HIFIUSDT",
+   "HNTUSDT",
+   "KEEPUSDT",
+   "KEYUSDT",
+   "KLAYUSDT",
+   "LEVERUSDT",
+   "LINAUSDT",
+   "LOOMUSDT",
+   "LUNAUSDT",
+   "MATICUSDT",
+   "MEMEFIUSDT",
+   "MKRUSDT",
+   "NEIROETHUSDT",
+   "OCEANUSDT",
+   "OMGUSDT",
+   "OMNIUSDT",
+   "ORBSUSDT",
+   "PERPUSDT",
+   "RAYUSDT",
+   "REEFUSDT",
+   "RENUSDT",
+   "RNDRUSDT",
+   "SRMUSDT",
+   "STMXUSDT",
+   "STRAXUSDT",
+   "TOMOUSDT",
+   "TROYUSDT",
+   "UNFIUSDT",
+   "UXLINKUSDT",
+   "VIDTUSDT",
+   "WAVESUSDT",
+   "XEMUSDT",
+   "YFIIUSDT"
+  ],
+  "n": 57,
+  "legs_on_delisted": {
+   "M1": 388,
+   "M2": 383,
+   "M3": 60
+  },
+  "fill_flags": {
+   "M1": {
+    "delist": 0,
+    "gap": 0
+   },
+   "M2": {
+    "delist": 1,
+    "gap": 0
+   },
+   "M3": {
+    "delist": 0,
+    "gap": 0
+   }
+  },
+  "PASS": true
+ },
+ "V4": {
+  "legs": 240,
+  "px_mismatch": 0,
+  "fund_mismatch": 0,
+  "pnl_mismatch": 0,
+  "max_fund_rel": 0.0,
+  "details": [],
+  "window_identity_fail": 0,
+  "m4_attr_identity_absdiff": {
+   "base": 1.3322676295501878e-15,
+   "x2": 9.103828801926284e-15,
+   "maker": 2.6645352591003757e-15,
+   "gross": 2.1316282072803006e-14
+  },
+  "PASS": "True"
+ }
+}

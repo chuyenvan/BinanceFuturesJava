@@ -1,0 +1,215 @@
+{
+ "kstar": 122,
+ "t": 21288,
+ "start": "2023-06-07 00:00:00",
+ "universe_match": true,
+ "n_univ": 50,
+ "max_abs_close_diff_vs_panel": 0.0,
+ "m1_pairs_independent": [
+  [
+   "BCHUSDT",
+   "STXUSDT",
+   -7.0012,
+   20.19
+  ],
+  [
+   "BCHUSDT",
+   "ETCUSDT",
+   -5.9604,
+   16.62
+  ],
+  [
+   "BCHUSDT",
+   "DOGEUSDT",
+   -5.7062,
+   16.19
+  ],
+  [
+   "BCHUSDT",
+   "AVAXUSDT",
+   -5.1942,
+   22.51
+  ],
+  [
+   "BCHUSDT",
+   "FTMUSDT",
+   -5.0037,
+   19.83
+  ],
+  [
+   "BCHUSDT",
+   "1000SHIBUSDT",
+   -4.9934,
+   18.75
+  ],
+  [
+   "AXSUSDT",
+   "CTSIUSDT",
+   -4.9846,
+   8.52
+  ],
+  [
+   "AXSUSDT",
+   "ADAUSDT",
+   -4.9367,
+   10.64
+  ],
+  [
+   "BCHUSDT",
+   "ATOMUSDT",
+   -4.9341,
+   24.95
+  ],
+  [
+   "BCHUSDT",
+   "LINKUSDT",
+   -4.8296,
+   21.24
+  ]
+ ],
+ "m1_pairs_engine": [
+  [
+   "BCHUSDT",
+   "STXUSDT",
+   -7.0012,
+   20.19
+  ],
+  [
+   "BCHUSDT",
+   "ETCUSDT",
+   -5.9604,
+   16.62
+  ],
+  [
+   "BCHUSDT",
+   "DOGEUSDT",
+   -5.7062,
+   16.19
+  ],
+  [
+   "BCHUSDT",
+   "AVAXUSDT",
+   -5.1942,
+   22.51
+  ],
+  [
+   "BCHUSDT",
+   "FTMUSDT",
+   -5.0037,
+   19.83
+  ],
+  [
+   "BCHUSDT",
+   "1000SHIBUSDT",
+   -4.9934,
+   18.75
+  ],
+  [
+   "AXSUSDT",
+   "CTSIUSDT",
+   -4.9846,
+   8.52
+  ],
+  [
+   "AXSUSDT",
+   "ADAUSDT",
+   -4.9367,
+   10.64
+  ],
+  [
+   "BCHUSDT",
+   "ATOMUSDT",
+   -4.9341,
+   24.95
+  ],
+  [
+   "BCHUSDT",
+   "LINKUSDT",
+   -4.8296,
+   21.24
+  ]
+ ],
+ "m1_pairs_match": true,
+ "m1_n_pass_independent": 251,
+ "m1_n_pass_engine": 251,
+ "n_trades_independent": 12,
+ "n_trades_engine": 12,
+ "trades_match": true,
+ "week_net_independent": 0.007834428934911646,
+ "week_net_engine": 0.007834428934911614,
+ "example_trades": [
+  {
+   "y": "AXSUSDT",
+   "x": "ADAUSDT",
+   "pos": -1,
+   "e": 21305,
+   "x_h": 21319,
+   "why": "mr",
+   "legs": [
+    {
+     "sym": "AXSUSDT",
+     "w": -0.05091433168948396,
+     "pe": 6.33,
+     "px": 6.153,
+     "qty": -0.008043338339570926,
+     "gross": 0.001423670886104058,
+     "fee": 7.028349474500471e-05,
+     "fund": -1.739314695623265e-05
+    },
+    {
+     "sym": "ADAUSDT",
+     "w": 0.049085668310516035,
+     "pe": 0.3211,
+     "px": 0.3267,
+     "qty": 0.1528672323591281,
+     "gross": 0.0008560565012111165,
+     "fee": 6.931917518557022e-05,
+     "fund": -4.922324881963925e-06
+    }
+   ],
+   "gross": 0.0022797273873151743,
+   "fee_base": 0.00013960266993057495,
+   "fund": -2.2315471838196575e-05
+  },
+  {
+   "y": "AXSUSDT",
+   "x": "ADAUSDT",
+   "pos": -1,
+   "e": 21346,
+   "x_h": 21360,
+   "why": "stop",
+   "legs": [
+    {
+     "sym": "AXSUSDT",
+     "w": -0.05091433168948396,
+     "pe": 6.203,
+     "px": 6.021,
+     "qty": -0.008208017360871185,
+     "gross": 0.001493859159678559,
+     "fee": 7.023436295350256e-05,
+     "fund": -3.2834760934457545e-05
+    },
+    {
+     "sym": "ADAUSDT",
+     "w": 0.049085668310516035,
+     "pe": 0.3157,
+     "px": 0.2949,
+     "qty": 0.15548200288411795,
+     "gross": -0.0032340256599896512,
+     "fee": 6.645611767272969e-05,
+     "fund": -9.422209374777548e-06
+    }
+   ],
+   "gross": -0.0017401665003110923,
+   "fee_base": 0.00013669048062623225,
+   "fund": -4.22569703092351e-05
+  }
+ ],
+ "adf_equiv": {
+  "n": 400,
+  "max_abs_diff": 1.6647905276556685e-11,
+  "frac_lt_1e8": 1.0,
+  "p05_decision_flips": 0
+ },
+ "PASS": true
+}
