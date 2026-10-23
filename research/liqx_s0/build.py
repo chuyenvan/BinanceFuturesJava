@@ -7,6 +7,11 @@ KL = "/home/ubuntu/vz_e1/raw/kline1m-%04d-%02d.parquet"
 MET = "/home/ubuntu/vz/out/metrics5m/%04d/%04d-%02d.parquet"
 TAR = WK + "/tardis/liquidations_%04d-%02d-01_PERPETUALS.csv.gz"
 DAY, B5 = 86_400_000, 300_000
+# ADDENDUM (LIQX_FIX=1): Vision metrics create_time semantics switched between 2024-03-01 and 2024-04-01
+# (v5b_switch.json: vs Tardis OI, rows from 2024-04-01 on = snapshot at create_time+5m). Fix: effective ts = create_time+5m.
+FIX = os.environ.get("LIQX_FIX", "0") == "1"
+SWITCH_MS = 1711929600000  # 2024-04-01 00:00 UTC
+SUFFIX = "_fix" if FIX else ""
 
 
 def ms(y, m, d=1):
@@ -74,8 +79,15 @@ def main():
             uni = universe(dq, d0)
             py, pm = (y, m - 1) if m > 1 else (y - 1, 12)
             k = read_kline([KL % (py, pm), KL % (y, m)], set(uni), d0 - 360_000, d0 + DAY)
+            shift = FIX and d0 >= SWITCH_MS
             met = pq.read_table(MET % (y, y, m), columns=["ts", "sym", "oi", "oi_value"],
-                                filters=[("ts", ">=", d0), ("ts", "<=", d0 + DAY)]).to_pandas()
+                                filters=[("ts", ">=", d0 - B5), ("ts", "<=", d0 + DAY)]).to_pandas()
+            if shift:
+                mp = pq.read_table(MET % (py, py, pm), columns=["ts", "sym", "oi", "oi_value"],
+                                   filters=[("ts", ">=", d0 - B5), ("ts", "<", d0)]).to_pandas()
+                met = pd.concat([mp, met], ignore_index=True)
+                met["ts"] = met.ts + B5
+            met = met[(met.ts >= d0) & (met.ts <= d0 + DAY)].reset_index(drop=True)
             met["sym"] = met.sym.astype(str)
             met = met[met.sym.isin(set(uni))]
             assert met.ts.dtype == np.int64 and not met.duplicated(["sym", "ts"]).any()
@@ -87,6 +99,7 @@ def main():
             nunk = int((liq.side == "unknown").sum())
             g = attach(grid_for(d0, uni), k, met, liq, d0)
             g["sample"] = "A" if y <= 2023 else "B"
+            g["oi_shift"] = bool(shift)
             kc = k[(k.ts >= d0)].groupby("sym").size()
             liq_in = liq[liq.sym.isin(set(uni))]
             log.append(dict(day=pd.Timestamp(d0, unit="ms").date().isoformat(), n_uni=len(uni),
@@ -97,8 +110,8 @@ def main():
             print(log[-1], flush=True)
             res.append(g)
     G = pd.concat(res, ignore_index=True)
-    G.to_parquet(WK + "/buckets_AB.parquet", index=False)
-    pd.DataFrame(log).to_csv(WK + "/build_AB_log.csv", index=False)
+    G.to_parquet(WK + "/buckets_AB%s.parquet" % SUFFIX, index=False)
+    pd.DataFrame(log).to_csv(WK + "/build_AB_log%s.csv" % SUFFIX, index=False)
     print("done", len(G), int(G.valid.sum()))
 
 

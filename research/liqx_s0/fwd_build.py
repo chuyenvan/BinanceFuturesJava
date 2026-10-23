@@ -1,7 +1,7 @@
 """LIQX_S0 forward sample F (2026-10-16..22): Vision daily 1m klines + daily metrics, real liq = own forceOrder collector."""
 import pandas as pd, numpy as np, os, sys, zipfile, io, json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from build import attach, grid_for, DAY, B5
+from build import attach, grid_for, DAY, B5, FIX, SUFFIX
 WK = os.path.expanduser("~/claude_master/liqx_wk"); FW = WK + "/fwd"
 COL = os.path.expanduser("~/collect/liq")
 DAYS = ["2026-10-%02d" % d for d in range(16, 23)]
@@ -36,10 +36,12 @@ def main():
                 if k is not None:
                     ks.append(pd.DataFrame({"sym": s, "ts": k.open_time.astype("int64"), "close": k.close,
                                             "quote_volume": k.quote_volume, "taker_buy_quote": k.taker_buy_quote}))
-            for dd in (D, dnext):
+            for dd in ((dprev, D) if FIX else (D, dnext)):
                 m = rzip(f"{FW}/met/{s}-{dd}.zip", MN)
                 if m is not None:
                     ts = (pd.to_datetime(m.create_time, utc=True).astype("int64") // 1_000_000).astype("int64")
+                    if FIX:  # ADDENDUM: 2026 Vision metrics = snapshot at create_time+5m (v5b_switch.json BTC 2026-10-01)
+                        ts = ts + B5
                     ms_.append(pd.DataFrame({"sym": s, "ts": ts, "oi": m.oi, "oi_value": m.oi_value}))
         k = pd.concat(ks, ignore_index=True); k = k[(k.ts >= d0 - 360_000) & (k.ts < d0 + DAY)]
         met = pd.concat(ms_, ignore_index=True); met = met[(met.ts >= d0) & (met.ts <= d0 + DAY)].sort_values(["sym", "ts"])
@@ -78,8 +80,8 @@ def main():
         print(log[-1], flush=True)
         res.append(g)
     G = pd.concat(res, ignore_index=True)
-    G.to_parquet(WK + "/buckets_F.parquet", index=False)
-    json.dump(log, open(WK + "/build_F_log.json", "w"), indent=1)
+    G.to_parquet(WK + "/buckets_F%s.parquet" % SUFFIX, index=False)
+    json.dump(log, open(WK + "/build_F_log%s.json" % SUFFIX, "w"), indent=1)
 
 
 if __name__ == "__main__":

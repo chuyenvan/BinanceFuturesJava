@@ -5,6 +5,7 @@ WK = os.path.expanduser("~/claude_master/liqx_wk")
 OUT = os.path.expanduser("~/claude_master/vz_e1_wt/docs/result/liqx_s0")
 os.makedirs(OUT, exist_ok=True)
 B5 = 300_000
+SUF = "_fix" if os.environ.get("LIQX_FIX", "0") == "1" else ""
 
 
 def proxies(g):
@@ -136,23 +137,23 @@ def verdict(res):
 
 
 def main():
-    G = proxies(pd.read_parquet(WK + "/buckets_AB.parquet"))
+    G = proxies(pd.read_parquet(WK + "/buckets_AB%s.parquet" % SUF))
     for c in ("T", "day"):
         assert G[c].dtype == np.int64
     plist = ["P1", "P2", "P3", "P1c"]
     res = {s: score_sample(G[G["sample"] == s], s, plist) for s in ("A", "B")}
-    if os.path.exists(WK + "/buckets_F.parquet"):
-        F = proxies(pd.read_parquet(WK + "/buckets_F.parquet"))
+    if os.path.exists(WK + "/buckets_F%s.parquet" % SUF):
+        F = proxies(pd.read_parquet(WK + "/buckets_F%s.parquet" % SUF))
         res["F"] = score_sample(F, "F", plist)
-        crash_table(F).to_csv(OUT + "/crash_days_F.csv", index=False)
+        crash_table(F).to_csv(OUT + "/crash_days_F%s.csv" % SUF, index=False)
     res["verdict"] = verdict(res)
-    json.dump(res, open(OUT + "/scores.json", "w"), indent=1, default=float)
-    ct = crash_table(G); ct.to_csv(OUT + "/crash_days_AB.csv", index=False)
+    json.dump(res, open(OUT + "/scores%s.json" % SUF, "w"), indent=1, default=float)
+    ct = crash_table(G); ct.to_csv(OUT + "/crash_days_AB%s.csv" % SUF, index=False)
     # V1
     v1 = G.groupby(["sym", "day"]).valid.sum()
     v1d = {"symday": int(len(v1)), "symday_288": int((v1 == 288).sum()), "symday_lt288": v1[v1 < 288].reset_index().assign(
         day=lambda d: pd.to_datetime(d.day, unit="ms").dt.date.astype(str)).values.tolist()}
-    json.dump(v1d, open(OUT + "/v1.json", "w"), indent=1, default=str)
+    json.dump(v1d, open(OUT + "/v1%s.json" % SUF, "w"), indent=1, default=str)
     print(json.dumps(res["verdict"], indent=1))
     for s in res:
         if s == "verdict":

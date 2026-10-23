@@ -1,5 +1,5 @@
 """LIQX_S0 V2: independent minimal recomputation of M1(P1, sample A). No pipeline import; raw files only; own rank."""
-import pyarrow.parquet as pq, pyarrow.compute as pc, numpy as np, csv, gzip, math, os, json, datetime as dt
+import pyarrow as pa, pyarrow.parquet as pq, pyarrow.compute as pc, numpy as np, csv, gzip, math, os, json, datetime as dt
 KL = "/home/ubuntu/vz_e1/raw/kline1m-%04d-%02d.parquet"
 MET = "/home/ubuntu/vz/out/metrics5m/%04d/%04d-%02d.parquet"
 TAR = os.path.expanduser("~/claude_master/liqx_wk/tardis/liquidations_%04d-%02d-01_PERPETUALS.csv.gz")
@@ -26,16 +26,21 @@ xs, ys = [], []
 for y in (2022, 2023):
     for m in range(1, 13):
         D = epoch_ms(y, m); py, pm = (y, m - 1) if m > 1 else (y - 1, 12)
+        # RUN 2 fix (V2 own bug): window [D-30d, D) can reach 2 months back (e.g. 2022-03-01 -> 2022-01-30); read 3 files.
         qv = {}; close = {}
-        for (yy, mm) in ((py, pm), (y, m)):
+        p2y, p2m = (py, pm - 1) if pm > 1 else (py - 1, 12)
+        for (yy, mm) in ((p2y, p2m), (py, pm), (y, m)):
+            if not os.path.exists(KL % (yy, mm)):
+                continue
             t = pq.read_table(KL % (yy, mm), columns=["ts", "sym", "quote_volume", "close"])
-            ts = t.column("ts").to_numpy(); sym = np.asarray(t.column("sym").to_pylist(), dtype=object)
-            q = t.column("quote_volume").to_numpy(); c = t.column("close").to_numpy()
-            w = (ts >= D - 30 * 86400000) & (ts < D)
-            for s_, v in zip(sym[w], q[w]):
+            t = t.set_column(1, "sym", pc.cast(t.column("sym"), pa.string())); ts = t.column("ts")
+            w = pc.and_(pc.greater_equal(ts, D - 30 * 86400000), pc.less(ts, D))
+            agg = t.filter(w).select(["sym", "quote_volume"]).group_by("sym").aggregate([("quote_volume", "sum")]).to_pydict()
+            for s_, v in zip(agg["sym"], agg["quote_volume_sum"]):
                 qv[s_] = qv.get(s_, 0.0) + v
-            w2 = (ts >= D - 6 * MIN) & (ts < D + 86400000)
-            for s_, a, b in zip(sym[w2], ts[w2], c[w2]):
+            w2 = pc.and_(pc.greater_equal(ts, D - 6 * MIN), pc.less(ts, D + 86400000))
+            tt = t.filter(w2).to_pydict()
+            for s_, a, b in zip(tt["sym"], tt["ts"], tt["close"]):
                 close[(s_, int(a))] = b
         uni = [s for s, _ in sorted(qv.items(), key=lambda kv: -kv[1])[:100]]
         mt = pq.read_table(MET % (y, y, m), columns=["ts", "sym", "oi_value"])
