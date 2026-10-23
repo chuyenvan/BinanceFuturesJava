@@ -1,0 +1,200 @@
+{
+ "BTCUSDT_2023-10-01": {
+  "err_L0": 5.283022782568901e-05,
+  "err_L300": 0.0003030172422342382,
+  "frac_rows_closer_L300": 0.16666666666666666,
+  "n": 264,
+  "verdict": "T",
+  "frac_closer_L300_first_half": 0.16666666666666666,
+  "frac_closer_L300_second_half": 0.16666666666666666
+ },
+ "SOLUSDT_2023-10-01": {
+  "err_L0": 6.6771962026748e-05,
+  "err_L300": 0.0008665499950450189,
+  "frac_rows_closer_L300": 0.0946969696969697,
+  "n": 264,
+  "verdict": "T",
+  "frac_closer_L300_first_half": 0.08333333333333333,
+  "frac_closer_L300_second_half": 0.10606060606060606
+ },
+ "BTCUSDT_2023-12-01": {
+  "err_L0": 5.0887305988342665e-05,
+  "err_L300": 0.00046330365680202724,
+  "frac_rows_closer_L300": 0.07196969696969698,
+  "n": 264,
+  "verdict": "T",
+  "frac_closer_L300_first_half": 0.08333333333333333,
+  "frac_closer_L300_second_half": 0.06060606060606061
+ },
+ "SOLUSDT_2023-12-01": {
+  "err_L0": 2.3119382362302234e-05,
+  "err_L300": 0.0008445438015368231,
+  "frac_rows_closer_L300": 0.03409090909090909,
+  "n": 264,
+  "verdict": "T",
+  "frac_closer_L300_first_half": 0.045454545454545456,
+  "frac_closer_L300_second_half": 0.022727272727272728
+ },
+ "BTCUSDT_2024-01-01": {
+  "err_L0": 1.3727317593076049e-05,
+  "err_L300": 0.0003475416223728562,
+  "frac_rows_closer_L300": 0.07954545454545454,
+  "n": 264,
+  "verdict": "T",
+  "frac_closer_L300_first_half": 0.06818181818181818,
+  "frac_closer_L300_second_half": 0.09090909090909091
+ },
+ "SOLUSDT_2024-01-01": {
+  "err_L0": 2.646668120040829e-05,
+  "err_L300": 0.0005012150138075258,
+  "frac_rows_closer_L300": 0.056818181818181816,
+  "n": 264,
+  "verdict": "T",
+  "frac_closer_L300_first_half": 0.030303030303030304,
+  "frac_closer_L300_second_half": 0.08333333333333333
+ },
+ "BTCUSDT_2024-02-01": {
+  "err_L0": 3.6381240905230134e-05,
+  "err_L300": 0.00048501258385644013,
+  "frac_rows_closer_L300": 0.07954545454545454,
+  "n": 264,
+  "verdict": "T",
+  "frac_closer_L300_first_half": 0.07575757575757576,
+  "frac_closer_L300_second_half": 0.08333333333333333
+ },
+ "SOLUSDT_2024-02-01": {
+  "err_L0": 3.699495783461002e-05,
+  "err_L300": 0.0006187987788738604,
+  "frac_rows_closer_L300": 0.06060606060606061,
+  "n": 264,
+  "verdict": "T",
+  "frac_closer_L300_first_half": 0.07575757575757576,
+  "frac_closer_L300_second_half": 0.045454545454545456
+ },
+ "BTCUSDT_2024-03-01": {
+  "err_L0": 5.373275784943282e-05,
+  "err_L300": 0.0005398287876777071,
+  "frac_rows_closer_L300": 0.08712121212121213,
+  "n": 264,
+  "verdict": "T",
+  "frac_closer_L300_first_half": 0.08333333333333333,
+  "frac_closer_L300_second_half": 0.09090909090909091
+ },
+ "SOLUSDT_2024-03-01": {
+  "err_L0": 3.243171812176182e-05,
+  "err_L300": 0.0006089037359530392,
+  "frac_rows_closer_L300": 0.04924242424242424,
+  "n": 264,
+  "verdict": "T",
+  "frac_closer_L300_first_half": 0.03787878787878788,
+  "frac_closer_L300_second_half": 0.06060606060606061
+ },
+ "BTCUSDT_2024-04-01": {
+  "err_L0": 0.00040433431285727243,
+  "err_L300": 3.583085464745566e-05,
+  "frac_rows_closer_L300": 0.9053030303030303,
+  "n": 264,
+  "verdict": "T+5m",
+  "frac_closer_L300_first_half": 0.9242424242424242,
+  "frac_closer_L300_second_half": 0.8863636363636364
+ },
+ "SOLUSDT_2024-04-01": {
+  "err_L0": 0.0005041145178380785,
+  "err_L300": 4.070828378335866e-05,
+  "frac_rows_closer_L300": 0.8939393939393939,
+  "n": 264,
+  "verdict": "T+5m",
+  "frac_closer_L300_first_half": 0.9545454545454546,
+  "frac_closer_L300_second_half": 0.8333333333333334
+ },
+ "BTCUSDT_2024-05-01": {
+  "err_L0": 0.0007502451266734322,
+  "err_L300": 2.9206486091398088e-05,
+  "frac_rows_closer_L300": 0.9166666666666666,
+  "n": 264,
+  "verdict": "T+5m",
+  "frac_closer_L300_first_half": 0.9166666666666666,
+  "frac_closer_L300_second_half": 0.9166666666666666
+ },
+ "SOLUSDT_2024-05-01": {
+  "err_L0": 0.0006620889384370912,
+  "err_L300": 3.7561202981642496e-05,
+  "frac_rows_closer_L300": 0.9204545454545454,
+  "n": 264,
+  "verdict": "T+5m",
+  "frac_closer_L300_first_half": 0.9242424242424242,
+  "frac_closer_L300_second_half": 0.9166666666666666
+ },
+ "BTCUSDT_2024-06-01": {
+  "err_L0": 0.00011571242668588605,
+  "err_L300": 1.369365567860989e-05,
+  "frac_rows_closer_L300": 0.8560606060606061,
+  "n": 264,
+  "verdict": "T+5m",
+  "frac_closer_L300_first_half": 0.8409090909090909,
+  "frac_closer_L300_second_half": 0.8712121212121212
+ },
+ "SOLUSDT_2024-06-01": {
+  "err_L0": 0.00021384067406468214,
+  "err_L300": 1.4781883441977189e-05,
+  "frac_rows_closer_L300": 0.9242424242424242,
+  "n": 264,
+  "verdict": "T+5m",
+  "frac_closer_L300_first_half": 0.946969696969697,
+  "frac_closer_L300_second_half": 0.9015151515151515
+ },
+ "BTCUSDT_2024-07-01": {
+  "err_L0": 0.00027252635279468207,
+  "err_L300": 2.11380263715782e-05,
+  "frac_rows_closer_L300": 0.9242424242424242,
+  "n": 264,
+  "verdict": "T+5m",
+  "frac_closer_L300_first_half": 0.9545454545454546,
+  "frac_closer_L300_second_half": 0.8939393939393939
+ },
+ "SOLUSDT_2024-07-01": {
+  "err_L0": 0.0004214469389230821,
+  "err_L300": 1.972273776540696e-05,
+  "frac_rows_closer_L300": 0.9204545454545454,
+  "n": 264,
+  "verdict": "T+5m",
+  "frac_closer_L300_first_half": 0.9166666666666666,
+  "frac_closer_L300_second_half": 0.9242424242424242
+ },
+ "BTCUSDT_2025-01-01": {
+  "err_L0": 0.00018808565829808363,
+  "err_L300": 2.0753035733219592e-05,
+  "frac_rows_closer_L300": 0.9318181818181818,
+  "n": 264,
+  "verdict": "T+5m",
+  "frac_closer_L300_first_half": 0.9242424242424242,
+  "frac_closer_L300_second_half": 0.9393939393939394
+ },
+ "SOLUSDT_2025-01-01": {
+  "err_L0": 0.00021779327356595072,
+  "err_L300": 5.712331345773993e-06,
+  "frac_rows_closer_L300": 0.9053030303030303,
+  "n": 264,
+  "verdict": "T+5m",
+  "frac_closer_L300_first_half": 0.8787878787878788,
+  "frac_closer_L300_second_half": 0.9318181818181818
+ },
+ "BTCUSDT_2026-10-01": {
+  "err_L0": 0.00028474476827248596,
+  "err_L300": 7.090521855529269e-05,
+  "frac_rows_closer_L300": 0.8522727272727273,
+  "n": 264,
+  "verdict": "T+5m",
+  "frac_closer_L300_first_half": 0.8787878787878788,
+  "frac_closer_L300_second_half": 0.8257575757575758
+ },
+ "SOLUSDT_2026-10-01": {
+  "err_L0": 0.0004824719323083133,
+  "err_L300": 0.000325062327510618,
+  "frac_rows_closer_L300": 0.6590909090909091,
+  "n": 264,
+  "verdict": "UNCLEAR",
+  "frac_closer_L300_first_half": 0.6515151515151515,
+  "frac_closer_L300_second_half": 0.6666666666666666
+ }
+}
