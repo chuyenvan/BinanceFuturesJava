@@ -378,3 +378,6 @@ Bản sao đã có trên Oracle: `live242/gc2/gc.log.0_7535`, `live242/gc/` (5 f
 - `need.txt` đang chờ 5 kernel trên (gồm cả `tsx2-ho-v420-s7`).
 
 Ngoài ra còn chạy `liq_ws.py` (PID 2178, collector liq, từ 10-15).
+
+## Oracle 10-23: kill pipeline treo (owner duyệt)
+- 10-23 07:33:56 (+07) SIGTERM PID 758938 (tsx_v2_sim run.py, treo poll 404 `tsx2-ho-v420-s7` từ 10-22 12:26), 766935 (tsx_v3 run.py, 404 a1/s7/s13/s2024 từ ~12:48), 768034 (tsx_v3 pipe.sh) + con 810437 (`sleep 300`); sau 8 s cả 4 đã thoát, không cần SIGKILL; cha 766933/768032 tự thoát; không còn tiến trình nào poll kernel tsx2-*/tsx3-*; không xoá file/state (`~/claude_master/tsx2sim/state.json` 65/66, `~/claude_master/tsx_v3/state.json` 5/9 giữ nguyên).
