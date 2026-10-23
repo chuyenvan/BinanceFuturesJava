@@ -381,3 +381,47 @@ Ngoài ra còn chạy `liq_ws.py` (PID 2178, collector liq, từ 10-15).
 
 ## Oracle 10-23: kill pipeline treo (owner duyệt)
 - 10-23 07:33:56 (+07) SIGTERM PID 758938 (tsx_v2_sim run.py, treo poll 404 `tsx2-ho-v420-s7` từ 10-22 12:26), 766935 (tsx_v3 run.py, 404 a1/s7/s13/s2024 từ ~12:48), 768034 (tsx_v3 pipe.sh) + con 810437 (`sleep 300`); sau 8 s cả 4 đã thoát, không cần SIGKILL; cha 766933/768032 tự thoát; không còn tiến trình nào poll kernel tsx2-*/tsx3-*; không xoá file/state (`~/claude_master/tsx2sim/state.json` 65/66, `~/claude_master/tsx_v3/state.json` 5/9 giữ nguyên).
+
+---
+
+## Deploy dcae2e2b (10-23, owner chạy `deploy_dcae2e2b.sh`; agent kiểm chỉ đọc lúc 09:42:24)
+
+### Log deploy (Oracle `~/claude_master/deploy/`)
+- `deploy_20261023_0926.log` (bản b73378bb): mọi kiểm OK, nhưng **FAIL cu_phap_JVM** là false-FAIL do script — `grep -i error` tự khớp
+  `ExitOnOutOfMemoryError`. Script đã khôi phục env.sh + start.sh, không restart. Sửa thành bản c5c1b0dd (bỏ dòng `Picked up` trước khi tìm lỗi,
+  backup bằng `cp -p`).
+- `deploy_20261023_0936.log`: dừng tay ở bước scp jar, không đổi gì.
+- `deploy_20261023_0937.log` (c5c1b0dd), toàn bộ **OK**:
+  - kiểm 242 (eea5adec, 1 process, env chưa có key mới, start.sh đúng mẫu, chưa có cron, có curl/flock);
+  - scp; backup; env +5 dòng (comment + 4 key); start.sh đổi đúng 1 dòng; `cu_phap_JVM` OK;
+  - YES lúc 09:37:28; `da_stop`, `jar_da_thay`, **`OK started pid=18743 lstart=Fri Oct 23 09:37:29 2026`**;
+  - kiểm sau start lần 1 ĐẠT (09:39:40);
+  - watchdog: cú pháp OK, dry-run `OK_GRACE pid=18743`, **telegram test 2/2**, **cron đã cài**;
+  - dòng cuối `=== XONG. OK started pid=18743 lstart=Fri Oct 23 09:37:29 2026`.
+
+### Kiểm độc lập trên 242 (09:42:24, chỉ đọc)
+| mục | kết quả |
+|---|---|
+| process | **PID 18743**, ppid 1, **1 process**, `lstart` **2026-10-23 09:37:29**, log `MainClass` 09:37:31.240; RSS 3,12 G ở 294 s |
+| jar (`/proc/18743/fd`) | **dcae2e2bbb1a357bc15703b416d4dccb** ✔ |
+| env process | `LIVE_HEARTBEAT=1`, `LIVE_KILLSW_MODE=log`, `LIVE_PERIODIC_RESET_HOURS=0`, `LIVE_EXEC_PROBE=1`, `LIVE_PROFILE=c3_shadow`, `SHADOW_NO_PUSH=true`, `LIVE_TS_MKT_EXT=1` + 6 key v11b; `JAVA_TOOL_OPTIONS=-Xms1g -Xmx3g -XX:+ExitOnOutOfMemoryError -Xlog:gc:file=logs/gc_%p_%t.log:…` ✔ |
+| diff env | đúng 5 dòng (`# [v11d+exec-probe 20261023_0937] …` + 4 export) ✔ |
+| diff start.sh | đúng 1 dòng (JAVA_TOOL_OPTIONS) ✔ |
+| quyền | `bin/start.sh` `-rwxrwxrwx root` — giống bản gốc (backup `cp -p` cũng 777, mtime gốc 09:26:33) |
+| `[OPS] v11d` | `LIVE_PERIODIC_RESET_HOURS=0h … LIVE_HEARTBEAT=1 file=run/heartbeat LIVE_KILLSW_MODE=log => hieu luc=log profile=c3_shadow` ✔ |
+| reset | `[OPS-RESET] LIVE_PERIODIC_RESET_HOURS=0 => TAT reset dinh ky` ✔; không có `TU CHOI` ✔ |
+| `[KILLSW] BAT` | `mode=log CHI LOG …` ✔. WOULD_TRIGGER: **0** (mọi mã); HOURLY chưa tới giờ đầu |
+| `[HEARTBEAT] BAT` | có (09:38:06); `run/heartbeat` 0 byte, **tuổi 19 s** ✔ |
+| c3_shadow | `[LIVE_PROFILE=c3_shadow] BAT … SHADOW_NO_PUSH=true` ✔ |
+| LEGACY | `managed 44` 6/6 dòng ✔ |
+| TS-EXT | `BAT … days_loaded=32` + `flag day=2026-10-23 flag=OFF dd=-0.173328 … max30Day=2026-09-27 minN=1436 src=file final=true` ✔ |
+| EXEC-PROBE | 0 dòng — đúng thiết kế (engine khởi động lười, chờ leg giấy đầu tiên; sổ giấy đang open=0) |
+| lỗi | **0 ERROR, 0 Exception** ✔ |
+| PASS-TIMING | 30,9 s (tick đầu, warm-up) → 0,87 / 0,43 / 0,47 / 0,39 s ✔ |
+| gc log | `logs/gc_18743_2026-10-23_09-37-30.log` (đúng PID) ✔; 2 file 48 byte của JVM thử (`gc_6955…`, `gc_18471…`) vô hại; `gc.log*` cũ để nguyên |
+| watchdog | crontab root `*/2 * * * * /usr/local/sbin/h242_watchdog.sh >> /var/lib/h242_watchdog/cron.out 2>&1`; script md5 **cf221b97…** ✔; `tg.env` 600; `watchdog.log`: 09:40:01 `OK_GRACE pid=18743 up=152s`, 09:42:02 `OK_GRACE … up=272s` (grace 10') |
+| sổ giấy | open=0, realized **−37,4455** (không đổi so với trước deploy) ✔ |
+
+⇒ **ĐẠT.** Đã ghi sổ C (ADDENDUM d). **Cửa sổ promotion 10-21 07:53:59 không reset.** Từ PID 18743 không còn tự-restart 12h.
+Việc cần theo dõi: HOURLY và WOULD_TRIGGER (C1–C6) sau 24–48h; dòng `[EXEC-PROBE] BAT` khi có leg giấy đầu tiên; watchdog chuyển từ
+`OK_GRACE` sang `OK` sau 09:47; RSS theo thời gian (không còn reset 12h).

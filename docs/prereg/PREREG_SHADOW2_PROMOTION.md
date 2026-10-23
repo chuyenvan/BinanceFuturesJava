@@ -144,6 +144,20 @@ Cửa sổ tối thiểu 4 tuần. Các tiêu chí (iii), (iv), (v) giữ nguyê
   (max30Day 09-27, minN 1436 do 10-10 thiếu 4'); cache 31 dòng; tick không chậm khi seed. 1 ERROR warm-up `[FEAT-PIPE] khong co feature
   snapshot phut nay` ở tick đầu (07:54:12, không lặp). **CỬA SỔ PROMOTION CHÍNH THỨC gói v1.1 BẮT ĐẦU 2026-10-21 07:53:59 (+07).**
   Tự-restart kế ~19:54:3x; ~chu kỳ 7 (~10-24 19:57) trôi vào khung ±3'. Chi tiết `docs/result/V11C_DEPLOY_1021.md`.
+- 10-21 19:54:31, 10-22 07:54:43, 10-22 19:55:31, 10-23 07:55:41: tự-restart theo lịch (Reset by Schedule), jar eea5adec, không sự cố.
+- 10-23 09:26:27–09:26:33: owner chạy `deploy_dcae2e2b.sh` (b73378bb) — DỪNG ở bước kiểm cú pháp JVM do lỗi script (grep 'error' tự khớp
+  `ExitOnOutOfMemoryError`), script đã khôi phục env.sh + start.sh (diff 0), **không restart**, jar eea5adec tiếp tục chạy. (Lần 09:36:57
+  bị dừng tay ở bước scp, không đổi gì.)
+- **10-23 09:37:29 (+07, PID 18743, log `MainClass` 09:37:31.240): owner deploy dcae2e2b** (v11d + exec-probe; jar **eea5adec → dcae2e2b**,
+  md5 kiểm qua `/proc/18743/fd`) bằng `deploy_dcae2e2b.sh` c5c1b0dd. env `conf/env.sh` +4: `LIVE_HEARTBEAT=1`, `LIVE_KILLSW_MODE=log`,
+  `LIVE_PERIODIC_RESET_HOURS=0`, `LIVE_EXEC_PROBE=1`; `bin/start.sh` JAVA_TOOL_OPTIONS `+ -XX:+ExitOnOutOfMemoryError`, gc
+  `logs/gc.log` → `logs/gc_%p_%t.log` (backup `*.bak_v11c_eea5adec_20261023_0937`, `env.sh/start.sh.bak_v11c_20261023_0937`).
+  Watchdog `/usr/local/sbin/h242_watchdog.sh` (md5 cf221b97) + cron root `*/2` cài 09:39:48, Telegram test gửi được 2/2.
+  Lý do: CHỈ VẬN HÀNH (ADDENDUM d) — watchdog (trước đó không có gì tự bật lại khi JVM chết), bỏ reset 12h sau khi RSS/heap phẳng
+  3 chu kỳ (live set cuối chu kỳ 568–570 M, RSS h≈6 2,58–2,61 GiB), ExitOnOutOfMemoryError, kill-switch chế độ log, exec-probe đo chi phí
+  khớp lệnh (chỉ log). Bằng chứng (1): bytecode ADDITIVE_OK + harness offline byte-identical với eea5adec (v11d `2f82b6a4`,
+  exec-probe `16de49a6`). Kiểm sau start ĐẠT (`docs/result/V11C_DEPLOY_1021.md` mục "Deploy dcae2e2b"). (3) restart = 1 sự kiện vận hành
+  ⇒ **cửa sổ promotion 2026-10-21 07:53:59 KHÔNG reset**. Từ đây không còn tự-restart 12h.
 
 ---
 
