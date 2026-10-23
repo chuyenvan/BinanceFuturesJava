@@ -141,13 +141,14 @@ def stage_valid():
             okt &= bool(same or gaps)
         del Pp
         # M4: s-scores at a decision hour inside week k
-        h = t - 1 + 100
+        r4 = 100                                  # decision row r <-> h = t-1+r (fill at open t+r)
+        h = t - 1 + r4
         Pp = P.copy_poisoned(h + 1, seed=k + 2)
         R2 = K.log_returns(Pp)
         U4 = K.universe(Pp, t)
-        Qd, _ = K.m4_pca(R2, t + 24 * (101 // 24), U4)
+        Qd, _ = K.m4_pca(R2, t + 24 * (r4 // 24), U4)
         s2, b2 = K.m4_scores(R2, h, U4, Qd)
-        s0 = sig[k]["s"][101]
+        s0 = sig[k]["s"][r4]
         ok4 = bool(np.array_equal(U4, sig[k]["U"]) and np.array_equal(np.nan_to_num(s2, nan=99), np.nan_to_num(s0, nan=99)))
         del Pp, R2
         v1.append(dict(k=k, formation_identical=okf, trades_identical=okt, m4_identical=ok4))
@@ -178,14 +179,19 @@ def stage_valid():
                       for y in range(2021, 2026)])
     fund["sym"] = fund["sym"].astype(str)
 
+    cache = {}
+
     def minute(sym, h, first=True):
         ts0 = K.H0_MS + h * 3600000
         mm = pd.Timestamp(ts0, unit="ms").strftime("%Y-%m")
-        p = os.path.join(raw_k, "kline1m-%s.parquet" % mm)
-        p = p if os.path.exists(p) else os.path.join(raw_e1, "kline1m-%s.parquet" % mm)
-        tb = pq.read_table(p, columns=["ts", "sym", "open", "close", "active"],
-                           filters=[("sym", "=", sym), ("ts", ">=", ts0), ("ts", "<", ts0 + 3600000)]).to_pandas()
-        tb = tb[tb.active].sort_values("ts")
+        if (sym, mm) not in cache:
+            p = os.path.join(raw_k, "kline1m-%s.parquet" % mm)
+            p = p if os.path.exists(p) else os.path.join(raw_e1, "kline1m-%s.parquet" % mm)
+            tb = pq.read_table(p, columns=["ts", "sym", "open", "close", "active"],
+                               filters=[("sym", "=", sym)]).to_pandas()
+            cache[(sym, mm)] = tb[tb.active].sort_values("ts").set_index("ts")
+        tb = cache[(sym, mm)]
+        tb = tb[(tb.index >= ts0) & (tb.index < ts0 + 3600000)]
         return None if tb.empty else (float(tb.open.iloc[0]) if first else float(tb.close.iloc[-1]))
 
     v4 = dict(legs=0, px_mismatch=0, fund_mismatch=0, pnl_mismatch=0, max_fund_rel=0.0, details=[])
