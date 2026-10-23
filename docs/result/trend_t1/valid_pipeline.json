@@ -1,0 +1,308 @@
+{
+ "V2": {
+  "ts_int64": true,
+  "max_rows": 1440,
+  "sym_days": 415689,
+  "partial_days": 537,
+  "dup": 0,
+  "px01_not_min1": 512
+ },
+ "V1": {
+  "2022-08-15": {
+   "universe_equal": true,
+   "variants": {
+    "V1": {
+     "log_equal": true,
+     "n_log": 108,
+     "entries_equal": true,
+     "n_entries": 33,
+     "exits_equal": true,
+     "n_exits": 23,
+     "after_cut_days_differ": 61
+    },
+    "V2": {
+     "log_equal": true,
+     "n_log": 108,
+     "entries_equal": true,
+     "n_entries": 34,
+     "exits_equal": true,
+     "n_exits": 24,
+     "after_cut_days_differ": 43
+    },
+    "V3": {
+     "log_equal": true,
+     "n_log": 108,
+     "entries_equal": true,
+     "n_entries": 24,
+     "exits_equal": true,
+     "n_exits": 14,
+     "after_cut_days_differ": 9
+    },
+    "V4": {
+     "log_equal": true,
+     "n_log": 108,
+     "entries_equal": true,
+     "n_entries": 11,
+     "exits_equal": true,
+     "n_exits": 1,
+     "after_cut_days_differ": 12
+    },
+    "V5": {
+     "log_equal": true,
+     "n_log": 108,
+     "entries_equal": true,
+     "n_entries": 0,
+     "exits_equal": true,
+     "n_exits": 0,
+     "after_cut_days_differ": 11
+    },
+    "V6": {
+     "log_equal": true,
+     "n_log": 108,
+     "entries_equal": true,
+     "n_entries": 0,
+     "exits_equal": true,
+     "n_exits": 0,
+     "after_cut_days_differ": 12
+    }
+   }
+  },
+  "2023-03-31": {
+   "universe_equal": true,
+   "variants": {
+    "V1": {
+     "log_equal": true,
+     "n_log": 336,
+     "entries_equal": true,
+     "n_entries": 134,
+     "exits_equal": true,
+     "n_exits": 124,
+     "after_cut_days_differ": 70
+    },
+    "V2": {
+     "log_equal": true,
+     "n_log": 336,
+     "entries_equal": true,
+     "n_entries": 180,
+     "exits_equal": true,
+     "n_exits": 170,
+     "after_cut_days_differ": 33
+    },
+    "V3": {
+     "log_equal": true,
+     "n_log": 336,
+     "entries_equal": true,
+     "n_entries": 107,
+     "exits_equal": true,
+     "n_exits": 100,
+     "after_cut_days_differ": 6
+    },
+    "V4": {
+     "log_equal": true,
+     "n_log": 336,
+     "entries_equal": true,
+     "n_entries": 48,
+     "exits_equal": true,
+     "n_exits": 43,
+     "after_cut_days_differ": 6
+    },
+    "V5": {
+     "log_equal": true,
+     "n_log": 336,
+     "entries_equal": true,
+     "n_entries": 33,
+     "exits_equal": true,
+     "n_exits": 28,
+     "after_cut_days_differ": 6
+    },
+    "V6": {
+     "log_equal": true,
+     "n_log": 336,
+     "entries_equal": true,
+     "n_entries": 51,
+     "exits_equal": true,
+     "n_exits": 41,
+     "after_cut_days_differ": 67
+    }
+   }
+  },
+  "2024-01-07": {
+   "universe_equal": true,
+   "variants": {
+    "V1": {
+     "log_equal": true,
+     "n_log": 618,
+     "entries_equal": true,
+     "n_entries": 262,
+     "exits_equal": true,
+     "n_exits": 252,
+     "after_cut_days_differ": 13
+    },
+    "V2": {
+     "log_equal": true,
+     "n_log": 618,
+     "entries_equal": true,
+     "n_entries": 316,
+     "exits_equal": true,
+     "n_exits": 306,
+     "after_cut_days_differ": 29
+    },
+    "V3": {
+     "log_equal": true,
+     "n_log": 618,
+     "entries_equal": true,
+     "n_entries": 202,
+     "exits_equal": true,
+     "n_exits": 198,
+     "after_cut_days_differ": 19
+    },
+    "V4": {
+     "log_equal": true,
+     "n_log": 618,
+     "entries_equal": true,
+     "n_entries": 94,
+     "exits_equal": true,
+     "n_exits": 85,
+     "after_cut_days_differ": 28
+    },
+    "V5": {
+     "log_equal": true,
+     "n_log": 618,
+     "entries_equal": true,
+     "n_entries": 102,
+     "exits_equal": true,
+     "n_exits": 97,
+     "after_cut_days_differ": 8
+    },
+    "V6": {
+     "log_equal": true,
+     "n_log": 618,
+     "entries_equal": true,
+     "n_entries": 170,
+     "exits_equal": true,
+     "n_exits": 160,
+     "after_cut_days_differ": 16
+    }
+   }
+  },
+  "2024-11-30": {
+   "universe_equal": true,
+   "variants": {
+    "V1": {
+     "log_equal": true,
+     "n_log": 946,
+     "entries_equal": true,
+     "n_entries": 366,
+     "exits_equal": true,
+     "n_exits": 356,
+     "after_cut_days_differ": 36
+    },
+    "V2": {
+     "log_equal": true,
+     "n_log": 946,
+     "entries_equal": true,
+     "n_entries": 476,
+     "exits_equal": true,
+     "n_exits": 466,
+     "after_cut_days_differ": 23
+    },
+    "V3": {
+     "log_equal": true,
+     "n_log": 946,
+     "entries_equal": true,
+     "n_entries": 324,
+     "exits_equal": true,
+     "n_exits": 314,
+     "after_cut_days_differ": 11
+    },
+    "V4": {
+     "log_equal": true,
+     "n_log": 946,
+     "entries_equal": true,
+     "n_entries": 148,
+     "exits_equal": true,
+     "n_exits": 138,
+     "after_cut_days_differ": 9
+    },
+    "V5": {
+     "log_equal": true,
+     "n_log": 946,
+     "entries_equal": true,
+     "n_entries": 198,
+     "exits_equal": true,
+     "n_exits": 193,
+     "after_cut_days_differ": 8
+    },
+    "V6": {
+     "log_equal": true,
+     "n_log": 946,
+     "entries_equal": true,
+     "n_entries": 311,
+     "exits_equal": true,
+     "n_exits": 301,
+     "after_cut_days_differ": 31
+    }
+   }
+  },
+  "2025-06-15": {
+   "universe_equal": true,
+   "variants": {
+    "V1": {
+     "log_equal": true,
+     "n_log": 1143,
+     "entries_equal": true,
+     "n_entries": 412,
+     "exits_equal": true,
+     "n_exits": 402,
+     "after_cut_days_differ": 19
+    },
+    "V2": {
+     "log_equal": true,
+     "n_log": 1143,
+     "entries_equal": true,
+     "n_entries": 580,
+     "exits_equal": true,
+     "n_exits": 573,
+     "after_cut_days_differ": 23
+    },
+    "V3": {
+     "log_equal": true,
+     "n_log": 1143,
+     "entries_equal": true,
+     "n_entries": 385,
+     "exits_equal": true,
+     "n_exits": 381,
+     "after_cut_days_differ": 14
+    },
+    "V4": {
+     "log_equal": true,
+     "n_log": 1143,
+     "entries_equal": true,
+     "n_entries": 170,
+     "exits_equal": true,
+     "n_exits": 166,
+     "after_cut_days_differ": 11
+    },
+    "V5": {
+     "log_equal": true,
+     "n_log": 1143,
+     "entries_equal": true,
+     "n_entries": 241,
+     "exits_equal": true,
+     "n_exits": 236,
+     "after_cut_days_differ": 8
+    },
+    "V6": {
+     "log_equal": true,
+     "n_log": 1143,
+     "entries_equal": true,
+     "n_entries": 355,
+     "exits_equal": true,
+     "n_exits": 345,
+     "after_cut_days_differ": 23
+    }
+   }
+  }
+ },
+ "V1_pass": true
+}
