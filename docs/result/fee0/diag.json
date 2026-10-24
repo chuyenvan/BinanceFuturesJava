@@ -1,0 +1,66 @@
+{
+ "S1_BTC_E": {
+  "gross_all_bps": 5.014407439982009,
+  "gross_filled_bps": 4.2956513400297816,
+  "gross_unfilled_bps": 28.868125507146605,
+  "fill": 0.9707495429616088,
+  "cost_M1_bps": 6.013968005235706,
+  "fund_bps": 0.0
+ },
+ "S1_BTC_C": {
+  "gross_all_bps": 6.758392681666192,
+  "gross_filled_bps": 4.826585451236738,
+  "gross_unfilled_bps": 46.093276075729754,
+  "fill": 0.953187250996016,
+  "cost_M1_bps": 6.013968005235706,
+  "fund_bps": 0.0
+ },
+ "S7_BTC_E": {
+  "gross_all_bps": 40.07691599344868,
+  "gross_filled_bps": 34.06932820409266,
+  "gross_unfilled_bps": 268.3652519889773,
+  "fill": 0.9743589743589743,
+  "cost_M1_bps": 6.013968005235706,
+  "fund_bps": 9.811614743589447
+ },
+ "S7_BTC_C": {
+  "gross_all_bps": 33.37170013919649,
+  "gross_filled_bps": 37.78285018339764,
+  "gross_unfilled_bps": -277.61437797698466,
+  "fill": 0.986013986013986,
+  "cost_M1_bps": 6.013968005235706,
+  "fund_bps": 4.803775524475317
+ },
+ "S1_ETH_E": {
+  "gross_all_bps": 5.662915506283839,
+  "gross_filled_bps": 4.848796181157055,
+  "gross_unfilled_bps": 30.295840229405663,
+  "fill": 0.9680073126142597,
+  "cost_M1_bps": 6.024346108791799,
+  "fund_bps": 0.0
+ },
+ "S1_ETH_C": {
+  "gross_all_bps": 11.138541948855133,
+  "gross_filled_bps": 10.491594827439776,
+  "gross_unfilled_bps": 30.174470885046357,
+  "fill": 0.9671314741035857,
+  "cost_M1_bps": 6.024346108791799,
+  "fund_bps": 0.0
+ },
+ "S7_ETH_E": {
+  "gross_all_bps": 38.85496099957046,
+  "gross_filled_bps": 42.723855402334515,
+  "gross_unfilled_bps": -108.16302630546365,
+  "fill": 0.9743589743589743,
+  "cost_M1_bps": 6.024346108791799,
+  "fund_bps": 11.167683333333006
+ },
+ "S7_ETH_C": {
+  "gross_all_bps": 36.59514876096856,
+  "gross_filled_bps": 36.90502375196644,
+  "gross_unfilled_bps": -7.407099960730079,
+  "fill": 0.993006993006993,
+  "cost_M1_bps": 6.024346108791799,
+  "fund_bps": 4.376841958041716
+ }
+}

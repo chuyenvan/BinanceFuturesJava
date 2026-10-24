@@ -1,0 +1,99 @@
+{
+ "V4": [
+  {
+   "sig": "S1_BTC",
+   "t_in_utc": "2026-03-16 21:00:00",
+   "P0": 74204.6,
+   "min_low_15": 74114.0,
+   "first_through_utc": "2026-03-16 21:00:00",
+   "fill_hand": true,
+   "fill_pipe": true,
+   "r_hand_exfund": 0.006453421903438281,
+   "r_pipe": 0.006453421903438282,
+   "agree": true
+  },
+  {
+   "sig": "S1_BTC",
+   "t_in_utc": "2024-01-21 21:00:00",
+   "P0": 41626.1,
+   "min_low_15": 41600.9,
+   "first_through_utc": "2024-01-21 21:00:00",
+   "fill_hand": true,
+   "fill_pipe": true,
+   "r_hand_exfund": -0.0009761616716020297,
+   "r_pipe": -0.0009761616716020297,
+   "agree": true
+  },
+  {
+   "sig": "S1_BTC",
+   "t_in_utc": "2026-01-30 21:00:00",
+   "P0": 83765.5,
+   "min_low_15": 83638.6,
+   "first_through_utc": "2026-01-30 21:00:00",
+   "fill_hand": true,
+   "fill_pipe": true,
+   "r_hand_exfund": 0.0031901402881347437,
+   "r_pipe": 0.0031901402881347437,
+   "agree": true
+  },
+  {
+   "sig": "S7_BTC",
+   "t_in_utc": "2026-01-30 21:00:00",
+   "P0": 83765.5,
+   "min_low_15": 83638.6,
+   "first_through_utc": "2026-01-30 21:00:00",
+   "fill_hand": true,
+   "fill_pipe": true,
+   "r_hand_exfund": -0.07225022597243796,
+   "r_pipe": -0.07254231597243795,
+   "agree": true
+  },
+  {
+   "sig": "S7_BTC",
+   "t_in_utc": "2026-03-13 20:00:00",
+   "P0": 71152.4,
+   "min_low_15": 71115.3,
+   "first_through_utc": "2026-03-13 20:00:00",
+   "fill_hand": true,
+   "fill_pipe": true,
+   "r_hand_exfund": 0.040619981536679506,
+   "r_pipe": 0.04075916153667952,
+   "agree": true
+  },
+  {
+   "sig": "S1_BTC",
+   "t_in_utc": "2024-01-18 21:00:00",
+   "P0": 40760.6,
+   "min_low_15": 40762.1,
+   "fill_hand": false,
+   "pipe_daily_M1": 0.0,
+   "agree": "True"
+  },
+  {
+   "sig": "S1_BTC",
+   "t_in_utc": "2024-02-03 21:00:00",
+   "P0": 43026.2,
+   "min_low_15": 43026.2,
+   "fill_hand": false,
+   "pipe_daily_M1": 0.0,
+   "agree": "True"
+  },
+  {
+   "sig": "S1_BTC",
+   "t_in_utc": "2024-03-24 21:00:00",
+   "P0": 66184.4,
+   "min_low_15": 66187.9,
+   "fill_hand": false,
+   "pipe_daily_M1": 0.0,
+   "agree": "True"
+  }
+ ],
+ "V4_PASS": true,
+ "V5_S8_mismatch_of_200": 0,
+ "V5_Q4E_mismatch_of_150": {
+  "imbd": 0,
+  "lo15": 0,
+  "exit": 0
+ },
+ "V5_PASS": true
+}
