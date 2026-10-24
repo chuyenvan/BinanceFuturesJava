@@ -45,6 +45,9 @@ def main():
     J = J[J._merge == "both"]
     cols = [c for c in A.columns if c not in key and c not in ("_m",)]
     excl = FUND_GATE if a.kind == "gate" else FUND_T1 + OI_T1
+    # D2B fix: 'cand' (co ung vien cua dong Tool1) la cot GHI CHU, khong phai feature #1-40 cua prereg CTL
+    # => khong tinh vao nonfund; bao rieng 'cand_flag_diff'. (10-23: BT dua symbol DIED vao tap ung vien, NEW2 = live thi khong.)
+    META = ["cand"] if a.kind == "fund" else []
     res = {"ref": a.ref, "new": a.new, "kind": a.kind, "rows_ref": int(len(A)), "rows_new": int(len(B)), "rows_both": int(len(J)),
            "only_ref": only_a, "only_new": only_b, "cols": {}}
     bit_nonfund = np.ones(len(J), bool)
@@ -60,6 +63,11 @@ def main():
             tol = bit
         res["cols"][c] = {"bit": float(bit.mean()) if len(bit) else None, "tol": float(tol.mean()) if len(tol) else None,
                           "n_bit_diff": int((~bit).sum()), "funding_dep": c in excl}
+        if c in META:
+            res["cand_flag_diff"] = {"n_rows": int((~bit).sum()),
+                                     "symbols": sorted(set(J["symbol"].values[~bit].tolist()))[:20] if (~bit).any() else [],
+                                     "n_minutes": int(len(set(J["min"].values[~bit].tolist())))}
+            continue
         if c not in excl:
             bit_nonfund &= bit
             tol_nonfund &= tol
@@ -71,7 +79,8 @@ def main():
     res["minutes_bit_nonfund_all"] = int(res["minutes"] - len(bad))
     res["bad_minutes_nonfund"] = bad[:50]
     res["n_bad_minutes_nonfund"] = len(bad)
-    res["cols_diff_nonfund"] = {c: v["n_bit_diff"] for c, v in res["cols"].items() if v["n_bit_diff"] and not v["funding_dep"]}
+    res["cols_diff_nonfund"] = {c: v["n_bit_diff"] for c, v in res["cols"].items() if v["n_bit_diff"] and not v["funding_dep"]
+                                and c not in META}
     res["cols_diff_fund"] = {c: v["n_bit_diff"] for c, v in res["cols"].items() if v["n_bit_diff"] and v["funding_dep"]}
     json.dump(res, open(a.out, "w"), indent=1)
     log.info("%s %s rows ref=%d new=%d both=%d only_ref=%d only_new=%d | nonfund bit=%.6f tol=%.6f bad_min=%d | diff_nonfund=%s | diff_fund=%s",
