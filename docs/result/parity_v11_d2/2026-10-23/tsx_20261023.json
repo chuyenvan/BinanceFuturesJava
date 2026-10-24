@@ -1,0 +1,103 @@
+{
+ "day": "2026-10-23",
+ "universe_union": 741,
+ "S_files": [
+  "/home/ubuntu/claude_master/v11_tsx/off/out/2026-09_days64.csv",
+  "/home/ubuntu/claude_master/v11_tsx/off/outv/2026-10_days64.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-20.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-21.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-22.csv"
+ ],
+ "flags_cmd_out": "2026-10-24 10:04:37.599 INFO  [main] t.TsxLiveOffline: flags /home/ubuntu/claude_master/parity_v11w/tsx/flags_20261023.csv 2026-09-20..2026-10-24 on=0",
+ "flag_2026-10-23": {
+  "vision": {
+   "flag_day": 20749,
+   "date": "2026-10-23",
+   "state": "OFF",
+   "dd": -0.1757311192401951,
+   "p": -0.1764252561954648,
+   "max_p": 0.0168332345035474,
+   "max_day": 20723,
+   "min_n": 1439,
+   "reason": "ok"
+  },
+  "live_lines": [
+   {
+    "flag": "OFF",
+    "dd": -0.173328,
+    "minN": 1436,
+    "src": "aero:1d",
+    "final": "false"
+   },
+   {
+    "flag": "OFF",
+    "dd": -0.173328,
+    "minN": 1436,
+    "src": "file",
+    "final": "true"
+   },
+   {
+    "flag": "OFF",
+    "dd": -0.173328,
+    "minN": 1436,
+    "src": "file",
+    "final": "true"
+   }
+  ],
+  "live_final_states": [
+   "OFF"
+  ]
+ },
+ "flag_2026-10-24": {
+  "vision": {
+   "flag_day": 20750,
+   "date": "2026-10-24",
+   "state": NaN,
+   "dd": NaN,
+   "p": NaN,
+   "max_p": NaN,
+   "max_day": -1,
+   "min_n": 0,
+   "reason": "missing 2026-10-23"
+  },
+  "live_lines": [
+   {
+    "flag": "OFF",
+    "dd": -0.167771,
+    "minN": 1436,
+    "src": "aero:1d",
+    "final": "false"
+   }
+  ],
+  "live_final_states": []
+ },
+ "flag_match": true,
+ "flag_status": "DAT",
+ "S_D": {
+  "vision64": null,
+  "vision32": null,
+  "n_min_vision": null,
+  "live": 0.006699544924738407,
+  "n_min_live": 1440
+ },
+ "S_hist_new": {
+  "2026-10-20": {
+   "vision64": 0.0296780470884635,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-21": {
+   "vision64": 0.0079043547080325,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-22": {
+   "vision64": -0.0507035627657561,
+   "n_min": 1440,
+   "live": -0.050703562329925365,
+   "n_min_live": 1440
+  }
+ }
+}

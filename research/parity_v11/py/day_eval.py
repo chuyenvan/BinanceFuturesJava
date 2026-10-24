@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""PARITY_V11_WINDOW luot D (D+1) — danh gia 1 ngay bang Vision offline vs live 242.
-Theo docs/prereg/PREREG_PARITY_V11_WINDOW.md (481701b2): P1-F/P1/P1-m/MD/FUND/NET/S1-I/S1-m/S1-V/GV-I/GV-O/P2/P3/CTL/TSX.
-Khong doc/ghi 242. Input: ~/claude_master/parity_v11w/{live,runs/d21,vision}.
+"""PARITY_V11_WINDOW luot D — danh gia 1 NGAY UTC (PV_DAY) bang Vision offline vs live 242.
+Theo docs/prereg/PREREG_PARITY_V11_WINDOW.md (481701b2) + ADDENDUM1 (fea9fb97): P1-F/P1/P1-m/MD/FUND/NET/S1-I/S1-m/GV-I/
+GV-O/P2/P3/CTL. Tham so hoa tu d1_eval.py (5f8e7291): cau hinh ngay o py/pv_cfg.py; logic cham GIU NGUYEN (regression D1
+bit-identical). Khong doc/ghi 242.
 
-argv: stage (gate|fund|s1|p2|p3|ctl|labels)
+argv: stage (gate|fund|net|s1|gv|p3|ctl); env PV_DAY=YYYY-MM-DD [PV_WORK=dir]
 """
-import glob
 import gzip
 import io
 import json
@@ -19,10 +19,14 @@ import numpy as np
 import pandas as pd
 import onnxruntime as ort
 
-W = os.path.expanduser("~/claude_master/parity_v11w")
-LIVE, RUN = W + "/live", W + "/runs/d21"
-MOD = os.path.expanduser("~/claude_master/parity_1020/raw242/models")
-T0, T1 = 1792543980000, 1792627140000
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from pv_cfg import cfg, globs  # noqa: E402
+
+C = cfg()
+W = C["ROOT"]
+LIVE, RUN, WORK, TAG = C["LIVE"], C["RUN"], C["WORK"], C["tag"]
+MOD = C["MOD"]
+T0, T1 = C["T0"], C["T1"]
 F32 = np.float32
 FEATS = ["momentum1M", "momentum5M", "momentum15M", "momentum1H", "momentum4H", "momentum24H", "momentumAcceleration",
          "trendStrengthETH", "trendConsistency", "volatility1M", "volatility15M", "volatility1H", "volatility24H",
@@ -36,6 +40,10 @@ F45 = ["f%d" % i for i in range(45)]
 FUND_T1 = ["f%d" % i for i in list(range(17, 26)) + [32]]
 OI_T1 = ["f%d" % i for i in range(40, 45)]
 DYN_MIN, SCORE_BASE, DYN_MULT, GS = F32(0.26787), F32(0.15), F32(1.28760), F32(1.55)
+
+
+def out(name):
+    return WORK + "/" + name
 
 
 def f7(t):
@@ -71,16 +79,15 @@ def eq(a, b, tol=1e-6):
 
 
 def load_live_gate():
-    L = pd.concat([d for d in (read_gz(p) for p in sorted(glob.glob(LIVE + "/dumps/feat_dump_*.csv.gz"))) if d is not None],
-                  ignore_index=True)
+    L = pd.concat([d for d in (read_gz(p) for p in globs(C["feat_globs"])) if d is not None], ignore_index=True)
     L["min"] = (L.ts // 60000) * 60000
     L = L.drop_duplicates("min", keep="last")
     L = L[(L["min"] >= T0) & (L["min"] <= T1)].sort_values("min").reset_index(drop=True)
     return L
 
 
-def load_bt():
-    B = pd.read_csv(RUN + "/out_BT.csv.gz")
+def load_bt(path=None):
+    B = pd.read_csv(path or RUN + "/out_BT.csv.gz")
     return B[(B["min"] >= T0) & (B["min"] <= T1)].sort_values("min").reset_index(drop=True)
 
 
@@ -108,16 +115,14 @@ def pwin(sess, X):
     return np.asarray(o)[:, -1].astype(np.float32)
 
 
-# ADDENDUM1 (MAJ-1): log loc 10-21 (+07) chi phu toi 10-21 23:59 (+07) = 16:59 UTC; noi them log day du
-# 10-22 00:00-07:05 (+07) (owner keo 10-24, zgrep tren full.log* cua 242) de phu het cua so UTC 10-21
-# (dong [GATE-RATIO] cua gio 23 UTC in luc 07:01 +07 10-22).
-LOGS = [LIVE + "/raw/loglines_1021.gz", LIVE + "/full_1022_0000_0705.log.gz"]
+# Log: D1 (legacy) = noi 2 file (loglines_1021 + full_1022_0000_0705); ngay khac = live/log_window.gz do day_prep.py gop
+# moi full.log@* cua pull242/<D> va pull242/<D+1> (khu trung, loc D 06:00 -> D+1 07:10 +07).
 _LOG = []
 
 
 def loglines(day=None):
     if not _LOG:
-        for p in LOGS:
+        for p in C["logs"]:
             with gzip.open(p, "rt", errors="ignore") as f:
                 _LOG.extend(f.read().splitlines())
     return _LOG
@@ -135,15 +140,14 @@ def lt(s):
                            tzinfo=dt.timezone(dt.timedelta(hours=7))).timestamp() * 1000)
 
 
-# ---------------------------------------------------------------- ADDENDUM1: q theo gio
+# ---------------------------------------------------------------- q theo gio (ADDENDUM1 D1)
 H = 3600000
 
 
 def qlog_by_hour():
-    """CRIT-1 (audit OC1023): LiveGateRollingRatio.noteCandidate() goi logHour() khi SANG gio => dong
-    [GATE-RATIO] in luc gio h+1 (+07 log) la q DA DUNG trong gio UTC h. Map: h = floor(t_log/H)*H - H.
-    (ab5bbe44 map sai thanh h = floor(t_log/H)*H.) Tra {h: (q_t9, buffer_log, eval_log, t_log)}."""
-    out = {}
+    """CRIT-1 (audit OC1023): dong [GATE-RATIO] in luc gio h+1 (+07 log) la q DA DUNG trong gio UTC h.
+    Map: h = floor(t_log/H)*H - H. Tra {h: (q_t9, buffer_log, eval_log, t_log)}."""
+    res = {}
     for ln in loglines():
         if "[GATE-RATIO] q_t=" in ln and "q_t9=" in ln:
             t = lt(ln)
@@ -151,9 +155,9 @@ def qlog_by_hour():
             mb = re.search(r"buffer=(\d+)", ln)
             me = re.search(r"eval=(\d+)", ln)
             if t and mm:
-                out[(t // H) * H - H] = (float(mm.group(1)), int(mb.group(1)) if mb else -1,
+                res[(t // H) * H - H] = (float(mm.group(1)), int(mb.group(1)) if mb else -1,
                                          int(me.group(1)) if me else -1, int(t))
-    return out
+    return res
 
 
 def restarts():
@@ -165,12 +169,11 @@ _QR = {}
 
 def q_replay(h):
     """q replay causal (prereg §4 P3) tu gate_ratio_live.bin: q dau gio h tren record ts in [h-90d, h);
-    gio co restart: record flush truoc restart (luat restart giu nguyen nhu ab5bbe44).
-    Tra (q, m, mode, t_restart)."""
+    gio co restart: record flush truoc restart. Tra (q, m, mode, t_restart)."""
     if not _QR:
         sys.path.insert(0, os.path.expanduser("~/claude_master/1016/grr"))
         import grr_lib
-        bts, br, nbad = grr_lib.load(LIVE + "/raw/gate_ratio_live.bin")
+        bts, br, nbad = grr_lib.load(C["buffer"])
         bts = np.asarray(bts, np.int64)
         o = np.argsort(bts, kind="stable")
         _QR.update(sorted_in_file=bool(np.all(np.diff(bts) >= 0)), bts=bts[o], br32=br[o].astype(np.float32),
@@ -196,15 +199,29 @@ def q_replay(h):
 
 
 def gate_tick(t_log):
-    """Dong [GATE] in trong phut M+1 (+07 log, giay :06-:40) la quyet dinh cua tick (nen) M:
-    tick = floor(t_log/60000)*60000 - 60000. Kiem tren log 10-22 (co dong [MAP] tick=) o stage gv."""
+    """Dong [GATE] in trong phut M+1 (+07 log) la quyet dinh cua tick M: tick = floor(t_log/60000)*60000 - 60000."""
     return (t_log // 60000) * 60000 - 60000
 
 
 # ---------------------------------------------------------------- stage gate
+def gate_join(B):
+    L = load_live_gate()
+    return L, L.merge(B, on="min", suffixes=("_l", "_b"))
+
+
+def p15_off_of(J, sess=None):
+    sess = sess or p15_session()
+    nm = sess.get_inputs()[0].name
+    Xoff = J[[f + "_b" for f in FEATS]].astype(np.float32).copy()
+    Xoff.columns = FEATS
+    for f in FUND_GATE:      # luot D: tiem funding live
+        Xoff[f] = J[f + "_l"].astype(np.float32)
+    return sess.run(None, {nm: Xoff.values})[0].reshape(-1)
+
+
 def stage_gate():
-    L, B = load_live_gate(), load_bt()
-    J = L.merge(B, on="min", suffixes=("_l", "_b"))
+    B = load_bt()
+    L, J = gate_join(B)
     res = {"n_live_minutes": int(len(L)), "n_bt_minutes": int(len(B)), "n_join": int(len(J)),
            "live_min": f7(int(L["min"].min())), "live_max": f7(int(L["min"].max())),
            "missing_in_live": [f7(int(x)) for x in sorted(set(B["min"]) - set(L["min"]))],
@@ -218,16 +235,10 @@ def stage_gate():
     res["P1F"] = {"ALL30": float(okall.mean()), "n_bad_minutes": int((~okall).sum()),
                   "bad_minutes": [f7(int(x)) for x in J["min"][~okall]],
                   "per_feature_lt_1": {k: v for k, v in perf.items() if v < 1.0}}
-    # 3 cot funding: bao cao (luot D khong phan quyet)
     res["FUND3_gate_roundD"] = {f: float(eq(J[f + "_l"], J[f + "_b"]).mean()) for f in FUND_GATE}
-    # p15
     sess = p15_session()
     nm = sess.get_inputs()[0].name
-    Xoff = J[[f + "_b" for f in FEATS]].astype(np.float32).copy()
-    Xoff.columns = FEATS
-    for f in FUND_GATE:      # luot D: tiem funding live
-        Xoff[f] = J[f + "_l"].astype(np.float32)
-    p15off = sess.run(None, {nm: Xoff.values})[0].reshape(-1)
+    p15off = p15_off_of(J, sess)
     Xlive = J[[f + "_l" for f in FEATS]].astype(np.float32)
     p15live_onnx = sess.run(None, {nm: Xlive.values})[0].reshape(-1)
     J["p15_off"] = p15off
@@ -241,7 +252,6 @@ def stage_gate():
     res["MD"] = {}
     for lc, bc in (("rateDownAvg", "r_down"), ("rateUpAvg", "r_up"), ("rateDown15MAvg", "r_down15")):
         res["MD"][lc] = float(eq(J[lc], J[bc]).mean())
-    # chi tiet phut lech
     bad = J[~okall].copy()
     bad["rel_p15"] = rel[~okall]
     dcols = [f for f in NONFUND_GATE if not eq(J[f + "_l"], J[f + "_b"]).all()]
@@ -251,31 +261,24 @@ def stage_gate():
         bd[f + "_live"] = bad[f + "_l"].values
         bd[f + "_bt"] = bad[f + "_b"].values
     res["bad_detail"] = bd.round(6).to_dict("records")
-    # nsym (K3)
     res["nsym_bt"] = J[["min", "nsym"]].assign(min=lambda x: x["min"].map(f7)).to_dict("records")
-    J.assign(p15_off=p15off, p15_onnx_live=p15live_onnx).to_csv(W + "/work/join_gate.csv.gz", index=False)
-    json.dump(res, open(W + "/work/gate_d1.json", "w"), indent=1, default=str)
-    print(json.dumps({k: v for k, v in res.items() if k not in ("nsym_live", "bad_detail")}, indent=1, default=str))
+    J.assign(p15_off=p15off, p15_onnx_live=p15live_onnx).to_csv(out("join_gate.csv.gz"), index=False)
+    json.dump(res, open(out("gate_%s.json" % TAG), "w"), indent=1, default=str)
+    print(json.dumps({k: v for k, v in res.items() if k not in ("nsym_live", "bad_detail", "nsym_bt")}, indent=1,
+                     default=str)[:4000])
 
 
 # ---------------------------------------------------------------- stage fund
 def load_live45():
-    A = read_gz(LIVE + "/feat45_live.csv.gz")
-    Bb = read_gz(LIVE + "/feat45_live_b.csv.gz")
-    # ADDENDUM1: 7 file predictionSymbol 10-22 00:00-00:06 (+07) CO tren Oracle (keo 10-23) nhung khong duoc
-    # giai ma vao feat45_live_b (bat dau tu 00:07) => giai ma bang Pa1020Feat (py/psym_c_build.sh).
-    Cc = read_gz(LIVE + "/feat45_live_c.csv.gz") if os.path.exists(LIVE + "/feat45_live_c.csv.gz") else None
-    F = pd.concat([x for x in (A, Bb, Cc) if x is not None], ignore_index=True)
+    F = pd.concat([x for x in (read_gz(p) for p in C["feat45"] if os.path.exists(p)) if x is not None],
+                  ignore_index=True)
     F = F.drop_duplicates(["ts", "symbol"], keep="last")
     F["min"] = (F.ts // 60000) * 60000
     F = F[(F["min"] >= T0) & (F["min"] <= T1)]
     return F
 
 
-def stage_fund():
-    F = load_live45()
-    U = pd.read_csv(RUN + "/fund_BT.csv.gz", dtype={"symbol": str})
-    U = U[(U["min"] >= T0) & (U["min"] <= T1)]
+def fund_join(U, F):
     J = U.merge(F, on=["min", "symbol"], suffixes=("_b", "_l"))
     cols = [c for c in F45 if c not in FUND_T1 and c not in OI_T1]
     ok = np.ones(len(J), bool)
@@ -286,6 +289,15 @@ def stage_fund():
         if o.mean() < 1:
             perc[c] = round(float(o.mean()), 6)
     J["ok"] = ok
+    return J, perc
+
+
+def stage_fund():
+    F = load_live45()
+    U = pd.read_csv(RUN + "/fund_BT.csv.gz", dtype={"symbol": str})
+    U = U[(U["min"] >= T0) & (U["min"] <= T1)]
+    J, perc = fund_join(U, F)
+    ok = J["ok"].values
     bym = J.groupby("min").ok.all()
     res = {"rows_bt": int(len(U)), "rows_live": int(len(F)), "rows_join": int(len(J)),
            "bt_rows_missing_in_live": int(len(U) - len(J)),
@@ -293,56 +305,80 @@ def stage_fund():
            "feat_lt_1": perc,
            "bad_minutes": [f7(int(x)) for x in bym[~bym].index],
            "rows_by_minute_live": F.groupby("min").size().describe().to_dict()}
-    # funding f17-f25,f32: bao cao rieng (luot D: tiem live, khong phan quyet)
     res["fund_feats_match_report_only"] = {c: float(eq(J[c + "_l"], J[c + "_b"]).mean()) for c in FUND_T1}
-    # OI f40-44
     res["oi_feats_report_only"] = {c: float(eq(J[c + "_l"], J[c + "_b"]).mean()) for c in OI_T1}
-    J.to_csv(W + "/work/join_fund.csv.gz", index=False)
-    json.dump(res, open(W + "/work/fund_d1.json", "w"), indent=1, default=str)
+    J.to_csv(out("join_fund.csv.gz"), index=False)
+    json.dump(res, open(out("fund_%s.json" % TAG), "w"), indent=1, default=str)
     print(json.dumps(res, indent=1, default=str)[:3000])
 
 
 # ---------------------------------------------------------------- stage net
-def stage_net():
-    F = pd.read_csv(W + "/work/join_fund.csv.gz", dtype={"symbol": str})
-    net = net_session()
+def net_pair(F, net=None):
+    net = net or net_session()
     Xl = F[[c + "_l" for c in F45]].values.astype(np.float32)
     Xb = F[[c + "_b" for c in F45[:40]]].values.astype(np.float32)
     for j, c in enumerate(F45[:40]):
         if c in FUND_T1:
             Xb[:, j] = Xl[:, j]
     Xb = np.concatenate([Xb, Xl[:, 40:45]], axis=1)
-    pwl, pwb = pwin(net, Xl), pwin(net, Xb)
+    return pwin(net, Xl), pwin(net, Xb)
+
+
+def stage_net():
+    F = pd.read_csv(out("join_fund.csv.gz"), dtype={"symbol": str})
+    net = net_session()
+    pwl, pwb = net_pair(F, net)
     d = np.abs(pwl - pwb)
     F["net_l"], F["net_b"] = pwl, pwb
     bym = F.assign(d=d).groupby("min").apply(lambda x: (x.d <= 1e-6 * (1 + np.abs(x.net_b))).all())
     res = {"rows": int(len(F)), "net015_le1e-6": float((d <= 1e-6 * (1 + np.abs(pwb))).mean()),
            "max_absdiff": float(d.max()), "minutes": int(len(bym)), "minutes_all_ok": float(bym.mean()),
            "bad_minutes": [f7(int(x)) for x in bym[~bym].index]}
-    F[["min", "symbol", "net_l", "net_b"]].to_csv(W + "/work/net_pw.csv.gz", index=False)
-    # net live cho TOAN BO symbol cua predictionSymbol (dung cho gateValue/P2 nhu par_a)
+    F[["min", "symbol", "net_l", "net_b"]].to_csv(out("net_pw.csv.gz"), index=False)
     L = load_live45()
     XL = L[F45].values.astype(np.float32)
-    L[["min", "symbol"]].assign(net_l=pwin(net, XL)).to_csv(W + "/work/net_live_all.csv.gz", index=False)
-    json.dump(res, open(W + "/work/net_d1.json", "w"), indent=1, default=str)
+    L[["min", "symbol"]].assign(net_l=pwin(net, XL)).to_csv(out("net_live_all.csv.gz"), index=False)
+    json.dump(res, open(out("net_%s.json" % TAG), "w"), indent=1, default=str)
     print(json.dumps(res, indent=1, default=str)[:2000])
 
 
 # ---------------------------------------------------------------- helpers S1
-LEGACY = set(x.strip() for x in open(LIVE + "/raw/ts_ext_legacy.txt") if x.strip()
-             and not x.startswith("#") and "," not in x)
+_LEG = {}
+
+
+def legacy_at(ts):
+    """Tap LEGACY dung o tick ts. D1 legacy: file co dinh (xem pv_cfg). Ngay khac: dong '[LEGACY] managed N: a,b,..'
+    gan nhat co thoi diem log <= ts + 2' (quyet dinh tick ts in o phut ts+1)."""
+    kind, path = C["legacy"]
+    if kind == "file":
+        if "set" not in _LEG:
+            _LEG["set"] = set(x.strip() for x in open(path) if x.strip() and not x.startswith("#") and "," not in x)
+        return _LEG["set"]
+    if "list" not in _LEG:
+        lst = []
+        for ln in loglines():
+            if "[LEGACY] managed" in ln:
+                t = lt(ln)
+                m = re.search(r"\[LEGACY\] managed (\d+): (\S*)", ln)
+                if t and m:
+                    s = set(x for x in m.group(2).split(",") if x)
+                    if len(s) == int(m.group(1)):
+                        lst.append((t, s))
+        lst.sort(key=lambda x: x[0])
+        _LEG["list"] = lst
+        _LEG["ts"] = np.array([a for a, _ in lst], np.int64)
+    i = int(np.searchsorted(_LEG["ts"], ts + 2 * 60000, "right")) - 1
+    return _LEG["list"][i][1] if i >= 0 else set()
 
 
 def load_s1():
-    fs = sorted(glob.glob(LIVE + "/s1/s1_dump_2026102[12]_*.csv.gz"))
-    S = pd.concat([d for d in (read_gz(p) for p in fs) if d is not None], ignore_index=True)
+    S = pd.concat([d for d in (read_gz(p) for p in globs(C["s1_globs"])) if d is not None], ignore_index=True)
     S = S[(S.ts >= T0) & (S.ts <= T1)].drop_duplicates(["ts", "symbol"], keep="last")
     return S
 
 
 def load_sel():
-    fs = sorted(glob.glob(LIVE + "/dumps/sel_dump_2026102[12]_*.csv.gz"))
-    S = pd.concat([d for d in (read_gz(p) for p in fs) if d is not None], ignore_index=True)
+    S = pd.concat([d for d in (read_gz(p) for p in globs(C["sel_globs"])) if d is not None], ignore_index=True)
     S = S[(S.ts >= T0) & (S.ts <= T1)].drop_duplicates(["ts", "symbol"], keep="last")
     return S
 
@@ -365,7 +401,6 @@ def stage_s1():
     d = np.abs(sc - S.score.values.astype(np.float32))
     tol = 1e-6 * (1 + np.abs(S.score.values))
     res = {"S1_m": {"rows": int(len(S)), "frac_le_1e-6": float((d <= tol).mean()), "max_abs": float(d.max())}}
-    # S1-I
     m = sel.merge(S, on=["ts", "symbol"], suffixes=("_sel", "_s1"))
     res["S1_I_selectorScore_vs_score"] = float(np.nanmax(np.abs(np.abs(m.selectorScore) - np.abs(m.score))))
     ok = 0
@@ -375,7 +410,7 @@ def stage_s1():
         sg = S[S.ts == ts]
         if len(sg) == 0:
             continue
-        cand = sg[~sg.symbol.isin(LEGACY)].sort_values(["score", "symbol"])
+        cand = sg[~sg.symbol.isin(legacy_at(int(ts)))].sort_values(["score", "symbol"])
         top = list(cand.symbol.head(24))
         want = list(g.sort_values("rank").symbol)
         tot += 1
@@ -385,20 +420,12 @@ def stage_s1():
             bad.append({"ts": f7(int(ts)), "jaccard": len(set(top) & set(want)) / 24.0,
                         "n": len(want), "rank0": int(g["rank"].min())})
     res["S1_I"] = {"minutes": tot, "exact_order": ok, "frac": ok / max(1, tot), "bad": bad[:20]}
-    json.dump(res, open(W + "/work/s1_d1.json", "w"), indent=1, default=str)
+    json.dump(res, open(out("s1_%s.json" % TAG), "w"), indent=1, default=str)
     print(json.dumps(res, indent=1, default=str)[:2500])
 
 
-def stage_gv_p2():
-    net = pd.read_csv(W + "/work/net_live_all.csv.gz", dtype={"symbol": str})
-    nb = pd.read_csv(W + "/work/net_pw.csv.gz", dtype={"symbol": str})
-    nbmap = {(int(a), b): c for a, b, c in zip(nb["min"], nb.symbol, nb.net_b)}
-    sel = load_sel()
-    s1 = load_s1()[["ts", "symbol", "score"]]
-    G = pd.read_csv(W + "/work/join_gate.csv.gz")
-    p15off = dict(zip(G["min"].astype(np.int64), G["p15_off"]))
-    QL = qlog_by_hour()
-    RS = restarts()
+def gv_rows(sel, s1, net, nbmap):
+    """gateValue theo luat LiveBuildMap.assign: live (pw live) va off (pw OFF neu co, fallback live)."""
     rows = []
     skipped = []
     for ts, g in sel.groupby("ts"):
@@ -421,7 +448,20 @@ def stage_gv_p2():
             for _, rr in g.iterrows():
                 rows.append((int(ts), rr.symbol, tag, float(rr.gateValue), float(gv.get(rr.symbol, np.nan)),
                              float(rr.p15), float(rr.selectorScore)))
-    Gd = pd.DataFrame(rows, columns=["ts", "symbol", "tag", "gv_live", "gv_calc", "p15", "sscore"])
+    return pd.DataFrame(rows, columns=["ts", "symbol", "tag", "gv_live", "gv_calc", "p15", "sscore"]), skipped
+
+
+def stage_gv_p2():
+    net = pd.read_csv(out("net_live_all.csv.gz"), dtype={"symbol": str})
+    nb = pd.read_csv(out("net_pw.csv.gz"), dtype={"symbol": str})
+    nbmap = {(int(a), b): c for a, b, c in zip(nb["min"], nb.symbol, nb.net_b)}
+    sel = load_sel()
+    s1 = load_s1()[["ts", "symbol", "score"]]
+    G = pd.read_csv(out("join_gate.csv.gz"))
+    p15off = dict(zip(G["min"].astype(np.int64), G["p15_off"]))
+    QL = qlog_by_hour()
+    RS = restarts()
+    Gd, skipped = gv_rows(sel, s1, net, nbmap)
     res = {"sel_minutes": int(sel.ts.nunique()), "skipped_minutes_no_net_live": skipped}
     for tag, name in (("live", "GV_I"), ("off", "GV_O")):
         x = Gd[Gd.tag == tag]
@@ -433,10 +473,8 @@ def stage_gv_p2():
                                    on=["ts", "symbol"], how="left")
     x["h"] = x.ts // H * H
 
-    # ADDENDUM1: q live theo PHUT. Gio co restart tai tr: tick >= phut(tr)-1' do process moi quyet dinh voi q
-    # tinh luc restart (= dong [GATE-RATIO] in luc h+1); tick truoc do do process cu quyet dinh voi q dau gio
-    # (process cu tat truoc h+1 nen KHONG co dong log) => dung q replay 'normal' cua gio h (danh dau q_src) va
-    # kiem bang khoang thr=[..] cua dong [GATE] (xem GATE_LOG.thr_range_match).
+    # q live theo PHUT (ADDENDUM1 D1): gio co restart tai tr: tick < phut(tr)-1' do process cu quyet dinh voi q dau gio
+    # (khong co dong log) => q replay 'normal' (q_src); con lai = dong [GATE-RATIO] da map gio.
     def qlive(ts):
         h = ts // H * H
         rs = [t for t in RS if h <= t < h + H]
@@ -450,7 +488,7 @@ def stage_gv_p2():
     x["q"] = x.ts.map(lambda t: ql[int(t)][0])
     x["q_src"] = x.ts.map(lambda t: ql[int(t)][1])
     qo = {int(h): q_replay(int(h))[0] for h in x.h.unique()}
-    x["q_off"] = x.h.map(qo)          # ADDENDUM1: phia offline dung q REPLAY (prereg §4 P2), khong dung q log
+    x["q_off"] = x.h.map(qo)
     x["p15_off"] = x.ts.map(p15off)
     need = ["q", "q_off", "p15_off", "gv_off"]
     dmask = x[need].isna().any(axis=1)
@@ -486,7 +524,14 @@ def stage_gv_p2():
                  "n_rq_ge_09_live": int((x.rl >= 0.9).sum()), "n_rq_ge_09_off": int((x.ro >= 0.9).sum()),
                  "n_rq_ge_08_live": int((x.rl >= 0.8).sum()),
                  "PASS": bool(hv.sum() == 0)}
-    # [GATE] log: map dong log -> tick (ADDENDUM1: ab5bbe44 map theo phut ghi log, lech 1 phut)
+    res["GATE_LOG"] = gate_log_check(x, fac_l)
+    x.to_csv(out("p2_pairs.csv.gz"), index=False)
+    json.dump(res, open(out("gv_p2_%s.json" % TAG), "w"), indent=1, default=str)
+    print(json.dumps(res, indent=1, default=str)[:4000])
+
+
+def gate_log_check(x, fac_l):
+    """[GATE] log: n_pass log == pass_live tinh lai; khoang thr=[..] (base tinh 0,008) khop fac/gv/tick."""
     gl = []
     tick_chk = []
     last_map = None
@@ -504,8 +549,7 @@ def stage_gv_p2():
                 gl.append((tk, mm.group(1), int(mm.group(4))))
                 last_map = None
     gl = pd.DataFrame(gl, columns=["min", "thr_rng", "n_pass_log"]).drop_duplicates("min", keep="last")
-    # Khoang thr=[..] cua dong [GATE] in EntryGate.threshold(gv) = base TINH MIN_MOMENTUM_15M (0,008)*fac*scale
-    # (DetectEntrySignal2TradeNormal @627e9b34), KHONG phai nguong ratio q_t => chi dung de kiem fac/gv/tick-map.
+    # Khoang thr=[..] cua dong [GATE] = base TINH MIN_MOMENTUM_15M (0,008)*fac*scale, KHONG phai nguong ratio q_t.
     x["thr_static"] = (F32(0.008) * fac_l.values * GS).astype(np.float32)
     cmp_pass = x.groupby("ts").agg(pass_calc=("pass_l", "sum"), thr_min=("thr_static", "min"),
                                    thr_max=("thr_static", "max")).reset_index().rename(columns={"ts": "min"})
@@ -518,7 +562,7 @@ def stage_gv_p2():
         return abs(a - r.thr_min) <= 6e-6 and abs(b - r.thr_max) <= 6e-6
 
     mrg["thr_ok"] = mrg.apply(rng_ok, axis=1)
-    res["GATE_LOG"] = {"n_lines": int(len(gl)), "n_minutes_join": int(len(mrg)),
+    return {"n_lines": int(len(gl)), "n_minutes_join": int(len(mrg)),
                        "map_tick_check": {"n_lines_with_MAP": len(tick_chk), "n_tick_eq": int(sum(tick_chk))},
                        "n_match": int((mrg.n_pass_log == mrg.pass_calc).sum()),
                        "sum_log": int(mrg.n_pass_log.sum()), "sum_calc": int(mrg.pass_calc.sum()),
@@ -529,14 +573,54 @@ def stage_gv_p2():
                            min=lambda d: d["min"].map(f7))[["min", "n_pass_log", "pass_calc"]].to_dict("records")[:20],
                        "gate_lines_not_joined": [f7(int(t)) for t in sorted(set(gl["min"]) - set(mrg["min"]))
                                                  if T0 <= t <= T1]}
-    x.to_csv(W + "/work/p2_pairs.csv.gz", index=False)
-    json.dump(res, open(W + "/work/gv_p2_d1.json", "w"), indent=1, default=str)
-    print(json.dumps(res, indent=1, default=str)[:4000])
+
+
+def stage_live_only():
+    """Ngay Vision chua co (>= 99 % U_D): chi cham phan KHONG can Vision: P1-m, GV-I, phia live cua P2 (r/q live,
+    [GATE] n_pass log == tinh lai). P3/S1-I/S1-m chay o stage p3/s1. Ghi live_only_<tag>.json."""
+    L = load_live_gate()
+    sess = p15_session()
+    nm = sess.get_inputs()[0].name
+    p = sess.run(None, {nm: L[FEATS].astype(np.float32).values})[0].reshape(-1)
+    m = np.abs(p - L.p15_out.values) / np.abs(L.p15_out.values)
+    res = {"n_live_minutes": int(len(L)), "P1m": {"frac_le_1e-6": float(np.nanmean(m <= 1e-6)), "max_rel": float(np.nanmax(m))}}
+    F = load_live45()
+    net = net_session()
+    NL = F[["min", "symbol"]].assign(net_l=pwin(net, F[F45].values.astype(np.float32)))
+    NL.to_csv(out("net_live_all.csv.gz"), index=False)
+    sel = load_sel()
+    s1 = load_s1()[["ts", "symbol", "score"]]
+    Gd, skipped = gv_rows(sel, s1, NL, {})
+    x = Gd[Gd.tag == "live"].copy().reset_index(drop=True)
+    res["GV_I"] = {"n": int(len(x)), "n_minutes": int(x.ts.nunique()), "frac_le1e-6": float(eq(x.gv_calc, x.gv_live).mean()),
+                   "n_diff": int((~eq(x.gv_calc, x.gv_live)).sum()), "skipped": skipped}
+    QL, RS = qlog_by_hour(), restarts()
+
+    def qlive(ts):
+        h = ts // H * H
+        rs = [t for t in RS if h <= t < h + H]
+        if rs and ts < (rs[-1] // 60000) * 60000 - 60000:
+            return q_replay(h)[0]
+        return QL[h][0] if h in QL else np.nan
+
+    ql = {int(t): qlive(int(t)) for t in x.ts.unique()}
+    x["q"] = x.ts.map(lambda t: ql[int(t)])
+    x = x[~x.q.isna()].reset_index(drop=True)
+    fac_l = np.maximum(DYN_MIN, (x.gv_live.astype(np.float32) / SCORE_BASE) * DYN_MULT).astype(np.float32)
+    thr_l = (x.q.astype(np.float32).values * fac_l.values * GS).astype(np.float32)
+    x["pass_l"] = ~(x.p15.astype(np.float32).values < thr_l)
+    x["rl"] = x.p15.astype(np.float32).values / thr_l
+    res["P2_live_side"] = {"n_pairs": int(len(x)), "n_minutes": int(x.ts.nunique()), "n_pass_live": int(x.pass_l.sum()),
+                           "max_rq_live": float(x.rl.max()), "n_rq_ge_09_live": int((x.rl >= 0.9).sum()),
+                           "n_rq_ge_08_live": int((x.rl >= 0.8).sum())}
+    res["GATE_LOG"] = gate_log_check(x, fac_l)
+    json.dump(res, open(out("live_only_%s.json" % TAG), "w"), indent=1, default=str)
+    print(json.dumps(res, indent=1, default=str)[:3000])
 
 
 def stage_p3():
     QL = qlog_by_hour()
-    hours = list(range((T0 // H) * H, (T1 // H) * H + H, H))   # 24 gio UTC cua cua so (00..23 UTC 10-21)
+    hours = list(range((T0 // H) * H, (T1 // H) * H + H, H))
     hu = lambda h: dt.datetime.utcfromtimestamp(h / 1000).strftime("%m-%d %H:%M")
     rows = []
     for h in sorted(QL):
@@ -546,7 +630,7 @@ def stage_p3():
                      "buffer_log": buf, "eval_log": ev, "m_eq_buf_minus_eval": bool(m == buf - ev),
                      "mode": mode, "restart_p07": f7(tr) if tr else "", "in_window": h in hours})
     Q = pd.DataFrame(rows)
-    Q["rel"] = (Q.q_log - Q.q_rep).abs() / Q.q_rep       # ADDENDUM1: bo co match6 (so 9 vs 6 chu so) -> rel
+    Q["rel"] = (Q.q_log - Q.q_rep).abs() / Q.q_rep
     Qw = Q[Q.in_window]
     have = set(Q.h[Q.in_window])
     res = {"n_hours_expected": len(hours), "n_hours_measured": int(len(Qw)),
@@ -560,8 +644,8 @@ def stage_p3():
            "pre_window_lines": Q[~Q.in_window].drop(columns=["h"]).to_dict("records"),
            "mismatch": Qw[Qw.rel > 1e-6].drop(columns=["h"]).to_dict("records")[:30]}
     res["PASS"] = bool(not res["hours_missing_utc"] and res["n_rel_gt_1e-6"] == 0)
-    Q.drop(columns=["h"]).to_csv(W + "/work/p3_q.csv", index=False)
-    json.dump(res, open(W + "/work/p3_d1.json", "w"), indent=1, default=str)
+    Q.drop(columns=["h"]).to_csv(out("p3_q.csv"), index=False)
+    json.dump(res, open(out("p3_%s.json" % TAG), "w"), indent=1, default=str)
     print(json.dumps({k: v for k, v in res.items() if k != "pre_window_lines"}, indent=1, default=str)[:3500])
 
 
@@ -576,6 +660,6 @@ def stage_ctl():
 
 
 if __name__ == "__main__":
-    os.makedirs(W + "/work", exist_ok=True)
+    os.makedirs(WORK, exist_ok=True)
     {"gate": stage_gate, "fund": stage_fund, "net": stage_net, "s1": stage_s1,
-     "gv": stage_gv_p2, "p3": stage_p3, "ctl": stage_ctl}[sys.argv[1]]()
+     "gv": stage_gv_p2, "p3": stage_p3, "ctl": stage_ctl, "live_only": stage_live_only}[sys.argv[1]]()

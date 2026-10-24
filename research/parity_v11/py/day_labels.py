@@ -1,29 +1,33 @@
 #!/usr/bin/env python3
-"""Nhan K1-K5 cho cac phut lech (PREREG_PARITY_V11_WINDOW §5) + bang tong hop.
-ADDENDUM1 (audit OC1023 CRIT-2): K3 = |U_D| != nsym live gan nhat, HOAC U thay doi trong [M-1440', M]
-(moc doi o TRUOC hoac bang M), moc doi = nen Vision dau tien cua symbol moi (ab5bbe44 gan K3 cho phut TRUOC
-moc doi: t < first741 <= t+1440). Them: log 10-22 00:00-07:05 (+07); nguon phut lech du theo §5
-(P1-F, P1, MD, FUND, NET, GV-O, S1-V); K2a (lo Vision), K2b ([TS-EXT] day n_min<1440), K2c ([FEAT-PIPE]).
-argv: none. Doc work/*.json + join_gate + s1v_rows + log + cache Vision.
+"""Nhan K1-K5 THEO PREREG GOC (§5, ban sua ADDENDUM1 D1) cho cac phut lech + bang tong hop. Tham so hoa tu d1_labels.py
+(5f8e7291) theo PV_DAY (py/pv_cfg.py); logic giu nguyen (regression D1 bit-identical). Nhan K' (PREREG ADDENDUM1
+fea9fb97) tinh rieng o py/day_kprime.py.
+K3 = |U_D| != nsym live gan nhat, HOAC U thay doi trong [M-1440', M] (moc = nen Vision dau tien cua symbol moi).
+Nguon phut lech §5: P1-F, P1, MD, FUND, NET, GV-O, S1-V; K2a (lo Vision), K2b ([TS-EXT] day n_min<1440), K2c ([FEAT-PIPE]).
+env: PV_DAY [PV_WORK]. Doc WORK/*_<tag>.json + join_gate + s1v_rows + log + cache Vision.
 """
-import glob
 import gzip
 import io
 import json
 import os
 import re
+import sys
 import zipfile
 import datetime as dt
 
 import numpy as np
 import pandas as pd
 
-W = os.path.expanduser("~/claude_master/parity_v11w")
-VIS = W + "/vision/klines_1m"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from pv_cfg import cfg  # noqa: E402
+
+C = cfg()
+W, WORK, TAG = C["ROOT"], C["WORK"], C["tag"]
+VIS = C["VIS"]
 MIN = 60000
-T0, T1 = 1792543980000, 1792627140000
-DAY_D, DAY_PREV = "2026-10-21", "2026-10-20"
-LOGS = [W + "/live/raw/loglines_1021.gz", W + "/live/full_1022_0000_0705.log.gz"]
+T0, T1 = C["T0"], C["T1"]
+DAY_D, DAY_PREV = C["day"], C["day_prev"]
+LOGS = C["logs"]
 
 
 def f7(t):
@@ -56,21 +60,19 @@ def lt(s):
                            tzinfo=dt.timezone(dt.timedelta(hours=7))).timestamp() * 1000)
 
 
+J = lambda n: json.load(open(WORK + "/" + n + "_" + TAG + ".json"))
 # ---------------- phut lech theo tung chi so (§5)
-feat = json.load(open(W + "/work/gate_d1.json"))
-fund = json.load(open(W + "/work/fund_d1.json"))
-net = json.load(open(W + "/work/net_d1.json"))
-gv = json.load(open(W + "/work/gv_p2_d1.json"))
+feat, fund, net, gv = J("gate"), J("fund"), J("net"), J("gv_p2")
 src = {"P1F": set(feat["P1F"]["bad_minutes"]), "FUND": set(fund["bad_minutes"]), "NET": set(net["bad_minutes"]),
        "GV_O": set(gv["GV_O"]["bad_minutes"])}
-JG = pd.read_csv(W + "/work/join_gate.csv.gz")
+JG = pd.read_csv(WORK + "/join_gate.csv.gz")
 rel = np.abs(JG.p15_out.values - JG.p15_off.values) / np.abs(JG.p15_off.values)
 src["P1"] = set(JG["min"][rel > 1e-3].map(f7))
 md_ok = np.ones(len(JG), bool)
 for lc, bc in (("rateDownAvg", "r_down"), ("rateUpAvg", "r_up"), ("rateDown15MAvg", "r_down15")):
     md_ok &= eq(JG[lc], JG[bc])
 src["MD"] = set(JG["min"][~md_ok].map(f7))
-SV = pd.read_csv(W + "/work/s1v_rows.csv.gz", usecols=["ts"] + ["c%d" % i for i in range(7)] +
+SV = pd.read_csv(WORK + "/s1v_rows.csv.gz", usecols=["ts"] + ["c%d" % i for i in range(7)] +
                  ["l%d" % i for i in range(7)] + ["score_live", "score_calc"])
 sv_ok = eq(SV.score_calc, SV.score_live)
 for i in range(7):
@@ -81,8 +83,8 @@ s1v_rows_bad_by_min = sv_bad.value_counts()
 del SV
 mins = sorted(set().union(*src.values()))
 
-# ---------------- K1: [LIVE-KLINE] cua so 10' co ghi de
-k1 = []   # (window_end, reread_overwritten, decided_on_unsettled, s1_close_rewritten)
+# ---------------- K1: [LIVE-KLINE] cua so 10' co ghi de (bo dem, khong theo symbol)
+k1 = []
 for s in lines:
     if "[LIVE-KLINE] reread" not in s:
         continue
@@ -115,6 +117,7 @@ for t, g in fp:
         k2c_blocks.append((t - 60 * MIN, t))
     prev = g
 
+
 # ---------------- Vision: moc doi U (nen dau tien cua symbol moi) + lo Vision (K2a)
 def vis_times(day, sym):
     p = "%s/%s/%s.zip" % (VIS, day, sym)
@@ -128,7 +131,14 @@ def vis_times(day, sym):
 
 
 days = sorted(os.listdir(VIS))
-syms = {d: set(f[:-4] for f in os.listdir(VIS + "/" + d) if f.endswith(".zip")) for d in days}
+if C["layout"] == "legacy-d1":
+    syms = {d: set(f[:-4] for f in os.listdir(VIS + "/" + d) if f.endswith(".zip")) for d in days}
+else:   # chi symbol thuoc universe da khai (zip tai them cho ngay khac khong lam doi U cua ngay nay)
+    UALL = set()
+    for p in C["tsx_univ"]:
+        UALL |= {x.strip() for x in open(p) if x.strip()}
+    syms = {d: set(f[:-4] for f in os.listdir(VIS + "/" + d) if f.endswith(".zip")) & UALL for d in days}
+    syms[DAY_D] = {x.strip() for x in open(C["U"]) if x.strip()}
 U_D = syms[DAY_D]
 marks = []
 for d in (DAY_PREV, DAY_D):
@@ -180,11 +190,10 @@ for s in mins:
                  "sources": sorted(n for n, v in src.items() if s in v),
                  "s1v_rows_bad": int(s1v_rows_bad_by_min.get(t, 0))})
 
-# phu cua K3 tren TOAN cua so (mo ta: nhan K3 co con phan biet duoc khong)
 allm = range(T0, T1 + MIN, MIN)
 k3_all = sum(1 for t in allm if (nsym_at(t) is not None and nsym_at(t) != len(U_D))
              or any(t - 1440 * MIN <= mk["first_candle"] <= t for mk in marks))
-out = {"n_bad_minutes": len(rows), "bad_minutes": rows,
+res = {"n_bad_minutes": len(rows), "bad_minutes": rows,
        "K5": [r["min"] for r in rows if r["labels"] == ["K5"]],
        "counts": {x: sum(1 for r in rows if x in r["labels"]) for x in ("K1", "K2a", "K2b", "K2c", "K3", "K5")},
        "bad_by_source": {k: len(v) for k, v in src.items()},
@@ -195,7 +204,5 @@ out = {"n_bad_minutes": len(rows), "bad_minutes": rows,
        "K3_cover_window": {"minutes": len(allm), "K3": k3_all},
        "live_kline_windows_with_issues": [{"end": f7(t), "reread_overwritten": a, "decided_on_unsettled": b,
                                            "s1_close_rewritten": c} for t, a, b, c in k1 if a or b or c][:60]}
-json.dump(out, open(W + "/work/labels_d1.json", "w"), indent=1, default=str)
-print(json.dumps({k: v for k, v in out.items() if k != "bad_minutes"}, indent=1, default=str)[:5000])
-for r in rows:
-    print(r)
+json.dump(res, open(WORK + "/labels_" + TAG + ".json", "w"), indent=1, default=str)
+print(json.dumps({k: v for k, v in res.items() if k != "bad_minutes"}, indent=1, default=str)[:5000])

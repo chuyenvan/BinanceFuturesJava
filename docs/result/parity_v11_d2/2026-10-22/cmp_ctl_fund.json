@@ -1,0 +1,349 @@
+{
+ "ref": "/home/ubuntu/claude_master/parity_v11w/d/2026-10-22/runs/fund_BT.csv.gz",
+ "new": "/home/ubuntu/claude_master/parity_v11w/d/2026-10-22/runs/fund_NEW2.csv.gz",
+ "kind": "fund",
+ "rows_ref": 48684,
+ "rows_new": 48684,
+ "rows_both": 48684,
+ "only_ref": 0,
+ "only_new": 0,
+ "cols": {
+  "cand": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f0": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f1": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f2": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f3": {
+   "bit": 0.9442527319037055,
+   "tol": 1.0,
+   "n_bit_diff": 2714,
+   "funding_dep": false
+  },
+  "f4": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f5": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f6": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f7": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f8": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f9": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f10": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f11": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f12": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f13": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f14": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f15": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f16": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f17": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f18": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f19": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f20": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f21": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f22": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f23": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f24": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f25": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f26": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f27": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f28": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f29": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f30": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f31": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f32": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f33": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f34": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f35": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f36": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f37": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f38": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f39": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f40": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f41": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f42": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f43": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f44": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  }
+ },
+ "rows_bit_nonfund": 0.9442527319037055,
+ "rows_tol_nonfund": 1.0,
+ "minutes": 1440,
+ "minutes_bit_nonfund_all": 1361,
+ "bad_minutes_nonfund": [
+  "1792628160000",
+  "1792628460000",
+  "1792631340000",
+  "1792631640000",
+  "1792631940000",
+  "1792633860000",
+  "1792634280000",
+  "1792636260000",
+  "1792636740000",
+  "1792639200000",
+  "1792642020000",
+  "1792642200000",
+  "1792642500000",
+  "1792643040000",
+  "1792645020000",
+  "1792647480000",
+  "1792648620000",
+  "1792649160000",
+  "1792649880000",
+  "1792650120000",
+  "1792650480000",
+  "1792652460000",
+  "1792654620000",
+  "1792655340000",
+  "1792655940000",
+  "1792656000000",
+  "1792656240000",
+  "1792656900000",
+  "1792658280000",
+  "1792658460000",
+  "1792658700000",
+  "1792663740000",
+  "1792665600000",
+  "1792666980000",
+  "1792668840000",
+  "1792669020000",
+  "1792669500000",
+  "1792670100000",
+  "1792670160000",
+  "1792673940000",
+  "1792674540000",
+  "1792675380000",
+  "1792676640000",
+  "1792678140000",
+  "1792678200000",
+  "1792678260000",
+  "1792678860000",
+  "1792679160000",
+  "1792679580000",
+  "1792680360000"
+ ],
+ "n_bad_minutes_nonfund": 79,
+ "cols_diff_nonfund": {
+  "f3": 2714
+ },
+ "cols_diff_fund": {}
+}

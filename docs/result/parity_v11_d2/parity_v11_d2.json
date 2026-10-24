@@ -1,0 +1,99 @@
+{
+ "round": "d2",
+ "prereg": "481701b2 + ADDENDUM1 fea9fb97",
+ "days": {
+  "2026-10-22": {
+   "status": {
+    "P1": "DAT",
+    "P1m": "DAT",
+    "S1_I": "DAT",
+    "S1_m": "DAT",
+    "GV_I": "DAT",
+    "P2": "DAT (yeu: 0 cap r/q>=0,9)",
+    "GATE_LOG_n_pass": "1440/1440",
+    "P3": "DAT",
+    "TSX": "DAT",
+    "CTL": "DAT",
+    "K5_Kprime": 416,
+    "ket_luan": "XAM (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)"
+   },
+   "rq": {
+    "ge09_live": 0,
+    "ge09_off": 0,
+    "ge08_live": 0,
+    "ge08_off": 0,
+    "max_live": 0.6946801,
+    "max_off": 0.69468004,
+    "n_pairs": 34560
+   }
+  },
+  "2026-10-23": {
+   "status": {
+    "P1": "KHONG DO DUOC",
+    "P1m": "DAT",
+    "S1_I": "DAT",
+    "S1_m": "DAT",
+    "GV_I": "DAT",
+    "P2": "KHONG DO DUOC",
+    "GATE_LOG_n_pass": "1440/1440",
+    "P3": "DAT",
+    "TSX": "DAT",
+    "CTL": "KHONG DO DUOC",
+    "K5_Kprime": null,
+    "ket_luan": "KHONG DO DUOC (mot phan) (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)"
+   },
+   "rq": {
+    "ge09_live": 28,
+    "ge09_off": null,
+    "ge08_live": 41,
+    "ge08_off": null,
+    "max_live": 1.6572306156158447,
+    "max_off": null,
+    "n_pairs": 34560,
+    "n_pass_live": 25,
+    "note": "chi phia live (Vision ngay D chua co)"
+   }
+  }
+ },
+ "cumulative": {
+  "P2_pairs_both_sides_measured": {
+   "n_pairs": 67824,
+   "ge09_live": 0,
+   "ge09_off": 0,
+   "ge08_live": 6,
+   "ge08_off": 6
+  },
+  "P2_pairs_live_side_all_days": {
+   "n_pairs": 102384,
+   "ge09_live": 28,
+   "ge08_live": 47
+  },
+  "P2_max_rq": {
+   "live": 1.6572306156158447,
+   "off": 0.8913218
+  },
+  "days_measured": [
+   "2026-10-21",
+   "2026-10-22",
+   "2026-10-23"
+  ],
+  "verdicts": {
+   "2026-10-21": "DAT (so bo cho phan funding: phan quyet chinh thuc P1/P2-funding o luot M)",
+   "2026-10-22": "XAM (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)",
+   "2026-10-23": "KHONG DO DUOC (mot phan) (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)"
+  }
+ },
+ "D1": {
+  "status_official_add1": "DAT (so bo cho phan funding: phan quyet chinh thuc P1/P2-funding o luot M)",
+  "K5_Kprime_relabel_only": 375,
+  "rq": {
+   "ge09_live": 0,
+   "ge09_off": 0,
+   "ge08_live": 6,
+   "ge08_off": 6,
+   "max_live": 0.8913219,
+   "max_off": 0.8913218,
+   "n_pairs": 33264
+  }
+ }
+}

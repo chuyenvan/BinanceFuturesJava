@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
 """S1-V (PREREG_PARITY_V11_WINDOW §4): tinh lai f0..f6 cua S1 tu close 1h Vision (code S1FeatureLive decompiled:
 vol7d/dd7d/hrsSinceHigh7d/ret/rankPct), tiem f7/f8 live, cham ONNX s1a2x1 => score/top-24 vs live s1_dump.
-Khong doc 242. Input: vision/klines_1m/2026-10-0*..21, live/s1.
+Tham so hoa tu d1_s1v.py (5f8e7291) theo PV_DAY (py/pv_cfg.py): ngay Vision = D-15..D. Khong doc 242.
 """
-import glob
 import json
 import os
-import zipfile
+import pickle
+import sys
 
 import numpy as np
 import pandas as pd
 import onnxruntime as ort
 
-W = os.path.expanduser("~/claude_master/parity_v11w")
-T0, T1 = 1792543980000, 1792627140000
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from pv_cfg import cfg, globs  # noqa: E402
+
+C = cfg()
+W, WORK, TAG = C["ROOT"], C["WORK"], C["tag"]
+T0, T1 = C["T0"], C["T1"]
 MINP = 84
-MOD = os.path.expanduser("~/claude_master/parity_1020/raw242/models/c3_models/s1a2x1_cut20251231.onnx")
+MOD = C["MOD"] + "/c3_models/s1a2x1_cut20251231.onnx"
 
 
 def ret(c, i, k):
@@ -38,13 +42,6 @@ def roll_max(c, i, w, minp):
     return float(np.max(a))
 
 
-def dd7d(c, i):
-    m = roll_max(c, i, 168, MINP)
-    if np.isnan(m) or m == 0 or np.isnan(c[i]):
-        return np.nan
-    return c[i] / m - 1
-
-
 def hrs_since_high(c, i):
     if i < 167 or i >= len(c):
         return np.nan
@@ -55,19 +52,8 @@ def hrs_since_high(c, i):
     return (167 - j) / 168.0
 
 
-def vol7d(c, i):
-    st = max(0, i - 168 + 1)
-    r = np.array([ret(c, j, 1) for j in range(st, i + 1)])
-    r = r[~np.isnan(r)]
-    if len(r) < MINP or len(r) < 2:
-        return np.nan
-    mu = r.mean()
-    return float(np.sqrt(((r - mu) ** 2).sum() / len(r)))
-
-
 def rank_pct(v):
     v = np.asarray(v, float)
-    n = np.isnan(v).sum()
     out = np.full(len(v), np.nan)
     ok = ~np.isnan(v)
     m = ok.sum()
@@ -93,12 +79,11 @@ RCACHE = {}
 
 def build_closes(syms):
     """sym -> (hour_ts array, close array) tu Vision 1m daily (pandas C parser)."""
-    days = ["2026-10-%02d" % d for d in range(6, 22)]
     out = {}
     for s in syms:
         ts, cl = [], []
-        for d in days:
-            p = "%s/vision/klines_1m/%s/%s.zip" % (W, d, s)
+        for d in C["s1v_days"]:
+            p = "%s/%s/%s.zip" % (C["VIS"], d, s)
             if not os.path.exists(p):
                 continue
             try:
@@ -122,39 +107,32 @@ def build_closes(syms):
 
 
 def main():
-    fs = sorted(glob.glob(W + "/live/s1/s1_dump_2026102[12]_*.csv.gz"))
+    fs = globs(C["s1_globs"])
     S = pd.concat([pd.read_csv(p) for p in fs], ignore_index=True)
     S = S[(S.ts >= T0) & (S.ts <= T1)]
     syms = sorted(S.symbol.unique())
-    cache = W + "/work/closes_cache.pkl"
+    cache = WORK + "/closes_cache.pkl"
     if os.path.exists(cache):
-        import pickle
-        C = pickle.load(open(cache, "rb"))
+        C1 = pickle.load(open(cache, "rb"))
     else:
-        C = build_closes(syms)
-        import pickle
-        pickle.dump(C, open(cache, "wb"))
-    print("closes syms=%d" % len(C), flush=True)
+        C1 = build_closes(syms)
+        pickle.dump(C1, open(cache, "wb"))
+    print("closes syms=%d" % len(C1), flush=True)
     sess = ort.InferenceSession(MOD, providers=["CPUExecutionProvider"])
     nm = sess.get_inputs()[0].name
     rows = []
     hours = sorted(S.ts.unique())
-    per_hour = {}
     for h in hours:
         sh = S[S.ts == h]
         feats = {}
         for s in sh.symbol.values:
-            if s not in C:
+            if s not in C1:
                 continue
-            th, cv = C[s]
+            th, cv = C1[s]
             idx = np.searchsorted(th, h - 3600000, "right") - 1
             if idx < 0:
                 continue
-            if s not in per_hour:
-                per_hour[s] = (th, cv)
-            # tinh truc tiep (nhanh: chi 1 chi so)
             st = max(0, idx - 167)
-            key = (id(cv), len(cv))
             r_all = RCACHE.get(s)
             if r_all is None or len(r_all) != len(cv):
                 r_all = np.full(len(cv), np.nan)
@@ -208,10 +186,11 @@ def main():
     res["top24_jaccard_mean"] = float(np.mean([v["jaccard"] for v in TOP.values()]))
     res["top24_same_order_frac"] = float(np.mean([v["same_order"] for v in TOP.values()]))
     res["top24_jaccard_min"] = float(np.min([v["jaccard"] for v in TOP.values()]))
-    D.to_csv(W + "/work/s1v_rows.csv.gz", index=False)
-    json.dump(res, open(W + "/work/s1v_d1.json", "w"), indent=1)
+    D.to_csv(WORK + "/s1v_rows.csv.gz", index=False)
+    json.dump(res, open(WORK + "/s1v_" + TAG + ".json", "w"), indent=1)
     print(json.dumps(res, indent=1))
 
 
 if __name__ == "__main__":
+    os.makedirs(WORK, exist_ok=True)
     main()

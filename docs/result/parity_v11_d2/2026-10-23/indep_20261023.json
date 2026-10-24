@@ -1,0 +1,13 @@
+{
+ "day": "2026-10-23",
+ "P3": {
+  "buffer_file": "/home/ubuntu/claude_master/pull242/2026-10-23/run/gate_ratio_live.bin.gz",
+  "log_file": "/home/ubuntu/claude_master/pull242/2026-10-23/logs/full.log@1792805130_42483444.gz",
+  "n_records": 769232,
+  "bad": 0,
+  "hours": 24,
+  "missing": 0,
+  "n_rel_gt_1e-6": 0,
+  "max_rel": 6.354013352561246e-10
+ }
+}
