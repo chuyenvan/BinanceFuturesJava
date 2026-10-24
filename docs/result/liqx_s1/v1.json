@@ -1,0 +1,114 @@
+[
+ {
+  "T_on": "2025-10-10T21:00:00",
+  "T_star": "2025-10-10T21:10:00",
+  "mkt_pre_identical": true,
+  "coin_pre_identical": true,
+  "n_pre": 2270,
+  "post_buckets_changed": 304,
+  "onset_exh_orig": [
+   [
+    1760109900000,
+    1760111100000
+   ],
+   [
+    1760130000000,
+    1760130600000
+   ]
+  ],
+  "onset_exh_x3": [
+   [
+    1760109900000,
+    1760111100000
+   ],
+   [
+    1760130000000,
+    1760130600000
+   ]
+  ],
+  "onset_exh_unchanged": true,
+  "max_abs_vs_pipeline": 0.0,
+  "nan_mismatch_vs_pipeline": 0,
+  "PASS": true
+ },
+ {
+  "T_on": "2022-05-11T11:05:00",
+  "T_star": "2022-05-11T11:15:00",
+  "mkt_pre_identical": true,
+  "coin_pre_identical": true,
+  "n_pre": 2151,
+  "post_buckets_changed": 377,
+  "onset_exh_orig": [
+   [
+    1652194200000,
+    1652194800000
+   ],
+   [
+    1652218800000,
+    1652219400000
+   ],
+   [
+    1652251800000,
+    1652253600000
+   ],
+   [
+    1652267100000,
+    1652267700000
+   ]
+  ],
+  "onset_exh_x3": [
+   [
+    1652194200000,
+    1652194800000
+   ],
+   [
+    1652218800000,
+    1652219400000
+   ],
+   [
+    1652251800000,
+    1652253600000
+   ],
+   [
+    1652267100000,
+    1652267700000
+   ]
+  ],
+  "onset_exh_unchanged": true,
+  "max_abs_vs_pipeline": 0.0,
+  "nan_mismatch_vs_pipeline": 0,
+  "PASS": true
+ },
+ {
+  "T_on": "2024-04-13T17:40:00",
+  "T_star": "2024-04-13T17:50:00",
+  "mkt_pre_identical": true,
+  "coin_pre_identical": true,
+  "n_pre": 2230,
+  "post_buckets_changed": 308,
+  "onset_exh_orig": [
+   [
+    1712943000000,
+    1712943600000
+   ],
+   [
+    1713030000000,
+    1713030600000
+   ]
+  ],
+  "onset_exh_x3": [
+   [
+    1712943000000,
+    1712943600000
+   ],
+   [
+    1713030000000,
+    1713030600000
+   ]
+  ],
+  "onset_exh_unchanged": true,
+  "max_abs_vs_pipeline": 0.0,
+  "nan_mismatch_vs_pipeline": 0,
+  "PASS": true
+ }
+]

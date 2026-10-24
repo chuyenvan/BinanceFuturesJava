@@ -1,0 +1,1827 @@
+{
+ "V4": {
+  "T_on": "2025-10-10T21:00:00",
+  "T_peak": "2025-10-10T21:20:00",
+  "T_exh": "2025-10-10T21:10:00",
+  "T_end": "2025-10-10T22:55:00",
+  "depth": -0.8383671968262385,
+  "I_peak": 0.04705849932526225,
+  "sP2_peak_recomputed_absdiff": 0.0,
+  "top_coins_at_peak": [
+   {
+    "sym": "BTCUSDT",
+    "P2": 378046530.3352,
+    "oiv0": 10137245919.281006,
+    "oidrop": 736263487.693006,
+    "tsx": 378046530.3352,
+    "r5": -0.080722,
+    "I": 0.037293
+   },
+   {
+    "sym": "ETHUSDT",
+    "P2": 174082646.35676,
+    "oiv0": 7148773008.043776,
+    "oidrop": 444278041.55112,
+    "tsx": 174082646.35676,
+    "r5": -0.068609,
+    "I": 0.024351
+   },
+   {
+    "sym": "SOLUSDT",
+    "P2": 130055326.83681,
+    "oiv0": 1905688798.6336,
+    "oidrop": 383287088.0588,
+    "tsx": 130055326.83681,
+    "r5": -0.220501,
+    "I": 0.068246
+   },
+   {
+    "sym": "DOGEUSDT",
+    "P2": 64052595.80059,
+    "oiv0": 498078257.82705,
+    "oidrop": 228482708.1697,
+    "tsx": 64052595.80059,
+    "r5": -0.577339,
+    "I": 0.128599
+   },
+   {
+    "sym": "BNBUSDT",
+    "P2": 45814750.8792,
+    "oiv0": 801106469.3745,
+    "oidrop": 191270883.66327,
+    "tsx": 45814750.8792,
+    "r5": -0.233314,
+    "I": 0.057189
+   },
+   {
+    "sym": "XRPUSDT",
+    "P2": 30588900.93793,
+    "oiv0": 724357708.486254,
+    "oidrop": 226288334.444364,
+    "tsx": 30588900.93793,
+    "r5": -0.37178,
+    "I": 0.042229
+   },
+   {
+    "sym": "ENAUSDT",
+    "P2": 29448898.8046,
+    "oiv0": 221123078.267,
+    "oidrop": 141141194.7226,
+    "tsx": 29448898.8046,
+    "r5": -1.020965,
+    "I": 0.133179
+   },
+   {
+    "sym": "ADAUSDT",
+    "P2": 23224571.1149,
+    "oiv0": 181773033.515,
+    "oidrop": 84649593.808985,
+    "tsx": 23224571.1149,
+    "r5": -0.656922,
+    "I": 0.127767
+   }
+  ]
+ },
+ "V5": [
+  {
+   "level": "COIN",
+   "sym": "PEOPLEUSDT",
+   "T_on": "2022-02-01 01:35",
+   "n": 13,
+   "spearman_I_vs_liqfrac": 0.4563234725428592,
+   "sum_P2": 6041284.82636245,
+   "sum_liq_long": 35953.01537,
+   "liq_in_onset_bucket": 11316.82491
+  },
+  {
+   "level": "COIN",
+   "sym": "CELRUSDT",
+   "T_on": "2022-03-01 15:05",
+   "n": 23,
+   "spearman_I_vs_liqfrac": 0.36310489211449437,
+   "sum_P2": 676889.59956331,
+   "sum_liq_long": 16004.800130000001,
+   "liq_in_onset_bucket": 5542.28649
+  },
+  {
+   "level": "COIN",
+   "sym": "KNCUSDT",
+   "T_on": "2022-03-01 16:55",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.8204559355370362,
+   "sum_P2": 964100.9411065578,
+   "sum_liq_long": 13667.98529,
+   "liq_in_onset_bucket": 3064.87655
+  },
+  {
+   "level": "COIN",
+   "sym": "ALPHAUSDT",
+   "T_on": "2022-04-01 01:55",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.7137299601826249,
+   "sum_P2": 499322.06132344995,
+   "sum_liq_long": 13632.67624,
+   "liq_in_onset_bucket": 7239.51043
+  },
+  {
+   "level": "COIN",
+   "sym": "ARUSDT",
+   "T_on": "2022-04-01 02:30",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.7662610281769212,
+   "sum_P2": 451555.4000241421,
+   "sum_liq_long": 18136.652700000002,
+   "liq_in_onset_bucket": 15436.2904
+  },
+  {
+   "level": "COIN",
+   "sym": "HNTUSDT",
+   "T_on": "2022-04-01 02:50",
+   "n": 12,
+   "spearman_I_vs_liqfrac": 0.9384571137702378,
+   "sum_P2": 1428232.2729041218,
+   "sum_liq_long": 44968.066100000004,
+   "liq_in_onset_bucket": 12356.8606
+  },
+  {
+   "level": "COIN",
+   "sym": "RENUSDT",
+   "T_on": "2022-04-01 02:50",
+   "n": 18,
+   "spearman_I_vs_liqfrac": 0.7050386995499953,
+   "sum_P2": 1141434.1337219314,
+   "sum_liq_long": 21442.37531,
+   "liq_in_onset_bucket": 1411.4262600000002
+  },
+  {
+   "level": "COIN",
+   "sym": "ENSUSDT",
+   "T_on": "2022-04-01 03:00",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.9538634047300502,
+   "sum_P2": 673290.1710249197,
+   "sum_liq_long": 48956.3413,
+   "liq_in_onset_bucket": 21079.5632
+  },
+  {
+   "level": "COIN",
+   "sym": "IOTXUSDT",
+   "T_on": "2022-04-01 04:05",
+   "n": 13,
+   "spearman_I_vs_liqfrac": 0.6863116428389843,
+   "sum_P2": 2413923.3705858113,
+   "sum_liq_long": 17140.60945,
+   "liq_in_onset_bucket": 0.0
+  },
+  {
+   "level": "COIN",
+   "sym": "CELRUSDT",
+   "T_on": "2022-04-01 06:10",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.7474093186836598,
+   "sum_P2": 1446284.4136587717,
+   "sum_liq_long": 11585.199620000001,
+   "liq_in_onset_bucket": 9585.50834
+  },
+  {
+   "level": "COIN",
+   "sym": "CELRUSDT",
+   "T_on": "2022-04-01 09:35",
+   "n": 20,
+   "spearman_I_vs_liqfrac": 0.5805929179325584,
+   "sum_P2": 3071929.407258907,
+   "sum_liq_long": 32628.68972,
+   "liq_in_onset_bucket": 7288.747710000001
+  },
+  {
+   "level": "COIN",
+   "sym": "ALPHAUSDT",
+   "T_on": "2022-04-01 10:20",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.5826856325833839,
+   "sum_P2": 1050055.0836313171,
+   "sum_liq_long": 10651.39549,
+   "liq_in_onset_bucket": 5188.50365
+  },
+  {
+   "level": "COIN",
+   "sym": "KAVAUSDT",
+   "T_on": "2022-04-01 20:30",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.808476315209445,
+   "sum_P2": 557696.451660221,
+   "sum_liq_long": 5703.6554399999995,
+   "liq_in_onset_bucket": 3608.82507
+  },
+  {
+   "level": "COIN",
+   "sym": "KNCUSDT",
+   "T_on": "2022-05-01 01:10",
+   "n": 13,
+   "spearman_I_vs_liqfrac": 0.37774102370030355,
+   "sum_P2": 1759744.9482893983,
+   "sum_liq_long": 92173.34017,
+   "liq_in_onset_bucket": 22076.14305
+  },
+  {
+   "level": "COIN",
+   "sym": "BNXUSDT",
+   "T_on": "2022-05-01 02:50",
+   "n": 14,
+   "spearman_I_vs_liqfrac": 0.4861183144403468,
+   "sum_P2": 2280079.37295838,
+   "sum_liq_long": 24972.37299,
+   "liq_in_onset_bucket": 4003.10284
+  },
+  {
+   "level": "COIN",
+   "sym": "APEUSDT",
+   "T_on": "2022-05-01 04:15",
+   "n": 21,
+   "spearman_I_vs_liqfrac": 0.3325629756283726,
+   "sum_P2": 18951321.728558872,
+   "sum_liq_long": 272099.6895,
+   "liq_in_onset_bucket": 44874.2765
+  },
+  {
+   "level": "COIN",
+   "sym": "ENSUSDT",
+   "T_on": "2022-05-01 04:55",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.6992227591000606,
+   "sum_P2": 1144583.631286025,
+   "sum_liq_long": 34869.2953,
+   "liq_in_onset_bucket": 8393.1916
+  },
+  {
+   "level": "COIN",
+   "sym": "IMXUSDT",
+   "T_on": "2022-05-01 09:40",
+   "n": 17,
+   "spearman_I_vs_liqfrac": 0.489247311827957,
+   "sum_P2": 400825.3501147395,
+   "sum_liq_long": 2489.4882999999995,
+   "liq_in_onset_bucket": 935.0331999999999
+  },
+  {
+   "level": "COIN",
+   "sym": "GTCUSDT",
+   "T_on": "2022-06-01 00:15",
+   "n": 11,
+   "spearman_I_vs_liqfrac": 0.6903452589658139,
+   "sum_P2": 389114.67374224914,
+   "sum_liq_long": 34680.575600000004,
+   "liq_in_onset_bucket": 10067.7922
+  },
+  {
+   "level": "COIN",
+   "sym": "WAVESUSDT",
+   "T_on": "2022-06-01 01:15",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.6920253482126268,
+   "sum_P2": 2454027.960686746,
+   "sum_liq_long": 20906.92519,
+   "liq_in_onset_bucket": 2043.48629
+  },
+  {
+   "level": "COIN",
+   "sym": "DENTUSDT",
+   "T_on": "2022-06-01 04:40",
+   "n": 12,
+   "spearman_I_vs_liqfrac": 0.5637450199203187,
+   "sum_P2": 771281.1004601989,
+   "sum_liq_long": 18249.666752,
+   "liq_in_onset_bucket": 598.18025
+  },
+  {
+   "level": "COIN",
+   "sym": "OGNUSDT",
+   "T_on": "2022-06-01 07:10",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.6132505339260791,
+   "sum_P2": 960401.0306092501,
+   "sum_liq_long": 6108.585000000001,
+   "liq_in_onset_bucket": 4038.6150000000002
+  },
+  {
+   "level": "COIN",
+   "sym": "DENTUSDT",
+   "T_on": "2022-06-01 07:45",
+   "n": 12,
+   "spearman_I_vs_liqfrac": 0.4328451548921767,
+   "sum_P2": 277804.5453806899,
+   "sum_liq_long": 10862.736647999998,
+   "liq_in_onset_bucket": 1184.403783
+  },
+  {
+   "level": "COIN",
+   "sym": "GMTUSDT",
+   "T_on": "2022-06-01 14:30",
+   "n": 14,
+   "spearman_I_vs_liqfrac": 0.5728376505106737,
+   "sum_P2": 7610839.54408445,
+   "sum_liq_long": 89066.75335999999,
+   "liq_in_onset_bucket": 13750.26233
+  },
+  {
+   "level": "COIN",
+   "sym": "WAVESUSDT",
+   "T_on": "2022-06-01 14:30",
+   "n": 21,
+   "spearman_I_vs_liqfrac": 0.38909396819790676,
+   "sum_P2": 6939057.172988843,
+   "sum_liq_long": 163505.99381,
+   "liq_in_onset_bucket": 6809.1511199999995
+  },
+  {
+   "level": "COIN",
+   "sym": "GALUSDT",
+   "T_on": "2022-06-01 14:35",
+   "n": 11,
+   "spearman_I_vs_liqfrac": 0.94,
+   "sum_P2": 868459.9797000012,
+   "sum_liq_long": 12205.09995,
+   "liq_in_onset_bucket": 4510.87729
+  },
+  {
+   "level": "COIN",
+   "sym": "SKLUSDT",
+   "T_on": "2022-06-01 14:35",
+   "n": 33,
+   "spearman_I_vs_liqfrac": 0.7374702527847955,
+   "sum_P2": 1683669.232750861,
+   "sum_liq_long": 49197.96153,
+   "liq_in_onset_bucket": 4568.22771
+  },
+  {
+   "level": "COIN",
+   "sym": "CHRUSDT",
+   "T_on": "2022-06-01 14:40",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.8885955896896605,
+   "sum_P2": 487455.8841345099,
+   "sum_liq_long": 16699.0039,
+   "liq_in_onset_bucket": 6326.3492
+  },
+  {
+   "level": "COIN",
+   "sym": "MASKUSDT",
+   "T_on": "2022-06-01 14:40",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.8670202638526013,
+   "sum_P2": 346478.0817163093,
+   "sum_liq_long": 12668.8612,
+   "liq_in_onset_bucket": 8127.4403999999995
+  },
+  {
+   "level": "COIN",
+   "sym": "TOMOUSDT",
+   "T_on": "2022-06-01 14:40",
+   "n": 32,
+   "spearman_I_vs_liqfrac": 0.5960552707822598,
+   "sum_P2": 1106806.9864420788,
+   "sum_liq_long": 22141.3011,
+   "liq_in_onset_bucket": 12535.1224
+  },
+  {
+   "level": "COIN",
+   "sym": "RSRUSDT",
+   "T_on": "2022-06-01 15:25",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.8620436566990364,
+   "sum_P2": 500307.13231666945,
+   "sum_liq_long": 14704.248225,
+   "liq_in_onset_bucket": 12702.428901
+  },
+  {
+   "level": "COIN",
+   "sym": "KSMUSDT",
+   "T_on": "2022-06-01 16:20",
+   "n": 23,
+   "spearman_I_vs_liqfrac": 0.5192657224243088,
+   "sum_P2": 1146718.3894630289,
+   "sum_liq_long": 41288.4113,
+   "liq_in_onset_bucket": 392.0384
+  },
+  {
+   "level": "COIN",
+   "sym": "BELUSDT",
+   "T_on": "2022-06-01 16:25",
+   "n": 21,
+   "spearman_I_vs_liqfrac": 0.504044659079662,
+   "sum_P2": 2037825.0036440874,
+   "sum_liq_long": 32884.34067,
+   "liq_in_onset_bucket": 9346.52413
+  },
+  {
+   "level": "COIN",
+   "sym": "SXPUSDT",
+   "T_on": "2022-06-01 16:50",
+   "n": 17,
+   "spearman_I_vs_liqfrac": 0.833222920695109,
+   "sum_P2": 1048236.8076491994,
+   "sum_liq_long": 27115.317669999997,
+   "liq_in_onset_bucket": 6731.1114099999995
+  },
+  {
+   "level": "COIN",
+   "sym": "GALUSDT",
+   "T_on": "2022-06-01 17:55",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.6468533029083301,
+   "sum_P2": 1228869.3738923296,
+   "sum_liq_long": 29443.628959999995,
+   "liq_in_onset_bucket": 7913.02183
+  },
+  {
+   "level": "COIN",
+   "sym": "OGNUSDT",
+   "T_on": "2022-06-01 17:55",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.5,
+   "sum_P2": 1871334.833972272,
+   "sum_liq_long": 31832.606699999997,
+   "liq_in_onset_bucket": 14797.6497
+  },
+  {
+   "level": "COIN",
+   "sym": "GTCUSDT",
+   "T_on": "2022-06-01 20:35",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.8958791600969526,
+   "sum_P2": 383693.65410171077,
+   "sum_liq_long": 32256.7709,
+   "liq_in_onset_bucket": 8473.4393
+  },
+  {
+   "level": "COIN",
+   "sym": "C98USDT",
+   "T_on": "2022-06-01 20:45",
+   "n": 12,
+   "spearman_I_vs_liqfrac": 0.7838429884596078,
+   "sum_P2": 320327.3425405006,
+   "sum_liq_long": 12633.9496,
+   "liq_in_onset_bucket": 528.212
+  },
+  {
+   "level": "COIN",
+   "sym": "WAVESUSDT",
+   "T_on": "2022-06-01 22:35",
+   "n": 11,
+   "spearman_I_vs_liqfrac": 0.3264121643956441,
+   "sum_P2": 4088242.667367382,
+   "sum_liq_long": 34959.08747,
+   "liq_in_onset_bucket": 6349.50293
+  },
+  {
+   "level": "COIN",
+   "sym": "IMXUSDT",
+   "T_on": "2022-07-01 03:55",
+   "n": 12,
+   "spearman_I_vs_liqfrac": -0.008085842158543539,
+   "sum_P2": 426001.47712149104,
+   "sum_liq_long": 9785.700200000001,
+   "liq_in_onset_bucket": 1772.6526
+  },
+  {
+   "level": "COIN",
+   "sym": "OPUSDT",
+   "T_on": "2022-07-01 04:50",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.24913643956121992,
+   "sum_P2": 387055.7707245708,
+   "sum_liq_long": 772.0243173499999,
+   "liq_in_onset_bucket": 634.12388555
+  },
+  {
+   "level": "COIN",
+   "sym": "WAVESUSDT",
+   "T_on": "2022-07-01 04:50",
+   "n": 13,
+   "spearman_I_vs_liqfrac": 0.8608782420695301,
+   "sum_P2": 539045.9467510096,
+   "sum_liq_long": 12802.433719999999,
+   "liq_in_onset_bucket": 1703.04101
+  },
+  {
+   "level": "COIN",
+   "sym": "ZRXUSDT",
+   "T_on": "2022-07-01 04:50",
+   "n": 16,
+   "spearman_I_vs_liqfrac": 0.23276216335120584,
+   "sum_P2": 192973.12170854883,
+   "sum_liq_long": 3575.3507499999996,
+   "liq_in_onset_bucket": 741.31659
+  },
+  {
+   "level": "COIN",
+   "sym": "OGNUSDT",
+   "T_on": "2022-07-01 10:50",
+   "n": 11,
+   "spearman_I_vs_liqfrac": 0.3556414433624599,
+   "sum_P2": 730682.4978772524,
+   "sum_liq_long": 8555.7376,
+   "liq_in_onset_bucket": 4034.7943
+  },
+  {
+   "level": "COIN",
+   "sym": "ROSEUSDT",
+   "T_on": "2022-08-01 05:25",
+   "n": 14,
+   "spearman_I_vs_liqfrac": 0.7034507505575495,
+   "sum_P2": 596835.3574130194,
+   "sum_liq_long": 3833.4093399999997,
+   "liq_in_onset_bucket": 3320.63488
+  },
+  {
+   "level": "COIN",
+   "sym": "FILUSDT",
+   "T_on": "2022-08-01 10:15",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.7874771203798857,
+   "sum_P2": 8042401.468359321,
+   "sum_liq_long": 149327.0653,
+   "liq_in_onset_bucket": 133601.29499999998
+  },
+  {
+   "level": "COIN",
+   "sym": "BATUSDT",
+   "T_on": "2022-08-01 10:55",
+   "n": 19,
+   "spearman_I_vs_liqfrac": 0.6594585204426835,
+   "sum_P2": 616082.2797468307,
+   "sum_liq_long": 17416.42368,
+   "liq_in_onset_bucket": 1001.11502
+  },
+  {
+   "level": "COIN",
+   "sym": "OPUSDT",
+   "T_on": "2022-08-01 11:10",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.8509316770186335,
+   "sum_P2": 2138197.952065997,
+   "sum_liq_long": 20549.89247047,
+   "liq_in_onset_bucket": 7565.85774281
+  },
+  {
+   "level": "COIN",
+   "sym": "APEUSDT",
+   "T_on": "2022-08-01 13:30",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.9273210372571158,
+   "sum_P2": 1571842.1403819383,
+   "sum_liq_long": 23200.9565,
+   "liq_in_onset_bucket": 7071.4753
+  },
+  {
+   "level": "COIN",
+   "sym": "BAKEUSDT",
+   "T_on": "2022-08-01 13:35",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.7446471099018033,
+   "sum_P2": 401947.46494263015,
+   "sum_liq_long": 6578.8169,
+   "liq_in_onset_bucket": 1351.1217000000001
+  },
+  {
+   "level": "COIN",
+   "sym": "CHZUSDT",
+   "T_on": "2022-08-01 16:10",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.7442397287788216,
+   "sum_P2": 820207.3080901112,
+   "sum_liq_long": 53344.10227999999,
+   "liq_in_onset_bucket": 12629.83984
+  },
+  {
+   "level": "COIN",
+   "sym": "ENJUSDT",
+   "T_on": "2022-08-01 16:30",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.7016464154456235,
+   "sum_P2": 271053.4299738705,
+   "sum_liq_long": 5551.67562,
+   "liq_in_onset_bucket": 608.01073
+  },
+  {
+   "level": "COIN",
+   "sym": "OPUSDT",
+   "T_on": "2022-08-01 17:10",
+   "n": 21,
+   "spearman_I_vs_liqfrac": 0.6157088159260924,
+   "sum_P2": 4622484.272715443,
+   "sum_liq_long": 154757.06941401,
+   "liq_in_onset_bucket": 14613.74766042
+  },
+  {
+   "level": "COIN",
+   "sym": "ETCUSDT",
+   "T_on": "2022-08-01 17:20",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.5735425432790918,
+   "sum_P2": 4389788.094237208,
+   "sum_liq_long": 143884.42690999998,
+   "liq_in_onset_bucket": 8121.563359999999
+  },
+  {
+   "level": "COIN",
+   "sym": "SNXUSDT",
+   "T_on": "2022-08-01 17:30",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.6393557667164507,
+   "sum_P2": 351709.06143374875,
+   "sum_liq_long": 4713.0552,
+   "liq_in_onset_bucket": 1313.4196000000002
+  },
+  {
+   "level": "COIN",
+   "sym": "TRBUSDT",
+   "T_on": "2022-09-01 04:45",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.22012232416847313,
+   "sum_P2": 1437690.1395666786,
+   "sum_liq_long": 40269.5525,
+   "liq_in_onset_bucket": 5100.7611
+  },
+  {
+   "level": "COIN",
+   "sym": "DOGEUSDT",
+   "T_on": "2022-11-01 11:05",
+   "n": 12,
+   "spearman_I_vs_liqfrac": 0.5983523197322218,
+   "sum_P2": 40668765.10551554,
+   "sum_liq_long": 61237.278739999994,
+   "liq_in_onset_bucket": 19753.125213
+  },
+  {
+   "level": "COIN",
+   "sym": "1000LUNCUSDT",
+   "T_on": "2022-11-01 23:30",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.6643638388299198,
+   "sum_P2": 6275994.6027855165,
+   "sum_liq_long": 34541.5810357,
+   "liq_in_onset_bucket": 34330.6318005
+  },
+  {
+   "level": "COIN",
+   "sym": "MASKUSDT",
+   "T_on": "2022-12-01 14:20",
+   "n": 16,
+   "spearman_I_vs_liqfrac": 0.6497830079357044,
+   "sum_P2": 5587006.798910417,
+   "sum_liq_long": 53911.8336,
+   "liq_in_onset_bucket": 8806.306199999999
+  },
+  {
+   "level": "COIN",
+   "sym": "BANDUSDT",
+   "T_on": "2022-12-01 23:25",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.4539333748811057,
+   "sum_P2": 3744551.237556822,
+   "sum_liq_long": 17728.793360000003,
+   "liq_in_onset_bucket": 9467.43424
+  },
+  {
+   "level": "COIN",
+   "sym": "GALUSDT",
+   "T_on": "2023-02-01 04:05",
+   "n": 11,
+   "spearman_I_vs_liqfrac": 0.6684915499697451,
+   "sum_P2": 443514.4949580904,
+   "sum_liq_long": 7042.25584,
+   "liq_in_onset_bucket": 545.81879
+  },
+  {
+   "level": "COIN",
+   "sym": "SFPUSDT",
+   "T_on": "2023-02-01 06:10",
+   "n": 22,
+   "spearman_I_vs_liqfrac": 0.7006340883495222,
+   "sum_P2": 4088510.9444759395,
+   "sum_liq_long": 27740.9368,
+   "liq_in_onset_bucket": 4696.9632
+  },
+  {
+   "level": "COIN",
+   "sym": "RNDRUSDT",
+   "T_on": "2023-05-01 16:25",
+   "n": 12,
+   "spearman_I_vs_liqfrac": 0.7142857142857143,
+   "sum_P2": 3856430.393132183,
+   "sum_liq_long": 25823.1051979,
+   "liq_in_onset_bucket": 1130.5874568
+  },
+  {
+   "level": "COIN",
+   "sym": "BCHUSDT",
+   "T_on": "2023-07-01 01:25",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.8157598856167373,
+   "sum_P2": 12250361.985805172,
+   "sum_liq_long": 39615.60732,
+   "liq_in_onset_bucket": 15863.67537
+  },
+  {
+   "level": "COIN",
+   "sym": "FLOWUSDT",
+   "T_on": "2023-07-01 14:20",
+   "n": 12,
+   "spearman_I_vs_liqfrac": -0.03276585625368606,
+   "sum_P2": 423163.96470168943,
+   "sum_liq_long": 6128.7242,
+   "liq_in_onset_bucket": 0.0
+  },
+  {
+   "level": "COIN",
+   "sym": "COMPUSDT",
+   "T_on": "2023-08-01 01:45",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.8903274267533648,
+   "sum_P2": 3656382.3947698325,
+   "sum_liq_long": 58931.77758999999,
+   "liq_in_onset_bucket": 5569.51847
+  },
+  {
+   "level": "COIN",
+   "sym": "CRVUSDT",
+   "T_on": "2023-08-01 03:35",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.706422018348624,
+   "sum_P2": 2493977.205883881,
+   "sum_liq_long": 142323.5967,
+   "liq_in_onset_bucket": 114657.201
+  },
+  {
+   "level": "COIN",
+   "sym": "ARKMUSDT",
+   "T_on": "2023-09-01 13:20",
+   "n": 14,
+   "spearman_I_vs_liqfrac": 0.2652365063724608,
+   "sum_P2": 911500.2853054805,
+   "sum_liq_long": 4398.0729756,
+   "liq_in_onset_bucket": 22.9593913
+  },
+  {
+   "level": "COIN",
+   "sym": "1000PEPEUSDT",
+   "T_on": "2023-09-01 17:30",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.5394031061791459,
+   "sum_P2": 2380097.4719866477,
+   "sum_liq_long": 33187.8151411,
+   "liq_in_onset_bucket": 13663.9873323
+  },
+  {
+   "level": "COIN",
+   "sym": "ARKMUSDT",
+   "T_on": "2023-09-01 23:05",
+   "n": 12,
+   "spearman_I_vs_liqfrac": 0.8004983736958102,
+   "sum_P2": 1864078.1690204204,
+   "sum_liq_long": 9482.4413239,
+   "liq_in_onset_bucket": 3526.9050818
+  },
+  {
+   "level": "COIN",
+   "sym": "YGGUSDT",
+   "T_on": "2023-10-01 11:50",
+   "n": 16,
+   "spearman_I_vs_liqfrac": 0.6089984572058625,
+   "sum_P2": 2242465.5503805904,
+   "sum_liq_long": 11504.758083699999,
+   "liq_in_onset_bucket": 2560.9122802
+  },
+  {
+   "level": "COIN",
+   "sym": "OGNUSDT",
+   "T_on": "2023-10-01 16:15",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.19977432661993444,
+   "sum_P2": 2479853.9768684534,
+   "sum_liq_long": 3204.2197,
+   "liq_in_onset_bucket": 3005.7122
+  },
+  {
+   "level": "COIN",
+   "sym": "AMBUSDT",
+   "T_on": "2023-10-01 19:10",
+   "n": 16,
+   "spearman_I_vs_liqfrac": 0.5883266720296446,
+   "sum_P2": 1708170.0287880797,
+   "sum_liq_long": 8889.8357675,
+   "liq_in_onset_bucket": 1908.1219924
+  },
+  {
+   "level": "COIN",
+   "sym": "CYBERUSDT",
+   "T_on": "2023-11-01 03:10",
+   "n": 36,
+   "spearman_I_vs_liqfrac": 0.6589351771910047,
+   "sum_P2": 4066874.9400549214,
+   "sum_liq_long": 27095.5659257,
+   "liq_in_onset_bucket": 8345.6189927
+  },
+  {
+   "level": "COIN",
+   "sym": "BLZUSDT",
+   "T_on": "2023-11-01 09:00",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.7722911241525444,
+   "sum_P2": 1781686.2252018005,
+   "sum_liq_long": 9257.702060000001,
+   "liq_in_onset_bucket": 3640.0964200000003
+  },
+  {
+   "level": "COIN",
+   "sym": "RUNEUSDT",
+   "T_on": "2023-11-01 15:30",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.6602080908235405,
+   "sum_P2": 1186135.252,
+   "sum_liq_long": 13658.4795,
+   "liq_in_onset_bucket": 2527.6592
+  },
+  {
+   "level": "COIN",
+   "sym": "SOLUSDT",
+   "T_on": "2023-11-01 20:10",
+   "n": 14,
+   "spearman_I_vs_liqfrac": 0.42106917556930534,
+   "sum_P2": 8264202.865840683,
+   "sum_liq_long": 39689.7386,
+   "liq_in_onset_bucket": 6781.458
+  },
+  {
+   "level": "COIN",
+   "sym": "TRBUSDT",
+   "T_on": "2024-01-01 14:40",
+   "n": 31,
+   "spearman_I_vs_liqfrac": 0.6352457616786799,
+   "sum_P2": 23899280.32783,
+   "sum_liq_long": 82374.6961,
+   "liq_in_onset_bucket": 6819.782
+  },
+  {
+   "level": "COIN",
+   "sym": "TRBUSDT",
+   "T_on": "2024-01-01 22:25",
+   "n": 26,
+   "spearman_I_vs_liqfrac": 0.7944599390349478,
+   "sum_P2": 10114489.11871819,
+   "sum_liq_long": 44916.1781,
+   "liq_in_onset_bucket": 9473.2449
+  },
+  {
+   "level": "COIN",
+   "sym": "1000PEPEUSDT",
+   "T_on": "2024-03-01 15:10",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.5890767338705079,
+   "sum_P2": 4184005.522072753,
+   "sum_liq_long": 15455.0592184,
+   "liq_in_onset_bucket": 3887.912618
+  },
+  {
+   "level": "COIN",
+   "sym": "PEOPLEUSDT",
+   "T_on": "2024-03-01 20:30",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.9096774193548388,
+   "sum_P2": 2051004.880619998,
+   "sum_liq_long": 3659.9348200000004,
+   "liq_in_onset_bucket": 903.93422
+  },
+  {
+   "level": "COIN",
+   "sym": "1000FLOKIUSDT",
+   "T_on": "2024-04-01 05:55",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.9242172469366515,
+   "sum_P2": 6840951.564947661,
+   "sum_liq_long": 51370.614253700005,
+   "liq_in_onset_bucket": 15726.264174
+  },
+  {
+   "level": "COIN",
+   "sym": "1000PEPEUSDT",
+   "T_on": "2024-04-01 05:55",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.6565706694547585,
+   "sum_P2": 14697694.843347294,
+   "sum_liq_long": 95312.1917601,
+   "liq_in_onset_bucket": 28158.2701842
+  },
+  {
+   "level": "COIN",
+   "sym": "1000SHIBUSDT",
+   "T_on": "2024-04-01 05:55",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.8554210601351293,
+   "sum_P2": 10960682.94965712,
+   "sum_liq_long": 192602.92942,
+   "liq_in_onset_bucket": 25607.006961
+  },
+  {
+   "level": "COIN",
+   "sym": "GALAUSDT",
+   "T_on": "2024-04-01 05:55",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.905226481588638,
+   "sum_P2": 6224088.658198455,
+   "sum_liq_long": 121866.9553,
+   "liq_in_onset_bucket": 61843.09101999999
+  },
+  {
+   "level": "COIN",
+   "sym": "INJUSDT",
+   "T_on": "2024-04-01 05:55",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.6217655652065945,
+   "sum_P2": 5331222.929183448,
+   "sum_liq_long": 59979.110654899996,
+   "liq_in_onset_bucket": 25934.2608619
+  },
+  {
+   "level": "COIN",
+   "sym": "FILUSDT",
+   "T_on": "2024-04-01 15:10",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.4344790873862011,
+   "sum_P2": 5371343.250250014,
+   "sum_liq_long": 101615.04839999999,
+   "liq_in_onset_bucket": 9810.097600000001
+  },
+  {
+   "level": "COIN",
+   "sym": "1000PEPEUSDT",
+   "T_on": "2024-05-01 07:10",
+   "n": 13,
+   "spearman_I_vs_liqfrac": 0.2590780536520794,
+   "sum_P2": 6960134.131148262,
+   "sum_liq_long": 57067.56322459999,
+   "liq_in_onset_bucket": 11009.8411982
+  },
+  {
+   "level": "COIN",
+   "sym": "PEOPLEUSDT",
+   "T_on": "2024-08-01 05:05",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.7716867372978795,
+   "sum_P2": 1200390.1574091017,
+   "sum_liq_long": 48335.35436,
+   "liq_in_onset_bucket": 26778.67906
+  },
+  {
+   "level": "COIN",
+   "sym": "HIGHUSDT",
+   "T_on": "2024-08-01 15:05",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.857381989916462,
+   "sum_P2": 302230.81736220024,
+   "sum_liq_long": 7739.1643388,
+   "liq_in_onset_bucket": 3005.5769312999996
+  },
+  {
+   "level": "COIN",
+   "sym": "BAKEUSDT",
+   "T_on": "2024-09-01 06:05",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.15852330117794736,
+   "sum_P2": 887231.876691569,
+   "sum_liq_long": 17016.501900000003,
+   "liq_in_onset_bucket": 10709.6252
+  },
+  {
+   "level": "COIN",
+   "sym": "BNXUSDT",
+   "T_on": "2024-09-01 14:15",
+   "n": 11,
+   "spearman_I_vs_liqfrac": 0.7003502627189415,
+   "sum_P2": 644766.6013733889,
+   "sum_liq_long": 4888.5695314,
+   "liq_in_onset_bucket": 2268.4620165
+  },
+  {
+   "level": "COIN",
+   "sym": "COTIUSDT",
+   "T_on": "2024-10-01 15:00",
+   "n": 42,
+   "spearman_I_vs_liqfrac": 0.6011648513891503,
+   "sum_P2": 1712031.1986472507,
+   "sum_liq_long": 55036.47741000001,
+   "liq_in_onset_bucket": 3194.46065
+  },
+  {
+   "level": "COIN",
+   "sym": "1000FLOKIUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 38,
+   "spearman_I_vs_liqfrac": 0.3585190439797666,
+   "sum_P2": 7566000.119437554,
+   "sum_liq_long": 122066.1252468,
+   "liq_in_onset_bucket": 26473.7053216
+  },
+  {
+   "level": "COIN",
+   "sym": "1000LUNCUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 37,
+   "spearman_I_vs_liqfrac": 0.5954473832962438,
+   "sum_P2": 2393314.9821224217,
+   "sum_liq_long": 61120.8796462,
+   "liq_in_onset_bucket": 4753.0552395
+  },
+  {
+   "level": "COIN",
+   "sym": "1000PEPEUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 37,
+   "spearman_I_vs_liqfrac": 0.46651642181978975,
+   "sum_P2": 43327007.60516019,
+   "sum_liq_long": 361896.221509,
+   "liq_in_onset_bucket": 73590.365868
+  },
+  {
+   "level": "COIN",
+   "sym": "1000SHIBUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 14,
+   "spearman_I_vs_liqfrac": 0.6237708623360274,
+   "sum_P2": 8195694.515625739,
+   "sum_liq_long": 93498.783075,
+   "liq_in_onset_bucket": 28193.577767000002
+  },
+  {
+   "level": "COIN",
+   "sym": "AAVEUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 14,
+   "spearman_I_vs_liqfrac": 0.7131268676790438,
+   "sum_P2": 3431496.2004736993,
+   "sum_liq_long": 45089.6945,
+   "liq_in_onset_bucket": 14118.5515
+  },
+  {
+   "level": "COIN",
+   "sym": "APEUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 37,
+   "spearman_I_vs_liqfrac": 0.5164724789071916,
+   "sum_P2": 1769091.7326126809,
+   "sum_liq_long": 47985.5567,
+   "liq_in_onset_bucket": 7438.6085
+  },
+  {
+   "level": "COIN",
+   "sym": "APTUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 38,
+   "spearman_I_vs_liqfrac": 0.7617054356668649,
+   "sum_P2": 6456756.352168892,
+   "sum_liq_long": 117818.72243100002,
+   "liq_in_onset_bucket": 14043.413662
+  },
+  {
+   "level": "COIN",
+   "sym": "ARBUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 37,
+   "spearman_I_vs_liqfrac": 0.5489288607870891,
+   "sum_P2": 7370772.905287541,
+   "sum_liq_long": 122754.9295953,
+   "liq_in_onset_bucket": 21636.963658599998
+  },
+  {
+   "level": "COIN",
+   "sym": "ARKMUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 38,
+   "spearman_I_vs_liqfrac": 0.6807598385494819,
+   "sum_P2": 2890236.5682202205,
+   "sum_liq_long": 60554.757699099995,
+   "liq_in_onset_bucket": 14560.9474596
+  },
+  {
+   "level": "COIN",
+   "sym": "ARUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 37,
+   "spearman_I_vs_liqfrac": 0.5511401855817291,
+   "sum_P2": 6540662.05468558,
+   "sum_liq_long": 88739.3277,
+   "liq_in_onset_bucket": 19421.3449
+  },
+  {
+   "level": "COIN",
+   "sym": "ATOMUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 11,
+   "spearman_I_vs_liqfrac": 0.7216878364870322,
+   "sum_P2": 609810.7518926719,
+   "sum_liq_long": 53370.541869999994,
+   "liq_in_onset_bucket": 23654.09236
+  },
+  {
+   "level": "COIN",
+   "sym": "AVAXUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 11,
+   "spearman_I_vs_liqfrac": 0.5196152422706631,
+   "sum_P2": 3955281.6603159113,
+   "sum_liq_long": 168280.1693,
+   "liq_in_onset_bucket": 88550.2791
+  },
+  {
+   "level": "COIN",
+   "sym": "BLURUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 38,
+   "spearman_I_vs_liqfrac": 0.5627665938254736,
+   "sum_P2": 1591882.3923035394,
+   "sum_liq_long": 35728.7790778,
+   "liq_in_onset_bucket": 8561.1832633
+  },
+  {
+   "level": "COIN",
+   "sym": "BNXUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 37,
+   "spearman_I_vs_liqfrac": 0.42390706447271154,
+   "sum_P2": 2478826.5740623157,
+   "sum_liq_long": 101230.56015509999,
+   "liq_in_onset_bucket": 5070.774990100001
+  },
+  {
+   "level": "COIN",
+   "sym": "CFXUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 11,
+   "spearman_I_vs_liqfrac": 0.7601778544330072,
+   "sum_P2": 1749920.668124027,
+   "sum_liq_long": 14887.658970400003,
+   "liq_in_onset_bucket": 4049.9478625
+  },
+  {
+   "level": "COIN",
+   "sym": "DYDXUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 11,
+   "spearman_I_vs_liqfrac": 0.835417813386166,
+   "sum_P2": 2968173.118286706,
+   "sum_liq_long": 74362.9121,
+   "liq_in_onset_bucket": 28868.978
+  },
+  {
+   "level": "COIN",
+   "sym": "ENSUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 11,
+   "spearman_I_vs_liqfrac": 0.48112522432468807,
+   "sum_P2": 920560.2381843007,
+   "sum_liq_long": 27647.844299999997,
+   "liq_in_onset_bucket": 6734.3549
+  },
+  {
+   "level": "COIN",
+   "sym": "FETUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 37,
+   "spearman_I_vs_liqfrac": 0.3367686656588716,
+   "sum_P2": 11044302.60756952,
+   "sum_liq_long": 145526.75239570002,
+   "liq_in_onset_bucket": 18962.4979858
+  },
+  {
+   "level": "COIN",
+   "sym": "FILUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.6809000623216585,
+   "sum_P2": 2967844.7307830304,
+   "sum_liq_long": 112163.513,
+   "liq_in_onset_bucket": 51840.0449
+  },
+  {
+   "level": "COIN",
+   "sym": "GALAUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 11,
+   "spearman_I_vs_liqfrac": 0.8117540630909457,
+   "sum_P2": 1779378.0698559799,
+   "sum_liq_long": 72990.86815,
+   "liq_in_onset_bucket": 27250.17535
+  },
+  {
+   "level": "COIN",
+   "sym": "GMTUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 37,
+   "spearman_I_vs_liqfrac": 0.6173838556445604,
+   "sum_P2": 2052066.5104786812,
+   "sum_liq_long": 130396.55905000001,
+   "liq_in_onset_bucket": 10665.391590000001
+  },
+  {
+   "level": "COIN",
+   "sym": "ICPUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 37,
+   "spearman_I_vs_liqfrac": 0.5619638967245826,
+   "sum_P2": 2063542.203229789,
+   "sum_liq_long": 45148.919538,
+   "liq_in_onset_bucket": 11315.297203
+  },
+  {
+   "level": "COIN",
+   "sym": "INJUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 11,
+   "spearman_I_vs_liqfrac": 0.7409328454600196,
+   "sum_P2": 4106022.7093331376,
+   "sum_liq_long": 54215.0492802,
+   "liq_in_onset_bucket": 12762.3116678
+  },
+  {
+   "level": "COIN",
+   "sym": "JASMYUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 41,
+   "spearman_I_vs_liqfrac": 0.6699528140519537,
+   "sum_P2": 1864694.3651589688,
+   "sum_liq_long": 59136.291329,
+   "liq_in_onset_bucket": 13920.949878
+  },
+  {
+   "level": "COIN",
+   "sym": "LDOUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 11,
+   "spearman_I_vs_liqfrac": 0.5869727736761196,
+   "sum_P2": 1067508.9579563027,
+   "sum_liq_long": 26647.553425,
+   "liq_in_onset_bucket": 6450.182239
+  },
+  {
+   "level": "COIN",
+   "sym": "NEARUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 37,
+   "spearman_I_vs_liqfrac": 0.4461916326334127,
+   "sum_P2": 14942292.882847903,
+   "sum_liq_long": 259540.9832,
+   "liq_in_onset_bucket": 53115.2173
+  },
+  {
+   "level": "COIN",
+   "sym": "OPUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 11,
+   "spearman_I_vs_liqfrac": 0.7758405579940839,
+   "sum_P2": 1583970.1719494495,
+   "sum_liq_long": 26437.887668969997,
+   "liq_in_onset_bucket": 8352.30014097
+  },
+  {
+   "level": "COIN",
+   "sym": "PEOPLEUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 41,
+   "spearman_I_vs_liqfrac": 0.4416012788021212,
+   "sum_P2": 6790519.111085154,
+   "sum_liq_long": 141314.77604,
+   "liq_in_onset_bucket": 14239.2865
+  },
+  {
+   "level": "COIN",
+   "sym": "RDNTUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 37,
+   "spearman_I_vs_liqfrac": 0.259415593083477,
+   "sum_P2": 1055616.982958299,
+   "sum_liq_long": 36917.998522899994,
+   "liq_in_onset_bucket": 18055.5910765
+  },
+  {
+   "level": "COIN",
+   "sym": "REEFUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.5292555264002762,
+   "sum_P2": 2215091.1987779797,
+   "sum_liq_long": 50828.976085,
+   "liq_in_onset_bucket": 11752.426106
+  },
+  {
+   "level": "COIN",
+   "sym": "RUNEUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 11,
+   "spearman_I_vs_liqfrac": 0.6689458755944951,
+   "sum_P2": 2001191.2539999993,
+   "sum_liq_long": 40506.048,
+   "liq_in_onset_bucket": 14016.8899
+  },
+  {
+   "level": "COIN",
+   "sym": "SEIUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.6964445168388972,
+   "sum_P2": 4455680.397411924,
+   "sum_liq_long": 73722.5666767,
+   "liq_in_onset_bucket": 42683.3396794
+  },
+  {
+   "level": "COIN",
+   "sym": "STXUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 14,
+   "spearman_I_vs_liqfrac": 0.5594024824464292,
+   "sum_P2": 3136652.037752073,
+   "sum_liq_long": 28107.5620337,
+   "liq_in_onset_bucket": 8637.5364581
+  },
+  {
+   "level": "COIN",
+   "sym": "SUIUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.49959672366232943,
+   "sum_P2": 6099295.286235762,
+   "sum_liq_long": 151291.9152283,
+   "liq_in_onset_bucket": 38226.4140804
+  },
+  {
+   "level": "COIN",
+   "sym": "TRBUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 11,
+   "spearman_I_vs_liqfrac": 0.7153577683486333,
+   "sum_P2": 1334974.7017183588,
+   "sum_liq_long": 19027.1083,
+   "liq_in_onset_bucket": 6766.2354
+  },
+  {
+   "level": "COIN",
+   "sym": "WLDUSDT",
+   "T_on": "2024-10-01 15:05",
+   "n": 38,
+   "spearman_I_vs_liqfrac": 0.6975598675042436,
+   "sum_P2": 13297281.319182467,
+   "sum_liq_long": 261000.7440291,
+   "liq_in_onset_bucket": 75849.5461511
+  },
+  {
+   "level": "COIN",
+   "sym": "CRVUSDT",
+   "T_on": "2024-10-01 17:20",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.5586206896551724,
+   "sum_P2": 869759.324397891,
+   "sum_liq_long": 61142.697700000004,
+   "liq_in_onset_bucket": 38693.9151
+  },
+  {
+   "level": "COIN",
+   "sym": "DOGEUSDT",
+   "T_on": "2024-10-01 17:20",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.6963280627604909,
+   "sum_P2": 3899366.8256970244,
+   "sum_liq_long": 102628.83117699999,
+   "liq_in_onset_bucket": 48609.325528
+  },
+  {
+   "level": "COIN",
+   "sym": "FTMUSDT",
+   "T_on": "2024-10-01 17:20",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.20102763744734678,
+   "sum_P2": 2863176.4693116085,
+   "sum_liq_long": 69750.69540499999,
+   "liq_in_onset_bucket": 11485.550204
+  },
+  {
+   "level": "COIN",
+   "sym": "REEFUSDT",
+   "T_on": "2024-10-01 17:20",
+   "n": 14,
+   "spearman_I_vs_liqfrac": 0.5000000000000001,
+   "sum_P2": 2640322.651954607,
+   "sum_liq_long": 53648.844375,
+   "liq_in_onset_bucket": 32129.661635000004
+  },
+  {
+   "level": "COIN",
+   "sym": "DYDXUSDT",
+   "T_on": "2024-10-01 17:25",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.903162730504245,
+   "sum_P2": 1292489.651737867,
+   "sum_liq_long": 36328.2296,
+   "liq_in_onset_bucket": 18604.6528
+  },
+  {
+   "level": "COIN",
+   "sym": "TRBUSDT",
+   "T_on": "2024-10-01 17:25",
+   "n": 13,
+   "spearman_I_vs_liqfrac": 0.8952450503824035,
+   "sum_P2": 820505.5655947503,
+   "sum_liq_long": 17239.835,
+   "liq_in_onset_bucket": 11185.6255
+  },
+  {
+   "level": "COIN",
+   "sym": "1000PEPEUSDT",
+   "T_on": "2024-10-01 20:20",
+   "n": 12,
+   "spearman_I_vs_liqfrac": 0.4678798171104941,
+   "sum_P2": 12901388.967868233,
+   "sum_liq_long": 170530.3284112,
+   "liq_in_onset_bucket": 11374.9085067
+  },
+  {
+   "level": "COIN",
+   "sym": "REEFUSDT",
+   "T_on": "2024-11-01 15:50",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.503448275862069,
+   "sum_P2": 364988.86958499986,
+   "sum_liq_long": 4025.7330590000006,
+   "liq_in_onset_bucket": 1030.283292
+  },
+  {
+   "level": "COIN",
+   "sym": "WLDUSDT",
+   "T_on": "2024-12-01 00:40",
+   "n": 14,
+   "spearman_I_vs_liqfrac": 0.8519005196557096,
+   "sum_P2": 13746318.31287542,
+   "sum_liq_long": 80448.22874650001,
+   "liq_in_onset_bucket": 7918.6810758
+  },
+  {
+   "level": "COIN",
+   "sym": "ENSUSDT",
+   "T_on": "2024-12-01 01:15",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.5803704306990811,
+   "sum_P2": 2733634.259981117,
+   "sum_liq_long": 21101.967399999998,
+   "liq_in_onset_bucket": 8137.3580999999995
+  },
+  {
+   "level": "COIN",
+   "sym": "RUNEUSDT",
+   "T_on": "2025-02-01 13:05",
+   "n": 80,
+   "spearman_I_vs_liqfrac": 0.3545068896180798,
+   "sum_P2": 14273419.888781592,
+   "sum_liq_long": 538910.9831000001,
+   "liq_in_onset_bucket": 5631.0935
+  },
+  {
+   "level": "COIN",
+   "sym": "RUNEUSDT",
+   "T_on": "2025-02-01 22:10",
+   "n": 29,
+   "spearman_I_vs_liqfrac": 0.19195749946635626,
+   "sum_P2": 2783576.485840506,
+   "sum_liq_long": 130114.67420000001,
+   "liq_in_onset_bucket": 12307.4413
+  },
+  {
+   "level": "COIN",
+   "sym": "API3USDT",
+   "T_on": "2025-04-01 04:40",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.5570860145311556,
+   "sum_P2": 277967.75879000034,
+   "sum_liq_long": 6208.590319999999,
+   "liq_in_onset_bucket": 3917.75394
+  },
+  {
+   "level": "COIN",
+   "sym": "WLDUSDT",
+   "T_on": "2025-05-01 02:10",
+   "n": 13,
+   "spearman_I_vs_liqfrac": 0.4144312328399571,
+   "sum_P2": 3602366.863515754,
+   "sum_liq_long": 128634.4811588,
+   "liq_in_onset_bucket": 19442.547887200002
+  },
+  {
+   "level": "COIN",
+   "sym": "MASKUSDT",
+   "T_on": "2025-06-01 08:55",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.517785415952115,
+   "sum_P2": 1519281.354400001,
+   "sum_liq_long": 75341.4775,
+   "liq_in_onset_bucket": 65118.43
+  },
+  {
+   "level": "COIN",
+   "sym": "MASKUSDT",
+   "T_on": "2025-06-01 17:05",
+   "n": 15,
+   "spearman_I_vs_liqfrac": 0.5963089933787814,
+   "sum_P2": 7835198.489469126,
+   "sum_liq_long": 211840.02340000003,
+   "liq_in_onset_bucket": 42018.7384
+  },
+  {
+   "level": "COIN",
+   "sym": "CFXUSDT",
+   "T_on": "2025-08-01 14:05",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.8171851462645624,
+   "sum_P2": 2682018.687082287,
+   "sum_liq_long": 237459.27418999997,
+   "liq_in_onset_bucket": 87252.02335999999
+  },
+  {
+   "level": "COIN",
+   "sym": "HIFIUSDT",
+   "T_on": "2025-10-01 07:00",
+   "n": 11,
+   "spearman_I_vs_liqfrac": 0.6134527889938429,
+   "sum_P2": 523828.25473999995,
+   "sum_liq_long": 23137.705948000003,
+   "liq_in_onset_bucket": 746.96874
+  },
+  {
+   "level": "COIN",
+   "sym": "DASHUSDT",
+   "T_on": "2025-11-01 14:15",
+   "n": 12,
+   "spearman_I_vs_liqfrac": 0.6830165269401093,
+   "sum_P2": 3712573.339577769,
+   "sum_liq_long": 237150.99919999996,
+   "liq_in_onset_bucket": 14772.97987
+  },
+  {
+   "level": "COIN",
+   "sym": "ZENUSDT",
+   "T_on": "2025-11-01 14:20",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.7920349407187459,
+   "sum_P2": 3288974.361093482,
+   "sum_liq_long": 130796.6554,
+   "liq_in_onset_bucket": 37985.5632
+  },
+  {
+   "level": "COIN",
+   "sym": "FETUSDT",
+   "T_on": "2025-12-01 00:10",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.45902081052301746,
+   "sum_P2": 2138275.0994753605,
+   "sum_liq_long": 319867.3170728,
+   "liq_in_onset_bucket": 170041.1427728
+  },
+  {
+   "level": "COIN",
+   "sym": "FILUSDT",
+   "T_on": "2025-12-01 00:10",
+   "n": 14,
+   "spearman_I_vs_liqfrac": 0.7570559839199048,
+   "sum_P2": 3431964.4706294714,
+   "sum_liq_long": 342606.4106000001,
+   "liq_in_onset_bucket": 142951.2861
+  },
+  {
+   "level": "COIN",
+   "sym": "ICPUSDT",
+   "T_on": "2025-12-01 00:10",
+   "n": 15,
+   "spearman_I_vs_liqfrac": 0.895978670381041,
+   "sum_P2": 2220561.2257679477,
+   "sum_liq_long": 328618.83,
+   "liq_in_onset_bucket": 101507.872
+  },
+  {
+   "level": "COIN",
+   "sym": "INJUSDT",
+   "T_on": "2025-12-01 00:10",
+   "n": 14,
+   "spearman_I_vs_liqfrac": 0.866979575601829,
+   "sum_P2": 1369193.7709320788,
+   "sum_liq_long": 192398.311821,
+   "liq_in_onset_bucket": 149444.7669
+  },
+  {
+   "level": "COIN",
+   "sym": "SUIUSDT",
+   "T_on": "2025-12-01 00:10",
+   "n": 5,
+   "spearman_I_vs_liqfrac": 0.9746794344808964,
+   "sum_P2": 3700127.282068316,
+   "sum_liq_long": 110027.68913289998,
+   "liq_in_onset_bucket": 59136.8517629
+  },
+  {
+   "level": "COIN",
+   "sym": "WLDUSDT",
+   "T_on": "2025-12-01 00:10",
+   "n": 7,
+   "spearman_I_vs_liqfrac": 0.37062465833055064,
+   "sum_P2": 973368.6442999996,
+   "sum_liq_long": 347962.1875663,
+   "liq_in_onset_bucket": 140280.1263663
+  },
+  {
+   "level": "COIN",
+   "sym": "UNIUSDT",
+   "T_on": "2025-12-01 00:15",
+   "n": 7,
+   "spearman_I_vs_liqfrac": 0.14414999403128945,
+   "sum_P2": 3457166.4410090907,
+   "sum_liq_long": 409379.721,
+   "liq_in_onset_bucket": 6129.9529999999995
+  },
+  {
+   "level": "COIN",
+   "sym": "SNXUSDT",
+   "T_on": "2025-12-01 00:25",
+   "n": 12,
+   "spearman_I_vs_liqfrac": 0.3918947285721939,
+   "sum_P2": 606359.3683118697,
+   "sum_liq_long": 41548.15559999999,
+   "liq_in_onset_bucket": 3953.2814
+  },
+  {
+   "level": "COIN",
+   "sym": "1000FLOKIUSDT",
+   "T_on": "2025-12-01 00:35",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.6810328622452322,
+   "sum_P2": 481741.9162038098,
+   "sum_liq_long": 74637.09137,
+   "liq_in_onset_bucket": 25582.740240000003
+  },
+  {
+   "level": "COIN",
+   "sym": "APTUSDT",
+   "T_on": "2025-12-01 00:35",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.27609440361293197,
+   "sum_P2": 4207704.829699371,
+   "sum_liq_long": 448953.21634,
+   "liq_in_onset_bucket": 14992.1334
+  },
+  {
+   "level": "COIN",
+   "sym": "DASHUSDT",
+   "T_on": "2025-12-01 00:40",
+   "n": 17,
+   "spearman_I_vs_liqfrac": 0.5305053315037305,
+   "sum_P2": 1974684.722250965,
+   "sum_liq_long": 222882.84587999998,
+   "liq_in_onset_bucket": 19920.15917
+  },
+  {
+   "level": "COIN",
+   "sym": "DOGEUSDT",
+   "T_on": "2025-12-01 00:55",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.13576671860539954,
+   "sum_P2": 2985778.2623949107,
+   "sum_liq_long": 2307956.9808400003,
+   "liq_in_onset_bucket": 570603.064856
+  },
+  {
+   "level": "COIN",
+   "sym": "LTCUSDT",
+   "T_on": "2025-12-01 00:55",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.6008540929590486,
+   "sum_P2": 2540751.699231757,
+   "sum_liq_long": 256038.26487999997,
+   "liq_in_onset_bucket": 56498.654259999996
+  },
+  {
+   "level": "COIN",
+   "sym": "XLMUSDT",
+   "T_on": "2025-12-01 00:55",
+   "n": 11,
+   "spearman_I_vs_liqfrac": 0.23890924128374827,
+   "sum_P2": 427040.2357556922,
+   "sum_liq_long": 50454.983400000005,
+   "liq_in_onset_bucket": 2985.0836600000002
+  },
+  {
+   "level": "COIN",
+   "sym": "ZECUSDT",
+   "T_on": "2025-12-01 01:10",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.4846833886276331,
+   "sum_P2": 6599686.751182927,
+   "sum_liq_long": 267419.14947,
+   "liq_in_onset_bucket": 10389.47998
+  },
+  {
+   "level": "COIN",
+   "sym": "ZECUSDT",
+   "T_on": "2025-12-01 04:15",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.5516772843673705,
+   "sum_P2": 7183049.869914664,
+   "sum_liq_long": 90475.55672,
+   "liq_in_onset_bucket": 55131.20615
+  },
+  {
+   "level": "COIN",
+   "sym": "ZECUSDT",
+   "T_on": "2025-12-01 12:50",
+   "n": 19,
+   "spearman_I_vs_liqfrac": 0.3367236493244794,
+   "sum_P2": 13332828.004070364,
+   "sum_liq_long": 415476.87119,
+   "liq_in_onset_bucket": 67463.38185
+  },
+  {
+   "level": "MKT",
+   "sym": "MKT",
+   "T_on": "2022-07-01T04:50:00",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.735565707852878,
+   "sum_P2": 64192171.24716544,
+   "sum_liq_long": 553092.38029235
+  },
+  {
+   "level": "MKT",
+   "sym": "MKT",
+   "T_on": "2024-04-01T05:50:00",
+   "n": 11,
+   "spearman_I_vs_liqfrac": 0.8000000000000002,
+   "sum_P2": 661841442.9263968,
+   "sum_liq_long": 8578054.857238341
+  },
+  {
+   "level": "MKT",
+   "sym": "MKT",
+   "T_on": "2024-04-01T15:10:00",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.8666666666666665,
+   "sum_P2": 399578178.74712974,
+   "sum_liq_long": 3501128.57310554
+  },
+  {
+   "level": "MKT",
+   "sym": "MKT",
+   "T_on": "2024-05-01T07:10:00",
+   "n": 16,
+   "spearman_I_vs_liqfrac": 0.8029411764705883,
+   "sum_P2": 511635891.7805917,
+   "sum_liq_long": 3865979.89282591
+  },
+  {
+   "level": "MKT",
+   "sym": "MKT",
+   "T_on": "2024-09-01T23:00:00",
+   "n": 13,
+   "spearman_I_vs_liqfrac": 0.7692307692307693,
+   "sum_P2": 169522245.61980647,
+   "sum_liq_long": 4291847.364427369
+  },
+  {
+   "level": "MKT",
+   "sym": "MKT",
+   "T_on": "2024-10-01T15:05:00",
+   "n": 41,
+   "spearman_I_vs_liqfrac": 0.6854852865868039,
+   "sum_P2": 1159588547.3447256,
+   "sum_liq_long": 18330297.540772397
+  },
+  {
+   "level": "MKT",
+   "sym": "MKT",
+   "T_on": "2024-11-01T15:50:00",
+   "n": 10,
+   "spearman_I_vs_liqfrac": 0.4787878787878787,
+   "sum_P2": 509507076.1033752,
+   "sum_liq_long": 3950684.7737686103
+  },
+  {
+   "level": "MKT",
+   "sym": "MKT",
+   "T_on": "2025-12-01T00:10:00",
+   "n": 14,
+   "spearman_I_vs_liqfrac": 0.5648351648351648,
+   "sum_P2": 989853123.0661067,
+   "sum_liq_long": 44769983.15162728
+  }
+ ],
+ "V5_n": 174,
+ "V5_summary": {
+  "n_coin": 166,
+  "n_mkt": 8,
+  "spearman_median": 0.622768213771311,
+  "ratio_P2_over_liq_median": 50.46781862082527,
+  "frac_with_liq": 1.0
+ }
+}
