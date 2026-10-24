@@ -1,0 +1,64 @@
+{
+ "sel_minutes": 1387,
+ "skipped_minutes_no_net_live": [],
+ "GV_I": {
+  "n": 33288,
+  "n_minutes": 1387,
+  "frac_le1e-6": 1.0,
+  "n_diff": 0,
+  "bad_minutes": []
+ },
+ "GV_O": {
+  "n": 33288,
+  "n_minutes": 1387,
+  "frac_le1e-6": 0.9996995914443644,
+  "n_diff": 10,
+  "bad_minutes": [
+   "10-21 07:53",
+   "10-21 23:59"
+  ]
+ },
+ "P2": {
+  "n_pairs": 33264,
+  "n_minutes": 1386,
+  "minutes_dropped": {
+   "10-21 07:53": [
+    "p15_off"
+   ]
+  },
+  "q_src_minutes": {
+   "log": 1333,
+   "replay_pre_restart": 53
+  },
+  "q_live_eq_q_off_frac": 0.03823953823953824,
+  "n_pass_live": 0,
+  "n_pass_off": 0,
+  "n_flip": 0,
+  "n_flip_minutes": 0,
+  "n_flip_heavy": 0,
+  "flip_detail": [],
+  "max_rq_live": 0.8913218975067139,
+  "max_rq_off": 0.8913217782974243,
+  "n_rq_ge_09_live": 0,
+  "n_rq_ge_09_off": 0,
+  "n_rq_ge_08_live": 6,
+  "PASS": true
+ },
+ "GATE_LOG": {
+  "n_lines": 1866,
+  "n_minutes_join": 1386,
+  "map_tick_check": {
+   "n_lines_with_MAP": 426,
+   "n_tick_eq": 426
+  },
+  "n_match": 1386,
+  "sum_log": 0,
+  "sum_calc": 0,
+  "thr_range_match_base0008": 1386,
+  "thr_range_mismatch": [],
+  "mismatch": [],
+  "gate_lines_not_joined": [
+   "10-21 07:53"
+  ]
+ }
+}

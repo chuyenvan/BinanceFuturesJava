@@ -1,0 +1,24 @@
+loaded 741 symbols 10-21 14:50 -> 10-21 18:00
+tai lap vs OFF-BT (r_down & r_down15 bit-exact): 148/151 ; vs live rateDown15MAvg: 141/151
+lech BT (toi da 10): [('10-21 15:31', -0.009411427192389965, -0.009424063), ('10-21 15:34', -0.011616374365985394, -0.011627188), ('10-21 15:35', -0.011598607525229454, -0.011607622)]
+phut live != tai lap: ['10-21 15:31', '10-21 15:34', '10-21 15:35', '10-21 17:04', '10-21 17:16', '10-21 17:18', '10-21 17:32', '10-21 17:37', '10-21 17:38', '10-21 17:40']
+10-21 17:16 live -0.015491122379899025 | H1 bo 1 symbol khop: [] | H2 bo 1 nen khop: [('RAMUSDT', '10-21 17:16~nen thu 1 tu cuoi'), ('RAMUSDT', '10-21 17:15~nen thu 2 tu cuoi'), ('RAMUSDT', '10-21 17:14~nen thu 3 tu cuoi'), ('RAMUSDT', '10-21 17:13~nen thu 4 tu cuoi'), ('RAMUSDT', '10-21 17:12~nen thu 5 tu cuoi'), ('RAMUSDT', '10-21 17:11~nen thu 6 tu cuoi'), ('RAMUSDT', '10-21 17:10~nen thu 7 tu cuoi'), ('RAMUSDT', '10-21 17:09~nen thu 8 tu cuoi'), ('RAMUSDT', '10-21 17:08~nen thu 9 tu cuoi'), ('RAMUSDT', '10-21 17:07~nen thu 10 tu cuoi')] | N 100 size 671 | delta*N -0.002193823456764221
+    BACUSDT r15= -0.00078371697 rank 650 n_buf 68
+    CEGUSDT r15= -0.0014844663 rank 610 n_buf 76
+    IBKRUSDT r15= -0.0042898073 rank 367 n_buf 63
+10-21 17:18 live -0.01458085048943758 | H1 bo 1 symbol khop: [] | H2 bo 1 nen khop: [('RAMUSDT', '10-21 17:18~nen thu 1 tu cuoi'), ('RAMUSDT', '10-21 17:17~nen thu 2 tu cuoi'), ('RAMUSDT', '10-21 17:16~nen thu 3 tu cuoi'), ('RAMUSDT', '10-21 17:15~nen thu 4 tu cuoi'), ('RAMUSDT', '10-21 17:14~nen thu 5 tu cuoi'), ('RAMUSDT', '10-21 17:13~nen thu 6 tu cuoi'), ('RAMUSDT', '10-21 17:12~nen thu 7 tu cuoi'), ('RAMUSDT', '10-21 17:11~nen thu 8 tu cuoi'), ('RAMUSDT', '10-21 17:10~nen thu 9 tu cuoi'), ('RAMUSDT', '10-21 17:09~nen thu 10 tu cuoi')] | N 100 size 668 | delta*N -0.0010860152542591095
+    BACUSDT r15= -0.0025460452 rank 449 n_buf 70
+    CEGUSDT r15= -0.0017128458 rank 544 n_buf 78
+    IBKRUSDT r15= -0.008579615 rank 59 n_buf 65
+10-21 17:37 live -0.010668762028217316 | H1 bo 1 symbol khop: [] | H2 bo 1 nen khop: [('RDWUSDT', '10-21 17:37~nen thu 1 tu cuoi'), ('RDWUSDT', '10-21 17:36~nen thu 2 tu cuoi'), ('RDWUSDT', '10-21 17:35~nen thu 3 tu cuoi'), ('RDWUSDT', '10-21 17:34~nen thu 4 tu cuoi'), ('RDWUSDT', '10-21 17:33~nen thu 5 tu cuoi'), ('RDWUSDT', '10-21 17:32~nen thu 6 tu cuoi'), ('RDWUSDT', '10-21 17:31~nen thu 7 tu cuoi'), ('RDWUSDT', '10-21 17:30~nen thu 8 tu cuoi'), ('RDWUSDT', '10-21 17:29~nen thu 9 tu cuoi'), ('RDWUSDT', '10-21 17:28~nen thu 10 tu cuoi')] | N 100 size 624 | delta*N -0.0011655502021312714
+    BACUSDT r15= None rank None n_buf 84
+    CEGUSDT r15= -0.0026505422 rank 199 n_buf 97
+    IBKRUSDT r15= -0.0053635826 rank 70 n_buf 84
+10-21 17:38 live -0.011014257557690144 | H1 bo 1 symbol khop: [] | H2 bo 1 nen khop: [('RDWUSDT', '10-21 17:38~nen thu 1 tu cuoi'), ('RDWUSDT', '10-21 17:37~nen thu 2 tu cuoi'), ('RDWUSDT', '10-21 17:36~nen thu 3 tu cuoi'), ('RDWUSDT', '10-21 17:35~nen thu 4 tu cuoi'), ('RDWUSDT', '10-21 17:34~nen thu 5 tu cuoi'), ('RDWUSDT', '10-21 17:33~nen thu 6 tu cuoi'), ('RDWUSDT', '10-21 17:32~nen thu 7 tu cuoi'), ('RDWUSDT', '10-21 17:31~nen thu 8 tu cuoi'), ('RDWUSDT', '10-21 17:30~nen thu 9 tu cuoi'), ('RDWUSDT', '10-21 17:29~nen thu 10 tu cuoi')] | N 100 size 635 | delta*N -0.0011682510375976562
+    BACUSDT r15= None rank None n_buf 84
+    CEGUSDT r15= -0.00204479 rank 270 n_buf 98
+    IBKRUSDT r15= -0.0052443673 rank 72 n_buf 85
+10-21 17:40 live -0.010486320592463017 | H1 bo 1 symbol khop: [] | H2 bo 1 nen khop: [('RDWUSDT', '10-21 17:40~nen thu 1 tu cuoi'), ('RDWUSDT', '10-21 17:39~nen thu 2 tu cuoi'), ('RDWUSDT', '10-21 17:38~nen thu 3 tu cuoi'), ('RDWUSDT', '10-21 17:37~nen thu 4 tu cuoi'), ('RDWUSDT', '10-21 17:36~nen thu 5 tu cuoi'), ('RDWUSDT', '10-21 17:35~nen thu 6 tu cuoi'), ('RDWUSDT', '10-21 17:34~nen thu 7 tu cuoi'), ('RDWUSDT', '10-21 17:33~nen thu 8 tu cuoi'), ('RDWUSDT', '10-21 17:32~nen thu 9 tu cuoi'), ('RDWUSDT', '10-21 17:31~nen thu 10 tu cuoi')] | N 100 size 642 | delta*N -0.0011710450053215027
+    BACUSDT r15= None rank None n_buf 85
+    CEGUSDT r15= -0.0016282051 rank 378 n_buf 100
+    IBKRUSDT r15= -0.0059594754 rank 63 n_buf 87

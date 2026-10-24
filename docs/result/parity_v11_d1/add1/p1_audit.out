@@ -1,0 +1,8 @@
+live minutes in window 1386 BT minutes 1387 expected 1387
+nfeat 33
+joined 1386
+P1 median rel 6.041e-10  frac<=1e-3 0.99928  frac<=1e-4 0.99928  max 1.120e-03  n 1386
+P1-m max rel 3.657e-07
+live missing minutes 1 [Timestamp('2026-10-21 00:53:00')]
+P1-F nonfund ALL-match 1378/1386
+bad minutes (+07): ['11:59', '17:04', '17:16', '17:18', '17:37', '17:38', '17:40', '23:59']
