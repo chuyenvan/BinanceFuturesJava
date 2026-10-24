@@ -16,7 +16,7 @@ ROOT = os.path.expanduser("~/claude_master/parity_v11w")
 REPO = os.path.expanduser("~/claude_master/vz_e1_wt")
 rnd, days = sys.argv[1], sys.argv[2:]
 OUT = REPO + "/docs/result/parity_v11_%s" % rnd
-SMALL = ["coverage", "universe", "gate", "fund", "net", "s1", "gv_p2", "p3", "s1v", "tsx", "labels", "kprime", "live_only"]
+SMALL = ["coverage", "universe", "gate", "fund", "net", "s1", "gv_p2", "p3", "s1v", "tsx", "labels", "kprime", "kpp", "live_only"]
 
 
 def L(p):
@@ -68,14 +68,17 @@ def day_status(work, run, tag):
     else:
         st["CTL"] = "DAT" if (cg["rows_bit_nonfund"] == 1.0 and cf["rows_tol_nonfund"] == 1.0) else "TRUOT (dung do)"
     st["K5_Kprime"] = None if kp is None else len(kp["K5_minutes"])
+    kpp = J("kpp")   # ADDENDUM2 (+ADD3 tu 10-24): nhan chinh thuc neu co
+    st["K5_official"] = kpp["official"]["K5"] if kpp else st["K5_Kprime"]
+    st["K5_rule"] = kpp["addendum"] if kpp else "ADDENDUM1"
     core = [st[k] for k in ("P1", "P2", "P3", "TSX", "S1_I", "GV_I", "CTL")]
     if any(x.startswith("TRUOT") for x in core):
         tot = "TRUOT"
     elif any(x.startswith(KD) for x in core):
         tot = KD + " (mot phan)"
-        if any(x.startswith("XAM") for x in core) or (st["K5_Kprime"] or 0) > 0:
+        if any(x.startswith("XAM") for x in core) or (st["K5_official"] or 0) > 0:
             tot += " + XAM"
-    elif any(x.startswith("XAM") for x in core) or st["K5_Kprime"] is None or st["K5_Kprime"] > 0:
+    elif any(x.startswith("XAM") for x in core) or st["K5_official"] is None or st["K5_official"] > 0:
         tot = "XAM"
     else:
         tot = "DAT"

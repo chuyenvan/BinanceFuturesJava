@@ -16,7 +16,7 @@ TAG=${D//-/}
 B=$W/d/$D
 mkdir -p $B/work
 exec > >(tee -a $B/run_day.log) 2>&1
-STEPS="prep vision universe r0 harness eval s1v tsx labels kprime"
+STEPS="prep vision universe r0 harness eval s1v tsx labels kprime"  # kprime gom ca kpp (ADD2/ADD3)
 on=0
 want() { [ $on -eq 1 ] && return 0; [ "$1" = "$FROM" ] && on=1 && return 0; return 1; }
 step() { echo "=== $(date -u +%FT%TZ) $*"; }
@@ -45,6 +45,8 @@ if want kprime; then
   run python3 $R/py/day_kprime.py plan
   run python3 $R/py/day_harness.py drop $B/work/kprime_groups.json
   run python3 $R/py/day_kprime.py eval
+  # nhan chinh thuc ADDENDUM2 (+ADDENDUM3 tu 10-24): K1'', K6'
+  run python3 $R/py/day_kpp.py
 fi
 # don file trung gian lon (giu JSON + csv nho): cache Vision, NEW2 tung doan, closes cache
 rm -f $B/runs/cache_*.ser.gz $B/runs/new2_s*/cache_*.ser.gz $B/runs/new2_s*/out_NEW2.csv.gz $B/runs/new2_s*/fund_NEW2.csv.gz
