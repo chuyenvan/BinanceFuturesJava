@@ -108,9 +108,19 @@ def pwin(sess, X):
     return np.asarray(o)[:, -1].astype(np.float32)
 
 
-def loglines(day="1021"):
-    with gzip.open(LIVE + "/raw/loglines_%s.gz" % day, "rt", errors="ignore") as f:
-        return f.read().splitlines()
+# ADDENDUM1 (MAJ-1): log loc 10-21 (+07) chi phu toi 10-21 23:59 (+07) = 16:59 UTC; noi them log day du
+# 10-22 00:00-07:05 (+07) (owner keo 10-24, zgrep tren full.log* cua 242) de phu het cua so UTC 10-21
+# (dong [GATE-RATIO] cua gio 23 UTC in luc 07:01 +07 10-22).
+LOGS = [LIVE + "/raw/loglines_1021.gz", LIVE + "/full_1022_0000_0705.log.gz"]
+_LOG = []
+
+
+def loglines(day=None):
+    if not _LOG:
+        for p in LOGS:
+            with gzip.open(p, "rt", errors="ignore") as f:
+                _LOG.extend(f.read().splitlines())
+    return _LOG
 
 
 PAT_T = re.compile(r"^(\d\d)/(\d\d)/(\d{4}) (\d\d):(\d\d):(\d\d)\.(\d+)")
@@ -123,6 +133,72 @@ def lt(s):
     d, mo, y, hh, mi, ss, ms = m.groups()
     return int(dt.datetime(int(y), int(mo), int(d), int(hh), int(mi), int(ss),
                            tzinfo=dt.timezone(dt.timedelta(hours=7))).timestamp() * 1000)
+
+
+# ---------------------------------------------------------------- ADDENDUM1: q theo gio
+H = 3600000
+
+
+def qlog_by_hour():
+    """CRIT-1 (audit OC1023): LiveGateRollingRatio.noteCandidate() goi logHour() khi SANG gio => dong
+    [GATE-RATIO] in luc gio h+1 (+07 log) la q DA DUNG trong gio UTC h. Map: h = floor(t_log/H)*H - H.
+    (ab5bbe44 map sai thanh h = floor(t_log/H)*H.) Tra {h: (q_t9, buffer_log, eval_log, t_log)}."""
+    out = {}
+    for ln in loglines():
+        if "[GATE-RATIO] q_t=" in ln and "q_t9=" in ln:
+            t = lt(ln)
+            mm = re.search(r"q_t9=([0-9.]+)", ln)
+            mb = re.search(r"buffer=(\d+)", ln)
+            me = re.search(r"eval=(\d+)", ln)
+            if t and mm:
+                out[(t // H) * H - H] = (float(mm.group(1)), int(mb.group(1)) if mb else -1,
+                                         int(me.group(1)) if me else -1, int(t))
+    return out
+
+
+def restarts():
+    return sorted(t for t in (lt(s) for s in loglines() if "MainClass:" in s) if t)
+
+
+_QR = {}
+
+
+def q_replay(h):
+    """q replay causal (prereg §4 P3) tu gate_ratio_live.bin: q dau gio h tren record ts in [h-90d, h);
+    gio co restart: record flush truoc restart (luat restart giu nguyen nhu ab5bbe44).
+    Tra (q, m, mode, t_restart)."""
+    if not _QR:
+        sys.path.insert(0, os.path.expanduser("~/claude_master/1016/grr"))
+        import grr_lib
+        bts, br, nbad = grr_lib.load(LIVE + "/raw/gate_ratio_live.bin")
+        bts = np.asarray(bts, np.int64)
+        o = np.argsort(bts, kind="stable")
+        _QR.update(sorted_in_file=bool(np.all(np.diff(bts) >= 0)), bts=bts[o], br32=br[o].astype(np.float32),
+                   nbad=int(nbad), rs=restarts())
+    bts, br32 = _QR["bts"], _QR["br32"]
+    PCT = 0.99995083
+
+    def q_at(cut_hi):
+        i0 = np.searchsorted(bts, h - 90 * 86400000, "left")
+        i1 = np.searchsorted(bts, cut_hi, "left")
+        a = br32[i0:i1]
+        m = len(a)
+        k = min(m - 1, max(0, int(np.floor(PCT * (m - 1)))))
+        return float(np.partition(a, k)[k]), m
+
+    rs = [t for t in _QR["rs"] if h <= t < h + H]
+    if rs:
+        cut = (rs[-1] // 60000) * 60000 - 60000
+        q, m = q_at(cut + 1)
+        return q, m, "restart", rs[-1]
+    q, m = q_at(h)
+    return q, m, "normal", None
+
+
+def gate_tick(t_log):
+    """Dong [GATE] in trong phut M+1 (+07 log, giay :06-:40) la quyet dinh cua tick (nen) M:
+    tick = floor(t_log/60000)*60000 - 60000. Kiem tren log 10-22 (co dong [MAP] tick=) o stage gv."""
+    return (t_log // 60000) * 60000 - 60000
 
 
 # ---------------------------------------------------------------- stage gate
@@ -186,7 +262,10 @@ def stage_gate():
 def load_live45():
     A = read_gz(LIVE + "/feat45_live.csv.gz")
     Bb = read_gz(LIVE + "/feat45_live_b.csv.gz")
-    F = pd.concat([x for x in (A, Bb) if x is not None], ignore_index=True)
+    # ADDENDUM1: 7 file predictionSymbol 10-22 00:00-00:06 (+07) CO tren Oracle (keo 10-23) nhung khong duoc
+    # giai ma vao feat45_live_b (bat dau tu 00:07) => giai ma bang Pa1020Feat (py/psym_c_build.sh).
+    Cc = read_gz(LIVE + "/feat45_live_c.csv.gz") if os.path.exists(LIVE + "/feat45_live_c.csv.gz") else None
+    F = pd.concat([x for x in (A, Bb, Cc) if x is not None], ignore_index=True)
     F = F.drop_duplicates(["ts", "symbol"], keep="last")
     F["min"] = (F.ts // 60000) * 60000
     F = F[(F["min"] >= T0) & (F["min"] <= T1)]
@@ -318,19 +397,16 @@ def stage_gv_p2():
     s1 = load_s1()[["ts", "symbol", "score"]]
     G = pd.read_csv(W + "/work/join_gate.csv.gz")
     p15off = dict(zip(G["min"].astype(np.int64), G["p15_off"]))
-    qh = {}
-    for ln in loglines():
-        if "[GATE-RATIO] q_t=" in ln and "q_t9=" in ln:
-            t = lt(ln)
-            mm = re.search(r"q_t9=([0-9.]+)", ln)
-            if t and mm:
-                qh[(t // 3600000) * 3600000] = float(mm.group(1))
+    QL = qlog_by_hour()
+    RS = restarts()
     rows = []
+    skipped = []
     for ts, g in sel.groupby("ts"):
         sc = s1[s1.ts == ts].set_index("symbol").score
         nw = net[net["min"] == ts].set_index("symbol")
         uni = sorted(s for s in sc.index if s in nw.index)
         if len(uni) < 20:
+            skipped.append(f7(int(ts)))
             continue
         rS = rank_first(np.array([sc[s] for s in uni], np.float32), True)
         for tag in ("live", "off"):
@@ -346,23 +422,46 @@ def stage_gv_p2():
                 rows.append((int(ts), rr.symbol, tag, float(rr.gateValue), float(gv.get(rr.symbol, np.nan)),
                              float(rr.p15), float(rr.selectorScore)))
     Gd = pd.DataFrame(rows, columns=["ts", "symbol", "tag", "gv_live", "gv_calc", "p15", "sscore"])
-    res = {}
+    res = {"sel_minutes": int(sel.ts.nunique()), "skipped_minutes_no_net_live": skipped}
     for tag, name in (("live", "GV_I"), ("off", "GV_O")):
         x = Gd[Gd.tag == tag]
-        res[name] = {"n": int(len(x)), "frac_le1e-6": float(eq(x.gv_calc, x.gv_live).mean()),
+        res[name] = {"n": int(len(x)), "n_minutes": int(x.ts.nunique()),
+                     "frac_le1e-6": float(eq(x.gv_calc, x.gv_live).mean()),
                      "n_diff": int((~eq(x.gv_calc, x.gv_live)).sum()),
                      "bad_minutes": [f7(int(t)) for t in sorted(set(x.ts[~eq(x.gv_calc, x.gv_live)]))][:30]}
     x = Gd[Gd.tag == "live"].merge(Gd[Gd.tag == "off"][["ts", "symbol", "gv_calc"]].rename(columns={"gv_calc": "gv_off"}),
                                    on=["ts", "symbol"], how="left")
-    x["h"] = x.ts // 3600000 * 3600000
-    x["q"] = x.h.map(qh)
+    x["h"] = x.ts // H * H
+
+    # ADDENDUM1: q live theo PHUT. Gio co restart tai tr: tick >= phut(tr)-1' do process moi quyet dinh voi q
+    # tinh luc restart (= dong [GATE-RATIO] in luc h+1); tick truoc do do process cu quyet dinh voi q dau gio
+    # (process cu tat truoc h+1 nen KHONG co dong log) => dung q replay 'normal' cua gio h (danh dau q_src) va
+    # kiem bang khoang thr=[..] cua dong [GATE] (xem GATE_LOG.thr_range_match).
+    def qlive(ts):
+        h = ts // H * H
+        rs = [t for t in RS if h <= t < h + H]
+        if rs and ts < (rs[-1] // 60000) * 60000 - 60000:
+            return q_replay(h)[0], "replay_pre_restart"
+        if h in QL:
+            return QL[h][0], "log"
+        return np.nan, "missing"
+
+    ql = {int(t): qlive(int(t)) for t in x.ts.unique()}
+    x["q"] = x.ts.map(lambda t: ql[int(t)][0])
+    x["q_src"] = x.ts.map(lambda t: ql[int(t)][1])
+    qo = {int(h): q_replay(int(h))[0] for h in x.h.unique()}
+    x["q_off"] = x.h.map(qo)          # ADDENDUM1: phia offline dung q REPLAY (prereg §4 P2), khong dung q log
     x["p15_off"] = x.ts.map(p15off)
-    x = x.dropna(subset=["q", "p15_off", "gv_off"])
+    need = ["q", "q_off", "p15_off", "gv_off"]
+    dmask = x[need].isna().any(axis=1)
+    dropped = {f7(int(t)): [c for c in need if x.loc[x.ts == t, c].isna().any()] for t in sorted(set(x.ts[dmask]))}
+    x = x[~dmask].reset_index(drop=True)
     fac_l = np.maximum(DYN_MIN, (x.gv_live.astype(np.float32) / SCORE_BASE) * DYN_MULT).astype(np.float32)
     fac_o = np.maximum(DYN_MIN, (x.gv_off.astype(np.float32) / SCORE_BASE) * DYN_MULT).astype(np.float32)
-    q = x.q.astype(np.float32).values
-    thr_l = (q * fac_l.values * GS).astype(np.float32)
-    thr_o = (q * fac_o.values * GS).astype(np.float32)
+    q_l = x.q.astype(np.float32).values
+    q_o = x.q_off.astype(np.float32).values
+    thr_l = (q_l * fac_l.values * GS).astype(np.float32)
+    thr_o = (q_o * fac_o.values * GS).astype(np.float32)
     x["pass_l"] = ~(x.p15.astype(np.float32).values < thr_l)
     x["pass_o"] = ~(x.p15_off.astype(np.float32).values < thr_o)
     x["thr_l"], x["thr_o"] = thr_l, thr_o
@@ -373,86 +472,97 @@ def stage_gv_p2():
     mo = np.abs(x.p15_off - x.thr_o) / np.abs(x.thr_o)
     heavy = (ml > 0.01) | (mo > 0.01)
     hv = (x.pass_l != x.pass_o) & heavy
-    res["P2"] = {"n_pairs": int(len(x)), "n_pass_live": int(x.pass_l.sum()), "n_pass_off": int(x.pass_o.sum()),
+    res["P2"] = {"n_pairs": int(len(x)), "n_minutes": int(x.ts.nunique()), "minutes_dropped": dropped,
+                 "q_src_minutes": {k: int(v) for k, v in x.groupby("q_src").ts.nunique().items()},
+                 "q_live_eq_q_off_frac": float((x.q == x.q_off).mean()),
+                 "n_pass_live": int(x.pass_l.sum()), "n_pass_off": int(x.pass_o.sum()),
                  "n_flip": int(len(fl)), "n_flip_minutes": int(fl.ts.nunique()),
                  "n_flip_heavy": int(hv.sum()),
-                 "flip_heavy_detail": [{"min": f7(int(x.ts[i])), "symbol": x.symbol[i], "p15": float(x.p15[i]),
-                                        "p15_off": float(x.p15_off[i]), "rel_l": float(ml[i]), "rel_o": float(mo[i]),
-                                        "thr_l": float(x.thr_l[i]), "thr_o": float(x.thr_o[i])}
-                                       for i in x.index[hv][:30]],
+                 "flip_detail": [{"min": f7(int(x.ts[i])), "symbol": x.symbol[i], "p15": float(x.p15[i]),
+                                  "p15_off": float(x.p15_off[i]), "rel_l": float(ml[i]), "rel_o": float(mo[i]),
+                                  "thr_l": float(x.thr_l[i]), "thr_o": float(x.thr_o[i]), "heavy": bool(hv[i])}
+                                 for i in fl.index[:30]],
                  "max_rq_live": float(x.rl.max()), "max_rq_off": float(x.ro.max()),
                  "n_rq_ge_09_live": int((x.rl >= 0.9).sum()), "n_rq_ge_09_off": int((x.ro >= 0.9).sum()),
+                 "n_rq_ge_08_live": int((x.rl >= 0.8).sum()),
                  "PASS": bool(hv.sum() == 0)}
+    # [GATE] log: map dong log -> tick (ADDENDUM1: ab5bbe44 map theo phut ghi log, lech 1 phut)
     gl = []
+    tick_chk = []
+    last_map = None
     for ln in loglines():
-        if "[GATE] " in ln and "n_pass=" in ln:
+        if "[MAP] tick=" in ln:
+            mt = re.search(r"\[MAP\] tick=(\d+)", ln)
+            last_map = int(mt.group(1)) if mt else None
+        elif "[GATE] " in ln and "n_pass=" in ln:
             t = lt(ln)
-            mm = re.search(r"n_cand=(\d+) n_rej=(\d+) n_pass=(\d+) n_skipfull=(\d+)", ln)
+            mm = re.search(r"thr=\[([^\]]*)\] n_cand=(\d+) n_rej=(\d+) n_pass=(\d+) n_skipfull=(\d+)", ln)
             if t and mm:
-                gl.append((int(t), int(mm.group(3))))
-    gl = pd.DataFrame(gl, columns=["t", "n_pass_log"])
-    gl["min"] = (gl.t // 60000) * 60000
-    cmp_pass = x.groupby("ts").pass_l.sum().rename("pass_calc").reset_index().rename(columns={"ts": "min"})
-    mrg = gl.groupby("min").n_pass_log.sum().reset_index().merge(cmp_pass, on="min")
+                tk = gate_tick(int(t))
+                if last_map is not None:
+                    tick_chk.append(last_map == tk)
+                gl.append((tk, mm.group(1), int(mm.group(4))))
+                last_map = None
+    gl = pd.DataFrame(gl, columns=["min", "thr_rng", "n_pass_log"]).drop_duplicates("min", keep="last")
+    # Khoang thr=[..] cua dong [GATE] in EntryGate.threshold(gv) = base TINH MIN_MOMENTUM_15M (0,008)*fac*scale
+    # (DetectEntrySignal2TradeNormal @627e9b34), KHONG phai nguong ratio q_t => chi dung de kiem fac/gv/tick-map.
+    x["thr_static"] = (F32(0.008) * fac_l.values * GS).astype(np.float32)
+    cmp_pass = x.groupby("ts").agg(pass_calc=("pass_l", "sum"), thr_min=("thr_static", "min"),
+                                   thr_max=("thr_static", "max")).reset_index().rename(columns={"ts": "min"})
+    mrg = gl.merge(cmp_pass, on="min")
+
+    def rng_ok(r):
+        if r.thr_rng.strip() == "-..-":
+            return False
+        a, b = (float(v) for v in r.thr_rng.split(".."))
+        return abs(a - r.thr_min) <= 6e-6 and abs(b - r.thr_max) <= 6e-6
+
+    mrg["thr_ok"] = mrg.apply(rng_ok, axis=1)
     res["GATE_LOG"] = {"n_lines": int(len(gl)), "n_minutes_join": int(len(mrg)),
+                       "map_tick_check": {"n_lines_with_MAP": len(tick_chk), "n_tick_eq": int(sum(tick_chk))},
                        "n_match": int((mrg.n_pass_log == mrg.pass_calc).sum()),
                        "sum_log": int(mrg.n_pass_log.sum()), "sum_calc": int(mrg.pass_calc.sum()),
+                       "thr_range_match_base0008": int(mrg.thr_ok.sum()),
+                       "thr_range_mismatch": mrg[~mrg.thr_ok].assign(min=lambda d: d["min"].map(f7))[
+                           ["min", "thr_rng", "thr_min", "thr_max"]].to_dict("records")[:20],
                        "mismatch": mrg[mrg.n_pass_log != mrg.pass_calc].assign(
-                           min=lambda d: d["min"].map(f7)).to_dict("records")[:20]}
+                           min=lambda d: d["min"].map(f7))[["min", "n_pass_log", "pass_calc"]].to_dict("records")[:20],
+                       "gate_lines_not_joined": [f7(int(t)) for t in sorted(set(gl["min"]) - set(mrg["min"]))
+                                                 if T0 <= t <= T1]}
     x.to_csv(W + "/work/p2_pairs.csv.gz", index=False)
     json.dump(res, open(W + "/work/gv_p2_d1.json", "w"), indent=1, default=str)
-    print(json.dumps(res, indent=1, default=str)[:3000])
+    print(json.dumps(res, indent=1, default=str)[:4000])
 
 
 def stage_p3():
-    sys.path.insert(0, os.path.expanduser("~/claude_master/1016/grr"))
-    import grr_lib
-    bts, br, nbad = grr_lib.load(LIVE + "/raw/gate_ratio_live.bin")
-    br32 = br.astype(np.float32)
-    PCT = 0.99995083
-    H = 3600000
-    restarts = sorted(t for t in (lt(s) for s in loglines() if "MainClass:" in s) if t)
+    QL = qlog_by_hour()
+    hours = list(range((T0 // H) * H, (T1 // H) * H + H, H))   # 24 gio UTC cua cua so (00..23 UTC 10-21)
+    hu = lambda h: dt.datetime.utcfromtimestamp(h / 1000).strftime("%m-%d %H:%M")
     rows = []
-    qlog = {}
-    for ln in loglines():
-        if "[GATE-RATIO] q_t=" in ln and "q_t9=" in ln:
-            t = lt(ln)
-            mm = re.search(r"q_t9=([0-9.]+)", ln)
-            if t and mm:
-                qlog[(t // H) * H] = float(mm.group(1))
-
-    def q_at(cut_hi, h):
-        i0 = np.searchsorted(bts, h - 90 * 86400000, "left")
-        i1 = np.searchsorted(bts, cut_hi, "left")
-        a = br32[i0:i1]
-        m = len(a)
-        k = min(m - 1, max(0, int(np.floor(PCT * (m - 1)))))
-        return float(np.partition(a, k)[k]), m
-
-    for h in sorted(qlog):
-        rs = [t for t in restarts if h <= t < h + H]
-        if rs:
-            tr = rs[-1]
-            cut = (tr // 60000) * 60000 - 60000
-            q, m = q_at(cut + 1, h)
-            mode = "restart"
-        else:
-            q, m = q_at(h, h)
-            mode = "normal"
-        rows.append({"h": h, "q_log": qlog[h], "q_rep": q, "m": m, "mode": mode})
+    for h in sorted(QL):
+        q_log, buf, ev, tlog = QL[h]
+        q, m, mode, tr = q_replay(h)
+        rows.append({"h_utc": hu(h), "h": h, "log_at_p07": f7(tlog), "q_log": q_log, "q_rep": q, "m": m,
+                     "buffer_log": buf, "eval_log": ev, "m_eq_buf_minus_eval": bool(m == buf - ev),
+                     "mode": mode, "restart_p07": f7(tr) if tr else "", "in_window": h in hours})
     Q = pd.DataFrame(rows)
-    Q["q_log6"] = Q.q_rep.round(6)
-    Q["match6"] = (Q.q_log - Q.q_log6).abs() < 5e-13
-    Q["rel"] = (Q.q_log - Q.q_rep).abs() / Q.q_rep
-    res = {"n_hours": int(len(Q)), "n_match_6dp": int(Q.match6.sum()),
-           "max_rel": float(Q.rel.max()), "med_rel": float(Q.rel.median()),
-           "n_rel_gt_1e-6": int((Q.rel > 1e-6).sum()),
-           "buffer": {"n": int(len(bts)), "bad_chunks": int(nbad), "first": f7(int(bts.min())), "last": f7(int(bts.max()))},
-           "mismatch": Q[~Q.match6].assign(h=lambda x: x.h.map(f7)).to_dict("records")[:30]}
-    res["PASS"] = bool(res["n_match_6dp"] == res["n_hours"])
-    Q.assign(h=lambda x: x.h.map(f7)).to_csv(W + "/work/p3_q.csv", index=False)
+    Q["rel"] = (Q.q_log - Q.q_rep).abs() / Q.q_rep       # ADDENDUM1: bo co match6 (so 9 vs 6 chu so) -> rel
+    Qw = Q[Q.in_window]
+    have = set(Q.h[Q.in_window])
+    res = {"n_hours_expected": len(hours), "n_hours_measured": int(len(Qw)),
+           "hours_missing_utc": [hu(h) for h in hours if h not in have],
+           "n_rel_gt_1e-6": int((Qw.rel > 1e-6).sum()),
+           "max_rel": float(Qw.rel.max()), "med_rel": float(Qw.rel.median()),
+           "n_m_eq_buf_minus_eval": int(Qw.m_eq_buf_minus_eval.sum()),
+           "restart_hours_utc": Qw[Qw["mode"] == "restart"].h_utc.tolist(),
+           "buffer": {"n": int(len(_QR["bts"])), "bad_chunks": _QR["nbad"], "sorted_in_file": _QR["sorted_in_file"],
+                      "first": f7(int(_QR["bts"].min())), "last": f7(int(_QR["bts"].max()))},
+           "pre_window_lines": Q[~Q.in_window].drop(columns=["h"]).to_dict("records"),
+           "mismatch": Qw[Qw.rel > 1e-6].drop(columns=["h"]).to_dict("records")[:30]}
+    res["PASS"] = bool(not res["hours_missing_utc"] and res["n_rel_gt_1e-6"] == 0)
+    Q.drop(columns=["h"]).to_csv(W + "/work/p3_q.csv", index=False)
     json.dump(res, open(W + "/work/p3_d1.json", "w"), indent=1, default=str)
-    print(json.dumps(res, indent=1, default=str)[:2500])
+    print(json.dumps({k: v for k, v in res.items() if k != "pre_window_lines"}, indent=1, default=str)[:3500])
 
 
 def stage_ctl():
