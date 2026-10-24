@@ -1,0 +1,90 @@
+{
+ "live_died_n_excl_BTCDOM_USDC": 141,
+ "live_died_still_trading_2026_10_23": [
+  "POWRUSDT"
+ ],
+ "live_died_in_live_psym_2026_10_23": [],
+ "per_seed": [
+  {
+   "seed": "tsx-x14-s123",
+   "sim_DIED_SYMBOLS": "BTCDOM,USDC",
+   "legs": 2959,
+   "legs_on_live_died": 591,
+   "legs_on_live_died_still_trading": 4,
+   "pnl": 108244.78610451112,
+   "pnl_on_live_died": 18974.79044764,
+   "pnl_on_still_trading": -13.169787000000014,
+   "n_died_symbols_traded": 106
+  },
+  {
+   "seed": "tsx-x14-s13",
+   "sim_DIED_SYMBOLS": "BTCDOM,USDC",
+   "legs": 2929,
+   "legs_on_live_died": 586,
+   "legs_on_live_died_still_trading": 4,
+   "pnl": 119151.2616892958,
+   "pnl_on_live_died": 21181.607377170003,
+   "pnl_on_still_trading": 22.738355,
+   "n_died_symbols_traded": 106
+  },
+  {
+   "seed": "tsx-x14-s2024",
+   "sim_DIED_SYMBOLS": "BTCDOM,USDC",
+   "legs": 2936,
+   "legs_on_live_died": 591,
+   "legs_on_live_died_still_trading": 4,
+   "pnl": 111052.70271553079,
+   "pnl_on_live_died": 19441.94825144,
+   "pnl_on_still_trading": -13.527664999999985,
+   "n_died_symbols_traded": 104
+  },
+  {
+   "seed": "tsx-x14-s21",
+   "sim_DIED_SYMBOLS": "BTCDOM,USDC",
+   "legs": 2940,
+   "legs_on_live_died": 618,
+   "legs_on_live_died_still_trading": 4,
+   "pnl": 109165.5500488337,
+   "pnl_on_live_died": 20832.80369283,
+   "pnl_on_still_trading": -13.779212000000001,
+   "n_died_symbols_traded": 106
+  },
+  {
+   "seed": "tsx-x14-s7",
+   "sim_DIED_SYMBOLS": "BTCDOM,USDC",
+   "legs": 2951,
+   "legs_on_live_died": 601,
+   "legs_on_live_died_still_trading": 4,
+   "pnl": 108906.7269191239,
+   "pnl_on_live_died": 18573.09066215,
+   "pnl_on_still_trading": -14.97311400000001,
+   "n_died_symbols_traded": 107
+  },
+  {
+   "seed": "tsx-x14-s777",
+   "sim_DIED_SYMBOLS": "BTCDOM,USDC",
+   "legs": 2900,
+   "legs_on_live_died": 587,
+   "legs_on_live_died_still_trading": 3,
+   "pnl": 129889.43273374088,
+   "pnl_on_live_died": 24294.0946227,
+   "pnl_on_still_trading": -59.76050100000003,
+   "n_died_symbols_traded": 106
+  },
+  {
+   "seed": "tsx-x14-s99",
+   "sim_DIED_SYMBOLS": "BTCDOM,USDC",
+   "legs": 3034,
+   "legs_on_live_died": 610,
+   "legs_on_live_died_still_trading": 4,
+   "pnl": 123360.02304163859,
+   "pnl_on_live_died": 19610.68981945,
+   "pnl_on_still_trading": -14.083443000000003,
+   "n_died_symbols_traded": 105
+  }
+ ],
+ "mean_share_legs_on_live_died": 0.20263208047768275,
+ "mean_share_pnl_on_live_died": 0.17650306677029315,
+ "mean_share_legs_still_trading": 0.0013069644185563693,
+ "mean_share_pnl_still_trading": -0.0001272293261017874
+}

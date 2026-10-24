@@ -1,0 +1,11 @@
+{
+ "log": "/home/ubuntu/claude_master/pull242/2026-10-22/logs/full.log@1792805100_42478591.gz",
+ "legacy_lines": 8681,
+ "legacy_n": 44,
+ "minutes": 1387,
+ "exact_order": 1387,
+ "frac": 1.0,
+ "minutes_without_legacy_line": 0,
+ "bad": [],
+ "minutes_legacy_in_raw_top24": 0
+}
