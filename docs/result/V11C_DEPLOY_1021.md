@@ -425,3 +425,15 @@ Ngoài ra còn chạy `liq_ws.py` (PID 2178, collector liq, từ 10-15).
 ⇒ **ĐẠT.** Đã ghi sổ C (ADDENDUM d). **Cửa sổ promotion 10-21 07:53:59 không reset.** Từ PID 18743 không còn tự-restart 12h.
 Việc cần theo dõi: HOURLY và WOULD_TRIGGER (C1–C6) sau 24–48h; dòng `[EXEC-PROBE] BAT` khi có leg giấy đầu tiên; watchdog chuyển từ
 `OK_GRACE` sang `OK` sau 09:47; RSS theo thời gian (không còn reset 12h).
+
+## 24h sau dcae2e2b (MASTER 10-24 ~10:15 +07; nguon: pull242/2026-10-23 full.log toi 10-24 08:25:30 + health242 Oracle; KHONG ssh 242)
+- Process: khong restart tu deploy 10-23 09:37:31 (MainClass cuoi = 09:37:31; truoc do 07:55:42 la tu-restart v11c cu). health242 trading_n=1 lien tuc toi 10-24 09:30.
+- 0 dong ERROR/Exception/OutOfMemory tu 09:37 10-23 toi 08:25 10-24.
+- RSS/GC: CHUA DO TRUC TIEP (gc_18743_*.log va ps tren 242 khong co trong pull242; doc 242 bi classifier chan). Proxy: mem_avail 242 on dinh 1 898–2 098 MB (khong giam dan), heap ExecProbe-STAT 850–1 053 MB.
+- [KILLSW] HOURLY mode=log: C1–C6 = 0/0 moi gio, C2=NA, 0 WOULD_TRIGGER; lag_s=6 miss=0/741; so giay eq 34 886–34 942, peak 35 015, dd ~0; open 19–23, U 0,066–0,080.
+- Dot crash-buy dau tien sau deploy: 10-24 02:25 +07 [GATE] n_pass=24 (thr thuc 0,02281..0,03645, u=0,0805) + 02:28 n_pass=1.
+- [EXEC-PROBE] BAT 02:25; STAT 08:25: offered=31 lines=31 dropped=0 no_book=0 rate_capped=0 avg_snap_ms=524.
+- So giay: dong TRAILING_STOP AVA/ARIA/APR (+7,8…+10,0 USD); realized 50,57.
+- LEGACY 44 (health242 legacy_n=44 lien tuc); [SHADOW] skip-LEGACY SOXSUSDT moi phut (binh thuong).
+- TS-EXT: co 10-23 OFF (dd −0,173), 10-24 OFF (dd −0,168, final=false luc 07:03).
+- health242: 0 dong khong-OK tu 09:30 10-23.
