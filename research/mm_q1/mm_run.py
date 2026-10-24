@@ -5,7 +5,7 @@ sys.path.insert(0, "/home/ubuntu/claude_master/vz_e1_wt/research/mm_q1")
 import mm_core as C
 
 HMS = 3600000; H6 = 6 * HMS
-RES = "/home/ubuntu/claude_master/mm_wk/res"
+RES = "/home/ubuntu/claude_master/mm_wk/res2"   # ADDENDUM1 rerun (run 1 kept in mm_wk/res)
 PER = sys.argv[1]; SYMS = sys.argv[2:]
 NEED = 60
 if PER == "D":
@@ -21,31 +21,17 @@ if PER == "D":
     e = e[(e.level == "MKT") & (e.variant == "main")]
     assert e.T_on.dtype == np.int64 and e.T_end.dtype == np.int64
     EP = (e.T_on.to_numpy() - H6, e.T_end.to_numpy() + H6)
-LOG = f"/home/ubuntu/claude_master/mm_wk/log_{PER}_{SYMS[0]}.txt"
+LOG = f"/home/ubuntu/claude_master/mm_wk/log2_{PER}_{SYMS[0]}.txt"
 def log(m):
     with open(LOG, "a") as f:
         f.write(time.strftime("%H:%M:%S ") + m + "\n")
 
-def trades_r(sym, h0):
-    tb, _ = C.fetch(sym, h0, "trades", ["trade_id", "price", "trade_time"])
-    if tb is None:
-        return None
-    tt = tb.column("trade_time").to_numpy(); assert tt.dtype == np.int64
-    p = tb.column("price").cast(pa.float64()).to_numpy(); tid = tb.column("trade_id").to_numpy()
-    m = (tt >= h0) & (tt < h0 + HMS)
-    if m.sum() < 2:
-        return None
-    o = np.lexsort((tid[m], tt[m])); pp = p[m][o]
-    return float(pp[-1] / pp[0] - 1.0)
-
 BTC = {}
 def btc_r(h0):
+    # ADDENDUM1 bug 2: r from valid trades (chd kline rows are not closed bars)
     if h0 not in BTC:
-        r, why = C.kline_r("BTCUSDT", h0)
-        src = "kline"
-        if r is None:
-            r = trades_r("BTCUSDT", h0); src = "trades" if r is not None else "none"
-        BTC[h0] = (r, src)
+        r = C.trades_r("BTCUSDT", h0)
+        BTC[h0] = (r, "trades" if r is not None else "none")
     return BTC[h0]
 
 for sym in SYMS:
@@ -74,11 +60,7 @@ for sym in SYMS:
                 elif abs(rb) >= 0.01:
                     rec["status"] = "rej_btc_ret"
                 else:
-                    rs, why = C.kline_r(sym, H); rec["r_sym_src"] = "kline" if rs is not None else why
-                    if rs is None:
-                        rs = trades_r(sym, H)
-                        if rs is not None:
-                            rec["r_sym_src"] = "trades:" + why
+                    rs = C.trades_r(sym, H); rec["r_sym_src"] = "trades" if rs is not None else "none"
                     rec["r_sym"] = rs
                     if rs is None:
                         rec["status"] = "rej_no_data_or_r"
@@ -93,7 +75,9 @@ for sym in SYMS:
                             info, S = C.replay(Dd)
                             q = C.quality(H, info, S)
                             rec["info"] = info; rec["q"] = q
-                            if info["pu_breaks"] > 0 or info["u_nonmono"] > 0 or info["E_nonmono"] > 0:
+                            if info["n_nonupdate_rows"] > 0:
+                                rec["status"] = "rej_snapshot"   # ADDENDUM1 point 3
+                            elif info["pu_breaks"] > 0 or info["u_nonmono"] > 0 or info["E_nonmono"] > 0:
                                 rec["status"] = "rej_pu"
                             elif q["crossed_frac"] > 0.01:
                                 rec["status"] = "rej_crossed"

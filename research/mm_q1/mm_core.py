@@ -62,8 +62,25 @@ def to_int(dict_strs, d):
 
 def load(sym, h0):
     ob, nob = fetch(sym, h0, "orderbook", ["event_time", "first_update_id", "final_update_id", "prev_final_update_id", "side", "price", "quantity", "event_type"])
-    tr, ntr = fetch(sym, h0, "trades", ["trade_id", "price", "quantity", "trade_time", "is_buyer_maker"])
+    tr, ntr = fetch(sym, h0, "trades", ["trade_id", "price", "quantity", "trade_time", "is_buyer_maker", "order_type"])
     return ob, tr, nob, ntr
+
+
+def trades_r(sym, h0):
+    """ADDENDUM1 bug 2: 1h return = last/first valid trade price in [h0, h0+1h) - 1 (dedupe id, drop price/qty 0)."""
+    tb, _ = fetch(sym, h0, "trades", ["trade_id", "price", "quantity", "trade_time"])
+    if tb is None:
+        return None
+    tt = tb.column("trade_time").to_numpy(); assert tt.dtype == np.int64
+    tid = tb.column("trade_id").to_numpy()
+    p = tb.column("price").cast(pa.float64()).to_numpy(); q = tb.column("quantity").cast(pa.float64()).to_numpy()
+    _, fi = np.unique(tid, return_index=True)
+    tt, tid, p, q = tt[fi], tid[fi], p[fi], q[fi]
+    m = (tt >= h0) & (tt < h0 + HMS) & (p > 0) & (q > 0)
+    if m.sum() < 2:
+        return None
+    o = np.lexsort((tid[m], tt[m])); pp = p[m][o]
+    return float(pp[-1] / pp[0] - 1.0)
 
 
 def load_d(sym, h0):
@@ -151,9 +168,15 @@ def replay(D):
     assert tid.dtype == np.int64 and tt.dtype == np.int64
     tp = tint_u[tdict.indices.to_numpy()]; tq = tr.column("quantity").cast(pa.float64()).to_numpy()
     ibm = tr.column("is_buyer_maker").to_numpy(zero_copy_only=False).astype(bool)
+    otp = tr.column("order_type").to_numpy(zero_copy_only=False)
     _, fi = np.unique(tid, return_index=True)
     info["trade_dup"] = int(len(tid) - len(fi))
-    tid, tt, tp, tq, ibm = tid[fi], tt[fi], tp[fi], tq[fi], ibm[fi]
+    tid, tt, tp, tq, ibm, otp = tid[fi], tt[fi], tp[fi], tq[fi], ibm[fi], otp[fi]
+    # ADDENDUM1 bug 1: drop zero-price / zero-qty prints (order_type NA)
+    good = (tp > 0) & (tq > 0)
+    info["trade_zero_dropped"] = int((~good).sum()); info["trade_na"] = int((otp == "NA").sum())
+    info["trade_na_nonzero"] = int(((otp == "NA") & good).sum()); info["trade_nonmarket_types"] = sorted(set(otp.tolist()) - {"MARKET"})
+    tid, tt, tp, tq, ibm = tid[good], tt[good], tp[good], tq[good], ibm[good]
     o = np.lexsort((tid, tt)); tid, tt, tp, tq, ibm = tid[o], tt[o], tp[o], tq[o], ibm[o]
     info["trade_off_tick"] = int((tp % tick != 0).sum()) if tick else -1
     return info, dict(E=gE, bb=bb, ba=ba, bbq=bbq, baq=baq, qbd=qbd, qad=qad, tid=tid, tt=tt, tp=tp, tq=tq, ibm=ibm)
