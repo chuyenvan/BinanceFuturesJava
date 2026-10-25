@@ -168,7 +168,8 @@ public class P2PTelegramNotifier {
                 LOG.error("❌ Gửi Telegram thất bại. HTTP Code: {} - Lỗi: {}", response.statusCode(), response.body());
             }
         } catch (Exception e) {
-            LOG.error("❌ Exception khi gửi Telegram: ", e);
+            // [V12 2b] khong in stack (URL co token): chi thong diep da che token
+            LOG.error("❌ Exception khi gửi Telegram: {}", com.binance.chuyennd.utils.HttpRequest.redactSecrets(String.valueOf(e)));
         }
     }
 }

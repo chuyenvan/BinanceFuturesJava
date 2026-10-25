@@ -132,7 +132,8 @@ public class Utils {
         try {
             LOG.info("Telegram respon: {}", HttpRequest.getContentFromUrl(urlString));
         } catch (Exception e) {
-            e.printStackTrace();
+            // [V12 2b] KHONG printStackTrace / log URL (chua token): chi thong diep loi da che token
+            LOG.warn("Telegram gui loi: {}", HttpRequest.redactSecrets(String.valueOf(e)));
         }
         return true;
     }
