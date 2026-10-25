@@ -42,13 +42,17 @@ def roll_max(c, i, w, minp):
     return float(np.max(a))
 
 
-def hrs_since_high(c, i):
-    if i < 167 or i >= len(c):
+def hrs_since_high(th, c, i):
+    """D3 fix: cua so 168 MOC GIO theo thoi gian (live dem moc truoc niem yet/thieu la NaN), can >= 84 moc co gia.
+    Ban cu doi i >= 167 phan tu => symbol co 84..167 gio lich su (vd BAC/CEG/IBKR tu 10-24 21:00 UTC) bi NaN sai."""
+    if i < 0 or i >= len(c):
         return np.nan
-    st = i - 168 + 1
-    if np.isnan(c[st:i + 1]).sum() > 84:
+    t_st = th[i] - 167 * 3600000
+    lo = int(np.searchsorted(th, t_st, "left"))
+    seg, seg_t = c[lo:i + 1], th[lo:i + 1]
+    if 168 - int(np.sum(~np.isnan(seg))) > 84:
         return np.nan
-    j = int(np.nanargmax(c[st:i + 1]))
+    j = int((seg_t[int(np.nanargmax(seg))] - t_st) // 3600000)
     return (167 - j) / 168.0
 
 
@@ -145,7 +149,7 @@ def main():
             vol = np.nan if (len(r) < MINP or len(r) < 2) else float(np.sqrt(((r - r.mean()) ** 2).sum() / (len(r) - 1)))
             mx = roll_max(cv, idx, 168, MINP)
             dd = np.nan if (np.isnan(mx) or mx == 0 or np.isnan(cv[idx])) else cv[idx] / mx - 1
-            hs = hrs_since_high(cv, idx)
+            hs = hrs_since_high(th, cv, idx)
             feats[s] = (vol, dd, hs, ret(cv, idx, 72), ret(cv, idx, 336))
         if not feats:
             continue

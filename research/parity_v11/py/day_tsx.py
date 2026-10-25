@@ -28,6 +28,7 @@ JAR = os.path.expanduser("~/claude_master/v11_tsx/jar/binance-java-sdk-1.2.4.jar
 CP = OFF + "/classes3:" + JAR
 HIST = [OFF + "/out/2026-09_days64.csv", OFF + "/outv/2026-10_days64.csv"]   # 09-01..10-19 (nhu D1)
 FIRST_NEW = "2026-10-20"
+st_live = {}
 
 
 def build_bin(days, uni, out_bin, out_syms):
@@ -105,7 +106,11 @@ def live_lines():
     L = gzip.open(C["logs"][-1], "rt", errors="ignore").read().splitlines() if C["layout"] == "pull242" else \
         sum((gzip.open(p, "rt", errors="ignore").read().splitlines() for p in C["logs"]), [])
     fl, dy = {}, {}
+    global st_live
     for s in L:
+        m = re.search(r"\[TS-EXT\] status now=(\d{4}-\d\d-\d\d)T\S+ flagToday=(\S+)", s)
+        if m:
+            st_live.setdefault(m.group(1), []).append(m.group(2))
         m = re.search(r"\[TS-EXT\] flag day=(\S+) flag=(\S+) dd=(\S+) .* minN=(\d+) src=(\S+) final=(\S+)", s)
         if m:
             fl.setdefault(m.group(1), []).append({"flag": m.group(2), "dd": float(m.group(3)), "minN": int(m.group(4)),
@@ -157,11 +162,19 @@ def main():
     for F in (D, shift(D, 1)):
         v = FL[FL.date == F]
         lv = fl_live.get(F, [])
+        # D3 fix: dong 'flag day=F' luon in final=false o lan tinh 07:03 (src=aero:1d); final=true chi xuat hien khi
+        # restart doc lai tu file. Ngay khong restart (10-24) => chi co final=false. Lay MOI dong flag day=F, doi chieu
+        # voi co hieu luc '[TS-EXT] status ... flagToday=' trong ngay F (UTC, bo PENDING).
+        st = sorted(set(x for x in st_live.get(F, []) if x != "PENDING"))
         res["flag_" + F] = {"vision": v.iloc[0].to_dict() if len(v) else None,
                             "live_lines": lv,
-                            "live_final_states": sorted(set(x["flag"] for x in lv if x["final"] == "true"))}
+                            "live_final_states": sorted(set(x["flag"] for x in lv)),
+                            "live_status_flagToday": st}
     vf = res["flag_" + D]["vision"]
     lstates = res["flag_" + D]["live_final_states"]
+    sstates = res["flag_" + D]["live_status_flagToday"]
+    if sstates and lstates and sstates != lstates:
+        lstates = sorted(set(lstates) | set(sstates))   # mau thuan dong flag vs status => khong khop
     if vf is None or vf["state"] == "NA" or not lstates:
         res["flag_match"] = None
         res["flag_status"] = "KHONG DO DUOC (vision=%s, live=%s)" % (vf["state"] if vf else None, lstates)
