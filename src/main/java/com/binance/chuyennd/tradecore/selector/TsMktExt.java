@@ -82,14 +82,17 @@ public final class TsMktExt {
         String v = Cfg.get(KEY_ENABLE);
         ENABLED = decideEnabled(v, LiveProfileC3.on(), LiveProfileC3.isLive());
         if (v != null && !ENABLED) {
-            LOG.warn("[TS-EXT] TAT: {}={} nhung profile on={} live={} (chi bat cho LIVE_PROFILE=c3_shadow)",
+            LOG.warn("[TS-EXT] TAT: {}={} nhung profile on={} live={} (chi bat cho LIVE_PROFILE=c3_shadow|c3_live)",
                     KEY_ENABLE, v, LiveProfileC3.on(), LiveProfileC3.isLive());
         }
     }
 
-    /** Thuan tinh toan cua cong bat. c3_live (co the day lenh that) ⇒ KHONG bat. */
+    /**
+     * Thuan tinh toan cua cong bat. [V12 vong 2b MASTER 10-25] c3_live CUNG bat: gia han time-stop cho cum THAT qua
+     * {@code c3live.exit.TrailingStopManager} giong so giay ({@code profileLive} giu trong chu ky cho test/nhat ky).
+     */
     static boolean decideEnabled(String v, boolean profileOn, boolean profileLive) {
-        return v != null && "1".equals(v.trim()) && profileOn && !profileLive;
+        return v != null && "1".equals(v.trim()) && profileOn;
     }
 
     public static boolean enabled() {
@@ -147,7 +150,7 @@ public final class TsMktExt {
                 if (INSTANCE == null) {
                     TsMktExt x = new TsMktExt(TsMktExt::aeroRead, new File(Cfg.getOr(KEY_FILE, DEFAULT_FILE)),
                             System.currentTimeMillis(), SEED_PAUSE_MS);
-                    LOG.info("[TS-EXT] BAT {}=1 profile=c3_shadow baseH={} extH={} thr={} minN={} file={} days_loaded={}",
+                    LOG.info("[TS-EXT] BAT {}=1 profile=c3_shadow|c3_live baseH={} extH={} thr={} minN={} file={} days_loaded={}",
                             KEY_ENABLE, BASE_HOURS, EXT_HOURS, AltEwIndex.DD_THRESHOLD,
                             AltEwIndex.MIN_MINUTES_PER_DAY, x.file.getAbsolutePath(), x.days.size());
                     x.startScheduler();

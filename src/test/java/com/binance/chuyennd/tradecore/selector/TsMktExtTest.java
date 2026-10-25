@@ -79,7 +79,7 @@ public class TsMktExtTest {
     public void enableGateOnlyC3Shadow() {
         assertTrue(TsMktExt.decideEnabled("1", true, false));
         assertTrue(TsMktExt.decideEnabled(" 1 ", true, false));
-        assertFalse(TsMktExt.decideEnabled("1", true, true));     // c3_live: khong bat
+        assertTrue(TsMktExt.decideEnabled("1", true, true));      // [V12 2b MASTER 10-25] c3_live: BAT (cum that)
         assertFalse(TsMktExt.decideEnabled("1", false, false));   // profile tat
         assertFalse(TsMktExt.decideEnabled("0", true, false));
         assertFalse(TsMktExt.decideEnabled(null, true, false));
@@ -180,6 +180,7 @@ public class TsMktExtTest {
         }
         List<String> want = new ArrayList<>();
         want.add("ShadowBookC3.java");
+        want.add("TrailingStopManager.java");   // [V12 2b MASTER 10-25] cum THAT c3_live (khong phai LEGACY)
         want.add("TsMktExt.java");
         assertEquals(want, callers);
         String botm = new String(Files.readAllBytes(root.resolve(
