@@ -10,6 +10,7 @@ import com.binance.chuyennd.c3live.api.Side;
 import com.binance.chuyennd.c3live.book.LiveBookC3;
 import com.binance.chuyennd.c3live.exec.C3LiveCids;
 import com.binance.chuyennd.c3live.exec.C3LiveOrderExecutor;
+import com.binance.chuyennd.c3live.recon.FlatConfirm;
 import com.binance.chuyennd.ops.KillSwitchEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +54,7 @@ public final class C3LiveFlattener {
     private final long windowMs;
     private final long safeRetryMs;
     private final ArrayDeque<Long> sends = new ArrayDeque<>();
+    private final FlatConfirm flat;
     private boolean announced;
     private boolean doneAnnounced;
     private long nCloseOrders;
@@ -60,6 +62,14 @@ public final class C3LiveFlattener {
     public C3LiveFlattener(ExchangeGateway gw, LiveBookC3 book, Supplier<KillSwitchEngine.Action> action,
                            Consumer<String> alert, C3LiveOrderExecutor.ApiObserver api, LongSupplier clock, int maxOrders,
                            long windowMs, long safeRetryMs) {
+        this(gw, book, action, alert, api, clock, maxOrders, windowMs, safeRetryMs, null);
+    }
+
+    /** [2c] {@code flat} dung chung voi Reconciler (null => tao rieng, khoang cach 5 s). */
+    public C3LiveFlattener(ExchangeGateway gw, LiveBookC3 book, Supplier<KillSwitchEngine.Action> action,
+                           Consumer<String> alert, C3LiveOrderExecutor.ApiObserver api, LongSupplier clock, int maxOrders,
+                           long windowMs, long safeRetryMs, FlatConfirm flat) {
+        this.flat = flat != null ? flat : new FlatConfirm(gw, api, FlatConfirm.DEFAULT_MIN_GAP_MS);
         this.gw = gw;
         this.book = book;
         this.action = action;
@@ -130,9 +140,12 @@ public final class C3LiveFlattener {
             qty = c.confirmedQty;
         }
         if (qty.signum() <= 0) {
-            finalizeClosed(sym, reason + ":flat_on_exchange", now);
+            // [2c MAJ-2] vang/0 trong positionRisk CHUA phai bang chung phang => chi xoa cum + huy stop khi FlatConfirm
+            // xac nhan (2 lan doc cach >= 5 s + 0 lenh mo); chua du => giu cum + stop, thu lai luot sau
+            if (flat.observeFlat(sym, now, "close " + reason)) finalizeClosed(sym, reason + ":flat_on_exchange", now);
             return 0;
         }
+        flat.clear(sym);
         int attempt = c.closeAttempts + 1;
         String cid = C3LiveCids.close(sym, Math.floorDiv(now, 60_000L), attempt);
         book.markClosing(sym, cid, reason, now);   // persist TRUOC khi gui
@@ -179,11 +192,17 @@ public final class C3LiveFlattener {
         if (q.isPresent()) {
             OrderInfo o = q.get();
             if (!o.getStatus().isFinal()) return 0;
-            BigDecimal rest = pos == null ? null : pos.getOrDefault(sym, BigDecimal.ZERO);
-            if (rest != null && rest.signum() <= 0) {
-                finalizeClosed(sym, c.closeReason, now);
+            BigDecimal exq = o.getExecutedQty();
+            if (o.getStatus() == OrderStatus.FILLED && exq != null && exq.compareTo(c.confirmedQty) >= 0) {
+                finalizeClosed(sym, c.closeReason, now);   // bang chung (ii): lenh dong cua bot khop het
                 return 0;
             }
+            BigDecimal rest = pos == null ? null : pos.getOrDefault(sym, BigDecimal.ZERO);
+            if (rest != null && rest.signum() <= 0) {
+                if (flat.observeFlat(sym, now, "close-check " + c.closeReason)) finalizeClosed(sym, c.closeReason, now);
+                return 0;   // chua du bang chung: giu cum + stop + closeCid, luot sau tra lai
+            }
+            flat.clear(sym);
             book.clearCloseCid(sym, now);   // khop mot phan / huy => gui phan con lai
             return pos == null ? 0 : 1;
         }

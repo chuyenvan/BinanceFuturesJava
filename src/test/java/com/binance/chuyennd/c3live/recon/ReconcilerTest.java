@@ -288,4 +288,114 @@ public class ReconcilerTest {
         OrderInfo dummy = null;
         assertNull(dummy);
     }
+
+    // ------------------------------------------------------------------ [2c] MAJ-1 / MAJ-2 / MIN-6
+
+    @Test
+    public void entryBlockedBeforeStartupReconcile() {
+        Node n = new Node(true);
+        assertFalse("MAJ-1: truoc startup() phai CHAN", n.rec.allowsEntry("C00USDT"));
+        assertTrue(n.rec.blocks().containsKey(Reconciler.BLOCK_STARTUP));
+        assertTrue(n.rec.startup().ok);
+        assertTrue(n.rec.allowsEntry("C00USDT"));
+        assertTrue(n.rec.blocks().isEmpty());
+    }
+
+    @Test
+    public void positionsMissingOnceKeepsClusterAndStopTwiceFiveSecApartCloses() {
+        Node n = new Node(false);   // stream chet => chi REST
+        n.leg("C00USDT", 0, "1.0", "100");
+        n.step("C00USDT", 1.12f);   // arm => stop tren san
+        assertTrue(n.rec.startup().ok);
+        String sid = n.book.cluster("C00USDT").get().stopClientAlgoId;
+        assertNotNull(sid);
+        gw.setPosition("C00USDT", BigDecimal.ZERO, BigDecimal.ONE);   // positionRisk 200 nhung KHONG co symbol
+        int c0 = gw.calls("cancelStop");
+        Reconciler.Report r1 = n.rec.checkPositions();
+        assertEquals("[C00USDT]", r1.flatPending.toString());
+        assertTrue(r1.closedWhileDown.isEmpty());
+        assertTrue("1 lan rong: GIU cum", n.book.isHolding("C00USDT"));
+        assertEquals("1 lan rong: KHONG huy stop", c0, gw.calls("cancelStop"));
+        assertEquals(1, gw.openStops("C00USDT").size());
+        assertEquals(sid, n.book.cluster("C00USDT").get().stopClientAlgoId);
+        assertFalse("dang nghi phang => chan vao lenh symbol do", n.rec.allowsEntry("C00USDT"));
+        assertTrue(n.rec.allowsEntry("C01USDT"));
+        assertNull("chua du 5 s => khong doc lai", n.rec.confirmPendingFlat());
+        now.addAndGet(2_000L);
+        assertTrue(n.rec.checkPositions().closedWhileDown.isEmpty());   // lan 2 nhung < 5 s
+        assertTrue(n.book.isHolding("C00USDT"));
+        assertEquals(c0, gw.calls("cancelStop"));
+        now.addAndGet(4_000L);
+        Reconciler.Report r2 = n.rec.confirmPendingFlat();
+        assertNotNull(r2);
+        assertEquals("[C00USDT:" + FillAccounting.REASON_EXTERNAL + "]", r2.closedWhileDown.toString());
+        assertFalse(n.book.isHolding("C00USDT"));
+        assertTrue("2 lan rong cach >= 5 s: huy stop", gw.calls("cancelStop") > c0);
+        assertTrue(gw.openStops("C00USDT").isEmpty());
+        assertTrue(n.rec.allowsEntry("C00USDT"));
+    }
+
+    @Test
+    public void positionReappearsClearsSuspicion() {
+        Node n = new Node(false);
+        n.leg("C00USDT", 0, "1.0", "100");
+        n.step("C00USDT", 1.12f);
+        assertTrue(n.rec.startup().ok);
+        gw.setPosition("C00USDT", BigDecimal.ZERO, BigDecimal.ONE);
+        assertEquals(1, n.rec.checkPositions().flatPending.size());
+        gw.setPosition("C00USDT", new BigDecimal("100"), BigDecimal.ONE);   // lan doc sau thay vi the => het nghi
+        assertTrue(n.rec.checkPositions().flatPending.isEmpty());
+        assertTrue(n.rec.flatPending().isEmpty());
+        now.addAndGet(10_000L);
+        gw.setPosition("C00USDT", BigDecimal.ZERO, BigDecimal.ONE);
+        Reconciler.Report r = n.rec.checkPositions();   // lai la "lan dau" => giu
+        assertTrue(r.closedWhileDown.isEmpty());
+        assertTrue(n.book.isHolding("C00USDT"));
+        assertEquals(1, gw.openStops("C00USDT").size());
+    }
+
+    @Test
+    public void startupWithMissingPositionKeepsClusterUntilConfirmed() {
+        Node n1 = new Node(true);
+        n1.leg("C00USDT", 0, "1.0", "100");
+        n1.step("C00USDT", 1.12f);
+        gw.wsSink = null;
+        gw.setPosition("C00USDT", BigDecimal.ZERO, BigDecimal.ONE);   // positionRisk thieu symbol luc restart
+        Node n2 = new Node(false);
+        Reconciler.Report r = n2.rec.startup();
+        assertTrue(r.ok);
+        assertEquals("[C00USDT]", r.flatPending.toString());
+        assertTrue(r.closedWhileDown.isEmpty() && r.orphanCancelled.isEmpty() && r.stopsDropped.isEmpty());
+        assertTrue(n2.book.isHolding("C00USDT"));
+        assertEquals(1, gw.openStops("C00USDT").size());
+        assertTrue(n2.rec.allowsEntry("C01USDT"));
+        assertFalse(n2.rec.allowsEntry("C00USDT"));
+        now.addAndGet(5_000L);
+        Reconciler.Report r2 = n2.rec.confirmPendingFlat();
+        assertNotNull(r2);
+        assertEquals(1, r2.closedWhileDown.size());
+        assertFalse(n2.book.isHolding("C00USDT"));
+        assertTrue(gw.openStops("C00USDT").isEmpty());
+    }
+
+    /** MIN-6: so mat tham chieu stop (ghi loi) nhung stop VAN tren san, cum da arm => restart NHAN lai stop, khong huy. */
+    @Test
+    public void startupAdoptsOwnStopForArmedClusterInsteadOfCancelling() {
+        Node n1 = new Node(true);
+        n1.leg("C00USDT", 0, "1.0", "100");
+        n1.step("C00USDT", 1.12f);
+        String a = n1.book.cluster("C00USDT").get().stopClientAlgoId;
+        assertNotNull(a);
+        n1.book.retireActiveStop("C00USDT", now.get());
+        n1.book.removeOrphanStop("C00USDT", a, now.get());
+        assertFalse(n1.book.referencedStopCids().contains(a));
+        Node n2 = new Node(true);
+        Reconciler.Report r = n2.rec.startup();
+        assertTrue(r.toString(), r.orphanCancelled.isEmpty());
+        assertEquals(a, n2.book.cluster("C00USDT").get().stopClientAlgoId);
+        assertEquals(1, gw.openStops("C00USDT").size());
+        int s0 = gw.calls("newStopMarket");
+        n2.step("C00USDT", 1.12f);
+        assertEquals("khong dat stop trung", s0, gw.calls("newStopMarket"));
+    }
 }

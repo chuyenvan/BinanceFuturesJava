@@ -76,6 +76,8 @@ public final class Reconciler {
         public final List<String> orphanCancelled = new ArrayList<>();
         public final List<String> foreignStops = new ArrayList<>();
         public final List<String> unknownPositions = new ArrayList<>();
+        /** [2c MAJ-2] cum co qty ma positionRisk vang/0, CHUA du bang chung phang => giu cum + stop. */
+        public final List<String> flatPending = new ArrayList<>();
         public boolean ok = true;
         public String error = "";
 
@@ -83,7 +85,8 @@ public final class Reconciler {
         public String toString() {
             return "ok=" + ok + (error.isEmpty() ? "" : " err=" + error) + " closedWhileDown=" + closedWhileDown + " overridden="
                     + overridden + " stopsDropped=" + stopsDropped + " pendingPromoted=" + pendingPromoted + " orphanCancelled="
-                    + orphanCancelled + " foreignStops=" + foreignStops + " unknownPositions=" + unknownPositions;
+                    + orphanCancelled + " foreignStops=" + foreignStops + " unknownPositions=" + unknownPositions
+                    + " flatPending=" + flatPending;
         }
     }
 
@@ -97,6 +100,8 @@ public final class Reconciler {
     private final double equityTol;
     private final int matchToRelease;
     private final File reanchorFile;
+    private final FlatConfirm flat;
+    /** [2c MAJ-1] khoi tao SAN co BLOCK_STARTUP: chi go khi {@link #startup()} doc san va doi chieu XONG. */
     private final Map<String, String> blocks = new TreeMap<>();
     private final Set<String> unknownSyms = new TreeSet<>();
     private int matchStreak;
@@ -108,6 +113,15 @@ public final class Reconciler {
     public Reconciler(ExchangeGateway gw, LiveBookC3 book, FillAccounting acct, Supplier<SymbolRules> rules,
                       Consumer<String> alert, C3LiveOrderExecutor.ApiObserver api, LongSupplier clock, double equityTol,
                       int matchToRelease, File reanchorFile) {
+        this(gw, book, acct, rules, alert, api, clock, equityTol, matchToRelease, reanchorFile, null);
+    }
+
+    /** [2c] {@code flat} dung chung voi C3LiveFlattener (null => tao rieng, khoang cach 5 s). */
+    public Reconciler(ExchangeGateway gw, LiveBookC3 book, FillAccounting acct, Supplier<SymbolRules> rules,
+                      Consumer<String> alert, C3LiveOrderExecutor.ApiObserver api, LongSupplier clock, double equityTol,
+                      int matchToRelease, File reanchorFile, FlatConfirm flat) {
+        this.blocks.put(BLOCK_STARTUP, "chua doi chieu khoi dong");
+        this.flat = flat != null ? flat : new FlatConfirm(gw, api, FlatConfirm.DEFAULT_MIN_GAP_MS);
         this.gw = gw;
         this.book = book;
         this.acct = acct;
@@ -123,11 +137,12 @@ public final class Reconciler {
     // ------------------------------------------------------------------ cong vao lenh
     /** Khong co ly do chan (vi the la / lech equity / reconcile khoi dong chua xong). */
     public synchronized boolean allowsEntry(String symbol) {
-        if (blocks.isEmpty()) return true;
+        if (blocks.isEmpty() && (symbol == null || !flat.isPending(symbol))) return true;
         long now = clock.getAsLong();
         if (now - lastBlockLogMs > 600_000L) {
             lastBlockLogMs = now;
-            LOG.warn("[C3-LIVE-RECON] CHAN vao lenh ({}): {}", symbol, blocks);
+            LOG.warn("[C3-LIVE-RECON] CHAN vao lenh ({}): {}{}", symbol, blocks,
+                    blocks.isEmpty() ? " (symbol dang cho xac nhan phang)" : "");
         }
         return false;
     }
@@ -174,10 +189,27 @@ public final class Reconciler {
         reconcileClusters(snap, pos, stopByCid, r, now, true);
         // stop mo coi
         Set<String> refd = book.referencedStopCids();
-        for (OrderInfo s : stops) {
+        // [2c MIN-6] stop c3s- cao nhat cua cum DA arm ma so khong co stop (vd so khong ghi duoc luc dat) => NHAN lai
+        // (san la nguon su that), con lai moi huy
+        List<OrderInfo> sorted = new ArrayList<>(stops);
+        sorted.sort((a, b) -> {
+            BigDecimal pa = a.getStopPrice() == null ? BigDecimal.ZERO : a.getStopPrice();
+            BigDecimal pb = b.getStopPrice() == null ? BigDecimal.ZERO : b.getStopPrice();
+            return pb.compareTo(pa);
+        });
+        for (OrderInfo s : sorted) {
             String cid = s.getClientOrderId();
             if (cid == null || refd.contains(cid)) continue;
             if (cid.startsWith(C3LiveCids.STOP_PREFIX)) {
+                Optional<LiveBookC3.ClusterView> cv = book.cluster(s.getSymbol());
+                if (cv.isPresent() && cv.get().trailArmed() && cv.get().stopClientAlgoId == null
+                        && cv.get().pendingStopCid == null && s.getStopPrice() != null && s.getStopPrice().signum() > 0
+                        && !r.flatPending.contains(s.getSymbol())) {
+                    book.setPendingStop(s.getSymbol(), cid, s.getStopPrice().doubleValue(), !s.isClosePosition(), now);
+                    book.promotePendingStop(s.getSymbol(), now);
+                    r.pendingPromoted.add(s.getSymbol() + "/" + cid + "(nhan lai)");
+                    continue;
+                }
                 cancelQuiet(s.getSymbol(), cid);
                 r.orphanCancelled.add(s.getSymbol() + "/" + cid);
             } else {
@@ -185,10 +217,11 @@ public final class Reconciler {
             }
         }
         unknownCheck(pos, r);
+        flat.retainOnly(book.ownedSymbols());
         blocks.remove(BLOCK_STARTUP);
         String m = "[C3-LIVE-RECON] khoi dong: " + r;
         if (!r.closedWhileDown.isEmpty() || !r.overridden.isEmpty() || !r.unknownPositions.isEmpty()
-                || !r.foreignStops.isEmpty()) {
+                || !r.foreignStops.isEmpty() || !r.flatPending.isEmpty()) {
             LOG.warn("{}", m);
             alert.accept(m);
         } else {
@@ -206,13 +239,26 @@ public final class Reconciler {
             BigDecimal ex = p == null || p.getPositionAmt() == null ? BigDecimal.ZERO : p.getPositionAmt();
             if (ex.signum() <= 0) {
                 if (c.confirmedQty.signum() > 0) {
-                    String reason = stopTriggered(c) ? FillAccounting.REASON_TRAILING
+                    // [2c MAJ-2] vang/0 trong positionRisk CHUA phai bang chung phang: can stop/lenh dong cua bot da khop
+                    // het, hoac 2 lan doc cach >= 5 s + 0 lenh mo (FlatConfirm). Chua du => GIU cum + stop, thu lai.
+                    OrderStatus st = activeStopStatus(c);
+                    boolean stopFired = st == OrderStatus.TRIGGERED || st == OrderStatus.FINISHED || st == OrderStatus.FILLED
+                            || st == OrderStatus.TRIGGERING;
+                    boolean positive = st == OrderStatus.FINISHED || st == OrderStatus.FILLED || closeOrderFilled(c);
+                    String who = startup ? "reconcile khoi dong" : "reconcile";
+                    if (!positive && !flat.observeFlat(sym, now, who)) {
+                        r.flatPending.add(sym);
+                        continue;
+                    }
+                    flat.clear(sym);
+                    String reason = stopFired ? FillAccounting.REASON_TRAILING
                             : (c.closeReason != null ? c.closeReason : FillAccounting.REASON_EXTERNAL);
                     acct.closedOnExchange(sym, reason, now);
                     r.closedWhileDown.add(sym + ":" + reason);
                 }
                 continue;
             }
+            flat.clear(sym);
             if (!startup) continue;
             // san thang qty/gia
             double ep = p.getEntryPrice() == null ? 0d : p.getEntryPrice().doubleValue();
@@ -247,24 +293,53 @@ public final class Reconciler {
         }
     }
 
-    /** Stop active cua cum da kich/khop (truy van theo clientAlgoId). */
-    private boolean stopTriggered(LiveBookC3.ClusterView c) {
+    /** Trang thai stop active cua cum tren san (truy van theo clientAlgoId); null = khong co / khong doc duoc. */
+    private OrderStatus activeStopStatus(LiveBookC3.ClusterView c) {
         String cid = c.stopClientAlgoId;
-        if (cid == null) return false;
+        if (cid == null) return null;
         try {
             Optional<OrderInfo> q = gw.queryStop(c.symbol, cid);
             api.onApiResult("queryStop", true);
-            if (!q.isPresent()) return false;
-            OrderStatus st = q.get().getStatus();
-            return st == OrderStatus.TRIGGERED || st == OrderStatus.FINISHED || st == OrderStatus.FILLED
-                    || st == OrderStatus.TRIGGERING;
+            return q.isPresent() ? q.get().getStatus() : null;
         } catch (GatewayException e) {
             api.onApiResult("queryStop", e.getKind() == ErrorKind.UNKNOWN_ORDER);
-            return false;
+            return null;
         } catch (RuntimeException e) {
             api.onApiResult("queryStop", false);
+            return null;
+        }
+    }
+
+    /** [2c MAJ-2] bang chung (ii): lenh dong cua bot (closeCid) FILLED va executedQty >= qty xac nhan trong so. */
+    private boolean closeOrderFilled(LiveBookC3.ClusterView c) {
+        if (c.closeCid == null) return false;
+        try {
+            Optional<OrderInfo> q = gw.queryOrder(c.symbol, c.closeCid);
+            api.onApiResult("queryOrder", true);
+            if (!q.isPresent() || q.get().getStatus() != OrderStatus.FILLED) return false;
+            BigDecimal exq = q.get().getExecutedQty();
+            return exq != null && exq.compareTo(c.confirmedQty) >= 0;
+        } catch (GatewayException e) {
+            api.onApiResult("queryOrder", e.getKind() == ErrorKind.UNKNOWN_ORDER);
+            return false;
+        } catch (RuntimeException e) {
+            api.onApiResult("queryOrder", false);
             return false;
         }
+    }
+
+    /**
+     * [2c MAJ-2] Goi moi nhip ops (5 s): co symbol dang "nghi phang" da du khoang cach => doc lai positionRisk de xac nhan
+     * (hoac xoa nghi ngo neu vi the con). null = khong co gi phai lam.
+     */
+    public synchronized Report confirmPendingFlat() {
+        if (!flat.anyDue(clock.getAsLong())) return null;
+        return checkPositions();
+    }
+
+    /** Symbol dang cho xac nhan phang (giu cum + stop). */
+    public Set<String> flatPending() {
+        return flat.pending();
     }
 
     private void unknownCheck(Map<String, PositionInfo> pos, Report r) {
@@ -296,6 +371,7 @@ public final class Reconciler {
             Map<String, PositionInfo> pos = positionsBySymbol();
             reconcileClusters(snap, pos, Collections.<String, OrderInfo>emptyMap(), r, now, false);
             unknownCheck(pos, r);
+            flat.retainOnly(book.ownedSymbols());
         } catch (RuntimeException e) {
             r.ok = false;
             r.error = e.toString();
