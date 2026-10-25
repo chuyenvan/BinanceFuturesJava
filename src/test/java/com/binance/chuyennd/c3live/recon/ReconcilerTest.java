@@ -601,57 +601,127 @@ public class ReconcilerTest {
         assertTrue(n.rec.allowsEntry("C00USDT"));
     }
 
+    static final String PA0_C00 = "{\"e\":\"ACCOUNT_UPDATE\",\"E\":1,\"a\":{\"m\":\"ORDER\",\"B\":[],\"P\":[{\"s\":\"C00USDT\","
+            + "\"pa\":\"0\",\"ep\":\"0\",\"ps\":\"BOTH\"}]}}";
+
     /**
-     * closedOnExchange (stream pa=0) trong khi positionRisk/account VAN con vi the (tre/sai) => xoa cum theo stream nhung GIU
-     * stop + symbol vao UNKNOWN; khi san that su phang => Reconciler huy stop va go chan.
+     * [2f] Duong thuong: cum X (C00, co stop) chot, stream pa=0 nhung positionRisk/account VAN con vi the (REST tre) => xoa cum
+     * theo stream, GIU stop, CHI chan X (lop B); symbol Y (C01) moi VAN vao duoc; khong UNKNOWN toan he. San phang => huy
+     * stop; X duoc go sau 2 lan doc phang cach >= 30 s.
      */
     @Test
-    public void streamFlatButRestStillHoldsKeepsStopUntilBothFlat() {
+    public void streamFlatButRestLagBlocksOnlyThatSymbol() {
         Node n = new Node(true);
         n.leg("C00USDT", 0, "1.0", "100");
         n.step("C00USDT", 1.12f);
         assertTrue(n.rec.startup().ok);
         String sid = n.book.cluster("C00USDT").get().stopClientAlgoId;
         int c0 = gw.calls("cancelStop");
-        gw.emitRaw("{\"e\":\"ACCOUNT_UPDATE\",\"E\":1,\"a\":{\"m\":\"ORDER\",\"B\":[],\"P\":[{\"s\":\"C00USDT\",\"pa\":\"0\",\"ep\":\"0\",\"ps\":\"BOTH\"}]}}");
+        gw.emitRaw(PA0_C00);
         assertFalse("stream la bang chung duong => xoa cum", n.book.isHolding("C00USDT"));
         assertEquals("GIU stop", c0, gw.calls("cancelStop"));
         assertEquals(1, gw.openStops("C00USDT").size());
-        assertFalse(n.rec.allowsEntry("C01USDT"));
-        assertTrue(n.rec.blocks().get(Reconciler.BLOCK_UNKNOWN).contains("C00USDT"));
         assertTrue(n.rec.stopGuard().keptStops().containsKey(sid));
-        // REST van con => giu
+        assertTrue("Y vao duoc", n.rec.allowsEntry("C01USDT"));
+        assertFalse("X bi chan", n.rec.allowsEntry("C00USDT"));
+        assertTrue(n.rec.blocks().toString(), n.rec.blocks().isEmpty());
+        assertEquals("[C00USDT]", n.rec.symbolBlocks().toString());
+        // REST van con => giu, van chi chan X
         now.addAndGet(GAP);
-        n.rec.confirmPendingFlat();
+        assertNotNull(n.rec.confirmPendingFlat());
         assertEquals(1, gw.openStops("C00USDT").size());
-        assertFalse(n.rec.allowsEntry("C01USDT"));
-        // san that su phang
+        assertTrue(n.rec.allowsEntry("C01USDT"));
+        assertFalse(n.rec.allowsEntry("C00USDT"));
+        assertFalse(n.rec.blocks().containsKey(Reconciler.BLOCK_UNKNOWN));
+        // san that su phang => huy stop; lan doc phang 1
         gw.setPosition("C00USDT", BigDecimal.ZERO, BigDecimal.ONE);
         now.addAndGet(GAP);
         Reconciler.Report r = n.rec.confirmPendingFlat();
         assertEquals("[C00USDT/" + sid + "]", r.orphanCancelled.toString());
         assertTrue(gw.openStops("C00USDT").isEmpty());
-        assertFalse(n.rec.allowsEntry("C01USDT"));
-        now.addAndGet(GAP);
-        n.rec.confirmPendingFlat();
+        assertFalse("1 lan doc phang: X van chan", n.rec.allowsEntry("C00USDT"));
         assertTrue(n.rec.allowsEntry("C01USDT"));
+        now.addAndGet(GAP);
+        n.rec.confirmPendingFlat();   // lan doc phang 2
+        assertTrue("2 lan doc phang: go X", n.rec.allowsEntry("C00USDT"));
+        assertTrue(n.rec.symbolBlocks().isEmpty());
     }
 
-    /** Stop bi giu => UNKNOWN KHONG duoc go chi vi vi the vang (con stop c3s- chua huy duoc). */
+    /** [2f] Cum KHONG co stop (chua arm) chot qua stream, REST tre (doc hang gio/fallback) => van lop B, khong chan toan he. */
     @Test
-    public void unknownNotReleasedWhileOwnStopStillKept() {
+    public void streamFlatRestLagWithoutStopIsSymbolBlockOnly() {
+        Node n = new Node(true);
+        n.leg("C00USDT", 0, "1.0", "100");
+        assertTrue(n.rec.startup().ok);
+        gw.emitRaw(PA0_C00);
+        assertFalse(n.book.isHolding("C00USDT"));
+        Reconciler.Report r = n.rec.checkPositions();
+        assertTrue(r.toString(), r.unknownPositions.isEmpty());
+        assertTrue(n.rec.allowsEntry("C01USDT"));
+        assertFalse(n.rec.allowsEntry("C00USDT"));
+        gw.setPosition("C00USDT", BigDecimal.ZERO, BigDecimal.ONE);
+        now.addAndGet(GAP);
+        n.rec.confirmPendingFlat();
+        assertFalse(n.rec.allowsEntry("C00USDT"));
+        now.addAndGet(GAP);
+        n.rec.confirmPendingFlat();
+        assertTrue(n.rec.allowsEntry("C00USDT"));
+    }
+
+    /**
+     * [2f] Lop B leo thang: san VAN con vi the (account) qua cua so 10' sau khi so chot => coi la vi the la => UNKNOWN toan he.
+     * Trong cua so: con stop giu => X khong duoc go du positionRisk rong.
+     */
+    @Test
+    public void symbolBlockEscalatesToGlobalAfterWindow() {
         Node n = new Node(true);
         n.leg("C00USDT", 0, "1.0", "100");
         n.step("C00USDT", 1.12f);
         assertTrue(n.rec.startup().ok);
-        gw.emitRaw("{\"e\":\"ACCOUNT_UPDATE\",\"E\":1,\"a\":{\"m\":\"ORDER\",\"B\":[],\"P\":[{\"s\":\"C00USDT\",\"pa\":\"0\",\"ep\":\"0\",\"ps\":\"BOTH\"}]}}");
+        gw.emitRaw(PA0_C00);
         gw.positionsGlitch = true;   // positionRisk rong nhung account VAN con vi the => guard giu
         for (int i = 0; i < 4; i++) {
             now.addAndGet(GAP);
             n.rec.confirmPendingFlat();
-            assertFalse("i=" + i, n.rec.allowsEntry("C01USDT"));
+            assertFalse("i=" + i, n.rec.allowsEntry("C00USDT"));
+            assertTrue("i=" + i, n.rec.allowsEntry("C01USDT"));
             assertEquals(1, gw.openStops("C00USDT").size());
         }
+        now.addAndGet(OwnStopGuard.KNOWN_CLOSE_WINDOW_MS);
+        n.rec.confirmPendingFlat();
+        assertEquals(1, gw.openStops("C00USDT").size());
+        assertFalse("qua cua so => toan he", n.rec.allowsEntry("C01USDT"));
+        assertTrue(n.rec.blocks().get(Reconciler.BLOCK_UNKNOWN).contains("C00USDT"));
+    }
+
+    /** [2f] positionRisk (REST) con vi the qua cua so 10' sau khi so chot => leo thang UNKNOWN toan he. */
+    @Test
+    public void restPositionPersistingPastWindowEscalates() {
+        Node n = new Node(true);
+        n.leg("C00USDT", 0, "1.0", "100");
+        assertTrue(n.rec.startup().ok);
+        gw.emitRaw(PA0_C00);
+        n.rec.checkPositions();
+        assertTrue(n.rec.allowsEntry("C01USDT"));
+        now.addAndGet(OwnStopGuard.KNOWN_CLOSE_WINDOW_MS);
+        Reconciler.Report r = n.rec.checkPositions();
+        assertEquals("[C00USDT]", r.unknownPositions.toString());
+        assertFalse(n.rec.allowsEntry("C01USDT"));
+        assertTrue(n.rec.symbolBlocks().isEmpty());
+    }
+
+    /** [2f] Doc vi the LOI khi giu stop cua cum vua chot => van lop (A) toan he. */
+    @Test
+    public void readErrorOnJustClosedClusterIsGlobal() {
+        Node n = new Node(true);
+        n.leg("C00USDT", 0, "1.0", "100");
+        n.step("C00USDT", 1.12f);
+        assertTrue(n.rec.startup().ok);
+        gw.failNext("account", new GatewayException(ErrorKind.TIMEOUT_UNKNOWN_STATE, "timeout", false));
+        gw.emitRaw(PA0_C00);
+        assertEquals(1, gw.openStops("C00USDT").size());
+        assertFalse(n.rec.allowsEntry("C01USDT"));
+        assertTrue(n.rec.blocks().get(Reconciler.BLOCK_UNKNOWN).contains("C00USDT"));
     }
 
     /** [2e] Lenh owner go cum ma: TU CHOI khi vi the != 0 (positionRisk hoac account) / symbol sai; OK khi ca hai phang. */

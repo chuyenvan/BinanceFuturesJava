@@ -30,8 +30,8 @@ import java.util.function.Supplier;
  *   <li>CA positionRisk LAN {@code account().positions} cung bao symbol phang (vang / amt = 0).</li>
  * </ul>
  * Mot trong hai nguon con vi the != 0, hoac doc loi / account khong co mang positions => GIU stop, dua symbol vao
- * UNKNOWN_POSITION (neu so khong giu symbol), ghi vao danh sach "dang giu" (Reconciler thu lai) va Telegram (lan dau ngay,
- * nhac lai moi 6 h/symbol).
+ * UNKNOWN_POSITION (neu so khong giu symbol; [2f] tru cum so VUA chot va vi the doc duoc => chi chan rieng symbol), ghi
+ * vao danh sach "dang giu" (Reconciler thu lai) va Telegram (lan dau ngay, nhac lai moi 6 h/symbol).
  * Hai duong KHONG qua guard (co chu dich, caller tu dam bao): {@link #cancelReplaced} (stop moi cua cum da len san va thanh
  * active) va {@link #cancelRetired} (cum dang giu bi go arm do DCA nhu so giay).
  */
@@ -97,19 +97,19 @@ public final class OwnStopGuard {
             pr = amt(ps, sym);
         } catch (RuntimeException e) {
             api.onApiResult("positions", false);
-            return keep(sym, cid, why, Result.KEPT_READ_ERROR, "khong doc duoc positionRisk (" + e + ")");
+            return keep(sym, cid, why, Result.KEPT_READ_ERROR, "khong doc duoc positionRisk (" + e + ")", true);
         }
         BigDecimal ac;
         try {
             AccountSnapshot a = gw.account();
             api.onApiResult("account", true);
             if (a == null || a.getPositions() == null) {
-                return keep(sym, cid, why, Result.KEPT_READ_ERROR, "account() khong co mang positions");
+                return keep(sym, cid, why, Result.KEPT_READ_ERROR, "account() khong co mang positions", true);
             }
             ac = amt(a.getPositions(), sym);
         } catch (RuntimeException e) {
             api.onApiResult("account", false);
-            return keep(sym, cid, why, Result.KEPT_READ_ERROR, "khong doc duoc account (" + e + ")");
+            return keep(sym, cid, why, Result.KEPT_READ_ERROR, "khong doc duoc account (" + e + ")", true);
         }
         if (pr.signum() != 0 || ac.signum() != 0) {
             return keep(sym, cid, why, Result.KEPT_POSITION, "vi the != 0 (positionRisk=" + pr.toPlainString() + " account="
@@ -155,6 +155,11 @@ public final class OwnStopGuard {
         return new java.util.TreeMap<>(kept);
     }
 
+    /** [2f] tap symbol con stop c3s- dang bi giu. */
+    public java.util.Set<String> keptSymbols() {
+        return new java.util.TreeSet<>(kept.values());
+    }
+
     /** true neu con stop c3s- cua symbol dang bi giu. */
     public boolean hasKept(String sym) {
         return sym != null && kept.containsValue(sym);
@@ -165,20 +170,44 @@ public final class OwnStopGuard {
         if (cid != null) kept.remove(cid);
     }
 
+    /**
+     * [2f] Symbol so DA BIET: cum vua bi so xoa (chot) trong {@link #KNOWN_CLOSE_WINDOW_MS} gan day (cung JVM). Vi the con
+     * thay tren san cua symbol nay = san tre/chua cap nhat => lop chan (B) CHI symbol do; qua cua so => coi la vi the la (A).
+     */
+    public static boolean recentlyClosed(LiveBookC3 book, String sym, long now) {
+        if (book == null || sym == null) return false;
+        long t = book.lastRemovedMs(sym);
+        return t != Long.MIN_VALUE && now - t >= 0L && now - t < KNOWN_CLOSE_WINDOW_MS;
+    }
+
+    /** [2f] cua so "so da biet vua chot" (B); qua cua so ma vi the con => leo thang UNKNOWN toan he (A). */
+    public static final long KNOWN_CLOSE_WINDOW_MS = 600_000L;
+
     private Result keep(String sym, String cid, String why, Result r, String detail) {
+        return keep(sym, cid, why, r, detail, false);
+    }
+
+    /**
+     * Giu stop. Lop chan: so dang giu cum => khong chan them; cum so vua chot (B) => Reconciler chi chan symbol nay (qua
+     * {@link #hasKept}); con lai (vi the la, so mat, qua cua so) hoac KHONG doc duoc vi the (positionRisk/account) => (A)
+     * UNKNOWN_POSITION toan he.
+     */
+    private Result keep(String sym, String cid, String why, Result r, String detail, boolean positionsUnreadable) {
         kept.put(cid, sym);
+        long now = clock.getAsLong();
         boolean held = book != null && book.isHolding(sym);
-        if (!held) {
+        boolean global = !held && (positionsUnreadable || !recentlyClosed(book, sym, now));
+        if (global) {
             try {
                 unknownSink.get().accept(sym);
             } catch (Throwable ignore) {
                 // khong lam hong guard
             }
         }
-        long now = clock.getAsLong();
         Long last = lastAlertMs.get(sym);
         String m = "[C3-LIVE-STOPGUARD] GIU stop " + sym + " " + cid + " (" + why + "): " + detail
-                + (held ? "" : " => symbol vao UNKNOWN_POSITION (chan mo moi)") + "; owner kiem tay neu keo dai";
+                + (held ? "" : global ? " => symbol vao UNKNOWN_POSITION (chan mo moi TOAN HE)"
+                : " => cum so vua chot: CHI chan mo moi " + sym + " toi khi xac nhan phang") + "; owner kiem tay neu keo dai";
         if (last == null || now - last >= ALERT_EVERY_MS) {
             lastAlertMs.put(sym, now);
             LOG.warn("{}", m);

@@ -113,6 +113,9 @@ public final class Reconciler {
     private final java.util.concurrent.ConcurrentLinkedQueue<String> unknownQ = new java.util.concurrent.ConcurrentLinkedQueue<>();
     /** [2d MIN-18] vi the la: moc lan doc dau tien thay vang. */
     private final Map<String, Long> unknownGoneSince = new TreeMap<>();
+    /** [2f] lop (B): symbol so da biet (vua chot) con vi the tren san / stop giu => chi chan symbol do. sym -> moc chot. */
+    private final Map<String, Long> knownSyms = new TreeMap<>();
+    private final Map<String, Long> knownGoneSince = new TreeMap<>();
     private int matchStreak;
     private double lastDiff = Double.NaN;
     private double lastBookEq = Double.NaN;
@@ -158,14 +161,25 @@ public final class Reconciler {
     /** Khong co ly do chan (vi the la / lech equity / reconcile khoi dong chua xong). */
     public synchronized boolean allowsEntry(String symbol) {
         drainUnknown();
-        if (blocks.isEmpty() && (symbol == null || !flat.isPending(symbol))) return true;
+        // [2f] lop (B): symbol so DA BIET (cum dang cho xac nhan phang / vua chot, san con vi the hoac stop c3s- dang giu)
+        // => CHI chan symbol do; lop (A) blocks (UNKNOWN that, equity, startup) => chan toan he
+        boolean symBlocked = symbol != null && (flat.isPending(symbol) || knownSyms.containsKey(symbol));
+        if (blocks.isEmpty() && !symBlocked) return true;
         long now = clock.getAsLong();
         if (now - lastBlockLogMs > 600_000L) {
             lastBlockLogMs = now;
             LOG.warn("[C3-LIVE-RECON] CHAN vao lenh ({}): {}{}", symbol, blocks,
-                    blocks.isEmpty() ? " (symbol dang cho xac nhan phang)" : "");
+                    blocks.isEmpty() ? " (chi symbol nay: dang cho xac nhan phang)" : "");
         }
         return false;
+    }
+
+    /** [2f] lop (B): symbol dang bi chan RIENG (cho xac nhan phang / cum vua chot con vi the hoac stop giu). */
+    public synchronized Set<String> symbolBlocks() {
+        drainUnknown();
+        Set<String> s = new TreeSet<>(knownSyms.keySet());
+        s.addAll(flat.pending());
+        return s;
     }
 
     public synchronized Map<String, String> blocks() {
@@ -187,6 +201,25 @@ public final class Reconciler {
     private void drainUnknown() {
         String s;
         while ((s = unknownQ.poll()) != null) markUnknown(s);
+        syncKnownKept();
+    }
+
+    /**
+     * [2f] stop c3s- dang bi guard GIU cho symbol so KHONG con giu va KHONG thuoc UNKNOWN (A) => cum so vua chot: lop (B),
+     * chan rieng symbol do toi khi stop huy duoc + 2 lan doc positionRisk phang cach >= 30 s.
+     */
+    private void syncKnownKept() {
+        if (guard == null || book == null) return;
+        for (String s : guard.keptSymbols()) {
+            if (unknownSyms.contains(s) || knownSyms.containsKey(s) || book.isHolding(s)) continue;
+            knownSyms.put(s, knownSince(s));
+            LOG.warn("[C3-LIVE-RECON] {}: cum so vua chot nhung con stop c3s- dang giu => CHI chan mo moi {} (lop B)", s, s);
+        }
+    }
+
+    private long knownSince(String s) {
+        long t = book == null ? Long.MIN_VALUE : book.lastRemovedMs(s);
+        return t == Long.MIN_VALUE ? clock.getAsLong() : t;
     }
 
     private void markUnknown(String symbol) {
@@ -381,7 +414,7 @@ public final class Reconciler {
         boolean unknownDue = false;
         for (long g : unknownGoneSince.values()) if (t - g >= flat.minGapMs()) unknownDue = true;
         // [2e] dang chan UNKNOWN (vd guard GIU stop vi positionRisk tre sau khi dong) => doc lai moi 30 s de tu go som
-        if (!unknownSyms.isEmpty() && t - lastPosCheckMs >= flat.minGapMs()) unknownDue = true;
+        if ((!unknownSyms.isEmpty() || !knownSyms.isEmpty()) && t - lastPosCheckMs >= flat.minGapMs()) unknownDue = true;
         if (!flat.anyDue(t) && !unknownDue) return null;
         return checkPositions();
     }
@@ -394,15 +427,59 @@ public final class Reconciler {
     private void unknownCheck(Map<String, PositionInfo> pos, Report r) {
         Set<String> owned = book.ownedSymbols();
         Set<String> now = new TreeSet<>();
+        long t = clock.getAsLong();
+        Set<String> knownSeen = new TreeSet<>();
         for (Map.Entry<String, PositionInfo> e : pos.entrySet()) {
             BigDecimal amt = e.getValue().getPositionAmt();
             if (amt == null || amt.signum() == 0) continue;
-            if (!owned.contains(e.getKey()) || amt.signum() < 0) now.add(e.getKey());
+            String s = e.getKey();
+            if (owned.contains(s) && amt.signum() > 0) continue;
+            // [2f] lop (B): cum so vua chot (cung JVM, < KNOWN_CLOSE_WINDOW_MS) ma san con vi the (REST tre) => chi chan symbol
+            // nay; qua cua so van con => leo thang (A) UNKNOWN toan he. So mat / vi the la / short => (A) nhu C9.
+            if (!owned.contains(s) && amt.signum() > 0 && !unknownSyms.contains(s)
+                    && (knownSyms.containsKey(s) || OwnStopGuard.recentlyClosed(book, s, t))) {
+                long since = knownSyms.containsKey(s) ? knownSyms.get(s) : knownSince(s);
+                if (t - since < OwnStopGuard.KNOWN_CLOSE_WINDOW_MS) {
+                    if (knownSyms.put(s, since) == null) {
+                        LOG.warn("[C3-LIVE-RECON] {}: cum so vua chot nhung positionRisk con {} => CHI chan mo moi {} (lop B)", s,
+                                amt.toPlainString(), s);
+                    }
+                    knownGoneSince.remove(s);
+                    knownSeen.add(s);
+                    continue;
+                }
+                knownSyms.remove(s);
+                knownGoneSince.remove(s);
+                LOG.error("[C3-LIVE-RECON] {}: cum so da chot > {} ms ma san VAN con vi the {} => leo thang UNKNOWN toan he", s,
+                        OwnStopGuard.KNOWN_CLOSE_WINDOW_MS, amt.toPlainString());
+            }
+            now.add(s);
         }
         r.unknownPositions.addAll(now);
+        // [2f] go lop (B): khong con stop giu + >= 2 lan doc positionRisk vang cach >= minGap
+        for (String s : new ArrayList<>(knownSyms.keySet())) {
+            if (knownSeen.contains(s)) continue;
+            if (unknownSyms.contains(s) || now.contains(s)) {
+                knownSyms.remove(s);
+                knownGoneSince.remove(s);
+                continue;
+            }
+            if (guard.hasKept(s)) {
+                knownGoneSince.remove(s);
+                continue;
+            }
+            Long g = knownGoneSince.get(s);
+            if (g == null) {
+                knownGoneSince.put(s, t);
+            } else if (t - g >= flat.minGapMs()) {
+                knownSyms.remove(s);
+                knownGoneSince.remove(s);
+                LOG.warn("[C3-LIVE-RECON] {}: 2 lan doc phang cach >= {} ms, khong con stop giu => GO chan rieng symbol (lop B)", s,
+                        flat.minGapMs());
+            }
+        }
         // [2d MIN-18] vi the la cu chi duoc coi la "het" khi >= 2 lan doc nhat quan cach >= minGap (30 s) deu vang
         // (1 lan doc rong/glitch KHONG go chan)
-        long t = clock.getAsLong();
         for (String s : new ArrayList<>(unknownSyms)) {
             if (now.contains(s)) {
                 unknownGoneSince.remove(s);
@@ -686,7 +763,8 @@ public final class Reconciler {
     }
 
     public synchronized String status() {
-        return "blocks=" + blocks + " lastDiff=" + (Double.isNaN(lastDiff) ? "NA" : String.format(Locale.ROOT, "%.5f", lastDiff))
+        return "blocks=" + blocks + " symBlocks=" + knownSyms.keySet() + "+" + flat.pending()
+                + " lastDiff=" + (Double.isNaN(lastDiff) ? "NA" : String.format(Locale.ROOT, "%.5f", lastDiff))
                 + " bookEq=" + fmt(lastBookEq) + " tmb=" + fmt(lastTmb) + " streak=" + matchStreak;
     }
 

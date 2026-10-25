@@ -630,10 +630,22 @@ public final class LiveBookC3 {
         persist(nowMs);
     }
 
+    /**
+     * [2f] Moc so XOA cum symbol gan nhat trong JVM nay (chi trong bo nho; restart => quen). Long.MIN_VALUE neu chua tung.
+     * Reconciler/OwnStopGuard dung de phan biet vi the "so DA BIET vua chot" (chan rieng symbol) voi vi the la (chan toan he).
+     */
+    public synchronized long lastRemovedMs(String symbol) {
+        Long t = removedAtMs.get(symbol);
+        return t == null ? Long.MIN_VALUE : t;
+    }
+
+    private final Map<String, Long> removedAtMs = new TreeMap<>();
+
     /** Cum da dong het tren san => xoa khoi so (+ 1 dong ledger). */
     public synchronized boolean removeCluster(String symbol, String reason, long nowMs) {
         Cluster c = clusters.remove(symbol);
         if (c == null) return false;
+        removedAtMs.put(symbol, nowMs);
         for (Leg x : c.legs) cidToSymbol.remove(x.cid);
         LOG.info("[C3-LIVE-BOOK] dong cum {} ly do={} legs={} qty={} avg={} exitQty={} exitAvg={} realized={} phi={}",
                 symbol, reason, c.legCount(), c.confirmedQty(), c.avgPrice(), c.exitQty,
