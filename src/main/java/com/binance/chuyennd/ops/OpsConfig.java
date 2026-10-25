@@ -162,6 +162,8 @@ public final class OpsConfig {
             p.resetFile = resetFile();
             p.autoReleaseMs = parseInt(KEY_KILLSW_AUTORELEASE_MIN, Cfg.get(KEY_KILLSW_AUTORELEASE_MIN),
                     DEFAULT_AUTORELEASE_MIN, 0, 24 * 60) * 60_000L;
+            p.autoReleaseCodes.add("C3");   // [V12 2b MASTER 10-25] C3 tu go: 30' sach + >= 3 call API OK lien tiep
+            p.c4Capacity = true;            // [V12 2b MASTER 10-25] C4 = cong suat: chi chan mo cum moi, tu go co tre
         }
         return p;
     }

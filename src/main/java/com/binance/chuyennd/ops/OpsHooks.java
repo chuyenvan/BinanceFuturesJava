@@ -92,7 +92,8 @@ public final class OpsHooks {
             }
             if (KS == null) return;
             if (KS.mode() == KillSwitchEngine.Mode.ACT) {
-                LOG.warn("[KILLSW] BAT mode=act (c3_live): C1-C5 => latch NO_NEW_ENTRY; C6/A40 => latch FLATTEN; latch file={} "
+                LOG.warn("[KILLSW] BAT mode=act (c3_live): C1/C2/C3/C5 => latch NO_NEW_ENTRY (C1/C3/C5 tu go); C4 = cong suat "
+                                + "(chan mo cum moi, DCA van chay, tu go); C6/A40 => latch FLATTEN; latch file={} "
                                 + "reset file={} (chi ops/killsw_reset.sh); C2 signed={}",
                         OpsConfig.latchFile().getPath(), OpsConfig.resetFile().getPath(), OpsConfig.c2SignedRaw());
             } else {
@@ -204,6 +205,17 @@ public final class OpsHooks {
             return KS.allowNewEntry(symbol);
         } catch (Throwable e) {
             err("allowNewEntry", e);
+            return KS.mode() != KillSwitchEngine.Mode.ACT;
+        }
+    }
+
+    /** [V12 2b] Cong DCA cua cum dang co (C4 cong suat KHONG chan DCA). KS tat / LOG => true; loi noi bo o ACT => false. */
+    public static boolean allowDca(String symbol) {
+        if (KS == null) return true;
+        try {
+            return KS.allowDca(symbol);
+        } catch (Throwable e) {
+            err("allowDca", e);
             return KS.mode() != KillSwitchEngine.Mode.ACT;
         }
     }

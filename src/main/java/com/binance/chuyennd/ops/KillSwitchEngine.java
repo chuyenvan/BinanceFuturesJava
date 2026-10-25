@@ -63,6 +63,12 @@ import java.util.function.Supplier;
  *       dinh = max(dinh luu file, equity da thay); {@code equity/dinh - 1 <= -40 %} => FLATTEN. Chi co khi gan
  *       EquitySource ({@link #attachEquitySource}) — khong gan => dong HOURLY/log y nhu v1.1.</li>
  * </ul>
+ * <p>[V12 vong 2b MASTER 10-25 — giai quyet lech GOLIVE §5.2] mode ACT + {@code Params.c4Capacity} (OpsConfig bat o
+ * c3_live): C4 (vi the &gt; 90 hoac U &gt;= U_MAX) la dieu kien CONG SUAT — KHONG latch, chi chan MO CUM MOI
+ * ({@link #allowNewEntry}); DCA cum dang co van qua ({@link #allowDca}; van chiu throttle U_MAX cua sizing); tu go co tre khi
+ * vi the &lt;= 85 VA U &lt;= U_MAX - 0,05. C3 tu go sau 30' sach + &gt;= 3 call API thanh cong lien tiep (nhu C1/C5).
+ * Giu latch cho owner: C2, C6, A40 (va STATE).
+ *
  * Mode LOG (c3_shadow): KHONG doc/ghi file latch, {@link #allowNewEntry} luon true, {@link #requiredAction} luon NONE,
  * van ban log giu nguyen v1.1 (C2 co dau chi khi co bat).
  */
@@ -138,6 +144,14 @@ public final class KillSwitchEngine {
         public long autoReleaseMs = 0L;
         /** Ma duoc tu go (C1 du lieu cu, C5 khong tick). C2/C3/C4/C6/A40/STATE giu latch toi khi owner reset. */
         public java.util.Set<String> autoReleaseCodes = new java.util.HashSet<>(java.util.Arrays.asList("C1", "C5"));
+        /** [V12 2b MASTER 10-25] ACT: C4 = dieu kien CONG SUAT (khong latch; chan mo cum moi; DCA van chay; tu go co tre). */
+        public boolean c4Capacity = false;
+        /** Go C4 cong suat khi so vi the <= gia tri nay ... */
+        public int c4ReleasePos = 85;
+        /** ... VA U <= U_MAX - gia tri nay. */
+        public double c4ReleaseUGap = 0.05;
+        /** [V12 2b MASTER 10-25] C3 tu go can them >= bay nhieu call API thanh cong LIEN TIEP. */
+        public int c3ReleaseOkConsec = 3;
     }
 
     /**
@@ -326,6 +340,13 @@ public final class KillSwitchEngine {
     private Consumer<String> alert;
     /** [V12] moc bat dau sach lien tuc cua tung ma (cho auto-release C1/C5). */
     private final Map<String, Long> cleanSince = new LinkedHashMap<>();
+    /** [V12 2b] C4 cong suat (ACT + c4Capacity): dang chan mo cum moi. */
+    private boolean c4Cap;
+    private long c4CapSinceMs;
+    private long nCapBlocked;
+    private long lastCapLogMs = Long.MIN_VALUE / 2;
+    /** [V12 2b] so call API thanh cong lien tiep (dieu kien tu go C3). */
+    private int apiOkConsec;
 
     /**
      * @param mode        mode HIEU LUC (LOG; ACT chi khi da cai). OFF => khong nen tao engine.
@@ -409,7 +430,16 @@ public final class KillSwitchEngine {
      */
     public synchronized boolean allowNewEntry(String symbol) {
         if (mode != Mode.ACT) return true;
-        if (latch == Action.NONE) return true;
+        if (latch == Action.NONE && !c4Cap) return true;
+        if (latch == Action.NONE) {   // [V12 2b] C4 cong suat: chi chan MO CUM MOI
+            nCapBlocked++;
+            long nowC = System.currentTimeMillis();
+            if (nowC - lastCapLogMs >= BLOCK_LOG_MS) {
+                lastCapLogMs = nowC;
+                sink.warn("[KILLSW] C4_CAPACITY chan MO CUM MOI symbol=" + symbol + " (DCA van chay) n_blocked=" + nCapBlocked);
+            }
+            return false;
+        }
         nBlocked++;
         long now = System.currentTimeMillis();
         if (now - lastBlockLogMs >= BLOCK_LOG_MS) {
@@ -426,6 +456,27 @@ public final class KillSwitchEngine {
      */
     public synchronized Action requiredAction() {
         return mode == Mode.ACT ? latch : Action.NONE;
+    }
+
+    /**
+     * [V12 2b] Cong DCA cua cum DANG CO: chi latch (NO_NEW_ENTRY/FLATTEN) chan; C4 cong suat KHONG chan (sizing van throttle
+     * U_MAX nhu sim). Mode khac ACT => luon true.
+     */
+    public synchronized boolean allowDca(String symbol) {
+        if (mode != Mode.ACT) return true;
+        if (latch == Action.NONE) return true;
+        nBlocked++;
+        long now = System.currentTimeMillis();
+        if (now - lastBlockLogMs >= BLOCK_LOG_MS) {
+            lastBlockLogMs = now;
+            sink.warn("[KILLSW] BLOCK_DCA symbol=" + symbol + " latch=" + latch + " codes=" + latchCodes + " n_blocked=" + nBlocked);
+        }
+        return false;
+    }
+
+    /** [V12 2b] C4 cong suat dang chan mo cum moi (chi ACT + c4Capacity). */
+    public synchronized boolean capacityBlocked() {
+        return c4Cap;
     }
 
     /** [V12] cac ma da gay latch (copy). */
@@ -503,6 +554,7 @@ public final class KillSwitchEngine {
         roll(nowMs);
         lastApi = api;
         c3Consec = ok ? 0 : c3Consec + 1;
+        apiOkConsec = ok ? apiOkConsec + 1 : 0;
         set("C3", c3(c3Consec), "api=" + api + " consec=" + c3Consec, nowMs);
     }
 
@@ -569,7 +621,9 @@ public final class KillSwitchEngine {
         lastDd = dd(equity, peak);
         float um = uMax == null ? 0f : uMax.get();
         float u = equity > 0f ? margin / equity : Float.NaN;
-        set("C4", c4(openPos, margin, equity, um), "open=" + openPos + " U=" + fmt4(u) + " U_MAX=" + fmt4(um), nowMs);
+        boolean c4met = c4(openPos, margin, equity, um);
+        set("C4", c4met, "open=" + openPos + " U=" + fmt4(u) + " U_MAX=" + fmt4(um), nowMs);
+        if (mode == Mode.ACT && prm.c4Capacity) updateCapacity(c4met, openPos, u, um, nowMs);
         set("C6", c6(lastDd), "dd=" + fmt4(lastDd) + " eq=" + fmt2(equity) + " peak=" + fmt2(peak), nowMs);
         maybeWritePeak(nowMs);
     }
@@ -628,7 +682,10 @@ public final class KillSwitchEngine {
                 cleanSince.put(code, nowMs);   // vd latch nap tu file sau restart: bat dau dem tu day
                 continue;
             }
-            if (nowMs - cs >= prm.autoReleaseMs) rel.add(code);
+            if (nowMs - cs < prm.autoReleaseMs) continue;
+            // [V12 2b MASTER 10-25] C3 (loi API lien tiep) can them >= c3ReleaseOkConsec call API thanh cong lien tiep
+            if ("C3".equals(code) && apiOkConsec < prm.c3ReleaseOkConsec) continue;
+            rel.add(code);
         }
         if (rel.isEmpty()) return;
         Action prev = latch;
@@ -649,6 +706,34 @@ public final class KillSwitchEngine {
                 + (latchCodes.isEmpty() ? "" : " (con " + latchCodes + ": chi owner mo bang ops/killsw_reset.sh)");
         sink.warn(m);
         fireAlert(m);
+    }
+
+    /**
+     * [V12 2b MASTER 10-25] C4 cong suat: dat => chan mo cum moi (Telegram 1 lan); het dat => CHI go khi vi the <= c4ReleasePos
+     * VA U <= U_MAX - c4ReleaseUGap (tre, tranh bat/tat lien tuc quanh tran).
+     */
+    private void updateCapacity(boolean met, int openPos, float u, float um, long nowMs) {
+        if (met) {
+            if (!c4Cap) {
+                c4Cap = true;
+                c4CapSinceMs = nowMs;
+                String m = "[KILLSW] C4_CAPACITY ON open=" + openPos + " U=" + fmt4(u) + " U_MAX=" + fmt4(um)
+                        + " => CHAN MO CUM MOI (DCA cum dang co van chay, throttle U_MAX); tu go khi open<=" + prm.c4ReleasePos
+                        + " va U<=U_MAX-" + prm.c4ReleaseUGap;
+                sink.warn(m);
+                fireAlert(m);
+            }
+            return;
+        }
+        if (!c4Cap) return;
+        boolean rel = openPos <= prm.c4ReleasePos && Float.isFinite(u) && u <= um - prm.c4ReleaseUGap;
+        if (rel) {
+            c4Cap = false;
+            String m = "[KILLSW] C4_CAPACITY OFF open=" + openPos + " U=" + fmt4(u) + " (sau " + (nowMs - c4CapSinceMs) / 60_000L
+                    + "') => mo cum moi tro lai";
+            sink.warn(m);
+            fireAlert(m);
+        }
     }
 
     private void evalC1(long nowMs) {
@@ -675,7 +760,7 @@ public final class KillSwitchEngine {
                 sink.warn(line(what(), code, s, nowMs, "CONT"));
             }
             cleanSince.remove(code);
-            if (mode == Mode.ACT) latchFor(code, detail, nowMs);
+            if (mode == Mode.ACT && !(prm.c4Capacity && "C4".equals(code))) latchFor(code, detail, nowMs);
         } else if (s.active) {
             s.active = false;
             cleanSince.put(code, nowMs);
@@ -786,6 +871,19 @@ public final class KillSwitchEngine {
                 }
             }
             lastResetAtMs = o.has("last_reset_at_ms") ? o.get("last_reset_at_ms").getAsLong() : 0L;
+            if (prm.c4Capacity && latchCodes.remove("C4")) {   // [V12 2b] C4 la cong suat, khong latch (file cu)
+                Action a0 = Action.NONE;
+                for (String c : latchCodes) {
+                    Action x = CODE_STATE.equals(c) ? Action.NO_NEW_ENTRY : latchActionOf(c);
+                    if (x.ordinal() > a0.ordinal()) a0 = x;
+                }
+                latch = a0;
+                if (latch == Action.NONE) {
+                    latchSinceMs = 0L;
+                    latchDetail = "-";
+                }
+                sink.warn("[KILLSW] file latch co C4 => bo (C4 la dieu kien cong suat, khong latch) => latch=" + latch);
+            }
             if (latch != Action.NONE) {
                 String m = "[KILLSW] NAP LATCH tu " + f.getPath() + ": " + latch + " codes=" + latchCodes + " since_ms="
                         + latchSinceMs + " detail=" + latchDetail + " => van chan (chi owner mo bang ops/killsw_reset.sh)";
