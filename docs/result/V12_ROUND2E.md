@@ -123,3 +123,19 @@ Thay 2 test 2e (`streamFlatButRestStillHoldsKeepsStopUntilBothFlat`, `unknownNot
 - Parity 10-23 jar 2f vs dcae2e2b: **PASS** — out_BT `e0918a33` ✅, out_NEW2 `e0918a33` ✅, fund_BT `a81b3b03` ✅, fund_NEW2 `8dea3f70` ✅; ctl only_ref = only_new = 0; strace AF_INET non-loopback = 0 (`round2e/r2f_compare.json`).
 - Commit: `72b0e7f5` (code + test), `ed430add` (pin), commit docs này.
 - Còn mở thêm: cửa sổ 10′ là tham số cứng; restart trong lúc (B) → mất mốc "vừa chốt" → vị thế còn trên sàn thành (A) (bảo thủ).
+
+## 6. Vòng 2g — MIN-20/21/22 (A1_DELTA_2EF @92481a10, G-CODE ĐẠT)
+
+| mã | sửa | test |
+|---|---|---|
+| MIN-20 | `TrailingStopManager`: chỉ gọi `cancelReplaced` stop cũ khi stop MỚI đã xác nhận NEW, tức response có `algoStatus` = NEW, hoặc thấy cid mới (NEW) trong `openStops`. Kiểm tối đa 2 lần, cách 1 s (`CONFIRM_GAP_MS`, sleeper tiêm được). Không xác nhận được → GIỮ CẢ HAI stop + WARN + đếm `unconfirmed`. Stop cũ nằm trong `orphanStops`; nhịp sau đi qua `OwnStopGuard` và chỉ bị huỷ khi stop active mới ĐANG MỞ trên sàn (hoặc vị thế phẳng). Áp dụng cho cả đường `send` lẫn `resolvePending`. | `replacedStopKeptUntilNewStopConfirmed` (giữ cả hai, ngủ đúng 1 lần 1 s, nhịp sau vẫn giữ, sàn xác nhận thì huỷ stop cũ), `replacedStopConfirmedViaOpenStops` |
+| MIN-21 | `OwnStopGuard.keep`: cụm sổ VỪA chốt (< 10′) → (B) kể cả khi lỗi đọc positionRisk/account. Startup, symbol lạ, hoặc đã quá 10′ → (A). | `readErrorOnJustClosedClusterIsSymbolOnly` (thay `readErrorOnJustClosedClusterIsGlobal` của 2f), `readErrorAfterWindowIsGlobal`, **`proofCrashR3ReadErrorDuringCrashStillAdmitsOtherSymbols`** (tái hiện ProofCrash R3: 24/24 leg symbol khác vào được, 3 symbol vừa chốt bị chặn riêng; ~2′ sau 24/24 + 3/3, hết chặn, stop cũ đã huỷ); `guardReadErrorKeepsStopThenRetriesAndReleases` (startup, (A)) giữ nguyên |
+| MIN-22 | Gỡ (B) cần thêm `account().positions` vắng/0 ở mỗi lần đọc được tính (đọc 1 lần/lượt). Account lỗi/null → lần đó không tính. Account còn vị thế → đếm lại; nếu quá 10′ → leo thang (A). | `symbolBlockReleaseNeedsAccountFlat` (stop giữ mất + positionRisk rỗng nhưng account còn 100 → X không mở lại qua 5 lần đọc; account phẳng → gỡ sau 2 lần) |
+
+- Build: **618 test, 0 fail, 0 error, 1 skip**.
+- Jar dry 2g: `~/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12dry_2g`, md5 **`285f107f6d3dbdde6e3cdeac58632768`** (100 260 333 B), đã pin trong `deploy_v12_dry.sh`. Jar 2f đã xoá.
+- Parity 10-23 jar 2g so với dcae2e2b: **PASS** — out_BT `e0918a33` ✅, out_NEW2 `e0918a33` ✅, fund_BT `a81b3b03` ✅, fund_NEW2 `8dea3f70` ✅; ctl only_ref = only_new = 0; strace AF_INET non-loopback = 0 (`round2e/r2g_compare.json`).
+- Commit: `8abec787` (code + test), `7f4415e8` (pin), cùng commit docs này.
+- Còn mở:
+  - MIN-20: nếu stop mới bị sàn từ chối bất đồng bộ, sổ vẫn coi cid mới là active, stop cũ (đang sống) được giữ và bảo vệ vị thế. Trailing chỉ đặt stop khác ở lần dời kế tiếp. Canary K2 phải kiểm `openAlgoOrders` = đúng 1 stop `c3s-` NEW sau mỗi lần dời.
+  - Đường chưa xác nhận sẽ ngủ ≤ 1 s trong nhịp trailing (hiếm).
