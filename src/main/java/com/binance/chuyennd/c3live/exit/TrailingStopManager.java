@@ -100,6 +100,7 @@ public final class TrailingStopManager {
     private final EventSink events;
     private volatile boolean closePositionConflictSeen;
     private long lastNoRulesWarnMs = Long.MIN_VALUE / 2;
+    private long lastBookErrMs = Long.MIN_VALUE / 2;
     private final AtomicLong nArm = new AtomicLong();
     private final AtomicLong nPlace = new AtomicLong();
     private final AtomicLong nMove = new AtomicLong();
@@ -283,9 +284,21 @@ public final class TrailingStopManager {
         String cid = C3LiveCids.stop(sym, Math.floorDiv(now, 60_000L), seq);
         book.setPendingStop(sym, cid, price.doubleValue(), qtyMode, now);
         if (!book.healthy()) {
-            book.clearPendingStop(sym, now);
-            LOG.error("[C3-LIVE-TRAIL] {} so khong ghi duoc truoc khi dat stop => KHONG gui", sym);
-            return 0;
+            // [2c MIN-6] san la nguon su that: so khong ghi duoc VAN dat/doi stop (trang thai giu trong RAM; restart =>
+            // Reconciler nhan lai stop c3s- cao nhat cua cum da arm thay vi huy) + ERROR + Telegram (thua 10')
+            if (now - lastBookErrMs > 600_000L) {
+                lastBookErrMs = now;
+                String m = "[C3-LIVE-TRAIL] " + sym + " SO KHONG GHI DUOC (dia day/loi IO) => VAN dat stop " + cid
+                        + " tren san (bao ve vi the); kiem dia/so NGAY";
+                LOG.error("{}", m);
+                try {
+                    if (alert != null) alert.accept(m);
+                } catch (Throwable ignore) {
+                    // alert khong duoc chan dat stop
+                }
+            } else {
+                LOG.error("[C3-LIVE-TRAIL] {} so khong ghi duoc => van dat stop {} tren san", sym, cid);
+            }
         }
         try {
             if (qtyMode) {

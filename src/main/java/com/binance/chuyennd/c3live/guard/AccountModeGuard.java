@@ -66,6 +66,69 @@ public final class AccountModeGuard {
     private volatile long globalCheckedAtMs;
     private final Set<String> clearedSymbols = ConcurrentHashMap.newKeySet();
     private final Set<String> blockedSymbols = ConcurrentHashMap.newKeySet();
+    /** [2c MIN-5] symbol da nap san (CROSSED + leverage dung) — hop le toi {@link #prefetchValidUntilMs}. */
+    private final Set<String> prefetchedOk = ConcurrentHashMap.newKeySet();
+    private volatile long prefetchValidUntilMs = Long.MIN_VALUE;
+    private volatile long nextPrefetchMs = Long.MIN_VALUE;
+    private volatile boolean prefetchUnsupported;
+    public static final long DEFAULT_PREFETCH_TTL_MS = 3_600_000L;
+    static final long PREFETCH_RETRY_MS = 300_000L;
+    static final long PREFETCH_VALID_MS = DEFAULT_PREFETCH_TTL_MS + 600_000L;
+
+    /**
+     * [2c MIN-5] Nap san symbolConfig MOI symbol (1 call) cho {@code universe} (null = moi symbol san tra): symbol dung
+     * (CROSSED + leverage) => leg dau KHONG goi REST symbolConfig (dot 24 leg khong tre). Symbol sai/vang => kiem rieng o
+     * leg dau nhu cu (tu sua 1 lan). Loi => giu cache cu (het han sau ~70') + WARN, thu lai sau 5'.
+     * @return so symbol OK nap duoc; -1 = loi / khong ho tro
+     */
+    public synchronized int prefetch(java.util.Collection<String> universe) {
+        long now = clock.getAsLong();
+        nextPrefetchMs = now + PREFETCH_RETRY_MS;
+        List<SymbolConfig> all;
+        try {
+            all = gw.symbolConfigs();
+        } catch (UnsupportedOperationException e) {
+            prefetchUnsupported = true;
+            LOG.info("[C5] gateway {} khong ho tro symbolConfigs => kiem tung symbol o leg dau", gw.name());
+            return -1;
+        } catch (RuntimeException e) {
+            LOG.warn("[C5] nap san symbolConfig loi ({}) => giu cache cu, thu lai sau {} s", e.toString(), PREFETCH_RETRY_MS / 1000);
+            return -1;
+        }
+        Set<String> ok = new java.util.HashSet<>();
+        List<String> bad = new ArrayList<>();
+        Set<String> seen = new java.util.HashSet<>();
+        for (SymbolConfig sc : all) {
+            if (sc == null || sc.getSymbol() == null) continue;
+            if (universe != null && !universe.contains(sc.getSymbol())) continue;
+            seen.add(sc.getSymbol());
+            if (sc.isCrossed() && sc.getLeverage() == expectedLeverage) {
+                ok.add(sc.getSymbol());
+            } else {
+                bad.add(sc.toString());
+                clearedSymbols.remove(sc.getSymbol());   // cau hinh doi => leg dau ke tiep kiem + sua lai
+            }
+        }
+        prefetchedOk.clear();
+        prefetchedOk.addAll(ok);
+        prefetchValidUntilMs = now + PREFETCH_VALID_MS;
+        nextPrefetchMs = now + DEFAULT_PREFETCH_TTL_MS;
+        int missing = universe == null ? 0 : (int) universe.stream().filter(s -> !seen.contains(s)).count();
+        LOG.info("[C5] nap san symbolConfig: {} OK, {} can sua o leg dau{}, {} vang (kiem rieng); universe={}", ok.size(), bad.size(),
+                bad.isEmpty() ? "" : " (vd " + bad.get(0) + ")", missing, universe == null ? "-" : universe.size());
+        return ok.size();
+    }
+
+    /** [2c MIN-5] nap lai moi gio (loi => thu lai sau 5'). */
+    public int prefetchIfDue(java.util.Collection<String> universe) {
+        if (prefetchUnsupported || clock.getAsLong() < nextPrefetchMs) return -1;
+        return prefetch(universe);
+    }
+
+    /** So symbol trong cache nap san con hieu luc (cho log/test). */
+    public int prefetchedCount() {
+        return clock.getAsLong() <= prefetchValidUntilMs ? prefetchedOk.size() : 0;
+    }
 
     public AccountModeGuard(ExchangeGateway gw, Consumer<String> alerter) {
         this(gw, 1, alerter, System::currentTimeMillis, DEFAULT_GLOBAL_TTL_MS);
@@ -120,6 +183,11 @@ public final class AccountModeGuard {
             return new Result(true, symbol, Collections.emptyList(), Collections.emptyList());
         }
         if (globalOk == null || clock.getAsLong() - globalCheckedAtMs > globalTtlMs) checkGlobal();
+        if (Boolean.TRUE.equals(globalOk) && prefetchedOk.contains(symbol) && clock.getAsLong() <= prefetchValidUntilMs) {
+            clearedSymbols.add(symbol);   // [2c MIN-5] da nap san: khong goi REST symbolConfig o leg dau
+            blockedSymbols.remove(symbol);
+            return new Result(true, symbol, Collections.emptyList(), Collections.emptyList());
+        }
         List<String> problems = new ArrayList<>();
         List<String> actions = new ArrayList<>();
         if (!Boolean.TRUE.equals(globalOk)) problems.add("GLOBAL BLOCKED");
@@ -176,5 +244,6 @@ public final class AccountModeGuard {
     /** Goi khi vi the symbol da dong het: leg dau ke tiep se kiem lai. */
     public void resetSymbol(String symbol) {
         clearedSymbols.remove(symbol);
+        prefetchedOk.remove(symbol);
     }
 }

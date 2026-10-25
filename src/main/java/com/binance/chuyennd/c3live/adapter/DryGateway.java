@@ -346,6 +346,15 @@ public final class DryGateway implements ExchangeGateway {
     @Override public boolean dualSidePosition() { return false; }
     @Override public void setDualSidePosition(boolean dual) { }
     @Override public SymbolConfig symbolConfig(String symbol) { return new SymbolConfig(symbol, SymbolConfig.CROSSED, 1); }
+
+    /** [2c MIN-5] dry: moi symbol trong exchangeInfo = CROSSED 1x (khong goi san). */
+    @Override
+    public List<SymbolConfig> symbolConfigs() {
+        List<SymbolConfig> out = new ArrayList<>();
+        ExchangeInfo ei = exchangeInfo();
+        if (ei != null) for (String s : ei.getSymbols().keySet()) out.add(new SymbolConfig(s, SymbolConfig.CROSSED, 1));
+        return out;
+    }
     @Override public int setLeverage(String symbol, int leverage) { return leverage; }
     @Override public void setMarginType(String symbol, String marginType) { }
     @Override public String startUserStream() { return "dry"; }

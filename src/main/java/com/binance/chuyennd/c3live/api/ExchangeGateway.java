@@ -89,6 +89,15 @@ public interface ExchangeGateway {
     /** GET /fapi/v1/symbolConfig?symbol= : marginType + leverage. */
     SymbolConfig symbolConfig(String symbol);
 
+    /**
+     * [V12 2c MIN-5] GET /fapi/v1/symbolConfig KHONG kem symbol = cau hinh MOI symbol (1 call) — de nap san luc start /
+     * moi gio. CHUA XAC MINH san tra du moi symbol (symbol vang => AccountModeGuard kiem rieng o leg dau). Ban cai khong
+     * ho tro => UnsupportedOperationException.
+     */
+    default java.util.List<SymbolConfig> symbolConfigs() {
+        throw new UnsupportedOperationException("symbolConfigs");
+    }
+
     /** POST /fapi/v1/leverage. Tra leverage san xac nhan. */
     int setLeverage(String symbol, int leverage);
 

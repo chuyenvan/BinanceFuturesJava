@@ -350,6 +350,16 @@ public class MockExchangeGateway implements ExchangeGateway {
         return symbolConfigs.getOrDefault(symbol, new SymbolConfig(symbol, SymbolConfig.CROSSED, 1));
     }
 
+    /** [2c MIN-5] moi symbol trong exchangeInfo + symbol da dat cau hinh. */
+    @Override
+    public synchronized List<SymbolConfig> symbolConfigs() {
+        enter("symbolConfigs");
+        Map<String, SymbolConfig> m = new java.util.TreeMap<>();
+        for (String s : exchangeInfo.getSymbols().keySet()) m.put(s, symbolConfig0(s));
+        for (Map.Entry<String, SymbolConfig> e : symbolConfigs.entrySet()) m.put(e.getKey(), e.getValue());
+        return new ArrayList<>(m.values());
+    }
+
     @Override
     public int setLeverage(String symbol, int leverage) {
         enter("setLeverage");

@@ -345,6 +345,19 @@ public final class C3LiveClient implements ExchangeGateway {
         throw new GatewayException(ErrorKind.OTHER, "symbolConfig: khong co dong cho symbol", true);
     }
 
+    /** [2c MIN-5] GET /fapi/v1/symbolConfig khong symbol => moi symbol (1 call). */
+    @Override
+    public List<SymbolConfig> symbolConfigs() {
+        JsonElement j = call("GET", "/fapi/v1/symbolConfig", new LinkedHashMap<>(), Sec.SIGNED, W_SYMCFG, 0);
+        List<SymbolConfig> out = new ArrayList<>();
+        for (JsonElement e : asArray(j)) {
+            JsonObject o = e.getAsJsonObject();
+            String s = str(o, "symbol");
+            if (s != null) out.add(new SymbolConfig(s, str(o, "marginType"), (int) lng(o, "leverage")));
+        }
+        return out;
+    }
+
     @Override
     public int setLeverage(String symbol, int leverage) {
         Map<String, String> p = new LinkedHashMap<>();

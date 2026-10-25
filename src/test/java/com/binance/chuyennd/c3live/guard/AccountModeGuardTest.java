@@ -146,4 +146,54 @@ public class AccountModeGuardTest {
         g.resetSymbol("S1USDT");
         assertFalse(g.isSymbolCleared("S1USDT"));
     }
+
+    // ------------------------------------------------------------------ [2c MIN-5] nap san symbolConfig toan universe
+
+    private static java.util.Set<String> universe(int n) {
+        java.util.Set<String> u = new java.util.TreeSet<>();
+        for (int i = 0; i < n; i++) u.add(com.binance.chuyennd.c3live.entry.C3LiveFixtures.sym(i));
+        return u;
+    }
+
+    @Test
+    public void prefetchMakesBurstOf24LegsCallNoPerSymbolRest() {
+        MockExchangeGateway m = new MockExchangeGateway();
+        m.exchangeInfo = com.binance.chuyennd.c3live.entry.C3LiveFixtures.info(30);
+        AccountModeGuard g = guard(m);
+        g.checkGlobal();
+        assertEquals(30, g.prefetch(universe(30)));
+        assertEquals(1, m.calls("symbolConfigs"));
+        for (int i = 0; i < 24; i++) assertTrue(g.checkSymbol(com.binance.chuyennd.c3live.entry.C3LiveFixtures.sym(i)).isOk());
+        assertEquals("dot 24 leg: 0 REST symbolConfig tung symbol", 0, m.calls("symbolConfig"));
+        // het TTL toan cuc (60 s): 1 lan kiem toan cuc, van 0 REST symbolConfig nho cache nap san (<= 1h)
+        now += 61_000L;
+        assertTrue(g.checkSymbol(com.binance.chuyennd.c3live.entry.C3LiveFixtures.sym(25)).isOk());
+        assertEquals(0, m.calls("symbolConfig"));
+        // nap lai moi gio
+        assertEquals(-1, g.prefetchIfDue(universe(30)));
+        now += 3_600_000L;
+        assertEquals(30, g.prefetchIfDue(universe(30)));
+        assertEquals(2, m.calls("symbolConfigs"));
+    }
+
+    @Test
+    public void prefetchedWrongConfigStillFixedAtFirstLegAndErrorsFallBack() {
+        MockExchangeGateway m = new MockExchangeGateway();
+        m.exchangeInfo = com.binance.chuyennd.c3live.entry.C3LiveFixtures.info(5);
+        m.setSymbolConfig("C02USDT", SymbolConfig.ISOLATED, 3);
+        AccountModeGuard g = guard(m);
+        g.checkGlobal();
+        assertEquals(4, g.prefetch(universe(5)));
+        AccountModeGuard.Result r = g.checkSymbol("C02USDT");   // khong nam trong cache OK => kiem + sua nhu cu
+        assertTrue(r.toString(), r.isOk());
+        assertEquals(1, m.calls("setMarginType"));
+        assertEquals(1, m.calls("setLeverage"));
+        // nap san loi => giu cache cu, thu lai sau 5'
+        m.failNext("symbolConfigs", new GatewayException(ErrorKind.TIMEOUT_UNKNOWN_STATE, "t", false));
+        now += 3_600_000L;
+        assertEquals(-1, g.prefetchIfDue(universe(5)));
+        assertEquals(-1, g.prefetchIfDue(universe(5)));   // chua toi 5'
+        now += 300_000L;
+        assertEquals(5, g.prefetchIfDue(universe(5)));
+    }
 }

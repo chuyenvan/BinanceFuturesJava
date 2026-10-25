@@ -17,6 +17,7 @@ import com.binance.chuyennd.c3live.filters.SymbolRules;
 import com.binance.chuyennd.c3live.guard.AccountModeGuard;
 import com.binance.chuyennd.c3live.log.OrderAuditLog;
 import com.binance.chuyennd.c3live.rate.RateGuard;
+import com.binance.chuyennd.c3live.recon.FlatConfirm;
 import com.binance.chuyennd.c3live.recon.Reconciler;
 import com.binance.chuyennd.c3live.risk.C3LiveEquity;
 import com.binance.chuyennd.c3live.risk.C3LiveFlattener;
@@ -72,7 +73,14 @@ public final class C3LiveRuntime {
     public static final String KEY_EQUITY_TOL = "LIVE_C3_EQUITY_TOL";
 
     private static volatile C3LiveRuntime INSTANCE;
-    private static volatile boolean initTried;
+    /** c3_live tat (profile/adapter) => khong bao gio tao. */
+    private static volatile boolean disabled;
+    /** [2c MIN-7] tao loi => thu lai moi INIT_RETRY_MS (vd owner sua quyen key file) thay vi bo mac vinh vien. */
+    static final long INIT_RETRY_MS = 60_000L;
+    private static volatile long lastInitTryMs = Long.MIN_VALUE / 2;
+    private static volatile long lastInitLogMs = Long.MIN_VALUE / 2;
+    private static volatile long lastInitAlertMs = Long.MIN_VALUE / 2;
+    private static volatile C3LiveAlerts initAlerts;
 
     final GatewayFactory.Mode mode;
     final ExchangeGateway gw;
@@ -92,29 +100,61 @@ public final class C3LiveRuntime {
     final TrailingStopManager trailing;
     final UserStream userStream;
     final File reanchorFile;
+    final FlatConfirm flat;
+    /** [2c MIN-7] true = phan VAO LENH tao loi => chi QUAN LY vi the cu (trailing/time-stop/X14/reconcile/FLATTEN), khong mo moi. */
+    final boolean manageOnly;
+    final String manageOnlyReason;
     private volatile SymbolRules rules;
 
-    /** null = c3_live tat / tao loi (khong push). */
+    /** null = c3_live tat / tao loi (khong push; tao loi => thu lai moi 60 s). */
     public static C3LiveRuntime get() {
         C3LiveRuntime r = INSTANCE;
-        if (r != null || initTried) return r;
+        if (r != null || disabled) return r;
+        long now = System.currentTimeMillis();
+        if (now - lastInitTryMs < INIT_RETRY_MS) return null;
         synchronized (C3LiveRuntime.class) {
-            if (!initTried) {
-                initTried = true;
-                try {
-                    INSTANCE = create();
-                } catch (Throwable t) {
-                    LOG.error("[C3-LIVE] KHONG khoi tao duoc runtime ({}) => TU CHOI push c3_live", t.toString());
-                }
+            if (INSTANCE != null || disabled) return INSTANCE;
+            if (now - lastInitTryMs < INIT_RETRY_MS) return null;
+            lastInitTryMs = now;
+            try {
+                INSTANCE = create();
+            } catch (Throwable t) {
+                initFailed("loi tao runtime: " + t, now);
             }
             return INSTANCE;
         }
     }
 
+    /** [2c MIN-7] moi nhanh loi tao runtime: ERROR (thua 10') + Telegram (thua 30'), thu lai sau 60 s. */
+    private static void initFailed(String why, long now) {
+        String m = "[C3-LIVE] KHONG tao duoc runtime (" + why + ") => TU CHOI push c3_live; vi the cu (neu co) CHI con stop"
+                + " tren san (khong time-stop/X14/reconcile) — thu lai moi " + INIT_RETRY_MS / 1000 + " s, KIEM NGAY";
+        if (now - lastInitLogMs >= 600_000L) {
+            lastInitLogMs = now;
+            LOG.error("{}", m);
+        }
+        if (now - lastInitAlertMs >= 1_800_000L) {
+            lastInitAlertMs = now;
+            try {
+                C3LiveAlerts a = initAlerts;
+                if (a == null) a = initAlerts = new C3LiveAlerts(Utils::sendSms2Telegram);
+                a.send(m);
+            } catch (Throwable ignore) {
+                // Telegram loi khong anh huong
+            }
+        }
+    }
+
     private static C3LiveRuntime create() {
-        if (!LiveProfileC3.isLive()) return null;
+        if (!LiveProfileC3.isLive()) {
+            disabled = true;
+            return null;
+        }
         GatewayFactory.Mode mode = GatewayFactory.Mode.parse(Cfg.get(GatewayFactory.KEY_ADAPTER));
-        if (mode == GatewayFactory.Mode.OFF) return null;
+        if (mode == GatewayFactory.Mode.OFF) {
+            disabled = true;
+            return null;
+        }
         C3LiveAlerts alerts = new C3LiveAlerts(Utils::sendSms2Telegram);
         OpsHooks.setAlert(alerts::send);
         double pilot = parseD(Cfg.get("LIVE_C3_PILOT_CAPITAL"), C3LiveEquity.DEFAULT_PILOT_CAPITAL);
@@ -123,10 +163,7 @@ public final class C3LiveRuntime {
         GatewayFactory.Result gr = GatewayFactory.create(mode, Cfg::get, refs::get,
                 BigDecimal.valueOf(parseD(Cfg.get("LIVE_C3_DRY_EQUITY"), pilot)), System::currentTimeMillis, audit);
         if (gr.gateway == null) {
-            String m = "[C3-LIVE] LIVE_ADAPTER=" + mode + " KHONG tao duoc gateway (" + gr.reason
-                    + ") => TU CHOI push c3_live (JVM chay tiep, so giay van chay)";
-            LOG.warn("{}", m);
-            alerts.send(m);
+            initFailed("LIVE_ADAPTER=" + mode + " KHONG tao duoc gateway: " + gr.reason, System.currentTimeMillis());
             return null;
         }
         if (Math.abs(Configs.LEVERAGE_ORDER - 1f) > 1e-6) {
@@ -151,9 +188,20 @@ public final class C3LiveRuntime {
         C3LiveOrderExecutor.ApiObserver api = OpsHooks::onApiResult;
         this.equity = new C3LiveEquity(gw, pilot, (long) parseD(Cfg.get("LIVE_C3_EQUITY_TTL_MS"), 60_000d),
                 System::currentTimeMillis, api);
-        OpsHooks.attachEquitySource(equity);
-        this.universe = new SymbolUniverseLive(SymbolUniverseLive.Config.fromEnv(Cfg::get), gw::exchangeInfo, alerts::send);
-        this.modeGuard = new AccountModeGuard(gw, alerts::send);
+        // [2c MIN-7] phan chi phuc vu VAO LENH (universe/modeGuard/entry): loi => manage-only (van quan ly vi the cu)
+        String moReason = null;
+        SymbolUniverseLive uni = null;
+        AccountModeGuard mg = null;
+        try {
+            uni = new SymbolUniverseLive(SymbolUniverseLive.Config.fromEnv(Cfg::get), gw::exchangeInfo, alerts::send);
+            mg = new AccountModeGuard(gw, alerts::send);
+        } catch (Throwable t) {
+            moReason = "universe/modeGuard: " + t;
+            uni = null;
+            mg = null;
+        }
+        this.universe = uni;
+        this.modeGuard = mg;
         long safe = (long) parseD(Cfg.get("LIVE_C3_RESEND_SAFE_MS"), C3LiveOrderExecutor.DEFAULT_SAFE_RETRY_MS);
         ExecutorService ex = Executors.newSingleThreadExecutor(r -> {
             Thread t = new Thread(r, "C3LIVE-EXEC");
@@ -167,38 +215,28 @@ public final class C3LiveRuntime {
         this.acct = new FillAccounting(book, gw, audit, fillObs, alerts::send, api, System::currentTimeMillis,
                 TrailingStopManager::tsExtOnClosed);
         this.reanchorFile = new File(Cfg.getOr(KEY_REANCHOR_FILE, Reconciler.DEFAULT_REANCHOR_FILE));
+        // [2c MAJ-2] 1 bo xac nhan "phang" dung chung cho Reconciler + Flattener
+        this.flat = new FlatConfirm(gw, api, FlatConfirm.DEFAULT_MIN_GAP_MS);
         this.reconciler = new Reconciler(gw, book, acct, () -> rules, alerts::send, api, System::currentTimeMillis,
                 parseD(Cfg.get(KEY_EQUITY_TOL), Reconciler.DEFAULT_EQUITY_TOL), Reconciler.DEFAULT_MATCH_TO_RELEASE,
-                reanchorFile);
+                reanchorFile, flat);
         acct.setUnknownPositionSink(reconciler::onUnknownPosition);
         final boolean dry = mode == GatewayFactory.Mode.DRY;
         final Reconciler rec = reconciler;
-        this.entry = C3LiveEntry.builder()
-                .book(book)
-                .killSwitch(new C3LiveEntry.KillSwitchView() {
-                    public boolean armed() { return OpsHooks.killSwitchArmed(); }
-                    public boolean allowNewEntry(String s) { return OpsHooks.allowNewEntry(s); }
-                    public boolean allowDca(String s) { return OpsHooks.allowDca(s); }
-                })
-                .universe(universe)
-                .modeGuard(modeGuard)
-                .rules(() -> rules)
-                .capital(equity::capital)
-                .legacy(LegacySymbols::isLegacySymbol)
-                .budgetFn((m, c) -> TradeUtils.managerBudget(null, m, c, null))
-                .legBudgetFn(LiveGridSizing::legBudget)
-                .gridDue((f, p, n) -> DcaUtils.shouldDcaGrid(f, p, n))
-                .executor(executor)
-                .audit(audit)
-                .refSink((s, p) -> refs.put(s, BigDecimal.valueOf(p)))
-                .pushAllowed(dry ? () -> true : () -> !LiveProfileC3.forceNoPush())
-                .dcaGridEnabled(LiveDcaGridC3.active())
-                .sizeCapOfEquity(LiveProfileC3.SIZE_CAP_OF_EQUITY)
-                .reconAllows(rec::allowsEntry)
-                .build();
+        C3LiveEntry en = null;
+        if (moReason == null) {
+            try {
+                en = buildEntry(dry, rec);
+            } catch (Throwable t) {
+                moReason = "entry: " + t;
+            }
+        }
+        this.entry = en;
+        this.manageOnly = moReason != null;
+        this.manageOnlyReason = moReason;
         this.flattener = new C3LiveFlattener(gw, book, OpsHooks::requiredAction, alerts::send, api,
                 System::currentTimeMillis, (int) parseD(Cfg.get("LIVE_C3_FLATTEN_MAX_ORDERS"), 5d),
-                (long) parseD(Cfg.get("LIVE_C3_FLATTEN_WINDOW_MS"), 10_000d), safe);
+                (long) parseD(Cfg.get("LIVE_C3_FLATTEN_WINDOW_MS"), 10_000d), safe, flat);
         this.trailing = TrailingStopManager.builder()
                 .gateway(gw)
                 .book(book)
@@ -226,13 +264,46 @@ public final class C3LiveRuntime {
         });
     }
 
+    private C3LiveEntry buildEntry(boolean dry, Reconciler rec) {
+        return C3LiveEntry.builder()
+                .book(book)
+                .killSwitch(new C3LiveEntry.KillSwitchView() {
+                    public boolean armed() { return OpsHooks.killSwitchArmed(); }
+                    public boolean allowNewEntry(String s) { return OpsHooks.allowNewEntry(s); }
+                    public boolean allowDca(String s) { return OpsHooks.allowDca(s); }
+                })
+                .universe(universe)
+                .modeGuard(modeGuard)
+                .rules(() -> rules)
+                .capital(equity::capital)
+                .legacy(LegacySymbols::isLegacySymbol)
+                .budgetFn((m, c) -> TradeUtils.managerBudget(null, m, c, null))
+                .legBudgetFn(LiveGridSizing::legBudget)
+                .gridDue((f, p, n) -> DcaUtils.shouldDcaGrid(f, p, n))
+                .executor(executor)
+                .audit(audit)
+                .refSink((s, p) -> refs.put(s, BigDecimal.valueOf(p)))
+                .pushAllowed(dry ? () -> true : () -> !LiveProfileC3.forceNoPush())
+                .dcaGridEnabled(LiveDcaGridC3.active())
+                .sizeCapOfEquity(LiveProfileC3.SIZE_CAP_OF_EQUITY)
+                .reconAllows(rec::allowsEntry)
+                .build();
+    }
+
     private void start() {
+        OpsHooks.attachEquitySource(equity);   // [2c] chi gan khi runtime tao XONG (thu lai khong gan nguon cu)
         String m = "[C3-LIVE] khoi dong adapter=" + mode + " gateway=" + gw.name() + " book=" + book.file().getPath()
                 + " cum=" + book.openCount() + " leg_treo=" + book.unresolvedLegs().size() + " pilot="
                 + equity.pilotCapital() + " killSwitchArmed=" + OpsHooks.killSwitchArmed() + " X14=" + TrailingStopManager.tsExtEnabled()
-                + " stream=" + (userStream == null ? "dry-events" : "ws");
+                + " stream=" + (userStream == null ? "dry-events" : "ws") + (manageOnly ? " MANAGE_ONLY" : "");
         LOG.warn("{}", m);
         alerts.send(m);
+        if (manageOnly) {
+            String mo = "[C3-LIVE] MANAGE-ONLY: phan vao lenh tao loi (" + manageOnlyReason + ") => KHONG mo moi; van quan ly"
+                    + " vi the cu (trailing/time-stop/X14/reconcile/FLATTEN). Sua cau hinh roi restart.";
+            LOG.error("{}", mo);
+            alerts.send(mo);
+        }
         if (!OpsHooks.killSwitchArmed()) {
             alerts.send("[C3-LIVE] kill-switch KHONG o mode act => moi leg c3_live bi TU CHOI (dat LIVE_KILLSW_MODE=act)");
         }
@@ -262,7 +333,7 @@ public final class C3LiveRuntime {
                 refreshRefData(now);
                 if (first) {
                     first = false;
-                    modeGuard.checkGlobal();
+                    if (modeGuard != null) modeGuard.checkGlobal();
                     int left = executor.resolveUnresolved(true);
                     LOG.warn("[C3-LIVE] khoi phuc sau restart: con {} leg treo", left);
                     Reconciler.Report r = reconciler.startup();
@@ -279,6 +350,7 @@ public final class C3LiveRuntime {
                     }
                 }
                 flattener.step();
+                reconciler.confirmPendingFlat();   // [2c MAJ-2] doc xac nhan symbol "nghi phang" (>= 5 s sau lan dau)
                 if (now - lastExit >= EXIT_EVERY_MS) {
                     lastExit = now;
                     exitTick();
@@ -295,7 +367,7 @@ public final class C3LiveRuntime {
                 if (now - lastStats >= STATS_EVERY_MS) {
                     LOG.info("[C3-LIVE] HOURLY cum={} margin={} pending={} exec[{}] entry{} trail[{}] fill[{}] stream[{}] recon[{}]",
                             book.openCount(), String.format("%.2f", book.marginUsed()), String.format("%.2f", book.pendingMargin()),
-                            executor.stats(), entry.counts(), trailing.stats(), acct.stats(),
+                            executor.stats(), entry == null ? "[MANAGE_ONLY]" : entry.counts(), trailing.stats(), acct.stats(),
                             userStream == null ? "dry" : userStream.stats(), reconciler.status());
                     lastStats = now;
                 }
@@ -327,9 +399,14 @@ public final class C3LiveRuntime {
 
     private void refreshRefData(long now) {
         try {
-            universe.refreshIfDue(now);
+            if (universe != null) universe.refreshIfDue(now);
         } catch (Throwable e) {
             LOG.warn("[C3-LIVE] refresh universe loi: {}", e.toString());
+        }
+        try {   // [2c MIN-5] nap san symbolConfig toan universe (start + moi gio) => dot 24 leg khong goi REST tung symbol
+            if (modeGuard != null && universe != null && universe.hasSnapshot()) modeGuard.prefetchIfDue(universe.tradableSymbols());
+        } catch (Throwable e) {
+            LOG.warn("[C3-LIVE] nap san symbolConfig loi: {}", e.toString());
         }
         try {
             SymbolRules r = rules;
@@ -359,7 +436,7 @@ public final class C3LiveRuntime {
 
     /** Thanh vien chi so thi truong (da loai TradFi) — null neu chua co snapshot. */
     public Set<String> marketIndexOrNull() {
-        if (!universe.hasSnapshot()) return null;
+        if (universe == null || !universe.hasSnapshot()) return null;
         Set<String> m = universe.marketIndexMembers();
         return m == null || m.isEmpty() ? null : m;
     }
@@ -369,6 +446,7 @@ public final class C3LiveRuntime {
      * thu nap DONG BO 1 lan (khoi dong: seed feature truoc vong ops); van chua co => null (khong loc + WARN o hook).
      */
     public Predicate<String> tradFiOrNull() {
+        if (universe == null) return null;
         if (!universe.hasSnapshot()) {
             try {
                 universe.refresh(System.currentTimeMillis());

@@ -76,7 +76,7 @@ public final class C3LiveHook {
         if (!ENABLED || symbol == null || ticker == null) return;
         try {
             C3LiveRuntime rt = C3LiveRuntime.get();
-            if (rt == null) return;
+            if (rt == null || rt.entry() == null) return;   // [2c MIN-7] manage-only: khong mo moi
             double ref = ticker.priceClose;
             double sizing = ref;
             Float rtPx = DataManagerAerospikeFloatSim.getPriceRealtime(symbol);
