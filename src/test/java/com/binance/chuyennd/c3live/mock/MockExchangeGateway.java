@@ -291,6 +291,7 @@ public class MockExchangeGateway implements ExchangeGateway {
     @Override
     public synchronized List<PositionInfo> positions() {
         enter("positions");
+        if (positionsGlitch) return new ArrayList<>();   // [2d] 200 nhung rong
         List<PositionInfo> out = new ArrayList<>();
         for (Map.Entry<String, BigDecimal> e : positionAmt.entrySet()) {
             if (e.getValue().signum() == 0) continue;
@@ -314,10 +315,33 @@ public class MockExchangeGateway implements ExchangeGateway {
         positionCost.put(symbol, qty.signum() > 0 ? qty.multiply(entry) : BigDecimal.ZERO);
     }
 
+    /** [2d] positions trong account(): null = san khong tra mang; EMPTY = tra mang rong (glitch); REAL = vi the that. */
+    public enum AccountPositions { REAL, EMPTY, NULL }
+    public volatile AccountPositions accountPositions = AccountPositions.REAL;
+    /** [2d] positionRisk tra 200 nhung RONG (glitch) — giu vi the that ben trong. */
+    public volatile boolean positionsGlitch = false;
+
+    private List<PositionInfo> accountPositionList() {
+        if (accountPositions == AccountPositions.NULL) return null;
+        if (accountPositions == AccountPositions.EMPTY) return Collections.emptyList();
+        List<PositionInfo> out = new ArrayList<>();
+        for (Map.Entry<String, BigDecimal> e : positionAmt.entrySet()) {
+            if (e.getValue().signum() == 0) continue;
+            BigDecimal px = prices.getOrDefault(e.getKey(), BigDecimal.ONE);
+            out.add(new PositionInfo(e.getKey(), "BOTH", e.getValue(), avg(e.getKey(), px), px, BigDecimal.ZERO,
+                    e.getValue().multiply(px), now));
+        }
+        return out;
+    }
+
     @Override
     public synchronized AccountSnapshot account() {
         enter("account");
-        if (!dynamicAccount) return accountSnapshot;
+        if (!dynamicAccount) {
+            AccountSnapshot a = accountSnapshot;
+            return new AccountSnapshot(a.getTotalMarginBalance(), a.getTotalWalletBalance(), a.getAvailableBalance(),
+                    a.getTotalUnrealizedProfit(), a.getAssets(), a.getTimeMs(), accountPositionList());
+        }
         BigDecimal upl = BigDecimal.ZERO;
         for (Map.Entry<String, BigDecimal> e : positionAmt.entrySet()) {
             if (e.getValue().signum() == 0) continue;
@@ -327,7 +351,7 @@ public class MockExchangeGateway implements ExchangeGateway {
         BigDecimal wallet = startEquity.add(realized).subtract(fees);
         BigDecimal m = wallet.add(upl);
         return new AccountSnapshot(m, wallet, m, upl,
-                Collections.singletonList(new AssetBalance("BFUSD", wallet, m, m, upl)), now);
+                Collections.singletonList(new AssetBalance("BFUSD", wallet, m, m, upl)), now, accountPositionList());
     }
 
     /** [2b] cong them so du (vd owner chuyen tien) — chi khi dynamicAccount. */

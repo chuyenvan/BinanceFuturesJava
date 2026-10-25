@@ -69,7 +69,8 @@ public final class C3LiveFlattener {
     public C3LiveFlattener(ExchangeGateway gw, LiveBookC3 book, Supplier<KillSwitchEngine.Action> action,
                            Consumer<String> alert, C3LiveOrderExecutor.ApiObserver api, LongSupplier clock, int maxOrders,
                            long windowMs, long safeRetryMs, FlatConfirm flat) {
-        this.flat = flat != null ? flat : new FlatConfirm(gw, api, FlatConfirm.DEFAULT_MIN_GAP_MS);
+        this.flat = flat != null ? flat
+                : new FlatConfirm(gw, api, alert, FlatConfirm.DEFAULT_MIN_GAP_MS, FlatConfirm.DEFAULT_MIN_READS);
         this.gw = gw;
         this.book = book;
         this.action = action;

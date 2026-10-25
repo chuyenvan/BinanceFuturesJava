@@ -104,6 +104,8 @@ public final class Reconciler {
     /** [2c MAJ-1] khoi tao SAN co BLOCK_STARTUP: chi go khi {@link #startup()} doc san va doi chieu XONG. */
     private final Map<String, String> blocks = new TreeMap<>();
     private final Set<String> unknownSyms = new TreeSet<>();
+    /** [2d MIN-18] vi the la: moc lan doc dau tien thay vang. */
+    private final Map<String, Long> unknownGoneSince = new TreeMap<>();
     private int matchStreak;
     private double lastDiff = Double.NaN;
     private double lastBookEq = Double.NaN;
@@ -121,7 +123,8 @@ public final class Reconciler {
                       Consumer<String> alert, C3LiveOrderExecutor.ApiObserver api, LongSupplier clock, double equityTol,
                       int matchToRelease, File reanchorFile, FlatConfirm flat) {
         this.blocks.put(BLOCK_STARTUP, "chua doi chieu khoi dong");
-        this.flat = flat != null ? flat : new FlatConfirm(gw, api, FlatConfirm.DEFAULT_MIN_GAP_MS);
+        this.flat = flat != null ? flat
+                : new FlatConfirm(gw, api, alert, FlatConfirm.DEFAULT_MIN_GAP_MS, FlatConfirm.DEFAULT_MIN_READS);
         this.gw = gw;
         this.book = book;
         this.acct = acct;
@@ -333,7 +336,10 @@ public final class Reconciler {
      * (hoac xoa nghi ngo neu vi the con). null = khong co gi phai lam.
      */
     public synchronized Report confirmPendingFlat() {
-        if (!flat.anyDue(clock.getAsLong())) return null;
+        long t = clock.getAsLong();
+        boolean unknownDue = false;
+        for (long g : unknownGoneSince.values()) if (t - g >= flat.minGapMs()) unknownDue = true;
+        if (!flat.anyDue(t) && !unknownDue) return null;
         return checkPositions();
     }
 
@@ -351,9 +357,27 @@ public final class Reconciler {
             if (!owned.contains(e.getKey()) || amt.signum() < 0) now.add(e.getKey());
         }
         r.unknownPositions.addAll(now);
-        // so tap la (cu) da het => go
-        unknownSyms.retainAll(now);
+        // [2d MIN-18] vi the la cu chi duoc coi la "het" khi >= 2 lan doc nhat quan cach >= minGap (30 s) deu vang
+        // (1 lan doc rong/glitch KHONG go chan)
+        long t = clock.getAsLong();
+        for (String s : new ArrayList<>(unknownSyms)) {
+            if (now.contains(s)) {
+                unknownGoneSince.remove(s);
+                continue;
+            }
+            Long g = unknownGoneSince.get(s);
+            if (g == null) {
+                unknownGoneSince.put(s, t);
+                LOG.warn("[C3-LIVE-RECON] vi the la {} vang o lan doc nay => CHUA go chan (can lan doc xac nhan sau >= {} ms)",
+                        s, flat.minGapMs());
+            } else if (t - g >= flat.minGapMs()) {
+                unknownSyms.remove(s);
+                unknownGoneSince.remove(s);
+            }
+        }
+        unknownGoneSince.keySet().retainAll(unknownSyms);
         for (String s : now) onUnknownPosition(s);
+        if (!unknownSyms.isEmpty()) blocks.put(BLOCK_UNKNOWN, String.join(",", unknownSyms));
         if (unknownSyms.isEmpty() && blocks.remove(BLOCK_UNKNOWN) != null) {
             String m = "[C3-LIVE-RECON] het vi the la => GO chan mo moi (UNKNOWN_POSITION)";
             LOG.warn("{}", m);

@@ -17,9 +17,18 @@ public final class AccountSnapshot {
     private final BigDecimal totalUnrealizedProfit;
     private final List<AssetBalance> assets;
     private final long timeMs;
+    /** [2d MAJ-2b] {@code positions} cua /fapi/v3/account; null = khong biet (ban cai khong tra). */
+    private final List<PositionInfo> positions;
 
     public AccountSnapshot(BigDecimal totalMarginBalance, BigDecimal totalWalletBalance, BigDecimal availableBalance,
                            BigDecimal totalUnrealizedProfit, List<AssetBalance> assets, long timeMs) {
+        this(totalMarginBalance, totalWalletBalance, availableBalance, totalUnrealizedProfit, assets, timeMs, null);
+    }
+
+    public AccountSnapshot(BigDecimal totalMarginBalance, BigDecimal totalWalletBalance, BigDecimal availableBalance,
+                           BigDecimal totalUnrealizedProfit, List<AssetBalance> assets, long timeMs,
+                           List<PositionInfo> positions) {
+        this.positions = positions == null ? null : Collections.unmodifiableList(new ArrayList<>(positions));
         this.totalMarginBalance = totalMarginBalance;
         this.totalWalletBalance = totalWalletBalance;
         this.availableBalance = availableBalance;
@@ -35,6 +44,8 @@ public final class AccountSnapshot {
     public List<AssetBalance> getAssets() { return assets; }
     /** Thoi diem client nhan snapshot (gio server da dong bo neu co). */
     public long getTimeMs() { return timeMs; }
+    /** [2d] vi the theo /fapi/v3/account; null = khong biet. */
+    public List<PositionInfo> getPositions() { return positions; }
 
     public Optional<AssetBalance> asset(String name) {
         for (AssetBalance a : assets) if (a.getAsset() != null && a.getAsset().equals(name)) return Optional.of(a);

@@ -234,6 +234,9 @@ public class ReconcilerTest {
         assertEquals("KHONG tu dong vi the la", 0, gw.calls("newMarketOrder"));
         gw.setPosition("C03USDT", BigDecimal.ZERO, BigDecimal.ONE);
         n.rec.checkPositions();
+        assertFalse("[2d MIN-18] 1 lan doc vang chua go chan", n.rec.allowsEntry("C00USDT"));
+        now.addAndGet(FlatConfirm.DEFAULT_MIN_GAP_MS);
+        n.rec.checkPositions();
         assertTrue(n.rec.allowsEntry("C00USDT"));
     }
 
@@ -289,7 +292,9 @@ public class ReconcilerTest {
         assertNull(dummy);
     }
 
-    // ------------------------------------------------------------------ [2c] MAJ-1 / MAJ-2 / MIN-6
+    // ------------------------------------------------------------------ [2c] MAJ-1 / [2d] MAJ-2b / MIN-18 / MIN-6
+
+    static final long GAP = FlatConfirm.DEFAULT_MIN_GAP_MS;   // 30 s
 
     @Test
     public void entryBlockedBeforeStartupReconcile() {
@@ -301,81 +306,175 @@ public class ReconcilerTest {
         assertTrue(n.rec.blocks().isEmpty());
     }
 
+    /**
+     * Hoi quy ProofFlat (A1_DELTA_2C): mat stream + positionRisk 200 nhung RONG (vi the THAT con, stop c3s- NEW) => KHONG
+     * bao gio huy stop / xoa cum, du doc nhieu lan cach >= 30 s.
+     */
     @Test
-    public void positionsMissingOnceKeepsClusterAndStopTwiceFiveSecApartCloses() {
-        Node n = new Node(false);   // stream chet => chi REST
+    public void proofFlatRegressionGlitchNeverCancelsStopOfRealPosition() {
+        Node n = new Node(false);   // stream chet
         n.leg("C00USDT", 0, "1.0", "100");
-        n.step("C00USDT", 1.12f);   // arm => stop tren san
+        n.step("C00USDT", 1.12f);   // arm => stop c3s- NEW tren san
         assertTrue(n.rec.startup().ok);
         String sid = n.book.cluster("C00USDT").get().stopClientAlgoId;
         assertNotNull(sid);
-        gw.setPosition("C00USDT", BigDecimal.ZERO, BigDecimal.ONE);   // positionRisk 200 nhung KHONG co symbol
         int c0 = gw.calls("cancelStop");
-        Reconciler.Report r1 = n.rec.checkPositions();
-        assertEquals("[C00USDT]", r1.flatPending.toString());
-        assertTrue(r1.closedWhileDown.isEmpty());
-        assertTrue("1 lan rong: GIU cum", n.book.isHolding("C00USDT"));
-        assertEquals("1 lan rong: KHONG huy stop", c0, gw.calls("cancelStop"));
-        assertEquals(1, gw.openStops("C00USDT").size());
-        assertEquals(sid, n.book.cluster("C00USDT").get().stopClientAlgoId);
-        assertFalse("dang nghi phang => chan vao lenh symbol do", n.rec.allowsEntry("C00USDT"));
-        assertTrue(n.rec.allowsEntry("C01USDT"));
-        assertNull("chua du 5 s => khong doc lai", n.rec.confirmPendingFlat());
-        now.addAndGet(2_000L);
-        assertTrue(n.rec.checkPositions().closedWhileDown.isEmpty());   // lan 2 nhung < 5 s
+        gw.positionsGlitch = true;
+        long[] steps = {10_000L, 10_000L, GAP, GAP, GAP, GAP};
+        for (long d : steps) {
+            now.addAndGet(d);
+            Reconciler.Report r = n.rec.checkPositions();
+            assertTrue(r.toString(), r.closedWhileDown.isEmpty());
+            assertTrue("giu cum", n.book.isHolding("C00USDT"));
+            assertEquals("giu stop", c0, gw.calls("cancelStop"));
+            assertEquals(1, gw.openStops("C00USDT").size());
+            assertEquals(sid, n.book.cluster("C00USDT").get().stopClientAlgoId);
+            assertFalse(n.rec.allowsEntry("C00USDT"));
+        }
+        assertEquals("vi the THAT van con", 0, new BigDecimal("100").compareTo(gw.position("C00USDT")));
+        gw.positionsGlitch = false;
+        now.addAndGet(GAP);
+        assertTrue(n.rec.checkPositions().flatPending.isEmpty());
+        assertTrue(n.rec.flatPending().isEmpty());
+        assertTrue(n.rec.allowsEntry("C00USDT"));
+    }
+
+    /** (a) thieu: phang THAT, khong stop, account phang — nhung chua du 3 lan doc cach >= 30 s => giu; lan 3 => phang. */
+    @Test
+    public void conditionA_needsThreeReadsThirtySecondsApart() {
+        Node n = new Node(false);
+        n.leg("C00USDT", 0, "1.0", "100");   // chua arm => khong stop
+        assertTrue(n.rec.startup().ok);
+        gw.setPosition("C00USDT", BigDecimal.ZERO, BigDecimal.ONE);   // phang that (ngoai bot), stream chet
+        long[] steps = {0L, 10_000L, 10_000L, 10_000L};   // doc 1 tai t, roi +10 +20 +30 (chi +30 duoc tinh = lan 2)
+        for (long d : steps) {
+            now.addAndGet(d);
+            assertTrue(n.rec.checkPositions().closedWhileDown.isEmpty());
+            assertTrue(n.book.isHolding("C00USDT"));
+        }
+        now.addAndGet(GAP - 1);
+        assertNull("chua du 30 s ke tu lan tinh truoc", n.rec.confirmPendingFlat());
+        assertTrue(n.book.isHolding("C00USDT"));
+        now.addAndGet(1);
+        Reconciler.Report r = n.rec.confirmPendingFlat();   // lan 3
+        assertNotNull(r);
+        assertEquals("[C00USDT:" + FillAccounting.REASON_EXTERNAL + "]", r.closedWhileDown.toString());
+        assertFalse(n.book.isHolding("C00USDT"));
+    }
+
+    /** (b) thieu: positionRisk rong nhung account().positions VAN co vi the (hoac khong co mang) => giu mai. */
+    @Test
+    public void conditionB_accountPositionsMustAlsoBeFlat() {
+        Node n = new Node(false);
+        n.leg("C00USDT", 0, "1.0", "100");   // khong stop => (c) thoa
+        assertTrue(n.rec.startup().ok);
+        gw.positionsGlitch = true;           // positionRisk rong, account REAL con vi the
+        for (int i = 0; i < 5; i++) {
+            n.rec.checkPositions();
+            now.addAndGet(GAP);
+        }
+        assertTrue(n.book.isHolding("C00USDT"));
+        gw.accountPositions = MockExchangeGateway.AccountPositions.NULL;   // san khong tra mang => khong doi chung duoc
+        for (int i = 0; i < 3; i++) {
+            n.rec.checkPositions();
+            now.addAndGet(GAP);
+        }
+        assertTrue("account khong co positions => khong ket luan phang", n.book.isHolding("C00USDT"));
+        assertTrue(n.rec.flatPending().contains("C00USDT"));
+    }
+
+    /** (c) thieu: phang that + account phang nhung VAN con stop c3s- NEW => giu cum + stop, Telegram WARN DUNG 1 lan. */
+    @Test
+    public void conditionC_openOwnStopBlocksFlatConclusionWithSingleAlert() {
+        Node n = new Node(false);
+        n.leg("C00USDT", 0, "1.0", "100");
+        n.step("C00USDT", 1.12f);   // arm => stop NEW
+        assertTrue(n.rec.startup().ok);
+        String sid = n.book.cluster("C00USDT").get().stopClientAlgoId;
+        gw.setPosition("C00USDT", BigDecimal.ZERO, BigDecimal.ONE);   // owner dong tay, stream chet
+        int a0 = alerts.size();
+        int c0 = gw.calls("cancelStop");
+        for (int i = 0; i < 6; i++) {
+            n.rec.checkPositions();
+            now.addAndGet(GAP);
+        }
         assertTrue(n.book.isHolding("C00USDT"));
         assertEquals(c0, gw.calls("cancelStop"));
-        now.addAndGet(4_000L);
-        Reconciler.Report r2 = n.rec.confirmPendingFlat();
-        assertNotNull(r2);
-        assertEquals("[C00USDT:" + FillAccounting.REASON_EXTERNAL + "]", r2.closedWhileDown.toString());
+        assertEquals(1, gw.openStops("C00USDT").size());
+        long warn = alerts.subList(a0, alerts.size()).stream().filter(m -> m.contains("stop c3s- NEW")).count();
+        assertEquals("Telegram WARN 1 lan", 1L, warn);
+        // owner huy stop tay => (c) thoa => lan doc ke tiep ket luan phang
+        gw.cancelStop("C00USDT", sid);
+        Reconciler.Report r = n.rec.checkPositions();
+        assertEquals(1, r.closedWhileDown.size());
         assertFalse(n.book.isHolding("C00USDT"));
-        assertTrue("2 lan rong cach >= 5 s: huy stop", gw.calls("cancelStop") > c0);
-        assertTrue(gw.openStops("C00USDT").isEmpty());
-        assertTrue(n.rec.allowsEntry("C00USDT"));
     }
 
     @Test
     public void positionReappearsClearsSuspicion() {
         Node n = new Node(false);
         n.leg("C00USDT", 0, "1.0", "100");
-        n.step("C00USDT", 1.12f);
         assertTrue(n.rec.startup().ok);
         gw.setPosition("C00USDT", BigDecimal.ZERO, BigDecimal.ONE);
         assertEquals(1, n.rec.checkPositions().flatPending.size());
-        gw.setPosition("C00USDT", new BigDecimal("100"), BigDecimal.ONE);   // lan doc sau thay vi the => het nghi
+        now.addAndGet(GAP);
+        n.rec.checkPositions();   // lan 2
+        gw.setPosition("C00USDT", new BigDecimal("100"), BigDecimal.ONE);   // vi the hien lai => xoa moc
+        now.addAndGet(GAP);
         assertTrue(n.rec.checkPositions().flatPending.isEmpty());
-        assertTrue(n.rec.flatPending().isEmpty());
-        now.addAndGet(10_000L);
         gw.setPosition("C00USDT", BigDecimal.ZERO, BigDecimal.ONE);
-        Reconciler.Report r = n.rec.checkPositions();   // lai la "lan dau" => giu
-        assertTrue(r.closedWhileDown.isEmpty());
-        assertTrue(n.book.isHolding("C00USDT"));
-        assertEquals(1, gw.openStops("C00USDT").size());
+        now.addAndGet(GAP);
+        n.rec.checkPositions();   // lai la lan 1
+        now.addAndGet(GAP);
+        n.rec.checkPositions();   // lan 2
+        assertTrue("dem lai tu dau sau khi vi the hien lai", n.book.isHolding("C00USDT"));
     }
 
     @Test
     public void startupWithMissingPositionKeepsClusterUntilConfirmed() {
         Node n1 = new Node(true);
         n1.leg("C00USDT", 0, "1.0", "100");
-        n1.step("C00USDT", 1.12f);
         gw.wsSink = null;
-        gw.setPosition("C00USDT", BigDecimal.ZERO, BigDecimal.ONE);   // positionRisk thieu symbol luc restart
+        gw.setPosition("C00USDT", BigDecimal.ZERO, BigDecimal.ONE);   // positionRisk thieu symbol luc restart (khong stop)
         Node n2 = new Node(false);
         Reconciler.Report r = n2.rec.startup();
         assertTrue(r.ok);
         assertEquals("[C00USDT]", r.flatPending.toString());
-        assertTrue(r.closedWhileDown.isEmpty() && r.orphanCancelled.isEmpty() && r.stopsDropped.isEmpty());
+        assertTrue(r.closedWhileDown.isEmpty());
         assertTrue(n2.book.isHolding("C00USDT"));
-        assertEquals(1, gw.openStops("C00USDT").size());
         assertTrue(n2.rec.allowsEntry("C01USDT"));
         assertFalse(n2.rec.allowsEntry("C00USDT"));
-        now.addAndGet(5_000L);
-        Reconciler.Report r2 = n2.rec.confirmPendingFlat();
-        assertNotNull(r2);
-        assertEquals(1, r2.closedWhileDown.size());
+        now.addAndGet(GAP);
+        assertTrue(n2.rec.confirmPendingFlat().closedWhileDown.isEmpty());   // lan 2
+        now.addAndGet(GAP);
+        Reconciler.Report r3 = n2.rec.confirmPendingFlat();                   // lan 3
+        assertEquals(1, r3.closedWhileDown.size());
         assertFalse(n2.book.isHolding("C00USDT"));
-        assertTrue(gw.openStops("C00USDT").isEmpty());
+    }
+
+    /** MIN-18: 1 lan doc rong KHONG go chan UNKNOWN_POSITION; can >= 2 lan doc nhat quan cach >= 30 s. */
+    @Test
+    public void unknownBlockNotReleasedByOneEmptyRead() {
+        Node n = new Node(true);
+        gw.setPosition("C03USDT", new BigDecimal("7"), BigDecimal.ONE);
+        n.rec.startup();
+        assertTrue(n.rec.blocks().containsKey(Reconciler.BLOCK_UNKNOWN));
+        gw.positionsGlitch = true;
+        n.rec.checkPositions();
+        assertFalse("1 lan doc rong: van chan", n.rec.allowsEntry("C00USDT"));
+        now.addAndGet(10_000L);
+        n.rec.checkPositions();
+        assertFalse("2 lan nhung < 30 s: van chan", n.rec.allowsEntry("C00USDT"));
+        gw.positionsGlitch = false;
+        now.addAndGet(GAP);
+        n.rec.checkPositions();   // vi the la hien lai => xoa moc
+        assertFalse(n.rec.allowsEntry("C00USDT"));
+        gw.setPosition("C03USDT", BigDecimal.ZERO, BigDecimal.ONE);   // het that
+        n.rec.checkPositions();
+        assertFalse("het lan 1: van chan", n.rec.allowsEntry("C00USDT"));
+        now.addAndGet(GAP);
+        n.rec.checkPositions();
+        assertTrue("2 lan nhat quan cach >= 30 s: go chan", n.rec.allowsEntry("C00USDT"));
     }
 
     /** MIN-6: so mat tham chieu stop (ghi loi) nhung stop VAN tren san, cum da arm => restart NHAN lai stop, khong huy. */

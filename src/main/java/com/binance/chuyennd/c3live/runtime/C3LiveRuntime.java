@@ -216,7 +216,7 @@ public final class C3LiveRuntime {
                 TrailingStopManager::tsExtOnClosed);
         this.reanchorFile = new File(Cfg.getOr(KEY_REANCHOR_FILE, Reconciler.DEFAULT_REANCHOR_FILE));
         // [2c MAJ-2] 1 bo xac nhan "phang" dung chung cho Reconciler + Flattener
-        this.flat = new FlatConfirm(gw, api, FlatConfirm.DEFAULT_MIN_GAP_MS);
+        this.flat = new FlatConfirm(gw, api, alerts::send, FlatConfirm.DEFAULT_MIN_GAP_MS, FlatConfirm.DEFAULT_MIN_READS);
         this.reconciler = new Reconciler(gw, book, acct, () -> rules, alerts::send, api, System::currentTimeMillis,
                 parseD(Cfg.get(KEY_EQUITY_TOL), Reconciler.DEFAULT_EQUITY_TOL), Reconciler.DEFAULT_MATCH_TO_RELEASE,
                 reanchorFile, flat);

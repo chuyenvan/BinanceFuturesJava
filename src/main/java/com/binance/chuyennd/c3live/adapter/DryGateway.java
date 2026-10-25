@@ -323,7 +323,7 @@ public final class DryGateway implements ExchangeGateway {
         BigDecimal wallet = equity.add(realized).subtract(fees);
         BigDecimal margin = wallet.add(upl);
         return new AccountSnapshot(margin, wallet, margin, upl,
-                Collections.singletonList(new AssetBalance("DRY", wallet, margin, margin, upl)), clock.getAsLong());
+                Collections.singletonList(new AssetBalance("DRY", wallet, margin, margin, upl)), clock.getAsLong(), positions());
     }
 
     private BigDecimal mark(String sym, BigDecimal def) {

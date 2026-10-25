@@ -304,8 +304,21 @@ public final class C3LiveClient implements ExchangeGateway {
         }
         BigDecimal tmb = dec(o, "totalMarginBalance");
         if (tmb == null) throw new GatewayException(ErrorKind.OTHER, "account: thieu totalMarginBalance", true);
+        // [2d MAJ-2b] positions cua v3/account = nguon doi chung thu 2 cho xac nhan "phang" (null neu san khong tra mang)
+        List<PositionInfo> positions = null;
+        if (o.has("positions") && o.get("positions").isJsonArray()) {
+            positions = new ArrayList<>();
+            for (JsonElement e : o.getAsJsonArray("positions")) {
+                JsonObject p = e.getAsJsonObject();
+                BigDecimal amt = dec(p, "positionAmt");
+                String s = str(p, "symbol");
+                if (s == null || amt == null) continue;
+                positions.add(new PositionInfo(s, str(p, "positionSide"), amt, dec(p, "entryPrice"), dec(p, "markPrice"),
+                        dec(p, "unrealizedProfit"), dec(p, "notional"), p.has("updateTime") ? lng(p, "updateTime") : 0L));
+            }
+        }
         return new AccountSnapshot(tmb, dec(o, "totalWalletBalance"), dec(o, "availableBalance"),
-                dec(o, "totalUnrealizedProfit"), assets, System.currentTimeMillis() + timeOffsetMs);
+                dec(o, "totalUnrealizedProfit"), assets, System.currentTimeMillis() + timeOffsetMs, positions);
     }
 
     @Override

@@ -128,30 +128,53 @@ public class C3LiveFlattenerTest {
         assertEquals(7_000d, e2.capital(), 0);
     }
 
-    /** [2c MAJ-2] positionRisk thieu symbol 1 lan => KHONG huy stop/xoa cum; lan doc thu 2 cach >= 5 s (0 lenh mo) => phang. */
+    /**
+     * [2c MAJ-2 / 2d MAJ-2b] positionRisk thieu symbol => KHONG huy stop/xoa cum cho toi khi du (a) 3 lan doc cach >= 30 s
+     * + (b) account phang + (c) 0 stop c3s- NEW.
+     */
     @Test
     public void positionsMissingDoesNotFinalizeUntilConfirmed() {
+        MockExchangeGateway gw = new MockExchangeGateway();
+        AtomicLong now = new AtomicLong(1_000_000L);
+        LiveBookC3 b = new LiveBookC3(null, 1.0);
+        open(gw, b, "AUSDT", now.get());   // chua arm => khong stop
+        C3LiveFlattener f = new C3LiveFlattener(gw, b, () -> KillSwitchEngine.Action.NONE, null, null, now::get, 5, 10_000L,
+                10_000L);
+        gw.setPosition("AUSDT", BigDecimal.ZERO, BigDecimal.ONE);   // phang that (vd owner dong tay)
+        assertEquals(0, f.closeCluster("AUSDT", "TIME_STOP"));   // lan 1
+        assertTrue("1 lan: giu cum", b.isHolding("AUSDT"));
+        now.addAndGet(10_000L);
+        assertEquals(0, f.closeCluster("AUSDT", "TIME_STOP"));   // < 30 s: khong tinh
+        now.addAndGet(20_000L);
+        assertEquals(0, f.closeCluster("AUSDT", "TIME_STOP"));   // lan 2
+        assertTrue("2 lan: van giu", b.isHolding("AUSDT"));
+        now.addAndGet(30_000L);
+        assertEquals(0, f.closeCluster("AUSDT", "TIME_STOP"));   // lan 3 + account phang + 0 stop
+        assertFalse("du 3 dieu kien: phang", b.isHolding("AUSDT"));
+        assertEquals("khong gui lenh ban khi san noi phang", 0, gw.calls("newMarketOrder") - 1);
+    }
+
+    /** [2d MAJ-2b] con stop c3s- NEW => Flattener KHONG bao gio ket luan phang (du positionRisk + account deu phang). */
+    @Test
+    public void openOwnStopKeepsClusterInFlattener() {
         MockExchangeGateway gw = new MockExchangeGateway();
         AtomicLong now = new AtomicLong(1_000_000L);
         LiveBookC3 b = new LiveBookC3(null, 1.0);
         open(gw, b, "AUSDT", now.get());
         gw.newStopMarket("AUSDT", Side.SELL, new BigDecimal("0.9"), "c3s-AUSDT-1", true);
         b.setStop("AUSDT", 0.9, "c3s-AUSDT-1", now.get());
-        C3LiveFlattener f = new C3LiveFlattener(gw, b, () -> KillSwitchEngine.Action.NONE, null, null, now::get, 5, 10_000L,
-                10_000L);
-        gw.setPosition("AUSDT", BigDecimal.ZERO, BigDecimal.ONE);   // positionRisk khong co symbol
-        assertEquals(0, f.closeCluster("AUSDT", "TIME_STOP"));
-        assertTrue("1 lan: giu cum", b.isHolding("AUSDT"));
-        assertEquals("1 lan: giu stop", 1, gw.openStops("AUSDT").size());
+        List<String> alerts = new ArrayList<>();
+        C3LiveFlattener f = new C3LiveFlattener(gw, b, () -> KillSwitchEngine.Action.NONE, alerts::add, null, now::get, 5,
+                10_000L, 10_000L);
+        gw.setPosition("AUSDT", BigDecimal.ZERO, BigDecimal.ONE);
+        for (int i = 0; i < 6; i++) {
+            assertEquals(0, f.closeCluster("AUSDT", "TIME_STOP"));
+            now.addAndGet(30_000L);
+        }
+        assertTrue(b.isHolding("AUSDT"));
+        assertEquals(1, gw.openStops("AUSDT").size());
         assertEquals(0, gw.calls("cancelStop"));
-        now.addAndGet(3_000L);
-        assertEquals(0, f.closeCluster("AUSDT", "TIME_STOP"));
-        assertTrue("< 5 s: van giu", b.isHolding("AUSDT"));
-        now.addAndGet(3_000L);
-        assertEquals(0, f.closeCluster("AUSDT", "TIME_STOP"));
-        assertFalse("2 lan cach >= 5 s: phang", b.isHolding("AUSDT"));
-        assertEquals(0, gw.openStops("AUSDT").size());
-        assertEquals("khong gui lenh ban khi san noi phang", 0, gw.calls("newMarketOrder") - 1);
+        assertEquals(1, alerts.stream().filter(m -> m.contains("stop c3s- NEW")).count());
     }
 
     private static AccountSnapshot snap(String tmb) {
