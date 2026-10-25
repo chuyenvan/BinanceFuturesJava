@@ -1,0 +1,55 @@
+== 1. deploy DRY=1 (truoc 11-18: chi canh bao)
+  [PASS] deploy DRY PASS
+  [PASS] deploy DRY khong doi env
+  [PASS] deploy tu choi khi md5 killsw_reset.sh sai (pin)
+== 2. deploy that KHONG FORCE_DATE (phai tu choi truoc 2026-11-18)
+  [PASS] tu choi truoc 11-18
+== 3. deploy that (FORCE_DATE=1 FORCE_TIME=1, go YES) tren 242 gia
+  [PASS] deploy XONG
+  [PASS] deploy kiem 0 dong KILLSW LATCH sau start
+  [PASS] jar moi tren 242 gia
+  [PASS] backup jar/env/start
+  [PASS] env them LIVE_ADAPTER=dry + c3_live + act
+  [PASS] process moi co env c3_live/dry
+  [PASS] exchangeInfo dat vao run/
+  [PASS] killsw_reset.sh chep sang ops/
+  [PASS] PAUSE watchdog da xoa
+== 4. deploy lan 2 phai tu choi (da co LIVE_ADAPTER)
+  [PASS] deploy lan 2 FAIL o kiem 242
+== 5. status (chi doc)
+== process pid=1099441 so=1 jar=8bc1489488e76a026378724211f485c3
+  [PASS] status in env c3_live
+== 6. killsw_reset (wrapper) DRY + YES
+  [PASS] killsw DRY khong ghi
+== Da ghi yeu cau run/killsw_reset.req ; log: run/killsw_reset.log
+== Bot CHUA ap dung sau 3s (bot tat? sai thu muc?). Yeu cau van cho; bot se ap dung khi chay.
+== Xong. Log: /home/ubuntu/claude_master/v12/r2d_wk/fake242/deploylog/killsw_reset_20261025_1730.log (gui MASTER)
+  [PASS] killsw YES ghi run/killsw_reset.req
+== 7. reanchor DRY + YES
+  [PASS] reanchor DRY khong ghi
+  [PASS] reanchor YES ghi yeu cau
+== 8. rollback DRY + chot gio + YES
+  [PASS] rollback DRY PASS
+  [PASS] rollback xong
+  [PASS] env ve c3_shadow, khong LIVE_ADAPTER
+  [PASS] jar ve ban cu
+  [PASS] so dry doi ten .rb_TS
+  [PASS] process chay lai env c3_shadow
+  [PASS] dinh C6 c3_live doi ten .rb_TS
+== 9. [2c CRIT-1] deploy co dong [KILLSW] LATCH sau start => ROLLBACK TU DONG + FAIL
+  [PASS] deploy FAIL vi LATCH (rc!=0)
+  [PASS] rollback tu dong da chay
+  [PASS] sau rollback tu dong: env c3_shadow, jar cu
+  [PASS] process chay env c3_shadow sau rollback tu dong
+== 10. [2d] thieu logs/full.log sau start => KHONG duoc PASS gia: FAIL + rollback tu dong
+LATCH_COUNT=no_log
+  [PASS] thieu log => FAIL (no_log) + rollback
+  [PASS] sau rollback (thieu log): env c3_shadow
+== 11. [2d] log xoay trong 120 s, dong LATCH nam o full.log.1 => van bat duoc: FAIL + rollback
+LATCH_COUNT=1 files=2
+  [PASS] LATCH trong file da xoay => FAIL + rollback
+  [PASS] sau rollback (log xoay): jar cu
+== 12. [2d] log xoay nhung KHONG co LATCH => buoc hau kiem LATCH dat (dem theo moc thoi gian, ke ca full.log.1)
+LATCH_COUNT=0 files=2
+  [PASS] log xoay, 0 LATCH => qua buoc LATCH (khong FAIL gia)
+TEST PASS 35/35
