@@ -21,7 +21,11 @@ import java.util.Set;
  * underlyingType thieu -> KHONG TradFi nhung verified=false (bao dem moi lan refresh).
  */
 public final class TradFiClassifier {
-    public static final Set<String> DEFAULT_CRYPTO_UNDERLYING = set("COIN", "INDEX");
+    /**
+     * [2c MASTER] PREMARKET (crypto pre-market, vd PREDICTUSDT) la crypto — bi loai vi status chu khong vi TradFi. INDEX
+     * khong phai TradFi (bi loai rieng o SymbolUniverseLive, Reason.INDEX).
+     */
+    public static final Set<String> DEFAULT_CRYPTO_UNDERLYING = set("COIN", "INDEX", "PREMARKET");
     public static final Set<String> DEFAULT_TRADFI_TAGS = set("TRADFI", "STOCK", "STOCKS", "EQUITY", "EQUITIES", "ETF", "FOREX", "FX",
             "COMMODITY", "COMMODITIES", "METAL", "METALS");
 

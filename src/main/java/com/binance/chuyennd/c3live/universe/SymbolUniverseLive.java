@@ -20,7 +20,10 @@ import java.util.function.Supplier;
 
 /**
  * [V12 P0-U1/U2/U3/U4] Universe live cua c3_live tu exchangeInfo (thay regex ^[A-Z0-9]+$ + Constants.diedSymbol).
- * <pre>U(t) = { s : status=TRADING, contractType=PERPETUAL, quoteAsset=USDT } \ TradFi \ UNIVERSE_EXCLUDE</pre>
+ * <pre>U(t) = { s : status=TRADING, contractType=PERPETUAL, quoteAsset=USDT, underlyingType != INDEX } \ TradFi \ UNIVERSE_EXCLUDE</pre>
+ * [2c MASTER] buyable = TRADING + PERPETUAL + underlyingType != INDEX (+ USDT, khong TradFi, ASCII, delivery); chi so
+ * tong hop (ALLUSDT, BTCDOMUSDT) loai ca khoi buyable lan market index. PREMARKET (vd PREDICTUSDT) = crypto: hien bi loai
+ * vi status (PENDING_TRADING), tu vao khi chuyen TRADING + PERPETUAL.
  * <ul>
  *   <li>{@link #isAlive}: san con TRADING (moi loai) - dung cho QUAN LY/dong vi the, khong chan theo chinh sach.</li>
  *   <li>{@link #isTradable}: trong U (gom ca ten non-ASCII, xu ly UTF-8, khong regex ASCII).</li>
@@ -40,7 +43,9 @@ public final class SymbolUniverseLive {
     public static final String DEFAULT_EXCLUDE = "BTCDOMUSDT:intentional,USDCUSDT:intentional";
 
     /** Ly do khong tradable / khong buyable. */
-    public enum Reason { NOT_LISTED, NOT_TRADING, NOT_USDT, TRADFI, NOT_PERPETUAL, EXCLUDED, NON_ASCII, DELIVERY_UNKNOWN, DELIVERY_SOON, STALE, NO_SNAPSHOT }
+    public enum Reason { NOT_LISTED, NOT_TRADING, NOT_USDT, TRADFI, NOT_PERPETUAL, EXCLUDED, NON_ASCII, DELIVERY_UNKNOWN, DELIVERY_SOON, STALE, NO_SNAPSHOT,
+        /** [2c MASTER] underlyingType=INDEX (ALLUSDT, BTCDOMUSDT...): backtest crash-buy khong xac thuc cho chi so tong hop. */
+        INDEX }
 
     /** Cau hinh bat bien. */
     public static final class Config {
@@ -188,6 +193,7 @@ public final class SymbolUniverseLive {
             else if (!"USDT".equals(m.getQuoteAsset())) r = Reason.NOT_USDT;
             else if (v.isTradFi()) r = Reason.TRADFI;
             else if (!"PERPETUAL".equals(m.getContractType())) r = Reason.NOT_PERPETUAL;
+            else if ("INDEX".equalsIgnoreCase(trimOrEmpty(m.getUnderlyingType()))) r = Reason.INDEX;
             else if (cfg.exclude.containsKey(sym)) r = Reason.EXCLUDED;
             if (r == null) {
                 tradable.add(sym);
@@ -338,4 +344,6 @@ public final class SymbolUniverseLive {
     public Config config() { return cfg; }
 
     static String upper(String s) { return s == null ? null : s.toUpperCase(Locale.ROOT); }
+
+    private static String trimOrEmpty(String s) { return s == null ? "" : s.trim(); }
 }

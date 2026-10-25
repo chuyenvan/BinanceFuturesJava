@@ -116,7 +116,9 @@ public class SymbolUniverseLiveTest {
         u2.refresh(NOW);
         assertTrue(u2.marketIndexMembers().contains(CN));
         assertTrue(u2.isBuyable(CN, NOW));
-        assertTrue(u2.isTradable("BTCDOMUSDT")); // UNIVERSE_EXCLUDE="" -> khong loai gi
+        // [2c MASTER] UNIVERSE_EXCLUDE="" nhung BTCDOMUSDT la underlyingType=INDEX => van loai (Reason.INDEX)
+        assertFalse(u2.isTradable("BTCDOMUSDT"));
+        assertEquals(SymbolUniverseLive.Reason.INDEX, u2.notTradableReason("BTCDOMUSDT").get());
     }
 
     @Test
@@ -182,5 +184,95 @@ public class SymbolUniverseLiveTest {
         assertFalse(SymbolUniverseLive.isAsciiSymbol(CN));
         assertFalse(SymbolUniverseLive.isAsciiSymbol("A B"));
         assertEquals(new HashSet<>(Arrays.asList("A", "B")), SymbolUniverseLive.Config.parseExclude(" A , B:intentional ,").keySet());
+    }
+
+    // ------------------------------------------------------------------ [2c MASTER] universe: INDEX loai, PREMARKET = crypto
+
+    private static SymbolMeta perp(String sym, String status, String ut) {
+        return SymbolMeta.builder(sym).status(status).contractType("PERPETUAL").quoteAsset("USDT").underlyingType(ut)
+                .deliveryDate(4_133_404_800_000L).build();
+    }
+
+    @Test
+    public void indexUnderlyingExcludedAndPremarketIsCryptoExcludedOnlyByStatus() {
+        List<SymbolMeta> l = new ArrayList<>();
+        l.add(perp("BTCUSDT", "TRADING", "COIN"));
+        l.add(perp("ALLUSDT", "TRADING", "INDEX"));
+        l.add(perp("PREDICTUSDT", "PENDING_TRADING", "PREMARKET"));
+        SymbolUniverseLive u = new SymbolUniverseLive(SymbolUniverseLive.Config.defaults(),
+                () -> new ExchangeInfo(NOW, Collections.emptyList(), l), alerts::add);
+        u.refresh(NOW);
+        assertTrue(u.isBuyable("BTCUSDT", NOW));
+        assertFalse(u.isBuyable("ALLUSDT", NOW));
+        assertEquals(SymbolUniverseLive.Reason.INDEX, u.notTradableReason("ALLUSDT").get());
+        assertFalse(u.marketIndexMembers().contains("ALLUSDT"));
+        assertEquals(SymbolUniverseLive.Reason.NOT_TRADING, u.notTradableReason("PREDICTUSDT").get());
+        assertFalse(u.classification("PREDICTUSDT").get().isTradFi());
+        // PREDICTUSDT chuyen TRADING + PERPETUAL => tu vao
+        l.set(2, perp("PREDICTUSDT", "TRADING", "PREMARKET"));
+        u.refresh(NOW + 1);
+        assertTrue(u.isBuyable("PREDICTUSDT", NOW + 1));
+        assertTrue(u.marketIndexMembers().contains("PREDICTUSDT"));
+    }
+
+    /**
+     * [2c MASTER] Dump exchangeInfo THAT (owner 10-25, 932 symbol): 0 TRADIFI_PERPETUAL trong buyable va market index;
+     * MDTUSDT (nay la co phieu Medtronic) loai; POWRUSDT co; ALLUSDT (INDEX) loai. Khong co dump => bo qua.
+     */
+    @Test
+    public void realDumpBuyableHasNoTradFiAndExpectedMembers() throws Exception {
+        String dir = System.getProperty("c3live.fixtures", System.getProperty("user.home") + "/claude_master/v12/fixtures");
+        java.io.File pinned = new java.io.File(dir, "exchangeInfo_20261025_1457.json.gz");
+        java.io.File f = pinned;
+        if (!f.exists()) {
+            java.io.File[] fs = new java.io.File(dir).listFiles((d, n) -> n.startsWith("exchangeInfo_") && n.endsWith(".json.gz"));
+            org.junit.Assume.assumeTrue("chua co dump exchangeInfo that trong " + dir, fs != null && fs.length > 0);
+            Arrays.sort(fs);
+            f = fs[fs.length - 1];
+        }
+        ExchangeInfo ei = com.binance.chuyennd.c3live.api.ExchangeInfoParser.parseFile(f.toPath());
+        long now = ei.getServerTime() > 0 ? ei.getServerTime() : NOW;
+        SymbolUniverseLive u = new SymbolUniverseLive(SymbolUniverseLive.Config.defaults(), () -> ei, alerts::add);
+        assertNotNull(u.refresh(now));
+        Set<String> buyable = new TreeSet<>();
+        Map<SymbolUniverseLive.Reason, Integer> why = new java.util.EnumMap<>(SymbolUniverseLive.Reason.class);
+        int tradfiContracts = 0;
+        for (SymbolMeta m : ei.getSymbols().values()) {
+            if ("TRADIFI_PERPETUAL".equals(m.getContractType())) tradfiContracts++;
+            if (u.isBuyable(m.getSymbol(), now)) buyable.add(m.getSymbol());
+            u.notTradableReason(m.getSymbol()).ifPresent(r -> why.merge(r, 1, Integer::sum));
+        }
+        int tfBuy = 0;
+        for (String s : buyable) if ("TRADIFI_PERPETUAL".equals(ei.getSymbols().get(s).getContractType())) tfBuy++;
+        int tfIdx = 0;
+        for (String s : u.marketIndexMembers()) if ("TRADIFI_PERPETUAL".equals(ei.getSymbols().get(s).getContractType())) tfIdx++;
+        org.slf4j.LoggerFactory.getLogger(SymbolUniverseLiveTest.class).info(
+                "[TEST-UNIVERSE] dump={} listed={} TRADIFI_PERPETUAL={} buyable={} marketIndex={} tradfi_in_buyable={}"
+                        + " tradfi_in_index={} ly_do={}", f.getName(), ei.getSymbols().size(), tradfiContracts, buyable.size(),
+                u.marketIndexMembers().size(), tfBuy, tfIdx, why);
+        assertTrue(tradfiContracts > 100);
+        assertEquals("0 TRADIFI_PERPETUAL trong buyable", 0, tfBuy);
+        assertEquals("0 TRADIFI_PERPETUAL trong market index", 0, tfIdx);
+        for (String s : buyable) {
+            SymbolMeta m = ei.getSymbols().get(s);
+            assertEquals(s, "TRADING", m.getStatus());
+            assertEquals(s, "PERPETUAL", m.getContractType());
+            assertNotEquals(s, "INDEX", m.getUnderlyingType());
+            assertFalse(s, u.classification(s).get().isTradFi());
+        }
+        assertFalse("MDTUSDT (Medtronic, TradFi) loai", buyable.contains("MDTUSDT"));
+        assertEquals(SymbolUniverseLive.Reason.TRADFI, u.notTradableReason("MDTUSDT").get());
+        assertTrue("POWRUSDT (crypto TRADING) co", buyable.contains("POWRUSDT"));
+        assertFalse("ALLUSDT (INDEX) loai", buyable.contains("ALLUSDT"));
+        assertFalse(u.marketIndexMembers().contains("ALLUSDT"));
+        assertEquals(SymbolUniverseLive.Reason.INDEX, u.notTradableReason("ALLUSDT").get());
+        assertFalse(buyable.contains("BTCDOMUSDT"));
+        if (ei.getSymbols().containsKey("PREDICTUSDT")) {
+            assertFalse("PREDICTUSDT khong con bi coi la TradFi", u.classification("PREDICTUSDT").get().isTradFi());
+            if (!"TRADING".equals(ei.getSymbols().get("PREDICTUSDT").getStatus())) {
+                assertEquals(SymbolUniverseLive.Reason.NOT_TRADING, u.notTradableReason("PREDICTUSDT").get());
+            }
+        }
+        assertTrue("buyable=" + buyable.size(), buyable.size() > 400);
     }
 }
