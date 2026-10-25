@@ -35,7 +35,7 @@ case "$1" in
     set -a; . conf/env.sh; set +a
     nohup bash -c 'exec -a "BinanceOrderTradingManager fake242" sleep 900' >/dev/null 2>&1 &
     sleep 1
-    D=$(date '+%d/%m/%Y %H:%M:%S.000')
+    D=$(TZ=Asia/Ho_Chi_Minh date '+%d/%m/%Y %H:%M:%S.000')   # log 242 that ghi gio +07
     {
       echo "$D INFO [main] x: MainClass: com.binance.chuyennd.trading.BinanceOrderTradingManager"
       echo "$D INFO [main] x: [HEARTBEAT] BAT file=run/heartbeat"
@@ -162,6 +162,21 @@ touch "$F/FAKE_ROTATE"
 OUT=$(echo YES | FORCE_DATE=1 FORCE_TIME=1 bash "$HERE/deploy_v12_dry.sh" 2>&1); echo "$OUT" | grep -a 'LATCH_COUNT' | head -2
 rm -f "$F/FAKE_ROTATE"
 chk "log xoay, 0 LATCH => qua buoc LATCH (khong FAIL gia)" "echo \"\$OUT\" | grep -q 'LATCH_COUNT=0 files=2' && echo \"\$OUT\" | grep -q '0 dong \[KILLSW\] LATCH'"
+chk "[2e] deploy in tz_shell + moc +07" "echo \"\$OUT\" | grep -q 'tz_shell=.*moc_start_+07='"
+echo "== 13. [2e] c3live_ghost_clear.sh: symbol sai / chi xem / YES=1 ghi yeu cau + doc ket qua bot"
+OUT=$(bash "$HERE/c3live_ghost_clear.sh" 'xrp;rm' 2>&1); RC=$?
+chk "ghost: symbol sai => tu choi" "[ $RC = 2 ] && [ ! -f $F/run/c3live_ghost_clear.req ]"
+OUT=$(bash "$HERE/c3live_ghost_clear.sh" XRPUSDT 2>&1)
+chk "ghost: khong YES => chi xem, khong ghi" "echo \"\$OUT\" | grep -q 'CHI XEM' && [ ! -f $F/run/c3live_ghost_clear.req ]"
+OUT=$(YES=1 GHOST_WAIT=2 bash "$HERE/c3live_ghost_clear.sh" XRPUSDT 2>&1); RC=$?
+chk "ghost: YES=1 ghi yeu cau dung symbol; bot gia khong tra loi => exit 5" "[ $RC = 5 ] && [ \"\$(cat $F/run/c3live_ghost_clear.req)\" = XRPUSDT ]"
+rm -f $F/run/c3live_ghost_clear.req
+( for i in $(seq 1 20); do if [ -f $F/run/c3live_ghost_clear.req ]; then echo "1793000000000 REFUSED XRPUSDT: vi the != 0 (positionRisk=100 account=100)" > $F/run/c3live_ghost_clear.req.result; rm -f $F/run/c3live_ghost_clear.req; break; fi; sleep 0.5; done ) &
+OUT=$(YES=1 GHOST_WAIT=8 bash "$HERE/c3live_ghost_clear.sh" XRPUSDT 2>&1); RC=$?; wait
+chk "ghost: bot tu choi (vi the != 0) => in ly do, exit 4" "[ $RC = 4 ] && echo \"\$OUT\" | grep -q 'REFUSED XRPUSDT: vi the != 0'"
+( for i in $(seq 1 20); do if [ -f $F/run/c3live_ghost_clear.req ]; then echo "1793000000000 OK XRPUSDT: huy stop [c3s-x], xoa cum khoi so" > $F/run/c3live_ghost_clear.req.result; rm -f $F/run/c3live_ghost_clear.req; break; fi; sleep 0.5; done ) &
+OUT=$(YES=1 GHOST_WAIT=8 bash "$HERE/c3live_ghost_clear.sh" XRPUSDT 2>&1); RC=$?; wait
+chk "ghost: bot OK => exit 0" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'OK XRPUSDT'"
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]

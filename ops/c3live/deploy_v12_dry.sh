@@ -173,7 +173,8 @@ if pgrep -f "$PP" >/dev/null; then echo "FAIL van_con_process_sau_stop"; exit 0;
 echo "OK da_stop"
 \cp -f target/binance-java-sdk-1.2.4.jar.v12dry target/binance-java-sdk-1.2.4.jar
 [ "$(md5sum < target/binance-java-sdk-1.2.4.jar | cut -c1-32)" = "$NJM" ] && echo "OK jar_da_thay" || echo "FAIL jar_thay_sai"
-date +%s > run/.v12_start_epoch   # [2d] moc thoi gian start cho hau kiem LATCH (dem theo timestamp, ke ca log da xoay)
+date +%s > run/.v12_start_epoch   # [2d] moc start (epoch, khong phu thuoc TZ); [2e] so sanh o TZ=Asia/Ho_Chi_Minh
+echo "INFO tz_shell=$(date +%z) moc_start_+07=$(TZ=Asia/Ho_Chi_Minh date -d @$(cat run/.v12_start_epoch) '+%F %T')"
 bin/daemon.sh start
 sleep 8
 P=$(pgrep -f "$PP" | head -1)
@@ -198,7 +199,7 @@ A=$1; cd "$A" || { echo "LATCH_COUNT=no_cd"; exit 0; }
 ST=$(cat run/.v12_start_epoch 2>/dev/null)
 case "$ST" in ''|*[!0-9]*) echo "LATCH_COUNT=no_start_mark"; exit 0;; esac
 [ -r logs/full.log ] || { echo "LATCH_COUNT=no_log"; exit 0; }
-K=$(date -d "@$ST" +%Y%m%d%H%M%S)
+K=$(TZ=Asia/Ho_Chi_Minh date -d "@$ST" +%Y%m%d%H%M%S)   # [2e] log 242 ghi gio +07 (da doi chieu) => ep TZ
 FILES=$(find logs -maxdepth 1 -type f \( -name full.log -o -name 'full.log.*' -o -name 'full*.gz' \) -newermt "@$ST" 2>/dev/null)
 [ -n "$FILES" ] || { echo "LATCH_COUNT=no_log_after_start"; exit 0; }
 since() {
