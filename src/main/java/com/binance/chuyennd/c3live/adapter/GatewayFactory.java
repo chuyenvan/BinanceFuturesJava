@@ -34,6 +34,10 @@ public final class GatewayFactory {
     public static final String KEY_ADAPTER = "LIVE_ADAPTER";
     public static final String KEY_EXCHANGEINFO_FILE = "LIVE_C3_EXCHANGEINFO_FILE";
     public static final String DEFAULT_EXCHANGEINFO_FILE = "run/c3live_exchangeInfo.json";
+    /** [V12 2b] file trang thai dry (vi the/stop gia lap song qua restart); khong dat => chi RAM. */
+    public static final String KEY_DRY_STATE_FILE = "LIVE_C3_DRY_STATE_FILE";
+    /** [V12 2b] phi taker gia lap cua dry (mac dinh 0,05 %). */
+    public static final String KEY_DRY_FEE_RATE = "LIVE_C3_DRY_FEE_RATE";
 
     public enum Mode {
         OFF, DRY, LIVE;
@@ -70,7 +74,12 @@ public final class GatewayFactory {
         if (mode == Mode.DRY) {
             String f = env.apply(KEY_EXCHANGEINFO_FILE);
             File file = new File(f == null || f.trim().isEmpty() ? DEFAULT_EXCHANGEINFO_FILE : f.trim());
-            DryGateway g = new DryGateway(fileSource(file), refPrice, dryEquity, audit, clock);
+            String sf = env.apply(KEY_DRY_STATE_FILE);
+            File state = sf == null || sf.trim().isEmpty() ? null : new File(sf.trim());
+            if (state == null) LOG.warn("[C3-LIVE] dry: {} khong dat => vi the gia lap CHI trong RAM (mat khi restart)",
+                    KEY_DRY_STATE_FILE);
+            DryGateway g = new DryGateway(fileSource(file), refPrice, dryEquity, audit, clock, state,
+                    parseFee(env.apply(KEY_DRY_FEE_RATE)));
             if (!file.exists()) {
                 LOG.warn("[C3-LIVE] dry: chua co file exchangeInfo {} => universe rong, khong leg nao vao (chi WARN)",
                         file.getPath());
@@ -85,6 +94,16 @@ public final class GatewayFactory {
             // C3LiveKeyException: thong diep chi ve duong dan/quyen, khong chua key
             return new Result(Mode.LIVE, null, null, "khong tao duoc C3LiveClient: " + e.getClass().getSimpleName() + ": "
                     + e.getMessage());
+        }
+    }
+
+    static double parseFee(String raw) {
+        if (raw == null || raw.trim().isEmpty()) return DryGateway.DEFAULT_FEE_RATE;
+        try {
+            double v = Double.parseDouble(raw.trim());
+            return Double.isFinite(v) && v >= 0d && v < 0.01d ? v : DryGateway.DEFAULT_FEE_RATE;
+        } catch (NumberFormatException e) {
+            return DryGateway.DEFAULT_FEE_RATE;
         }
     }
 
