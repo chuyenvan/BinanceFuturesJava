@@ -95,6 +95,9 @@ public final class OpsConfig {
     public static final String DEFAULT_KILLSW_LATCH_FILE = "run/killsw_latch.json";
     public static final String DEFAULT_KILLSW_RESET_FILE = "run/killsw_reset.req";
     /** Nguong owner 10-25 (Q1c) — tam, chot lai sau exec-probe ~100 leg. */
+    /** [V12 MASTER 10-25] c3_live: C1/C5 tu go latch sau N phut lien tuc sach (0 = tat). */
+    public static final String KEY_KILLSW_AUTORELEASE_MIN = "LIVE_KILLSW_AUTORELEASE_MIN";
+    public static final int DEFAULT_AUTORELEASE_MIN = 30;
     public static final double DEFAULT_C2_WARN = 0.017;
     public static final double DEFAULT_C2_SLIP = 0.025;
     public static final int DEFAULT_C2_COUNT = 3;
@@ -157,6 +160,8 @@ public final class OpsConfig {
         if (act) {
             p.latchFile = latchFile();
             p.resetFile = resetFile();
+            p.autoReleaseMs = parseInt(KEY_KILLSW_AUTORELEASE_MIN, Cfg.get(KEY_KILLSW_AUTORELEASE_MIN),
+                    DEFAULT_AUTORELEASE_MIN, 0, 24 * 60) * 60_000L;
         }
         return p;
     }

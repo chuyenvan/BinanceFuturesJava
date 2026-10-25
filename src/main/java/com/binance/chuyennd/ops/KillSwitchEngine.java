@@ -134,6 +134,10 @@ public final class KillSwitchEngine {
         public File latchFile = null;
         /** File yeu cau reset cua owner (chi dung o mode ACT). */
         public File resetFile = null;
+        /** [V12 MASTER 10-25] ACT: ma trong {@link #autoReleaseCodes} tu go latch sau bay nhieu ms LIEN TUC sach (0 = tat). */
+        public long autoReleaseMs = 0L;
+        /** Ma duoc tu go (C1 du lieu cu, C5 khong tick). C2/C3/C4/C6/A40/STATE giu latch toi khi owner reset. */
+        public java.util.Set<String> autoReleaseCodes = new java.util.HashSet<>(java.util.Arrays.asList("C1", "C5"));
     }
 
     /**
@@ -320,6 +324,8 @@ public final class KillSwitchEngine {
     private long nBlocked;
     private long lastStateWarnMs = Long.MIN_VALUE / 2;
     private Consumer<String> alert;
+    /** [V12] moc bat dau sach lien tuc cua tung ma (cho auto-release C1/C5). */
+    private final Map<String, Long> cleanSince = new LinkedHashMap<>();
 
     /**
      * @param mode        mode HIEU LUC (LOG; ACT chi khi da cai). OFF => khong nen tao engine.
@@ -603,6 +609,46 @@ public final class KillSwitchEngine {
                 persistLatch(nowMs);
             }
         }
+        if (mode == Mode.ACT && prm.autoReleaseMs > 0L) maybeAutoRelease(nowMs);
+    }
+
+    /**
+     * [V12 MASTER 10-25] c3_live (ACT): C1/C5 tu go latch khi ma do SACH LIEN TUC >= autoReleaseMs (30') + Telegram.
+     * Ma khac (C2, C3, C4, C6, A40, STATE) giu latch toi khi owner chay ops/killsw_reset.sh.
+     */
+    private void maybeAutoRelease(long nowMs) {
+        if (latch == Action.NONE || latchCodes.isEmpty()) return;
+        java.util.List<String> rel = new java.util.ArrayList<>();
+        for (String code : latchCodes) {
+            if (!prm.autoReleaseCodes.contains(code)) continue;
+            CodeState s = st.get(code);
+            if (s == null || s.active) continue;
+            Long cs = cleanSince.get(code);
+            if (cs == null) {
+                cleanSince.put(code, nowMs);   // vd latch nap tu file sau restart: bat dau dem tu day
+                continue;
+            }
+            if (nowMs - cs >= prm.autoReleaseMs) rel.add(code);
+        }
+        if (rel.isEmpty()) return;
+        Action prev = latch;
+        latchCodes.removeAll(rel);
+        Action a = Action.NONE;
+        for (String c : latchCodes) {
+            Action x = CODE_STATE.equals(c) ? Action.NO_NEW_ENTRY : latchActionOf(c);
+            if (x.ordinal() > a.ordinal()) a = x;
+        }
+        latch = a;
+        if (latch == Action.NONE) {
+            latchSinceMs = 0L;
+            latchDetail = "-";
+        }
+        persistLatch(nowMs);
+        String m = "[KILLSW] AUTO_RELEASE codes=" + rel + " sach lien tuc >= " + (prm.autoReleaseMs / 60_000L)
+                + "' => latch " + prev + " -> " + latch
+                + (latchCodes.isEmpty() ? "" : " (con " + latchCodes + ": chi owner mo bang ops/killsw_reset.sh)");
+        sink.warn(m);
+        fireAlert(m);
     }
 
     private void evalC1(long nowMs) {
@@ -628,9 +674,11 @@ public final class KillSwitchEngine {
                 s.lastLog = nowMs;
                 sink.warn(line(what(), code, s, nowMs, "CONT"));
             }
+            cleanSince.remove(code);
             if (mode == Mode.ACT) latchFor(code, detail, nowMs);
         } else if (s.active) {
             s.active = false;
+            cleanSince.put(code, nowMs);
             sink.info("[KILLSW] CLEAR code=" + code + " mode=" + modeLabel + " dur_s=" + (nowMs - s.since) / 1000L
                     + " detail=" + detail);
         }
