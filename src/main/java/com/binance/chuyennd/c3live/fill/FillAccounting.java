@@ -1,0 +1,340 @@
+package com.binance.chuyennd.c3live.fill;
+
+import com.binance.chuyennd.c3live.api.ErrorKind;
+import com.binance.chuyennd.c3live.api.ExchangeGateway;
+import com.binance.chuyennd.c3live.api.GatewayException;
+import com.binance.chuyennd.c3live.api.OrderInfo;
+import com.binance.chuyennd.c3live.book.LiveBookC3;
+import com.binance.chuyennd.c3live.exec.C3LiveCids;
+import com.binance.chuyennd.c3live.exec.C3LiveOrderExecutor;
+import com.binance.chuyennd.c3live.log.OrderAuditLog;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
+import java.util.function.LongSupplier;
+
+/**
+ * [V12 C7] Ke toan fill THAT vao {@link LiveBookC3} tu user-data stream (hoac adapter dry phat su kien cung dang).
+ * <ul>
+ *   <li>Leg MUA {@code c3-...}: FILLED (hoac ket thuc voi z&gt;0) => {@link LiveBookC3#confirm} (qty/avgPrice/orderId that);
+ *       chi lan xac nhan DAU TIEN (stream hoac executor REST) moi goi {@code FillObserver.onFill} (C2 co dau, ref = close nen
+ *       1m quyet dinh) => khong dem trung. Ket thuc z=0 => huy giu cho.</li>
+ *   <li>Moi fill (x=TRADE): phi {@code n} (quy USD neu tai san on dinh USDT/USDC/BFUSD/FDUSD; khac => WARN, khong cong)
+ *       + realizedPnl {@code rp} => so (cum + tong ke tu moc doi chieu equity).</li>
+ *   <li>Fill BAN cua cum dang giu: cong qty/gia dong; ly do suy tu clientOrderId: {@code c3x-} = lenh dong cua bot,
+ *       {@code c3s-}/stop dang dat/ot=STOP_MARKET = TRAILING_STOP, {@code autoclose-} = LIQUIDATION, {@code adl_autoclose}
+ *       = ADL, {@code settlement_autoclose} = DELIST_SETTLE, con lai = EXTERNAL.</li>
+ *   <li>{@code ACCOUNT_UPDATE}: vi the cua cum dang giu ve 0 => {@link #closedOnExchange} (huy stop con lai, xoa cum,
+ *       Telegram neu khong phai stop/lenh dong cua bot); vi the khac 0 KHONG co trong so => bao Reconciler (chan mo moi);
+ *       FUNDING_FEE => funding; DEPOSIT/WITHDRAW/... => chuyen tien (doi chieu equity).</li>
+ * </ul>
+ * Thread-safe (synchronized). Khong bao gio nem ra ngoai.
+ */
+public final class FillAccounting {
+
+    private static final Logger LOG = LoggerFactory.getLogger(FillAccounting.class);
+    public static final String REASON_TRAILING = "TRAILING_STOP";
+    public static final String REASON_LIQ = "LIQUIDATION";
+    public static final String REASON_ADL = "ADL";
+    public static final String REASON_SETTLE = "DELIST_SETTLE";
+    public static final String REASON_EXTERNAL = "EXTERNAL";
+    public static final String REASON_BOT_CLOSE = "BOT_CLOSE";
+    static final Set<String> STABLE = new HashSet<>(Arrays.asList("USDT", "USDC", "BFUSD", "FDUSD"));
+    static final BigDecimal QTY_EPS = new BigDecimal("1e-12");
+
+    /** Cum vua dong (nhat ky X14 onClosed — noi o runtime qua TrailingStopManager). */
+    public interface ClosedHook {
+        void onClosed(String symbol, long tsFirstLeg, String reason, long now);
+    }
+
+    private final LiveBookC3 book;
+    private final ExchangeGateway gw;
+    private final OrderAuditLog audit;
+    private final C3LiveOrderExecutor.FillObserver fill;
+    private final Consumer<String> alert;
+    private final C3LiveOrderExecutor.ApiObserver api;
+    private final LongSupplier clock;
+    private final ClosedHook closedHook;
+    private volatile Consumer<String> unknownPosition = s -> { };
+    private final Map<String, String> lastExitReason = new ConcurrentHashMap<>();
+    private final Set<String> warnedAssets = ConcurrentHashMap.newKeySet();
+    private final AtomicLong nOrder = new AtomicLong();
+    private final AtomicLong nConfirm = new AtomicLong();
+    private final AtomicLong nExitFill = new AtomicLong();
+    private final AtomicLong nClosedExchange = new AtomicLong();
+    private final AtomicLong nAccount = new AtomicLong();
+
+    public FillAccounting(LiveBookC3 book, ExchangeGateway gw, OrderAuditLog audit, C3LiveOrderExecutor.FillObserver fill,
+                          Consumer<String> alert, C3LiveOrderExecutor.ApiObserver api, LongSupplier clock,
+                          ClosedHook closedHook) {
+        this.book = book;
+        this.gw = gw;
+        this.audit = audit;
+        this.fill = fill == null ? (s, b, f, r) -> { } : fill;
+        this.alert = alert == null ? m -> { } : alert;
+        this.api = api == null ? (a, ok) -> { } : api;
+        this.clock = clock == null ? System::currentTimeMillis : clock;
+        this.closedHook = closedHook == null ? (s, t, r, n) -> { } : closedHook;
+    }
+
+    /** Noi Reconciler: vi the khac 0 khong co trong so. */
+    public void setUnknownPositionSink(Consumer<String> sink) {
+        this.unknownPosition = sink == null ? s -> { } : sink;
+    }
+
+    public void dispatch(UserStreamEvents.Event e) {
+        try {
+            if (e instanceof UserStreamEvents.OrderUpdate) {
+                onOrderUpdate((UserStreamEvents.OrderUpdate) e);
+            } else if (e instanceof UserStreamEvents.AccountUpdate) {
+                onAccountUpdate((UserStreamEvents.AccountUpdate) e);
+            } else if (e instanceof UserStreamEvents.AlgoUpdate) {
+                onAlgoUpdate((UserStreamEvents.AlgoUpdate) e);
+            }
+        } catch (Throwable t) {
+            LOG.error("[C3-LIVE-FILL] loi xu ly su kien {}: {}", e == null ? "-" : e.type, t.toString());
+        }
+    }
+
+    public synchronized void onOrderUpdate(UserStreamEvents.OrderUpdate u) {
+        long now = clock.getAsLong();
+        nOrder.incrementAndGet();
+        String sym = u.symbol;
+        String cid = u.clientOrderId;
+        if (sym == null) return;
+        if (u.isTrade()) {
+            double comm = commissionUsd(u.commission, u.commissionAsset);
+            double rp = u.realizedPnl == null ? 0d : u.realizedPnl.doubleValue();
+            book.addFillCosts(sym, comm, rp, now);
+            audit.record(OrderAuditLog.Entry.of(now).clientOrderId(cid).orderId(u.orderId).symbol(sym).side(u.side)
+                    .type(u.origType == null ? u.orderType : u.origType).qty(u.lastQty).price(u.lastPrice)
+                    .status("FILL").latencyMs(Math.max(0L, now - u.tradeTimeMs)).errCode("")
+                    .reason("stream X=" + u.status + " z=" + plain(u.cumQty) + " n=" + plain(u.commission) + " "
+                            + (u.commissionAsset == null ? "" : u.commissionAsset) + " rp=" + plain(u.realizedPnl)));
+        }
+        if (u.isBuy()) {
+            onBuy(u, now);
+        } else {
+            onSell(u, now);
+        }
+    }
+
+    private void onBuy(UserStreamEvents.OrderUpdate u, long now) {
+        String cid = u.clientOrderId;
+        Optional<LiveBookC3.LegView> lv = cid == null ? Optional.<LiveBookC3.LegView>empty() : book.leg(cid);
+        if (!lv.isPresent()) {
+            if (cid != null && cid.startsWith(C3LiveCids.ENTRY_PREFIX)) return;   // leg da ket thuc / da xoa: bo qua
+            if (u.isTrade()) {
+                String m = "[C3-LIVE] FILL MUA KHONG thuoc so c3_live: " + u.symbol + " cid=" + cid + " qty=" + plain(u.lastQty)
+                        + " => Reconciler se chan mo moi neu con vi the la";
+                LOG.warn("{}", m);
+                alert.accept(m);
+            }
+            return;
+        }
+        BigDecimal z = u.cumQty == null ? BigDecimal.ZERO : u.cumQty;
+        if ("FILLED".equals(u.status) || (u.isFinal() && z.signum() > 0)) {
+            double px = u.avgPrice == null ? 0d : u.avgPrice.doubleValue();
+            if (book.confirm(cid, z, px, u.orderId, now)) {
+                nConfirm.incrementAndGet();
+                LOG.info("[C3-LIVE-FILL] xac nhan qua stream {} {} qty={} avg={} ref={}", u.symbol, cid, z.toPlainString(), px,
+                        lv.get().refPx);
+                if (px > 0d) fill.onFill(u.symbol, true, px, lv.get().refPx);
+            }
+        } else if (u.isFinal()) {
+            if (book.cancel(cid, "stream_" + u.status, now)) {
+                LOG.warn("[C3-LIVE-FILL] leg {} {} ket thuc {} khong khop => huy giu cho", u.symbol, cid, u.status);
+            }
+        } else if (u.orderId > 0) {
+            book.noteOpen(cid, u.orderId, now);
+        }
+    }
+
+    private void onSell(UserStreamEvents.OrderUpdate u, long now) {
+        String sym = u.symbol;
+        Optional<LiveBookC3.ClusterView> c = book.cluster(sym);
+        if (!c.isPresent()) return;
+        String reason = exitReason(u.clientOrderId, u.origType, c.get().stopClientAlgoId);
+        if (REASON_BOT_CLOSE.equals(reason) && c.get().closeReason != null) reason = c.get().closeReason;
+        lastExitReason.put(sym, reason);
+        if (u.isTrade() && u.lastQty != null && u.lastQty.signum() > 0) {
+            nExitFill.incrementAndGet();
+            double px = u.lastPrice == null ? 0d : u.lastPrice.doubleValue();
+            book.addExitFill(sym, u.lastQty, px, now);
+            if (REASON_TRAILING.equals(reason) && c.get().stopPrice > 0d && px > 0d) {
+                LOG.info("[C3-LIVE-FILL] {} stop khop {}@{} (stop={} truot={})", sym, plain(u.lastQty), px, c.get().stopPrice,
+                        String.format(Locale.ROOT, "%.5f", 1d - px / c.get().stopPrice));
+            }
+        }
+        if ("FILLED".equals(u.status)) {
+            Optional<LiveBookC3.ClusterView> c2 = book.cluster(sym);
+            if (c2.isPresent() && !c2.get().hasUnresolved
+                    && c2.get().exitQty.add(QTY_EPS).compareTo(c2.get().confirmedQty) >= 0) {
+                closedOnExchange(sym, reason, now);
+            }
+        }
+    }
+
+    public synchronized void onAccountUpdate(UserStreamEvents.AccountUpdate a) {
+        long now = clock.getAsLong();
+        nAccount.incrementAndGet();
+        String m = a.reason == null ? "" : a.reason;
+        double stableBc = 0d;
+        for (UserStreamEvents.Balance b : a.balances) {
+            if (b.asset == null || b.balanceChange == null || b.balanceChange.signum() == 0) continue;
+            if (STABLE.contains(b.asset)) {
+                stableBc += b.balanceChange.doubleValue();
+            } else if (warnedAssets.add(b.asset + "|" + m)) {
+                LOG.warn("[C3-LIVE-FILL] ACCOUNT_UPDATE {} doi so du tai san KHONG on dinh {} bc={} => khong quy USD (doi chieu "
+                        + "equity co the lech)", m, b.asset, b.balanceChange.toPlainString());
+            }
+        }
+        if (stableBc != 0d) {
+            if ("FUNDING_FEE".equals(m)) {
+                book.addFunding(stableBc, now);
+            } else if (!"ORDER".equals(m)) {
+                book.addTransfer(stableBc, now);
+                LOG.warn("[C3-LIVE-FILL] ACCOUNT_UPDATE ly do={} doi so du on dinh {} => ghi 'chuyen tien' cho doi chieu equity",
+                        m, stableBc);
+            }
+        }
+        for (UserStreamEvents.Position p : a.positions) {
+            if (p.symbol == null || p.positionAmt == null) continue;
+            boolean flat = p.positionAmt.abs().compareTo(QTY_EPS) <= 0;
+            Optional<LiveBookC3.ClusterView> c = book.cluster(p.symbol);
+            if (c.isPresent()) {
+                if (flat) {
+                    if (c.get().confirmedQty.signum() > 0 && !c.get().hasUnresolved) {
+                        String r = lastExitReason.getOrDefault(p.symbol, "ORDER".equals(m) ? REASON_EXTERNAL : m);
+                        closedOnExchange(p.symbol, r, now);
+                    }
+                } else if (p.positionAmt.signum() < 0) {
+                    String msg = "[C3-LIVE] vi the AM (short) " + p.symbol + " pa=" + p.positionAmt.toPlainString()
+                            + " tren tai khoan c3_live — KHONG tu dong; Reconciler chan mo moi";
+                    LOG.error("{}", msg);
+                    alert.accept(msg);
+                    unknownPosition.accept(p.symbol);
+                }
+            } else if (!flat) {
+                unknownPosition.accept(p.symbol);
+            }
+        }
+    }
+
+    public synchronized void onAlgoUpdate(UserStreamEvents.AlgoUpdate a) {
+        if (a.clientAlgoId == null) return;
+        LOG.info("[C3-LIVE-FILL] ALGO_UPDATE {} caid={} X={} ai={}", a.symbol, a.clientAlgoId, a.status, a.actualOrderId);
+        if (a.symbol != null && ("TRIGGERED".equals(a.status) || "FINISHED".equals(a.status) || "TRIGGERING".equals(a.status))) {
+            Optional<LiveBookC3.ClusterView> c = book.cluster(a.symbol);
+            if (c.isPresent() && a.clientAlgoId.equals(c.get().stopClientAlgoId)) lastExitReason.put(a.symbol, REASON_TRAILING);
+        }
+    }
+
+    /**
+     * Vi the cua cum da phang tren san (stop khop / thanh ly / ADL / delist / lenh dong cua bot / tay): huy MOI stop con lai
+     * cua symbol, xoa cum (ghi ledger), Telegram neu KHONG phai stop/lenh dong cua bot. Idempotent.
+     */
+    public synchronized void closedOnExchange(String sym, String reason, long now) {
+        Optional<LiveBookC3.ClusterView> c = book.cluster(sym);
+        if (!c.isPresent()) return;
+        if (c.get().hasUnresolved) {
+            LOG.warn("[C3-LIVE-FILL] {} vi the san = 0 nhung con leg mua treo => cho executor giai quyet", sym);
+            return;
+        }
+        Set<String> cids = new HashSet<>();
+        if (c.get().stopClientAlgoId != null) cids.add(c.get().stopClientAlgoId);
+        if (c.get().pendingStopCid != null) cids.add(c.get().pendingStopCid);
+        cids.addAll(c.get().orphanStops);
+        try {
+            List<OrderInfo> open = gw.openStops(sym);
+            api.onApiResult("openStops", true);
+            for (OrderInfo o : open) {
+                String id = o.getClientOrderId();
+                if (id != null && id.startsWith(C3LiveCids.STOP_PREFIX)) cids.add(id);
+            }
+        } catch (RuntimeException e) {
+            api.onApiResult("openStops", false);
+            LOG.warn("[C3-LIVE-FILL] {} khong doc duoc stop mo ({}) => Reconciler se don stop mo coi", sym, e.toString());
+        }
+        for (String id : cids) cancelQuiet(sym, id);
+        String r = reason == null ? REASON_EXTERNAL : reason;
+        book.removeCluster(sym, r, now);
+        nClosedExchange.incrementAndGet();
+        lastExitReason.remove(sym);
+        try {
+            closedHook.onClosed(sym, c.get().tsFirstLeg, r, now);
+        } catch (Throwable ignore) {
+            // chi log
+        }
+        boolean normal = REASON_TRAILING.equals(r) || isBotCloseReason(r);
+        String m = "[C3-LIVE] cum " + sym + " DA DONG tren san (" + r + ") qty=" + c.get().confirmedQty.toPlainString()
+                + " avg=" + c.get().avgPrice + " => da cap nhat so, huy " + cids.size() + " stop";
+        if (normal) {
+            LOG.info("{}", m);
+        } else {
+            LOG.warn("{}", m);
+            alert.accept(m);
+        }
+    }
+
+    private static boolean isBotCloseReason(String r) {
+        return r != null && (r.startsWith("TIME_STOP") || r.startsWith("FLATTEN") || r.startsWith("X14")
+                || r.startsWith("TRAILING_IMMEDIATE") || REASON_BOT_CLOSE.equals(r));
+    }
+
+    private void cancelQuiet(String sym, String cid) {
+        try {
+            gw.cancelStop(sym, cid);
+            api.onApiResult("cancelStop", true);
+        } catch (GatewayException e) {
+            boolean gone = e.getKind() == ErrorKind.UNKNOWN_ORDER;
+            api.onApiResult("cancelStop", gone);
+            if (!gone) LOG.warn("[C3-LIVE-FILL] {} huy stop {} loi {} => Reconciler don sau", sym, cid, e.getKind());
+        } catch (RuntimeException e) {
+            api.onApiResult("cancelStop", false);
+        }
+    }
+
+    /** Ly do dong suy tu clientOrderId / loai lenh goc. */
+    public static String exitReason(String cid, String origType, String activeStopCid) {
+        if (cid != null) {
+            if (cid.startsWith(C3LiveCids.CLOSE_PREFIX)) return REASON_BOT_CLOSE;
+            if (cid.startsWith(C3LiveCids.STOP_PREFIX) || cid.equals(activeStopCid)) return REASON_TRAILING;
+            if (cid.startsWith("autoclose-")) return REASON_LIQ;
+            if (cid.startsWith("adl_autoclose")) return REASON_ADL;
+            if (cid.startsWith("settlement_autoclose")) return REASON_SETTLE;
+        }
+        if ("STOP_MARKET".equalsIgnoreCase(origType) || "STOP".equalsIgnoreCase(origType)) return REASON_TRAILING;
+        return REASON_EXTERNAL;
+    }
+
+    double commissionUsd(BigDecimal n, String asset) {
+        if (n == null || n.signum() == 0) return 0d;
+        if (asset == null || STABLE.contains(asset.toUpperCase(Locale.ROOT))) return n.doubleValue();
+        if (warnedAssets.add("fee|" + asset)) {
+            LOG.warn("[C3-LIVE-FILL] phi tra bang {} (khong on dinh) => KHONG quy USD (so phi thieu, doi chieu equity co the lech)",
+                    asset);
+        }
+        return 0d;
+    }
+
+    private static String plain(BigDecimal v) {
+        return v == null ? "" : v.stripTrailingZeros().toPlainString();
+    }
+
+    public String stats() {
+        return "orders=" + nOrder.get() + " confirm=" + nConfirm.get() + " exitFill=" + nExitFill.get() + " closedOnExchange="
+                + nClosedExchange.get() + " account=" + nAccount.get();
+    }
+}
