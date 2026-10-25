@@ -87,9 +87,16 @@ public final class OpsHooks {
         if (c3live) {
             KillSwitchEngine.Params p = prm == null ? new KillSwitchEngine.Params() : prm;
             p.c6OwnPeak = true;
+            if (p.peakTag == null) p.peakTag = adapterTag(Cfg.get("LIVE_ADAPTER"));   // [2d MIN-19] dinh dry != dinh live
             return new KillSwitchEngine(mode, label, sink, c3livePeakFile, null, uMax, nowMs, p);
         }
         return new KillSwitchEngine(mode, label, sink, shadowPeakFile, paperEquity, uMax, nowMs, prm);
+    }
+
+    /** [2d MIN-19] nhan adapter cho dinh kill-switch c3_live: dry|live|... (thuong, khong khoang trang); rong => off. */
+    static String adapterTag(String raw) {
+        if (raw == null || raw.trim().isEmpty()) return "off";
+        return raw.trim().toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9_]", "_");
     }
 
     /** Goi 1 lan khi khoi dong (idempotent). */

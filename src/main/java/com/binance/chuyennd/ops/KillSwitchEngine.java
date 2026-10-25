@@ -159,6 +159,12 @@ public final class KillSwitchEngine {
          * {@code reset_peak=1} dat lai CA dinh nay (xoa file). Mac dinh false = hanh vi v1.1 (so giay).
          */
         public boolean c6OwnPeak = false;
+        /**
+         * [V12 2d MIN-19] c3_live: nhan adapter (dry|live|...) ghi kem dinh C6 (file dinh) va acct_peak (file latch). Nap
+         * dinh co nhan KHAC (hoac khong nhan) => BO QUA + WARN (dinh dry khong duoc dung cho tien that). null = khong nhan
+         * (c3_shadow / v1.1: dinh dang file y nguyen).
+         */
+        public String peakTag = null;
     }
 
     /**
@@ -396,6 +402,17 @@ public final class KillSwitchEngine {
         if (peakFile == null || !peakFile.exists()) return;
         try {
             String s = new String(Files.readAllBytes(peakFile.toPath()), StandardCharsets.UTF_8).trim();
+            if (prm.peakTag != null) {   // [2d MIN-19] "<dinh> adapter=<nhan>"
+                String[] tok = s.split("\\s+");
+                String tag = null;
+                for (String x : tok) if (x.startsWith("adapter=")) tag = x.substring("adapter=".length());
+                if (!prm.peakTag.equals(tag)) {
+                    sink.warn("[KILLSW] file dinh " + peakFile.getAbsolutePath() + " cua adapter=" + (tag == null ? "(khong nhan)" : tag)
+                            + " != adapter hien tai " + prm.peakTag + " => BO QUA (dinh lay lai tu tmb that dau tien)");
+                    return;
+                }
+                s = tok[0];
+            }
             double v = Double.parseDouble(s);
             if (Double.isFinite(v) && v > 0d) {
                 peak = v;
@@ -418,7 +435,8 @@ public final class KillSwitchEngine {
         try {
             File abs = peakFile.getAbsoluteFile();
             File tmp = new File(abs.getParentFile(), abs.getName() + ".tmp");
-            Files.write(tmp.toPath(), (Double.toString(peak) + "\n").getBytes(StandardCharsets.UTF_8));
+            Files.write(tmp.toPath(), (Double.toString(peak) + (prm.peakTag != null ? " adapter=" + prm.peakTag : "") + "\n")
+                    .getBytes(StandardCharsets.UTF_8));
             Files.move(tmp.toPath(), abs.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
             peakWritten = peak;
         } catch (Exception e) {
@@ -854,6 +872,7 @@ public final class KillSwitchEngine {
         for (Long t : c2Events) ev.add(t);
         o.add("c2_events_ms", ev);
         if (acctPeak > 0d) o.addProperty("acct_peak", acctPeak);
+        if (acctPeak > 0d && prm.peakTag != null) o.addProperty("acct_peak_adapter", prm.peakTag);
         o.addProperty("last_reset_at_ms", lastResetAtMs);
         o.addProperty("updated_ms", nowMs);
         try {
@@ -895,7 +914,11 @@ public final class KillSwitchEngine {
             latchDetail = o.has("detail") ? o.get("detail").getAsString() : "-";
             c2Events.clear();
             if (o.has("c2_events_ms")) for (JsonElement e : o.getAsJsonArray("c2_events_ms")) c2Events.addLast(e.getAsLong());
-            if (o.has("acct_peak")) {
+            String apTag = o.has("acct_peak_adapter") ? o.get("acct_peak_adapter").getAsString() : null;
+            if (o.has("acct_peak") && prm.peakTag != null && !prm.peakTag.equals(apTag)) {   // [2d MIN-19]
+                sink.warn("[KILLSW] acct_peak trong " + f.getPath() + " cua adapter=" + (apTag == null ? "(khong nhan)" : apTag)
+                        + " != adapter hien tai " + prm.peakTag + " => BO QUA (A40 lay lai dinh tu tmb that dau tien)");
+            } else if (o.has("acct_peak")) {
                 double p = o.get("acct_peak").getAsDouble();
                 if (Double.isFinite(p) && p > 0d) {
                     acctPeak = p;

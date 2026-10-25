@@ -72,6 +72,59 @@ public class KillSwitchC3LivePeakTest {
                         .getBytes(StandardCharsets.UTF_8));
     }
 
+    /** File dinh c3_live: "<dinh> adapter=<nhan>" (2d MIN-19). */
+    private double ownPeakValue() throws Exception {
+        String s = new String(Files.readAllBytes(ownPeak.toPath()), StandardCharsets.UTF_8).trim();
+        assertTrue("file dinh c3_live phai co nhan adapter: " + s, s.contains(" adapter="));
+        return Double.parseDouble(s.split("\\s+")[0]);
+    }
+
+    private KillSwitchEngine c3liveTagged(long now, String adapter, KillSwitchEngine.Params p) {
+        p.peakTag = adapter;
+        return OpsHooks.build(KillSwitchEngine.Mode.ACT, "act", sink, true, shadowPeak, ownPeak, () -> 35_000d, () -> 0.6f,
+                now, p);
+    }
+
+    // ------------------------------------------------------------------ [2d MIN-19] dinh dry KHONG dung cho tien that
+    @Test
+    public void dryPeaksIgnoredWhenAdapterChangesToLive() throws Exception {
+        KillSwitchEngine dry = c3liveTagged(T0, "dry", actParams());
+        dry.onPaper(T0, 0, 0f, 12_000f);          // dinh C6 dry = 12 000 (tmb gia lap)
+        dry.onAccountEquity(T0, 12_000d);         // acct_peak A40 dry = 12 000 (ghi vao file latch)
+        assertEquals(12_000d, ownPeakValue(), 1e-9);
+        String ownTxt = new String(Files.readAllBytes(ownPeak.toPath()), StandardCharsets.UTF_8);
+        assertTrue(ownTxt, ownTxt.trim().endsWith("adapter=dry"));
+        String latchTxt = new String(Files.readAllBytes(new File(tmp.getRoot(), "run/killsw_latch.json").toPath()),
+                StandardCharsets.UTF_8);
+        assertTrue(latchTxt, latchTxt.contains("\"acct_peak_adapter\":\"dry\""));
+        // cung adapter => nap lai
+        KillSwitchEngine dry2 = c3liveTagged(T0 + 1_000L, "dry", actParams());
+        assertEquals(12_000d, dry2.peak(), 1e-9);
+        assertEquals(12_000d, dry2.acctPeak(), 1e-9);
+        // chuyen sang live (tmb that 10 000): dinh dry BO QUA + WARN => KHONG latch C6/A40
+        lines.clear();
+        KillSwitchEngine live = c3liveTagged(T0 + 2_000L, "live", actParams());
+        assertTrue(Double.isNaN(live.peak()));
+        assertTrue(Double.isNaN(live.acctPeak()));
+        assertTrue(lines.toString(), lines.stream().anyMatch(l -> l.startsWith("W") && l.contains("adapter=dry")
+                && l.contains("adapter hien tai live") && l.contains("BO QUA")));
+        live.onPaper(T0 + 3_000L, 0, 0f, 10_000f);
+        live.onAccountEquity(T0 + 3_000L, 10_000d);
+        assertEquals(KillSwitchEngine.Action.NONE, live.requiredAction());
+        assertEquals(10_000d, live.peak(), 1e-9);
+        assertEquals(10_000d, live.acctPeak(), 1e-9);
+        assertTrue(new String(Files.readAllBytes(ownPeak.toPath()), StandardCharsets.UTF_8).trim().endsWith("adapter=live"));
+    }
+
+    @Test
+    public void untaggedOldPeakFileIgnoredForC3Live() throws Exception {
+        Files.write(ownPeak.toPath(), "35015.29\n".getBytes(StandardCharsets.UTF_8));   // dinh dang cu khong nhan
+        KillSwitchEngine e = c3liveTagged(T0, "live", actParams());
+        assertTrue(Double.isNaN(e.peak()));
+        e.onPaper(T0, 0, 0f, 10_000f);
+        assertEquals(KillSwitchEngine.Action.NONE, e.requiredAction());
+    }
+
     private void assertShadowFileUntouched() throws Exception {
         assertEquals("35015.29\n", new String(Files.readAllBytes(shadowPeak.toPath()), StandardCharsets.UTF_8));
         assertEquals(shadowMtime, shadowPeak.lastModified());
@@ -89,7 +142,7 @@ public class KillSwitchC3LivePeakTest {
         assertEquals("dinh rieng = tmb dau tien (khong san PAPER_EQUITY)", 10_000d, e.peak(), 1e-9);
         assertTrue(alerts.isEmpty());
         assertTrue("dinh rieng duoc ghi", ownPeak.exists());
-        assertEquals(10_000d, Double.parseDouble(new String(Files.readAllBytes(ownPeak.toPath()), StandardCharsets.UTF_8).trim()),
+        assertEquals(10_000d, ownPeakValue(),
                 1e-9);
         assertShadowFileUntouched();
     }
@@ -196,7 +249,7 @@ public class KillSwitchC3LivePeakTest {
         assertEquals(KillSwitchEngine.Action.NONE, e.requiredAction());
         assertEquals(5_000d, e.peak(), 1e-9);
         assertTrue(ownPeak.exists());
-        assertEquals(5_000d, Double.parseDouble(new String(Files.readAllBytes(ownPeak.toPath()), StandardCharsets.UTF_8).trim()),
+        assertEquals(5_000d, ownPeakValue(),
                 1e-9);
         // restart: nap dinh rieng tu file rieng, KHONG tu file shadow
         KillSwitchEngine r = c3live(T0 + 100_000L);
