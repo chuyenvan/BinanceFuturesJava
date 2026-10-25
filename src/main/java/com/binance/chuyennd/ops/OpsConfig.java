@@ -4,6 +4,9 @@ import com.binance.chuyennd.tradecore.Cfg;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.util.Locale;
+
 /**
  * [V11D OPS 2026-10-21] Co VAN HANH cua ban v11d (ADDENDUM d PREREG_SHADOW2_PROMOTION). Khong co key nao o day cham
  * logic quyet dinh (feature, sizing, entry/exit, gate, selector, TS_MKT_EXT). Mac dinh = hanh vi v11c y het.
@@ -79,6 +82,83 @@ public final class OpsConfig {
     /** ms ngu cua {@code BinanceOrderTradingManager.startThreadAutoRestartProgram}; 0 = tat reset dinh ky. */
     public static long periodicResetMs() {
         return resetPeriodMs(RESET_HOURS);
+    }
+
+    // ------------------------------------------------------------------ [V12 SAFE 2026-10-25] kill-switch ACT + C2 co dau
+    public static final String KEY_KILLSW_C2_SIGNED = "LIVE_KILLSW_C2_SIGNED";
+    public static final String KEY_KILLSW_C2_WARN = "LIVE_KILLSW_C2_WARN";
+    public static final String KEY_KILLSW_C2_SLIP = "LIVE_KILLSW_C2_SLIP";
+    public static final String KEY_KILLSW_C2_COUNT = "LIVE_KILLSW_C2_COUNT";
+    public static final String KEY_KILLSW_C2_WINDOW_H = "LIVE_KILLSW_C2_WINDOW_H";
+    public static final String KEY_KILLSW_LATCH_FILE = "LIVE_KILLSW_LATCH_FILE";
+    public static final String KEY_KILLSW_RESET_FILE = "LIVE_KILLSW_RESET_FILE";
+    public static final String DEFAULT_KILLSW_LATCH_FILE = "run/killsw_latch.json";
+    public static final String DEFAULT_KILLSW_RESET_FILE = "run/killsw_reset.req";
+    /** Nguong owner 10-25 (Q1c) — tam, chot lai sau exec-probe ~100 leg. */
+    public static final double DEFAULT_C2_WARN = 0.017;
+    public static final double DEFAULT_C2_SLIP = 0.025;
+    public static final int DEFAULT_C2_COUNT = 3;
+    public static final int DEFAULT_C2_WINDOW_H = 24;
+
+    static boolean isC3Live(String profile) {
+        return profile != null && "c3_live".equals(profile.trim().toLowerCase(Locale.ROOT));
+    }
+
+    public static String c2SignedRaw() {
+        String r = Cfg.get(KEY_KILLSW_C2_SIGNED);
+        return r == null ? "0" : r.trim();
+    }
+
+    public static File latchFile() {
+        return new File(Cfg.getOr(KEY_KILLSW_LATCH_FILE, DEFAULT_KILLSW_LATCH_FILE).trim());
+    }
+
+    public static File resetFile() {
+        return new File(Cfg.getOr(KEY_KILLSW_RESET_FILE, DEFAULT_KILLSW_RESET_FILE).trim());
+    }
+
+    /** So thuc trong [lo, hi]; vang => def; sai => def + WARN. */
+    static double parseDouble(String key, String raw, double def, double lo, double hi) {
+        if (raw == null || raw.trim().isEmpty()) return def;
+        try {
+            double v = Double.parseDouble(raw.trim());
+            if (Double.isFinite(v) && v >= lo && v <= hi) return v;
+        } catch (NumberFormatException ignore) {
+            // roi xuong WARN
+        }
+        LOG.warn("[KILLSW] {}='{}' khong hop le (can [{}, {}]) => dung mac dinh {}", key, raw, lo, hi, def);
+        return def;
+    }
+
+    static int parseInt(String key, String raw, int def, int lo, int hi) {
+        if (raw == null || raw.trim().isEmpty()) return def;
+        try {
+            int v = Integer.parseInt(raw.trim());
+            if (v >= lo && v <= hi) return v;
+        } catch (NumberFormatException ignore) {
+            // roi xuong WARN
+        }
+        LOG.warn("[KILLSW] {}='{}' khong hop le (can so nguyen [{}, {}]) => dung mac dinh {}", key, raw, lo, hi, def);
+        return def;
+    }
+
+    /**
+     * Tham so kill-switch v1.2. {@code act=false} (c3_shadow mode log): KHONG co file latch/reset (khong I/O moi);
+     * C2 co dau chi khi {@code LIVE_KILLSW_C2_SIGNED=1} (mac dinh 0 = cong thuc v1.1).
+     */
+    public static KillSwitchEngine.Params killSwitchParams(boolean act) {
+        KillSwitchEngine.Params p = new KillSwitchEngine.Params();
+        p.c2Signed = parseOn(Cfg.get(KEY_KILLSW_C2_SIGNED));
+        p.c2Warn = parseDouble(KEY_KILLSW_C2_WARN, Cfg.get(KEY_KILLSW_C2_WARN), DEFAULT_C2_WARN, 0d, 0.5d);
+        p.c2Slip = parseDouble(KEY_KILLSW_C2_SLIP, Cfg.get(KEY_KILLSW_C2_SLIP), DEFAULT_C2_SLIP, 0d, 0.5d);
+        p.c2Count = parseInt(KEY_KILLSW_C2_COUNT, Cfg.get(KEY_KILLSW_C2_COUNT), DEFAULT_C2_COUNT, 1, 1000);
+        p.c2WindowMs = parseInt(KEY_KILLSW_C2_WINDOW_H, Cfg.get(KEY_KILLSW_C2_WINDOW_H), DEFAULT_C2_WINDOW_H, 1, 24 * 30)
+                * HOUR_MS;
+        if (act) {
+            p.latchFile = latchFile();
+            p.resetFile = resetFile();
+        }
+        return p;
     }
 
     /** "1"/"true" (khong phan biet hoa thuong, bo khoang trang) => true; con lai false. */

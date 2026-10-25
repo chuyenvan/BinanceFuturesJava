@@ -72,11 +72,12 @@ public class KillSwitchEngineTest {
     }
 
     @Test
-    public void modeActOnLiveNotImplementedInV11d() {
-        assertFalse(KillSwitchEngine.ACT_IMPLEMENTED);
+    public void modeActOnLiveIsActInV12() {
+        // [V12 SAFE C8] act da cai (truoc v11d: CHUA cai => log). c3_shadow van tu choi (modeActRejectedOnShadow).
+        assertTrue(KillSwitchEngine.ACT_IMPLEMENTED);
         KillSwitchEngine.Resolved r = KillSwitchEngine.resolve("act", "c3_live");
-        assertEquals(KillSwitchEngine.Mode.LOG, r.effective);
-        assertTrue(r.warn.contains("CHUA cai"));
+        assertEquals(KillSwitchEngine.Mode.ACT, r.effective);
+        assertNull(r.warn);
     }
 
     @Test

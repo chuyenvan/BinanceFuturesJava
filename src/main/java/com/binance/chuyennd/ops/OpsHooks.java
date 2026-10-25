@@ -10,6 +10,7 @@ import java.io.File;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * [V11D OPS 2026-10-21] Diem noi DUY NHAT tu code giao dich sang heartbeat + kill-switch. Moi ham:
@@ -22,6 +23,16 @@ import java.util.Map;
  *   <li>{@link #onApiResult(String, boolean)} — sau {@code getAllPositionInfos} trong {@code updatePositionInfo}.</li>
  *   <li>{@link #onPaperBook(ShadowBookC3)} / {@link #onPaperTick(ShadowBookC3, Map)} — {@code shadowTickC3}.</li>
  * </ul>
+ *
+ * <p>[V12 SAFE 2026-10-25] API cho vong 2 (c3_live) — CHUA co call site nao trong v1.2/safe:
+ * <ul>
+ *   <li>{@link #allowNewEntry(String)} — goi o {@code createOrderBuyRequest} TRUOC push VA o cua gui lenh (entry + DCA).</li>
+ *   <li>{@link #requiredAction()} — vong quan ly vi the: FLATTEN => dong het reduce-only chia lo.</li>
+ *   <li>{@link #onFill(String, boolean, Double, Double)} — moi fill that (C2), ref = close nen 1m quyet dinh.</li>
+ *   <li>{@link #attachEquitySource(EquitySource)} — totalMarginBalance tai khoan con (A40).</li>
+ *   <li>{@link #setAlert(Consumer)} — Telegram.</li>
+ * </ul>
+ * Mode khac ACT (c3_shadow, sim): allowNewEntry = true, requiredAction = NONE (khong doi quyet dinh).
  */
 public final class OpsHooks {
 
@@ -54,10 +65,11 @@ public final class OpsHooks {
             }
         };
         File peak = new File(Cfg.getOr(OpsConfig.KEY_KILLSW_STATE_FILE, OpsConfig.DEFAULT_KILLSW_STATE_FILE));
+        KillSwitchEngine.Params prm = OpsConfig.killSwitchParams(KS_MODE.effective == KillSwitchEngine.Mode.ACT);
         return new KillSwitchEngine(KS_MODE.effective, label, sink, peak,
                 com.binance.chuyennd.tradecore.selector.LiveProfileC3::paperEquity,
                 () -> com.binance.chuyennd.tradecore.Configs.U_MAX,
-                System.currentTimeMillis());
+                System.currentTimeMillis(), prm);
     }
 
     /** Goi 1 lan khi khoi dong (idempotent). */
@@ -71,13 +83,23 @@ public final class OpsHooks {
                     OpsConfig.KEY_KILLSW_MODE, RAW_MODE == null ? "-" : RAW_MODE.trim(),
                     KS_MODE.effective.name().toLowerCase(java.util.Locale.ROOT), PROFILE == null ? "-" : PROFILE.trim());
             if (KS_MODE.warn != null) LOG.warn("{}", KS_MODE.warn);
+            if (OpsConfig.isC3Live(PROFILE) && KS_MODE.effective != KillSwitchEngine.Mode.ACT) {
+                LOG.warn("[KILLSW] LIVE_PROFILE=c3_live nhung kill-switch KHONG o mode act (hieu luc={}) => KHONG co bao ve tu"
+                        + " dong; vong 2 phai tu choi push khi killSwitchArmed()=false", KS_MODE.effective);
+            }
             if (KS == null) return;
-            LOG.info("[KILLSW] BAT mode={} CHI LOG (khong doi quyet dinh). Nguong: C1 lag>{}s|miss>{}%|no_data>{}s; "
-                            + "C2 slip>{} (so giay: N/A, khong co fill that); C3 >={} loi API lien tiep (dong bo vi the REST); "
-                            + "C4 open>{} hoac U>=U_MAX; C5 khong tick>{}s; C6 DD<={} (so giay MTM). LEGACY khong tinh C4/C6.",
-                    KS.mode().name().toLowerCase(java.util.Locale.ROOT), KillSwitchEngine.C1_LAG_SEC, KillSwitchEngine.C1_MISSING_PCT,
-                    KillSwitchEngine.C1_NODATA_SEC, KillSwitchEngine.C2_SLIP, KillSwitchEngine.C3_CONSEC,
-                    KillSwitchEngine.C4_MAX_POS, KillSwitchEngine.C5_NOTICK_SEC, KillSwitchEngine.C6_DD);
+            if (KS.mode() == KillSwitchEngine.Mode.ACT) {
+                LOG.warn("[KILLSW] BAT mode=act (c3_live): C1-C5 => latch NO_NEW_ENTRY; C6/A40 => latch FLATTEN; latch file={} "
+                                + "reset file={} (chi ops/killsw_reset.sh); C2 signed={}",
+                        OpsConfig.latchFile().getPath(), OpsConfig.resetFile().getPath(), OpsConfig.c2SignedRaw());
+            } else {
+                LOG.info("[KILLSW] BAT mode={} CHI LOG (khong doi quyet dinh). Nguong: C1 lag>{}s|miss>{}%|no_data>{}s; "
+                                + "C2 slip>{} (so giay: N/A, khong co fill that); C3 >={} loi API lien tiep (dong bo vi the REST); "
+                                + "C4 open>{} hoac U>=U_MAX; C5 khong tick>{}s; C6 DD<={} (so giay MTM). LEGACY khong tinh C4/C6.",
+                        KS.mode().name().toLowerCase(java.util.Locale.ROOT), KillSwitchEngine.C1_LAG_SEC, KillSwitchEngine.C1_MISSING_PCT,
+                        KillSwitchEngine.C1_NODATA_SEC, KillSwitchEngine.C2_SLIP, KillSwitchEngine.C3_CONSEC,
+                        KillSwitchEngine.C4_MAX_POS, KillSwitchEngine.C5_NOTICK_SEC, KillSwitchEngine.C6_DD);
+            }
             Thread t = new Thread(() -> {
                 while (true) {
                     try {
@@ -145,6 +167,68 @@ public final class OpsHooks {
             KS.onPaper(System.currentTimeMillis(), book.openCount(), book.marginRunning(), book.equityNow(px));
         } catch (Throwable e) {
             err("onPaperTick", e);
+        }
+    }
+
+    // ------------------------------------------------------------------ [V12] API vong 2 (c3_live)
+
+    /** [V12] true iff kill-switch dang o mode ACT (c3_live). Vong 2 nen tu choi push that khi false. */
+    public static boolean killSwitchArmed() {
+        return KS != null && KS.mode() == KillSwitchEngine.Mode.ACT;
+    }
+
+    /**
+     * [V12] Cong mo lenh MOI. KS tat / mode LOG => true (khong doi quyet dinh). Mode ACT: theo latch; loi noi bo =>
+     * FAIL-CLOSED false.
+     */
+    public static boolean allowNewEntry(String symbol) {
+        if (KS == null) return true;
+        try {
+            return KS.allowNewEntry(symbol);
+        } catch (Throwable e) {
+            err("allowNewEntry", e);
+            return KS.mode() != KillSwitchEngine.Mode.ACT;
+        }
+    }
+
+    /** [V12] NONE / NO_NEW_ENTRY / FLATTEN (chi khac NONE o mode ACT). Loi noi bo o ACT => NO_NEW_ENTRY. */
+    public static KillSwitchEngine.Action requiredAction() {
+        if (KS == null) return KillSwitchEngine.Action.NONE;
+        try {
+            return KS.requiredAction();
+        } catch (Throwable e) {
+            err("requiredAction", e);
+            return KS.mode() == KillSwitchEngine.Mode.ACT ? KillSwitchEngine.Action.NO_NEW_ENTRY : KillSwitchEngine.Action.NONE;
+        }
+    }
+
+    /** [V12] fill that (C2). ref = close nen 1m quyet dinh; isBuy = chieu lenh. */
+    public static void onFill(String symbol, boolean isBuy, Double fillPx, Double refPx) {
+        if (KS == null) return;
+        try {
+            KS.onFill(System.currentTimeMillis(), symbol, isBuy, fillPx, refPx);
+        } catch (Throwable e) {
+            err("onFill", e);
+        }
+    }
+
+    /** [V12] gan nguon totalMarginBalance tai khoan con (A40). */
+    public static void attachEquitySource(EquitySource src) {
+        if (KS == null) return;
+        try {
+            KS.attachEquitySource(src);
+        } catch (Throwable e) {
+            err("attachEquitySource", e);
+        }
+    }
+
+    /** [V12] noi Telegram cho latch/reset/C2_WARN. */
+    public static void setAlert(Consumer<String> alert) {
+        if (KS == null) return;
+        try {
+            KS.setAlert(alert);
+        } catch (Throwable e) {
+            err("setAlert", e);
         }
     }
 
