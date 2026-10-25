@@ -69,10 +69,27 @@ public final class OpsHooks {
         };
         File peak = new File(Cfg.getOr(OpsConfig.KEY_KILLSW_STATE_FILE, OpsConfig.DEFAULT_KILLSW_STATE_FILE));
         KillSwitchEngine.Params prm = OpsConfig.killSwitchParams(KS_MODE.effective == KillSwitchEngine.Mode.ACT);
-        return new KillSwitchEngine(KS_MODE.effective, label, sink, peak,
+        return build(KS_MODE.effective, label, sink, C3LIVE, peak, C3LIVE ? OpsConfig.c3LivePeakFile() : null,
                 com.binance.chuyennd.tradecore.selector.LiveProfileC3::paperEquity,
                 () -> com.binance.chuyennd.tradecore.Configs.U_MAX,
                 System.currentTimeMillis(), prm);
+    }
+
+    /**
+     * [V12 2c CRIT-1] Dung engine theo profile (tach ra de test duong that). c3_live: C6 tren tmb that so voi dinh RIENG
+     * ({@code c3livePeakFile}), KHONG san PAPER_EQUITY, KHONG dung {@code shadowPeakFile}. Profile khac: y nhu v1.1
+     * (dinh so giay {@code shadowPeakFile}, san PAPER_EQUITY).
+     */
+    static KillSwitchEngine build(KillSwitchEngine.Mode mode, String label, KillSwitchEngine.Sink sink, boolean c3live,
+                                  File shadowPeakFile, File c3livePeakFile,
+                                  java.util.function.DoubleSupplier paperEquity,
+                                  java.util.function.Supplier<Float> uMax, long nowMs, KillSwitchEngine.Params prm) {
+        if (c3live) {
+            KillSwitchEngine.Params p = prm == null ? new KillSwitchEngine.Params() : prm;
+            p.c6OwnPeak = true;
+            return new KillSwitchEngine(mode, label, sink, c3livePeakFile, null, uMax, nowMs, p);
+        }
+        return new KillSwitchEngine(mode, label, sink, shadowPeakFile, paperEquity, uMax, nowMs, prm);
     }
 
     /** Goi 1 lan khi khoi dong (idempotent). */
@@ -177,9 +194,10 @@ public final class OpsHooks {
     // ------------------------------------------------------------------ [V12] API vong 2 (c3_live)
 
     /**
-     * [V12] So LIVE (vong 2: so lenh that c3_live) — C4 (so vi the, U = margin/equity) + C6 (DD equity so, dinh san
-     * PAPER_EQUITY) nhu {@link #onPaperTick}. Goi sau moi nhip danh gia vi the. KHONG goi dong thoi voi onPaperTick
-     * tren CUNG profile (2 nguon equity se tron dinh C6).
+     * [V12] So LIVE (vong 2: so lenh that c3_live) — C4 (so vi the, U = margin/equity) + C6. [2c CRIT-1] c3_live: C6 =
+     * DD cua totalMarginBalance that so voi dinh RIENG ({@code LIVE_C3_KILLSW_PEAK_FILE}, mac dinh
+     * run/c3live_killsw_peak; KHONG san PAPER_EQUITY, KHONG dung run/killsw_peak cua c3_shadow). Goi sau moi nhip danh
+     * gia vi the. KHONG goi dong thoi voi onPaperTick tren CUNG profile (c3_live: onPaper* bi bo qua).
      */
     public static void onBook(int openPos, float margin, float equity) {
         if (KS == null) return;

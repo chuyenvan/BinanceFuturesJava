@@ -6,7 +6,8 @@
 # Cach chay (tu thu muc chay bot, noi co run/):
 #   bash ops/killsw_reset.sh                 # DRY=1 mac dinh: chi xem trang thai latch, KHONG ghi gi
 #   DRY=0 bash ops/killsw_reset.sh           # mo latch: phai go YES
-#   DRY=0 RESET_PEAK=1 bash ops/killsw_reset.sh   # + dat lai dinh equity A40 (CHI khi da nap/rut von co chu dich)
+#   DRY=0 RESET_PEAK=1 bash ops/killsw_reset.sh   # + dat lai dinh equity A40 + C6 c3_live (run/c3live_killsw_peak)
+#                                                 #   (CHI khi da nap/rut von co chu dich)
 # Bien tuy chon: RUN_DIR (mac dinh run), LIVE_KILLSW_LATCH_FILE, LIVE_KILLSW_RESET_FILE (phai TRUNG env cua bot),
 #   KILLSW_RESET_LOG (mac dinh $RUN_DIR/killsw_reset.log), WAIT_S (cho bot ap dung, mac dinh 30; 0 = khong cho).
 set -euo pipefail
@@ -38,7 +39,7 @@ if [ "$DRY" != "0" ]; then
   exit 0
 fi
 
-echo "== Mo latch se: latch -> NONE, xoa danh sach ma + su kien C2 trong 24h$( [ "$RESET_PEAK" = 1 ] && echo ', DAT LAI dinh equity A40')."
+echo "== Mo latch se: latch -> NONE, xoa danh sach ma + su kien C2 trong 24h$( [ "$RESET_PEAK" = 1 ] && echo ', DAT LAI dinh equity A40 + C6 c3_live')."
 echo "   Dieu kien con dat (vd van mat du lieu / DD van <= -40 %) => bot latch LAI ngay."
 read -r -p "Go YES de xac nhan: " ANS
 if [ "$ANS" != "YES" ]; then

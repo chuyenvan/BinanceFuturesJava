@@ -103,6 +103,30 @@ public final class OpsConfig {
     public static final int DEFAULT_C2_COUNT = 3;
     public static final int DEFAULT_C2_WINDOW_H = 24;
 
+    /** [V12 2c CRIT-1] File dinh C6 RIENG cua c3_live (tmb that) — KHONG dung chung run/killsw_peak cua c3_shadow. */
+    public static final String KEY_C3LIVE_KILLSW_PEAK_FILE = "LIVE_C3_KILLSW_PEAK_FILE";
+    public static final String DEFAULT_C3LIVE_KILLSW_PEAK_FILE = "run/c3live_killsw_peak";
+
+    /**
+     * [V12 2c CRIT-1] File dinh C6 cua c3_live. Neu cau hinh tro TRUNG file dinh so giay ({@code LIVE_KILLSW_STATE_FILE},
+     * mac dinh run/killsw_peak) => bo cau hinh, dung mac dinh + WARN (khong bao gio dung chung dinh voi c3_shadow).
+     */
+    static File c3LivePeakFile(String raw, String shadowRaw) {
+        File def = new File(DEFAULT_C3LIVE_KILLSW_PEAK_FILE);
+        File f = raw == null || raw.trim().isEmpty() ? def : new File(raw.trim());
+        File sh = new File(shadowRaw == null || shadowRaw.trim().isEmpty() ? DEFAULT_KILLSW_STATE_FILE : shadowRaw.trim());
+        if (f.getAbsoluteFile().toPath().normalize().equals(sh.getAbsoluteFile().toPath().normalize())) {
+            LOG.warn("[KILLSW] {}={} TRUNG file dinh so giay {} => dung {}", KEY_C3LIVE_KILLSW_PEAK_FILE, raw, sh.getPath(),
+                    DEFAULT_C3LIVE_KILLSW_PEAK_FILE);
+            return def;
+        }
+        return f;
+    }
+
+    public static File c3LivePeakFile() {
+        return c3LivePeakFile(Cfg.get(KEY_C3LIVE_KILLSW_PEAK_FILE), Cfg.get(KEY_KILLSW_STATE_FILE));
+    }
+
     static boolean isC3Live(String profile) {
         return profile != null && "c3_live".equals(profile.trim().toLowerCase(Locale.ROOT));
     }

@@ -152,6 +152,13 @@ public final class KillSwitchEngine {
         public double c4ReleaseUGap = 0.05;
         /** [V12 2b MASTER 10-25] C3 tu go can them >= bay nhieu call API thanh cong LIEN TIEP. */
         public int c3ReleaseOkConsec = 3;
+        /**
+         * [V12 2c CRIT-1] c3_live: C6 do DD cua totalMarginBalance THAT so voi dinh RIENG (file rieng, mac dinh
+         * {@code run/c3live_killsw_peak}): KHONG san PAPER_EQUITY, KHONG doc/ghi file dinh so giay cua c3_shadow; dinh
+         * khoi tao = tmb hop le dau tien; equity &lt;= 0 / NaN => giu trang thai C6 cu (khong danh gia); owner
+         * {@code reset_peak=1} dat lai CA dinh nay (xoa file). Mac dinh false = hanh vi v1.1 (so giay).
+         */
+        public boolean c6OwnPeak = false;
     }
 
     /**
@@ -393,7 +400,8 @@ public final class KillSwitchEngine {
             if (Double.isFinite(v) && v > 0d) {
                 peak = v;
                 peakWritten = v;
-                sink.info("[KILLSW] nap dinh equity giay tu " + peakFile.getAbsolutePath() + " = " + fmt2(v));
+                sink.info("[KILLSW] nap dinh equity " + (prm.c6OwnPeak ? "c3_live (tmb that, C6)" : "giay") + " tu "
+                        + peakFile.getAbsolutePath() + " = " + fmt2(v));
             } else {
                 sink.warn("[KILLSW] file dinh " + peakFile.getAbsolutePath() + " gia tri khong hop le => bo qua");
             }
@@ -612,6 +620,10 @@ public final class KillSwitchEngine {
         lastOpen = openPos;
         lastMargin = margin;
         lastEquity = equity;
+        if (prm.c6OwnPeak) {   // [V12 2c CRIT-1] c3_live: dinh rieng tu tmb that, khong san PAPER_EQUITY
+            onBookOwnPeak(nowMs, openPos, margin, equity);
+            return;
+        }
         if (!peakFloorApplied) {
             peakFloorApplied = true;
             double pe = paperEquity == null ? 0d : paperEquity.getAsDouble();
@@ -625,6 +637,26 @@ public final class KillSwitchEngine {
         set("C4", c4met, "open=" + openPos + " U=" + fmt4(u) + " U_MAX=" + fmt4(um), nowMs);
         if (mode == Mode.ACT && prm.c4Capacity) updateCapacity(c4met, openPos, u, um, nowMs);
         set("C6", c6(lastDd), "dd=" + fmt4(lastDd) + " eq=" + fmt2(equity) + " peak=" + fmt2(peak), nowMs);
+        maybeWritePeak(nowMs);
+    }
+
+    /** [V12 2c CRIT-1] c3_live: C4 nhu tren; C6 tren tmb that so voi dinh rieng (equity khong hop le => giu C6 cu). */
+    private void onBookOwnPeak(long nowMs, int openPos, float margin, float equity) {
+        float um = uMax == null ? 0f : uMax.get();
+        float u = equity > 0f ? margin / equity : Float.NaN;
+        boolean c4met = c4(openPos, margin, equity, um);
+        set("C4", c4met, "open=" + openPos + " U=" + fmt4(u) + " U_MAX=" + fmt4(um), nowMs);
+        if (mode == Mode.ACT && prm.c4Capacity) updateCapacity(c4met, openPos, u, um, nowMs);
+        if (!(Float.isFinite(equity) && equity > 0f)) {
+            if (nowMs - lastPeakWarnMs >= EQ_WARN_MS) {
+                lastPeakWarnMs = nowMs;
+                sink.warn("[KILLSW] C6 c3_live: equity khong hop le (" + equity + ") => giu trang thai C6 cu");
+            }
+            return;
+        }
+        if (Double.isNaN(peak) || equity > peak) peak = equity;
+        lastDd = dd(equity, peak);
+        set("C6", c6(lastDd), "dd=" + fmt4(lastDd) + " eq=" + fmt2(equity) + " peak=" + fmt2(peak) + " (c3_live tmb)", nowMs);
         maybeWritePeak(nowMs);
     }
 
@@ -949,6 +981,19 @@ public final class KillSwitchEngine {
         if (resetPeak) {
             acctPeak = Double.NaN;
             acctPeakWritten = Double.NaN;
+            if (prm.c6OwnPeak) {   // [V12 2c CRIT-1] dinh C6 rieng c3_live cung dat lai (lay lai tu tmb ke tiep)
+                peak = Double.NaN;
+                peakWritten = Double.NaN;
+                lastDd = Double.NaN;
+                if (peakFile != null) {
+                    try {
+                        Files.deleteIfExists(peakFile.toPath());
+                    } catch (Exception e) {
+                        sink.warn("[KILLSW] reset_peak: khong xoa duoc file dinh " + peakFile.getPath() + ": " + e
+                                + " (dinh RAM da dat lai; file se ghi de khi co dinh moi)");
+                    }
+                }
+            }
         }
         lastResetAtMs = at;
         for (Iterator<CodeState> it = st.values().iterator(); it.hasNext(); ) {
