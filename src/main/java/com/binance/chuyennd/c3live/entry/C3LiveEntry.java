@@ -38,13 +38,18 @@ public final class C3LiveEntry {
     public enum Outcome {
         DISABLED, PUSH_OFF, KS_NOT_ARMED, KS_BLOCKED, NOT_BUYABLE, BOOK_UNHEALTHY, LEGACY, HOLDING, DCA_OFF,
         DCA_NOT_HOLDING, DCA_PENDING, DCA_NOT_DUE, TIER3_DCA, MODE_GUARD, NO_RULES, NO_EQUITY, U_MAX, BUDGET_SMALL,
-        SIZING, RESERVE_FAIL, BAD_INPUT, ERROR, SUBMITTED
+        SIZING, RESERVE_FAIL, BAD_INPUT, ERROR, SUBMITTED, RECON_BLOCKED
     }
 
     public interface KillSwitchView {
         boolean armed();
 
         boolean allowNewEntry(String symbol);
+
+        /** [V12 2b] DCA cum dang co: C4 (cong suat) KHONG chan DCA; latch van chan. Mac dinh = allowNewEntry. */
+        default boolean allowDca(String symbol) {
+            return allowNewEntry(symbol);
+        }
     }
 
     public interface CapitalSource {
@@ -75,9 +80,19 @@ public final class C3LiveEntry {
         public final double sizingPx;
         public final float tierMultiplier;
         public final boolean tier3;
+        /** [V12 2b] symbolPred / rank cua leg (nhu so giay) => metadata cum (trailing dung symbolPred). */
+        public final Float symbolPred;
+        public final int rank;
 
         public LegInput(String symbol, String level, boolean dca, long barStartMs, double refPx, double sizingPx,
                         float tierMultiplier, boolean tier3) {
+            this(symbol, level, dca, barStartMs, refPx, sizingPx, tierMultiplier, tier3, null, -1);
+        }
+
+        public LegInput(String symbol, String level, boolean dca, long barStartMs, double refPx, double sizingPx,
+                        float tierMultiplier, boolean tier3, Float symbolPred, int rank) {
+            this.symbolPred = symbolPred;
+            this.rank = rank;
             this.symbol = symbol;
             this.level = level;
             this.dca = dca;
@@ -137,6 +152,7 @@ public final class C3LiveEntry {
     private final boolean dcaGridEnabled;
     private final float sizeCapOfEquity;
     private final double minBudget;
+    private final Predicate<String> reconAllows;
     private final Map<Outcome, Long> counts = new EnumMap<>(Outcome.class);
     private final Map<Outcome, Long> lastWarn = new EnumMap<>(Outcome.class);
 
@@ -158,6 +174,7 @@ public final class C3LiveEntry {
         this.dcaGridEnabled = b.dcaGridEnabled;
         this.sizeCapOfEquity = b.sizeCapOfEquity;
         this.minBudget = b.minBudget;
+        this.reconAllows = b.reconAllows == null ? s -> true : b.reconAllows;
     }
 
     public static Builder builder() {
@@ -196,13 +213,18 @@ public final class C3LiveEntry {
         // (1) kill-switch phai o mode act (c3_live) — khong thi tu choi push
         if (!ks.armed()) return Result.of(Outcome.KS_NOT_ARMED, "kill-switch khong o mode act");
         // (2) latch NO_NEW_ENTRY/FLATTEN chan ca entry lan DCA
-        if (!ks.allowNewEntry(sym)) return Result.of(Outcome.KS_BLOCKED, "latch");
+        // [V12 2b] DCA: chi latch chan (C4 cong suat khong chan DCA); mo cum moi: latch + C4 cong suat
+        if (in.dca ? !ks.allowDca(sym) : !ks.allowNewEntry(sym)) {
+            return Result.of(Outcome.KS_BLOCKED, in.dca ? "latch" : "latch/C4 cong suat");
+        }
         // (3) universe: TradFi / non-ASCII / delist < 7d / EXCLUDE / snapshot cu
         if (!universe.isBuyable(sym, nowMs)) {
             Optional<String> why = universe.whyNotBuyable(sym, nowMs);
             return Result.of(Outcome.NOT_BUYABLE, why.orElse("?"));
         }
         if (!book.healthy()) return Result.of(Outcome.BOOK_UNHEALTHY, book.unhealthyReason());
+        // [V12 2b C9] reconcile chan (vi the la / lech equity > 1 % / reconcile khoi dong loi)
+        if (!reconAllows.test(sym)) return Result.of(Outcome.RECON_BLOCKED, "reconcile chan mo moi");
         if (legacy.test(sym)) return Result.of(Outcome.LEGACY, "vi the LEGACY");
         // (so THAT) trung coin / DCA grid
         int legIdx;
@@ -258,6 +280,7 @@ public final class C3LiveEntry {
                 nowMs)) {
             return new Result(Outcome.RESERVE_FAIL, cid, sz.getQty(), b, used, cap, "reserve false (cid trung/dong/so hong)");
         }
+        book.setMeta(sym, in.symbolPred, in.rank, nowMs);   // [V12 2b] symbolPred/rank leg dau co gia tri (nhu so giay)
         refSink.accept(sym, in.refPx);
         exec.submit(cid);
         return new Result(Outcome.SUBMITTED, cid, sz.getQty(), b, used, cap,
@@ -322,6 +345,7 @@ public final class C3LiveEntry {
         private boolean dcaGridEnabled;
         private float sizeCapOfEquity = 0.045f;
         private double minBudget = 5d;
+        private Predicate<String> reconAllows;
 
         public Builder book(LiveBookC3 v) { book = v; return this; }
         public Builder killSwitch(KillSwitchView v) { ks = v; return this; }
@@ -340,6 +364,7 @@ public final class C3LiveEntry {
         public Builder dcaGridEnabled(boolean v) { dcaGridEnabled = v; return this; }
         public Builder sizeCapOfEquity(float v) { sizeCapOfEquity = v; return this; }
         public Builder minBudget(double v) { minBudget = v; return this; }
+        public Builder reconAllows(Predicate<String> v) { reconAllows = v; return this; }
 
         public C3LiveEntry build() {
             if (book == null || ks == null || universe == null || modeGuard == null || rules == null || capital == null

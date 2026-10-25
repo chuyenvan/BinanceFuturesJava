@@ -20,6 +20,8 @@ public final class C3LiveCids {
 
     public static final String ENTRY_PREFIX = "c3-";
     public static final String CLOSE_PREFIX = "c3x-";
+    /** [V12 2b] stop trailing (Algo API clientAlgoId): {@code c3s-<symbolToken>-<min>-<seq>}. */
+    public static final String STOP_PREFIX = "c3s-";
 
     private C3LiveCids() {
     }
@@ -30,6 +32,11 @@ public final class C3LiveCids {
 
     public static String close(String symbol, long minute, int attempt) {
         return build(CLOSE_PREFIX, symbol, minute, Integer.toString(attempt));
+    }
+
+    /** [V12 2b] clientAlgoId stop trailing; seq = so thu tu stop cua cum (persist trong so, tang qua restart). */
+    public static String stop(String symbol, long minute, int seq) {
+        return build(STOP_PREFIX, symbol, minute, Integer.toString(seq));
     }
 
     static String build(String prefix, String symbol, long minute, String tail) {

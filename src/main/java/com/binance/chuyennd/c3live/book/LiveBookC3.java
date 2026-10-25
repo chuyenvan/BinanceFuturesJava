@@ -9,7 +9,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -26,7 +28,7 @@ import java.util.TreeSet;
 
 /**
  * [V12 C1] So vi the THAT cua c3_live (tai khoan con). Cum theo symbol: legs (cid, legIdx, qty, gia, margin, trang thai),
- * tsFirstLeg, legCount, peak/armed/stopPrice/stopClientAlgoId (cho trailing C6 vong 2b), closeCid.
+ * tsFirstLeg, legCount, peak/armed/stopPrice/stopClientAlgoId (trailing C6), closeCid.
  *
  * <p>Giu cho margin DONG BO truoc khi gui lenh: {@link #reserve} ghi leg PENDING (margin du kien = notional/leverage)
  * va persist TRUOC khi lenh roi khoi JVM => U = {@link #marginUsed()} / equity tinh ca pending => 24 ung vien cung tick
@@ -36,14 +38,20 @@ import java.util.TreeSet;
  * UNKNOWN = gui roi nhung khong biet san da nhan chua (timeout) — chi duoc gui lai SAU KHI queryOrder xac nhan khong co.
  * Ca 3 trang thai chua giai quyet deu tinh margin (bao thu) va khoa symbol (khoa xu ly persist qua restart).
  *
+ * <p>[V12 vong 2b] them: trang thai trailing GIONG so giay ({@code peakRate} so voi VWAP entry, {@code priceSL} logic,
+ * symbolPred/rank cua leg dau co gia tri — {@code ShadowBookC3.Cluster}); stop tren san (active / pending / mo coi);
+ * phi + realizedPnl + fill dong (C7); "san thang" qty/gia (C9); moc doi chieu equity (anchor + tong da chot/phi/funding/
+ * chuyen tien ke tu moc). Dong cum => 1 dong {@code c3live_ledger.csv} canh file so.
+ *
  * <p>Persist JSON {@code run/c3live_book.json}, ghi atomic (tmp + ATOMIC_MOVE) sau MOI thay doi. File hong => sao luu
  * {@code .corrupt_<ms>} + {@link #healthy()} = false (fail-closed: chan mo moi). Ghi loi => healthy=false toi khi ghi lai duoc.
- * Thread-safe (moi ham synchronized).
+ * Truong moi cua vong 2b doc bang {@code has()} (file vong 2a van nap duoc). Thread-safe (moi ham synchronized).
  */
 public final class LiveBookC3 {
 
     private static final Logger LOG = LoggerFactory.getLogger(LiveBookC3.class);
     public static final String DEFAULT_FILE = "run/c3live_book.json";
+    public static final String LEDGER_NAME = "c3live_ledger.csv";
     public static final int VERSION = 1;
 
     public enum LegState {
@@ -118,6 +126,27 @@ public final class LiveBookC3 {
         public final long closeSentMs;
         public final boolean hasUnresolved;
         public final List<LegView> legs;
+        // ---- vong 2b
+        /** VWAP entry kieu FLOAT y het {@code ShadowBookC3.Cluster.avgEntry()} (dau vao trailing). */
+        public final float avgEntryF;
+        /** dinh lai (ty le so VWAP) — ratchet bam dinh nhu so giay; reset 0 khi DCA. */
+        public final float peakRate;
+        /** stop LOGIC (giong {@code priceSL} so giay); NaN = chua arm. */
+        public final float priceSL;
+        public final Float symbolPred;
+        public final int rank;
+        public final int stopSeq;
+        public final String pendingStopCid;
+        public final double pendingStopPrice;
+        public final long pendingStopSentMs;
+        public final boolean pendingStopQtyMode;
+        public final boolean stopQtyMode;
+        public final List<String> orphanStops;
+        public final double commission;
+        public final double realizedPnl;
+        public final BigDecimal exitQty;
+        public final double exitAvgPx;
+        public final boolean exchangeOverride;
 
         ClusterView(Cluster c, double leverage) {
             this.symbol = c.symbol;
@@ -140,6 +169,56 @@ public final class LiveBookC3 {
             List<LegView> ls = new ArrayList<>();
             for (Leg l : c.legs) ls.add(new LegView(c.symbol, l));
             this.legs = Collections.unmodifiableList(ls);
+            this.avgEntryF = c.avgEntryF();
+            this.peakRate = c.peakRate;
+            this.priceSL = c.priceSL;
+            this.symbolPred = c.symbolPred;
+            this.rank = c.rank;
+            this.stopSeq = c.stopSeq;
+            this.pendingStopCid = c.pendingStopCid;
+            this.pendingStopPrice = c.pendingStopPrice;
+            this.pendingStopSentMs = c.pendingStopSentMs;
+            this.pendingStopQtyMode = c.pendingStopQtyMode;
+            this.stopQtyMode = c.stopQtyMode;
+            this.orphanStops = Collections.unmodifiableList(new ArrayList<>(c.orphanStops));
+            this.commission = c.commission;
+            this.realizedPnl = c.realizedPnl;
+            this.exitQty = c.exitQty;
+            this.exitAvgPx = c.exitQty.signum() > 0 ? c.exitNotional / c.exitQty.doubleValue() : 0d;
+            this.exchangeOverride = c.adjQty != null;
+        }
+
+        /** Da arm trailing (stop logic co gia tri). */
+        public boolean trailArmed() {
+            return !Float.isNaN(priceSL);
+        }
+    }
+
+    /** Moc doi chieu equity (C9 hang gio). */
+    public static final class AccountView {
+        public final double anchorEquity;
+        public final long anchorMs;
+        public final double realized;
+        public final double commission;
+        public final double funding;
+        public final double transfers;
+
+        AccountView(LiveBookC3 b) {
+            this.anchorEquity = b.anchorEquity;
+            this.anchorMs = b.anchorMs;
+            this.realized = b.realizedSinceAnchor;
+            this.commission = b.commissionSinceAnchor;
+            this.funding = b.fundingSinceAnchor;
+            this.transfers = b.transferSinceAnchor;
+        }
+
+        public boolean anchored() {
+            return !Double.isNaN(anchorEquity);
+        }
+
+        /** Equity so (chua tinh lai chua chot) = moc + da chot - phi + funding + chuyen tien. */
+        public double bookEquityExUnrealized() {
+            return anchorEquity + realized - commission + funding + transfers;
         }
     }
 
@@ -176,6 +255,25 @@ public final class LiveBookC3 {
         long closeSinceMs;
         long closeSentMs;
         int closeAttempts;
+        // ---- vong 2b
+        float peakRate = 0f;
+        float priceSL = Float.NaN;
+        Float symbolPred;
+        int rank = -1;
+        int stopSeq;
+        String pendingStopCid;
+        double pendingStopPrice;
+        long pendingStopSentMs;
+        boolean pendingStopQtyMode;
+        boolean stopQtyMode;
+        final List<String> orphanStops = new ArrayList<>();
+        double commission;
+        double realizedPnl;
+        BigDecimal exitQty = BigDecimal.ZERO;
+        double exitNotional;
+        /** "San thang" (C9): qty/gia vi the tren san khi lech so; null = theo legs. */
+        BigDecimal adjQty;
+        double adjAvg;
 
         int legCount() {
             int n = 0;
@@ -188,13 +286,18 @@ public final class LiveBookC3 {
             return false;
         }
 
-        BigDecimal confirmedQty() {
+        BigDecimal legsQty() {
             BigDecimal q = BigDecimal.ZERO;
             for (Leg l : legs) if (l.state == LegState.CONFIRMED) q = q.add(l.execQty);
             return q;
         }
 
+        BigDecimal confirmedQty() {
+            return adjQty != null ? adjQty : legsQty();
+        }
+
         double avgPrice() {
+            if (adjQty != null) return adjAvg;
             double qty = 0d, notional = 0d;
             for (Leg l : legs) {
                 if (l.state != LegState.CONFIRMED) continue;
@@ -205,7 +308,26 @@ public final class LiveBookC3 {
             return qty > 0d ? notional / qty : 0d;
         }
 
+        /**
+         * VWAP kieu so giay: sumEntryQty (double) += (double)entry_f * qty_f; qty (float) += qty_f; avg = (float)(sum/qty).
+         * Cung thu tu cong leg => cung bit voi {@code ShadowBookC3.Cluster.avgEntry()} khi cung gia/qty.
+         */
+        float avgEntryF() {
+            if (adjQty != null) return (float) adjAvg;
+            double sum = 0d;
+            float q = 0f;
+            for (Leg l : legs) {
+                if (l.state != LegState.CONFIRMED) continue;
+                float e = (float) l.avgPx;
+                float qq = l.execQty.floatValue();
+                sum += (double) e * qq;
+                q += qq;
+            }
+            return q > 0f ? (float) (sum / q) : 0f;
+        }
+
         double confirmedMargin(double leverage) {
+            if (adjQty != null) return adjQty.doubleValue() * adjAvg / leverage;
             double m = 0d;
             for (Leg l : legs) if (l.state == LegState.CONFIRMED) m += l.execQty.doubleValue() * l.avgPx / leverage;
             return m;
@@ -234,6 +356,13 @@ public final class LiveBookC3 {
     private boolean loadOk = true;
     private boolean persistOk = true;
     private String unhealthyReason = "";
+    // ---- vong 2b: doi chieu equity
+    private double anchorEquity = Double.NaN;
+    private long anchorMs;
+    private double realizedSinceAnchor;
+    private double commissionSinceAnchor;
+    private double fundingSinceAnchor;
+    private double transferSinceAnchor;
 
     /**
      * @param file     file persist (null = chi RAM, dung cho test)
@@ -347,6 +476,21 @@ public final class LiveBookC3 {
         return out;
     }
 
+    /** Tap clientAlgoId stop ma so dang tham chieu (active + pending + mo coi cho huy). */
+    public synchronized Set<String> referencedStopCids() {
+        Set<String> s = new TreeSet<>();
+        for (Cluster c : clusters.values()) {
+            if (c.stopClientAlgoId != null) s.add(c.stopClientAlgoId);
+            if (c.pendingStopCid != null) s.add(c.pendingStopCid);
+            s.addAll(c.orphanStops);
+        }
+        return s;
+    }
+
+    public synchronized AccountView account() {
+        return new AccountView(this);
+    }
+
     // ------------------------------------------------------------------ ghi
     /**
      * Giu cho margin cho 1 leg MUA truoc khi gui. false (khong doi gi) khi: so khong lanh, cid da ton tai (idempotent),
@@ -413,7 +557,11 @@ public final class LiveBookC3 {
         persist(nowMs);
     }
 
-    /** Xac nhan khop (execQty > 0); execQty <= 0 => huy. Idempotent: leg da ket thuc => false. */
+    /**
+     * Xac nhan khop (execQty > 0); execQty <= 0 => huy. Idempotent: leg da ket thuc => false.
+     * [2b] leg DCA (legIdx > 0) khop => RESET trailing (peakRate=0, priceSL=NaN, armed=false) y het
+     * {@code ShadowBookC3.Cluster.addLeg} (sim mergeOrder tao cum REQUEST moi); stop cu (neu co) do TrailingStopManager huy.
+     */
     public synchronized boolean confirm(String cid, BigDecimal execQty, double avgPx, long orderId, long nowMs) {
         Leg l = legOf(cid);
         if (l == null || !l.state.unresolved()) return false;
@@ -427,6 +575,17 @@ public final class LiveBookC3 {
         l.tsUpdated = nowMs;
         Cluster c = clusters.get(cidToSymbol.get(cid));
         if (c != null && avgPx > c.peak) c.peak = avgPx;
+        if (c != null && l.legIdx > 0) {
+            c.peakRate = 0f;
+            c.priceSL = Float.NaN;
+            c.armed = false;
+            if (c.adjQty != null) {   // da "san thang": cong leg moi vao qty/gia san
+                double q0 = c.adjQty.doubleValue();
+                double q1 = execQty.doubleValue();
+                c.adjAvg = (q0 * c.adjAvg + q1 * avgPx) / (q0 + q1);
+                c.adjQty = c.adjQty.add(execQty);
+            }
+        }
         persist(nowMs);
         return true;
     }
@@ -471,17 +630,20 @@ public final class LiveBookC3 {
         persist(nowMs);
     }
 
-    /** Cum da dong het tren san => xoa khoi so. */
+    /** Cum da dong het tren san => xoa khoi so (+ 1 dong ledger). */
     public synchronized boolean removeCluster(String symbol, String reason, long nowMs) {
         Cluster c = clusters.remove(symbol);
         if (c == null) return false;
         for (Leg x : c.legs) cidToSymbol.remove(x.cid);
-        LOG.info("[C3-LIVE-BOOK] dong cum {} ly do={} legs={} qty={}", symbol, reason, c.legCount(), c.confirmedQty());
+        LOG.info("[C3-LIVE-BOOK] dong cum {} ly do={} legs={} qty={} avg={} exitQty={} exitAvg={} realized={} phi={}",
+                symbol, reason, c.legCount(), c.confirmedQty(), c.avgPrice(), c.exitQty,
+                c.exitQty.signum() > 0 ? c.exitNotional / c.exitQty.doubleValue() : 0d, c.realizedPnl, c.commission);
+        appendLedger(c, reason, nowMs);
         persist(nowMs);
         return true;
     }
 
-    /** (vong 2b trailing) ghi stop dang dat tren san cho cum. */
+    /** (trailing) ghi stop dang dat tren san cho cum. */
     public synchronized void setStop(String symbol, double stopPrice, String clientAlgoId, long nowMs) {
         Cluster c = clusters.get(symbol);
         if (c == null) return;
@@ -498,11 +660,171 @@ public final class LiveBookC3 {
         persist(nowMs);
     }
 
-    /** (vong 2b) cap nhat dinh gia cua cum. */
+    /** cap nhat dinh gia cua cum. */
     public synchronized void updatePeak(String symbol, double px, long nowMs) {
         Cluster c = clusters.get(symbol);
         if (c == null || !(px > c.peak)) return;
         c.peak = px;
+        persist(nowMs);
+    }
+
+    // ------------------------------------------------------------------ [2b] trailing / stop
+    /** symbolPred / rank cua leg CO GIA TRI dau tien (giong so giay). true neu doi. */
+    public synchronized boolean setMeta(String symbol, Float symbolPred, int rank, long nowMs) {
+        Cluster c = clusters.get(symbol);
+        if (c == null) return false;
+        boolean ch = false;
+        if (c.symbolPred == null && symbolPred != null) {
+            c.symbolPred = symbolPred;
+            ch = true;
+        }
+        if (c.rank < 0 && rank >= 0) {
+            c.rank = rank;
+            ch = true;
+        }
+        if (ch) persist(nowMs);
+        return ch;
+    }
+
+    /**
+     * Trang thai trailing (peakRate, priceSL logic; NaN = chua arm). Chi persist khi doi. priceSL co gia tri => armed.
+     */
+    public synchronized void setTrail(String symbol, float peakRate, float priceSL, long nowMs) {
+        Cluster c = clusters.get(symbol);
+        if (c == null) return;
+        boolean same = Float.floatToIntBits(c.peakRate) == Float.floatToIntBits(peakRate)
+                && Float.floatToIntBits(c.priceSL) == Float.floatToIntBits(priceSL);
+        if (same) return;
+        c.peakRate = peakRate;
+        c.priceSL = priceSL;
+        c.armed = !Float.isNaN(priceSL);
+        persist(nowMs);
+    }
+
+    /** Cap so thu tu stop moi (stopSeq++ persist TRUOC khi gui). -1 neu khong co cum. */
+    public synchronized int nextStopSeq(String symbol, long nowMs) {
+        Cluster c = clusters.get(symbol);
+        if (c == null) return -1;
+        c.stopSeq++;
+        persist(nowMs);
+        return c.stopSeq;
+    }
+
+    /** Ghi stop SAP gui (persist TRUOC khi gui => restart biet de tra). */
+    public synchronized boolean setPendingStop(String symbol, String cid, double price, boolean qtyMode, long nowMs) {
+        Cluster c = clusters.get(symbol);
+        if (c == null) return false;
+        c.pendingStopCid = cid;
+        c.pendingStopPrice = price;
+        c.pendingStopSentMs = nowMs;
+        c.pendingStopQtyMode = qtyMode;
+        persist(nowMs);
+        return true;
+    }
+
+    public synchronized void clearPendingStop(String symbol, long nowMs) {
+        Cluster c = clusters.get(symbol);
+        if (c == null || c.pendingStopCid == null) return;
+        c.pendingStopCid = null;
+        c.pendingStopPrice = 0d;
+        c.pendingStopSentMs = 0L;
+        c.pendingStopQtyMode = false;
+        persist(nowMs);
+    }
+
+    /**
+     * Stop pending da len san => thanh stop active. Stop active cu (neu co) chuyen sang danh sach MO COI (cho huy).
+     * @return cid stop cu (null neu khong co)
+     */
+    public synchronized String promotePendingStop(String symbol, long nowMs) {
+        Cluster c = clusters.get(symbol);
+        if (c == null || c.pendingStopCid == null) return null;
+        String old = c.stopClientAlgoId;
+        if (old != null && !old.equals(c.pendingStopCid) && !c.orphanStops.contains(old)) c.orphanStops.add(old);
+        c.stopClientAlgoId = c.pendingStopCid;
+        c.stopPrice = c.pendingStopPrice;
+        c.stopQtyMode = c.pendingStopQtyMode;
+        c.pendingStopCid = null;
+        c.pendingStopPrice = 0d;
+        c.pendingStopSentMs = 0L;
+        c.pendingStopQtyMode = false;
+        persist(nowMs);
+        return old;
+    }
+
+    /** Huy stop active khoi so (vd DCA reset arm): chuyen sang mo coi cho huy tren san. */
+    public synchronized String retireActiveStop(String symbol, long nowMs) {
+        Cluster c = clusters.get(symbol);
+        if (c == null || c.stopClientAlgoId == null) return null;
+        String old = c.stopClientAlgoId;
+        if (!c.orphanStops.contains(old)) c.orphanStops.add(old);
+        c.stopClientAlgoId = null;
+        c.stopPrice = 0d;
+        c.stopQtyMode = false;
+        persist(nowMs);
+        return old;
+    }
+
+    public synchronized void removeOrphanStop(String symbol, String cid, long nowMs) {
+        Cluster c = clusters.get(symbol);
+        if (c == null || !c.orphanStops.remove(cid)) return;
+        persist(nowMs);
+    }
+
+    // ------------------------------------------------------------------ [2b] ke toan fill (C7)
+    /** Phi (USD, duong = mat) + realizedPnl cua 1 fill; cum khong con => van cong vao tong ke tu moc. */
+    public synchronized void addFillCosts(String symbol, double commissionUsd, double realizedPnl, long nowMs) {
+        if (!(Double.isFinite(commissionUsd)) || !(Double.isFinite(realizedPnl))) return;
+        if (commissionUsd == 0d && realizedPnl == 0d) return;
+        Cluster c = symbol == null ? null : clusters.get(symbol);
+        if (c != null) {
+            c.commission += commissionUsd;
+            c.realizedPnl += realizedPnl;
+        }
+        commissionSinceAnchor += commissionUsd;
+        realizedSinceAnchor += realizedPnl;
+        persist(nowMs);
+    }
+
+    /** 1 fill BAN (dong) cua cum. */
+    public synchronized void addExitFill(String symbol, BigDecimal qty, double px, long nowMs) {
+        Cluster c = clusters.get(symbol);
+        if (c == null || qty == null || qty.signum() <= 0 || !(px > 0d)) return;
+        c.exitQty = c.exitQty.add(qty);
+        c.exitNotional += qty.doubleValue() * px;
+        persist(nowMs);
+    }
+
+    /** C9 "san thang": dat qty/gia vi the theo san (qty <= 0 khong hop le => bo qua). */
+    public synchronized boolean overrideFromExchange(String symbol, BigDecimal qty, double entryPx, long nowMs) {
+        Cluster c = clusters.get(symbol);
+        if (c == null || qty == null || qty.signum() <= 0 || !(entryPx > 0d)) return false;
+        c.adjQty = qty;
+        c.adjAvg = entryPx;
+        persist(nowMs);
+        return true;
+    }
+
+    public synchronized void addFunding(double usd, long nowMs) {
+        if (!Double.isFinite(usd) || usd == 0d) return;
+        fundingSinceAnchor += usd;
+        persist(nowMs);
+    }
+
+    public synchronized void addTransfer(double usd, long nowMs) {
+        if (!Double.isFinite(usd) || usd == 0d) return;
+        transferSinceAnchor += usd;
+        persist(nowMs);
+    }
+
+    /** Dat moc doi chieu equity moi (reset tong ke tu moc). */
+    public synchronized void anchor(double equityExUnrealized, long nowMs) {
+        anchorEquity = equityExUnrealized;
+        anchorMs = nowMs;
+        realizedSinceAnchor = 0d;
+        commissionSinceAnchor = 0d;
+        fundingSinceAnchor = 0d;
+        transferSinceAnchor = 0d;
         persist(nowMs);
     }
 
@@ -519,6 +841,27 @@ public final class LiveBookC3 {
         return null;
     }
 
+    private void appendLedger(Cluster c, String reason, long nowMs) {
+        if (file == null) return;
+        File f = new File(file.getAbsoluteFile().getParentFile(), LEDGER_NAME);
+        boolean header = !f.exists();
+        try (PrintWriter w = new PrintWriter(new FileWriter(f, true))) {
+            if (header) {
+                w.println("sym,ts_first_leg,legs,qty,avg_entry,exit_qty,exit_avg,realized_pnl,commission,reason,ts_close,"
+                        + "symbol_pred,rank,armed,price_sl");
+            }
+            double exitAvg = c.exitQty.signum() > 0 ? c.exitNotional / c.exitQty.doubleValue() : 0d;
+            w.printf("%s,%d,%d,%s,%s,%s,%s,%s,%s,%s,%d,%s,%d,%s,%s%n", c.symbol, c.tsFirstLeg, c.legCount(),
+                    c.confirmedQty().toPlainString(), Double.toString(c.avgPrice()), c.exitQty.toPlainString(),
+                    Double.toString(exitAvg), Double.toString(c.realizedPnl), Double.toString(c.commission),
+                    reason == null ? "" : reason.replace(',', ';'), nowMs,
+                    c.symbolPred == null ? "" : Float.toString(c.symbolPred), c.rank, c.armed,
+                    Float.isNaN(c.priceSL) ? "" : Float.toString(c.priceSL));
+        } catch (IOException e) {
+            LOG.error("[C3-LIVE-BOOK] khong ghi duoc ledger {}: {}", f.getPath(), e.toString());
+        }
+    }
+
     // ------------------------------------------------------------------ persist
     private void persist(long nowMs) {
         if (file == null) return;
@@ -526,6 +869,14 @@ public final class LiveBookC3 {
         root.addProperty("version", VERSION);
         root.addProperty("saved_ms", nowMs);
         root.addProperty("leverage", leverage);
+        JsonObject acct = new JsonObject();
+        if (!Double.isNaN(anchorEquity)) acct.addProperty("anchor_equity", anchorEquity);
+        acct.addProperty("anchor_ms", anchorMs);
+        acct.addProperty("realized", realizedSinceAnchor);
+        acct.addProperty("commission", commissionSinceAnchor);
+        acct.addProperty("funding", fundingSinceAnchor);
+        acct.addProperty("transfers", transferSinceAnchor);
+        root.add("account", acct);
         JsonArray arr = new JsonArray();
         for (Cluster c : clusters.values()) {
             JsonObject o = new JsonObject();
@@ -540,6 +891,30 @@ public final class LiveBookC3 {
             o.addProperty("close_since_ms", c.closeSinceMs);
             o.addProperty("close_attempts", c.closeAttempts);
             o.addProperty("close_sent_ms", c.closeSentMs);
+            // ---- 2b (float luu bang bit de khoi phuc 100 %)
+            o.addProperty("peak_rate_bits", Float.floatToIntBits(c.peakRate));
+            o.addProperty("price_sl_bits", Float.floatToIntBits(c.priceSL));
+            if (c.symbolPred != null) o.addProperty("symbol_pred_bits", Float.floatToIntBits(c.symbolPred));
+            o.addProperty("rank", c.rank);
+            o.addProperty("stop_seq", c.stopSeq);
+            o.addProperty("stop_qty_mode", c.stopQtyMode);
+            if (c.pendingStopCid != null) {
+                o.addProperty("pending_stop_cid", c.pendingStopCid);
+                o.addProperty("pending_stop_price", c.pendingStopPrice);
+                o.addProperty("pending_stop_sent_ms", c.pendingStopSentMs);
+                o.addProperty("pending_stop_qty_mode", c.pendingStopQtyMode);
+            }
+            JsonArray orph = new JsonArray();
+            for (String s : c.orphanStops) orph.add(s);
+            o.add("orphan_stops", orph);
+            o.addProperty("commission", c.commission);
+            o.addProperty("realized_pnl", c.realizedPnl);
+            o.addProperty("exit_qty", c.exitQty.toPlainString());
+            o.addProperty("exit_notional", c.exitNotional);
+            if (c.adjQty != null) {
+                o.addProperty("adj_qty", c.adjQty.toPlainString());
+                o.addProperty("adj_avg", c.adjAvg);
+            }
             JsonArray legs = new JsonArray();
             for (Leg l : c.legs) {
                 JsonObject j = new JsonObject();
@@ -612,6 +987,27 @@ public final class LiveBookC3 {
                 c.closeSinceMs = o.get("close_since_ms").getAsLong();
                 c.closeAttempts = o.get("close_attempts").getAsInt();
                 c.closeSentMs = o.get("close_sent_ms").getAsLong();
+                if (o.has("peak_rate_bits")) c.peakRate = Float.intBitsToFloat(o.get("peak_rate_bits").getAsInt());
+                if (o.has("price_sl_bits")) c.priceSL = Float.intBitsToFloat(o.get("price_sl_bits").getAsInt());
+                if (o.has("symbol_pred_bits")) c.symbolPred = Float.intBitsToFloat(o.get("symbol_pred_bits").getAsInt());
+                if (o.has("rank")) c.rank = o.get("rank").getAsInt();
+                if (o.has("stop_seq")) c.stopSeq = o.get("stop_seq").getAsInt();
+                if (o.has("stop_qty_mode")) c.stopQtyMode = o.get("stop_qty_mode").getAsBoolean();
+                if (o.has("pending_stop_cid")) {
+                    c.pendingStopCid = o.get("pending_stop_cid").getAsString();
+                    c.pendingStopPrice = o.get("pending_stop_price").getAsDouble();
+                    c.pendingStopSentMs = o.get("pending_stop_sent_ms").getAsLong();
+                    c.pendingStopQtyMode = o.has("pending_stop_qty_mode") && o.get("pending_stop_qty_mode").getAsBoolean();
+                }
+                if (o.has("orphan_stops")) for (JsonElement x : o.getAsJsonArray("orphan_stops")) c.orphanStops.add(x.getAsString());
+                if (o.has("commission")) c.commission = o.get("commission").getAsDouble();
+                if (o.has("realized_pnl")) c.realizedPnl = o.get("realized_pnl").getAsDouble();
+                if (o.has("exit_qty")) c.exitQty = new BigDecimal(o.get("exit_qty").getAsString());
+                if (o.has("exit_notional")) c.exitNotional = o.get("exit_notional").getAsDouble();
+                if (o.has("adj_qty")) {
+                    c.adjQty = new BigDecimal(o.get("adj_qty").getAsString());
+                    c.adjAvg = o.get("adj_avg").getAsDouble();
+                }
                 for (JsonElement le : o.getAsJsonArray("legs")) {
                     JsonObject j = le.getAsJsonObject();
                     Leg l = new Leg();
@@ -638,8 +1034,26 @@ public final class LiveBookC3 {
                 if (tmp.containsKey(c.symbol)) throw new IllegalStateException("symbol trung " + c.symbol);
                 tmp.put(c.symbol, c);
             }
+            double aEq = Double.NaN;
+            long aMs = 0L;
+            double r = 0d, cm = 0d, fu = 0d, tr = 0d;
+            if (root.has("account")) {
+                JsonObject a = root.getAsJsonObject("account");
+                if (a.has("anchor_equity")) aEq = a.get("anchor_equity").getAsDouble();
+                if (a.has("anchor_ms")) aMs = a.get("anchor_ms").getAsLong();
+                if (a.has("realized")) r = a.get("realized").getAsDouble();
+                if (a.has("commission")) cm = a.get("commission").getAsDouble();
+                if (a.has("funding")) fu = a.get("funding").getAsDouble();
+                if (a.has("transfers")) tr = a.get("transfers").getAsDouble();
+            }
             clusters.putAll(tmp);
             cidToSymbol.putAll(tmpCid);
+            anchorEquity = aEq;
+            anchorMs = aMs;
+            realizedSinceAnchor = r;
+            commissionSinceAnchor = cm;
+            fundingSinceAnchor = fu;
+            transferSinceAnchor = tr;
             int unresolved = 0;
             for (Cluster c : clusters.values()) for (Leg l : c.legs) if (l.state.unresolved()) unresolved++;
             LOG.warn("[C3-LIVE-BOOK] nap {} cum ({} leg chua giai quyet) tu {}", clusters.size(), unresolved, file.getPath());
