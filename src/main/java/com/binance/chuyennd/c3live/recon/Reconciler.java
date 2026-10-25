@@ -116,6 +116,8 @@ public final class Reconciler {
     /** [2f] lop (B): symbol so da biet (vua chot) con vi the tren san / stop giu => chi chan symbol do. sym -> moc chot. */
     private final Map<String, Long> knownSyms = new TreeMap<>();
     private final Map<String, Long> knownGoneSince = new TreeMap<>();
+    /** [2h] moc Telegram gan nhat cua moi symbol UNKNOWN (nhac lai 6 h). */
+    private final Map<String, Long> unknownAlertMs = new TreeMap<>();
     private int matchStreak;
     private double lastDiff = Double.NaN;
     private double lastBookEq = Double.NaN;
@@ -202,6 +204,26 @@ public final class Reconciler {
         String s;
         while ((s = unknownQ.poll()) != null) markUnknown(s);
         syncKnownKept();
+        escalateStaleKnown();
+    }
+
+    /**
+     * [2h MIN-23] Lop (B) qua {@link OwnStopGuard#KNOWN_CLOSE_WINDOW_MS} (10') ma CHUA go => leo thang (A) THEO THOI GIAN, khong
+     * can doc san thanh cong (positionRisk/account loi keo dai van leo thang). Chay moi lan xa hang (moi nhip ops qua
+     * {@link #confirmPendingFlat}, va o cong vao lenh). Telegram ngay; nhac lai moi 6 h trong {@link #confirmPendingFlat}.
+     */
+    private void escalateStaleKnown() {
+        if (knownSyms.isEmpty()) return;
+        long t = clock.getAsLong();
+        for (Map.Entry<String, Long> e : new ArrayList<>(knownSyms.entrySet())) {
+            if (t - e.getValue() < OwnStopGuard.KNOWN_CLOSE_WINDOW_MS) continue;
+            String s = e.getKey();
+            knownSyms.remove(s);
+            knownGoneSince.remove(s);
+            markUnknown(s, "[C3-LIVE-RECON] " + s + ": chan rieng (lop B) qua " + OwnStopGuard.KNOWN_CLOSE_WINDOW_MS / 60_000L
+                    + "' van CHUA go duoc (doc san loi keo dai / san con vi the / stop con giu) => leo thang UNKNOWN_POSITION"
+                    + " TOAN HE (chan mo moi), KHONG tu dong; owner kiem tay");
+        }
     }
 
     /**
@@ -231,13 +253,34 @@ public final class Reconciler {
     }
 
     private void markUnknown(String symbol) {
+        markUnknown(symbol, "[C3-LIVE-RECON] vi the LA tren tai khoan c3_live: " + symbol
+                + " (khong co trong so) => CHAN mo moi, KHONG tu dong; owner kiem tra/dong tay");
+    }
+
+    private void markUnknown(String symbol, String m) {
         if (unknownSyms.add(symbol)) {
-            String m = "[C3-LIVE-RECON] vi the LA tren tai khoan c3_live: " + symbol
-                    + " (khong co trong so) => CHAN mo moi, KHONG tu dong; owner kiem tra/dong tay";
+            unknownAlertMs.put(symbol, clock.getAsLong());
             LOG.error("{}", m);
             alert.accept(m);
         }
         blocks.put(BLOCK_UNKNOWN, String.join(",", unknownSyms));
+    }
+
+    /** [2h] Telegram nhac lai moi 6 h cho symbol con chan UNKNOWN_POSITION (A). */
+    private void remindUnknown(long t) {
+        unknownAlertMs.keySet().retainAll(unknownSyms);
+        for (String s : unknownSyms) {
+            Long last = unknownAlertMs.get(s);
+            if (last == null) {
+                unknownAlertMs.put(s, t);
+            } else if (t - last >= FlatConfirm.GHOST_REMIND_MS) {
+                unknownAlertMs.put(s, t);
+                String m = "[C3-LIVE-RECON] NHAC (6h): VAN chan mo moi TOAN HE (UNKNOWN_POSITION) vi " + s
+                        + " — owner kiem vi the/stop tren san; tu go khi 2 lan doc phang + khong con stop giu";
+                LOG.error("{}", m);
+                alert.accept(m);
+            }
+        }
     }
 
     // ------------------------------------------------------------------ khoi dong
@@ -419,6 +462,7 @@ public final class Reconciler {
     public synchronized Report confirmPendingFlat() {
         drainUnknown();
         long t = clock.getAsLong();
+        remindUnknown(t);
         boolean unknownDue = false;
         for (long g : unknownGoneSince.values()) if (t - g >= flat.minGapMs()) unknownDue = true;
         // [2e] dang chan UNKNOWN (vd guard GIU stop vi positionRisk tre sau khi dong) => doc lai moi 30 s de tu go som

@@ -874,6 +874,108 @@ public class ReconcilerTest {
         assertEquals("stop cu da huy", 0, lg.openStops(null).size());
     }
 
+    /** Gateway loi doc keo dai nhu ProofB (A1 2g). */
+    static final class ErrGateway extends MockExchangeGateway {
+        volatile boolean errPos;
+        volatile boolean errAcct;
+
+        @Override
+        public synchronized List<com.binance.chuyennd.c3live.api.PositionInfo> positions() {
+            if (errPos) throw new GatewayException(ErrorKind.OTHER, "503 gia lap", false);
+            return super.positions();
+        }
+
+        @Override
+        public synchronized com.binance.chuyennd.c3live.api.AccountSnapshot account() {
+            if (errAcct) throw new GatewayException(ErrorKind.OTHER, "503 gia lap", false);
+            return super.account();
+        }
+    }
+
+    /**
+     * [2h MIN-23] Hoi quy ProofB (A1_DELTA_2G): stream bao cum X dong (sai) trong khi san THAT con 100, doc loi keo dai tu luc
+     * chot. 0–9': (B) chi chan X, symbol khac vao duoc; tu 10': (A) toan he (theo thoi gian, khong can doc thanh cong) + Telegram;
+     * nhac lai sau 6 h; stop LUON giu. Het loi + san phang => go (A) theo luat cu.
+     */
+    private void proofB(boolean errPos, boolean errAcct) {
+        ErrGateway eg = new ErrGateway();
+        String s = "XUSDT";
+        eg.setPrice(s, BigDecimal.ONE);
+        LiveBookC3 book = new LiveBookC3(null, 1.0);
+        assertTrue(book.reserve(s, "c3-XUSDT-1-0", 0, 1L, "BIG_DOWN", 1.0, new BigDecimal("100"), 100.0, now.get()));
+        book.markSending("c3-XUSDT-1-0", now.get());
+        OrderInfo o = eg.newMarketOrder(s, Side.BUY, new BigDecimal("100"), "c3-XUSDT-1-0", false);
+        assertTrue(book.confirm("c3-XUSDT-1-0", o.getExecutedQty(), o.getAvgPrice().doubleValue(), o.getOrderId(), now.get()));
+        book.setTrail(s, 0.08f, 1.05f, now.get());
+        eg.newStopMarket(s, Side.SELL, new BigDecimal("0.95"), "c3s-XUSDT-1-1", true);
+        book.setStop(s, 0.95, "c3s-XUSDT-1-1", now.get());
+        List<String> al = new ArrayList<>();
+        FillAccounting acct = new FillAccounting(book, eg, OrderAuditLog.dry(), null, al::add, null, now::get, null);
+        Reconciler rec = new Reconciler(eg, book, acct, () -> null, al::add, null, now::get, 0.01, 2, null, null);
+        OwnStopGuard g = new OwnStopGuard(eg, book, null, al::add, () -> rec::onUnknownPosition, now::get);
+        rec.setStopGuard(g);
+        acct.setStopGuard(g);
+        acct.setUnknownPositionSink(rec::onUnknownPosition);
+        assertTrue(rec.startup().ok);
+        eg.errPos = errPos;
+        eg.errAcct = errAcct;
+        acct.closedOnExchange(s, FillAccounting.REASON_TRAILING, now.get());   // stream bao dong (sai)
+        String tag = "errPos=" + errPos + " errAcct=" + errAcct;
+        for (int m = 1; m <= 16; m++) {
+            for (int k = 0; k < 2; k++) {
+                now.addAndGet(30_000L);
+                rec.confirmPendingFlat();
+            }
+            boolean a = rec.blocks().containsKey(Reconciler.BLOCK_UNKNOWN);
+            if (m < 10) {
+                assertTrue(tag + " t=" + m + "' Y vao duoc", rec.allowsEntry("YUSDT"));
+                assertFalse(tag + " t=" + m, a);
+                assertTrue(tag + " t=" + m + " B", rec.symbolBlocks().contains(s));
+            } else {
+                assertTrue(tag + " t=" + m + "' phai (A)", a);
+                assertFalse(tag + " t=" + m, rec.allowsEntry("YUSDT"));
+                assertFalse(rec.symbolBlocks().contains(s));
+            }
+            assertEquals(tag + " stop luon giu", 1, eg.openStops(s).size());
+        }
+        assertEquals(0, new BigDecimal("100").compareTo(eg.position(s)));
+        long esc = al.stream().filter(x -> x.contains("leo thang UNKNOWN_POSITION")).count()
+                + al.stream().filter(x -> x.contains("vi the LA") && x.contains(s)).count();
+        assertTrue(tag + " Telegram khi len (A): " + al, esc >= 1);
+        long r0 = al.stream().filter(x -> x.contains("NHAC (6h)")).count();
+        now.addAndGet(FlatConfirm.GHOST_REMIND_MS);
+        rec.confirmPendingFlat();
+        assertEquals(tag + " nhac lai 6h", r0 + 1, al.stream().filter(x -> x.contains("NHAC (6h)")).count());
+        rec.confirmPendingFlat();
+        assertEquals(tag + " khong spam", r0 + 1, al.stream().filter(x -> x.contains("NHAC (6h)")).count());
+        // het loi + san phang => go (A) theo luat cu (huy stop giu, 2 lan doc phang cach >= 30 s)
+        eg.errPos = false;
+        eg.errAcct = false;
+        eg.setPosition(s, BigDecimal.ZERO, BigDecimal.ONE);
+        for (int i = 0; i < 3; i++) {
+            now.addAndGet(31_000L);
+            rec.confirmPendingFlat();
+        }
+        assertTrue(tag + " " + rec.blocks(), rec.allowsEntry("YUSDT"));
+        assertTrue(eg.openStops(s).isEmpty());
+    }
+
+    @Test
+    public void proofBR6PositionRiskErrorEscalatesAfterWindow() {
+        proofB(true, false);
+    }
+
+    @Test
+    public void proofBR8BothReadErrorsEscalateAfterWindow() {
+        proofB(true, true);
+    }
+
+    @Test
+    public void proofBR5R7ReadOkOrAccountErrorEscalateAfterWindow() {
+        proofB(false, false);
+        proofB(false, true);
+    }
+
     /** [2e] Lenh owner go cum ma: TU CHOI khi vi the != 0 (positionRisk hoac account) / symbol sai; OK khi ca hai phang. */
     @Test
     public void ghostClearRefusesWithPositionAndClearsWhenFlat() {
