@@ -14,6 +14,7 @@ import com.binance.chuyennd.c3live.api.OrderStatus;
 import com.binance.chuyennd.c3live.api.PositionInfo;
 import com.binance.chuyennd.c3live.api.Side;
 import com.binance.chuyennd.c3live.api.SymbolConfig;
+import com.binance.chuyennd.c3live.api.Ticker24h;
 import com.binance.chuyennd.c3live.log.OrderAuditLog;
 import com.binance.chuyennd.c3live.rate.RateGuard;
 import com.google.gson.JsonArray;
@@ -61,7 +62,8 @@ public final class C3LiveClient implements ExchangeGateway {
     static final String H_APIKEY = "X-MBX-APIKEY";
 
     static final int W_TIME = 1, W_EXINFO = 1, W_ORDER = 1, W_QUERY = 1, W_OPEN_SYM = 1, W_OPEN_ALL = 40,
-            W_POSITION = 5, W_ACCOUNT = 5, W_MULTI = 30, W_DUAL = 30, W_SYMCFG = 5, W_SET = 1, W_LISTEN = 1;
+            W_POSITION = 5, W_ACCOUNT = 5, W_MULTI = 30, W_DUAL = 30, W_SYMCFG = 5, W_SET = 1, W_LISTEN = 1,
+            W_TICKER_SYM = 1, W_TICKER_ALL = 40;
 
     private enum Sec { NONE, API_KEY, SIGNED }
 
@@ -390,6 +392,25 @@ public final class C3LiveClient implements ExchangeGateway {
         } catch (GatewayException e) {
             if (e.getExchangeCode() != -4046) throw e; // No need to change margin type
         }
+    }
+
+    /** [V12 3] GET /fapi/v1/ticker/24hr (public, khong ky). Chi cong cu canary dung. */
+    @Override
+    public List<Ticker24h> tickers24h(String symbolOrNull) {
+        Map<String, String> p = new LinkedHashMap<>();
+        if (symbolOrNull != null) p.put("symbol", symbolOrNull);
+        JsonElement j = call("GET", "/fapi/v1/ticker/24hr", p, Sec.NONE, symbolOrNull == null ? W_TICKER_ALL : W_TICKER_SYM, 0);
+        List<Ticker24h> out = new ArrayList<>();
+        if (j != null && j.isJsonObject()) {
+            out.add(parseTicker(j.getAsJsonObject()));
+        } else {
+            for (JsonElement e : asArray(j)) out.add(parseTicker(e.getAsJsonObject()));
+        }
+        return out;
+    }
+
+    static Ticker24h parseTicker(JsonObject o) {
+        return new Ticker24h(str(o, "symbol"), dec(o, "lastPrice"), dec(o, "quoteVolume"), lng(o, "closeTime"));
     }
 
     @Override

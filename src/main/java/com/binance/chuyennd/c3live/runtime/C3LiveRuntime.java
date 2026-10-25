@@ -84,6 +84,8 @@ public final class C3LiveRuntime {
     private static volatile long lastInitLogMs = Long.MIN_VALUE / 2;
     private static volatile long lastInitAlertMs = Long.MIN_VALUE / 2;
     private static volatile C3LiveAlerts initAlerts;
+    /** [V12 3] lock tai khoan con (chi adapter live), giu suot doi JVM. */
+    private static volatile C3LiveAccountLock accountLock;
 
     final GatewayFactory.Mode mode;
     final ExchangeGateway gw;
@@ -160,6 +162,17 @@ public final class C3LiveRuntime {
         if (mode == GatewayFactory.Mode.OFF) {
             disabled = true;
             return null;
+        }
+        if (mode == GatewayFactory.Mode.LIVE && accountLock == null) {
+            // [V12 3] lenh that: giu lock doc quyen tai khoan con (canary dang giu => TU CHOI tao, thu lai sau 60 s)
+            java.io.File lf = new java.io.File(Cfg.getOr(C3LiveAccountLock.KEY_FILE, C3LiveAccountLock.DEFAULT_FILE));
+            C3LiveAccountLock l = C3LiveAccountLock.tryAcquire(lf, "c3live-runtime");
+            if (l == null) {
+                initFailed("lock tai khoan con " + lf.getPath() + " dang bi giu (" + C3LiveAccountLock.holderInfo(lf)
+                        + ") — cong cu canary dang chay?", System.currentTimeMillis());
+                return null;
+            }
+            accountLock = l;
         }
         C3LiveAlerts alerts = new C3LiveAlerts(Utils::sendSms2Telegram);
         OpsHooks.setAlert(alerts::send);

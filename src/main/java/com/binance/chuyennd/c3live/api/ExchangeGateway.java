@@ -104,6 +104,14 @@ public interface ExchangeGateway {
     /** POST /fapi/v1/marginType (CROSSED|ISOLATED). "Khong can doi" (-4046) coi la thanh cong. */
     void setMarginType(String symbol, String marginType);
 
+    /**
+     * [V12 3] GET /fapi/v1/ticker/24hr (public; symbol null = moi symbol, weight 40; co symbol = weight 1). Chi cong cu canary
+     * dung (luat chon symbol + gia tham chieu cho tran notional). Ban cai khong ho tro => UnsupportedOperationException.
+     */
+    default List<Ticker24h> tickers24h(String symbolOrNull) {
+        throw new UnsupportedOperationException("tickers24h");
+    }
+
     /** POST /fapi/v1/listenKey (user-data stream cua TAI KHOAN CON). */
     String startUserStream();
 

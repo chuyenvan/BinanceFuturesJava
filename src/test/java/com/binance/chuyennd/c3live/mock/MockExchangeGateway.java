@@ -403,6 +403,23 @@ public class MockExchangeGateway implements ExchangeGateway {
         return symbolConfigs.getOrDefault(symbol, new SymbolConfig(symbol, SymbolConfig.CROSSED, 1));
     }
 
+    /** [V12 3] quoteVolume 24h gia lap (luat chon symbol canary); thieu = 0. */
+    public final Map<String, BigDecimal> quoteVolumes = new ConcurrentHashMap<>();
+
+    @Override
+    public List<com.binance.chuyennd.c3live.api.Ticker24h> tickers24h(String symbolOrNull) {
+        enter("tickers24h");
+        java.util.Set<String> syms = new java.util.TreeSet<>(prices.keySet());
+        syms.addAll(exchangeInfo.getSymbols().keySet());
+        List<com.binance.chuyennd.c3live.api.Ticker24h> out = new ArrayList<>();
+        for (String s : syms) {
+            if (symbolOrNull != null && !symbolOrNull.equals(s)) continue;
+            out.add(new com.binance.chuyennd.c3live.api.Ticker24h(s, prices.getOrDefault(s, BigDecimal.ONE),
+                    quoteVolumes.getOrDefault(s, BigDecimal.ZERO), now));
+        }
+        return out;
+    }
+
     private final AtomicInteger listenKeys = new AtomicInteger();
 
     @Override public String startUserStream() { enter("startUserStream"); return "mockListenKey" + listenKeys.incrementAndGet(); }
