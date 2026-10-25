@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- [V12 3] logback cho JVM canary (C3LiveCanary): log rieng ${CANARY_DIR}/canary_jvm.log (KHONG ghi logs/full.log cua bot);
+     stdout chi co dong ket qua (logger CANARY_OUT) cho script doc. Khong log key/secret/chu ky/listenKey (code da che). -->
+<configuration>
+    <appender name="OUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>${CANARY_DIR:-run/canary}/canary_jvm.log</file>
+        <append>true</append>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{20}: %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+    <logger name="CANARY_OUT" level="INFO" additivity="false">
+        <appender-ref ref="OUT"/>
+        <appender-ref ref="FILE"/>
+    </logger>
+    <root level="INFO">
+        <appender-ref ref="FILE"/>
+    </root>
+</configuration>

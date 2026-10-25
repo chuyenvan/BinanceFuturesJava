@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# =============================================================================
+# canary_flatten.sh — KHAN CAP: dong het vi the 2 symbol canary (reduce-only), huy stop c3s- qua guard (chi khi vi the da 0),
+# in trang thai cuoi. KHONG cham symbol / vi the / lenh nao khac. Khong chot gio (khan cap). Chay ca khi phien da DUNG.
+#   YES=1 bash ops/c3live/canary/canary_flatten.sh
+# Ket qua: "KET QUA: DAT|TRUOT|TU_CHOI".
+# =============================================================================
+. "$(cd "$(dirname "$0")" && pwd)/canary_lib.sh"
+cl_init flatten
+need_yes "gui lenh dong vi the THAT"
+cl_check_242
+cl_push_logback
+cl_run "" flatten; RC=$?
+V=$(cl_verdict $RC)
+say "flatten: $V ($CL_LAST_RESULT)"
+cl_run "" status >/dev/null; say "trang thai phien (run/canary/canary_state.json):"
+printf '%s' "$CL_LAST_OUT" | grep -v '^RESULT ' | cut -c1-2000 | sed 's/^/   /'
+say "KET QUA: $V"
+[ "$V" = DAT ] || say "!! KHONG DAT — kiem tra tay tren web Binance (tai khoan con), bao MASTER"
+say "Log: $CL_LOG"
+[ "$V" = DAT ]

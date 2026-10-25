@@ -177,6 +177,149 @@ chk "ghost: bot tu choi (vi the != 0) => in ly do, exit 4" "[ $RC = 4 ] && echo 
 ( for i in $(seq 1 20); do if [ -f $F/run/c3live_ghost_clear.req ]; then echo "1793000000000 OK XRPUSDT: huy stop [c3s-x], xoa cum khoi so" > $F/run/c3live_ghost_clear.req.result; rm -f $F/run/c3live_ghost_clear.req; break; fi; sleep 0.5; done ) &
 OUT=$(YES=1 GHOST_WAIT=8 bash "$HERE/c3live_ghost_clear.sh" XRPUSDT 2>&1); RC=$?; wait
 chk "ghost: bot OK => exit 0" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'OK XRPUSDT'"
+
+echo "== 14. [V12 3] script canary (ops/c3live/canary): java GIA in dong RESULT theo file FAKE_* (KHONG goi san, KHONG key that)"
+CN=$HERE/canary
+cat > "$W/fakejava.sh" <<'FJ'
+#!/usr/bin/env bash
+# java GIA: bo qua tham so JVM toi lop main; ghi lenh vao run/canary/fake_calls.log; RESULT theo FAKE_TRUOT_<buoc> / FAKE_CANARY_LOCK
+while [ $# -gt 0 ] && [ "$1" != com.binance.chuyennd.c3live.canary.C3LiveCanary ]; do shift; done
+shift; CMD=${1:-}; K=${2:-}
+D=${CANARY_DIR:-run/canary}; mkdir -p "$D"
+echo "$CMD $K TMB=${CANARY_EXPECT_TMB:-} INJ=${CANARY_INJECT_TIMEOUT:-} KF=${LIVE_C3_KEYS_FILE:-}" >> "$D/fake_calls.log"
+sleep 1
+[ -f FAKE_CANARY_LOCK ] && { echo "RESULT $CMD TU_CHOI | lock tai khoan con dang bi giu (gia)"; exit 2; }
+case "$CMD" in
+  keycheck) echo "KEYCHECK serverTime=1 tmb=10000 multiAssets=true dual=false"; echo "RESULT keycheck DAT"; exit 0 ;;
+  status) cat "$D/canary_state.json" 2>/dev/null; echo; echo "RESULT status DAT"; exit 0 ;;
+  preflight) N=K0 ;;
+  setup) N=SETUP ;;
+  flatten) N=FLATTEN ;;
+  cleanup) N=CLEANUP ;;
+  step) case "$K" in K6_RESTART) N=K6;; K6B_RESTART) N=K6b;; K6B_OPEN) N=K6b_OPEN;; K7B) N=K7b;; *) N=$K;; esac ;;
+  *) echo "RESULT $CMD TU_CHOI | lenh khong ho tro"; exit 2 ;;
+esac
+if [ "$K" = K6B_RESTART ] && [ -f "$D/c3live_book.json" ]; then echo "RESULT K6b TU_CHOI | K6b: so van con"; exit 2; fi
+case "$K" in K1|K6_OPEN|K6B_OPEN) echo '{"version":1}' > "$D/c3live_book.json";; esac
+V=DAT; RC=0
+[ -f "FAKE_TRUOT_$N" ] && { V=TRUOT; RC=3; }
+J="$D/canary_$(TZ=Asia/Ho_Chi_Minh date +%Y%m%d_%H%M%S)_${CMD}${K:+_$K}.jsonl"
+NOW=$(date +%s%3N)
+echo "{\"ts\":$NOW,\"type\":\"CALL_W\",\"api\":\"newMarketOrder:BUY\",\"symbol\":\"C00USDT\",\"cid\":\"c3-C00USDT-$N-$RANDOM$RANDOM\",\"ok\":true,\"latMs\":42,\"w1m\":17}" >> "$J"
+echo "{\"ts\":$NOW,\"type\":\"STEP_RESULT\",\"k\":\"$N\",\"verdict\":\"$V\"}" >> "$J"
+python3 -I - "$D/canary_state.json" "$N" "$V" <<'PY'
+import json, os, sys
+f, n, v = sys.argv[1:4]
+s = json.load(open(f)) if os.path.exists(f) else {"symMain": "C00USDT", "symAux": "C01USDT", "steps": {}}
+s.setdefault("steps", {})[n] = {"result": v, "fails": [] if v == "DAT" else ["gia"], "data": {"openLeg": {"streamLatMs": 120}}}
+json.dump(s, open(f, "w"))
+PY
+echo "JOURNAL $J"
+echo "DATA {\"symMain\":\"C00USDT\",\"symAux\":\"C01USDT\"}"
+echo "RESULT $N $V$( [ $V = DAT ] || echo ' | gia')"
+exit $RC
+FJ
+mkdir -p "$W/canarylog"; echo ok > "$W/g1.ok"; echo ok > "$W/g2.ok"
+cv() { env LOGDIR=$W/canarylog CANARY_JAR_MD5=$NEW JAVA_242="bash $W/fakejava.sh" CANARY_KEYS_FILE=$W/keys/c3live/keys.env \
+  CANARY_KEYS_OWNER=$(id -un) POLL_S=1 GATE_FILES="$W/g1.ok $W/g2.ok" "$@"; }
+calls() { awk '{print ($1=="step") ? $2 : $1}' $F/run/canary/fake_calls.log 2>/dev/null | tr '\n' ' ' | sed 's/ $//'; }
+FK="TESTKEY$(date +%s%N | md5sum | cut -c1-32)abcdefghijklmnopqrstuv"; FS="TESTSEC$(date +%N%s | md5sum | cut -c1-32)ABCDEFGHIJKLMNOPQRSTUV"
+echo "-- 14a keys_install"
+OUT=$(printf '%s\n%s\n' "$FK" "$FS" | cv bash $CN/c3live_keys_install.sh 2>&1); RC=$?
+chk "keys: khong YES => TU_CHOI, khong ghi" "[ $RC = 2 ] && [ ! -e $W/keys/c3live/keys.env ]"
+OUT=$(printf '%s\n%s\n' "$FK" "$FS" | cv YES=1 bash $CN/c3live_keys_install.sh 2>&1); RC=$?; echo "$OUT" | grep -a 'GHI_XONG\|KET QUA' | head -3
+chk "keys: YES=1 ghi 600 + thu muc 700 + 2 dong + keycheck DAT" "[ $RC = 0 ] && [ \$(stat -c %a $W/keys/c3live/keys.env) = 600 ] && [ \$(stat -c %a $W/keys/c3live) = 700 ] && [ \$(grep -c '^C3_LIVE_API_' $W/keys/c3live/keys.env) = 2 ] && echo \"\$OUT\" | grep -q 'KET QUA: DAT'"
+chk "keys: JVM keycheck nhan dung LIVE_C3_KEYS_FILE" "grep -q 'keycheck  TMB= INJ= KF=$W/keys/c3live/keys.env' $F/run/canary/fake_calls.log"
+OUT2=$(printf '%s\n%s\n' "$FK" "$FS" | cv YES=1 bash $CN/c3live_keys_install.sh 2>&1); RC=$?
+chk "keys: da co file, khong REPLACE => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT2\" | grep -q 'REPLACE=1'"
+OUT2=$(printf '%s\n%s\n' "$FK" "$FS" | cv YES=1 REPLACE=1 bash $CN/c3live_keys_install.sh 2>&1); RC=$?
+chk "keys: REPLACE=1 => backup .bak_ (600)" "[ $RC = 0 ] && ls $W/keys/c3live/keys.env.bak_* >/dev/null 2>&1 && [ \$(stat -c %a \$(ls $W/keys/c3live/keys.env.bak_* | head -1)) = 600 ]"
+OUT2=$(printf 'abc\nxyz\n' | cv YES=1 REPLACE=1 bash $CN/c3live_keys_install.sh 2>&1); RC=$?
+chk "keys: key sai dinh dang => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT2\" | grep -q 'sai dinh dang'"
+chk "keys: KHONG lo key/secret ra output + log Oracle" "! echo \"\$OUT\$OUT2\" | grep -qF \"$FK\" && ! echo \"\$OUT\$OUT2\" | grep -qF \"$FS\" && ! grep -rqF \"$FK\" $W/canarylog && ! grep -rqF \"$FS\" $W/canarylog"
+echo "-- 14b preflight (dieu kien vao §2)"
+date +%s > $F/run/.v12_start_epoch
+OUT=$(cv FORCE_TIME=1 bash $CN/canary_preflight.sh 2>&1); RC=$?
+chk "preflight: thieu CANARY_EXPECT_TMB => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'CANARY_EXPECT_TMB'"
+OUT=$(cv FORCE_TIME=1 CANARY_EXPECT_TMB=10000 CANARY_JAR_MD5=00000000000000000000000000000000 bash $CN/canary_preflight.sh 2>&1); RC=$?
+chk "preflight: md5 jar khac pin => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'md5 jar tren 242 khac pin'"
+OUT=$(cv FORCE_TIME=1 CANARY_EXPECT_TMB=10000 bash $CN/canary_preflight.sh 2>&1); RC=$?
+chk "preflight: dry < 5 ngay => TU_CHOI (MO-1)" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'dry moi chay 0 ngay'"
+echo $(( $(date +%s) - 6 * 86400 )) > $F/run/.v12_start_epoch
+OUT=$(cv FORCE_TIME=1 CANARY_EXPECT_TMB=10000 GATE_FILES="$W/g1.ok $W/khong_co.ok" bash $CN/canary_preflight.sh 2>&1); RC=$?
+chk "preflight: thieu file gate MASTER => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'thieu file gate MASTER'"
+echo "$(TZ=Asia/Ho_Chi_Minh date '+%d/%m/%Y %H:%M:%S.000') WARN [main] x: [KILLSW] LATCH action=FLATTEN code=C6" >> $F/logs/full.log
+OUT=$(cv FORCE_TIME=1 CANARY_EXPECT_TMB=10000 bash $CN/canary_preflight.sh 2>&1); RC=$?
+sed -i '/\[KILLSW\] LATCH/d' $F/logs/full.log
+chk "preflight: log dry co [KILLSW] LATCH => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'LATCH / \[C3-LIVE-ORDER\]'"
+HH=$(TZ=Asia/Ho_Chi_Minh date +%-H); MM=$(TZ=Asia/Ho_Chi_Minh date +%-M)
+TOK=1; { [ "$MM" -ge 10 ] && [ "$MM" -le 44 ]; } || TOK=0; case "$HH" in 7|19) TOK=0;; esac
+if [ "$HH" -eq 1 ] || [ "$HH" -eq 13 ]; then [ "$MM" -gt 20 ] || TOK=0; fi
+if [ "$TOK" = 0 ] && [ "$MM" -ne 9 ] && [ "$MM" -ne 20 ] && [ "$MM" -ne 59 ]; then   # tranh sat bien phut
+  OUT=$(cv CANARY_EXPECT_TMB=10000 bash $CN/canary_preflight.sh 2>&1); RC=$?
+  chk "preflight: ngoai khung gio => TU_CHOI (time_ok)" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'khong hop le'"
+fi
+rm -f $F/run/canary/fake_calls.log
+OUT=$(cv FORCE_TIME=1 CANARY_EXPECT_TMB=10000 bash $CN/canary_preflight.sh 2>&1); RC=$?
+chk "preflight: khong YES => chi kiem, KHONG chay JVM" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'CHI KIEM' && [ ! -s $F/run/canary/fake_calls.log ]"
+OUT=$(cv FORCE_TIME=1 CANARY_EXPECT_TMB=10000 YES=1 bash $CN/canary_preflight.sh 2>&1); RC=$?; echo "$OUT" | grep -a 'KET QUA\|symMain' | head -3
+chk "preflight: YES=1 => K0 chay (tmb truyen vao JVM), DAT, in symbol" "[ $RC = 0 ] && grep -q '^preflight  TMB=10000 ' $F/run/canary/fake_calls.log && echo \"\$OUT\" | grep -q 'KET QUA: DAT' && echo \"\$OUT\" | grep -q 'symMain = \"C00USDT\"'"
+chk "preflight: logback-canary.xml dat vao run/canary" "cmp -s $CN/logback-canary.xml $F/run/canary/logback-canary.xml"
+echo "-- 14c canary.sh (chuoi K1..K8)"
+OUT=$(cv FORCE_TIME=1 bash $CN/canary.sh 2>&1); RC=$?
+chk "canary: khong YES => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'can YES=1'"
+rm -f $F/run/canary/fake_calls.log
+OUT=$(cv FORCE_TIME=1 YES=1 bash $CN/canary.sh 2>&1); RC=$?; echo "$OUT" | grep -a 'KET QUA' | tail -1
+chk "canary: chuoi DAT, dung thu tu (K6 OPEN+RESTART, K6b OPEN+doi ten so+RESTART+flatten)" "[ $RC = 0 ] && [ \"\$(calls)\" = 'K1 K2 K3 K4 K5 K6_OPEN K6_RESTART K6B_OPEN K6B_RESTART flatten K7 K7B K8' ] && echo \"\$OUT\" | grep -q 'KET QUA: DAT'"
+chk "canary: K6b doi ten so (.k6b_TS)" "ls $F/run/canary/c3live_book.json.k6b_* >/dev/null 2>&1"
+chk "canary: MO-5 mac dinh TAT (K1 INJ=0)" "grep -q '^step K1 TMB= INJ=0 ' $F/run/canary/fake_calls.log"
+echo "-- 14d canary_report (bang chung + §5, khong key)"
+OUT=$(cv bash $CN/canary_report.sh 2>&1); RC=$?; echo "$OUT" | grep -a 'KET QUA' | tail -2
+RPT=$(echo "$OUT" | sed -n 's/.*Bao cao: //p' | tail -1)
+chk "report: tong DAT, file txt co" "[ $RC = 0 ] && [ -s \"$RPT\" ] && grep -q 'KET QUA TONG: DAT' \"$RPT\" && grep -q 'K6b  DAT' \"$RPT\""
+chk "report: 0 lenh trung cid + weight do duoc" "grep -q ' 1\. 0 lenh trung cid.*DAT' \"$RPT\" && grep -q 'max X-MBX-USED-WEIGHT-1M=17' \"$RPT\""
+chk "report: khong chua key/secret" "! grep -qF \"$FK\" \"$RPT\" && ! grep -qF \"$FS\" \"$RPT\" && ! grep -rqF \"$FK\" $W/canarylog && ! grep -rqF \"$FS\" $W/canarylog"
+echo "{\"type\":\"CALL_R\",\"msg\":\"lo $FK\"}" > $F/run/canary/canary_99999999_000000_leak.jsonl
+OUT=$(cv bash $CN/canary_report.sh 2>&1); RC=$?
+RPT=$(echo "$OUT" | sed -n 's/.*Bao cao: //p' | tail -1)
+chk "report: file 242 co key => TRUOT tieu chi 6, KHONG keo file do, report khong co key" "[ $RC = 3 ] && grep -q ' 6\. 0 bi mat trong log.*TRUOT' \"$RPT\" && ! grep -rqF \"$FK\" $W/canarylog && ! ls $W/canarylog/report_*/files/canary_99999999_000000_leak.jsonl >/dev/null 2>&1"
+rm -f $F/run/canary/canary_99999999_000000_leak.jsonl
+echo "-- 14e canary_cleanup (doi ten run/canary)"
+OUT=$(cv bash $CN/canary_cleanup.sh 2>&1); RC=$?
+chk "cleanup: khong YES => TU_CHOI" "[ $RC = 2 ] && [ -d $F/run/canary ]"
+OUT=$(cv YES=1 bash $CN/canary_cleanup.sh 2>&1); RC=$?
+DONE=$(ls -d $F/run/canary_done_* 2>/dev/null | head -1)
+chk "cleanup: YES=1 => DAT, run/canary -> run/canary_done_TS" "[ $RC = 0 ] && [ ! -e $F/run/canary ] && [ -f \"$DONE/canary_state.json\" ]"
+OUT=$(cv bash $CN/canary_report.sh "run/$(basename "$DONE")" 2>&1); RC=$?
+chk "report tren thu muc da cleanup: DAT" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'KET QUA: DAT'"
+echo "-- 14f TRUOT dung chuoi + flatten"
+touch $F/FAKE_TRUOT_K3
+OUT=$(cv FORCE_TIME=1 YES=1 bash $CN/canary.sh 2>&1); RC=$?; rm -f $F/FAKE_TRUOT_K3
+chk "canary: K3 TRUOT => dung, flatten, KHONG chay K4+, exit 3" "[ $RC = 3 ] && [ \"\$(calls)\" = 'K1 K2 K3 flatten' ] && echo \"\$OUT\" | grep -q 'KET QUA: TRUOT (buoc K3)'"
+echo "-- 14g canary_step / lock / JVM canary khac / adapter live / flatten"
+OUT=$(cv FORCE_TIME=1 YES=1 bash $CN/canary_step.sh 'K9;rm' 2>&1); RC=$?
+chk "step: buoc la => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'thieu/sai buoc'"
+rm -f $F/run/canary/fake_calls.log
+OUT=$(cv FORCE_TIME=1 YES=1 CANARY_INJECT_TIMEOUT=1 bash $CN/canary_step.sh K1 2>&1); RC=$?
+chk "step K1 + CANARY_INJECT_TIMEOUT=1 => JVM nhan INJ=1 (MO-5)" "[ $RC = 0 ] && grep -q '^step K1 TMB= INJ=1 ' $F/run/canary/fake_calls.log"
+OUT=$(cv FORCE_TIME=1 YES=1 CANARY_INJECT_TIMEOUT=2 bash $CN/canary_step.sh K1 2>&1); RC=$?
+chk "step: CANARY_INJECT_TIMEOUT khac 0/1 => TU_CHOI" "[ $RC = 2 ]"
+touch $F/FAKE_CANARY_LOCK
+OUT=$(cv FORCE_TIME=1 YES=1 bash $CN/canary_step.sh K2 2>&1); RC=$?; rm -f $F/FAKE_CANARY_LOCK
+chk "step: lock tai khoan con bi giu => TU_CHOI (khong DAT)" "[ $RC != 0 ] && echo \"\$OUT\" | grep -q 'lock tai khoan con dang bi giu' && echo \"\$OUT\" | grep -q 'KET QUA: TU_CHOI'"
+( exec -a "java -cp x.jar com.binance.chuyennd.c3live.canary.C3LiveCanary step K4" sleep 20 ) &
+SP=$!; sleep 0.5
+OUT=$(cv FORCE_TIME=1 YES=1 bash $CN/canary_step.sh K2 2>&1); RC=$?; kill $SP 2>/dev/null; wait $SP 2>/dev/null
+chk "step: co JVM canary khac dang chay => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'JVM canary khac'"
+sed -i 's/^export LIVE_ADAPTER=dry$/export LIVE_ADAPTER=live/' $F/conf/env.sh; (cd $F && bin/daemon.sh stop; bin/daemon.sh start)
+OUT=$(cv YES=1 bash $CN/canary_flatten.sh 2>&1); RC=$?
+sed -i 's/^export LIVE_ADAPTER=live$/export LIVE_ADAPTER=dry/' $F/conf/env.sh; (cd $F && bin/daemon.sh stop; bin/daemon.sh start)
+chk "flatten: bot o LIVE_ADAPTER=live => TU_CHOI (runtime chinh giu tai khoan)" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'LIVE_ADAPTER=live'"
+OUT=$(cv YES=1 bash $CN/canary_flatten.sh 2>&1); RC=$?
+chk "flatten: YES=1 => DAT + in trang thai" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'KET QUA: DAT' && echo \"\$OUT\" | grep -q 'symMain'"
+OUT=$(cv FORCE_TIME=1 YES=1 bash $CN/canary_step.sh SETUP 2>&1); RC=$?
+chk "step SETUP => lenh setup, khong flatten" "[ $RC = 0 ] && [ \"\$(calls | awk '{print \$NF}')\" = setup ]"
+chk "khong file nao trong log Oracle chua key/secret" "! grep -rqF \"$FK\" $W/canarylog && ! grep -rqF \"$FS\" $W/canarylog"
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]
