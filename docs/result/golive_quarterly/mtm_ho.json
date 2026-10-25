@@ -1,0 +1,170 @@
+{
+ "T0": 1767200400000,
+ "NE": 393120,
+ "mtm_check": {
+  "miss": 0,
+  "legmin": 9779084,
+  "nofile": 0,
+  "nosym": 0,
+  "tail_legmin": 0,
+  "days": 274,
+  "day0": "20251231",
+  "day1": "20260930",
+  "n_sym": 259,
+  "n_files": 662,
+  "fetch": {
+   "ok": 0,
+   "cache": 653,
+   "404": 9,
+   "fail": 0
+  },
+  "nofile_list": []
+ },
+ "check": {
+  "tsx-ho-x14-s42": {
+   "ref_maxabs": 0.0,
+   "cache_maxabs": 0.0,
+   "cache_len": 393120,
+   "len": 393120,
+   "eq_start": 35000.0,
+   "eqcheck": {
+    "n_upd": 273,
+    "med_pct": 0.00028530185622877013,
+    "max_pct": 0.011296094519241962,
+    "final_dev_pct": 0.0002131931036375434,
+    "final_ok": "True",
+    "upd_last": "20260930 07:00",
+    "upd_last_eq": 165074.0,
+    "upd_vs_result": true
+   },
+   "dropped_total": 0
+  },
+  "tsx-ho-x14-s7": {
+   "ref_maxabs": 0.0,
+   "cache_maxabs": 0.0,
+   "cache_len": 393120,
+   "len": 393120,
+   "eq_start": 35000.0,
+   "eqcheck": {
+    "n_upd": 273,
+    "med_pct": 0.0002945097221429549,
+    "max_pct": 0.011073335339661927,
+    "final_dev_pct": 0.00044928978562008837,
+    "final_ok": "True",
+    "upd_last": "20260930 07:00",
+    "upd_last_eq": 156424.0,
+    "upd_vs_result": true
+   },
+   "dropped_total": 0
+  },
+  "tsx-ho-x14-s13": {
+   "ref_maxabs": 0.0,
+   "cache_maxabs": 0.0,
+   "cache_len": 393120,
+   "len": 393120,
+   "eq_start": 35000.0,
+   "eqcheck": {
+    "n_upd": 273,
+    "med_pct": 0.00036263954441562163,
+    "max_pct": 0.010953356791709723,
+    "final_dev_pct": 0.0005206084055187077,
+    "final_ok": "True",
+    "upd_last": "20260930 07:00",
+    "upd_last_eq": 169292.0,
+    "upd_vs_result": true
+   },
+   "dropped_total": 0
+  },
+  "tsx-ho-x14-s21": {
+   "ref_maxabs": 0.0,
+   "cache_maxabs": 0.0,
+   "cache_len": 393120,
+   "len": 393120,
+   "eq_start": 35000.0,
+   "eqcheck": {
+    "n_upd": 273,
+    "med_pct": 0.0001991547416313466,
+    "max_pct": 0.010439947750551237,
+    "final_dev_pct": 0.00046655393277639234,
+    "final_ok": "True",
+    "upd_last": "20260930 07:00",
+    "upd_last_eq": 161822.0,
+    "upd_vs_result": true
+   },
+   "dropped_total": 0
+  },
+  "tsx-ho-x14-s99": {
+   "ref_maxabs": 0.0,
+   "cache_maxabs": 0.0,
+   "cache_len": 393120,
+   "len": 393120,
+   "eq_start": 35000.0,
+   "eqcheck": {
+    "n_upd": 273,
+    "med_pct": 0.000431286558733035,
+    "max_pct": 0.01115659317214579,
+    "final_dev_pct": 0.00014226062188260613,
+    "final_ok": "True",
+    "upd_last": "20260930 07:00",
+    "upd_last_eq": 173686.0,
+    "upd_vs_result": true
+   },
+   "dropped_total": 0
+  },
+  "tsx-ho-x14-s123": {
+   "ref_maxabs": 0.0,
+   "cache_maxabs": 0.0,
+   "cache_len": 393120,
+   "len": 393120,
+   "eq_start": 35000.0,
+   "eqcheck": {
+    "n_upd": 273,
+    "med_pct": 0.0005775752068837292,
+    "max_pct": 0.012280162674149775,
+    "final_dev_pct": 0.0004367858762233112,
+    "final_ok": "True",
+    "upd_last": "20260930 07:00",
+    "upd_last_eq": 156415.0,
+    "upd_vs_result": true
+   },
+   "dropped_total": 0
+  },
+  "tsx-ho-x14-s777": {
+   "ref_maxabs": 0.0,
+   "cache_maxabs": 0.0,
+   "cache_len": 393120,
+   "len": 393120,
+   "eq_start": 35000.0,
+   "eqcheck": {
+    "n_upd": 273,
+    "med_pct": 0.0003700045783761041,
+    "max_pct": 0.01073013134501588,
+    "final_dev_pct": 0.00017115164581138487,
+    "final_ok": "True",
+    "upd_last": "20260930 07:00",
+    "upd_last_eq": 166142.0,
+    "upd_vs_result": true
+   },
+   "dropped_total": 0
+  },
+  "tsx-ho-x14-s2024": {
+   "ref_maxabs": 0.0,
+   "cache_maxabs": 0.0,
+   "cache_len": 393120,
+   "len": 393120,
+   "eq_start": 35000.0,
+   "eqcheck": {
+    "n_upd": 273,
+    "med_pct": 0.00010824435652256881,
+    "max_pct": 0.011159098383484167,
+    "final_dev_pct": 3.6435353156782924e-05,
+    "final_ok": "True",
+    "upd_last": "20260930 07:00",
+    "upd_last_eq": 155956.0,
+    "upd_vs_result": true
+   },
+   "dropped_total": 0
+  }
+ },
+ "ok": true
+}
