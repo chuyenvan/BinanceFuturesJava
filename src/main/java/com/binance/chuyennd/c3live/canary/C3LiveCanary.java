@@ -1,0 +1,207 @@
+package com.binance.chuyennd.c3live.canary;
+
+import com.binance.chuyennd.c3live.alert.C3LiveAlerts;
+import com.binance.chuyennd.c3live.api.AccountSnapshot;
+import com.binance.chuyennd.c3live.client.C3LiveClient;
+import com.binance.chuyennd.c3live.client.C3LiveClientConfig;
+import com.binance.chuyennd.c3live.fill.UserStream;
+import com.binance.chuyennd.c3live.rate.RateGuard;
+import com.binance.chuyennd.c3live.runtime.C3LiveAccountLock;
+import com.binance.chuyennd.utils.Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
+import java.util.TimeZone;
+import java.util.function.Function;
+
+/**
+ * [V12 3] Cong cu G-CANARY — JVM RIENG (KHONG phai JVM bot), thu muc {@code run/canary/}, chi chay theo lenh script owner
+ * ({@code ops/c3live/canary/*.sh}):
+ * <pre>
+ *   java -cp target/binance-java-sdk-1.2.4.jar com.binance.chuyennd.c3live.canary.C3LiveCanary &lt;lenh&gt; [K]
+ *     keycheck | preflight | setup | step &lt;K1..K8|K6_OPEN|K6_RESTART|K6B_OPEN|K6B_RESTART|K7B&gt; | flatten | cleanup | status
+ * </pre>
+ * Dong cuoi stdout: {@code RESULT <lenh> DAT|TRUOT|TU_CHOI [| ly do]}. Ma thoat: 0 DAT, 3 TRUOT, 2 TU_CHOI, 4 loi.
+ * Lay lock tai khoan con ({@link C3LiveAccountLock}) — runtime c3_live chinh (adapter live) dang giu => TU CHOI.
+ * Bien moi truong: CANARY_DIR (run/canary), CANARY_EXPECT_TMB (so da nap, bat buoc cho preflight), CANARY_INJECT_TIMEOUT=1
+ * (MO-5, mac dinh tat), LIVE_C3_* cua C3LiveClientConfig (key file root-only), LIVE_C3_WS_URLS, LIVE_C3_ACCOUNT_LOCK.
+ * KHONG in key / secret / chu ky / listenKey.
+ */
+public final class C3LiveCanary {
+
+    private static final Logger LOG = LoggerFactory.getLogger(C3LiveCanary.class);
+    /** Dong ket qua cho script (logback-canary.xml: logger CANARY_OUT -> stdout, chi %msg). */
+    private static final Logger OUT = LoggerFactory.getLogger("CANARY_OUT");
+
+    /** Dong ket qua cuoi (cho test). */
+    static volatile String lastLine;
+
+    static void out(String s) {
+        lastLine = s;
+        OUT.info(s);
+    }
+
+    private C3LiveCanary() {
+    }
+
+    public static void main(String[] args) {
+        int code;
+        try {
+            code = run(args, C3LiveCanary::env);
+        } catch (Throwable t) {
+            LOG.error("[CANARY] loi: {}", t.toString());
+            out("RESULT " + (args.length > 0 ? args[0] : "?") + " LOI " + t.getClass().getSimpleName());
+            code = 4;
+        }
+        sleepQuiet(2_000L);   // cho Telegram bat dong bo gui xong
+        System.exit(code);
+    }
+
+    static String env(String k) {
+        String v = System.getenv(k);
+        return v != null ? v : System.getProperty(k);
+    }
+
+    static int run(String[] args, Function<String, String> env) throws IOException {
+        if (args.length == 0) {
+            out("RESULT ? TU_CHOI | thieu lenh");
+            return 2;
+        }
+        String cmd = args[0].trim().toLowerCase(Locale.ROOT);
+        File dir = new File(or(env.apply("CANARY_DIR"), "run/canary"));
+        if ("status".equals(cmd)) {
+            out(CanaryState.load(dir).toJson());
+            out("RESULT status DAT");
+            return 0;
+        }
+        File lockFile = new File(or(env.apply(C3LiveAccountLock.KEY_FILE), C3LiveAccountLock.DEFAULT_FILE));
+        C3LiveAccountLock lock = C3LiveAccountLock.tryAcquire(lockFile, "c3live-canary " + cmd);
+        if (lock == null) {
+            out("RESULT " + cmd + " TU_CHOI | lock tai khoan con dang bi giu (" + C3LiveAccountLock.holderInfo(lockFile)
+                    + ") — runtime c3_live chinh (adapter live) hoac canary khac dang chay");
+            return 2;
+        }
+        try {
+            return runLocked(cmd, args, env, dir);
+        } finally {
+            lock.release();   // K6/K6b _OPEN: halt() truoc khi toi day (OS nha lock khi JVM chet)
+        }
+    }
+
+    private static int runLocked(String cmd, String[] args, Function<String, String> env, File dir) throws IOException {
+        RateGuard rg = RateGuard.defaults();
+        C3LiveClient client;
+        try {
+            client = C3LiveClient.create(C3LiveClientConfig.fromEnv(env), rg);
+        } catch (Exception e) {
+            out("RESULT " + cmd + " TU_CHOI | khong tao duoc client: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            return 2;
+        }
+        if ("keycheck".equals(cmd)) return keycheck(client);
+        C3LiveAlerts tg = new C3LiveAlerts(Utils::sendSms2Telegram);
+        CanaryEngine.Deps d = new CanaryEngine.Deps();
+        d.raw = client;
+        d.dir = dir;
+        d.clock = System::currentTimeMillis;
+        d.sleeper = C3LiveCanary::sleepQuiet;
+        d.connector = UserStream.okHttp(60_000L);
+        d.wsUrls = UserStream.parseUrls(or(env.apply("LIVE_C3_WS_URLS"), UserStream.DEFAULT_URLS));
+        d.alert = tg::send;
+        d.legacy = legacySet(new File(or(env.apply("LIVE_LEGACY_FILE"), "run/legacy_symbols.csv")))::contains;
+        d.usedWeight1m = rg::lastServerWeight1m;
+        d.journalName = "canary_" + ts() + "_" + cmd + (args.length > 1 ? "_" + args[1].replaceAll("[^A-Za-z0-9_]", "") : "") + ".jsonl";
+        CanaryEngine.Config cfg = new CanaryEngine.Config();
+        String et = env.apply("CANARY_EXPECT_TMB");
+        if (et != null && !et.trim().isEmpty()) cfg.expectTmb = Double.parseDouble(et.trim());
+        cfg.injectTimeout = "1".equals(or(env.apply("CANARY_INJECT_TIMEOUT"), "0").trim());
+        CanaryEngine e = new CanaryEngine(d, cfg);
+        CanaryEngine.Result r;
+        switch (cmd) {
+            case "preflight": r = e.preflight(); break;
+            case "setup": r = e.setup(); break;
+            case "step":
+                if (args.length < 2) {
+                    out("RESULT step TU_CHOI | thieu ten buoc K");
+                    return 2;
+                }
+                r = e.step(args[1]);
+                break;
+            case "flatten": r = e.flatten(); break;
+            case "cleanup": r = e.cleanupCheck(); break;
+            default:
+                out("RESULT " + cmd + " TU_CHOI | lenh khong ho tro");
+                return 2;
+        }
+        out("JOURNAL " + e.journal().file().getPath());
+        out("DATA " + new com.google.gson.Gson().toJson(CanaryJournal.sanitize(r.data)));
+        out(r.line());
+        if ("step".equals(cmd) && args[1].toUpperCase(Locale.ROOT).endsWith("_OPEN") && r.ok()) {
+            // K6/K6b: gia lap JVM chet dot ngot (khong shutdown hook, khong dong stream/so) — buoc _RESTART chay JVM moi
+            sleepQuiet(2_000L);
+            Runtime.getRuntime().halt(0);
+        }
+        e.close();
+        return r.ok() ? 0 : (CanaryEngine.TU_CHOI.equals(r.verdict) ? 2 : 3);
+    }
+
+    /** Doc thu key (chi doc): gio server, tmb, multiAssets, dual. Khong in key. */
+    static int keycheck(C3LiveClient c) {
+        try {
+            long st = c.serverTime();
+            AccountSnapshot a = c.account();
+            boolean multi = c.multiAssetsMargin();
+            boolean dual = c.dualSidePosition();
+            out("KEYCHECK serverTime=" + st + " tmb=" + a.getTotalMarginBalance() + " multiAssets=" + multi + " dual=" + dual
+                    + " assets=" + CanaryEngine.assetMap(a));
+            out("RESULT keycheck DAT");
+            return 0;
+        } catch (RuntimeException e) {
+            out("RESULT keycheck TRUOT | " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            return 3;
+        }
+    }
+
+    /** Tap LEGACY tai khoan chinh (file run/legacy_symbols.csv: symbol dau moi dong). Thieu file => rong. */
+    static Set<String> legacySet(File f) {
+        Set<String> s = new HashSet<>();
+        if (!f.exists()) return s;
+        try {
+            for (String line : Files.readAllLines(f.toPath(), StandardCharsets.UTF_8)) {
+                String t = line.trim();
+                if (t.isEmpty() || t.startsWith("#")) continue;
+                String sym = t.split("[,;\\s]")[0].trim().toUpperCase(Locale.ROOT);
+                if (!sym.isEmpty() && !"SYMBOL".equals(sym)) s.add(sym);
+            }
+        } catch (IOException e) {
+            LOG.warn("[CANARY] khong doc duoc {}: {}", f.getPath(), e.toString());
+        }
+        return s;
+    }
+
+    static String ts() {
+        SimpleDateFormat f = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT);
+        f.setTimeZone(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
+        return f.format(new Date());
+    }
+
+    static String or(String v, String def) {
+        return v == null || v.trim().isEmpty() ? def : v.trim();
+    }
+
+    static void sleepQuiet(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+        }
+    }
+}
