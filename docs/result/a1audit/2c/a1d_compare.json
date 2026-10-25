@@ -1,0 +1,183 @@
+{
+ "22": {
+  "out_BT": {
+   "a1d": [
+    "2c7c336d175195963d20a269b01004cd",
+    1441
+   ],
+   "ref_dcae2e2b": [
+    "2c7c336d175195963d20a269b01004cd",
+    1441
+   ],
+   "match": true
+  },
+  "out_NEW2": {
+   "a1d": [
+    "2c7c336d175195963d20a269b01004cd",
+    1441
+   ],
+   "ref_dcae2e2b": [
+    "2c7c336d175195963d20a269b01004cd",
+    1441
+   ],
+   "match": true
+  },
+  "fund_BT": {
+   "a1d": [
+    "1a6d1521c3466daf2b7ba7f65ecfeea7",
+    48685
+   ],
+   "ref_dcae2e2b": [
+    "1a6d1521c3466daf2b7ba7f65ecfeea7",
+    48685
+   ],
+   "match": true
+  },
+  "fund_NEW2": {
+   "a1d": [
+    "f4acab2339701bc65b2a42638bf7a3ca",
+    48685
+   ],
+   "ref_dcae2e2b": [
+    "f4acab2339701bc65b2a42638bf7a3ca",
+    48685
+   ],
+   "match": true
+  },
+  "cmp_ctl_gate.json": {
+   "rows": [
+    1440,
+    1440
+   ],
+   "only": [
+    0,
+    0
+   ],
+   "cols_not_bit1": {},
+   "same_as_ref_run": true
+  },
+  "cmp_ctl_fund.json": {
+   "rows": [
+    48684,
+    48684
+   ],
+   "only": [
+    0,
+    0
+   ],
+   "cols_not_bit1": {
+    "f3": 0.9442527319037055
+   },
+   "same_as_ref_run": true
+  },
+  "strace_af_inet_nonlo": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "to242": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "rc": [
+   0,
+   0,
+   0,
+   0
+  ]
+ },
+ "23": {
+  "out_BT": {
+   "a1d": [
+    "e0918a333a52be3aefe2a3b62a5ac8f4",
+    1441
+   ],
+   "ref_dcae2e2b": [
+    "e0918a333a52be3aefe2a3b62a5ac8f4",
+    1441
+   ],
+   "match": true
+  },
+  "out_NEW2": {
+   "a1d": [
+    "e0918a333a52be3aefe2a3b62a5ac8f4",
+    1441
+   ],
+   "ref_dcae2e2b": [
+    "e0918a333a52be3aefe2a3b62a5ac8f4",
+    1441
+   ],
+   "match": true
+  },
+  "fund_BT": {
+   "a1d": [
+    "a81b3b03915a44d418ee23488d71d226",
+    49204
+   ],
+   "ref_dcae2e2b": [
+    "a81b3b03915a44d418ee23488d71d226",
+    49204
+   ],
+   "match": true
+  },
+  "fund_NEW2": {
+   "a1d": [
+    "8dea3f700aaddfd6abad961af1c65ea7",
+    49204
+   ],
+   "ref_dcae2e2b": [
+    "8dea3f700aaddfd6abad961af1c65ea7",
+    49204
+   ],
+   "match": true
+  },
+  "cmp_ctl_gate.json": {
+   "rows": [
+    1440,
+    1440
+   ],
+   "only": [
+    0,
+    0
+   ],
+   "cols_not_bit1": {},
+   "same_as_ref_run": true
+  },
+  "cmp_ctl_fund.json": {
+   "rows": [
+    49203,
+    49203
+   ],
+   "only": [
+    0,
+    0
+   ],
+   "cols_not_bit1": {
+    "cand": 0.9975001524297299,
+    "f3": 0.945856959941467
+   },
+   "same_as_ref_run": true
+  },
+  "strace_af_inet_nonlo": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "to242": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "rc": [
+   0,
+   0,
+   0,
+   0
+  ]
+ }
+}
