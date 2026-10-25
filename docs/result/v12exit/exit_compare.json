@@ -1,0 +1,53 @@
+{
+ "date": "2026-10-22",
+ "jar_md5": "a55be721e574217c852beebcc07e6dc3",
+ "head": "28be5cbb",
+ "ref_commit": "dcae2e2b",
+ "md5_unzipped": {
+  "out_BT": {
+   "new": "2c7c336d175195963d20a269b01004cd",
+   "ref": "2c7c336d175195963d20a269b01004cd",
+   "match": true
+  },
+  "out_NEW2": {
+   "new": "2c7c336d175195963d20a269b01004cd",
+   "ref": "2c7c336d175195963d20a269b01004cd",
+   "match": true
+  },
+  "fund_BT": {
+   "new": "1a6d1521c3466daf2b7ba7f65ecfeea7",
+   "ref": "1a6d1521c3466daf2b7ba7f65ecfeea7",
+   "match": true
+  },
+  "fund_NEW2": {
+   "new": "f4acab2339701bc65b2a42638bf7a3ca",
+   "ref": "f4acab2339701bc65b2a42638bf7a3ca",
+   "match": true
+  }
+ },
+ "ctl_gate": {
+  "rows_ref": 1440,
+  "rows_new": 1440,
+  "rows_both": 1440,
+  "only_ref": 0,
+  "only_new": 0,
+  "cols_bit_diff": {}
+ },
+ "ctl_fund": {
+  "rows_ref": 48684,
+  "rows_new": 48684,
+  "rows_both": 48684,
+  "only_ref": 0,
+  "only_new": 0,
+  "cols_bit_diff": {
+   "f3": 2714
+  }
+ },
+ "strace_af_inet_connect": {
+  "strace_BT.txt": 0,
+  "new2_s0/strace_NEW2.txt": 0,
+  "new2_s1/strace_NEW2.txt": 0,
+  "new2_s2/strace_NEW2.txt": 0
+ },
+ "verdict": "PASS"
+}
