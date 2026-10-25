@@ -1,0 +1,168 @@
+== log /home/ubuntu/claude_master/pull242/2026-10-24/logs/full.log@1792891380_49644083.gz
+2026-10-25T01:23:28Z
+STATUS=OK
+log_files=1
+log_first_min_after_ws=0
+log_last_min_before_we=0
+log_marker_minutes_FEAT-PIPE=24
+log_marker_minutes_GATE=1440
+log_marker_minutes_GATE-RATIO=24
+log_marker_minutes_LIVE-KLINE=168
+log_marker_minutes_MainClass=0
+log_marker_minutes_TS-EXT=25
+log_max_gap_min=0
+log_minutes=1440
+missing=
+fails=
+errors=
+== MainClass 10-23..10-25
+23/10/2026 07:55:42.557 INFO  [main] c.b.c.u.Utils: MainClass: com.binance.chuyennd.trading.BinanceOrderTradingManager APPDir: ./run
+23/10/2026 09:37:31.240 INFO  [main] c.b.c.u.Utils: MainClass: com.binance.chuyennd.trading.BinanceOrderTradingManager APPDir: ./run
+== dong log quanh 21:05-21:40 10-24 (khong phai MAP/LEGACY/SHADOW/S1)
+24/10/2026 21:05:06.003 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Start check level change of market for trade! Sat Oct 24 21:05:06 GMT+07:00 2026
+24/10/2026 21:05:06.140 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Btc ticker size: 1000 20261024 04:25 -> 20261024 21:04
+24/10/2026 21:05:06.159 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Check level market: 20261024 21:04 DownAvg: -0.204% UpAvg:0.183% DownAvg15M:-1.011%  btcRate: -0.002% btcRate15M: -0.013% null
+24/10/2026 21:05:06.160 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Market level change: 20261024 21:04 level: null symbols:618
+24/10/2026 21:05:06.629 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: [GATE] scale=1.5500 topk=24 base=0.00800 thr=[0.02643..0.03351] n_cand=24 n_rej=24 n_pass=0 n_skipfull=0 u=0.0451
+24/10/2026 21:05:06.629 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: 🔕 [PREDICT fail 24] market[15M:0.95% Risk4H:-1.42%] Min15M:0.80% | BIRB(0.248) IRYS(0.259) Q(0.276) BMT(0.278) ORDER(0.284) AGT(0.
+24/10/2026 21:05:06.630 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Predict: {"return15M":0.009501291,"riskDrawdown4H":-0.014161706}
+24/10/2026 21:05:06.630 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Finish check level change of market 2 trade: Sat Oct 24 21:05:06 GMT+07:00 2026
+24/10/2026 21:06:06.054 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Start check level change of market for trade! Sat Oct 24 21:06:06 GMT+07:00 2026
+24/10/2026 21:06:06.152 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Btc ticker size: 1000 20261024 04:26 -> 20261024 21:05
+24/10/2026 21:06:06.160 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Check level market: 20261024 21:05 DownAvg: -0.172% UpAvg:0.249% DownAvg15M:-1.001%  btcRate: 0.016% btcRate15M: -0.017% null
+24/10/2026 21:06:06.160 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Market level change: 20261024 21:05 level: null symbols:640
+24/10/2026 21:06:06.502 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: [GATE] scale=1.5500 topk=24 base=0.00800 thr=[0.02705..0.03478] n_cand=24 n_rej=24 n_pass=0 n_skipfull=0 u=0.0451
+24/10/2026 21:06:06.502 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: 🔕 [PREDICT fail 24] market[15M:0.96% Risk4H:-1.42%] Min15M:0.80% | BIRB(0.254) IRYS(0.265) Q(0.279) BMT(0.283) ORDER(0.294) AGT(0.
+24/10/2026 21:06:06.502 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Predict: {"return15M":0.009579858,"riskDrawdown4H":-0.014171958}
+24/10/2026 21:06:06.502 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Finish check level change of market 2 trade: Sat Oct 24 21:06:06 GMT+07:00 2026
+24/10/2026 21:07:06.027 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Start check level change of market for trade! Sat Oct 24 21:07:06 GMT+07:00 2026
+24/10/2026 21:07:06.128 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Btc ticker size: 1000 20261024 04:27 -> 20261024 21:06
+24/10/2026 21:07:06.136 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Check level market: 20261024 21:06 DownAvg: -0.124% UpAvg:0.296% DownAvg15M:-0.943%  btcRate: -0.014% btcRate15M: -0.031% null
+24/10/2026 21:07:06.136 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Market level change: 20261024 21:06 level: null symbols:625
+24/10/2026 21:07:06.664 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: [GATE] scale=1.5500 topk=24 base=0.00800 thr=[0.02799..0.03511] n_cand=24 n_rej=24 n_pass=0 n_skipfull=0 u=0.0451
+24/10/2026 21:07:06.664 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: 🔕 [PREDICT fail 24] market[15M:0.89% Risk4H:-1.37%] Min15M:0.80% | IRYS(0.263) BIRB(0.282) Q(0.291) BMT(0.295) ORDER(0.298) AGT(0.
+24/10/2026 21:07:06.664 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Predict: {"return15M":0.008864859,"riskDrawdown4H":-0.013652682}
+24/10/2026 21:07:06.664 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Finish check level change of market 2 trade: Sat Oct 24 21:07:06 GMT+07:00 2026
+24/10/2026 21:07:36.410 INFO  [FundingFee-Refresh] c.b.c.r.FundingFeeManager: 🔄 FundingFee refresh: cập nhật 890 symbol.
+24/10/2026 21:08:06.080 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Start check level change of market for trade! Sat Oct 24 21:08:06 GMT+07:00 2026
+24/10/2026 21:08:06.178 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Btc ticker size: 1000 20261024 04:28 -> 20261024 21:07
+24/10/2026 21:08:06.197 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Check level market: 20261024 21:07 DownAvg: -0.252% UpAvg:0.181% DownAvg15M:-1.065%  btcRate: -0.015% btcRate15M: -0.046% null
+24/10/2026 21:08:06.197 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Market level change: 20261024 21:07 level: null symbols:626
+24/10/2026 21:08:06.592 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: [GATE] scale=1.5500 topk=24 base=0.00800 thr=[0.02974..0.03622] n_cand=24 n_rej=24 n_pass=0 n_skipfull=0 u=0.0451
+24/10/2026 21:08:06.592 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: 🔕 [PREDICT fail 24] market[15M:0.96% Risk4H:-1.33%] Min15M:0.80% | IRYS(0.279) BIRB(0.294) Q(0.304) BMT(0.309) ORDER(0.309) AGT(0.
+24/10/2026 21:08:06.592 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Predict: {"return15M":0.009637328,"riskDrawdown4H":-0.013276219}
+24/10/2026 21:08:06.592 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Finish check level change of market 2 trade: Sat Oct 24 21:08:06 GMT+07:00 2026
+24/10/2026 21:09:06.051 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Start check level change of market for trade! Sat Oct 24 21:09:06 GMT+07:00 2026
+24/10/2026 21:09:06.151 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Btc ticker size: 1000 20261024 04:29 -> 20261024 21:08
+24/10/2026 21:09:06.164 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Check level market: 20261024 21:08 DownAvg: -0.296% UpAvg:0.112% DownAvg15M:-1.16%  btcRate: -0.031% btcRate15M: -0.077% null
+24/10/2026 21:09:06.164 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Market level change: 20261024 21:08 level: null symbols:634
+24/10/2026 21:09:06.770 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: [GATE] scale=1.5500 topk=24 base=0.00800 thr=[0.02915..0.03592] n_cand=24 n_rej=24 n_pass=0 n_skipfull=0 u=0.0451
+24/10/2026 21:09:06.770 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: 🔕 [PREDICT fail 24] market[15M:0.90% Risk4H:-1.29%] Min15M:0.80% | BIRB(0.274) IRYS(0.285) Q(0.287) BMT(0.288) ORDER(0.302) AGT(0.
+24/10/2026 21:09:06.771 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Predict: {"return15M":0.009015427,"riskDrawdown4H":-0.012937307}
+24/10/2026 21:09:06.771 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Finish check level change of market 2 trade: Sat Oct 24 21:09:06 GMT+07:00 2026
+24/10/2026 21:10:06.106 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Start check level change of market for trade! Sat Oct 24 21:10:06 GMT+07:00 2026
+24/10/2026 21:10:06.232 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Btc ticker size: 1000 20261024 04:30 -> 20261024 21:09
+24/10/2026 21:10:06.240 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Check level market: 20261024 21:09 DownAvg: -0.196% UpAvg:0.205% DownAvg15M:-1.169%  btcRate: 0.026% btcRate15M: -0.051% null
+24/10/2026 21:10:06.240 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Market level change: 20261024 21:09 level: null symbols:628
+24/10/2026 21:10:06.774 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: [GATE] scale=1.5500 topk=24 base=0.00800 thr=[0.02907..0.03595] n_cand=24 n_rej=24 n_pass=0 n_skipfull=0 u=0.0451
+24/10/2026 21:10:06.774 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: 🔕 [PREDICT fail 24] market[15M:0.96% Risk4H:-1.33%] Min15M:0.80% | BIRB(0.273) IRYS(0.282) Q(0.297) BMT(0.301) ORDER(0.303) AGT(0.
+24/10/2026 21:10:06.774 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Predict: {"return15M":0.00955172,"riskDrawdown4H":-0.013275683}
+24/10/2026 21:10:06.774 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Finish check level change of market 2 trade: Sat Oct 24 21:10:06 GMT+07:00 2026
+24/10/2026 21:11:06.021 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Start check level change of market for trade! Sat Oct 24 21:11:06 GMT+07:00 2026
+24/10/2026 21:11:06.026 INFO  [pool-1-thread-1] c.b.c.a.LiveTickerWindow: [LIVE-KLINE] reread=3' win{minutes=10 decided_on_unsettled=0/7410 correct=100.000% | topK 0/240 correct=100.000% | pass 0/0 correct=n/a | reread_o
+24/10/2026 21:11:06.088 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Btc ticker size: 1000 20261024 04:31 -> 20261024 21:10
+24/10/2026 21:11:06.094 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Check level market: 20261024 21:10 DownAvg: -0.262% UpAvg:0.157% DownAvg15M:-1.258%  btcRate: -0.011% btcRate15M: -0.062% null
+24/10/2026 21:11:06.094 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Market level change: 20261024 21:10 level: null symbols:623
+24/10/2026 21:11:06.096 WARN  [pool-1-thread-1] c.b.c.a.f.e.e.LiveFeatureDump: 🟠 [LIVE_FEAT_DUMP] XOAY file theo 10 phut -> dong feat_dump_20261024_210000.csv.gz + sel_dump_20261024_205900.csv.gz
+24/10/2026 21:11:06.216 WARN  [pool-1-thread-1] c.b.c.a.f.e.e.LiveFeatureDump: 🟠 [LIVE_FEAT_DUMP] mo file feat_dump/sel_dump_20261024_211000.csv.gz (selector cung tick).
+24/10/2026 21:11:06.403 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: [GATE] scale=1.5500 topk=24 base=0.00800 thr=[0.02821..0.03456] n_cand=24 n_rej=24 n_pass=0 n_skipfull=0 u=0.0451
+24/10/2026 21:11:06.403 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: 🔕 [PREDICT fail 24] market[15M:1.02% Risk4H:-1.41%] Min15M:0.80% | IRYS(0.265) BIRB(0.276) Q(0.278) BMT(0.284) ORDER(0.286) AGT(0.
+24/10/2026 21:11:06.403 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Predict: {"return15M":0.010242087,"riskDrawdown4H":-0.014081776}
+24/10/2026 21:11:06.403 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Finish check level change of market 2 trade: Sat Oct 24 21:11:06 GMT+07:00 2026
+24/10/2026 21:12:06.090 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Start check level change of market for trade! Sat Oct 24 21:12:06 GMT+07:00 2026
+24/10/2026 21:12:06.193 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Btc ticker size: 1000 20261024 04:32 -> 20261024 21:11
+24/10/2026 21:12:06.203 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Check level market: 20261024 21:11 DownAvg: -0.45% UpAvg:0.049% DownAvg15M:-1.467%  btcRate: -0.082% btcRate15M: -0.143% null
+24/10/2026 21:12:06.203 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Market level change: 20261024 21:11 level: null symbols:665
+24/10/2026 21:12:06.207 WARN  [pool-1-thread-1] c.b.c.a.f.e.e.LiveFeatureDump: 🟠 [LIVE_FEAT_DUMP] mo file feat_dump/feat_dump_20261024_211100.csv.gz (33 feature + ts/symbol/p15_out + 4 market).
+24/10/2026 21:12:06.759 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: [GATE] scale=1.5500 topk=24 base=0.00800 thr=[0.02876..0.03435] n_cand=24 n_rej=24 n_pass=0 n_skipfull=0 u=0.0451
+24/10/2026 21:12:06.759 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: 🔕 [PREDICT fail 24] market[15M:0.96% Risk4H:-1.41%] Min15M:0.80% | IRYS(0.270) BIRB(0.276) Q(0.280) BMT(0.284) ORDER(0.285) AGT(0.
+24/10/2026 21:12:06.759 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Predict: {"return15M":0.009626312,"riskDrawdown4H":-0.014087677}
+24/10/2026 21:12:06.762 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Finish check level change of market 2 trade: Sat Oct 24 21:12:06 GMT+07:00 2026
+24/10/2026 21:12:58.522 INFO  [LiveOiFeatRefresh] c.b.c.a.o.f.LiveOiFeatProvider: [OI-LIVE] inplace refresh 737 coin (since=1792761155230, keep=1792764755230) tai freshTs=1792849800000 (stale=true) size=737 evicted=0
+24/10/2026 21:13:06.095 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Start check level change of market for trade! Sat Oct 24 21:13:06 GMT+07:00 2026
+24/10/2026 21:13:06.189 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Btc ticker size: 1000 20261024 04:33 -> 20261024 21:12
+24/10/2026 21:13:06.195 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Check level market: 20261024 21:12 DownAvg: -0.292% UpAvg:0.108% DownAvg15M:-1.569%  btcRate: -0.017% btcRate15M: -0.161% null
+24/10/2026 21:13:06.195 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Market level change: 20261024 21:12 level: null symbols:672
+24/10/2026 21:13:06.575 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: [GATE] scale=1.5500 topk=24 base=0.00800 thr=[0.02940..0.03906] n_cand=24 n_rej=24 n_pass=0 n_skipfull=0 u=0.0451
+24/10/2026 21:13:06.575 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: 🔕 [PREDICT fail 24] market[15M:0.95% Risk4H:-1.40%] Min15M:0.80% | IRYS(0.276) BIRB(0.294) Q(0.300) BMT(0.307) ORDER(0.309) AGT(0.
+24/10/2026 21:13:06.575 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Predict: {"return15M":0.009484484,"riskDrawdown4H":-0.014020622}
+24/10/2026 21:13:06.575 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Finish check level change of market 2 trade: Sat Oct 24 21:13:06 GMT+07:00 2026
+24/10/2026 21:14:06.047 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Start check level change of market for trade! Sat Oct 24 21:14:06 GMT+07:00 2026
+24/10/2026 21:14:06.150 INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: Btc ticker size: 1000 20261024 04:34 -> 20261024 21:13
+== khoang trong log 10-24 (>90s)
+== ERROR 10-24 theo gio
+== ERROR 10-24 mau
+== KILLSW
+24/10/2026 03:00:00.344 INFO  [OpsKillSwitch] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T02+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=23 U=
+24/10/2026 04:00:00.647 INFO  [OpsKillSwitch] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T03+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=23 U=
+24/10/2026 05:00:00.994 INFO  [OpsKillSwitch] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T04+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=22 U=
+24/10/2026 06:00:01.258 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T05+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=21 
+24/10/2026 07:00:01.064 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T06+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=21 
+24/10/2026 08:00:01.322 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T07+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=19 
+24/10/2026 09:00:01.031 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T08+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=19 
+24/10/2026 10:00:00.486 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T09+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=17 
+24/10/2026 11:00:00.627 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T10+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=17 
+24/10/2026 12:00:00.734 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T11+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=17 
+24/10/2026 13:00:00.405 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T12+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=16 
+24/10/2026 14:00:00.860 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T13+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=15 
+24/10/2026 15:00:00.648 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T14+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=14 
+24/10/2026 16:00:01.129 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T15+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=13 
+24/10/2026 17:00:01.029 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T16+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=13 
+24/10/2026 18:00:00.676 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T17+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=13 
+24/10/2026 19:00:00.890 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T18+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=13 
+24/10/2026 20:00:01.013 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T19+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=13 
+24/10/2026 21:00:00.845 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T20+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=13 
+24/10/2026 22:00:00.675 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T21+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=13 
+24/10/2026 23:00:00.795 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T22+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=13 
+25/10/2026 00:00:01.558 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-24T23+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=13 
+25/10/2026 01:00:01.017 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-25T00+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=13 
+25/10/2026 02:00:01.352 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-25T01+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=13 
+25/10/2026 03:00:01.538 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-25T02+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=13 
+25/10/2026 04:00:00.393 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-25T03+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=13 
+25/10/2026 05:00:00.451 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-25T04+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=13 
+25/10/2026 06:00:00.378 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-25T05+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=13 
+25/10/2026 07:00:00.862 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-25T06+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=13 
+25/10/2026 08:00:00.931 INFO  [pool-3-thread-1] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=2026-10-25T07+07 mode=log C1=0/0 C2=NA C3=0/0 C4=0/0 C5=0/0 C6=0/0 (met/edge) | lag_s=6 miss=0/741 api=positionRisk consec=0 open=13 
+== exec-probe
+24/10/2026 03:25:06.965 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=27 lines=27 dropped=0 batches=16 connects=16 no_book=0 rate_capped=0 avg_snap_ms=487 worker_cpu_ms=218 heap_used_mb=1458 queue=0 src=
+24/10/2026 04:25:07.401 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=28 lines=28 dropped=0 batches=17 connects=17 no_book=0 rate_capped=0 avg_snap_ms=484 worker_cpu_ms=384 heap_used_mb=850 queue=0 src=w
+24/10/2026 05:25:07.671 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=28 lines=28 dropped=0 batches=17 connects=17 no_book=0 rate_capped=0 avg_snap_ms=484 worker_cpu_ms=516 heap_used_mb=852 queue=0 src=w
+24/10/2026 06:25:08.156 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=29 lines=29 dropped=0 batches=18 connects=18 no_book=0 rate_capped=0 avg_snap_ms=494 worker_cpu_ms=645 heap_used_mb=852 queue=0 src=w
+24/10/2026 07:25:08.247 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=30 lines=30 dropped=0 batches=19 connects=19 no_book=0 rate_capped=0 avg_snap_ms=519 worker_cpu_ms=778 heap_used_mb=1053 queue=0 src=
+24/10/2026 08:25:08.535 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=31 lines=31 dropped=0 batches=20 connects=20 no_book=0 rate_capped=0 avg_snap_ms=524 worker_cpu_ms=911 heap_used_mb=855 queue=0 src=w
+24/10/2026 09:25:09.388 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=32 lines=32 dropped=0 batches=21 connects=21 no_book=0 rate_capped=0 avg_snap_ms=515 worker_cpu_ms=1055 heap_used_mb=852 queue=0 src=
+24/10/2026 10:25:09.430 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=33 lines=33 dropped=0 batches=22 connects=22 no_book=0 rate_capped=0 avg_snap_ms=511 worker_cpu_ms=1204 heap_used_mb=850 queue=0 src=
+24/10/2026 11:25:09.511 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=33 lines=33 dropped=0 batches=22 connects=22 no_book=0 rate_capped=0 avg_snap_ms=511 worker_cpu_ms=1347 heap_used_mb=841 queue=0 src=
+24/10/2026 12:25:10.484 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=34 lines=34 dropped=0 batches=23 connects=23 no_book=0 rate_capped=0 avg_snap_ms=510 worker_cpu_ms=1492 heap_used_mb=848 queue=0 src=
+24/10/2026 13:25:10.644 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=35 lines=35 dropped=0 batches=24 connects=24 no_book=0 rate_capped=0 avg_snap_ms=511 worker_cpu_ms=1633 heap_used_mb=659 queue=0 src=
+24/10/2026 14:25:10.933 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=35 lines=35 dropped=0 batches=24 connects=24 no_book=0 rate_capped=0 avg_snap_ms=511 worker_cpu_ms=1771 heap_used_mb=1268 queue=0 src
+24/10/2026 15:25:11.511 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=36 lines=36 dropped=0 batches=25 connects=25 no_book=0 rate_capped=0 avg_snap_ms=506 worker_cpu_ms=1917 heap_used_mb=1265 queue=0 src
+24/10/2026 16:25:12.136 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=37 lines=37 dropped=0 batches=26 connects=26 no_book=0 rate_capped=0 avg_snap_ms=508 worker_cpu_ms=2060 heap_used_mb=863 queue=0 src=
+24/10/2026 17:25:12.616 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=37 lines=37 dropped=0 batches=26 connects=26 no_book=0 rate_capped=0 avg_snap_ms=508 worker_cpu_ms=2199 heap_used_mb=673 queue=0 src=
+24/10/2026 18:25:12.898 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=37 lines=37 dropped=0 batches=26 connects=26 no_book=0 rate_capped=0 avg_snap_ms=508 worker_cpu_ms=2340 heap_used_mb=661 queue=0 src=
+24/10/2026 19:25:13.592 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=37 lines=37 dropped=0 batches=26 connects=26 no_book=0 rate_capped=0 avg_snap_ms=508 worker_cpu_ms=2482 heap_used_mb=1479 queue=0 src
+24/10/2026 20:25:13.694 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=37 lines=37 dropped=0 batches=26 connects=26 no_book=0 rate_capped=0 avg_snap_ms=508 worker_cpu_ms=2599 heap_used_mb=668 queue=0 src=
+24/10/2026 21:25:14.423 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=37 lines=37 dropped=0 batches=26 connects=26 no_book=0 rate_capped=0 avg_snap_ms=508 worker_cpu_ms=2720 heap_used_mb=663 queue=0 src=
+24/10/2026 22:25:14.572 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=37 lines=37 dropped=0 batches=26 connects=26 no_book=0 rate_capped=0 avg_snap_ms=508 worker_cpu_ms=2834 heap_used_mb=665 queue=0 src=
+24/10/2026 23:25:14.584 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=37 lines=37 dropped=0 batches=26 connects=26 no_book=0 rate_capped=0 avg_snap_ms=508 worker_cpu_ms=2950 heap_used_mb=670 queue=0 src=
+25/10/2026 00:25:14.943 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=37 lines=37 dropped=0 batches=26 connects=26 no_book=0 rate_capped=0 avg_snap_ms=508 worker_cpu_ms=3066 heap_used_mb=671 queue=0 src=
+25/10/2026 01:25:15.113 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=37 lines=37 dropped=0 batches=26 connects=26 no_book=0 rate_capped=0 avg_snap_ms=508 worker_cpu_ms=3188 heap_used_mb=656 queue=0 src=
+25/10/2026 02:25:15.318 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=37 lines=37 dropped=0 batches=26 connects=26 no_book=0 rate_capped=0 avg_snap_ms=508 worker_cpu_ms=3306 heap_used_mb=667 queue=0 src=
+25/10/2026 03:25:15.396 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=37 lines=37 dropped=0 batches=26 connects=26 no_book=0 rate_capped=0 avg_snap_ms=508 worker_cpu_ms=3423 heap_used_mb=670 queue=0 src=
+25/10/2026 04:25:15.647 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=37 lines=37 dropped=0 batches=26 connects=26 no_book=0 rate_capped=0 avg_snap_ms=508 worker_cpu_ms=3553 heap_used_mb=666 queue=0 src=
+25/10/2026 05:25:16.108 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=37 lines=37 dropped=0 batches=26 connects=26 no_book=0 rate_capped=0 avg_snap_ms=508 worker_cpu_ms=3671 heap_used_mb=669 queue=0 src=
+25/10/2026 06:25:16.502 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=37 lines=37 dropped=0 batches=26 connects=26 no_book=0 rate_capped=0 avg_snap_ms=508 worker_cpu_ms=3786 heap_used_mb=671 queue=0 src=
+25/10/2026 07:25:16.961 INFO  [ExecProbe] c.b.c.o.ExecProbe: [EXEC-PROBE-STAT] offered=37 lines=37 dropped=0 batches=26 connects=26 no_book=0 rate_capped=0 avg_snap_ms=508 worker_cpu_ms=3900 heap_used_mb=670 queue=0 src=
+== exec-probe all count
+60
+== OOM/Killed/OutOfMemory

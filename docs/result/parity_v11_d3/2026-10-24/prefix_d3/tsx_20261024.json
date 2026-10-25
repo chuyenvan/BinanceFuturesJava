@@ -1,0 +1,103 @@
+{
+ "day": "2026-10-24",
+ "universe_union": 741,
+ "S_files": [
+  "/home/ubuntu/claude_master/v11_tsx/off/out/2026-09_days64.csv",
+  "/home/ubuntu/claude_master/v11_tsx/off/outv/2026-10_days64.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-20.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-21.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-22.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-23.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-24.csv"
+ ],
+ "flags_cmd_out": "2026-10-25 19:25:33.108 INFO  [main] t.TsxLiveOffline: flags /home/ubuntu/claude_master/parity_v11w/tsx/flags_20261024.csv 2026-09-20..2026-10-25 on=0",
+ "flag_2026-10-24": {
+  "vision": {
+   "flag_day": 20750,
+   "date": "2026-10-24",
+   "state": "OFF",
+   "dd": -0.1701903585307639,
+   "p": -0.1258478625762259,
+   "max_p": 0.060711089546883,
+   "max_day": 20723,
+   "min_n": 1439,
+   "reason": "ok"
+  },
+  "live_lines": [
+   {
+    "flag": "OFF",
+    "dd": -0.167771,
+    "minN": 1436,
+    "src": "aero:1d",
+    "final": "false"
+   }
+  ],
+  "live_final_states": []
+ },
+ "flag_2026-10-25": {
+  "vision": {
+   "flag_day": 20751,
+   "date": "2026-10-25",
+   "state": "OFF",
+   "dd": -0.1722497665601257,
+   "p": -0.1541294453452533,
+   "max_p": 0.0349143751922022,
+   "max_day": 20723,
+   "min_n": 1439,
+   "reason": "ok"
+  },
+  "live_lines": [
+   {
+    "flag": "OFF",
+    "dd": -0.169837,
+    "minN": 1436,
+    "src": "aero:1d",
+    "final": "false"
+   }
+  ],
+  "live_final_states": []
+ },
+ "flag_match": null,
+ "flag_status": "KHONG DO DUOC (vision=OFF, live=[])",
+ "S_D": {
+  "vision64": -0.0024848684143467,
+  "vision32": -0.0024848686256254,
+  "n_min_vision": 1440,
+  "live": -0.0024848686256254155,
+  "n_min_live": 1440,
+  "absdiff64": 2.1127871544304733e-10,
+  "absdiff32": 1.5612511283791264e-17
+ },
+ "S_hist_new": {
+  "2026-10-20": {
+   "vision64": 0.0296780470884635,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-21": {
+   "vision64": 0.0079043547080325,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-22": {
+   "vision64": -0.0507035627657561,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-23": {
+   "vision64": 0.0066995385759033,
+   "n_min": 1440,
+   "live": 0.006699544924738407,
+   "n_min_live": 1440
+  },
+  "2026-10-24": {
+   "vision64": -0.0024848684143467,
+   "n_min": 1440,
+   "live": -0.0024848686256254155,
+   "n_min_live": 1440
+  }
+ }
+}
