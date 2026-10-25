@@ -139,3 +139,30 @@ Thay 2 test 2e (`streamFlatButRestStillHoldsKeepsStopUntilBothFlat`, `unknownNot
 - Còn mở:
   - MIN-20: nếu stop mới bị sàn từ chối bất đồng bộ, sổ vẫn coi cid mới là active, stop cũ (đang sống) được giữ và bảo vệ vị thế. Trailing chỉ đặt stop khác ở lần dời kế tiếp. Canary K2 phải kiểm `openAlgoOrders` = đúng 1 stop `c3s-` NEW sau mỗi lần dời.
   - Đường chưa xác nhận sẽ ngủ ≤ 1 s trong nhịp trailing (hiếm).
+
+## 7. Vòng 2h — MIN-23 (A1_DELTA_2G @fef3550e)
+
+**Lỗi:** khi positionRisk lỗi liên tục, `retryKeptStops`/`unknownCheck` không chạy, nên lớp (B) không bao giờ leo thang lên (A).
+
+**Sửa (`Reconciler`):**
+- `escalateStaleKnown()` chạy mỗi lần xả hàng. Tức là mỗi nhịp OPS qua `confirmPendingFlat`, và cả ở cổng vào lệnh / `blocks()` / `checkPositions`.
+- Mục (B) quá `KNOWN_CLOSE_WINDOW_MS` (10′) tính từ lúc sổ chốt mà chưa gỡ → chuyển (A) UNKNOWN_POSITION toàn hệ **theo thời gian**, không cần đọc sàn thành công. Có Telegram ngay ("leo thang UNKNOWN_POSITION TOÀN HỆ").
+- `remindUnknown()` trong `confirmPendingFlat`: mỗi symbol (A) được nhắc Telegram lại sau mỗi 6 h ("NHAC (6h)"). Áp cho mọi (A), kể cả vị thế lạ C9.
+- Gỡ (A) giữ luật cũ: guard huỷ được stop giữ (cả hai nguồn phẳng) + 2 lần đọc positionRisk vắng cách ≥ 30 s.
+
+**Test hồi quy ProofB** (stream báo đóng sai, sàn thật còn 100, theo dõi 16′):
+- `proofBR6PositionRiskErrorEscalatesAfterWindow` (positionRisk lỗi kéo dài)
+- `proofBR8BothReadErrorsEscalateAfterWindow` (cả hai lỗi)
+- `proofBR5R7ReadOkOrAccountErrorEscalateAfterWindow`
+
+Mỗi ca kiểm:
+- 1′–9′: (B), symbol khác vào được.
+- Từ 10′: (A), chặn toàn hệ.
+- Stop luôn được giữ; có Telegram khi lên (A); nhắc đúng 1 lần sau 6 h.
+- Hết lỗi + sàn phẳng → stop huỷ, (A) gỡ.
+
+**Kết quả:**
+- Build: **621 test, 0 fail, 0 error, 1 skip**.
+- Jar dry 2h: `~/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12dry_2h`, md5 **`e1b1b7ece88f6f4729f832b9d9217b69`** (100 260 954 B), đã pin trong `deploy_v12_dry.sh`. Jar 2g đã xoá.
+- Parity 10-23 jar 2h so với dcae2e2b: **PASS** — out_BT `e0918a33` ✅, out_NEW2 `e0918a33` ✅, fund_BT `a81b3b03` ✅, fund_NEW2 `8dea3f70` ✅; ctl only_ref = only_new = 0; strace AF_INET non-loopback = 0 (`round2e/r2h_compare.json`).
+- Commit: `181b6e14` (code + test), `0e7f6493` (pin), cùng commit docs này.

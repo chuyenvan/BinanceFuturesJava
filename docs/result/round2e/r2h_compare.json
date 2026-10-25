@@ -1,0 +1,59 @@
+{
+ "jar": "binance-java-sdk-1.2.4.jar_v12dry_2h",
+ "jar_md5": "e1b1b7ece88f6f4729f832b9d9217b69",
+ "code_head": "181b6e14",
+ "ref_jar": "dcae2e2b",
+ "days": {
+  "2026-10-23": {
+   "md5_unzipped": {
+    "out_BT": {
+     "new": "e0918a333a52be3aefe2a3b62a5ac8f4",
+     "ref": "e0918a333a52be3aefe2a3b62a5ac8f4",
+     "match": true,
+     "rows": 1441
+    },
+    "out_NEW2": {
+     "new": "e0918a333a52be3aefe2a3b62a5ac8f4",
+     "ref": "e0918a333a52be3aefe2a3b62a5ac8f4",
+     "match": true,
+     "rows": 1441
+    },
+    "fund_BT": {
+     "new": "a81b3b03915a44d418ee23488d71d226",
+     "ref": "a81b3b03915a44d418ee23488d71d226",
+     "match": true,
+     "rows": 49204
+    },
+    "fund_NEW2": {
+     "new": "8dea3f700aaddfd6abad961af1c65ea7",
+     "ref": "8dea3f700aaddfd6abad961af1c65ea7",
+     "match": true,
+     "rows": 49204
+    }
+   },
+   "ctl_gate": {
+    "rows_both": 1440,
+    "only_ref": 0,
+    "only_new": 0,
+    "cols_not_bit1": {}
+   },
+   "ctl_fund": {
+    "rows_both": 49203,
+    "only_ref": 0,
+    "only_new": 0,
+    "cols_not_bit1": {
+     "cand": 0.9975001524297299,
+     "f3": 0.945856959941467
+    }
+   },
+   "strace_af_inet_nonlo_connect": {
+    "strace_BT.txt": 0,
+    "new2_s0/strace_NEW2.txt": 0,
+    "new2_s1/strace_NEW2.txt": 0,
+    "new2_s2/strace_NEW2.txt": 0
+   },
+   "verdict": "PASS"
+  }
+ },
+ "verdict": "PASS"
+}
