@@ -167,6 +167,15 @@ public class Configs {
     public static java.util.Set<Long> LOSER_TS_EXT_DAYS = new java.util.HashSet<>();
     public static float U_MAX  = 0.60f;   // trần tổng margin/equity, U≥U_MAX → chặn (gene search [0.40, 0.80])
 
+    // [NUP-TIER2 2026-10-26] docs/prereg/PREREG_NUP.md §1.2. Mac dinh TAT => byte-identical.
+    //   Ung vien PREDICT TRUOT gate chinh nhung QUA phan vi GATE_TIER2_PCT duoc vao lenh khi
+    //   U < GATE_TIER2_U_MAX, return nen 1m quyet dinh > GATE_TIER2_CRASH_RET va con slot top-K.
+    //   Size = GATE_TIER2_SIZE_MULT x size thuong. Khong doi buffer/quota cua gate chinh.
+    public static boolean GATE_TIER2_ENABLED = false;
+    public static float GATE_TIER2_U_MAX = 0.20f;
+    public static float GATE_TIER2_CRASH_RET = -0.01f;
+    public static float GATE_TIER2_SIZE_MULT = 0.5f;
+
 
 
     // =========================================================
@@ -913,6 +922,11 @@ public class Configs {
             if ((v = Cfg.get("SIM_TS_MAX_GAP_WEAK")) != null) TS_MAX_GAP_WEAK = Float.parseFloat(v.trim());
             if ((v = Cfg.get("SIM_F_BASE")) != null) F_BASE = Float.parseFloat(v.trim());
             if ((v = Cfg.get("SIM_U_MAX")) != null) U_MAX = Float.parseFloat(v.trim());
+            // [NUP-TIER2 2026-10-26] docs/prereg/PREREG_NUP.md §1.2 (khong khai => TAT)
+            if ((v = Cfg.get("GATE_TIER2_ENABLED")) != null) GATE_TIER2_ENABLED = Boolean.parseBoolean(v.trim());
+            if ((v = Cfg.get("GATE_TIER2_U_MAX")) != null) GATE_TIER2_U_MAX = Float.parseFloat(v.trim());
+            if ((v = Cfg.get("GATE_TIER2_CRASH_RET")) != null) GATE_TIER2_CRASH_RET = Float.parseFloat(v.trim());
+            if ((v = Cfg.get("GATE_TIER2_SIZE_MULT")) != null) GATE_TIER2_SIZE_MULT = Float.parseFloat(v.trim());
             // [GATE_QUOTA_SKIPFULL 2026-10-04] docs/prereg/PREREG_GATE_QUOTA_SKIPFULL.md (sim + live cung key; khong khai => false)
             if ((v = Cfg.get("GATE_QUOTA_SKIP_WHEN_FULL")) != null) GATE_QUOTA_SKIP_WHEN_FULL = Boolean.parseBoolean(v.trim());
             // [BURST-COOLDOWN 2026-10-16] docs/prereg/PREREG_BURST_COOLDOWN.md (khong khai => 0 => tat)

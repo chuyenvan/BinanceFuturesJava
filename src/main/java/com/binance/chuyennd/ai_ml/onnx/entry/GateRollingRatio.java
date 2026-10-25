@@ -42,6 +42,10 @@ public final class GateRollingRatio {
     private static float pct = 0f;
     private static int days = 90;
 
+    // [NUP-TIER2 2026-10-26] docs/prereg/PREREG_NUP.md §1.2. Mac dinh TAT => khong nhanh nao chay.
+    private static boolean tier2On = false;
+    private static float tier2Pct = 0.99985f;
+
     private static final GateRatioBuffer buffer = new GateRatioBuffer();
     private static boolean warnedBeforeFirst = false;
 
@@ -83,6 +87,21 @@ public final class GateRollingRatio {
         on = true;
         LOG.warn("*** [GATE-RATIO] BAT: mode=ratio pct={} window={}d | warm-up 7d | quantile tren TY SO r ***",
                 String.format("%.8f", pct), days);
+        // [NUP-TIER2] doc key rieng; mac dinh TAT. Key chi co tac dung khi gate ratio ON.
+        String t2 = Cfg.get("GATE_TIER2_ENABLED");
+        tier2On = t2 != null && Boolean.parseBoolean(t2.trim());
+        String t2p = Cfg.get("GATE_TIER2_PCT");
+        if (t2p != null && !t2p.trim().isEmpty()) tier2Pct = Float.parseFloat(t2p.trim());
+        if (tier2On) {
+            if (tier2Pct <= 0f || tier2Pct >= 1f || tier2Pct >= pct) {
+                LOG.warn("[GATE-TIER2] pct={} khong hop le (phai 0<pct<gate pct={}) -> TAT", tier2Pct, pct);
+                tier2On = false;
+            } else {
+                LOG.warn("*** [GATE-TIER2] BAT: pct={} (gate chinh {}) | chi PREDICT, U<{}, crash>{} | size x{} ***",
+                        String.format("%.8f", tier2Pct), String.format("%.8f", pct),
+                        Configs.GATE_TIER2_U_MAX, Configs.GATE_TIER2_CRASH_RET, Configs.GATE_TIER2_SIZE_MULT);
+            }
+        }
     }
 
     public static boolean isOn() {
@@ -123,6 +142,27 @@ public final class GateRollingRatio {
                     buffer.size(), Configs.MIN_MOMENTUM_15M);
         }
         return q;
+    }
+
+    /**
+     * [NUP-TIER2] Ung vien da TRUOT gate chinh: kiem tra no co QUA phan vi {@code tier2Pct} tren
+     * CUNG buffer r, CUNG cua so/gio hay khong. Chi doc buffer; KHONG nap mau, KHONG notePass,
+     * KHONG doi bat ky bo dem/quota nao cua gate chinh.
+     */
+    public static boolean tier2Pass(long ts, float p15, float sp) {
+        if (!on || !tier2On) return false;
+        float scale = (sp / EntryGate.SCORE_BASE) * EntryGate.DYN_MULT;
+        float gs = EntryGate.GATE_REGIME_ADAPTIVE ? EntryGate.CURRENT_REGIME_SCALE : EntryGate.GATE_DYN_SCALE;
+        float factor = Math.max(EntryGate.DYN_MIN, scale);
+        float q2 = buffer.queryPctExcludingLast(ts, tier2Pct, days, Configs.MIN_MOMENTUM_15M);
+        // Cung bieu thuc voi EntryGate.threshold(q2, sp): pass <=> !(p15 < q2*factor*gs).
+        return !(p15 < q2 * factor * gs);
+    }
+
+    /** Unit test: bat/tat tier2 va dat pct (khong doc Cfg). */
+    static void configureTier2ForTest(boolean enabled, float pctValue) {
+        tier2On = enabled;
+        tier2Pct = pctValue;
     }
 
     /** Lõi: tính (nếu qua giờ mới) q cho giờ của ts, trả q, rồi nạp (ts, r) — package-private cho unit test. */

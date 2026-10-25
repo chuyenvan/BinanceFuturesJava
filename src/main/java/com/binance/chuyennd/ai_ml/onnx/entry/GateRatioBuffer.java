@@ -100,6 +100,23 @@ final class GateRatioBuffer {
         return a[lo];
     }
 
+    /**
+     * [NUP-TIER2] Phan vi {@code pct} tren CUNG buffer, CUNG cua so, CUNG gio — chi doc, KHONG nap mau,
+     * KHONG di chuyen head/tail. Loai mau CUOI neu no chinh la {@code ts} vua duoc {@code addAndQuery}
+     * nap, de q2 tinh tren dung trang thai TRUOC-add nhu q1 cua gate chinh.
+     * Warm-up / chua co gio => fallbackBase (giong computeQ).
+     */
+    float queryPctExcludingLast(long ts, float pct, int days, float fallbackBase) {
+        long h = (ts / HOUR) * HOUR;
+        if (lastHour == Long.MIN_VALUE || h != lastHour) return fallbackBase;
+        int end = tail;
+        if (end > head && tsBuf[end - 1] == ts) end--;
+        int m = end - head;
+        if (firstTs == Long.MIN_VALUE || m == 0 || (h - firstTs) < WARMUP_MS) return fallbackBase;
+        int k = Math.min(m - 1, Math.max(0, (int) Math.floor((double) pct * (m - 1))));
+        return kthSmallest(head, m, k);
+    }
+
     private float[] scratch(int n) {
         if (scratchArr == null || scratchArr.length < n) scratchArr = new float[n];
         return scratchArr;

@@ -1319,6 +1319,63 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         return BudgetManagerSimple.getInstance().marginRunning;
     }
 
+    // ===================== [NUP-TIER2 2026-10-26] =====================
+    /** Bo dem/log cho TIER2 (0 khi cờ TẮT). */
+    private static long tier2Entered = 0;
+
+    /** Dieu kien U: U = margin dang dung / equity phai NHO HON GATE_TIER2_U_MAX. */
+    static boolean tier2UOk(float marginRunning, float equity, float uMax) {
+        if (!(equity > 0f)) return false;
+        float u = marginRunning / equity;
+        return u < uMax;
+    }
+
+    /** Dieu kien nen quyet dinh: return 1m da dong = close/open-1 > GATE_TIER2_CRASH_RET. */
+    static boolean tier2CrashOk(float priceOpen, float priceClose, float crashRet) {
+        if (!(priceOpen > 0f)) return false;
+        return (priceClose / priceOpen - 1f) > crashRet;
+    }
+
+    /** Size: budget thuong x GATE_TIER2_SIZE_MULT. */
+    static float tier2Size(float budget, float mult) {
+        return budget * mult;
+    }
+
+    /**
+     * [NUP-TIER2] Ung vien PREDICT vua bi gate chinh tu choi co duoc vao qua cong phu khong.
+     * Thu tu kiem (re -> dat): cờ, loai leg/slot top-K, U, nen khong sap, phan vi tier2.
+     * Ham THUAN: khong doi buffer/quota/bo dem cua gate chinh.
+     */
+    private boolean tier2Eligible(MarketLevelChange levelChange, Float symbolPred, Integer selRank,
+                                  KlineObjectSimple ticker, AiPredictionData predict, boolean bookFull) {
+        if (!Configs.GATE_TIER2_ENABLED) return false;
+        if (levelChange != MarketLevelChange.PREDICT_SYMBOL_TRADE) return false;
+        if (symbolPred == null || selRank == null) return false;   // "con slot K" = nam trong top-K cua tick
+        if (bookFull) return false;                                // so day: khong co cho
+        Float eq = sizingEquity();
+        Float mr = sizingMarginRunning();
+        if (eq == null || eq <= 0f) return false;
+        if (!tier2UOk(mr == null ? 0f : mr, eq, Configs.GATE_TIER2_U_MAX)) return false;
+        if (!tier2CrashOk(ticker.priceOpen, ticker.priceClose, Configs.GATE_TIER2_CRASH_RET)) return false;
+        return com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.tier2Pass(
+                ticker.startTime, predict.predReturn15M, symbolPred);
+    }
+
+    /** Ghi nhan rieng leg tier2 (KHONG them cot vao printDone.csv de giu dinh dang scorer cu). */
+    private static synchronized void logTier2Entered(String sym, long ts, float margin) {
+        try {
+            java.io.File f = new java.io.File("storage/tier2.csv");
+            boolean writeHeader = !f.exists() || f.length() == 0L;
+            try (java.io.FileWriter fw = new java.io.FileWriter(f, true)) {
+                if (writeHeader) fw.write("sym,start,margin\n");
+                fw.write(sym + "," + Utils.normalizeDateYYYYMMDDHHmm(ts) + "," + margin + "\n");
+            }
+        } catch (Exception e) {
+            LOG.warn("[TIER2] khong ghi duoc storage/tier2.csv: {}", e.toString());
+        }
+    }
+    // ===================== [/NUP-TIER2] =====================
+
     /** [B3] goc sizing = EQUITY hien tai (FIX_B3) hoac balanceBasic — dung chung sizing + kiem tra so day. */
     private static Float sizingEquity() {
         return Configs.FIX_B3
@@ -1360,6 +1417,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_NO_PRED, symbolId, ticker, levelChange, symbolPred, null);
             return;
         }
+        boolean tier2 = false;   // [NUP-TIER2] true = leg nay vao qua cong phu, size x GATE_TIER2_SIZE_MULT
         if (!levelChange.equals(MarketLevelChange.BIG_DOWN)) {
                 // [L7 2026-09-11, docs/experiment/L7_LEAN_GATE.md] MOT cong entry duy nhat, DUNG CHUNG voi
                 //   LIVE (DetectEntrySignal2TradeNormal.createOrderBuyRequest goi cung ham nay).
@@ -1375,9 +1433,22 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                 ablationSignalSeen++;
                 if (filterResult.decision == AIRejectFilter.FilterDecision.REJECT) {
-                    if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_GATE_REJECT, symbolId, ticker, levelChange, symbolPred, predict);
-                    if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE) predictSymbolRejectedGate++; // TASK-134
-                    return;
+                    // [NUP-TIER2 2026-10-26] docs/prereg/PREREG_NUP.md §1.2: TRUOT gate chinh nhung
+                    //   QUA phan vi tier2 + U<thr + nen khong sap + con slot top-K => vao size nho.
+                    //   Cờ TẮT => tier2Eligible false ngay => y het code cu.
+                    if (tier2Eligible(levelChange, symbolPred, selRank, ticker, predict, bookFull)) {
+                        tier2 = true;
+                        tier2Entered++;
+                        LOG.info("TIER2-ENTER sym={} t={} rank={} sp={} p15={} U={}",
+                                SimpleSymbolMapper.getInstance().getSymbol(symbolId),
+                                Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime), selRank, symbolPred,
+                                predict.predReturn15M,
+                                sizingEquity() > 0f ? sizingMarginRunning() / sizingEquity() : -1f);
+                    } else {
+                        if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_GATE_REJECT, symbolId, ticker, levelChange, symbolPred, predict);
+                        if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE) predictSymbolRejectedGate++; // TASK-134
+                        return;
+                    }
                 }
             ablationPassCount++;
         }
@@ -1507,6 +1578,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                     marketData != null ? marketData.rateDownAvg : 0f);
         }
 
+        // [NUP-TIER2] size nho hon cho leg vao qua cong phu, SAU tierMultiplier/grid ratio va TRUOC
+        //   calQuantityTest => dung nghia "SIZE_MULT x size thuong". Cờ TẮT => tier2=false => khong nhan.
+        if (tier2) budget *= Configs.GATE_TIER2_SIZE_MULT;
+
         String symbolStr = SimpleSymbolMapper.getInstance().getSymbol(symbolId);
         Float quantity = Utils.calQuantityTest(budget, leverage, entry, symbolStr);
 
@@ -1592,6 +1667,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             symbol2OrdersEntry[symbolId] = orders;
         }
         orders.add(order);
+        if (tier2) logTier2Entered(symbolStr, ticker.startTime, order.calMargin());
         if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_ENTERED, symbolId, ticker, levelChange, symbolPred, predict);
 
         // ENTRY-MATCH PROBE (env WFO_LOG_ENTRIES=1). Default off = byte-identical.
