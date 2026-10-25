@@ -338,7 +338,7 @@ public class C3LiveClientTest {
         assertEquals("CONDITIONAL", r.param("algoType"));
         assertEquals("STOP_MARKET", r.param("type"));
         assertEquals("2412.37", r.param("triggerPrice"));
-        assertEquals("CONTRACT_PRICE", r.param("workingType"));
+        assertEquals("MARK_PRICE", r.param("workingType"));   // [V12 MASTER 10-25] mac dinh MARK_PRICE
         assertEquals("0.25", r.param("quantity"));
         assertEquals("true", r.param("reduceOnly"));
         assertNull(r.param("closePosition"));

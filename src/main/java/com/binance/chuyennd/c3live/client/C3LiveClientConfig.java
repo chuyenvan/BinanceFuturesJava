@@ -9,7 +9,7 @@ import java.util.function.Function;
  * [V12 C2] Cau hinh C3LiveClient (bat bien). Bien moi truong / system property:
  * LIVE_C3_KEYS_FILE (/root/.config/c3live/keys.env), LIVE_C3_KEYS_OWNER (root), LIVE_C3_BASE_URL (https://fapi.binance.com),
  * LIVE_C3_RECV_WINDOW_MS (5000), LIVE_C3_HTTP_CONNECT_TIMEOUT_MS (3000), LIVE_C3_HTTP_TIMEOUT_MS (10000),
- * LIVE_C3_TIME_SYNC_MS (600000), LIVE_C3_STOP_WORKING_TYPE (CONTRACT_PRICE), LIVE_C3_RATE_MAX_WAIT_MS (2000),
+ * LIVE_C3_TIME_SYNC_MS (600000), LIVE_C3_STOP_WORKING_TYPE (MARK_PRICE), LIVE_C3_RATE_MAX_WAIT_MS (2000),
  * LIVE_C3_CANCEL_COUNTS_AS_ORDER (1).
  */
 public final class C3LiveClientConfig {
@@ -114,7 +114,9 @@ public final class C3LiveClientConfig {
         private long connectTimeoutMs = 3_000L;
         private long requestTimeoutMs = 10_000L;
         private long timeSyncIntervalMs = 600_000L;
-        private String stopWorkingType = "CONTRACT_PRICE";
+        // [V12 MASTER 10-25] MARK_PRICE: stop sau arm kich theo gia danh dau (tranh rau nen gia last/contract khi
+        //   thanh khoan mong lam kich stop gia); LIVE_C3_STOP_WORKING_TYPE=CONTRACT_PRICE de quay lai.
+        private String stopWorkingType = "MARK_PRICE";
         private long rateMaxWaitMs = 2_000L;
         private boolean cancelCountsAsOrder = true;
 
