@@ -1,6 +1,10 @@
 package com.binance.chuyennd.ops;
 
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -9,10 +13,15 @@ import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayDeque;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
@@ -37,15 +46,35 @@ import java.util.function.Supplier;
  *   <li>C6/A40: DD MTM cua so GIAY (equity = PAPER_EQUITY + realized + MTM cum mo; dinh = max(PAPER_EQUITY, dinh da
  *       luu, equity da thay)) {@code <= -40 %}. LEGACY KHONG tinh.</li>
  * </ul>
- * Dac ta hanh dong khi act (cho c3_live sau nay, CHUA cai trong v11d — {@link #ACT_IMPLEMENTED} = false):
- * C1–C5 => dung mo lenh moi + Telegram, van quan ly vi the dang mo; C6/A40 => dong het + dung, cho owner.
+ *
+ * <p>[V12 SAFE 2026-10-25] (docs/plan/GOLIVE_SCENARIO.md C8, quyet dinh owner Q1b/Q1c 10-25):
+ * <ul>
+ *   <li><b>C2 co dau</b> sau co {@code LIVE_KILLSW_C2_SIGNED=1} (mac dinh 0 = cong thuc |.| v1.1 y nguyen): truot
+ *       BAT LOI (mua: {@code fill/ref - 1}, ban: {@code 1 - fill/ref}); {@code > c2Warn} (1,7 %) => WARN
+ *       {@code [KILLSW] C2_WARN}; {@code > c2Slip} (2,5 %) xay ra {@code >= c2Count} (3) lan trong {@code c2WindowMs}
+ *       (24h) => C2 dat. Moc su kien luu file latch (song qua restart). Nguong = tham so config.</li>
+ *   <li><b>ACT that</b> ({@link #ACT_IMPLEMENTED} = true, CHI profile {@code c3_live}; c3_shadow van tu choi => log):
+ *       C1–C5 dat => latch {@link Action#NO_NEW_ENTRY}; C6 hoac A40 dat => latch {@link Action#FLATTEN} (bao gom chan
+ *       mo moi). Latch persist {@code LIVE_KILLSW_LATCH_FILE} (mac dinh {@code run/killsw_latch.json}), CHI xoa bang
+ *       script owner {@code ops/killsw_reset.sh} (ghi file yeu cau {@code LIVE_KILLSW_RESET_FILE}; engine la nguoi ghi
+ *       DUY NHAT file latch). Hanh dong do caller thuc hien qua {@link #allowNewEntry(String)} /
+ *       {@link #requiredAction()} (vong 2 noi o {@code createOrderBuyRequest} + cua gui lenh + vong dong reduce-only).</li>
+ *   <li><b>A40</b> tren equity THAT tai khoan con qua {@link EquitySource} (vong 2 cai = totalMarginBalance, Q1b):
+ *       dinh = max(dinh luu file, equity da thay); {@code equity/dinh - 1 <= -40 %} => FLATTEN. Chi co khi gan
+ *       EquitySource ({@link #attachEquitySource}) — khong gan => dong HOURLY/log y nhu v1.1.</li>
+ * </ul>
+ * Mode LOG (c3_shadow): KHONG doc/ghi file latch, {@link #allowNewEntry} luon true, {@link #requiredAction} luon NONE,
+ * van ban log giu nguyen v1.1 (C2 co dau chi khi co bat).
  */
 public final class KillSwitchEngine {
 
     public enum Mode { OFF, LOG, ACT }
 
-    /** v11d khong cai hanh dong nao cho act. */
-    public static final boolean ACT_IMPLEMENTED = false;
+    /** Hanh dong caller phai thuc hien (chi khac NONE o mode ACT). Thu tu = muc nghiem trong. */
+    public enum Action { NONE, NO_NEW_ENTRY, FLATTEN }
+
+    /** [V12] act da cai (latch NO_NEW_ENTRY / FLATTEN). Van chi hop le o profile c3_live. */
+    public static final boolean ACT_IMPLEMENTED = true;
 
     public static final long C1_LAG_SEC = 180L;
     /** missing/universe > 10 % (so nguyen: missing*10 > universe). */
@@ -57,10 +86,17 @@ public final class KillSwitchEngine {
     public static final int C4_MAX_POS = 90;
     public static final long C5_NOTICK_SEC = 300L;
     public static final double C6_DD = -0.40;
+    /** [V12] A40: DD equity that tai khoan con (owner 10-10: DD chap nhan 40 %). */
+    public static final double A40_DD = -0.40;
     public static final String REF_SYMBOL = "BTCUSDT";
     public static final String[] CODES = {"C1", "C2", "C3", "C4", "C5", "C6"};
+    public static final String CODE_A40 = "A40";
+    /** Ma latch khi file latch hong/khong doc duoc o mode ACT (fail-closed). */
+    public static final String CODE_STATE = "STATE";
     static final long REPEAT_LOG_MS = 60_000L;
     static final long PEAK_WRITE_MIN_MS = 60_000L;
+    static final long BLOCK_LOG_MS = 60_000L;
+    static final long EQ_WARN_MS = 600_000L;
     private static final long MIN_MS = 60_000L;
     private static final DateTimeFormatter HOUR_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH'+07'").withZone(ZoneId.of("Asia/Ho_Chi_Minh"));
@@ -86,9 +122,23 @@ public final class KillSwitchEngine {
         }
     }
 
+    /** [V12] tham so moi (mac dinh = hanh vi v1.1: C2 |.|, khong latch file, khong A40). */
+    public static final class Params {
+        /** {@code LIVE_KILLSW_C2_SIGNED}: false = cong thuc |fill/ref-1| > 2,5 % cua v1.1. */
+        public boolean c2Signed = false;
+        public double c2Warn = 0.017;
+        public double c2Slip = 0.025;
+        public int c2Count = 3;
+        public long c2WindowMs = 24L * 3_600_000L;
+        /** File latch (chi dung o mode ACT). */
+        public File latchFile = null;
+        /** File yeu cau reset cua owner (chi dung o mode ACT). */
+        public File resetFile = null;
+    }
+
     /**
      * off|log|act theo profile. c3_shadow (va moi profile khac c3_live): chi off|log — act BI TU CHOI + WARN, chay log.
-     * c3_live + act: hop le ve chinh sach, nhung v11d chua cai hanh dong => chay log + WARN. Gia tri la => off + WARN.
+     * c3_live + act: hop le (v1.2 da cai hanh dong). Gia tri la => off + WARN.
      */
     public static Resolved resolve(String raw, String profile) {
         String v = raw == null ? "" : raw.trim().toLowerCase(Locale.ROOT);
@@ -122,10 +172,20 @@ public final class KillSwitchEngine {
         return sinceMarketDataSec > C1_NODATA_SEC;
     }
 
-    /** null = N/A (khong co fill that hoac thieu gia tham chieu). */
+    /** null = N/A (khong co fill that hoac thieu gia tham chieu). Cong thuc v1.1 (tri tuyet doi). */
     static Double c2Slip(Double fill, Double ref) {
         if (fill == null || ref == null || !(ref > 0d) || !(fill > 0d)) return null;
         return Math.abs(fill / ref - 1.0);
+    }
+
+    /**
+     * [V12] truot BAT LOI co dau: mua {@code fill/ref - 1}, ban {@code 1 - fill/ref} (duong = bat loi).
+     * null = N/A. Gia khong huu han => N/A.
+     */
+    static Double c2Adverse(boolean isBuy, Double fill, Double ref) {
+        if (fill == null || ref == null || !(ref > 0d) || !(fill > 0d)) return null;
+        if (!Double.isFinite(fill) || !Double.isFinite(ref)) return null;
+        return isBuy ? fill / ref - 1.0 : 1.0 - fill / ref;
     }
 
     static boolean c2(Double slip) {
@@ -151,6 +211,10 @@ public final class KillSwitchEngine {
 
     static boolean c6(double dd) {
         return dd <= C6_DD + 1e-12;
+    }
+
+    static boolean a40(double dd) {
+        return dd <= A40_DD + 1e-12;
     }
 
     /** Tuoi (s) cua nen phut {@code refMinuteStartMs} tinh tu luc nen DONG. */
@@ -191,7 +255,12 @@ public final class KillSwitchEngine {
     }
 
     static String action(String code) {
-        return "C6".equals(code) ? "CLOSE_ALL+HALT" : "STOP_NEW_ENTRIES+TELEGRAM(van quan ly vi the)";
+        return "C6".equals(code) || CODE_A40.equals(code) ? "CLOSE_ALL+HALT" : "STOP_NEW_ENTRIES+TELEGRAM(van quan ly vi the)";
+    }
+
+    /** [V12] hanh dong latch cua 1 ma: C6/A40 => FLATTEN, con lai => NO_NEW_ENTRY. */
+    static Action latchActionOf(String code) {
+        return "C6".equals(code) || CODE_A40.equals(code) ? Action.FLATTEN : Action.NO_NEW_ENTRY;
     }
 
     // ------------------------------------------------------------------ state
@@ -212,6 +281,7 @@ public final class KillSwitchEngine {
     private final File peakFile;
     private final DoubleSupplier paperEquity;
     private final Supplier<Float> uMax;
+    private final Params prm;
     private final Map<String, CodeState> st = new LinkedHashMap<>();
     private long lastTickStartMs;
     private long lastMarketDataMs;
@@ -231,6 +301,25 @@ public final class KillSwitchEngine {
     private long lastPeakWarnMs = Long.MIN_VALUE / 2;
     private Double lastSlip;
     private String hour;
+    // [V12] ACT / latch / C2 co dau / A40
+    private Action latch = Action.NONE;
+    private final Set<String> latchCodes = new LinkedHashSet<>();
+    private long latchSinceMs;
+    private String latchDetail = "-";
+    private final ArrayDeque<Long> c2Events = new ArrayDeque<>();
+    private EquitySource equitySource;
+    private double acctPeak = Double.NaN;
+    private double acctPeakWritten = Double.NaN;
+    private double lastAcctEq = Double.NaN;
+    private double lastAcctDd = Double.NaN;
+    private long lastAcctPeakWriteMs = Long.MIN_VALUE / 2;
+    private long lastEqWarnMs = Long.MIN_VALUE / 2;
+    private long nEqUnavailable;
+    private long lastResetAtMs;
+    private long lastBlockLogMs = Long.MIN_VALUE / 2;
+    private long nBlocked;
+    private long lastStateWarnMs = Long.MIN_VALUE / 2;
+    private Consumer<String> alert;
 
     /**
      * @param mode        mode HIEU LUC (LOG; ACT chi khi da cai). OFF => khong nen tao engine.
@@ -241,17 +330,28 @@ public final class KillSwitchEngine {
      */
     public KillSwitchEngine(Mode mode, String modeLabel, Sink sink, File peakFile, DoubleSupplier paperEquity,
                             Supplier<Float> uMax, long nowMs) {
+        this(mode, modeLabel, sink, peakFile, paperEquity, uMax, nowMs, null);
+    }
+
+    /** [V12] nhu tren + tham so C2 co dau / file latch. {@code prm == null} => mac dinh (= v1.1). */
+    public KillSwitchEngine(Mode mode, String modeLabel, Sink sink, File peakFile, DoubleSupplier paperEquity,
+                            Supplier<Float> uMax, long nowMs, Params prm) {
         this.mode = mode;
         this.modeLabel = modeLabel;
         this.sink = sink;
         this.peakFile = peakFile;
         this.paperEquity = paperEquity;
         this.uMax = uMax;
+        this.prm = prm == null ? new Params() : prm;
         for (String c : CODES) st.put(c, new CodeState());
         this.lastTickStartMs = nowMs;
         this.lastMarketDataMs = nowMs;
         this.hour = hourKey(nowMs);
         loadPeak();
+        if (mode == Mode.ACT) {
+            loadLatch(nowMs);
+            checkResetRequest(nowMs);
+        }
     }
 
     public Mode mode() {
@@ -294,6 +394,80 @@ public final class KillSwitchEngine {
         }
     }
 
+    // ------------------------------------------------------------------ [V12] API cho vong 2 (c3_live)
+
+    /**
+     * [V12] Cong mo lenh MOI (vong 2 goi o {@code createOrderBuyRequest} TRUOC push VA o cua gui lenh, ca entry lan
+     * DCA). Mode khac ACT => luon true (c3_shadow/sim khong doi). ACT: false khi da latch (NO_NEW_ENTRY/FLATTEN).
+     * Lenh reduce-only (dong/SL) KHONG di qua cong nay.
+     */
+    public synchronized boolean allowNewEntry(String symbol) {
+        if (mode != Mode.ACT) return true;
+        if (latch == Action.NONE) return true;
+        nBlocked++;
+        long now = System.currentTimeMillis();
+        if (now - lastBlockLogMs >= BLOCK_LOG_MS) {
+            lastBlockLogMs = now;
+            sink.warn("[KILLSW] BLOCK_NEW_ENTRY symbol=" + symbol + " latch=" + latch + " codes=" + latchCodes
+                    + " n_blocked=" + nBlocked);
+        }
+        return false;
+    }
+
+    /**
+     * [V12] Hanh dong bat buoc hien tai: NONE / NO_NEW_ENTRY (chi chan mo moi, van quan ly vi the) / FLATTEN (dong het
+     * reduce-only chia lo + dung). Mode khac ACT => luon NONE.
+     */
+    public synchronized Action requiredAction() {
+        return mode == Mode.ACT ? latch : Action.NONE;
+    }
+
+    /** [V12] cac ma da gay latch (copy). */
+    public synchronized Set<String> latchCodes() {
+        return new LinkedHashSet<>(latchCodes);
+    }
+
+    /** [V12] noi Telegram (vong 2). Goi khi latch moi / nang muc / reset / C2_WARN. Khong bao gio nem ra ngoai. */
+    public synchronized void setAlert(Consumer<String> alert) {
+        this.alert = alert;
+    }
+
+    /**
+     * [V12] Gan nguon equity THAT (A40). Sau khi gan, dong HOURLY co them A40 va {@link #periodic} poll equity.
+     * Chi gan 1 lan (lan sau bo qua).
+     */
+    public synchronized void attachEquitySource(EquitySource src) {
+        if (src == null || equitySource != null) return;
+        equitySource = src;
+        st.put(CODE_A40, new CodeState());
+        sink.info("[KILLSW] gan EquitySource (A40 DD<=" + A40_DD + " tren equity that) dinh_luu=" + fmt2(acctPeak));
+    }
+
+    /** [V12] Dua 1 diem equity that (vong 2 co the day thay vi de periodic poll). */
+    public synchronized void onAccountEquity(long nowMs, Double equity) {
+        roll(nowMs);
+        if (!st.containsKey(CODE_A40)) st.put(CODE_A40, new CodeState());
+        if (equity == null || !Double.isFinite(equity) || !(equity > 0d)) {
+            nEqUnavailable++;
+            if (nowMs - lastEqWarnMs >= EQ_WARN_MS) {
+                lastEqWarnMs = nowMs;
+                sink.warn("[KILLSW] A40 equity khong co/khong hop le (" + equity + ") n=" + nEqUnavailable
+                        + " => giu trang thai A40 cu (bao loi API qua onApiResult de C3 bat)");
+            }
+            return;
+        }
+        lastAcctEq = equity;
+        if (Double.isNaN(acctPeak) || equity > acctPeak) acctPeak = equity;
+        lastAcctDd = dd(equity, acctPeak);
+        set(CODE_A40, a40(lastAcctDd), "dd=" + fmt4(lastAcctDd) + " eq=" + fmt2(equity) + " peak=" + fmt2(acctPeak), nowMs);
+        if (mode == Mode.ACT && prm.latchFile != null && acctPeak > 0d
+                && (Double.isNaN(acctPeakWritten) || acctPeak > acctPeakWritten * (1 + 1e-9))
+                && nowMs - lastAcctPeakWriteMs >= PEAK_WRITE_MIN_MS) {
+            lastAcctPeakWriteMs = nowMs;
+            persistLatch(nowMs);
+        }
+    }
+
     // ------------------------------------------------------------------ su kien (hook)
     public synchronized void onTickStart(long nowMs) {
         roll(nowMs);
@@ -326,11 +500,52 @@ public final class KillSwitchEngine {
         set("C3", c3(c3Consec), "api=" + api + " consec=" + c3Consec, nowMs);
     }
 
-    /** C2 cho c3_live sau nay (KHONG noi o v11d). ref = close nen quyet dinh. */
+    /**
+     * C2 cho c3_live. ref = close nen 1m quyet dinh. Co {@code LIVE_KILLSW_C2_SIGNED=0} (mac dinh): cong thuc v1.1
+     * |fill/ref-1| > 2,5 % (y nguyen). Co = 1: coi la lenh MUA, xem {@link #onFill(long, String, boolean, Double, Double)}.
+     */
     public synchronized void onFill(long nowMs, String symbol, Double fillPx, Double refPx) {
+        if (prm.c2Signed) {
+            onFillSigned(nowMs, symbol, true, fillPx, refPx);
+            return;
+        }
         roll(nowMs);
         lastSlip = c2Slip(fillPx, refPx);
         set("C2", c2(lastSlip), symbol + " slip=" + (lastSlip == null ? "NA" : fmt4(lastSlip)), nowMs);
+    }
+
+    /** [V12] C2 co chieu lenh. Co SIGNED=0 => cong thuc v1.1 (bo qua chieu). */
+    public synchronized void onFill(long nowMs, String symbol, boolean isBuy, Double fillPx, Double refPx) {
+        if (!prm.c2Signed) {
+            onFill(nowMs, symbol, fillPx, refPx);
+            return;
+        }
+        onFillSigned(nowMs, symbol, isBuy, fillPx, refPx);
+    }
+
+    private void onFillSigned(long nowMs, String symbol, boolean isBuy, Double fillPx, Double refPx) {
+        roll(nowMs);
+        Double adv = c2Adverse(isBuy, fillPx, refPx);
+        lastSlip = adv;
+        pruneC2(nowMs);
+        String side = isBuy ? "BUY" : "SELL";
+        if (adv != null && adv > prm.c2Warn) {
+            String m = "[KILLSW] C2_WARN symbol=" + symbol + " side=" + side + " adverse=" + fmt4(adv)
+                    + " warn>" + fmt4(prm.c2Warn) + " slip>" + fmt4(prm.c2Slip) + " mode=" + modeLabel;
+            sink.warn(m);
+            fireAlert(m);
+        }
+        if (adv != null && adv > prm.c2Slip) {
+            c2Events.addLast(nowMs);
+            if (mode == Mode.ACT) persistLatch(nowMs);
+        }
+        boolean met = c2Events.size() >= prm.c2Count;
+        set("C2", met, symbol + " " + side + " adverse=" + (adv == null ? "NA" : fmt4(adv)) + " n_slip_win="
+                + c2Events.size() + "/" + prm.c2Count + " win_h=" + prm.c2WindowMs / 3_600_000L, nowMs);
+    }
+
+    private void pruneC2(long nowMs) {
+        while (!c2Events.isEmpty() && c2Events.peekFirst() <= nowMs - prm.c2WindowMs) c2Events.pollFirst();
     }
 
     /** So GIAY: so cum mo, margin, equity MTM (LEGACY khong nam trong so giay). */
@@ -353,12 +568,41 @@ public final class KillSwitchEngine {
         maybeWritePeak(nowMs);
     }
 
-    /** Thread rieng goi moi ~15 s: lan gio, C1 no_data, C5. */
+    /** Thread rieng goi moi ~15 s: lan gio, C1 no_data, C5. [V12] + C2 het cua so, A40 poll, reset owner (ACT). */
     public synchronized void periodic(long nowMs) {
         roll(nowMs);
+        // reset owner TRUOC khi danh gia => ma con dat se latch lai ngay trong cung luot
+        if (mode == Mode.ACT) checkResetRequest(nowMs);
         evalC1(nowMs);
         long noTick = (nowMs - lastTickStartMs) / 1000L;
         set("C5", c5(noTick), "no_tick_s=" + noTick, nowMs);
+        if (prm.c2Signed) {
+            int before = c2Events.size();
+            pruneC2(nowMs);
+            if (c2Events.size() != before || st.get("C2").active) {
+                set("C2", c2Events.size() >= prm.c2Count, "n_slip_win=" + c2Events.size() + "/" + prm.c2Count
+                        + " (periodic)", nowMs);
+            }
+        }
+        if (equitySource != null) {
+            Double eq;
+            try {
+                eq = equitySource.totalMarginBalance();
+            } catch (Throwable e) {
+                eq = null;
+            }
+            onAccountEquity(nowMs, eq);
+        }
+        if (mode == Mode.ACT) {
+            if (latch != Action.NONE && prm.latchFile != null && !prm.latchFile.exists()) {
+                if (nowMs - lastStateWarnMs >= REPEAT_LOG_MS) {
+                    lastStateWarnMs = nowMs;
+                    sink.warn("[KILLSW] file latch " + prm.latchFile.getPath() + " BI XOA khi dang latch " + latch
+                            + " => ghi lai (chi script owner ops/killsw_reset.sh duoc mo latch)");
+                }
+                persistLatch(nowMs);
+            }
+        }
     }
 
     private void evalC1(long nowMs) {
@@ -379,16 +623,206 @@ public final class KillSwitchEngine {
                 s.edgesHour++;
                 s.edgesTotal++;
                 s.lastLog = nowMs;
-                sink.warn(line("WOULD_TRIGGER", code, s, nowMs, "START"));
+                sink.warn(line(what(), code, s, nowMs, "START"));
             } else if (nowMs - s.lastLog >= REPEAT_LOG_MS) {
                 s.lastLog = nowMs;
-                sink.warn(line("WOULD_TRIGGER", code, s, nowMs, "CONT"));
+                sink.warn(line(what(), code, s, nowMs, "CONT"));
             }
+            if (mode == Mode.ACT) latchFor(code, detail, nowMs);
         } else if (s.active) {
             s.active = false;
             sink.info("[KILLSW] CLEAR code=" + code + " mode=" + modeLabel + " dur_s=" + (nowMs - s.since) / 1000L
                     + " detail=" + detail);
         }
+    }
+
+    private String what() {
+        return mode == Mode.ACT ? "TRIGGER" : "WOULD_TRIGGER";
+    }
+
+    /** [V12] ACT: latch theo ma (moi lan dat, khong chi canh len => sau reset ma van dat thi latch lai ngay). */
+    private void latchFor(String code, String detail, long nowMs) {
+        Action a = latchActionOf(code);
+        boolean newCode = latchCodes.add(code);
+        if (a.ordinal() > latch.ordinal()) {
+            Action prev = latch;
+            if (prev == Action.NONE) latchSinceMs = nowMs;
+            latch = a;
+            latchDetail = code + ": " + detail;
+            persistLatch(nowMs);
+            String m = "[KILLSW] LATCH action=" + a + " (truoc " + prev + ") code=" + code + " codes=" + latchCodes
+                    + " detail=" + detail + " | " + (a == Action.FLATTEN
+                    ? "DONG HET reduce-only chia lo + dung; " : "dung mo moi, van quan ly vi the; ")
+                    + "chi owner mo lai bang ops/killsw_reset.sh";
+            sink.warn(m);
+            fireAlert(m);
+        } else if (newCode) {
+            persistLatch(nowMs);
+            sink.warn("[KILLSW] LATCH them code=" + code + " (giu " + latch + ") codes=" + latchCodes + " detail=" + detail);
+        }
+    }
+
+    private void fireAlert(String m) {
+        Consumer<String> a = alert;
+        if (a == null) return;
+        try {
+            a.accept(m);
+        } catch (Throwable ignore) {
+            // alert khong duoc lam hong engine
+        }
+    }
+
+    // ------------------------------------------------------------------ [V12] persist latch (chi mode ACT)
+
+    /** Engine la nguoi ghi DUY NHAT file latch (atomic tmp + move). */
+    private void persistLatch(long nowMs) {
+        if (mode != Mode.ACT || prm.latchFile == null) return;
+        JsonObject o = new JsonObject();
+        o.addProperty("version", 1);
+        o.addProperty("latch", latch.name());
+        JsonArray codes = new JsonArray();
+        for (String c : latchCodes) codes.add(c);
+        o.add("codes", codes);
+        o.addProperty("since_ms", latch == Action.NONE ? 0L : latchSinceMs);
+        o.addProperty("detail", latchDetail);
+        JsonArray ev = new JsonArray();
+        for (Long t : c2Events) ev.add(t);
+        o.add("c2_events_ms", ev);
+        if (acctPeak > 0d) o.addProperty("acct_peak", acctPeak);
+        o.addProperty("last_reset_at_ms", lastResetAtMs);
+        o.addProperty("updated_ms", nowMs);
+        try {
+            File abs = prm.latchFile.getAbsoluteFile();
+            File dir = abs.getParentFile();
+            if (dir != null && !dir.exists()) dir.mkdirs();
+            File tmp = new File(dir, abs.getName() + ".tmp");
+            Files.write(tmp.toPath(), (o.toString() + "\n").getBytes(StandardCharsets.UTF_8));
+            Files.move(tmp.toPath(), abs.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            if (acctPeak > 0d) acctPeakWritten = acctPeak;
+        } catch (Exception e) {
+            if (nowMs - lastStateWarnMs >= REPEAT_LOG_MS) {
+                lastStateWarnMs = nowMs;
+                sink.warn("[KILLSW] khong ghi duoc file latch " + prm.latchFile.getPath() + ": " + e
+                        + " (latch van giu trong RAM)");
+            }
+        }
+    }
+
+    /** Nap latch luc khoi dong. File hong => FAIL-CLOSED: latch NO_NEW_ENTRY code=STATE (sao luu file hong). */
+    private void loadLatch(long nowMs) {
+        File f = prm.latchFile;
+        if (f == null) {
+            sink.warn("[KILLSW] mode=act KHONG co file latch => latch KHONG song qua restart");
+            return;
+        }
+        if (!f.exists()) {
+            sink.info("[KILLSW] chua co file latch " + f.getPath() + " => khong latch");
+            return;
+        }
+        try {
+            String s = new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8);
+            JsonObject o = JsonParser.parseString(s).getAsJsonObject();
+            Action a = Action.valueOf(o.get("latch").getAsString().trim());
+            latch = a;
+            latchCodes.clear();
+            if (o.has("codes")) for (JsonElement e : o.getAsJsonArray("codes")) latchCodes.add(e.getAsString());
+            latchSinceMs = o.has("since_ms") ? o.get("since_ms").getAsLong() : 0L;
+            latchDetail = o.has("detail") ? o.get("detail").getAsString() : "-";
+            c2Events.clear();
+            if (o.has("c2_events_ms")) for (JsonElement e : o.getAsJsonArray("c2_events_ms")) c2Events.addLast(e.getAsLong());
+            if (o.has("acct_peak")) {
+                double p = o.get("acct_peak").getAsDouble();
+                if (Double.isFinite(p) && p > 0d) {
+                    acctPeak = p;
+                    acctPeakWritten = p;
+                }
+            }
+            lastResetAtMs = o.has("last_reset_at_ms") ? o.get("last_reset_at_ms").getAsLong() : 0L;
+            if (latch != Action.NONE) {
+                String m = "[KILLSW] NAP LATCH tu " + f.getPath() + ": " + latch + " codes=" + latchCodes + " since_ms="
+                        + latchSinceMs + " detail=" + latchDetail + " => van chan (chi owner mo bang ops/killsw_reset.sh)";
+                sink.warn(m);
+                fireAlert(m);
+            } else {
+                sink.info("[KILLSW] nap file latch " + f.getPath() + ": NONE c2_events=" + c2Events.size()
+                        + " acct_peak=" + fmt2(acctPeak));
+            }
+        } catch (Exception e) {
+            File bak = new File(f.getPath() + ".corrupt_" + nowMs);
+            try {
+                Files.copy(f.toPath(), bak.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            } catch (Exception ignore) {
+                // giu file goc neu khong sao luu duoc
+            }
+            latch = Action.NO_NEW_ENTRY;
+            latchCodes.clear();
+            latchCodes.add(CODE_STATE);
+            latchSinceMs = nowMs;
+            latchDetail = "file latch hong: " + e;
+            String m = "[KILLSW] FAIL-CLOSED file latch " + f.getPath() + " khong doc duoc (" + e + ") => latch NO_NEW_ENTRY"
+                    + " code=STATE, sao luu " + bak.getName();
+            sink.warn(m);
+            fireAlert(m);
+            persistLatch(nowMs);
+        }
+    }
+
+    /**
+     * Yeu cau reset cua owner ({@code ops/killsw_reset.sh} ghi {@code resetFile}): {"reset_at_ms":..,"reset_by":..,
+     * "reset_peak":0|1}. Ap dung: latch NONE, xoa ma + su kien C2; reset_peak=1 => dinh equity that ve NaN (lay lai
+     * tu equity hien tai). File yeu cau doi ten {@code .done_<ms>}. Ma con dat => latch lai o lan danh gia ke.
+     */
+    private void checkResetRequest(long nowMs) {
+        File f = prm.resetFile;
+        if (f == null || !f.exists()) return;
+        long at = nowMs;
+        String by = "-";
+        boolean resetPeak = false;
+        try {
+            String s = new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8);
+            JsonObject o = JsonParser.parseString(s).getAsJsonObject();
+            if (o.has("reset_at_ms")) at = o.get("reset_at_ms").getAsLong();
+            if (o.has("reset_by")) by = o.get("reset_by").getAsString();
+            if (o.has("reset_peak")) resetPeak = o.get("reset_peak").getAsInt() == 1;
+        } catch (Exception e) {
+            sink.warn("[KILLSW] file reset " + f.getPath() + " khong hop le (" + e + ") => BO QUA, doi ten .bad");
+            try {
+                Files.move(f.toPath(), new File(f.getPath() + ".bad_" + nowMs).toPath(), StandardCopyOption.REPLACE_EXISTING);
+            } catch (Exception ignore) {
+                // de nguyen
+            }
+            return;
+        }
+        Action prev = latch;
+        Set<String> prevCodes = new LinkedHashSet<>(latchCodes);
+        latch = Action.NONE;
+        latchCodes.clear();
+        latchSinceMs = 0L;
+        latchDetail = "-";
+        c2Events.clear();
+        if (resetPeak) {
+            acctPeak = Double.NaN;
+            acctPeakWritten = Double.NaN;
+        }
+        lastResetAtMs = at;
+        for (Iterator<CodeState> it = st.values().iterator(); it.hasNext(); ) {
+            CodeState s = it.next();
+            s.active = false;   // ma con dat => canh len moi + latch lai
+        }
+        persistLatch(nowMs);
+        try {
+            Files.move(f.toPath(), new File(f.getPath() + ".done_" + nowMs).toPath(), StandardCopyOption.REPLACE_EXISTING);
+        } catch (Exception e) {
+            try {
+                Files.deleteIfExists(f.toPath());
+            } catch (Exception ignore) {
+                // lan sau se ap dung lai (idempotent)
+            }
+        }
+        String m = "[KILLSW] RESET boi owner (" + by + ", reset_at_ms=" + at + ", reset_peak=" + (resetPeak ? 1 : 0)
+                + "): " + prev + " codes=" + prevCodes + " => NONE";
+        sink.warn(m);
+        fireAlert(m);
     }
 
     private String line(String what, String code, CodeState s, long nowMs, String edge) {
@@ -422,6 +856,11 @@ public final class KillSwitchEngine {
                 .append(" U=").append(fmt4(lastEquity > 0f ? lastMargin / lastEquity : Float.NaN))
                 .append(" eq=").append(fmt2(lastEquity)).append(" peak=").append(fmt2(peak))
                 .append(" dd=").append(fmt4(lastDd));
+        if (st.containsKey(CODE_A40)) {
+            b.append(" acct_eq=").append(fmt2(lastAcctEq)).append(" acct_peak=").append(fmt2(acctPeak))
+                    .append(" acct_dd=").append(fmt4(lastAcctDd));
+        }
+        if (mode == Mode.ACT) b.append(" latch=").append(latch).append(latchCodes.isEmpty() ? "" : latchCodes.toString());
         return b.toString();
     }
 
@@ -444,6 +883,14 @@ public final class KillSwitchEngine {
 
     synchronized double peak() {
         return peak;
+    }
+
+    synchronized double acctPeak() {
+        return acctPeak;
+    }
+
+    synchronized int c2EventCount() {
+        return c2Events.size();
     }
 
     private static String fmt2(double v) {

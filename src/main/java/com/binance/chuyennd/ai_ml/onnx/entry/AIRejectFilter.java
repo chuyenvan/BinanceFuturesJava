@@ -50,6 +50,9 @@ public class AIRejectFilter {
      *  Chi dem, KHONG doi quyet dinh; key tat => khong bao gio tang. */
     public static final AtomicInteger skipFullCount = new AtomicInteger(0);
 
+    /** [FAIL-CLOSED audD 2026-10-23] dem don dieu REJECT vi p15/thr khong xac dinh (NaN/-inf). Chi tang khi LIVE gate bat. */
+    public static final AtomicInteger nonFiniteRejectCount = new AtomicInteger(0);
+
     /** Reset counter truoc moi ablation run. */
     public static void resetCounters() {
         mom15RejectCount.set(0);
@@ -179,6 +182,15 @@ public class AIRejectFilter {
      * predRisk4H khong con model dung sau (carry-forward tu gate cu), dung lam la chan live la rui ro gia.
      */
     private FilterResult evaluate(float pred15M, float thres15M) {
+        // [FAIL-CLOSED audD 2026-10-23] `pred < thr` voi NaN LUON false => PASS (fcmpg/ifge). Chi ap khi LIVE gate
+        //   bat (sim khong co key LIVE_* => nhanh nay khong chay => sim byte-identical). p15/thr khong xac dinh => REJECT.
+        if (LiveGateRollingRatio.isOn()
+                && (Float.isNaN(pred15M) || Float.isInfinite(pred15M)
+                    || Float.isNaN(thres15M) || thres15M == Float.NEGATIVE_INFINITY)) {
+            nonFiniteRejectCount.incrementAndGet();
+            return new FilterResult(FilterDecision.REJECT,
+                    "FAIL-CLOSED: p15/thr khong xac dinh (p15=" + pred15M + " thr=" + thres15M + ")");
+        }
         if (pred15M < thres15M) {
             mom15RejectCount.incrementAndGet();
             return new FilterResult(FilterDecision.REJECT,

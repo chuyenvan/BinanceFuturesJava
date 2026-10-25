@@ -58,6 +58,8 @@ public final class LiveGateRollingRatio {
 
     private static final GateRatioBuffer buffer = new GateRatioBuffer();
     private static boolean warnedBeforeFirst = false;
+    /** [FAIL-CLOSED audD 2026-10-23] so lan r/q khong huu han (REJECT). */
+    static long nonFinite = 0;
 
     // bộ đếm theo giờ (log mỗi giờ)
     private static long curHour = Long.MIN_VALUE;
@@ -137,6 +139,15 @@ public final class LiveGateRollingRatio {
         float factor = Math.max(EntryGate.DYN_MIN, (sp / EntryGate.SCORE_BASE) * EntryGate.DYN_MULT);
         float gs = EntryGate.GATE_REGIME_ADAPTIVE ? EntryGate.CURRENT_REGIME_SCALE : EntryGate.GATE_DYN_SCALE;
         float r = p15 / (factor * gs);
+        // [FAIL-CLOSED audD 2026-10-23] r NaN/inf KHONG duoc vao buffer (quickselect voi NaN cho q sai/NaN, cache
+        //   ca gio + persist qua restart). Tra NaN => AIRejectFilter.evaluate REJECT.
+        if (!Float.isFinite(r)) {
+            if (nonFinite++ % 1000 == 0) {
+                LOG.warn("[GATE-RATIO] FAIL-CLOSED r khong huu han (p15={} sp={} factor={} gs={}) -> REJECT, khong nap (n={})",
+                        p15, sp, factor, gs, nonFinite);
+            }
+            return Float.NaN;
+        }
         float q = buffer.addAndQuery(ts, r, pct, days, Configs.MIN_MOMENTUM_15M);
         if (!warnedBeforeFirst && buffer.nBeforeFirst() > 0) {
             warnedBeforeFirst = true;
@@ -144,6 +155,12 @@ public final class LiveGateRollingRatio {
                     buffer.size(), Configs.MIN_MOMENTUM_15M);
         }
         appendRecord(ts, r);
+        if (!Float.isFinite(q)) {
+            if (nonFinite++ % 1000 == 0) {
+                LOG.warn("[GATE-RATIO] FAIL-CLOSED q_t khong huu han ({}) size={} -> REJECT (n={})", q, buffer.size(), nonFinite);
+            }
+            return Float.NaN;
+        }
         return q;
     }
 

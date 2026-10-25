@@ -348,6 +348,13 @@ public class DetectEntrySignal2TradeNormal {
                 } catch (Exception e) {
                     LOG.error("entry predict (extractAllFeatures/predictAll) loi: {}", e.toString());
                 }
+                if (predictData == null) {
+                    // [FAIL-CLOSED audD 2026-10-23] khong co prediction => createOrderBuyRequest return som cho MOI leg
+                    //   (selector/BIG_DOWN/DCA). Ghi ro de monitor khong doc nham dong [GATE] la PASS.
+                    NO_PRED_TICKS.incrementAndGet();
+                    LOG.warn("[FAIL-CLOSED] tick {} KHONG co prediction (feature snapshot thieu/loi) -> 0 entry/DCA tick nay (n={})",
+                            Utils.normalizeDateYYYYMMDDHHmm(time), NO_PRED_TICKS.get());
+                }
             }
             // 3. Chạy AI Predict -> Sort theo L0 (Prob Fail) từ bé đến lớn
             // [CASCADE 2026-09-28] docs/plan/PLAN_CASCADE_ENTRY.md — GATE-FIRST (mac dinh TAT):
@@ -506,6 +513,7 @@ public class DetectEntrySignal2TradeNormal {
             Float gateThrMin = null, gateThrMax = null;
             // [SHADOW2 2026-10-05] moc dem skipFull + reset U cua tick (chi LOG).
             final int gateSkipFull0 = AIRejectFilter.skipFullCount.get();
+            final int gateNonFinite0 = AIRejectFilter.nonFiniteRejectCount.get();   // [FAIL-CLOSED audD]
             lastLiveU = Float.NaN;
             for (Map.Entry<Float, String> entry : selPool.entrySet()) {
                 String symbol = entry.getValue();
@@ -558,8 +566,13 @@ public class DetectEntrySignal2TradeNormal {
                         String.format("%.5f", Configs.MIN_MOMENTUM_15M),
                         gateThrMin == null ? "-" : String.format("%.5f", gateThrMin),
                         gateThrMax == null ? "-" : String.format("%.5f", gateThrMax),
-                        gateCand, predictRejects.size(),
+                        // [FAIL-CLOSED audD] khong pred => moi ung vien bi bo => n_pass PHAI = 0 (truoc: in n_pass=n_cand)
+                        gateCand, predictData == null ? gateCand : predictRejects.size(),
                         AIRejectFilter.skipFullCount.get() - gateSkipFull0, lastLiveU));
+            }
+            int gateNonFinite = AIRejectFilter.nonFiniteRejectCount.get() - gateNonFinite0;
+            if (gateNonFinite > 0) {
+                LOG.warn("[FAIL-CLOSED] [GATE] {} ung vien REJECT vi p15/thr khong xac dinh (NaN) tick {}", gateNonFinite, time);
             }
             // market pred GIỐNG NHAU mọi coin → in 1 lần kèm danh sách SYM(symbolPred). (24H đã bỏ khỏi hệ.)
             if (!predictRejects.isEmpty() && predictData != null) {
@@ -586,6 +599,8 @@ public class DetectEntrySignal2TradeNormal {
 
     // [PARITY] Pool DAY DU (khong loc maxThres) cho selector rank-mode -> khop backtest RANK-TOPK.
     private final TreeMap<Float, String> selectorRankPool = new TreeMap<>();
+    /** [FAIL-CLOSED audD 2026-10-23] so tick khong co prediction (0 entry). */
+    public static final java.util.concurrent.atomic.AtomicLong NO_PRED_TICKS = new java.util.concurrent.atomic.AtomicLong();
     // [C3-SHADOW] pNoPump per-coin cua tick hien tai. Khi profile doi THU TU sang score S1,
     // symbolPred truyen xuong VAN PHAI la pNoPump (no chi vao ban le trailing STRONG/WEAK).
     private final Map<String, Float> selPnp = new HashMap<>();

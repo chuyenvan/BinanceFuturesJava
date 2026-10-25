@@ -37,6 +37,13 @@ public final class LiveFeaturePipeline {
     /** [V11 §6] tap died cho MarketDataObject = cua NGUON sim/train (store/market.bin sinh voi DIED_SYMBOLS=BTCDOM,USDC). */
     public static final String K_MD_DIED = "LIVE_MD_DIED_SYMBOLS";
     public static final String MD_DIED_DEFAULT = "BTCDOM,USDC";
+    /**
+     * [V12 SAFE C11 2026-10-25] {@code LIVE_SEED_EXCLUDE_DECISION_MIN=1}: seed GIU LAI phut cuoi cua map seed (khong nuoi
+     * ngay); tick dau: phut giu lai &lt; phut quyet dinh => nuoi (= hanh vi cu), &gt;= => bo (phut quyet dinh tinh tu
+     * snapshot cua so nhu moi tick) => het race "seed nuoi toi phut quyet dinh dau => minute &lt;= lastFed => mat tick"
+     * (10-21 07:54:10). Mac dinh 0 = hanh vi cu y nguyen; c3_live dat 1.
+     */
+    public static final String K_SEED_EXCL = "LIVE_SEED_EXCLUDE_DECISION_MIN";
     public static final int TOL_DEFAULT = 3;
     public static final long TIMEOUT_DEFAULT = 3000L;
     public static final long POLL_DEFAULT = 250L;
@@ -110,6 +117,11 @@ public final class LiveFeaturePipeline {
     private long lastMinute = Long.MIN_VALUE;
     private Result last;
     private int prevCount = -1;
+    // [V12 SAFE C11] phut seed giu lai (chi khi seedExclLast)
+    private boolean seedExclLast = false;
+    private long pendingMinute = Long.MIN_VALUE;
+    private Map<String, KlineObjectSimple> pendingSnap = null;
+    long nSeedHeldFed = 0, nSeedHeldDropped = 0;
     long nTicks = 0, nPartial = 0, nMdNull = 0, nGapMinutes = 0, nCatchup = 0, nNoSnap = 0;
 
     public LiveFeaturePipeline(Sink sink, MdGen md, boolean featMdInline, int tol) {
@@ -128,6 +140,17 @@ public final class LiveFeaturePipeline {
     /** Rate dung cho QUYET DINH market-level (levelChange/predictAllCandidates). Mac dinh legacy. */
     public static boolean decisionMdInline() {
         return "inline".equalsIgnoreCase(Cfg.getOr(K_MD_SOURCE, "legacy").trim());
+    }
+
+    /** [V12 SAFE C11] doc co LIVE_SEED_EXCLUDE_DECISION_MIN ("1"/"true" => bat; mac dinh 0). */
+    static boolean seedExcludeCfg() {
+        String v = Cfg.getOr(K_SEED_EXCL, "0").trim();
+        return "1".equals(v) || "true".equalsIgnoreCase(v);
+    }
+
+    /** [V12 SAFE C11] bat/tat giu lai phut seed cuoi (goi TRUOC {@link #seed}). */
+    public synchronized void setSeedExcludeDecisionMin(boolean on) {
+        this.seedExclLast = on;
     }
 
     static boolean featMdInlineCfg() {
@@ -176,6 +199,13 @@ public final class LiveFeaturePipeline {
                         + "feat_md={} decision_md={} settle tol={} timeout={}ms poll={}ms md_died={}",
                 p.featMdInline ? "inline" : "legacy", decisionMdInline() ? "inline" : "legacy", p.tol, timeoutMs(), pollMs(),
                 new java.util.TreeSet<>(died));
+        p.seedExclLast = seedExcludeCfg();
+        if (p.seedExclLast) {
+            LOG.warn("*** [FEAT-PIPE] {}=1: seed giu lai phut cuoi, tick dau tinh phut quyet dinh tu snapshot cua so (C11)",
+                    K_SEED_EXCL);
+        } else if ("c3_live".equalsIgnoreCase(Cfg.getOr("LIVE_PROFILE", "").trim())) {
+            LOG.warn("[FEAT-PIPE] LIVE_PROFILE=c3_live nhung {}=0 => race seed/tick dau sau restart (C11) VAN CON", K_SEED_EXCL);
+        }
         return p;
     }
 
@@ -202,6 +232,10 @@ public final class LiveFeaturePipeline {
      * restart = backtest. Key co the lech ms (readDataFromAerospikeCustom(now-2000')) => can ve dau phut.
      */
     public synchronized void seed(TreeMap<Long, Map<String, KlineObjectSimple>> minutes) {
+        if (seedExclLast) {
+            seedHoldLast(minutes);
+            return;
+        }
         int n = 0;
         if (minutes != null) {
             for (Map.Entry<Long, Map<String, KlineObjectSimple>> e : minutes.entrySet()) {
@@ -221,12 +255,58 @@ public final class LiveFeaturePipeline {
         LOG.info("[FEAT-PIPE] seed replay {} phut, phut cuoi {} ({} symbol)", n, lastFed, prevCount);
     }
 
+    /** [V12 SAFE C11] nhu {@link #seed} nhung phut hop le CUOI cung duoc giu lai (pending) cho tick dau quyet dinh. */
+    private void seedHoldLast(TreeMap<Long, Map<String, KlineObjectSimple>> minutes) {
+        int n = 0;
+        long heldMin = Long.MIN_VALUE;
+        Map<String, KlineObjectSimple> held = null;
+        if (minutes != null) {
+            for (Map.Entry<Long, Map<String, KlineObjectSimple>> e : minutes.entrySet()) {
+                long m = align(e.getKey());
+                Map<String, KlineObjectSimple> snap = e.getValue();
+                if (m <= lastFed || m <= heldMin || snap == null || snap.isEmpty()) continue;
+                for (KlineObjectSimple k : snap.values()) {
+                    if (k != null && k.startTime != null) k.startTime = align(k.startTime);
+                }
+                if (held != null) {
+                    md.update(held);
+                    sink.feed(heldMin, held);
+                    lastFed = heldMin;
+                    prevCount = held.size();
+                    n++;
+                }
+                held = snap;
+                heldMin = m;
+            }
+        }
+        pendingSnap = held;
+        pendingMinute = heldMin;
+        LOG.info("[FEAT-PIPE] seed replay {} phut, phut cuoi {} ({} symbol); GIU LAI phut {} cho tick dau ({})",
+                n, lastFed, prevCount, held == null ? "-" : String.valueOf(heldMin), K_SEED_EXCL);
+    }
+
     /**
      * Tick quyet dinh phut {@code minute}: (1) cho du symbol (F-settle); (2) nuoi cac phut con thieu
      * (lastFed, minute); (3) phut quyet dinh: md + extract. Goi lai cung phut => tra ket qua cu (khong nuoi trung).
      */
     public synchronized Result onTick(MinuteSource src, long minute, MarketDataObject legacyRate) {
         if (minute == lastMinute && last != null) return last;
+        if (pendingSnap != null) {   // [V12 SAFE C11] chi khi co LIVE_SEED_EXCLUDE_DECISION_MIN=1
+            if (pendingMinute < minute) {
+                md.update(pendingSnap);
+                sink.feed(pendingMinute, pendingSnap);
+                lastFed = pendingMinute;
+                prevCount = pendingSnap.size();
+                nSeedHeldFed++;
+                LOG.info("[FEAT-PIPE] tick dau phut {}: nuoi phut seed giu lai {} (< phut quyet dinh)", minute, pendingMinute);
+            } else {
+                nSeedHeldDropped++;
+                LOG.warn("[FEAT-PIPE] tick dau phut {}: BO phut seed giu lai {} (>= phut quyet dinh) -> tinh tu snapshot cua so"
+                        + " (race seed/tick dau da tranh, C11)", minute, pendingMinute);
+            }
+            pendingSnap = null;
+            pendingMinute = Long.MIN_VALUE;
+        }
         if (lastFed != Long.MIN_VALUE && minute <= lastFed) {
             LOG.warn("[FEAT-PIPE] phut {} <= phut da nuoi {} (clock lui?) -> giu ket qua cu", minute, lastFed);
             return last;
