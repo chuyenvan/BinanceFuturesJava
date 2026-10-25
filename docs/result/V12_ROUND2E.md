@@ -14,7 +14,7 @@ Không push, không merge, không deploy, không gọi Binance, không đụng 2
 
 ## 0. Risk-first
 
-1. **Stop `c3s-` bị GIỮ khi sàn chưa xác nhận phẳng → chặn TOÀN BỘ mở mới (UNKNOWN_POSITION)** cho tới khi cả positionRisk lẫn account báo phẳng và stop huỷ được.
+1. **[ĐÃ THAY ở 2f — xem §5: nay chỉ chặn RIÊNG symbol (lớp B), toàn hệ chỉ khi vị thế lạ / lỗi đọc (lớp A)]** ~~Stop `c3s-` bị GIỮ khi sàn chưa xác nhận phẳng → chặn TOÀN BỘ mở mới (UNKNOWN_POSITION)~~ cho tới khi cả positionRisk lẫn account báo phẳng và stop huỷ được.
    - Ca thường gặp: stream báo `pa=0` nhưng positionRisk REST trễ vài trăm ms → guard giữ stop + UNKNOWN; Reconciler đọc lại mỗi 30 s, huỷ stop, rồi gỡ chặn sau 2 lần đọc nhất quán (≈ 60–90 s chặn mở mới). Bảo thủ, có chủ đích.
    - UNKNOWN vẫn chặn toàn hệ thống (hành vi có sẵn từ C9), không chỉ symbol đó.
 2. **`/fapi/v3/account` mảng `positions` vẫn CHƯA XÁC MINH với sàn thật** (như 2d). Nếu sàn không trả mảng → guard KHÔNG BAO GIỜ huỷ stop mồ côi (KEPT_READ_ERROR) và chặn mở mới khi có stop mồ côi. Fail-safe nhưng có thể kẹt; kiểm ở canary K0.
@@ -91,3 +91,35 @@ Cụm ma (sổ giữ, vị thế thật đã phẳng, còn stop `c3s-` NEW) vẫ
 4. Chưa có script chuyển dry → canary (khi viết: reset latch có chủ đích; nay file latch khác nhãn được giữ + cảnh báo thay vì âm thầm mang sang).
 5. Stop `c3s-` lạ trên cụm sổ ĐANG GIỮ, không phải stop active, trong khi stop active không mở → giữ (KEPT_POSITION) + Telegram 6 h; khi trailing có stop active mới đang mở, lượt quét hằng giờ sẽ huỷ nó (nhánh "bị thay").
 6. Hedge mode: guard dùng `|amt|`, nhưng mock chỉ có 1 vị thế/symbol nên chưa có test LONG+SHORT riêng (bot chạy one-way, hedge `dualSidePosition=true` bị `AccountModeGuard` chặn).
+
+## 5. Vòng 2f — chặn 2 lớp (thay rủi ro 1 của §0)
+
+MASTER: chặn toàn hệ 60–90 s mỗi khi stop trailing kích hoạt trong đợt sập là không chấp nhận được (mất leg crash-buy, live lệch sim). Đã đổi thành 2 lớp:
+
+| lớp | khi nào | chặn | gỡ |
+|---|---|---|---|
+| **(A)** UNKNOWN_POSITION (như C9) | vị thế trên sàn mà sổ KHÔNG biết (sổ mất/rollback — ca D, vị thế tay — ca E), short; guard KHÔNG đọc được vị thế (positionRisk/account lỗi hoặc mảng null); lớp B quá cửa sổ 10′ | TOÀN HỆ | ≥ 2 lần đọc vắng cách ≥ 30 s + không còn stop giữ |
+| **(B)** chặn riêng symbol | symbol sổ ĐÃ BIẾT: cụm đang chờ xác nhận phẳng (flatPending, có từ 2c), hoặc cụm sổ vừa chốt (< 10′, cùng JVM) mà positionRisk còn vị thế / guard còn giữ stop `c3s-` | CHỈ symbol đó; symbol khác vào bình thường | không còn stop giữ + 2 lần đọc positionRisk vắng cách ≥ 30 s |
+
+- "Sổ đã biết vừa chốt" = `LiveBookC3.lastRemovedMs(sym)` (mốc `removeCluster`, chỉ trong bộ nhớ: restart → quên → ca D luôn là (A)). Cửa sổ `OwnStopGuard.KNOWN_CLOSE_WINDOW_MS` = 10′.
+- `OwnStopGuard.keep`: sổ không giữ symbol → (A) nếu lỗi đọc vị thế hoặc không "vừa chốt"; ngược lại (B) (không gọi unknownSink). Lỗi đọc `openStops` của cụm vừa chốt → (B).
+- `Reconciler`: `knownSyms` (B) đồng bộ từ `guard.keptSymbols()` mỗi lần xả hàng; `unknownCheck` xếp vị thế không thuộc sổ vào (B) nếu "vừa chốt", quá 10′ còn vị thế → leo thang (A); `allowsEntry(sym)` chỉ chặn sym khi (B); `confirmPendingFlat` đọc lại mỗi 30 s khi có (B); `symbolBlocks()` + `status()` hiện (B).
+- Đường thường "stream `pa=0` nhưng REST trễ" (có hoặc không có stop) → (B). Ca D/E → (A).
+- Margin cho throttle ở (B): giữ như hiện tại — cụm đã xoá khỏi sổ theo bằng chứng dương (stream `pa=0`), không cộng lại; bảo thủ nhờ (B) chặn symbol đó và leo thang (A) nếu sàn vẫn còn vị thế sau 10′.
+
+| test 2f | kiểm |
+|---|---|
+| `streamFlatButRestLagBlocksOnlyThatSymbol` | X (C00, có stop) chốt qua stream, REST còn 100 → Y (C01) vào được, X bị chặn, `blocks()` rỗng; sàn phẳng → huỷ stop; X gỡ sau 2 lần đọc phẳng |
+| `streamFlatRestLagWithoutStopIsSymbolBlockOnly` | cụm chưa arm, REST trễ (đọc fallback/hằng giờ) → (B), không UNKNOWN |
+| `symbolBlockEscalatesToGlobalAfterWindow` | account còn vị thế: trong 10′ chỉ chặn X; quá 10′ → (A) toàn hệ |
+| `restPositionPersistingPastWindowEscalates` | positionRisk còn vị thế quá 10′ → (A) |
+| `readErrorOnJustClosedClusterIsGlobal` | account lỗi khi giữ stop cụm vừa chốt → (A) |
+| `proofFlat2CaseD_…` (giữ nguyên) | ca D vẫn chặn toàn hệ |
+
+Thay 2 test 2e (`streamFlatButRestStillHoldsKeepsStopUntilBothFlat`, `unknownNotReleasedWhileOwnStopStillKept`) vốn khẳng định hành vi chặn toàn hệ cũ.
+
+- Build: **613 test, 0 fail, 0 error, 1 skip**. `test_fake242` không đổi (không sửa ops ngoài pin).
+- Jar dry 2f: `~/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12dry_2f`, md5 **`5164c1c337b4b425fb5ecb9c0f70e8d3`** (100 258 916 B), pin trong `deploy_v12_dry.sh`. Jar 2e đã xoá.
+- Parity 10-23 jar 2f vs dcae2e2b: **PASS** — out_BT `e0918a33` ✅, out_NEW2 `e0918a33` ✅, fund_BT `a81b3b03` ✅, fund_NEW2 `8dea3f70` ✅; ctl only_ref = only_new = 0; strace AF_INET non-loopback = 0 (`round2e/r2f_compare.json`).
+- Commit: `72b0e7f5` (code + test), `ed430add` (pin), commit docs này.
+- Còn mở thêm: cửa sổ 10′ là tham số cứng; restart trong lúc (B) → mất mốc "vừa chốt" → vị thế còn trên sàn thành (A) (bảo thủ).
