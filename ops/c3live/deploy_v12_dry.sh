@@ -8,7 +8,8 @@
 # Script tu dung o moi buoc sai; hoi YES (in hoa) truoc khi restart. Log: ~/claude_master/deploy/deploy_v12dry_<TS>.log
 # Rollback: bash ~/claude_master/deploy/rollback_v12.sh <TS>
 # Bien cho test (Oracle, server 242 GIA): SSH_242, SCP_242, RHOST, APP_DIR, LOGDIR, WD_PAUSE, NJ, NJ_MD5, OLD_MD5,
-#   KILLSW_SH, EXINFO_CMD, POST_WAIT_S, POST_ROUNDS.
+#   KILLSW_SH, KILLSW_MD5, RB_SH, LATCH_WAIT_S, EXINFO_CMD, POST_WAIT_S, POST_ROUNDS.
+# [2c] Sau restart cho LATCH_WAIT_S (120 s): co >= 1 dong "[KILLSW] LATCH" => ROLLBACK TU DONG + FAIL.
 # =============================================================================
 set -uo pipefail
 
@@ -17,10 +18,13 @@ SCP_242=${SCP_242:-"scp -P 2222 -o BatchMode=yes -i /home/ubuntu/.ssh/id_rsa_chu
 RHOST=${RHOST-"root@103.157.218.242:"}
 A=${APP_DIR:-/home/chuyennd/java/v_t_m}
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}   # mau nhan dien process app (test: process gia)
-NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12dry}
-NJ_MD5=${NJ_MD5:-a55be721e574217c852beebcc07e6dc3}
+NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12dry_2c}
+NJ_MD5=${NJ_MD5:-ff717f380688a358c6830a7e0fadba04}   # jar vong 2c (HEAD ff549d47)
 OLD_MD5=${OLD_MD5:-dcae2e2bbb1a357bc15703b416d4dccb}
 KILLSW_SH=${KILLSW_SH:-/home/ubuntu/claude_master/v12/c3live/ops/killsw_reset.sh}
+KILLSW_MD5=${KILLSW_MD5:-6f8d83481904f91b3f92601b31720ace}   # [2c MIN-12] pin md5 ops/killsw_reset.sh (commit vong 2c)
+RB_SH=${RB_SH:-$(cd "$(dirname "$0")" && pwd)/rollback_v12.sh}   # [2c CRIT-1] rollback tu dong khi LATCH sau start
+LATCH_WAIT_S=${LATCH_WAIT_S:-120}
 WD_PAUSE=${WD_PAUSE:-/var/lib/h242_watchdog/PAUSE}
 EXINFO_CMD=${EXINFO_CMD:-"curl -s --max-time 30 https://fapi.binance.com/fapi/v1/exchangeInfo"}
 POST_WAIT_S=${POST_WAIT_S:-120}
@@ -65,7 +69,9 @@ fi
 ok "jar moi md5 $NJ_MD5"
 [ -f "$KILLSW_SH" ] || die "khong thay $KILLSW_SH"
 bash -n "$KILLSW_SH" || die "cu phap killsw_reset.sh loi"
-ok "killsw_reset.sh co, cu phap OK"
+[ "$(md5sum < "$KILLSW_SH" | cut -c1-32)" = "$KILLSW_MD5" ] || die "md5 killsw_reset.sh sai (mong $KILLSW_MD5) — dung ban da audit"
+ok "killsw_reset.sh co, cu phap OK, md5 $KILLSW_MD5"
+[ -f "$RB_SH" ] && bash -n "$RB_SH" || die "khong thay/cu phap loi rollback $RB_SH (can cho rollback tu dong)"
 
 # ---------------------------------------------------------------- 2. kiem 242 (chi doc)
 say "--- kiem 242 (chi doc)"
@@ -181,6 +187,29 @@ fi
 START_LINE=$(echo "$RS" | grep '^OK started')
 ok "$START_LINE"
 
+# ---------------------------------------------------------------- 4b. [2c CRIT-1] 0 dong [KILLSW] LATCH trong ${LATCH_WAIT_S}s dau
+say "--- cho ${LATCH_WAIT_S}s roi kiem 0 dong '[KILLSW] LATCH' ke tu start (co => ROLLBACK TU DONG)"
+sleep "$LATCH_WAIT_S"
+LT=$($SSH_242 "bash -s -- $A" <<'EOF'
+A=$1; cd "$A" || { echo "FAIL cd"; exit 0; }
+L=logs/full.log
+N=$(grep -a -n 'MainClass: com.binance.chuyennd.trading.BinanceOrderTradingManager' $L | tail -1 | cut -d: -f1)
+C=$(tail -n +${N:-1} $L | grep -a -c '\[KILLSW\] LATCH\|\[KILLSW\] NAP LATCH\|\[KILLSW\] FAIL-CLOSED')
+echo "LATCH_COUNT=$C"
+tail -n +${N:-1} $L | grep -a '\[KILLSW\] LATCH\|\[KILLSW\] NAP LATCH\|\[KILLSW\] FAIL-CLOSED' | head -3 | sed 's/^/   /'
+EOF
+) || LT="LATCH_COUNT=ssh_loi"
+echo "$LT"
+LC=$(echo "$LT" | grep -o 'LATCH_COUNT=[0-9a-z_]*' | cut -d= -f2)
+if [ "$LC" != 0 ]; then
+  say "FAIL: co ${LC} dong [KILLSW] LATCH trong ${LATCH_WAIT_S}s dau (hoac khong doc duoc log) => ROLLBACK TU DONG"
+  $SSH_242 "rm -f $WD_PAUSE" || true
+  YES_AUTO=1 FORCE_TIME=1 bash "$RB_SH" "$TS"
+  say "DEPLOY FAIL (kill-switch latch sau start). Da chay rollback. Gui log cho MASTER: $LOG"
+  exit 1
+fi
+ok "0 dong [KILLSW] LATCH trong ${LATCH_WAIT_S}s dau"
+
 # ---------------------------------------------------------------- 5. kiem sau start (toi da ~10')
 CHK() { $SSH_242 "PP='$PROC_PAT' bash -s -- $A $NJ_MD5" <<'EOF'
 A=$1; NJM=$2; cd "$A"
@@ -211,6 +240,7 @@ UT=$(echo "$U" | grep -o 'tradable=[0-9]*' | cut -d= -f2)
 [ "$(T '\[C3-LIVE-ORDER\]')" = 0 ]                      && echo "OK 0_lenh_that"        || echo "FAIL co_dong_C3-LIVE-ORDER(lenh_that?)"
 [ "$(T 'TU CHOI')" = 0 ]                                && echo "OK khong_TU_CHOI"      || echo "FAIL co_TU_CHOI"
 echo "INFO so_dong_LIVE-DRY=$(T '\[LIVE-DRY\]') (co the 0 neu chua co leg)"
+[ "$(T '\[KILLSW\] LATCH')" = 0 ] && echo "OK 0_KILLSW_LATCH" || echo "FAIL KILLSW_LATCH=$(T '\[KILLSW\] LATCH')"
 if [ -f run/heartbeat ]; then AGE=$(( $(date +%s) - $(stat -c %Y run/heartbeat) )); [ $AGE -lt 180 ] && echo "OK heartbeat_tuoi=${AGE}s" || echo "WAIT heartbeat_tuoi=${AGE}s"; else echo "WAIT heartbeat_chua_co"; fi
 X=$(tail -n +$N $L | grep -a -v 'Picked up' | grep -a -c 'Exception\|\[OPS\] loi hook\|\[C3-LIVE\] loi vong')
 [ "$X" = 0 ] && echo "OK 0_exception" || echo "FAIL exception=$X"

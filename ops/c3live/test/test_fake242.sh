@@ -47,6 +47,7 @@ case "$1" in
         echo "$D INFO [main] x: [C5] GLOBAL OK"
         echo "$D INFO [main] x: [UNIVERSE] listed=640 alive=600 tradable=480 buyable=470 +0 -0 tradfi_excl=110"
         echo "$D INFO [main] x: [C3-LIVE-RECON] khoi dong: ok=true closedWhileDown=[]"
+        [ -f FAKE_LATCH ] && echo "$D WARN [main] x: [KILLSW] LATCH action=FLATTEN (truoc NONE) code=C6 codes=[C6] detail=dd=-0.7144"
       else
         echo "$D INFO [main] x: 🟡 [LIVE_PROFILE=c3_shadow] BAT"
       fi
@@ -67,7 +68,8 @@ EOF
 
 export PROC_PAT="BinanceOrderTradingManager fake242" SSH_242="bash -c" SCP_242=cp RHOST="" APP_DIR=$F LOGDIR=$W/deploylog WD_PAUSE=$W/PAUSE OLD_MD5=$OLD NJ=$W/new.jar \
   NJ_MD5=$NEW KILLSW_SH=$REPO/ops/killsw_reset.sh EXINFO_CMD="cat $W/exinfo.json" POST_WAIT_S=2 POST_ROUNDS=2 WAIT_S=3 \
-  REANCHOR_WAIT=2
+  REANCHOR_WAIT=2 LATCH_WAIT_S=2
+# KILLSW_MD5 KHONG dat => dung md5 pin mac dinh trong deploy_v12_dry.sh (kiem pin khop ops/killsw_reset.sh cua repo)
 PASS=0; FAILN=0
 chk() { if eval "$2"; then PASS=$((PASS+1)); echo "  [PASS] $1"; else FAILN=$((FAILN+1)); echo "  [FAIL] $1"; fi; }
 
@@ -75,6 +77,8 @@ echo "== 1. deploy DRY=1 (truoc 11-18: chi canh bao)"
 OUT=$(DRY=1 bash "$HERE/deploy_v12_dry.sh" 2>&1); echo "$OUT" | tail -4
 chk "deploy DRY PASS" "echo \"\$OUT\" | grep -q 'DRY PASS'"
 chk "deploy DRY khong doi env" "grep -qx 'export LIVE_PROFILE=c3_shadow' $F/conf/env.sh && ! grep -q LIVE_ADAPTER $F/conf/env.sh"
+OUT=$(DRY=1 KILLSW_MD5=00000000000000000000000000000000 bash "$HERE/deploy_v12_dry.sh" 2>&1)
+chk "deploy tu choi khi md5 killsw_reset.sh sai (pin)" "echo \"\$OUT\" | grep -q 'md5 killsw_reset.sh sai'"
 echo "== 2. deploy that KHONG FORCE_DATE (phai tu choi truoc 2026-11-18)"
 OUT=$(echo YES | FORCE_TIME=1 bash "$HERE/deploy_v12_dry.sh" 2>&1); echo "$OUT" | tail -2
 if [ "$(date +%s)" -lt "$(date -d '2026-11-18 08:00 +07' +%s)" ]; then
@@ -84,6 +88,7 @@ echo "== 3. deploy that (FORCE_DATE=1 FORCE_TIME=1, go YES) tren 242 gia"
 OUT=$(echo YES | FORCE_DATE=1 FORCE_TIME=1 bash "$HERE/deploy_v12_dry.sh" 2>&1); echo "$OUT" | tail -8
 TS=$(echo "$OUT" | grep -o 'TS=[0-9_]*' | head -1 | cut -d= -f2)
 chk "deploy XONG" "echo \"\$OUT\" | grep -q '=== XONG'"
+chk "deploy kiem 0 dong KILLSW LATCH sau start" "echo \"\$OUT\" | grep -q '0 dong \[KILLSW\] LATCH'"
 chk "jar moi tren 242 gia" "[ \"\$(md5sum < $F/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEW ]"
 chk "backup jar/env/start" "[ -f $F/target/binance-java-sdk-1.2.4.jar.bak_v12pre_$TS ] && [ -f $F/conf/env.sh.bak_v12pre_$TS ] && [ -f $F/bin/start.sh.bak_v12pre_$TS ]"
 chk "env them LIVE_ADAPTER=dry + c3_live + act" "grep -qx 'export LIVE_ADAPTER=dry' $F/conf/env.sh && grep -qx 'export LIVE_PROFILE=c3_live' $F/conf/env.sh && grep -qx 'export LIVE_KILLSW_MODE=act' $F/conf/env.sh"
@@ -107,16 +112,35 @@ OUT=$(bash "$HERE/c3live_reanchor.sh" 2>&1)
 chk "reanchor DRY khong ghi" "[ ! -f $F/run/c3live_reanchor.req ]"
 OUT=$(echo YES | DRY=0 bash "$HERE/c3live_reanchor.sh" 2>&1)
 chk "reanchor YES ghi yeu cau" "[ -f $F/run/c3live_reanchor.req ]"
-echo "== 8. rollback DRY + YES"
+echo "== 8. rollback DRY + chot gio + YES"
 OUT=$(DRY=1 bash "$HERE/rollback_v12.sh" "$TS" 2>&1)
 chk "rollback DRY PASS" "echo \"\$OUT\" | grep -q 'DRY PASS'"
+HH=$(TZ=Asia/Ho_Chi_Minh date +%-H); MM=$(TZ=Asia/Ho_Chi_Minh date +%-M)
+TOK=1; { [ "$MM" -ge 10 ] && [ "$MM" -le 44 ]; } || TOK=0; case "$HH" in 7|19) TOK=0;; esac
+if [ "$HH" -eq 1 ] || [ "$HH" -eq 13 ]; then [ "$MM" -gt 20 ] || TOK=0; fi
+if [ "$TOK" = 0 ]; then
+  OUT=$(echo YES | bash "$HERE/rollback_v12.sh" "$TS" 2>&1)
+  chk "rollback tu choi ngoai khung gio (time_ok)" "echo \"\$OUT\" | grep -q 'khong hop le' && grep -qx 'export LIVE_ADAPTER=dry' $F/conf/env.sh"
+else
+  echo "  (bo qua kiem tu choi ngoai gio: dang trong khung gio hop le $HH:$MM)"
+fi
 echo '{"version":1,"clusters":[]}' > $F/run/c3live_book.json
-OUT=$(echo YES | bash "$HERE/rollback_v12.sh" "$TS" 2>&1); echo "$OUT" | tail -4
+echo '35015.29' > $F/run/c3live_killsw_peak
+OUT=$(echo YES | FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TS" 2>&1); echo "$OUT" | tail -4
 chk "rollback xong" "echo \"\$OUT\" | grep -q 'Rollback xong'"
 chk "env ve c3_shadow, khong LIVE_ADAPTER" "grep -qx 'export LIVE_PROFILE=c3_shadow' $F/conf/env.sh && ! grep -q LIVE_ADAPTER $F/conf/env.sh"
 chk "jar ve ban cu" "[ \"\$(md5sum < $F/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $OLD ]"
 chk "so dry doi ten .rb_TS" "[ -f $F/run/c3live_book.json.rb_$TS ] && [ ! -f $F/run/c3live_book.json ]"
 chk "process chay lai env c3_shadow" "tr '\\0' '\\n' < /proc/\$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)/environ | grep -qx 'LIVE_PROFILE=c3_shadow'"
+chk "dinh C6 c3_live doi ten .rb_TS" "[ -f $F/run/c3live_killsw_peak.rb_$TS ] && [ ! -f $F/run/c3live_killsw_peak ]"
+echo "== 9. [2c CRIT-1] deploy co dong [KILLSW] LATCH sau start => ROLLBACK TU DONG + FAIL"
+touch "$F/FAKE_LATCH"
+OUT=$(echo YES | FORCE_DATE=1 FORCE_TIME=1 bash "$HERE/deploy_v12_dry.sh" 2>&1); RC=$?; echo "$OUT" | tail -5
+rm -f "$F/FAKE_LATCH"
+chk "deploy FAIL vi LATCH (rc!=0)" "[ $RC != 0 ] && echo \"\$OUT\" | grep -q 'DEPLOY FAIL (kill-switch latch'"
+chk "rollback tu dong da chay" "echo \"\$OUT\" | grep -q 'Rollback TU DONG' && echo \"\$OUT\" | grep -q 'Rollback xong'"
+chk "sau rollback tu dong: env c3_shadow, jar cu" "grep -qx 'export LIVE_PROFILE=c3_shadow' $F/conf/env.sh && ! grep -q LIVE_ADAPTER $F/conf/env.sh && [ \"\$(md5sum < $F/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $OLD ]"
+chk "process chay env c3_shadow sau rollback tu dong" "tr '\\0' '\\n' < /proc/\$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)/environ | grep -qx 'LIVE_PROFILE=c3_shadow'"
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]

@@ -4,6 +4,7 @@
 # Chay tren ORACLE:  bash ~/claude_master/deploy/rollback_v12.sh <TS>
 #   <TS> = gia tri TS in o dau log deploy_v12dry (dang 20261118_0915)
 # Thu (chi doc): DRY=1 bash ~/claude_master/deploy/rollback_v12.sh <TS>
+# [2c] Chot gio nhu deploy (khan cap: FORCE_TIME=1). YES_AUTO=1 chi danh cho rollback tu dong cua deploy_v12_dry.sh.
 # KHONG xoa so dry (run/c3live_*): doi ten .rb_<TS> de lan deploy sau bat dau sach (so dry khong co tien that).
 # =============================================================================
 set -uo pipefail
@@ -14,6 +15,8 @@ PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}   # mau nhan dien process app (
 OLD_MD5=${OLD_MD5:-dcae2e2bbb1a357bc15703b416d4dccb}
 WD_PAUSE=${WD_PAUSE:-/var/lib/h242_watchdog/PAUSE}
 DRY=${DRY:-0}
+FORCE_TIME=${FORCE_TIME:-0}   # [2c MIN-12] bo chot gio (khan cap / rollback tu dong ngay sau deploy)
+YES_AUTO=${YES_AUTO:-0}       # [2c] 1 = khong hoi YES (CHI deploy_v12_dry.sh goi khi LATCH sau start)
 LOGDIR=${LOGDIR:-/home/ubuntu/claude_master/deploy}
 mkdir -p "$LOGDIR"
 LOG=$LOGDIR/rollback_v12_$(TZ=Asia/Ho_Chi_Minh date +%Y%m%d_%H%M).log
@@ -21,6 +24,19 @@ exec > >(tee -a "$LOG") 2>&1
 say() { echo "[$(TZ=Asia/Ho_Chi_Minh date '+%F %T')] $*"; }
 
 say "=== rollback v1.2 -> dcae2e2b (c3_shadow) TS=$TS DRY=$DRY ==="
+# [2c MIN-12] chot gio nhu deploy (phut :10-:44, tranh 07:xx/19:xx, 00:50-01:20, 12:50-13:20); khan cap: FORCE_TIME=1
+time_ok() {
+  H=$(TZ=Asia/Ho_Chi_Minh date +%-H); M=$(TZ=Asia/Ho_Chi_Minh date +%-M)
+  [ "$M" -ge 10 ] && [ "$M" -le 44 ] || return 1
+  case "$H" in 7|19) return 1;; esac
+  if [ "$H" -eq 1 ] || [ "$H" -eq 13 ]; then [ "$M" -gt 20 ] || return 1; fi
+  return 0
+}
+if [ "$DRY" != 1 ] && [ "$FORCE_TIME" != 1 ] && ! time_ok; then
+  say "DUNG: gio $(TZ=Asia/Ho_Chi_Minh date +%H:%M) (+07) khong hop le. Chay lai trong phut :10-:44 (tranh 07:xx, 19:xx,"
+  say "      00:50-01:20, 12:50-13:20). KHAN CAP (bot hong, MASTER bao): FORCE_TIME=1 bash $0 $TS"
+  exit 1
+fi
 PRE=$($SSH_242 "PP='$PROC_PAT' bash -s -- $A $TS $OLD_MD5" <<'EOF'
 A=$1; TS=$2; OLD=$3; cd "$A" || { echo "FAIL cd"; exit 0; }
 for f in target/binance-java-sdk-1.2.4.jar.bak_v12pre_$TS conf/env.sh.bak_v12pre_$TS bin/start.sh.bak_v12pre_$TS; do
@@ -36,8 +52,12 @@ echo "$PRE"
 echo "$PRE" | grep -q '^FAIL' && { say "DUNG: thieu backup / md5 sai. KHONG doi gi. Gui log cho MASTER: $LOG"; exit 1; }
 [ "$DRY" = 1 ] && { say "DRY=1: dung o day (DRY PASS), khong doi gi."; exit 0; }
 
-say "Rollback ve dcae2e2b (c3_shadow) voi backup TS=$TS. Go YES de tiep tuc:"
-read -r ANS; [ "$ANS" = YES ] || { say "huy"; exit 0; }
+if [ "$YES_AUTO" = 1 ]; then
+  say "Rollback TU DONG (YES_AUTO=1, goi tu deploy_v12_dry.sh) ve dcae2e2b (c3_shadow) voi backup TS=$TS"
+else
+  say "Rollback ve dcae2e2b (c3_shadow) voi backup TS=$TS. Go YES de tiep tuc:"
+  read -r ANS; [ "$ANS" = YES ] || { say "huy"; exit 0; }
+fi
 RS=$($SSH_242 "PP='$PROC_PAT' bash -s -- $A $TS $OLD_MD5 $WD_PAUSE" <<'EOF'
 A=$1; TS=$2; OLD=$3; PAUSE=$4; cd "$A" || { echo "FAIL cd"; exit 0; }
 touch "$PAUSE" 2>/dev/null
@@ -47,7 +67,7 @@ pgrep -f "$PP" >/dev/null && { echo "FAIL van con process"; rm -f "$PAUSE"; exit
 \cp -f target/binance-java-sdk-1.2.4.jar.bak_v12pre_$TS target/binance-java-sdk-1.2.4.jar
 \cp -f conf/env.sh.bak_v12pre_$TS conf/env.sh
 \cp -f bin/start.sh.bak_v12pre_$TS bin/start.sh
-for f in run/c3live_book.json run/c3live_dry_state.json run/c3live_ledger.csv run/killsw_latch.json; do
+for f in run/c3live_book.json run/c3live_dry_state.json run/c3live_ledger.csv run/killsw_latch.json run/c3live_killsw_peak; do
   [ -f "$f" ] && mv -f "$f" "$f.rb_$TS"
 done
 J=$(md5sum < target/binance-java-sdk-1.2.4.jar | cut -c1-32)
