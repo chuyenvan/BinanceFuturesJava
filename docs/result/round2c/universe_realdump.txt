@@ -1,0 +1,1 @@
+[TEST-UNIVERSE] dump=exchangeInfo_20261025_1457.json.gz listed=932 TRADIFI_PERPETUAL=225 buyable=513 marketIndex=514 tradfi_in_buyable=0 tradfi_in_index=0 ly_do={NOT_TRADING=138, NOT_USDT=44, TRADFI=224, NOT_PERPETUAL=4, EXCLUDED=1, INDEX=2}
