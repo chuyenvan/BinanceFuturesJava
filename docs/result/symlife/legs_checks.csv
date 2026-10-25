@@ -1,0 +1,17 @@
+check,legs,legs_pct,notional,notional_pct,pnl,pnl_pct_of_total,n_sym
+ALL DEV (8 seed),23583,100.0,24339665,100.0,925538,100.0,525
+symbol khong co tren Vision,0,0.0,0,0.0,0,0.0,0
+symbol thuoc DIED live (143),4771,20.23,4319705,17.75,162629,17.57,107
+  DIED live nhung con giao dich 2026-10-23,66,0.28,71515,0.29,1202,0.13,2
+  DIED live & da ngung,4705,19.95,4248190,17.45,161427,17.44,105
+symbol da ngung (moi luc) tai 2026-10-23,5642,23.92,5103972,20.97,195069,21.08,128
+  da ngung nhung KHONG thuoc DIED live,937,3.97,855782,3.52,33642,3.63,23
+LOI: entry < first_trade_ts,0,0.0,0,0.0,0,0.0,0
+LOI: entry > last_trade_ts,0,0.0,0,0.0,0,0.0,0
+exit > last_trade_ts (giu qua delist),100,0.42,59543,0.24,-8850,-0.96,9
+LOI: entry trong gap giao dich>=3 ngay (relist),0,0.0,0,0.0,0,0.0,0
+giu vi the qua gap giao dich>=3 ngay,0,0.0,0,0.0,0,0.0,0
+entry vao ngay symbol 0 giao dich (raw),0,0.0,0,0.0,0,0.0,0
+entry trong lo raw 2022-02-26..28,0,0.0,0,0.0,0,0.0,0
+entry < 7 ngay sau niem yet,1845,7.82,2574251,10.58,95541,10.32,164
+entry < 30 ngay sau niem yet,4581,19.43,6158656,25.3,259558,28.04,301
