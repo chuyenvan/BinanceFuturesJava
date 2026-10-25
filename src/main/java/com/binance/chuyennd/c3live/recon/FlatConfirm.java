@@ -30,8 +30,9 @@ import java.util.function.Consumer;
  *       <li>{@code account().positions} (/fapi/v3/account) cung vang symbol hoac positionAmt = 0 (mang null = khong biet
  *           =&gt; KHONG du);</li>
  *       <li>0 algo order {@code c3s-} con mo (NEW/chua final) cho symbol. Con stop c3s- NEW ma positionRisk rong =&gt;
- *           KHONG ket luan phang; Telegram WARN 1 lan, cho (i)/(ii) hoac owner (de stop song khi vi the da phang la vo hai:
- *           closePosition reduce-only).</li>
+ *           KHONG ket luan phang; Telegram WARN ngay + [2e] nhac lai moi 6 h, cho (i)/(ii) hoac owner go bang
+ *           {@code ops/c3live/c3live_ghost_clear.sh SYMBOL} (de stop song khi vi the da phang la vo hai: closePosition
+ *           reduce-only).</li>
  *     </ol>
  *     Them: khong co lenh THUONG nao dang mo cho symbol.</li>
  * </ol>
@@ -45,12 +46,14 @@ public final class FlatConfirm {
     public static final long DEFAULT_MIN_GAP_MS = 30_000L;
     /** [2d MAJ-2b] so lan doc positionRisk lien tiep phai vang. */
     public static final int DEFAULT_MIN_READS = 3;
+    /** [2e] chu ky nhac lai Telegram "cum ma" (con stop c3s- NEW ma ca 2 nguon bao phang). */
+    public static final long GHOST_REMIND_MS = 6L * 3_600_000L;
 
     private static final class St {
         int reads;
         long firstMs;
         long lastCountedMs;
-        boolean stopWarned;
+        long lastStopWarnMs = Long.MIN_VALUE / 2;
         long lastLogMs = Long.MIN_VALUE / 2;
     }
 
@@ -136,11 +139,12 @@ public final class FlatConfirm {
             if (cid != null && cid.startsWith(C3LiveCids.STOP_PREFIX) && (os == null || !os.isFinal())) ownOpen++;
         }
         if (ownOpen > 0) {
-            if (!s.stopWarned) {
-                s.stopWarned = true;
+            if (now - s.lastStopWarnMs >= GHOST_REMIND_MS) {   // [2e] nhac lai moi 6h toi khi go
+                s.lastStopWarnMs = now;
                 String m = "[C3-LIVE-FLAT] " + sym + ": positionRisk + account deu bao phang nhung VAN con " + ownOpen
-                        + " stop c3s- NEW tren san => KHONG ket luan phang, GIU cum + stop; cho stream pa=0 / lenh dong FILLED"
-                        + " hoac owner kiem tay";
+                        + " stop c3s- NEW tren san => KHONG ket luan phang, GIU cum + stop (CUM MA?); cho stream pa=0 / lenh dong"
+                        + " FILLED, hoac owner kiem tay roi chay: bash ops/c3live/c3live_ghost_clear.sh " + sym
+                        + " (nhac lai moi 6h)";
                 LOG.warn("{}", m);
                 try {
                     alert.accept(m);

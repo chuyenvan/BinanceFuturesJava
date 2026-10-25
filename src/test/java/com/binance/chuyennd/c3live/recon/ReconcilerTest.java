@@ -71,6 +71,9 @@ public class ReconcilerTest {
 
         Node(boolean streamUp) {
             acct.setUnknownPositionSink(rec::onUnknownPosition);
+            // [2e] nhu runtime: 1 guard huy stop c3s- dung chung
+            acct.setStopGuard(rec.stopGuard());
+            mgr.setStopGuard(rec.stopGuard());
             gw.wsSink = streamUp ? txt -> acct.dispatch(UserStreamEvents.parse(txt)) : null;
         }
 
@@ -496,5 +499,217 @@ public class ReconcilerTest {
         int s0 = gw.calls("newStopMarket");
         n2.step("C00USDT", 1.12f);
         assertEquals("khong dat stop trung", s0, gw.calls("newStopMarket"));
+    }
+
+    // ------------------------------------------------------------------ [2e] MAJ-3 (ProofFlat2 ca D/E) + cum ma
+
+    static final String XRP = "XRPUSDT";
+    static final String XRP_STOP = "c3s-XRPUSDT-29883400-1";
+
+    /**
+     * Hoi quy ProofFlat2 ca D (A1_DELTA_2D): so MAT/rollback (rong) + vi the THAT XRP 100 con stop c3s- NEW => startup KHONG
+     * huy stop; XRP vao UNKNOWN_POSITION (chan mo moi) + Telegram; quet hang gio sau do van giu.
+     */
+    @Test
+    public void proofFlat2CaseD_startupKeepsOwnStopOfRealPositionMissingFromBook() {
+        gw.setPrice(XRP, BigDecimal.ONE);
+        gw.setPosition(XRP, new BigDecimal("100"), BigDecimal.ONE);
+        gw.newStopMarket(XRP, Side.SELL, new BigDecimal("0.95"), XRP_STOP, true);
+        Node n = new Node(true);
+        int c0 = gw.calls("cancelStop");
+        Reconciler.Report r = n.rec.startup();
+        assertTrue(r.toString(), r.orphanCancelled.isEmpty());
+        assertEquals(r.toString(), 1, r.orphanKept.size());
+        assertTrue(r.orphanKept.get(0), r.orphanKept.get(0).contains("KEPT_POSITION"));
+        assertEquals("KHONG goi huy", c0, gw.calls("cancelStop"));
+        assertEquals(1, gw.openStops(XRP).size());
+        assertTrue(r.unknownPositions.contains(XRP));
+        assertTrue(n.rec.blocks().get(Reconciler.BLOCK_UNKNOWN).contains(XRP));
+        assertFalse(n.rec.allowsEntry(XRP));
+        assertFalse(n.rec.allowsEntry("C00USDT"));
+        assertTrue(alerts.stream().anyMatch(m -> m.contains("GIU stop " + XRP)));
+        now.addAndGet(3_600_000L);
+        Reconciler.Report h = n.rec.hourly();
+        assertTrue(h.toString(), h.orphanCancelled.isEmpty());
+        assertEquals(1, gw.openStops(XRP).size());
+        assertEquals(c0, gw.calls("cancelStop"));
+        assertEquals(0, new BigDecimal("100").compareTo(gw.position(XRP)));
+    }
+
+    /** Hoi quy ProofFlat2 ca E: so giu C00, vi the la DOGE (tay) co stop c3s- => quet hang gio GIU stop DOGE. */
+    @Test
+    public void proofFlat2CaseE_hourlySweepKeepsOwnStopOfForeignPosition() {
+        Node n = new Node(true);
+        n.leg("C00USDT", 0, "1.0", "100");
+        n.step("C00USDT", 1.12f);
+        assertTrue(n.rec.startup().ok);
+        String ocid = "c3s-DOGEUSDT-29883500-1";
+        gw.setPrice("DOGEUSDT", new BigDecimal("0.10"));
+        gw.setPosition("DOGEUSDT", new BigDecimal("50"), new BigDecimal("0.10"));
+        gw.newStopMarket("DOGEUSDT", Side.SELL, new BigDecimal("0.09"), ocid, true);
+        int c0 = gw.calls("cancelStop");
+        now.addAndGet(3_600_000L);
+        Reconciler.Report r = n.rec.hourly();
+        assertTrue(r.toString(), r.orphanCancelled.isEmpty());
+        assertTrue(r.toString(), r.orphanKept.contains("DOGEUSDT/" + ocid + ":KEPT_POSITION"));
+        assertEquals(c0, gw.calls("cancelStop"));
+        assertEquals(1, gw.openStops("DOGEUSDT").size());
+        assertFalse(n.rec.allowsEntry("C01USDT"));
+        assertTrue(n.rec.blocks().get(Reconciler.BLOCK_UNKNOWN).contains("DOGEUSDT"));
+        assertTrue("cum C00 khong bi dong", n.book.isHolding("C00USDT"));
+    }
+
+    /** Stop c3s- mo coi, ca positionRisk lan account deu phang => huy (hanh vi don dep van con). */
+    @Test
+    public void orphanOwnStopCancelledWhenBothSourcesFlat() {
+        gw.newStopMarket("C01USDT", Side.SELL, new BigDecimal("1"), "c3s-C01USDT-1-1", true);
+        Node n = new Node(true);
+        Reconciler.Report r = n.rec.startup();
+        assertEquals("[C01USDT/c3s-C01USDT-1-1]", r.orphanCancelled.toString());
+        assertTrue(r.orphanKept.isEmpty());
+        assertTrue(gw.openStops("C01USDT").isEmpty());
+        assertTrue(n.rec.allowsEntry("C00USDT"));
+        assertTrue(n.rec.stopGuard().keptStops().isEmpty());
+    }
+
+    /** Doc account loi / account khong co mang positions => GIU stop + UNKNOWN; doc lai duoc va phang => huy + go chan. */
+    @Test
+    public void guardReadErrorKeepsStopThenRetriesAndReleases() {
+        gw.newStopMarket("C01USDT", Side.SELL, new BigDecimal("1"), "c3s-C01USDT-1-1", true);
+        gw.failNext("account", new GatewayException(ErrorKind.TIMEOUT_UNKNOWN_STATE, "timeout", false));
+        Node n = new Node(true);
+        Reconciler.Report r = n.rec.startup();
+        assertTrue(r.toString(), r.orphanCancelled.isEmpty());
+        assertTrue(r.orphanKept.get(0), r.orphanKept.get(0).endsWith(":KEPT_READ_ERROR"));
+        assertEquals(1, gw.openStops("C01USDT").size());
+        assertFalse(n.rec.allowsEntry("C00USDT"));
+        // lan doc lai: account khong co mang positions => van giu
+        gw.accountPositions = MockExchangeGateway.AccountPositions.NULL;
+        now.addAndGet(GAP);
+        assertNotNull(n.rec.confirmPendingFlat());
+        assertEquals(1, gw.openStops("C01USDT").size());
+        assertFalse(n.rec.allowsEntry("C00USDT"));
+        // doc duoc + phang => huy, roi go chan sau 2 lan doc nhat quan
+        gw.accountPositions = MockExchangeGateway.AccountPositions.REAL;
+        now.addAndGet(GAP);
+        Reconciler.Report r2 = n.rec.confirmPendingFlat();
+        assertEquals("[C01USDT/c3s-C01USDT-1-1]", r2.orphanCancelled.toString());
+        assertTrue(gw.openStops("C01USDT").isEmpty());
+        assertFalse("chua go ngay", n.rec.allowsEntry("C00USDT"));
+        now.addAndGet(GAP);
+        n.rec.confirmPendingFlat();
+        assertTrue(n.rec.allowsEntry("C00USDT"));
+    }
+
+    /**
+     * closedOnExchange (stream pa=0) trong khi positionRisk/account VAN con vi the (tre/sai) => xoa cum theo stream nhung GIU
+     * stop + symbol vao UNKNOWN; khi san that su phang => Reconciler huy stop va go chan.
+     */
+    @Test
+    public void streamFlatButRestStillHoldsKeepsStopUntilBothFlat() {
+        Node n = new Node(true);
+        n.leg("C00USDT", 0, "1.0", "100");
+        n.step("C00USDT", 1.12f);
+        assertTrue(n.rec.startup().ok);
+        String sid = n.book.cluster("C00USDT").get().stopClientAlgoId;
+        int c0 = gw.calls("cancelStop");
+        gw.emitRaw("{\"e\":\"ACCOUNT_UPDATE\",\"E\":1,\"a\":{\"m\":\"ORDER\",\"B\":[],\"P\":[{\"s\":\"C00USDT\",\"pa\":\"0\",\"ep\":\"0\",\"ps\":\"BOTH\"}]}}");
+        assertFalse("stream la bang chung duong => xoa cum", n.book.isHolding("C00USDT"));
+        assertEquals("GIU stop", c0, gw.calls("cancelStop"));
+        assertEquals(1, gw.openStops("C00USDT").size());
+        assertFalse(n.rec.allowsEntry("C01USDT"));
+        assertTrue(n.rec.blocks().get(Reconciler.BLOCK_UNKNOWN).contains("C00USDT"));
+        assertTrue(n.rec.stopGuard().keptStops().containsKey(sid));
+        // REST van con => giu
+        now.addAndGet(GAP);
+        n.rec.confirmPendingFlat();
+        assertEquals(1, gw.openStops("C00USDT").size());
+        assertFalse(n.rec.allowsEntry("C01USDT"));
+        // san that su phang
+        gw.setPosition("C00USDT", BigDecimal.ZERO, BigDecimal.ONE);
+        now.addAndGet(GAP);
+        Reconciler.Report r = n.rec.confirmPendingFlat();
+        assertEquals("[C00USDT/" + sid + "]", r.orphanCancelled.toString());
+        assertTrue(gw.openStops("C00USDT").isEmpty());
+        assertFalse(n.rec.allowsEntry("C01USDT"));
+        now.addAndGet(GAP);
+        n.rec.confirmPendingFlat();
+        assertTrue(n.rec.allowsEntry("C01USDT"));
+    }
+
+    /** Stop bi giu => UNKNOWN KHONG duoc go chi vi vi the vang (con stop c3s- chua huy duoc). */
+    @Test
+    public void unknownNotReleasedWhileOwnStopStillKept() {
+        Node n = new Node(true);
+        n.leg("C00USDT", 0, "1.0", "100");
+        n.step("C00USDT", 1.12f);
+        assertTrue(n.rec.startup().ok);
+        gw.emitRaw("{\"e\":\"ACCOUNT_UPDATE\",\"E\":1,\"a\":{\"m\":\"ORDER\",\"B\":[],\"P\":[{\"s\":\"C00USDT\",\"pa\":\"0\",\"ep\":\"0\",\"ps\":\"BOTH\"}]}}");
+        gw.positionsGlitch = true;   // positionRisk rong nhung account VAN con vi the => guard giu
+        for (int i = 0; i < 4; i++) {
+            now.addAndGet(GAP);
+            n.rec.confirmPendingFlat();
+            assertFalse("i=" + i, n.rec.allowsEntry("C01USDT"));
+            assertEquals(1, gw.openStops("C00USDT").size());
+        }
+    }
+
+    /** [2e] Lenh owner go cum ma: TU CHOI khi vi the != 0 (positionRisk hoac account) / symbol sai; OK khi ca hai phang. */
+    @Test
+    public void ghostClearRefusesWithPositionAndClearsWhenFlat() {
+        Node n = new Node(false);
+        n.leg("C00USDT", 0, "1.0", "100");
+        n.step("C00USDT", 1.12f);
+        assertTrue(n.rec.startup().ok);
+        assertTrue(n.rec.ghostClear("c00usdt;rm").startsWith("REFUSED"));
+        assertTrue(n.rec.ghostClear("C05USDT").startsWith("REFUSED"));
+        String res = n.rec.ghostClear("C00USDT");
+        assertTrue(res, res.startsWith("REFUSED") && res.contains("vi the != 0"));
+        gw.positionsGlitch = true;   // positionRisk rong, account con
+        res = n.rec.ghostClear("C00USDT");
+        assertTrue(res, res.startsWith("REFUSED"));
+        gw.positionsGlitch = false;
+        gw.setPosition("C00USDT", BigDecimal.ZERO, BigDecimal.ONE);
+        gw.accountPositions = MockExchangeGateway.AccountPositions.NULL;
+        res = n.rec.ghostClear("C00USDT");
+        assertTrue(res, res.startsWith("REFUSED"));
+        assertTrue(n.book.isHolding("C00USDT"));
+        assertEquals(1, gw.openStops("C00USDT").size());
+        gw.accountPositions = MockExchangeGateway.AccountPositions.REAL;
+        res = n.rec.ghostClear("C00USDT");
+        assertTrue(res, res.startsWith("OK"));
+        assertFalse(n.book.isHolding("C00USDT"));
+        assertTrue(gw.openStops("C00USDT").isEmpty());
+        assertTrue(n.rec.flatPending().isEmpty());
+        assertTrue(alerts.stream().anyMatch(m -> m.contains("GO cum ma C00USDT")));
+        assertTrue(n.rec.ghostClear("C00USDT").startsWith("REFUSED"));
+    }
+
+    /** [2e] Cum ma (phang + con stop c3s- NEW): Telegram lan dau + NHAC LAI moi 6 h toi khi go. */
+    @Test
+    public void ghostClusterReminderEverySixHours() {
+        Node n = new Node(false);
+        n.leg("C00USDT", 0, "1.0", "100");
+        n.step("C00USDT", 1.12f);
+        assertTrue(n.rec.startup().ok);
+        gw.setPosition("C00USDT", BigDecimal.ZERO, BigDecimal.ONE);
+        int a0 = alerts.size();
+        for (int i = 0; i < 6; i++) {
+            n.rec.checkPositions();
+            now.addAndGet(GAP);
+        }
+        assertEquals(1L, alerts.subList(a0, alerts.size()).stream().filter(m -> m.contains("stop c3s- NEW")).count());
+        assertTrue(alerts.stream().anyMatch(m -> m.contains("c3live_ghost_clear.sh C00USDT")));
+        now.addAndGet(FlatConfirm.GHOST_REMIND_MS);
+        n.rec.checkPositions();
+        assertEquals(2L, alerts.subList(a0, alerts.size()).stream().filter(m -> m.contains("stop c3s- NEW")).count());
+        now.addAndGet(GAP);
+        n.rec.checkPositions();
+        assertEquals("khong spam", 2L, alerts.subList(a0, alerts.size()).stream().filter(m -> m.contains("stop c3s- NEW")).count());
+        assertTrue(n.rec.ghostClear("C00USDT").startsWith("OK"));
+        now.addAndGet(FlatConfirm.GHOST_REMIND_MS);
+        n.rec.checkPositions();
+        assertEquals("da go => het nhac", 2L,
+                alerts.subList(a0, alerts.size()).stream().filter(m -> m.contains("stop c3s- NEW")).count());
     }
 }

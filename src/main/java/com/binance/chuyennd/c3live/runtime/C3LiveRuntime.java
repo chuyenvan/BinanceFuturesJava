@@ -18,6 +18,7 @@ import com.binance.chuyennd.c3live.guard.AccountModeGuard;
 import com.binance.chuyennd.c3live.log.OrderAuditLog;
 import com.binance.chuyennd.c3live.rate.RateGuard;
 import com.binance.chuyennd.c3live.recon.FlatConfirm;
+import com.binance.chuyennd.c3live.recon.OwnStopGuard;
 import com.binance.chuyennd.c3live.recon.Reconciler;
 import com.binance.chuyennd.c3live.risk.C3LiveEquity;
 import com.binance.chuyennd.c3live.risk.C3LiveFlattener;
@@ -71,6 +72,8 @@ public final class C3LiveRuntime {
     public static final String KEY_WS_URLS = "LIVE_C3_WS_URLS";
     public static final String KEY_REANCHOR_FILE = "LIVE_C3_REANCHOR_FILE";
     public static final String KEY_EQUITY_TOL = "LIVE_C3_EQUITY_TOL";
+    public static final String KEY_GHOST_FILE = "LIVE_C3_GHOST_CLEAR_FILE";
+    public static final String DEFAULT_GHOST_FILE = "run/c3live_ghost_clear.req";
 
     private static volatile C3LiveRuntime INSTANCE;
     /** c3_live tat (profile/adapter) => khong bao gio tao. */
@@ -101,6 +104,9 @@ public final class C3LiveRuntime {
     final UserStream userStream;
     final File reanchorFile;
     final FlatConfirm flat;
+    final OwnStopGuard stopGuard;
+    /** [2e] file lenh owner go cum ma (ops/c3live/c3live_ghost_clear.sh) + file ket qua (cung thu muc, duoi .result). */
+    final File ghostFile;
     /** [2c MIN-7] true = phan VAO LENH tao loi => chi QUAN LY vi the cu (trailing/time-stop/X14/reconcile/FLATTEN), khong mo moi. */
     final boolean manageOnly;
     final String manageOnlyReason;
@@ -249,6 +255,13 @@ public final class C3LiveRuntime {
                 .stopMode("reduce_only_qty".equalsIgnoreCase(Cfg.getOr(KEY_STOP_MODE, "close_position").trim())
                         ? TrailingStopManager.StopMode.REDUCE_ONLY_QTY : TrailingStopManager.StopMode.CLOSE_POSITION)
                 .build();
+        // [2e MAJ-3] 1 diem huy stop c3s- DUY NHAT, dung chung (UNKNOWN -> Reconciler)
+        this.stopGuard = new OwnStopGuard(gw, book, api, alerts::send, () -> rec::onUnknownPosition, System::currentTimeMillis);
+        reconciler.setStopGuard(stopGuard);
+        acct.setStopGuard(stopGuard);
+        flattener.setStopGuard(stopGuard);
+        trailing.setStopGuard(stopGuard);
+        this.ghostFile = new File(Cfg.getOr(KEY_GHOST_FILE, DEFAULT_GHOST_FILE));
         if (dry && gw instanceof DryGateway) {
             ((DryGateway) gw).setEventSink(txt -> acct.dispatch(UserStreamEvents.parse(txt)));
             this.userStream = null;
@@ -359,6 +372,7 @@ public final class C3LiveRuntime {
                     lastRecon = now;
                     reconciler.hourly();   // file yeu cau dat lai moc (owner) => chay ngay
                 }
+                if (ghostFile.exists()) ghostClearRequest(now);   // [2e] lenh owner go cum ma
                 if (now - lastBook >= BOOK_EVERY_MS) {
                     Double tmb = equity.totalMarginBalance();
                     if (tmb != null) OpsHooks.onBook(book.openCount(), (float) book.marginUsed(), tmb.floatValue());
@@ -379,6 +393,35 @@ public final class C3LiveRuntime {
             } catch (InterruptedException ie) {
                 return;
             }
+        }
+    }
+
+    /**
+     * [2e] Lenh owner go "cum ma": file chua 1 symbol => {@link Reconciler#ghostClear} (CHI khi positionRisk + account deu = 0)
+     * => ghi ket qua vao {@code <file>.result} (OK/REFUSED + ly do) cho script doc. File yeu cau bi xoa truoc khi xu ly.
+     */
+    private void ghostClearRequest(long now) {
+        String sym = "";
+        try {
+            sym = new String(java.nio.file.Files.readAllBytes(ghostFile.toPath()), java.nio.charset.StandardCharsets.UTF_8).trim()
+                    .toUpperCase(java.util.Locale.ROOT);
+        } catch (Exception e) {
+            sym = "";
+        }
+        try {
+            java.nio.file.Files.deleteIfExists(ghostFile.toPath());
+        } catch (Exception ignore) {
+            // lan sau doc lai (idempotent: ghostClear tu choi khi so khong con cum)
+        }
+        String res = reconciler.ghostClear(sym);
+        LOG.warn("[C3-LIVE] lenh owner ghost_clear '{}' => {}", sym, res);
+        try {
+            File out = new File(ghostFile.getPath() + ".result");
+            File tmp = new File(ghostFile.getPath() + ".result.tmp");
+            java.nio.file.Files.write(tmp.toPath(), (now + " " + res + "\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            java.nio.file.Files.move(tmp.toPath(), out.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        } catch (Exception e) {
+            LOG.warn("[C3-LIVE] khong ghi duoc ket qua ghost_clear: {}", e.toString());
         }
     }
 

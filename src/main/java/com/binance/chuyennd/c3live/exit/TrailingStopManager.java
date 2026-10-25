@@ -10,6 +10,7 @@ import com.binance.chuyennd.c3live.book.LiveBookC3;
 import com.binance.chuyennd.c3live.exec.C3LiveCids;
 import com.binance.chuyennd.c3live.exec.C3LiveOrderExecutor;
 import com.binance.chuyennd.c3live.filters.SymbolRules;
+import com.binance.chuyennd.c3live.recon.OwnStopGuard;
 import com.binance.chuyennd.ops.KillSwitchEngine;
 import com.binance.chuyennd.tradecore.selector.C3TrailRate;
 import com.binance.chuyennd.tradecore.selector.TsMktExt;
@@ -99,6 +100,7 @@ public final class TrailingStopManager {
     private final StopMode stopMode;
     private final EventSink events;
     private volatile boolean closePositionConflictSeen;
+    private OwnStopGuard guard;
     private long lastNoRulesWarnMs = Long.MIN_VALUE / 2;
     private long lastBookErrMs = Long.MIN_VALUE / 2;
     private final AtomicLong nArm = new AtomicLong();
@@ -128,6 +130,7 @@ public final class TrailingStopManager {
         this.safeRetryMs = Math.max(0L, b.safeRetryMs);
         this.stopMode = b.stopMode == null ? StopMode.CLOSE_POSITION : b.stopMode;
         this.events = b.events == null ? (t, s, n, v, d) -> { } : b.events;
+        this.guard = new OwnStopGuard(gw, book, this.api, this.alert, null, this.clock);
     }
 
     public static Builder builder() {
@@ -160,7 +163,7 @@ public final class TrailingStopManager {
     private int stepOne(LiveBookC3.ClusterView c0, Map<String, Float> prices, long now) {
         String sym = c0.symbol;
         int ops = 0;
-        for (String oc : c0.orphanStops) ops += cancelOrphan(sym, oc, now);
+        for (String oc : c0.orphanStops) ops += cancelOrphan(sym, oc, now, GUARDED);
         if (c0.closeReason != null) {   // dang dong (time-stop/X14/immediate): day tiep lenh dong (idempotent)
             ops += closer.closeCluster(sym, c0.closeReason);
             return ops;
@@ -181,7 +184,7 @@ public final class TrailingStopManager {
             if (!pendingBlocks && c.trailArmed() && c.stopClientAlgoId == null) ops += syncStop(c, c.priceSL, now);
             if (!c.trailArmed() && c.stopClientAlgoId != null) {   // DCA reset arm: huy stop cu ke ca khi chua co gia
                 String old = book.retireActiveStop(sym, now);
-                if (old != null) ops += cancelOrphan(sym, old, now);
+                if (old != null) ops += cancelOrphan(sym, old, now, RETIRED);
             }
             return ops;
         }
@@ -231,7 +234,7 @@ public final class TrailingStopManager {
             if (c.stopClientAlgoId != null) {   // vd DCA reset arm => stop cu khong con hop le
                 String old = book.retireActiveStop(sym, now);
                 LOG.info("[C3-LIVE-TRAIL] {} khong con arm (DCA reset) => huy stop {}", sym, old);
-                if (old != null) ops += cancelOrphan(sym, old, now);
+                if (old != null) ops += cancelOrphan(sym, old, now, RETIRED);
             }
             return ops;
         }
@@ -314,7 +317,7 @@ public final class TrailingStopManager {
                     qtyMode ? "qty+reduceOnly" : "closePosition", old, c.stopPrice);
             events.event("STOP_PLACED", sym, now, price.doubleValue(), why + " cid=" + cid + (qtyMode ? " qty" : ""));
             int ops = 1;
-            if (old != null) ops += cancelOrphan(sym, old, now);
+            if (old != null) ops += cancelOrphan(sym, old, now, REPLACED);
             return ops;
         } catch (GatewayException e) {
             int code = e.getExchangeCode();
@@ -381,7 +384,7 @@ public final class TrailingStopManager {
             String old = book.promotePendingStop(sym, now);
             LOG.warn("[C3-LIVE-TRAIL] {} stop pending {} CO tren san ({}) => nhan lam stop active", sym, c.pendingStopCid, st);
             int ops = 1;
-            if (old != null) ops += cancelOrphan(sym, old, now);
+            if (old != null) ops += cancelOrphan(sym, old, now, REPLACED);
             return ops;
         }
         book.clearPendingStop(sym, now);
@@ -389,26 +392,36 @@ public final class TrailingStopManager {
         return 1;
     }
 
-    /** Huy stop cu/mo coi; da het (UNKNOWN_ORDER) cung coi la xong. */
-    private int cancelOrphan(String sym, String cid, long now) {
-        try {
-            gw.cancelStop(sym, cid);
-            api.onApiResult("cancelStop", true);
+    /** [2e MAJ-3] cach huy: GUARDED = qua OwnStopGuard; REPLACED = stop cu vua bi thay; RETIRED = cum bi go arm (DCA). */
+    private static final int GUARDED = 0;
+    private static final int REPLACED = 1;
+    private static final int RETIRED = 2;
+
+    /** Huy stop cu/mo coi qua OwnStopGuard (diem huy c3s- duy nhat); da het cung coi la xong. */
+    private int cancelOrphan(String sym, String cid, long now, int mode) {
+        OwnStopGuard.Result r;
+        if (mode == REPLACED) {
+            r = guard.cancelReplaced(sym, cid, "stop cu bi thay (trailing)");
+        } else if (mode == RETIRED) {
+            r = guard.cancelRetired(sym, cid, "cum bi go arm (DCA reset nhu so giay)");
+        } else {
+            r = guard.cancelOwnStopGuarded(sym, cid, "stop mo coi cua cum (trailing)");
+        }
+        if (r == OwnStopGuard.Result.CANCELLED || r == OwnStopGuard.Result.GONE) {
             book.removeOrphanStop(sym, cid, now);
-            nCancel.incrementAndGet();
-            events.event("STOP_CANCEL", sym, now, 0d, cid);
-        } catch (GatewayException e) {
-            if (e.getKind() == ErrorKind.UNKNOWN_ORDER) {
-                api.onApiResult("cancelStop", true);
-                book.removeOrphanStop(sym, cid, now);
-            } else {
-                api.onApiResult("cancelStop", false);
-                LOG.warn("[C3-LIVE-TRAIL] {} huy stop {} loi {} => thu lai nhip sau", sym, cid, e.getKind());
+            if (r == OwnStopGuard.Result.CANCELLED) {
+                nCancel.incrementAndGet();
+                events.event("STOP_CANCEL", sym, now, 0d, cid);
             }
-        } catch (RuntimeException e) {
-            api.onApiResult("cancelStop", false);
+        } else if (r == OwnStopGuard.Result.CANCEL_ERROR) {
+            LOG.warn("[C3-LIVE-TRAIL] {} huy stop {} loi => thu lai nhip sau", sym, cid);
         }
         return 1;
+    }
+
+    /** [2e MAJ-3] guard huy stop c3s- dung chung (runtime). */
+    public synchronized void setStopGuard(OwnStopGuard g) {
+        if (g != null) this.guard = g;
     }
 
     /** X14 dang bat (c3_live: LIVE_TS_MKT_EXT=1). */

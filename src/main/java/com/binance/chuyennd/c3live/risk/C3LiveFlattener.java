@@ -11,6 +11,7 @@ import com.binance.chuyennd.c3live.book.LiveBookC3;
 import com.binance.chuyennd.c3live.exec.C3LiveCids;
 import com.binance.chuyennd.c3live.exec.C3LiveOrderExecutor;
 import com.binance.chuyennd.c3live.recon.FlatConfirm;
+import com.binance.chuyennd.c3live.recon.OwnStopGuard;
 import com.binance.chuyennd.ops.KillSwitchEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +56,7 @@ public final class C3LiveFlattener {
     private final long safeRetryMs;
     private final ArrayDeque<Long> sends = new ArrayDeque<>();
     private final FlatConfirm flat;
+    private OwnStopGuard guard;
     private boolean announced;
     private boolean doneAnnounced;
     private long nCloseOrders;
@@ -80,6 +82,7 @@ public final class C3LiveFlattener {
         this.maxOrders = Math.max(1, maxOrders);
         this.windowMs = Math.max(1L, windowMs);
         this.safeRetryMs = Math.max(0L, safeRetryMs);
+        this.guard = new OwnStopGuard(gw, book, this.api, this.alert, null, clock);
     }
 
     /** Mot luot FLATTEN. @return so lenh dong da gui trong luot. */
@@ -226,31 +229,36 @@ public final class C3LiveFlattener {
     /** Cum da phang tren san: huy stop (cid trong so + moi stop mo cua symbol) roi xoa cum. */
     private void finalizeClosed(String sym, String reason, long now) {
         Optional<LiveBookC3.ClusterView> c = book.cluster(sym);
-        if (c.isPresent() && c.get().stopClientAlgoId != null) cancelStopQuiet(sym, c.get().stopClientAlgoId);
+        java.util.Set<String> cids = new java.util.LinkedHashSet<>();
+        if (c.isPresent()) {
+            if (c.get().stopClientAlgoId != null) cids.add(c.get().stopClientAlgoId);
+            if (c.get().pendingStopCid != null) cids.add(c.get().pendingStopCid);
+            cids.addAll(c.get().orphanStops);
+        }
         try {
             List<OrderInfo> open = gw.openStops(sym);
             api.onApiResult("openStops", true);
-            for (OrderInfo s : open) cancelStopQuiet(sym, s.getClientOrderId());
+            for (OrderInfo s : open) {
+                if (OwnStopGuard.isOwn(s.getClientOrderId())) cids.add(s.getClientOrderId());   // [2e] KHONG dung stop ngoai bot
+            }
         } catch (RuntimeException e) {
             api.onApiResult("openStops", false);
             LOG.warn("[C3-LIVE-CLOSE] {} khong doc duoc stop mo ({}) => reconcile se don stop mo coi", sym, e.toString());
         }
+        // [2e MAJ-3] xoa cum TRUOC roi huy stop c3s- qua guard (chi khi positionRisk + account deu phang)
         book.removeCluster(sym, reason, now);
-        LOG.warn("[C3-LIVE-CLOSE] {} DA DONG ({}) va huy stop", sym, reason);
+        int kept = 0;
+        for (String id : cids) {
+            OwnStopGuard.Result gr = guard.cancelOwnStopGuarded(sym, id, "dong cum (" + reason + ")");
+            if (gr == OwnStopGuard.Result.KEPT_POSITION || gr == OwnStopGuard.Result.KEPT_READ_ERROR) kept++;
+        }
+        LOG.warn("[C3-LIVE-CLOSE] {} DA DONG ({}); stop c3s-: {} xu ly, {} GIU (vi the san chua phang / doc loi)", sym, reason,
+                cids.size(), kept);
     }
 
-    private void cancelStopQuiet(String sym, String algoCid) {
-        if (algoCid == null) return;
-        try {
-            gw.cancelStop(sym, algoCid);
-            api.onApiResult("cancelStop", true);
-        } catch (GatewayException e) {
-            boolean ok = e.getKind() == ErrorKind.UNKNOWN_ORDER;
-            api.onApiResult("cancelStop", ok);
-            if (!ok) LOG.warn("[C3-LIVE-CLOSE] {} huy stop {} loi {}", sym, algoCid, e.getKind());
-        } catch (RuntimeException e) {
-            api.onApiResult("cancelStop", false);
-        }
+    /** [2e MAJ-3] guard huy stop c3s- dung chung (runtime). */
+    public synchronized void setStopGuard(OwnStopGuard g) {
+        if (g != null) this.guard = g;
     }
 
     private Map<String, BigDecimal> positions() {

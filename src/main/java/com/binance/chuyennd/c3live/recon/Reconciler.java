@@ -78,6 +78,8 @@ public final class Reconciler {
         public final List<String> unknownPositions = new ArrayList<>();
         /** [2c MAJ-2] cum co qty ma positionRisk vang/0, CHUA du bang chung phang => giu cum + stop. */
         public final List<String> flatPending = new ArrayList<>();
+        /** [2e MAJ-3] stop c3s- "mo coi" nhung GIU vi vi the con / doc loi (OwnStopGuard). */
+        public final List<String> orphanKept = new ArrayList<>();
         public boolean ok = true;
         public String error = "";
 
@@ -86,7 +88,7 @@ public final class Reconciler {
             return "ok=" + ok + (error.isEmpty() ? "" : " err=" + error) + " closedWhileDown=" + closedWhileDown + " overridden="
                     + overridden + " stopsDropped=" + stopsDropped + " pendingPromoted=" + pendingPromoted + " orphanCancelled="
                     + orphanCancelled + " foreignStops=" + foreignStops + " unknownPositions=" + unknownPositions
-                    + " flatPending=" + flatPending;
+                    + " flatPending=" + flatPending + " orphanKept=" + orphanKept;
         }
     }
 
@@ -101,9 +103,14 @@ public final class Reconciler {
     private final int matchToRelease;
     private final File reanchorFile;
     private final FlatConfirm flat;
+    private OwnStopGuard guard;
+    /** [2e] moc lan doc positionRisk gan nhat (de doc lai moi 30 s khi dang chan UNKNOWN). */
+    private long lastPosCheckMs = Long.MIN_VALUE / 2;
+    private long lastKeptRetryMs = Long.MIN_VALUE / 2;
     /** [2c MAJ-1] khoi tao SAN co BLOCK_STARTUP: chi go khi {@link #startup()} doc san va doi chieu XONG. */
     private final Map<String, String> blocks = new TreeMap<>();
     private final Set<String> unknownSyms = new TreeSet<>();
+    private final java.util.concurrent.ConcurrentLinkedQueue<String> unknownQ = new java.util.concurrent.ConcurrentLinkedQueue<>();
     /** [2d MIN-18] vi the la: moc lan doc dau tien thay vang. */
     private final Map<String, Long> unknownGoneSince = new TreeMap<>();
     private int matchStreak;
@@ -135,11 +142,22 @@ public final class Reconciler {
         this.equityTol = equityTol > 0d ? equityTol : DEFAULT_EQUITY_TOL;
         this.matchToRelease = Math.max(1, matchToRelease);
         this.reanchorFile = reanchorFile;
+        this.guard = new OwnStopGuard(gw, book, this.api, this.alert, () -> this::onUnknownPosition, this.clock);
+    }
+
+    /** [2e MAJ-3] guard huy stop c3s- dung chung (runtime); mac dinh guard rieng (unknown -> chinh Reconciler nay). */
+    public synchronized void setStopGuard(OwnStopGuard g) {
+        if (g != null) this.guard = g;
+    }
+
+    public synchronized OwnStopGuard stopGuard() {
+        return guard;
     }
 
     // ------------------------------------------------------------------ cong vao lenh
     /** Khong co ly do chan (vi the la / lech equity / reconcile khoi dong chua xong). */
     public synchronized boolean allowsEntry(String symbol) {
+        drainUnknown();
         if (blocks.isEmpty() && (symbol == null || !flat.isPending(symbol))) return true;
         long now = clock.getAsLong();
         if (now - lastBlockLogMs > 600_000L) {
@@ -151,12 +169,27 @@ public final class Reconciler {
     }
 
     public synchronized Map<String, String> blocks() {
+        drainUnknown();
         return new LinkedHashMap<>(blocks);
     }
 
-    /** Vi the khac 0 khong thuoc so (tu C7 hoac luot reconcile). */
-    public synchronized void onUnknownPosition(String symbol) {
+    /**
+     * Vi the khac 0 khong thuoc so (tu C7 / OwnStopGuard / luot reconcile). [2e] KHONG lay khoa Reconciler (tranh dao thu tu
+     * khoa voi FillAccounting): xep hang, ap dung o lan goi dong bo ke tiep (allowsEntry/blocks/checkPositions... luon xa
+     * hang truoc) => chan vao lenh co hieu luc ngay o cong vao lenh.
+     */
+    public void onUnknownPosition(String symbol) {
         if (symbol == null) return;
+        unknownQ.add(symbol);
+        if (Thread.holdsLock(this)) drainUnknown();
+    }
+
+    private void drainUnknown() {
+        String s;
+        while ((s = unknownQ.poll()) != null) markUnknown(s);
+    }
+
+    private void markUnknown(String symbol) {
         if (unknownSyms.add(symbol)) {
             String m = "[C3-LIVE-RECON] vi the LA tren tai khoan c3_live: " + symbol
                     + " (khong co trong so) => CHAN mo moi, KHONG tu dong; owner kiem tra/dong tay";
@@ -170,6 +203,8 @@ public final class Reconciler {
     /** Luot doi chieu luc khoi dong (sau khi executor giai quyet leg treo). Loi doc san => CHAN mo moi toi luot sau. */
     public synchronized Report startup() {
         long now = clock.getAsLong();
+        drainUnknown();
+        lastPosCheckMs = now;
         Report r = new Report();
         Map<String, PositionInfo> pos;
         List<OrderInfo> stops;
@@ -213,8 +248,13 @@ public final class Reconciler {
                     r.pendingPromoted.add(s.getSymbol() + "/" + cid + "(nhan lai)");
                     continue;
                 }
-                cancelQuiet(s.getSymbol(), cid);
-                r.orphanCancelled.add(s.getSymbol() + "/" + cid);
+                // [2e MAJ-3] chi huy khi positionRisk + account deu phang; con vi the / doc loi => GIU + UNKNOWN + Telegram
+                OwnStopGuard.Result gr = guard.cancelOwnStopGuarded(s.getSymbol(), cid, "stop mo coi luc khoi dong");
+                if (gr == OwnStopGuard.Result.CANCELLED || gr == OwnStopGuard.Result.GONE) {
+                    r.orphanCancelled.add(s.getSymbol() + "/" + cid);
+                } else {
+                    r.orphanKept.add(s.getSymbol() + "/" + cid + ":" + gr);
+                }
             } else {
                 r.foreignStops.add(s.getSymbol() + "/" + cid);
             }
@@ -224,7 +264,7 @@ public final class Reconciler {
         blocks.remove(BLOCK_STARTUP);
         String m = "[C3-LIVE-RECON] khoi dong: " + r;
         if (!r.closedWhileDown.isEmpty() || !r.overridden.isEmpty() || !r.unknownPositions.isEmpty()
-                || !r.foreignStops.isEmpty() || !r.flatPending.isEmpty()) {
+                || !r.foreignStops.isEmpty() || !r.flatPending.isEmpty() || !r.orphanKept.isEmpty()) {
             LOG.warn("{}", m);
             alert.accept(m);
         } else {
@@ -336,9 +376,12 @@ public final class Reconciler {
      * (hoac xoa nghi ngo neu vi the con). null = khong co gi phai lam.
      */
     public synchronized Report confirmPendingFlat() {
+        drainUnknown();
         long t = clock.getAsLong();
         boolean unknownDue = false;
         for (long g : unknownGoneSince.values()) if (t - g >= flat.minGapMs()) unknownDue = true;
+        // [2e] dang chan UNKNOWN (vd guard GIU stop vi positionRisk tre sau khi dong) => doc lai moi 30 s de tu go som
+        if (!unknownSyms.isEmpty() && t - lastPosCheckMs >= flat.minGapMs()) unknownDue = true;
         if (!flat.anyDue(t) && !unknownDue) return null;
         return checkPositions();
     }
@@ -362,6 +405,11 @@ public final class Reconciler {
         long t = clock.getAsLong();
         for (String s : new ArrayList<>(unknownSyms)) {
             if (now.contains(s)) {
+                unknownGoneSince.remove(s);
+                continue;
+            }
+            if (guard.hasKept(s)) {
+                // [2e MAJ-3] con stop c3s- bi GIU cho symbol nay (chua huy duoc) => CHUA go chan
                 unknownGoneSince.remove(s);
                 continue;
             }
@@ -389,11 +437,14 @@ public final class Reconciler {
     /** Khi mat user stream: cum co qty ma san = 0 => cap nhat so; vi the la => chan. */
     public synchronized Report checkPositions() {
         long now = clock.getAsLong();
+        lastPosCheckMs = now;
+        drainUnknown();
         Report r = new Report();
         try {
             List<LiveBookC3.ClusterView> snap = book.clusters();   // chup TRUOC khi doc san
             Map<String, PositionInfo> pos = positionsBySymbol();
             reconcileClusters(snap, pos, Collections.<String, OrderInfo>emptyMap(), r, now, false);
+            retryKeptStops(r, now);
             unknownCheck(pos, r);
             flat.retainOnly(book.ownedSymbols());
         } catch (RuntimeException e) {
@@ -497,6 +548,27 @@ public final class Reconciler {
         return upl;
     }
 
+    /**
+     * [2e MAJ-3] Thu huy lai (qua guard) cac stop c3s- dang bi GIU khong con thuoc so — vd positionRisk tre sau khi stream bao
+     * dong: vai giay sau ca 2 nguon phang => huy, symbol moi duoc go UNKNOWN. Thua toi thieu minGap (30 s).
+     */
+    private void retryKeptStops(Report r, long now) {
+        Map<String, String> k = guard.keptStops();
+        if (k.isEmpty() || now - lastKeptRetryMs < flat.minGapMs()) return;
+        lastKeptRetryMs = now;
+        Set<String> refd = book.referencedStopCids();
+        for (Map.Entry<String, String> e : k.entrySet()) {
+            if (refd.contains(e.getKey())) continue;   // so dang tham chieu (trailing tu xu ly)
+            OwnStopGuard.Result gr = guard.cancelOwnStopGuarded(e.getValue(), e.getKey(), "thu lai stop dang giu");
+            if (gr == OwnStopGuard.Result.CANCELLED || gr == OwnStopGuard.Result.GONE) {
+                r.orphanCancelled.add(e.getValue() + "/" + e.getKey());
+            } else {
+                r.orphanKept.add(e.getValue() + "/" + e.getKey() + ":" + gr);
+            }
+        }
+        if (!r.orphanCancelled.isEmpty()) LOG.warn("[C3-LIVE-RECON] huy stop dang giu (nay da phang): {}", r.orphanCancelled);
+    }
+
     private void sweepOrphanStops(Report r) {
         try {
             List<OrderInfo> stops = gw.openStops(null);
@@ -509,12 +581,17 @@ public final class Reconciler {
                     Optional<LiveBookC3.ClusterView> c = book.cluster(s.getSymbol());
                     if (c.isPresent() && c.get().pendingStopCid != null) continue;   // dang dat do: de nhip sau
                 }
-                cancelQuiet(s.getSymbol(), cid);
-                r.orphanCancelled.add(s.getSymbol() + "/" + cid);
+                OwnStopGuard.Result gr = guard.cancelOwnStopGuarded(s.getSymbol(), cid, "stop mo coi (quet hang gio)");
+                if (gr == OwnStopGuard.Result.CANCELLED || gr == OwnStopGuard.Result.GONE) {
+                    r.orphanCancelled.add(s.getSymbol() + "/" + cid);
+                } else {
+                    r.orphanKept.add(s.getSymbol() + "/" + cid + ":" + gr);
+                }
             }
         } catch (RuntimeException e) {
             api.onApiResult("openStops", false);
         }
+        if (!r.orphanKept.isEmpty()) LOG.warn("[C3-LIVE-RECON] GIU stop c3s- (vi the con / doc loi): {}", r.orphanKept);
         if (!r.orphanCancelled.isEmpty()) LOG.warn("[C3-LIVE-RECON] huy stop mo coi: {}", r.orphanCancelled);
     }
 
@@ -551,15 +628,57 @@ public final class Reconciler {
         return m;
     }
 
-    private void cancelQuiet(String sym, String cid) {
+    /**
+     * [2e] Lenh owner go "cum ma" ({@code ops/c3live/c3live_ghost_clear.sh SYMBOL} => file yeu cau, runtime goi ham nay):
+     * CHI khi CA positionRisk LAN account().positions bao symbol phang (doc loi / account khong co mang => TU CHOI) thi huy
+     * moi stop c3s- con mo cua symbol (qua OwnStopGuard) roi xoa cum khoi so (ly do GHOST_CLEAR_OWNER). @return dong ket qua
+     * "OK ..." hoac "REFUSED ...".
+     */
+    public synchronized String ghostClear(String sym) {
+        long now = clock.getAsLong();
+        drainUnknown();
+        if (sym == null || !sym.matches("[A-Z0-9]{2,30}")) return "REFUSED symbol khong hop le: " + sym;
+        if (!book.isHolding(sym)) return "REFUSED " + sym + ": so KHONG giu cum symbol nay";
+        BigDecimal pr = BigDecimal.ZERO;
+        BigDecimal ac = BigDecimal.ZERO;
         try {
-            gw.cancelStop(sym, cid);
-            api.onApiResult("cancelStop", true);
-        } catch (GatewayException e) {
-            api.onApiResult("cancelStop", e.getKind() == ErrorKind.UNKNOWN_ORDER);
+            for (PositionInfo p : gw.positions()) {
+                if (sym.equals(p.getSymbol()) && p.getPositionAmt() != null) pr = pr.add(p.getPositionAmt().abs());
+            }
+            api.onApiResult("positions", true);
+            AccountSnapshot a = gw.account();
+            api.onApiResult("account", true);
+            if (a == null || a.getPositions() == null) return "REFUSED " + sym + ": account() khong co mang positions";
+            for (PositionInfo p : a.getPositions()) {
+                if (sym.equals(p.getSymbol()) && p.getPositionAmt() != null) ac = ac.add(p.getPositionAmt().abs());
+            }
         } catch (RuntimeException e) {
-            api.onApiResult("cancelStop", false);
+            return "REFUSED " + sym + ": doc san loi (" + e.getClass().getSimpleName() + ")";
         }
+        if (pr.signum() != 0 || ac.signum() != 0) {
+            return "REFUSED " + sym + ": vi the != 0 (positionRisk=" + pr.toPlainString() + " account=" + ac.toPlainString()
+                    + ") — KHONG phai cum ma; giu nguyen";
+        }
+        List<String> done = new ArrayList<>();
+        List<String> kept = new ArrayList<>();
+        try {
+            for (OrderInfo s : gw.openStops(sym)) {
+                if (!OwnStopGuard.isOwn(s.getClientOrderId())) continue;
+                OwnStopGuard.Result gr = guard.cancelOwnStopGuarded(sym, s.getClientOrderId(), "owner go cum ma");
+                (gr == OwnStopGuard.Result.CANCELLED || gr == OwnStopGuard.Result.GONE ? done : kept).add(s.getClientOrderId());
+            }
+            api.onApiResult("openStops", true);
+        } catch (RuntimeException e) {
+            api.onApiResult("openStops", false);
+            return "REFUSED " + sym + ": khong doc duoc stop mo (" + e.getClass().getSimpleName() + ")";
+        }
+        if (!kept.isEmpty()) return "REFUSED " + sym + ": khong huy duoc stop " + kept + " (giu cum)";
+        book.removeCluster(sym, "GHOST_CLEAR_OWNER", now);
+        flat.clear(sym);
+        String m = "[C3-LIVE-RECON] owner GO cum ma " + sym + ": positionRisk + account = 0, huy stop " + done + ", xoa cum";
+        LOG.warn("{}", m);
+        alert.accept(m);
+        return "OK " + sym + ": huy stop " + done + ", xoa cum khoi so";
     }
 
     public synchronized double lastEquityDiff() {

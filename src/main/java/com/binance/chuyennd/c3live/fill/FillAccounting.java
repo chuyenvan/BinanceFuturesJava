@@ -8,6 +8,7 @@ import com.binance.chuyennd.c3live.book.LiveBookC3;
 import com.binance.chuyennd.c3live.exec.C3LiveCids;
 import com.binance.chuyennd.c3live.exec.C3LiveOrderExecutor;
 import com.binance.chuyennd.c3live.log.OrderAuditLog;
+import com.binance.chuyennd.c3live.recon.OwnStopGuard;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,6 +68,7 @@ public final class FillAccounting {
     private final LongSupplier clock;
     private final ClosedHook closedHook;
     private volatile Consumer<String> unknownPosition = s -> { };
+    private volatile OwnStopGuard stopGuard;
     private final Map<String, String> lastExitReason = new ConcurrentHashMap<>();
     private final Set<String> warnedAssets = ConcurrentHashMap.newKeySet();
     private final AtomicLong nOrder = new AtomicLong();
@@ -267,9 +269,16 @@ public final class FillAccounting {
             api.onApiResult("openStops", false);
             LOG.warn("[C3-LIVE-FILL] {} khong doc duoc stop mo ({}) => Reconciler se don stop mo coi", sym, e.toString());
         }
-        for (String id : cids) cancelQuiet(sym, id);
         String r = reason == null ? REASON_EXTERNAL : reason;
+        // [2e MAJ-3] xoa cum TRUOC, roi huy stop qua guard: chi huy khi positionRisk + account deu phang; con vi the / doc loi
+        // => GIU stop + symbol vao UNKNOWN_POSITION + Telegram (Reconciler doc lai moi 30 s de tu go neu that su phang)
         book.removeCluster(sym, r, now);
+        int kept = 0;
+        for (String id : cids) {
+            OwnStopGuard.Result gr = guard().cancelOwnStopGuarded(sym, id, "cum dong (" + r + ")");
+            if (gr == OwnStopGuard.Result.KEPT_POSITION || gr == OwnStopGuard.Result.KEPT_READ_ERROR) kept++;
+        }
+        if (kept > 0) LOG.warn("[C3-LIVE-FILL] {} cum da dong ({}) nhung GIU {} stop c3s- (vi the san chua phang / doc loi)", sym, r, kept);
         nClosedExchange.incrementAndGet();
         lastExitReason.remove(sym);
         try {
@@ -279,7 +288,8 @@ public final class FillAccounting {
         }
         boolean normal = REASON_TRAILING.equals(r) || isBotCloseReason(r);
         String m = "[C3-LIVE] cum " + sym + " DA DONG tren san (" + r + ") qty=" + c.get().confirmedQty.toPlainString()
-                + " avg=" + c.get().avgPrice + " => da cap nhat so, huy " + cids.size() + " stop";
+                + " avg=" + c.get().avgPrice + " => da cap nhat so, xu ly " + cids.size() + " stop"
+                + (kept > 0 ? " (GIU " + kept + " stop c3s- vi san chua xac nhan phang)" : "");
         if (normal) {
             LOG.info("{}", m);
         } else {
@@ -293,17 +303,18 @@ public final class FillAccounting {
                 || r.startsWith("TRAILING_IMMEDIATE") || REASON_BOT_CLOSE.equals(r));
     }
 
-    private void cancelQuiet(String sym, String cid) {
-        try {
-            gw.cancelStop(sym, cid);
-            api.onApiResult("cancelStop", true);
-        } catch (GatewayException e) {
-            boolean gone = e.getKind() == ErrorKind.UNKNOWN_ORDER;
-            api.onApiResult("cancelStop", gone);
-            if (!gone) LOG.warn("[C3-LIVE-FILL] {} huy stop {} loi {} => Reconciler don sau", sym, cid, e.getKind());
-        } catch (RuntimeException e) {
-            api.onApiResult("cancelStop", false);
+    private OwnStopGuard guard() {
+        OwnStopGuard g = stopGuard;
+        if (g == null) {
+            g = new OwnStopGuard(gw, book, api, alert, () -> unknownPosition, clock);
+            stopGuard = g;
         }
+        return g;
+    }
+
+    /** [2e MAJ-3] guard huy stop c3s- dung chung (runtime). */
+    public void setStopGuard(OwnStopGuard g) {
+        if (g != null) stopGuard = g;
     }
 
     /** Ly do dong suy tu clientOrderId / loai lenh goc. */
