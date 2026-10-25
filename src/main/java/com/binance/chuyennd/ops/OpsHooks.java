@@ -31,6 +31,7 @@ import java.util.function.Consumer;
  *   <li>{@link #onFill(String, boolean, Double, Double)} — moi fill that (C2), ref = close nen 1m quyet dinh.</li>
  *   <li>{@link #attachEquitySource(EquitySource)} — totalMarginBalance tai khoan con (A40).</li>
  *   <li>{@link #setAlert(Consumer)} — Telegram.</li>
+ *   <li>{@link #onBook(int, float, float)} — so lenh that (C4/C6); {@link #onApiResult} — moi call REST tai khoan con (C3).</li>
  * </ul>
  * Mode khac ACT (c3_shadow, sim): allowNewEntry = true, requiredAction = NONE (khong doi quyet dinh).
  */
@@ -171,6 +172,20 @@ public final class OpsHooks {
     }
 
     // ------------------------------------------------------------------ [V12] API vong 2 (c3_live)
+
+    /**
+     * [V12] So LIVE (vong 2: so lenh that c3_live) — C4 (so vi the, U = margin/equity) + C6 (DD equity so, dinh san
+     * PAPER_EQUITY) nhu {@link #onPaperTick}. Goi sau moi nhip danh gia vi the. KHONG goi dong thoi voi onPaperTick
+     * tren CUNG profile (2 nguon equity se tron dinh C6).
+     */
+    public static void onBook(int openPos, float margin, float equity) {
+        if (KS == null) return;
+        try {
+            KS.onPaper(System.currentTimeMillis(), openPos, margin, equity);
+        } catch (Throwable e) {
+            err("onBook", e);
+        }
+    }
 
     /** [V12] true iff kill-switch dang o mode ACT (c3_live). Vong 2 nen tu choi push that khi false. */
     public static boolean killSwitchArmed() {
