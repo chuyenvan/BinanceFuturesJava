@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -111,6 +112,9 @@ public final class TrailingStopManager {
     private final AtomicLong nDefer = new AtomicLong();
     private final AtomicLong nImmediate = new AtomicLong();
     private final AtomicLong nFallbackQty = new AtomicLong();
+    private final AtomicLong nUnconfirmed = new AtomicLong();
+    /** [2g MIN-20] cho giua 2 lan kiem stop moi (test thay bang ham ghi nhan). */
+    private final java.util.function.LongConsumer sleeper;
 
     private TrailingStopManager(Builder b) {
         this.gw = b.gw;
@@ -130,6 +134,7 @@ public final class TrailingStopManager {
         this.safeRetryMs = Math.max(0L, b.safeRetryMs);
         this.stopMode = b.stopMode == null ? StopMode.CLOSE_POSITION : b.stopMode;
         this.events = b.events == null ? (t, s, n, v, d) -> { } : b.events;
+        this.sleeper = b.sleeper == null ? TrailingStopManager::sleepQuiet : b.sleeper;
         this.guard = new OwnStopGuard(gw, book, this.api, this.alert, null, this.clock);
     }
 
@@ -304,10 +309,11 @@ public final class TrailingStopManager {
             }
         }
         try {
+            OrderInfo resp;
             if (qtyMode) {
-                gw.newStopMarket(sym, Side.SELL, c.confirmedQty, price, cid, true);
+                resp = gw.newStopMarket(sym, Side.SELL, c.confirmedQty, price, cid, true);
             } else {
-                gw.newStopMarket(sym, Side.SELL, price, cid, true);
+                resp = gw.newStopMarket(sym, Side.SELL, price, cid, true);
             }
             api.onApiResult("newStopMarket", true);
             String old = book.promotePendingStop(sym, now);
@@ -317,7 +323,7 @@ public final class TrailingStopManager {
                     qtyMode ? "qty+reduceOnly" : "closePosition", old, c.stopPrice);
             events.event("STOP_PLACED", sym, now, price.doubleValue(), why + " cid=" + cid + (qtyMode ? " qty" : ""));
             int ops = 1;
-            if (old != null) ops += cancelOrphan(sym, old, now, REPLACED);
+            if (old != null) ops += cancelReplacedIfConfirmed(sym, cid, resp, old, now);
             return ops;
         } catch (GatewayException e) {
             int code = e.getExchangeCode();
@@ -381,15 +387,57 @@ public final class TrailingStopManager {
                 LOG.warn("[C3-LIVE-TRAIL] {} stop pending {} tren san = {} => bo, dat lai nhip sau", sym, c.pendingStopCid, st);
                 return 1;
             }
+            String newCid = c.pendingStopCid;
             String old = book.promotePendingStop(sym, now);
-            LOG.warn("[C3-LIVE-TRAIL] {} stop pending {} CO tren san ({}) => nhan lam stop active", sym, c.pendingStopCid, st);
+            LOG.warn("[C3-LIVE-TRAIL] {} stop pending {} CO tren san ({}) => nhan lam stop active", sym, newCid, st);
             int ops = 1;
-            if (old != null) ops += cancelOrphan(sym, old, now, REPLACED);
+            if (old != null) ops += cancelReplacedIfConfirmed(sym, newCid, q.get(), old, now);
             return ops;
         }
         book.clearPendingStop(sym, now);
         LOG.warn("[C3-LIVE-TRAIL] {} stop pending {} KHONG co tren san => bo, dat lai nhip sau", sym, c.pendingStopCid);
         return 1;
+    }
+
+    /**
+     * [2g MIN-20] Chi huy stop cu (REPLACED) khi stop MOI da xac nhan NEW: response co algoStatus NEW, hoac thay cid moi
+     * (chua final) trong openStops — kiem toi da 2 lan cach {@link #CONFIRM_GAP_MS}. Khong xac nhan duoc => GIU CA HAI stop
+     * (vo hai: closePosition/reduce-only), WARN; stop cu nam trong orphanStops, nhip sau di qua OwnStopGuard (chi huy khi
+     * stop active moi DANG MO tren san, hoac vi the phang).
+     */
+    private int cancelReplacedIfConfirmed(String sym, String newCid, OrderInfo resp, String old, long now) {
+        if (newStopConfirmed(sym, newCid, resp)) return cancelOrphan(sym, old, now, REPLACED);
+        nUnconfirmed.incrementAndGet();
+        LOG.warn("[C3-LIVE-TRAIL] {} stop moi {} CHUA xac nhan NEW (status={}, khong thay trong openStops sau 2 lan) => GIU ca"
+                + " stop cu {}; nhip sau huy qua guard", sym, newCid, resp == null ? null : resp.getStatus(), old);
+        return 0;
+    }
+
+    static final long CONFIRM_GAP_MS = 1_000L;
+
+    private static void sleepQuiet(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private boolean newStopConfirmed(String sym, String newCid, OrderInfo resp) {
+        if (resp != null && resp.getStatus() == OrderStatus.NEW) return true;
+        for (int i = 0; i < 2; i++) {
+            if (i > 0) sleeper.accept(CONFIRM_GAP_MS);
+            try {
+                List<OrderInfo> open = gw.openStops(sym);
+                api.onApiResult("openStops", true);
+                for (OrderInfo o : open) {
+                    if (newCid.equals(o.getClientOrderId()) && o.getStatus() == OrderStatus.NEW) return true;
+                }
+            } catch (RuntimeException e) {
+                api.onApiResult("openStops", false);
+            }
+        }
+        return false;
     }
 
     /** [2e MAJ-3] cach huy: GUARDED = qua OwnStopGuard; REPLACED = stop cu vua bi thay; RETIRED = cum bi go arm (DCA). */
@@ -437,7 +485,7 @@ public final class TrailingStopManager {
     public String stats() {
         return "arm=" + nArm.get() + " place=" + nPlace.get() + " move=" + nMove.get() + " cancel=" + nCancel.get()
                 + " timeStop=" + nTimeStop.get() + " defer=" + nDefer.get() + " immediate=" + nImmediate.get()
-                + " fallbackQty=" + nFallbackQty.get();
+                + " fallbackQty=" + nFallbackQty.get() + " unconfirmed=" + nUnconfirmed.get();
     }
 
     public static final class Builder {
@@ -458,7 +506,9 @@ public final class TrailingStopManager {
         private long safeRetryMs = 10_000L;
         private StopMode stopMode = StopMode.CLOSE_POSITION;
         private EventSink events;
+        private java.util.function.LongConsumer sleeper;
 
+        public Builder sleeper(java.util.function.LongConsumer v) { sleeper = v; return this; }
         public Builder gateway(ExchangeGateway v) { gw = v; return this; }
         public Builder book(LiveBookC3 v) { book = v; return this; }
         public Builder rules(Supplier<SymbolRules> v) { rules = v; return this; }

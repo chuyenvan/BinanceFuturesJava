@@ -4,6 +4,7 @@ import com.binance.chuyennd.c3live.api.ErrorKind;
 import com.binance.chuyennd.c3live.api.ExchangeInfo;
 import com.binance.chuyennd.c3live.api.GatewayException;
 import com.binance.chuyennd.c3live.api.OrderInfo;
+import com.binance.chuyennd.c3live.api.OrderStatus;
 import com.binance.chuyennd.c3live.api.Side;
 import com.binance.chuyennd.c3live.book.LiveBookC3;
 import com.binance.chuyennd.c3live.entry.C3LiveFixtures;
@@ -273,5 +274,94 @@ public class TrailingStopManagerTest {
         action.set(KillSwitchEngine.Action.FLATTEN);
         assertEquals(0, mgr().step(px(S, 1.2f)));
         assertEquals(0, gw.calls("newStopMarket"));
+    }
+
+    // ------------------------------------------------------------------ [2g MIN-20]
+
+    /** Mock: hideStatus => response stop moi KHONG co algoStatus NEW; hideOpen => cid moi khong hien trong openStops. */
+    private MockExchangeGateway lagStopGw(AtomicBoolean hideStatus, AtomicBoolean hideOpen, AtomicReference<String> lastCid) {
+        MockExchangeGateway g = new MockExchangeGateway() {
+            @Override
+            public synchronized OrderInfo newStopMarket(String symbol, Side side, BigDecimal qty, BigDecimal stopPrice, String cid,
+                                                        boolean reduceOnly) {
+                OrderInfo o = super.newStopMarket(symbol, side, qty, stopPrice, cid, reduceOnly);
+                lastCid.set(cid);
+                return hideStatus.get() ? o.toBuilder().status(OrderStatus.UNKNOWN).rawStatus(null).build() : o;
+            }
+
+            @Override
+            public synchronized List<OrderInfo> openStops(String symbolOrNull) {
+                List<OrderInfo> l = super.openStops(symbolOrNull);
+                if (!hideOpen.get()) return l;
+                List<OrderInfo> out = new ArrayList<>();
+                for (OrderInfo o : l) if (!o.getClientOrderId().equals(lastCid.get())) out.add(o);
+                return out;
+            }
+        };
+        g.exchangeInfo = ei;
+        return g;
+    }
+
+    private TrailingStopManager mgrSleep(List<Long> sleeps) {
+        return TrailingStopManager.builder().gateway(gw).book(book).rules(() -> new SymbolRules(ei, T0)).closer((s, r) -> 1)
+                .defer((s, t, n) -> false).armHook((s, t, n) -> { }).action(action::get).clock(now::get).safeRetryMs(10_000L)
+                .sleeper(sleeps::add).build();
+    }
+
+    /**
+     * San tra 200 nhung stop MOI khong xac nhan NEW (status khac NEW, khong thay trong openStops sau 2 lan cach 1 s) => GIU CA
+     * HAI stop, khong huy stop cu; nhip sau van chua thay => guard giu; san xac nhan => nhip sau guard huy stop cu.
+     */
+    @Test
+    public void replacedStopKeptUntilNewStopConfirmed() {
+        AtomicBoolean hs = new AtomicBoolean(false);
+        AtomicBoolean ho = new AtomicBoolean(false);
+        AtomicReference<String> last = new AtomicReference<>();
+        gw = lagStopGw(hs, ho, last);
+        open(S, 0, "1.0", "100", 0.5f);
+        List<Long> sleeps = new ArrayList<>();
+        TrailingStopManager m = mgrSleep(sleeps);
+        m.step(px(S, 1.08f));   // arm: stop dau (status NEW)
+        String a = c().stopClientAlgoId;
+        assertNotNull(a);
+        assertTrue(sleeps.isEmpty());
+        hs.set(true);
+        ho.set(true);
+        int c0 = gw.calls("cancelStop");
+        m.step(px(S, 1.20f));   // MOVE: stop moi khong xac nhan
+        String b = c().stopClientAlgoId;
+        assertNotEquals(a, b);
+        assertEquals("GIU stop cu", c0, gw.calls("cancelStop"));
+        assertEquals("kiem 2 lan cach 1 s", Collections.singletonList(TrailingStopManager.CONFIRM_GAP_MS), sleeps);
+        assertTrue(c().orphanStops.contains(a));
+        assertTrue(m.stats(), m.stats().contains("unconfirmed=1"));
+        m.step(px(S, 1.20f));   // van chua thay stop moi => guard GIU (cum giu, vi the con)
+        assertEquals(c0, gw.calls("cancelStop"));
+        assertEquals("con CA HAI stop", 2, gw.calls("newStopMarket"));
+        ho.set(false);          // san xac nhan
+        m.step(px(S, 1.20f));
+        assertEquals(c0 + 1, gw.calls("cancelStop"));
+        assertTrue(c().orphanStops.isEmpty());
+        assertEquals(1, gw.openStops(S).size());
+        assertEquals(b, gw.openStops(S).get(0).getClientOrderId());
+    }
+
+    /** Response thieu algoStatus NEW nhung openStops thay stop moi ngay lan 1 => huy stop cu ngay, khong cho. */
+    @Test
+    public void replacedStopConfirmedViaOpenStops() {
+        AtomicBoolean hs = new AtomicBoolean(false);
+        AtomicBoolean ho = new AtomicBoolean(false);
+        AtomicReference<String> last = new AtomicReference<>();
+        gw = lagStopGw(hs, ho, last);
+        open(S, 0, "1.0", "100", 0.5f);
+        List<Long> sleeps = new ArrayList<>();
+        TrailingStopManager m = mgrSleep(sleeps);
+        m.step(px(S, 1.08f));
+        hs.set(true);
+        int c0 = gw.calls("cancelStop");
+        m.step(px(S, 1.20f));
+        assertEquals(c0 + 1, gw.calls("cancelStop"));
+        assertTrue(sleeps.isEmpty());
+        assertEquals(1, gw.openStops(S).size());
     }
 }

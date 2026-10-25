@@ -710,18 +710,168 @@ public class ReconcilerTest {
         assertTrue(n.rec.symbolBlocks().isEmpty());
     }
 
-    /** [2f] Doc vi the LOI khi giu stop cua cum vua chot => van lop (A) toan he. */
+    /**
+     * [2g MIN-21] Doc vi the LOI khi giu stop cua cum VUA chot (< 10') => chi (B) symbol do (truoc 2g: A toan he); REST hoi
+     * phuc + phang => huy stop, go sau 2 lan doc phang.
+     */
     @Test
-    public void readErrorOnJustClosedClusterIsGlobal() {
+    public void readErrorOnJustClosedClusterIsSymbolOnly() {
         Node n = new Node(true);
         n.leg("C00USDT", 0, "1.0", "100");
         n.step("C00USDT", 1.12f);
         assertTrue(n.rec.startup().ok);
-        gw.failNext("account", new GatewayException(ErrorKind.TIMEOUT_UNKNOWN_STATE, "timeout", false));
+        gw.failNext("positions", new GatewayException(ErrorKind.TIMEOUT_UNKNOWN_STATE, "timeout", false));
         gw.emitRaw(PA0_C00);
         assertEquals(1, gw.openStops("C00USDT").size());
+        assertTrue(n.rec.allowsEntry("C01USDT"));
+        assertFalse(n.rec.allowsEntry("C00USDT"));
+        assertTrue(n.rec.blocks().toString(), n.rec.blocks().isEmpty());
+        assertTrue(n.rec.stopGuard().keptStops().toString(), n.rec.stopGuard().hasKept("C00USDT"));
+        gw.setPosition("C00USDT", BigDecimal.ZERO, BigDecimal.ONE);
+        now.addAndGet(GAP);
+        n.rec.confirmPendingFlat();
+        assertTrue(gw.openStops("C00USDT").isEmpty());
+        assertFalse(n.rec.allowsEntry("C00USDT"));
+        now.addAndGet(GAP);
+        n.rec.confirmPendingFlat();
+        assertTrue(n.rec.allowsEntry("C00USDT"));
+    }
+
+    /** [2g MIN-21] Lop B qua cua so 10': lan giu sau (ke ca do loi doc) => (A) toan he. */
+    @Test
+    public void readErrorAfterWindowIsGlobal() {
+        Node n = new Node(true);
+        n.leg("C00USDT", 0, "1.0", "100");
+        n.step("C00USDT", 1.12f);
+        assertTrue(n.rec.startup().ok);
+        gw.emitRaw(PA0_C00);   // REST con 100 => B
+        assertTrue(n.rec.allowsEntry("C01USDT"));
+        now.addAndGet(OwnStopGuard.KNOWN_CLOSE_WINDOW_MS);
+        gw.failNext("account", new GatewayException(ErrorKind.TIMEOUT_UNKNOWN_STATE, "timeout", false));
+        n.rec.confirmPendingFlat();
         assertFalse(n.rec.allowsEntry("C01USDT"));
         assertTrue(n.rec.blocks().get(Reconciler.BLOCK_UNKNOWN).contains("C00USDT"));
+        assertEquals(1, gw.openStops("C00USDT").size());
+    }
+
+    /**
+     * [2g MIN-22] Go (B) can CA account().positions phang: stop giu da mat (huy ngoai) + positionRisk rong (glitch) nhung
+     * account VAN con vi the => KHONG mo lai X; account phang => go sau 2 lan doc.
+     */
+    @Test
+    public void symbolBlockReleaseNeedsAccountFlat() {
+        Node n = new Node(true);
+        n.leg("C00USDT", 0, "1.0", "100");
+        n.step("C00USDT", 1.12f);
+        assertTrue(n.rec.startup().ok);
+        String sid = n.book.cluster("C00USDT").get().stopClientAlgoId;
+        gw.emitRaw(PA0_C00);   // REST con 100 => B + giu stop
+        assertFalse(n.rec.allowsEntry("C00USDT"));
+        gw.cancelStop("C00USDT", sid);   // stop mat (san/owner)
+        gw.positionsGlitch = true;       // positionRisk rong, account con 100
+        for (int i = 0; i < 5; i++) {
+            now.addAndGet(GAP);
+            n.rec.confirmPendingFlat();
+            assertFalse("i=" + i + " account con vi the => khong go X", n.rec.allowsEntry("C00USDT"));
+            assertTrue(n.rec.allowsEntry("C01USDT"));
+        }
+        assertFalse(n.rec.stopGuard().hasKept("C00USDT"));
+        gw.positionsGlitch = false;
+        gw.setPosition("C00USDT", BigDecimal.ZERO, BigDecimal.ONE);
+        now.addAndGet(GAP);
+        n.rec.confirmPendingFlat();
+        assertFalse(n.rec.allowsEntry("C00USDT"));
+        now.addAndGet(GAP);
+        n.rec.confirmPendingFlat();
+        assertTrue(n.rec.allowsEntry("C00USDT"));
+    }
+
+    /** Gateway tre/loi nhu ProofCrash (A1 2ef): positionRisk + account dong bang trong {@code frozenUntil}; readErr => positions nem. */
+    static final class LagGateway extends MockExchangeGateway {
+        AtomicLong clk;
+        long frozenUntil = Long.MIN_VALUE;
+        List<com.binance.chuyennd.c3live.api.PositionInfo> fp;
+        com.binance.chuyennd.c3live.api.AccountSnapshot fa;
+        boolean readErr;
+
+        @Override
+        public synchronized List<com.binance.chuyennd.c3live.api.PositionInfo> positions() {
+            if (readErr) throw new GatewayException(ErrorKind.OTHER, "503 gia lap", false);
+            return clk.get() < frozenUntil ? fp : super.positions();
+        }
+
+        @Override
+        public synchronized com.binance.chuyennd.c3live.api.AccountSnapshot account() {
+            return clk.get() < frozenUntil ? fa : super.account();
+        }
+
+        void freeze(long ms) {
+            fp = new ArrayList<>(super.positions());
+            fa = super.account();
+            frozenUntil = clk.get() + ms;
+        }
+    }
+
+    /**
+     * [2g MIN-21] Hoi quy ProofCrash R3 (A1_DELTA_2EF): 3 cum chot cung luc (stop kich, xu ly nhu stream pa=0), moi cum con 1 stop
+     * c3s- cu chua huy, REST tre 60 s VA positionRisk LOI DOC dung luc chot => 24/24 leg symbol khac VAO DUOC, 3 symbol vua chot
+     * bi chan rieng; ~2' sau (REST het tre) 24/24 + 3/3, het chan, stop cu da huy.
+     */
+    @Test
+    public void proofCrashR3ReadErrorDuringCrashStillAdmitsOtherSymbols() {
+        String[] cl = {"AUSDT", "BUSDT", "CUSDT"};
+        LagGateway lg = new LagGateway();
+        lg.clk = now;
+        LiveBookC3 book = new LiveBookC3(null, 1.0);
+        int k = 0;
+        for (String s : cl) {
+            lg.setPrice(s, new BigDecimal("1.00"));
+            String cid = "c3-" + s + "-2988" + (k++) + "-0";
+            assertTrue(book.reserve(s, cid, 0, 29_880L + k, "BIG_DOWN", 1.0, new BigDecimal("100"), 100.0, now.get()));
+            book.markSending(cid, now.get());
+            OrderInfo o = lg.newMarketOrder(s, Side.BUY, new BigDecimal("100"), cid, false);
+            assertTrue(book.confirm(cid, o.getExecutedQty(), o.getAvgPrice().doubleValue(), o.getOrderId(), now.get()));
+            book.setTrail(s, 0.08f, 1.05f, now.get());
+            String sc = "c3s-" + s + "-1-1";
+            lg.newStopMarket(s, Side.SELL, new BigDecimal("1.05"), sc, true);
+            book.setStop(s, 1.05, sc, now.get());
+        }
+        FillAccounting acct = new FillAccounting(book, lg, OrderAuditLog.dry(), null, alerts::add, null, now::get, null);
+        Reconciler rec = new Reconciler(lg, book, acct, () -> null, alerts::add, null, now::get, 0.01, 2, null, null);
+        OwnStopGuard g = new OwnStopGuard(lg, book, null, alerts::add, () -> rec::onUnknownPosition, now::get);
+        rec.setStopGuard(g);
+        acct.setStopGuard(g);
+        acct.setUnknownPositionSink(rec::onUnknownPosition);
+        assertTrue(rec.startup().ok);
+        for (String s : cl) lg.newStopMarket(s, Side.SELL, new BigDecimal("0.90"), "c3s-" + s + "-1-0", true);   // stop cu chua huy
+        lg.freeze(60_000L);
+        for (String s : cl) lg.triggerStops(s, new BigDecimal("1.04"));
+        lg.readErr = true;
+        now.addAndGet(1_000L);
+        for (String s : cl) acct.closedOnExchange(s, FillAccounting.REASON_TRAILING, now.get());
+        lg.readErr = false;
+        now.addAndGet(5_000L);
+        rec.confirmPendingFlat();
+        rec.checkPositions();
+        int ok = 0;
+        for (int i = 0; i < 24; i++) if (rec.allowsEntry("Y" + i + "USDT")) ok++;
+        assertEquals("24/24 leg symbol khac vao duoc", 24, ok);
+        for (String s : cl) assertFalse(s, rec.allowsEntry(s));
+        assertTrue(rec.blocks().toString(), rec.blocks().isEmpty());
+        assertEquals("[AUSDT, BUSDT, CUSDT]", rec.symbolBlocks().toString());
+        assertEquals(3, lg.openStops(null).size());
+        for (int i = 0; i < 4; i++) {
+            now.addAndGet(31_000L);
+            rec.confirmPendingFlat();
+            rec.checkPositions();
+        }
+        ok = 0;
+        for (int i = 0; i < 24; i++) if (rec.allowsEntry("Y" + i + "USDT")) ok++;
+        assertEquals(24, ok);
+        for (String s : cl) assertTrue(s, rec.allowsEntry(s));
+        assertTrue(rec.blocks().isEmpty());
+        assertTrue(rec.symbolBlocks().isEmpty());
+        assertEquals("stop cu da huy", 0, lg.openStops(null).size());
     }
 
     /** [2e] Lenh owner go cum ma: TU CHOI khi vi the != 0 (positionRisk hoac account) / symbol sai; OK khi ca hai phang. */

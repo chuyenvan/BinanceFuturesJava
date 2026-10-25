@@ -189,14 +189,16 @@ public final class OwnStopGuard {
 
     /**
      * Giu stop. Lop chan: so dang giu cum => khong chan them; cum so vua chot (B) => Reconciler chi chan symbol nay (qua
-     * {@link #hasKept}); con lai (vi the la, so mat, qua cua so) hoac KHONG doc duoc vi the (positionRisk/account) => (A)
-     * UNKNOWN_POSITION toan he.
+     * {@link #hasKept}) — [2g MIN-21] ke ca khi loi doc vi the ({@code positionsUnreadable} chi con de ghi log); con lai (vi
+     * the la, so mat/restart, qua cua so) => (A) UNKNOWN_POSITION toan he.
      */
     private Result keep(String sym, String cid, String why, Result r, String detail, boolean positionsUnreadable) {
         kept.put(cid, sym);
         long now = clock.getAsLong();
         boolean held = book != null && book.isHolding(sym);
-        boolean global = !held && (positionsUnreadable || !recentlyClosed(book, sym, now));
+        // [2g MIN-21] cum so VUA chot (< 10') => (B) ke ca khi KHONG doc duoc vi the (REST loi dung luc sap); qua 10' / so
+        // khong biet (startup, symbol la) => (A). Reconciler thu lai moi 30 s; qua cua so thi lan giu sau leo thang (A).
+        boolean global = !held && !recentlyClosed(book, sym, now);
         if (global) {
             try {
                 unknownSink.get().accept(sym);
@@ -206,6 +208,7 @@ public final class OwnStopGuard {
         }
         Long last = lastAlertMs.get(sym);
         String m = "[C3-LIVE-STOPGUARD] GIU stop " + sym + " " + cid + " (" + why + "): " + detail
+                + (positionsUnreadable ? " [loi doc vi the]" : "")
                 + (held ? "" : global ? " => symbol vao UNKNOWN_POSITION (chan mo moi TOAN HE)"
                 : " => cum so vua chot: CHI chan mo moi " + sym + " toi khi xac nhan phang") + "; owner kiem tay neu keo dai";
         if (last == null || now - last >= ALERT_EVERY_MS) {

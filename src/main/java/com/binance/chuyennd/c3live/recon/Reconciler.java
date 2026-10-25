@@ -217,6 +217,14 @@ public final class Reconciler {
         }
     }
 
+    private static BigDecimal absAmt(List<PositionInfo> ps, String sym) {
+        BigDecimal s = BigDecimal.ZERO;
+        for (PositionInfo p : ps) {
+            if (sym.equals(p.getSymbol()) && p.getPositionAmt() != null) s = s.add(p.getPositionAmt().abs());
+        }
+        return s;
+    }
+
     private long knownSince(String s) {
         long t = book == null ? Long.MIN_VALUE : book.lastRemovedMs(s);
         return t == Long.MIN_VALUE ? clock.getAsLong() : t;
@@ -457,6 +465,9 @@ public final class Reconciler {
         }
         r.unknownPositions.addAll(now);
         // [2f] go lop (B): khong con stop giu + >= 2 lan doc positionRisk vang cach >= minGap
+        // [2g MIN-22] + account().positions cung vang/0 o moi lan doc tinh (doc loi / mang null => lan nay khong tinh)
+        boolean acctRead = false;
+        List<PositionInfo> acctPos = null;
         for (String s : new ArrayList<>(knownSyms.keySet())) {
             if (knownSeen.contains(s)) continue;
             if (unknownSyms.contains(s) || now.contains(s)) {
@@ -466,6 +477,28 @@ public final class Reconciler {
             }
             if (guard.hasKept(s)) {
                 knownGoneSince.remove(s);
+                continue;
+            }
+            if (!acctRead) {
+                acctRead = true;
+                try {
+                    AccountSnapshot a = gw.account();
+                    api.onApiResult("account", true);
+                    acctPos = a == null ? null : a.getPositions();
+                } catch (RuntimeException e) {
+                    api.onApiResult("account", false);
+                }
+            }
+            if (acctPos == null) continue;   // khong doi chung duoc => lan nay khong tinh, giu moc
+            if (absAmt(acctPos, s).signum() != 0) {
+                knownGoneSince.remove(s);   // account con vi the (positionRisk rong/sai) => dem lai
+                if (t - knownSyms.get(s) >= OwnStopGuard.KNOWN_CLOSE_WINDOW_MS) {   // qua cua so => (A)
+                    knownSyms.remove(s);
+                    now.add(s);
+                    r.unknownPositions.add(s);
+                    LOG.error("[C3-LIVE-RECON] {}: cum so da chot > {} ms ma account VAN con vi the => leo thang UNKNOWN toan he",
+                            s, OwnStopGuard.KNOWN_CLOSE_WINDOW_MS);
+                }
                 continue;
             }
             Long g = knownGoneSince.get(s);
