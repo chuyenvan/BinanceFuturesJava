@@ -1,0 +1,93 @@
+== 1. deploy DRY=1 (truoc 11-18: chi canh bao)
+   + export LIVE_C3_EXCHANGEINFO_FILE=run/c3live_exchangeInfo.json
+   + export LIVE_C3_DRY_STATE_FILE=run/c3live_dry_state.json
+   + export LIVE_C3_EXCLUDE_TRADFI_FEATURES=1
+[2026-10-25 18:09:49] DRY=1: dung o day, khong doi gi. (DRY PASS)
+  [PASS] deploy DRY PASS
+  [PASS] deploy DRY khong doi env
+  [PASS] deploy tu choi khi md5 killsw_reset.sh sai (pin)
+== 2. deploy that KHONG FORCE_DATE (phai tu choi truoc 2026-11-18)
+[2026-10-25 18:09:49] DUNG: truoc 2026-11-18 08:00 +07: deploy se thay jar shadow dang danh gia. Chi chay sau ngay do (hoac FORCE_DATE=1 khi MASTER bao).
+[2026-10-25 18:09:49] Log: /home/ubuntu/claude_master/v12/r2e_wk/fake242/deploylog/deploy_v12dry_20261025_1809.log
+  [PASS] tu choi truoc 11-18
+== 3. deploy that (FORCE_DATE=1 FORCE_TIME=1, go YES) tren 242 gia
+OK 0_KILLSW_LATCH
+OK heartbeat_tuoi=13s
+OK 0_exception
+[2026-10-25 18:10:03] xoa watchdog PAUSE
+[2026-10-25 18:10:03] OK: kiem sau start DAT
+[2026-10-25 18:10:03] === XONG. OK started pid=1108162 lstart=Sun Oct 25 18:09:49 2026
+[2026-10-25 18:10:03] Theo doi: bash /home/ubuntu/claude_master/v12/r2e_wk/fake242/deploylog/c3live_status.sh   |   Rollback: bash /home/ubuntu/claude_master/v12/r2e_wk/fake242/deploylog/rollback_v12.sh 20261025_1809
+[2026-10-25 18:10:03] Gui cho MASTER dong tren + file log: /home/ubuntu/claude_master/v12/r2e_wk/fake242/deploylog/deploy_v12dry_20261025_1809.log
+  [PASS] deploy XONG
+  [PASS] deploy kiem 0 dong KILLSW LATCH sau start
+  [PASS] jar moi tren 242 gia
+  [PASS] backup jar/env/start
+  [PASS] env them LIVE_ADAPTER=dry + c3_live + act
+  [PASS] process moi co env c3_live/dry
+  [PASS] exchangeInfo dat vao run/
+  [PASS] killsw_reset.sh chep sang ops/
+  [PASS] PAUSE watchdog da xoa
+== 4. deploy lan 2 phai tu choi (da co LIVE_ADAPTER)
+  [PASS] deploy lan 2 FAIL o kiem 242
+== 5. status (chi doc)
+== process pid=1108162 so=1 jar=8bc1489488e76a026378724211f485c3
+   env LIVE_C3_EXCLUDE_TRADFI_FEATURES=1
+   env LIVE_C3_BOOK_FILE=run/c3live_book.json
+   env LIVE_C3_DRY_STATE_FILE=run/c3live_dry_state.json
+   env LIVE_ADAPTER=dry
+   env LIVE_TS_MKT_EXT=1
+  [PASS] status in env c3_live
+== 6. killsw_reset (wrapper) DRY + YES
+  [PASS] killsw DRY khong ghi
+== Da ghi yeu cau run/killsw_reset.req ; log: run/killsw_reset.log
+== Bot CHUA ap dung sau 3s (bot tat? sai thu muc?). Yeu cau van cho; bot se ap dung khi chay.
+== Xong. Log: /home/ubuntu/claude_master/v12/r2e_wk/fake242/deploylog/killsw_reset_20261025_1810.log (gui MASTER)
+  [PASS] killsw YES ghi run/killsw_reset.req
+== 7. reanchor DRY + YES
+  [PASS] reanchor DRY khong ghi
+  [PASS] reanchor YES ghi yeu cau
+== 8. rollback DRY + chot gio + YES
+  [PASS] rollback DRY PASS
+  (bo qua kiem tu choi ngoai gio: dang trong khung gio hop le 18:10)
+OK started pid=1108617 lstart=Sun Oct 25 18:10:09 2026
+OK env LIVE_PROFILE=c3_shadow
+OK env khong LIVE_ADAPTER
+[2026-10-25 18:10:19] Rollback xong. Gui log cho MASTER: /home/ubuntu/claude_master/v12/r2e_wk/fake242/deploylog/rollback_v12_20261025_1810.log
+  [PASS] rollback xong
+  [PASS] env ve c3_shadow, khong LIVE_ADAPTER
+  [PASS] jar ve ban cu
+  [PASS] so dry doi ten .rb_TS
+  [PASS] process chay lai env c3_shadow
+  [PASS] dinh C6 c3_live doi ten .rb_TS
+== 9. [2c CRIT-1] deploy co dong [KILLSW] LATCH sau start => ROLLBACK TU DONG + FAIL
+OK started pid=1108857 lstart=Sun Oct 25 18:10:29 2026
+OK env LIVE_PROFILE=c3_shadow
+OK env khong LIVE_ADAPTER
+[2026-10-25 18:10:39] Rollback xong. Gui log cho MASTER: /home/ubuntu/claude_master/v12/r2e_wk/fake242/deploylog/rollback_v12_20261025_1810.log
+[2026-10-25 18:10:39] DEPLOY FAIL (kill-switch latch sau start). Da chay rollback. Gui log cho MASTER: /home/ubuntu/claude_master/v12/r2e_wk/fake242/deploylog/deploy_v12dry_20261025_1810.log
+  [PASS] deploy FAIL vi LATCH (rc!=0)
+  [PASS] rollback tu dong da chay
+  [PASS] sau rollback tu dong: env c3_shadow, jar cu
+  [PASS] process chay env c3_shadow sau rollback tu dong
+== 10. [2d] thieu logs/full.log sau start => KHONG duoc PASS gia: FAIL + rollback tu dong
+LATCH_COUNT=no_log
+[2026-10-25 18:11:00] DEPLOY FAIL (kill-switch latch sau start). Da chay rollback. Gui log cho MASTER: /home/ubuntu/claude_master/v12/r2e_wk/fake242/deploylog/deploy_v12dry_20261025_1810.log
+  [PASS] thieu log => FAIL (no_log) + rollback
+  [PASS] sau rollback (thieu log): env c3_shadow
+== 11. [2d] log xoay trong 120 s, dong LATCH nam o full.log.1 => van bat duoc: FAIL + rollback
+LATCH_COUNT=1 files=2
+[2026-10-25 18:11:20] DEPLOY FAIL (kill-switch latch sau start). Da chay rollback. Gui log cho MASTER: /home/ubuntu/claude_master/v12/r2e_wk/fake242/deploylog/deploy_v12dry_20261025_1811.log
+  [PASS] LATCH trong file da xoay => FAIL + rollback
+  [PASS] sau rollback (log xoay): jar cu
+== 12. [2d] log xoay nhung KHONG co LATCH => buoc hau kiem LATCH dat (dem theo moc thoi gian, ke ca full.log.1)
+LATCH_COUNT=0 files=2
+  [PASS] log xoay, 0 LATCH => qua buoc LATCH (khong FAIL gia)
+  [PASS] [2e] deploy in tz_shell + moc +07
+== 13. [2e] c3live_ghost_clear.sh: symbol sai / chi xem / YES=1 ghi yeu cau + doc ket qua bot
+  [PASS] ghost: symbol sai => tu choi
+  [PASS] ghost: khong YES => chi xem, khong ghi
+  [PASS] ghost: YES=1 ghi yeu cau dung symbol; bot gia khong tra loi => exit 5
+  [PASS] ghost: bot tu choi (vi the != 0) => in ly do, exit 4
+  [PASS] ghost: bot OK => exit 0
+TEST PASS 41/41
