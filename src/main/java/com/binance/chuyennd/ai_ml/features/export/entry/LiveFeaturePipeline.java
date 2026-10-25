@@ -122,6 +122,8 @@ public final class LiveFeaturePipeline {
     private long pendingMinute = Long.MIN_VALUE;
     private Map<String, KlineObjectSimple> pendingSnap = null;
     long nSeedHeldFed = 0, nSeedHeldDropped = 0;
+    /** [V12 2b c3_live] loc snapshot TRUOC khi nuoi md/history/feature (loai TradFi). null = khong loc (mac dinh). */
+    private java.util.function.UnaryOperator<Map<String, KlineObjectSimple>> snapFilter = null;
     long nTicks = 0, nPartial = 0, nMdNull = 0, nGapMinutes = 0, nCatchup = 0, nNoSnap = 0;
 
     public LiveFeaturePipeline(Sink sink, MdGen md, boolean featMdInline, int tol) {
@@ -146,6 +148,19 @@ public final class LiveFeaturePipeline {
     static boolean seedExcludeCfg() {
         String v = Cfg.getOr(K_SEED_EXCL, "0").trim();
         return "1".equals(v) || "true".equalsIgnoreCase(v);
+    }
+
+    /**
+     * [V12 2b] dat bo loc snapshot (goi TRUOC {@link #seed}); c3_live: bo symbol TradFi khoi MarketDataInline, HistoryManager/
+     * CoinRank, feature va snapshot funding/EntrySignalFilter. null = khong loc (c3_shadow/sim y nguyen).
+     */
+    public synchronized void setSnapshotFilter(java.util.function.UnaryOperator<Map<String, KlineObjectSimple>> f) {
+        this.snapFilter = f;
+    }
+
+    private Map<String, KlineObjectSimple> filt(Map<String, KlineObjectSimple> snap) {
+        java.util.function.UnaryOperator<Map<String, KlineObjectSimple>> f = snapFilter;
+        return f == null || snap == null ? snap : f.apply(snap);
     }
 
     /** [V12 SAFE C11] bat/tat giu lai phut seed cuoi (goi TRUOC {@link #seed}). */
@@ -240,7 +255,7 @@ public final class LiveFeaturePipeline {
         if (minutes != null) {
             for (Map.Entry<Long, Map<String, KlineObjectSimple>> e : minutes.entrySet()) {
                 long m = align(e.getKey());
-                Map<String, KlineObjectSimple> snap = e.getValue();
+                Map<String, KlineObjectSimple> snap = filt(e.getValue());
                 if (m <= lastFed || snap == null || snap.isEmpty()) continue;
                 for (KlineObjectSimple k : snap.values()) {
                     if (k != null && k.startTime != null) k.startTime = align(k.startTime);
@@ -263,7 +278,7 @@ public final class LiveFeaturePipeline {
         if (minutes != null) {
             for (Map.Entry<Long, Map<String, KlineObjectSimple>> e : minutes.entrySet()) {
                 long m = align(e.getKey());
-                Map<String, KlineObjectSimple> snap = e.getValue();
+                Map<String, KlineObjectSimple> snap = filt(e.getValue());
                 if (m <= lastFed || m <= heldMin || snap == null || snap.isEmpty()) continue;
                 for (KlineObjectSimple k : snap.values()) {
                     if (k != null && k.startTime != null) k.startTime = align(k.startTime);
@@ -322,7 +337,7 @@ public final class LiveFeaturePipeline {
         long from = lastFed == Long.MIN_VALUE ? minute : lastFed + MIN;
         from = Math.max(from, minute - (long) MAX_CATCHUP_MIN * MIN);
         for (long m = from; m < minute; m += MIN) {
-            Map<String, KlineObjectSimple> snap = src.snapshot(m);
+            Map<String, KlineObjectSimple> snap = filt(src.snapshot(m));
             if (snap == null || snap.isEmpty()) {
                 nGapMinutes++;
                 continue;
@@ -332,7 +347,7 @@ public final class LiveFeaturePipeline {
             lastFed = m;
             nCatchup++;
         }
-        Map<String, KlineObjectSimple> snap = src.snapshot(minute);
+        Map<String, KlineObjectSimple> snap = filt(src.snapshot(minute));
         if (snap == null || snap.isEmpty()) {
             nNoSnap++;
             LOG.error("[FEAT-PIPE] khong co snapshot phut {} trong cache -> bo tick", minute);

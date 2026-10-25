@@ -317,7 +317,8 @@ public class DetectEntrySignal2TradeNormal {
 
             // --- CẬP NHẬT HISTORY CHO FUNDING EXTRACTOR ---
             if (fundingExtractor != null && featPipeline == null) {   // [V11] snapshot: pipeline da nuoi HistoryManager
-                fundingExtractor.updateMarketHistory(symbol2FinalTicker);
+                fundingExtractor.updateMarketHistory(
+                        com.binance.chuyennd.c3live.runtime.C3LiveHook.dropTradFi(symbol2FinalTicker));   // [V12 2b] tat => cung map
             }
             long tHistMs = (System.nanoTime() - tTop0) / 1_000_000L;
 
@@ -328,7 +329,8 @@ public class DetectEntrySignal2TradeNormal {
             if (aiBrain != null && featureEntryExtractor != null) {
                 try {
                     long timestamp = time;
-                    Map<String, KlineObjectSimple> currentMarketMap = new HashMap<>(symbol2FinalTicker);
+                    Map<String, KlineObjectSimple> currentMarketMap = com.binance.chuyennd.c3live.runtime.C3LiveHook
+                            .dropTradFi(new HashMap<>(symbol2FinalTicker));   // [V12 2b] tat => cung map
 
                     // 2. Trích xuất Features cho Entry Model
                     if (featPipeline != null) {
@@ -871,7 +873,11 @@ public class DetectEntrySignal2TradeNormal {
         Map<String, Float> symbol2FundingPred = new HashMap<>();
         final List<String> basket = CoinRankManager.getInstance().getTopCoin(time);
         // [V11 §6] snapshot: funding-45 nhu ExportFeaturesForPythonTool (snapshot day du + rate feature). legacy => cu.
-        final Map<String, KlineObjectSimple> fSnap = featSnapTick != null ? featSnapTick : symbol2FinalTicker;
+        final Map<String, KlineObjectSimple> fSnap = com.binance.chuyennd.c3live.runtime.C3LiveHook.dropTradFi(
+                featSnapTick != null ? featSnapTick : symbol2FinalTicker);   // [V12 2b] tat => cung map
+        // [V12 2b] c3_live: TradFi KHONG vao feature funding / pool rank selector (null = khong loc)
+        final java.util.function.Predicate<String> tradFiDrop = com.binance.chuyennd.c3live.runtime.C3LiveHook
+                .excludeTradFiFeatures() ? com.binance.chuyennd.c3live.runtime.C3LiveHook.tradFiFeatureFilterOrNull() : null;
         final MarketDataObject fRate = featSnapTick != null ? featRateTick : null;
         // [B4-SPEED] thay clear() (reload full-history MỖI tick ~250s) bằng cache-qua-tick + BatchRead
         // 1 lần cho mọi coin + refresh khi pipelineFreshTs tăng => lookup BIT-IDENTICAL, IO giảm ~1000x.
@@ -907,6 +913,7 @@ public class DetectEntrySignal2TradeNormal {
         for (String symbol : allSymbols) {
             KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
             if (!Utils.isTickerAvailable(ticker)) continue;
+            if (tradFiDrop != null && tradFiDrop.test(symbol)) continue;   // [V12 2b] chi c3_live
 
             if (fundingExtractor != null && fundingBrain != null) {
                 OrderTargetInfoTest dummyOrder = new OrderTargetInfoTest(
@@ -1561,6 +1568,9 @@ public class DetectEntrySignal2TradeNormal {
                 // [V11 F-input] seed = replay TUNG phut (updateHistory + getTopCoin) 1 luot, khong nap 2 luot.
                 this.featPipeline = com.binance.chuyennd.ai_ml.features.export.entry.LiveFeaturePipeline
                         .forProd(this.featureEntryExtractor);
+                if (com.binance.chuyennd.c3live.runtime.C3LiveHook.excludeTradFiFeatures()) {   // [V12 2b] chi c3_live
+                    this.featPipeline.setSnapshotFilter(com.binance.chuyennd.c3live.runtime.C3LiveHook::dropTradFi);
+                }
                 this.featPipeline.seed(time2Tickers);
                 this.tickerWindow.setInPlaceReread(true);   // [V11 F-repair]
             } else {
