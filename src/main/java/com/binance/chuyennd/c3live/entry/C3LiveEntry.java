@@ -168,11 +168,14 @@ public final class C3LiveEntry {
         return book;
     }
 
-    /** Xu ly 1 leg. Khong nem. */
+    /** Xu ly 1 leg (tuan tu hoa tren instance). Khong nem. */
     public Result onLeg(LegInput in, long nowMs) {
         Result r;
         try {
-            r = decide(in, nowMs);
+            // tuan tu hoa: kiem trung coin + doc U + giu cho la MOT buoc (tick selector/market co the chay song song)
+            synchronized (this) {
+                r = decide(in, nowMs);
+            }
         } catch (Throwable t) {
             r = Result.of(Outcome.ERROR, t.toString());
             LOG.error("[C3-LIVE] loi leg {}: {}", in == null ? "-" : in.symbol, t.toString());
