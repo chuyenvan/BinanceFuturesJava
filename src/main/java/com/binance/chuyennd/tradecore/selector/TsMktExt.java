@@ -69,6 +69,14 @@ public final class TsMktExt {
     static volatile Boolean enabledForTest = null;
     static volatile Predicate<String> legacyCheck = LegacySymbols::isLegacySymbol;
     private static volatile TsMktExt INSTANCE;
+    /** [V12 c3_live P0-U3] loc thanh vien ALT_EW theo {@link MarketIndexFilter} (null = khong loc: c3_shadow/sim y nguyen). */
+    static Map<String, KlineObjectSimple> filterMembers(Map<String, KlineObjectSimple> bars) {
+        Predicate<String> f = MarketIndexFilter.get();
+        if (f == null || bars == null) return bars;
+        Map<String, KlineObjectSimple> out = new java.util.HashMap<>();
+        for (Map.Entry<String, KlineObjectSimple> e : bars.entrySet()) if (f.test(e.getKey())) out.put(e.getKey(), e.getValue());
+        return out;
+    }
 
     static {
         String v = Cfg.get(KEY_ENABLE);
@@ -287,7 +295,7 @@ public final class TsMktExt {
             TreeMap<Long, Map<String, KlineObjectSimple>> m = reader.read(t, k);
             if (m != null) {
                 for (Map.Entry<Long, Map<String, KlineObjectSimple>> e : m.entrySet()) {
-                    acc.feed(e.getKey(), e.getValue());
+                    acc.feed(e.getKey(), filterMembers(e.getValue()));
                 }
             }
             t += k * AltEwIndex.MIN;

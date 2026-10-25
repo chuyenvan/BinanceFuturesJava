@@ -113,6 +113,22 @@ public final class LegacySymbols {
      * Reconcile moi tick tu vi the THAT doc ve tu Binance. Ghi dia khi tap doi.
      * Luon in {@code [LEGACY] managed N: ...} de verify.sh/health doc duoc.
      */
+    /** [V12 C1] LEGACY = real \\ (paper U c3liveOwned): vi the C3 THAT (LiveBookC3) KHONG bao gio la LEGACY. */
+    static TreeSet<String> compute(Set<String> realPositions, Set<String> paperPositions, Set<String> c3LiveOwned) {
+        TreeSet<String> ex = new TreeSet<>();
+        if (paperPositions != null) ex.addAll(paperPositions);
+        if (c3LiveOwned != null) ex.addAll(c3LiveOwned);
+        return compute(realPositions, ex);
+    }
+
+    /** [V12 C1] nhu {@link #reconcile(Set, Set)} nhung loai ca symbol c3_live dang so huu (so that). */
+    public void reconcile(Set<String> realPositions, Set<String> paperPositions, Set<String> c3LiveOwned) {
+        TreeSet<String> ex = new TreeSet<>();
+        if (paperPositions != null) ex.addAll(paperPositions);
+        if (c3LiveOwned != null) ex.addAll(c3LiveOwned);
+        reconcile(realPositions, ex);
+    }
+
     public void reconcile(Set<String> realPositions, Set<String> paperPositions) {
         TreeSet<String> now = compute(realPositions, paperPositions);
         boolean changed = !now.equals(new TreeSet<>(legacy));

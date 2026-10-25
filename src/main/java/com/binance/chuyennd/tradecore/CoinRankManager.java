@@ -71,6 +71,11 @@ public class CoinRankManager {
         return symbolTiers.getOrDefault(symbol, CoinTier.TIER_3_SHITCOIN);
     }
 
+    /** [V12 c3_live] tier hien tai KHONG goi checkAndUpdate (khong doi thoi diem cap nhat tier ma so giay thay). */
+    public CoinTier peekCoinTier(String symbol) {
+        return symbolTiers.getOrDefault(symbol, CoinTier.TIER_3_SHITCOIN);
+    }
+
     public float getBudgetMultiplier(String symbol) {
         CoinTier tier = symbolTiers.getOrDefault(symbol, CoinTier.TIER_3_SHITCOIN);
         return getMultiplierByTier(tier);

@@ -43,6 +43,8 @@ public final class OpsHooks {
 
     private static final String RAW_MODE = Cfg.get(OpsConfig.KEY_KILLSW_MODE);
     private static final String PROFILE = Cfg.get("LIVE_PROFILE");
+    /** [V12 Q1b] c3_live: so GIAY KHONG duoc lam nguon C4/C6 (chi onBook tu so THAT). */
+    private static final boolean C3LIVE = OpsConfig.isC3Live(PROFILE);
     private static final KillSwitchEngine.Resolved KS_MODE = KillSwitchEngine.resolve(RAW_MODE, PROFILE);
     private static final boolean HB = OpsHeartbeat.on();
     private static final KillSwitchEngine KS = KS_MODE.effective == KillSwitchEngine.Mode.OFF ? null : newEngine();
@@ -151,7 +153,7 @@ public final class OpsHooks {
 
     /** Dau shadowTickC3: so trong (0 cum) => C4/C6 tren equity = PAPER_EQUITY + realized (khong can gia). */
     public static void onPaperBook(ShadowBookC3 book) {
-        if (KS == null || book == null) return;
+        if (KS == null || book == null || C3LIVE) return;
         try {
             if (book.openCount() != 0) return;   // co cum mo => onPaperTick (co gia) se xu ly
             KS.onPaper(System.currentTimeMillis(), 0, book.marginRunning(),
@@ -163,7 +165,7 @@ public final class OpsHooks {
 
     /** Sau {@code book.tick(px, now)} trong shadowTickC3 — CUNG map gia vua dung cho nhip exit (chi doc). */
     public static void onPaperTick(ShadowBookC3 book, Map<String, Float> px) {
-        if (KS == null || book == null) return;
+        if (KS == null || book == null || C3LIVE) return;
         try {
             KS.onPaper(System.currentTimeMillis(), book.openCount(), book.marginRunning(), book.equityNow(px));
         } catch (Throwable e) {

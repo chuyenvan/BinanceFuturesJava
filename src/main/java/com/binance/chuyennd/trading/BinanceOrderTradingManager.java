@@ -466,7 +466,8 @@ public class BinanceOrderTradingManager {
             if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
                 com.binance.chuyennd.tradecore.selector.LegacySymbols.getInstance().reconcile(
                         newSymbol2Pos.keySet(),
-                        com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance().openSymbols());
+                        com.binance.chuyennd.tradecore.selector.ShadowBookC3.getInstance().openSymbols(),
+                        com.binance.chuyennd.c3live.runtime.C3LiveHook.ownedSymbols());   // [V12 C1] tat => rong
             }
             Long timeProcess = (System.currentTimeMillis() - startTime);
             LOG.info("Update all position:{} {} ms", bm.symbol2Pos.size(), timeProcess.floatValue());

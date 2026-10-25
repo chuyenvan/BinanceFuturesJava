@@ -219,6 +219,9 @@ public class DetectEntrySignal2TradeNormal {
 
             LOG.info("Btc ticker size: {} {} -> {}", symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC).size(), Utils.normalizeDateYYYYMMDDHHmm(btcTickers.get(0).startTime.longValue()), Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()));
             long time = btcTicker.startTime.longValue();
+            // [V12 C3-LIVE P0-U3] market level cua c3_live chi tinh tren marketIndexMembers (da loai TradFi).
+            //   Hook tat (c3_shadow/sim) => null => KHONG loc (y nguyen).
+            final java.util.Set<String> c3Idx = com.binance.chuyennd.c3live.runtime.C3LiveHook.marketIndexOrNull();
 
             for (Map.Entry<String, List<KlineObjectSimple>> entry : symbol2LastTickers.entrySet()) {
                 try {
@@ -241,8 +244,11 @@ public class DetectEntrySignal2TradeNormal {
                     if (rateChange > 0.3) {
                         continue;
                     }
-                    rateDown2Symbols.put(rateChange, symbol);
-                    rateUp2Symbols.put(-rateChange, symbol);
+                    final boolean inIdx = c3Idx == null || c3Idx.contains(symbol);
+                    if (inIdx) {
+                        rateDown2Symbols.put(rateChange, symbol);
+                        rateUp2Symbols.put(-rateChange, symbol);
+                    }
                     Float priceMax = null;
                     Float priceMin = null;
                     for (int i = 0; i < Configs.NUMBER_TICKER_CAL_RATE_CHANGE; i++) {
@@ -261,9 +267,13 @@ public class DetectEntrySignal2TradeNormal {
                     if (StringUtils.equals(symbol, Constants.SYMBOL_PAIR_BTC)) {
                         btcMax15M = priceMax;
                     }
-                    rateDown15M2Symbols.put(Utils.rateOf2Double(tickers.get(tickers.size() - 1).priceClose, priceMax).floatValue(), symbol);
+                    if (inIdx) {
+                        rateDown15M2Symbols.put(Utils.rateOf2Double(tickers.get(tickers.size() - 1).priceClose, priceMax).floatValue(), symbol);
+                    }
                     symbol2Max15m.put(symbol, priceMax);
-                    rateUp15M2Symbols.put(-Utils.rateOf2Double(tickers.get(tickers.size() - 1).priceClose, priceMin).floatValue(), symbol);
+                    if (inIdx) {
+                        rateUp15M2Symbols.put(-Utils.rateOf2Double(tickers.get(tickers.size() - 1).priceClose, priceMin).floatValue(), symbol);
+                    }
 
                 } catch (Exception e) {
                     LOG.error("loop ticker symbol loi: {}", e.toString());
@@ -1080,6 +1090,18 @@ public class DetectEntrySignal2TradeNormal {
                 createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1, symbol2Max15m.get(symbol),
                         marketRate, predictData, null, symbol2LastTickers, null);
             }
+            // [V12 C1] vi the THAT (LiveBookC3) den bac grid ma so giay KHONG den bac => leg CHI live (so giay bo qua).
+            //   Hook tat => khong vao nhanh nay.
+            if (com.binance.chuyennd.c3live.runtime.C3LiveHook.enabled()) {
+                for (String symbol : com.binance.chuyennd.c3live.runtime.C3LiveHook.dcaDue(tk)) {
+                    if (due.contains(symbol)) continue;
+                    KlineObjectSimple ticker = tk.get(symbol);
+                    if (!Utils.isTickerAvailable(ticker)) continue;
+                    LOG.info("[LIVE-DCA-GRID] site={} live-only due={}", site, symbol);
+                    createOrderBuyRequest0(symbol, ticker, MarketLevelChange.DCA_LEVEL1, symbol2Max15m.get(symbol),
+                            marketRate, predictData, null, symbol2LastTickers, null, true);
+                }
+            }
         } catch (Exception e) {
             LOG.error("[LIVE-DCA-GRID] loi site={}: {}", site, e.toString());
         }
@@ -1089,6 +1111,18 @@ public class DetectEntrySignal2TradeNormal {
                                       MarketDataObject marketRate, OnnxInferenceManager.PredictionResult prediction,
                                       Float symbolPred, Map<String, List<KlineObjectSimple>> symbol2LastTickers,
                                       List<String> rejectCollector) {
+        createOrderBuyRequest0(symbol, ticker, levelChange, priceMax15M, marketRate, prediction, symbolPred,
+                symbol2LastTickers, rejectCollector, false);
+    }
+
+    /**
+     * [V12 C3-LIVE] {@code liveOnly=true} (CHI goi khi {@code C3LiveHook.enabled()}): leg cho so THAT, so giay bo qua
+     * (dung cho DCA grid ma chi vi the that den bac). false = hanh vi cu.
+     */
+    private void createOrderBuyRequest0(String symbol, KlineObjectSimple ticker, MarketLevelChange levelChange, Float priceMax15M,
+                                        MarketDataObject marketRate, OnnxInferenceManager.PredictionResult prediction,
+                                        Float symbolPred, Map<String, List<KlineObjectSimple>> symbol2LastTickers,
+                                        List<String> rejectCollector, boolean liveOnly) {
 
 
         if (prediction == null) {
@@ -1148,6 +1182,15 @@ public class DetectEntrySignal2TradeNormal {
                 LOG.info("CAU DAO BAT: Tu choi mo lenh [{}] do da so lenh moi vao gan day deu chet hoac gong lo!", symbol);
                 return;
             }
+        }
+
+        // [V12 C1/C3/C8 2026-10-25] c3_live (LIVE_PROFILE=c3_live + LIVE_ADAPTER=dry|live): leg da qua gate => duong THAT
+        //   (kill-switch -> universe -> so that -> AccountModeGuard -> sizing U_MAX tren LiveBookC3 -> SymbolRules ->
+        //   giu cho margin -> gateway qua executor rieng). So giay ben duoi chay tiep lam twin (khong doi).
+        //   Hook tat => khong goi gi (c3_shadow/sim y nguyen).
+        if (com.binance.chuyennd.c3live.runtime.C3LiveHook.enabled()) {
+            com.binance.chuyennd.c3live.runtime.C3LiveHook.onLeg(symbol, ticker, levelChange);
+            if (liveOnly) return;
         }
 
         Float marginRunning = BudgetManager.getInstance().marginRunning;
@@ -1316,9 +1359,12 @@ public class DetectEntrySignal2TradeNormal {
             // [C3-LIVE 2026-10-03] chi di thang so giay khi cong day lenh DONG (forceNoPush). c3_shadow:
             //   forceNoPush LUON true => y het HEAD. c3_live + push mo => qua queue -> processOrderNewMarketNew
             //   (kiem forceNoPush + kill-switch LAN NUA ngay truoc khi goi san).
+            // [V12 C3] c3_live: KHONG BAO GIO rpush (queue LEGACY = tai khoan chinh); lenh that di qua C3LiveHook o tren,
+            //   day luon la so giay twin. c3_shadow: dieu kien y nguyen.
             if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()
-                    && !com.binance.chuyennd.tradecore.selector.LiveProfileC3.shadowUseRedisQueue()
-                    && com.binance.chuyennd.tradecore.selector.LiveProfileC3.forceNoPush()) {
+                    && (com.binance.chuyennd.tradecore.selector.LiveProfileC3.isLive()
+                    || (!com.binance.chuyennd.tradecore.selector.LiveProfileC3.shadowUseRedisQueue()
+                    && com.binance.chuyennd.tradecore.selector.LiveProfileC3.forceNoPush()))) {
                 BinanceOrderTradingManager.shadowHandleOrder(orderTrade);
                 // [EXEC-PROBE] LIVE_EXEC_PROBE (mac dinh 0) => chi MOT phep doc boolean. Bat => chi xep hang su kien
                 //   (khong I/O tren luong nay, khong doi bien nao); leg CHI tinh khi so giay da ghi (legCount > 0).
