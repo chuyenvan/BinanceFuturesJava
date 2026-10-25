@@ -513,7 +513,15 @@ public final class KillSwitchEngine {
     /** [V12] noi Telegram (vong 2). Goi khi latch moi / nang muc / reset / C2_WARN. Khong bao gio nem ra ngoai. */
     public synchronized void setAlert(Consumer<String> alert) {
         this.alert = alert;
+        if (alert != null && !earlyAlerts.isEmpty()) {
+            List<String> q = new java.util.ArrayList<>(earlyAlerts);
+            earlyAlerts.clear();
+            for (String m : q) fireAlert(m);
+        }
     }
+
+    /** [2e] canh bao phat sinh truoc setAlert (chi c3_live). */
+    private final List<String> earlyAlerts = new java.util.ArrayList<>();
 
     /**
      * [V12] Gan nguon equity THAT (A40). Sau khi gan, dong HOURLY co them A40 va {@link #periodic} poll equity.
@@ -847,7 +855,11 @@ public final class KillSwitchEngine {
 
     private void fireAlert(String m) {
         Consumer<String> a = alert;
-        if (a == null) return;
+        if (a == null) {
+            // [2e] c3_live (peakTag != null): canh bao luc nap file (truoc setAlert) giu lai, gui khi setAlert. c3_shadow: nhu cu.
+            if (prm.peakTag != null && earlyAlerts.size() < 8) earlyAlerts.add(m);
+            return;
+        }
         try {
             a.accept(m);
         } catch (Throwable ignore) {
@@ -873,6 +885,7 @@ public final class KillSwitchEngine {
         o.add("c2_events_ms", ev);
         if (acctPeak > 0d) o.addProperty("acct_peak", acctPeak);
         if (acctPeak > 0d && prm.peakTag != null) o.addProperty("acct_peak_adapter", prm.peakTag);
+        if (prm.peakTag != null) o.addProperty("adapter", prm.peakTag);   // [2e] nhan adapter cua ca file latch
         o.addProperty("last_reset_at_ms", lastResetAtMs);
         o.addProperty("updated_ms", nowMs);
         try {
@@ -926,6 +939,22 @@ public final class KillSwitchEngine {
                 }
             }
             lastResetAtMs = o.has("last_reset_at_ms") ? o.get("last_reset_at_ms").getAsLong() : 0L;
+            // [2e] file latch cua adapter KHAC (vd dry -> live): KHONG tu bo latch / su kien C2 (huong an toan), chi WARN + Telegram
+            // huong dan owner reset co chu dich bang ops/killsw_reset.sh
+            if (prm.peakTag != null) {
+                String lt = o.has("adapter") ? o.get("adapter").getAsString() : null;
+                if (!prm.peakTag.equals(lt) && latch == Action.NONE && c2Events.isEmpty()) {
+                    sink.info("[KILLSW] file latch " + f.getPath() + " cua adapter=" + (lt == null ? "(khong nhan)" : lt)
+                            + " != " + prm.peakTag + " nhung khong co latch / su kien C2 => khong co gi de giu");
+                } else if (!prm.peakTag.equals(lt)) {
+                    String m = "[KILLSW] file latch " + f.getPath() + " cua adapter=" + (lt == null ? "(khong nhan)" : lt)
+                            + " != adapter hien tai " + prm.peakTag + ": GIU nguyen latch=" + latch + " codes=" + latchCodes
+                            + " c2_events=" + c2Events.size() + " (an toan). Neu chuyen adapter CO CHU DICH: owner chay"
+                            + " DRY=0 RESET_PEAK=1 bash ops/killsw_reset.sh";
+                    sink.warn(m);
+                    fireAlert(m);
+                }
+            }
             if (prm.c4Capacity && latchCodes.remove("C4")) {   // [V12 2b] C4 la cong suat, khong latch (file cu)
                 Action a0 = Action.NONE;
                 for (String c : latchCodes) {

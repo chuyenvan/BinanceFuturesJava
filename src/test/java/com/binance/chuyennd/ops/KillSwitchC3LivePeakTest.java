@@ -116,6 +116,60 @@ public class KillSwitchC3LivePeakTest {
         assertTrue(new String(Files.readAllBytes(ownPeak.toPath()), StandardCharsets.UTF_8).trim().endsWith("adapter=live"));
     }
 
+    /**
+     * [2e] File latch (killsw_latch.json, c2_events) gan nhan adapter. Latch FLATTEN tu adapter KHAC (dry -> live): KHONG tu bo
+     * (huong an toan) — van FLATTEN + WARN + Telegram huong dan owner reset bang killsw_reset.sh; reset => NONE + nhan moi.
+     */
+    @Test
+    public void latchFromOtherAdapterKeptWithWarnUntilOwnerReset() throws Exception {
+        File latchFile = new File(tmp.getRoot(), "run/killsw_latch.json");
+        KillSwitchEngine dry = c3liveTagged(T0, "dry", actParams());
+        dry.onPaper(T0, 0, 0f, 10_000f);
+        dry.onPaper(T0 + 5_000L, 0, 0f, 5_000f);   // -50 % => C6 FLATTEN (dry)
+        assertEquals(KillSwitchEngine.Action.FLATTEN, dry.requiredAction());
+        String txt = new String(Files.readAllBytes(latchFile.toPath()), StandardCharsets.UTF_8);
+        assertTrue(txt, txt.contains("\"adapter\":\"dry\""));
+        lines.clear();
+        KillSwitchEngine live = c3liveTagged(T0 + 10_000L, "live", actParams());
+        List<String> liveAlerts = new ArrayList<>();
+        live.setAlert(liveAlerts::add);
+        assertEquals("KHONG tu bo latch khi khac nhan", KillSwitchEngine.Action.FLATTEN, live.requiredAction());
+        assertTrue(live.latchCodes().contains("C6"));
+        assertFalse(live.allowNewEntry("BTCUSDT"));
+        assertTrue(lines.toString(), lines.stream().anyMatch(l -> l.startsWith("W") && l.contains("file latch")
+                && l.contains("adapter=dry") && l.contains("adapter hien tai live") && l.contains("killsw_reset.sh")));
+        assertTrue("Telegram (gui khi setAlert)", liveAlerts.stream().anyMatch(m -> m.contains("killsw_reset.sh")
+                && m.contains("adapter=dry")));
+        // file latch KHONG bi doi nhan khi chi nap
+        assertTrue(new String(Files.readAllBytes(latchFile.toPath()), StandardCharsets.UTF_8).contains("\"adapter\":\"dry\""));
+        // owner reset co chu dich
+        writeReset(1);
+        live.onTickStart(T0 + 20_000L);
+        live.periodic(T0 + 20_000L);
+        assertEquals(KillSwitchEngine.Action.NONE, live.requiredAction());
+        live.onPaper(T0 + 30_000L, 0, 0f, 10_000f);
+        assertEquals(KillSwitchEngine.Action.NONE, live.requiredAction());
+        txt = new String(Files.readAllBytes(latchFile.toPath()), StandardCharsets.UTF_8);
+        assertTrue(txt, txt.contains("\"adapter\":\"live\""));
+        lines.clear();
+        KillSwitchEngine live2 = c3liveTagged(T0 + 40_000L, "live", actParams());
+        assertEquals(KillSwitchEngine.Action.NONE, live2.requiredAction());
+        assertFalse(lines.toString(), lines.stream().anyMatch(l -> l.startsWith("W") && l.contains("file latch")));
+    }
+
+    /** [2e] file latch cu (khong nhan) khong co latch / C2 => chi INFO, khong Telegram (khong co gi de giu). */
+    @Test
+    public void untaggedEmptyLatchFileOnlyInfo() throws Exception {
+        Files.write(new File(tmp.getRoot(), "run/killsw_latch.json").toPath(),
+                "{\"latch\":\"NONE\",\"codes\":[],\"c2_events_ms\":[]}".getBytes(StandardCharsets.UTF_8));
+        KillSwitchEngine e = c3liveTagged(T0, "live", actParams());
+        List<String> a = new ArrayList<>();
+        e.setAlert(a::add);
+        assertEquals(KillSwitchEngine.Action.NONE, e.requiredAction());
+        assertTrue(a.toString(), a.isEmpty());
+        assertFalse(lines.stream().anyMatch(l -> l.startsWith("W") && l.contains("file latch")));
+    }
+
     @Test
     public void untaggedOldPeakFileIgnoredForC3Live() throws Exception {
         Files.write(ownPeak.toPath(), "35015.29\n".getBytes(StandardCharsets.UTF_8));   // dinh dang cu khong nhan
