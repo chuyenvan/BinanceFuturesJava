@@ -18,8 +18,8 @@ SCP_242=${SCP_242:-"scp -P 2222 -o BatchMode=yes -i /home/ubuntu/.ssh/id_rsa_chu
 RHOST=${RHOST-"root@103.157.218.242:"}
 A=${APP_DIR:-/home/chuyennd/java/v_t_m}
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}   # mau nhan dien process app (test: process gia)
-NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12dry_2c}
-NJ_MD5=${NJ_MD5:-ff717f380688a358c6830a7e0fadba04}   # jar vong 2c (HEAD ff549d47)
+NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12dry_2d}
+NJ_MD5=${NJ_MD5:-6829a6ed00c72453b053c952eed01633}   # jar vong 2d
 OLD_MD5=${OLD_MD5:-dcae2e2bbb1a357bc15703b416d4dccb}
 KILLSW_SH=${KILLSW_SH:-/home/ubuntu/claude_master/v12/c3live/ops/killsw_reset.sh}
 KILLSW_MD5=${KILLSW_MD5:-6f8d83481904f91b3f92601b31720ace}   # [2c MIN-12] pin md5 ops/killsw_reset.sh (commit vong 2c)
@@ -173,6 +173,7 @@ if pgrep -f "$PP" >/dev/null; then echo "FAIL van_con_process_sau_stop"; exit 0;
 echo "OK da_stop"
 \cp -f target/binance-java-sdk-1.2.4.jar.v12dry target/binance-java-sdk-1.2.4.jar
 [ "$(md5sum < target/binance-java-sdk-1.2.4.jar | cut -c1-32)" = "$NJM" ] && echo "OK jar_da_thay" || echo "FAIL jar_thay_sai"
+date +%s > run/.v12_start_epoch   # [2d] moc thoi gian start cho hau kiem LATCH (dem theo timestamp, ke ca log da xoay)
 bin/daemon.sh start
 sleep 8
 P=$(pgrep -f "$PP" | head -1)
@@ -191,18 +192,36 @@ ok "$START_LINE"
 say "--- cho ${LATCH_WAIT_S}s roi kiem 0 dong '[KILLSW] LATCH' ke tu start (co => ROLLBACK TU DONG)"
 sleep "$LATCH_WAIT_S"
 LT=$($SSH_242 "bash -s -- $A" <<'EOF'
-A=$1; cd "$A" || { echo "FAIL cd"; exit 0; }
-L=logs/full.log
-N=$(grep -a -n 'MainClass: com.binance.chuyennd.trading.BinanceOrderTradingManager' $L | tail -1 | cut -d: -f1)
-C=$(tail -n +${N:-1} $L | grep -a -c '\[KILLSW\] LATCH\|\[KILLSW\] NAP LATCH\|\[KILLSW\] FAIL-CLOSED')
-echo "LATCH_COUNT=$C"
-tail -n +${N:-1} $L | grep -a '\[KILLSW\] LATCH\|\[KILLSW\] NAP LATCH\|\[KILLSW\] FAIL-CLOSED' | head -3 | sed 's/^/   /'
+# [2d] dem theo MOC THOI GIAN start (run/.v12_start_epoch), gom ca file log da xoay (full.log.N, *.gz) moi hon moc.
+# Thieu moc / thieu hoac khong doc duoc logs/full.log / khong thay dong MainClass sau moc => KHONG kiem duoc => FAIL.
+A=$1; cd "$A" || { echo "LATCH_COUNT=no_cd"; exit 0; }
+ST=$(cat run/.v12_start_epoch 2>/dev/null)
+case "$ST" in ''|*[!0-9]*) echo "LATCH_COUNT=no_start_mark"; exit 0;; esac
+[ -r logs/full.log ] || { echo "LATCH_COUNT=no_log"; exit 0; }
+K=$(date -d "@$ST" +%Y%m%d%H%M%S)
+FILES=$(find logs -maxdepth 1 -type f \( -name full.log -o -name 'full.log.*' -o -name 'full*.gz' \) -newermt "@$ST" 2>/dev/null)
+[ -n "$FILES" ] || { echo "LATCH_COUNT=no_log_after_start"; exit 0; }
+since() {
+  for f in $FILES; do case "$f" in *.gz) zcat -f "$f" 2>/dev/null;; *) cat "$f" 2>/dev/null;; esac; done | awk -v K="$K" '
+    { k = ""
+      if ($0 ~ /^[0-9][0-9]\/[0-9][0-9]\/[0-9][0-9][0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]/) {
+        k = substr($0,7,4) substr($0,4,2) substr($0,1,2) substr($0,12,2) substr($0,15,2) substr($0,18,2) }
+      else if ($0 ~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]/) {
+        k = substr($0,1,4) substr($0,6,2) substr($0,9,2) substr($0,12,2) substr($0,15,2) substr($0,18,2) }
+      if (k != "") cur = k
+      if (cur != "" && cur >= K) print }'
+}
+SEEN=$(since | grep -a -c 'MainClass: com.binance.chuyennd.trading.BinanceOrderTradingManager')
+[ "${SEEN:-0}" -ge 1 ] || { echo "LATCH_COUNT=no_start_line"; exit 0; }
+C=$(since | grep -a -c '\[KILLSW\] LATCH\|\[KILLSW\] NAP LATCH\|\[KILLSW\] FAIL-CLOSED')
+echo "LATCH_COUNT=$C files=$(echo $FILES | wc -w)"
+since | grep -a '\[KILLSW\] LATCH\|\[KILLSW\] NAP LATCH\|\[KILLSW\] FAIL-CLOSED' | head -3 | sed 's/^/   /'
 EOF
 ) || LT="LATCH_COUNT=ssh_loi"
 echo "$LT"
 LC=$(echo "$LT" | grep -o 'LATCH_COUNT=[0-9a-z_]*' | cut -d= -f2)
 if [ "$LC" != 0 ]; then
-  say "FAIL: co ${LC} dong [KILLSW] LATCH trong ${LATCH_WAIT_S}s dau (hoac khong doc duoc log) => ROLLBACK TU DONG"
+  say "FAIL: hau kiem LATCH = '${LC}' (so dong [KILLSW] LATCH > 0, hoac thieu/khong doc duoc log, log xoay mat dong start) => ROLLBACK TU DONG"
   $SSH_242 "rm -f $WD_PAUSE" || true
   YES_AUTO=1 FORCE_TIME=1 bash "$RB_SH" "$TS"
   say "DEPLOY FAIL (kill-switch latch sau start). Da chay rollback. Gui log cho MASTER: $LOG"

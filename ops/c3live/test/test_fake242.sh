@@ -52,6 +52,9 @@ case "$1" in
         echo "$D INFO [main] x: 🟡 [LIVE_PROFILE=c3_shadow] BAT"
       fi
     } >> logs/full.log
+    # [2d] log xoay ngay sau start (dong start + LATCH nam o full.log.1) / mat log
+    [ -f FAKE_ROTATE ] && { mv -f logs/full.log logs/full.log.1; echo "$D INFO [main] x: (sau xoay log)" > logs/full.log; }
+    [ -f FAKE_NOLOG ] && rm -f logs/full.log logs/full.log.*
     touch run/heartbeat ;;
 esac
 EOF
@@ -141,6 +144,24 @@ chk "deploy FAIL vi LATCH (rc!=0)" "[ $RC != 0 ] && echo \"\$OUT\" | grep -q 'DE
 chk "rollback tu dong da chay" "echo \"\$OUT\" | grep -q 'Rollback TU DONG' && echo \"\$OUT\" | grep -q 'Rollback xong'"
 chk "sau rollback tu dong: env c3_shadow, jar cu" "grep -qx 'export LIVE_PROFILE=c3_shadow' $F/conf/env.sh && ! grep -q LIVE_ADAPTER $F/conf/env.sh && [ \"\$(md5sum < $F/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $OLD ]"
 chk "process chay env c3_shadow sau rollback tu dong" "tr '\\0' '\\n' < /proc/\$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)/environ | grep -qx 'LIVE_PROFILE=c3_shadow'"
+echo "== 10. [2d] thieu logs/full.log sau start => KHONG duoc PASS gia: FAIL + rollback tu dong"
+touch "$F/FAKE_NOLOG"
+OUT=$(echo YES | FORCE_DATE=1 FORCE_TIME=1 bash "$HERE/deploy_v12_dry.sh" 2>&1); RC=$?; echo "$OUT" | grep -a 'LATCH_COUNT\|DEPLOY FAIL' | head -3
+rm -f "$F/FAKE_NOLOG"
+chk "thieu log => FAIL (no_log) + rollback" "[ $RC != 0 ] && echo \"\$OUT\" | grep -q 'LATCH_COUNT=no_log' && echo \"\$OUT\" | grep -q 'Rollback xong'"
+chk "sau rollback (thieu log): env c3_shadow" "grep -qx 'export LIVE_PROFILE=c3_shadow' $F/conf/env.sh && ! grep -q LIVE_ADAPTER $F/conf/env.sh"
+echo "== 11. [2d] log xoay trong 120 s, dong LATCH nam o full.log.1 => van bat duoc: FAIL + rollback"
+touch "$F/FAKE_ROTATE" "$F/FAKE_LATCH"
+OUT=$(echo YES | FORCE_DATE=1 FORCE_TIME=1 bash "$HERE/deploy_v12_dry.sh" 2>&1); RC=$?; echo "$OUT" | grep -a 'LATCH_COUNT\|DEPLOY FAIL' | head -3
+rm -f "$F/FAKE_ROTATE" "$F/FAKE_LATCH"
+chk "LATCH trong file da xoay => FAIL + rollback" "[ $RC != 0 ] && echo \"\$OUT\" | grep -q 'LATCH_COUNT=1 ' && echo \"\$OUT\" | grep -q 'Rollback xong'"
+chk "sau rollback (log xoay): jar cu" "[ \"\$(md5sum < $F/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $OLD ]"
+echo "== 12. [2d] log xoay nhung KHONG co LATCH => buoc hau kiem LATCH dat (dem theo moc thoi gian, ke ca full.log.1)"
+rm -f $F/logs/full.log.1
+touch "$F/FAKE_ROTATE"
+OUT=$(echo YES | FORCE_DATE=1 FORCE_TIME=1 bash "$HERE/deploy_v12_dry.sh" 2>&1); echo "$OUT" | grep -a 'LATCH_COUNT' | head -2
+rm -f "$F/FAKE_ROTATE"
+chk "log xoay, 0 LATCH => qua buoc LATCH (khong FAIL gia)" "echo \"\$OUT\" | grep -q 'LATCH_COUNT=0 files=2' && echo \"\$OUT\" | grep -q '0 dong \[KILLSW\] LATCH'"
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]
