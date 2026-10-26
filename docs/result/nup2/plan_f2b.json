@@ -1,0 +1,182 @@
+[
+ {
+  "tag": "nup2-c-xy-a1",
+  "arm": "xy",
+  "seed": "a1",
+  "scope": "DEV",
+  "ov": {
+   "SIM_GATE_ROLLING_PCT": 0.99985,
+   "SELECTOR_RANK_TOPK": 32
+  },
+  "jar": "sim-jar-tsx"
+ },
+ {
+  "tag": "nup2-c-xy-s7",
+  "arm": "xy",
+  "seed": "s7",
+  "scope": "DEV",
+  "ov": {
+   "SIM_GATE_ROLLING_PCT": 0.99985,
+   "SELECTOR_RANK_TOPK": 32
+  },
+  "jar": "sim-jar-tsx"
+ },
+ {
+  "tag": "nup2-c-xy-s21",
+  "arm": "xy",
+  "seed": "s21",
+  "scope": "DEV",
+  "ov": {
+   "SIM_GATE_ROLLING_PCT": 0.99985,
+   "SELECTOR_RANK_TOPK": 32
+  },
+  "jar": "sim-jar-tsx"
+ },
+ {
+  "tag": "nup2-c-xy-s99",
+  "arm": "xy",
+  "seed": "s99",
+  "scope": "DEV",
+  "ov": {
+   "SIM_GATE_ROLLING_PCT": 0.99985,
+   "SELECTOR_RANK_TOPK": 32
+  },
+  "jar": "sim-jar-tsx"
+ },
+ {
+  "tag": "nup2-c-xb1-a1",
+  "arm": "xb1",
+  "seed": "a1",
+  "scope": "DEV",
+  "ov": {
+   "SIM_GATE_ROLLING_PCT": 0.99985,
+   "SIM_F_BASE": 0.006305
+  },
+  "jar": "sim-jar-tsx"
+ },
+ {
+  "tag": "nup2-c-xb1-s7",
+  "arm": "xb1",
+  "seed": "s7",
+  "scope": "DEV",
+  "ov": {
+   "SIM_GATE_ROLLING_PCT": 0.99985,
+   "SIM_F_BASE": 0.006305
+  },
+  "jar": "sim-jar-tsx"
+ },
+ {
+  "tag": "nup2-c-xb1-s21",
+  "arm": "xb1",
+  "seed": "s21",
+  "scope": "DEV",
+  "ov": {
+   "SIM_GATE_ROLLING_PCT": 0.99985,
+   "SIM_F_BASE": 0.006305
+  },
+  "jar": "sim-jar-tsx"
+ },
+ {
+  "tag": "nup2-c-xb1-s99",
+  "arm": "xb1",
+  "seed": "s99",
+  "scope": "DEV",
+  "ov": {
+   "SIM_GATE_ROLLING_PCT": 0.99985,
+   "SIM_F_BASE": 0.006305
+  },
+  "jar": "sim-jar-tsx"
+ },
+ {
+  "tag": "nup2-c-yb1-a1",
+  "arm": "yb1",
+  "seed": "a1",
+  "scope": "DEV",
+  "ov": {
+   "SELECTOR_RANK_TOPK": 32,
+   "SIM_F_BASE": 0.006305
+  },
+  "jar": "sim-jar-tsx"
+ },
+ {
+  "tag": "nup2-c-yb1-s7",
+  "arm": "yb1",
+  "seed": "s7",
+  "scope": "DEV",
+  "ov": {
+   "SELECTOR_RANK_TOPK": 32,
+   "SIM_F_BASE": 0.006305
+  },
+  "jar": "sim-jar-tsx"
+ },
+ {
+  "tag": "nup2-c-yb1-s21",
+  "arm": "yb1",
+  "seed": "s21",
+  "scope": "DEV",
+  "ov": {
+   "SELECTOR_RANK_TOPK": 32,
+   "SIM_F_BASE": 0.006305
+  },
+  "jar": "sim-jar-tsx"
+ },
+ {
+  "tag": "nup2-c-yb1-s99",
+  "arm": "yb1",
+  "seed": "s99",
+  "scope": "DEV",
+  "ov": {
+   "SELECTOR_RANK_TOPK": 32,
+   "SIM_F_BASE": 0.006305
+  },
+  "jar": "sim-jar-tsx"
+ },
+ {
+  "tag": "nup2-c-xyb1-a1",
+  "arm": "xyb1",
+  "seed": "a1",
+  "scope": "DEV",
+  "ov": {
+   "SIM_GATE_ROLLING_PCT": 0.99985,
+   "SELECTOR_RANK_TOPK": 32,
+   "SIM_F_BASE": 0.006305
+  },
+  "jar": "sim-jar-tsx"
+ },
+ {
+  "tag": "nup2-c-xyb1-s7",
+  "arm": "xyb1",
+  "seed": "s7",
+  "scope": "DEV",
+  "ov": {
+   "SIM_GATE_ROLLING_PCT": 0.99985,
+   "SELECTOR_RANK_TOPK": 32,
+   "SIM_F_BASE": 0.006305
+  },
+  "jar": "sim-jar-tsx"
+ },
+ {
+  "tag": "nup2-c-xyb1-s21",
+  "arm": "xyb1",
+  "seed": "s21",
+  "scope": "DEV",
+  "ov": {
+   "SIM_GATE_ROLLING_PCT": 0.99985,
+   "SELECTOR_RANK_TOPK": 32,
+   "SIM_F_BASE": 0.006305
+  },
+  "jar": "sim-jar-tsx"
+ },
+ {
+  "tag": "nup2-c-xyb1-s99",
+  "arm": "xyb1",
+  "seed": "s99",
+  "scope": "DEV",
+  "ov": {
+   "SIM_GATE_ROLLING_PCT": 0.99985,
+   "SELECTOR_RANK_TOPK": 32,
+   "SIM_F_BASE": 0.006305
+  },
+  "jar": "sim-jar-tsx"
+ }
+]

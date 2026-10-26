@@ -1,0 +1,17 @@
+
+=== PREREG §3 — bang E, 4 seed a1/s7/s21/s99, B0 DD median = -22.474% ===
+arm  lever                cum/nam      xB0       SumPnL      xB0  maxDDmed   dDD pp huuich     E  hang
+A1   A1 gate 0.99990      1330.75    1.839      89413.3    0.789    -25.86    -3.39     no 0.248  2
+A2   A2 gate 0.99985      1855.62    2.564     110786.1    0.927    -27.79    -5.32    YES 0.294  1
+A3   A3 TOPK 32            924.25    1.280     118158.3    1.023    -25.29    -2.81    YES 0.099  3
+A5   A5 dyn 1.30           721.12    1.000     112466.8    1.000    -22.47     0.00     no 0.000  8
+A7   A7 TIER2           -- khong do duoc (s21 timeout 7200 s)
+B1   B1 size x0.5          724.12    1.004      48349.3    0.430    -15.50     6.97    YES 0.001  4
+B2   B2 DCA nhip x0.67     722.75    1.001     118963.5    1.062    -24.76    -2.29     no 0.001  5
+B3   B3 DCA 6 bac          723.88    1.001      82288.2    0.726    -19.85     2.62     no 0.000  6
+B4   B4 U_MAX x1.25        721.25    1.000     139238.1    1.239    -25.86    -3.38     no 0.000  7
+B0  : 4-seed median DD = -22.474% (8-seed -22.833 KHONG dung)
+
+X = A2 (A2 gate 0.99985)
+Y = A3 (A3 TOPK 32)
+wrote /home/ubuntu/claude_master/nup2_wk/factorial.json /home/ubuntu/claude_master/nup2_wk/plan_f2b.json
