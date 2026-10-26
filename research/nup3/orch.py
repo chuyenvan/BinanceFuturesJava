@@ -19,6 +19,7 @@ import socket
 import subprocess
 import sys
 import time
+import datetime
 
 socket.setdefaulttimeout(60)
 sys.path.insert(0, "/home/ubuntu/claude_master/tsx")
@@ -262,6 +263,40 @@ def gates(st=None):
     return g
 
 
+_TERM = {}
+
+
+def free_slots():
+    """Slot CPU trong cua account. ks.free_slots() goc chi xet 50 kernel theo 'hotness' (khong thay sim-* moi chay)
+    va goi status moi kernel => 429. O day: list theo dateRun, chi xet kernel chay trong 12,5h, cache trang thai
+    ket thuc theo (ref, lastRunTime); loi/429 => tinh la DANG CHAY (than trong)."""
+    ks = GA.ks_mod()
+    L = ks._api().kernels_list(mine=True, page_size=50, sort_by="dateRun")
+    now = datetime.datetime.utcnow()
+    used = unknown = 0
+    for k in L:
+        lr = k.lastRunTime
+        if lr is None or (now - lr).total_seconds() > 12.5 * 3600:
+            continue
+        key = (k.ref, str(lr))
+        if key in _TERM:
+            continue
+        try:
+            s = ks._status(k.ref)
+        except Exception:  # noqa: BLE001
+            unknown += 1
+            time.sleep(5)
+            continue
+        if s in ks.TERMINAL:
+            _TERM[key] = s
+        elif s in ("RUNNING", "QUEUED"):
+            used += 1
+        else:
+            unknown += 1
+        time.sleep(1)
+    return max(0, ks.MAX_CONCURRENT - used - unknown), used, unknown
+
+
 def run():
     P = plan()
     log.info("ORCH NUP3 start plan=%d jar=%s code=%s", len(P), JAR_SHA[:8], CODE_SHA)
@@ -278,9 +313,9 @@ def run():
             todo = [e for e in allowed if st.get(e["tag"], {}).get("state") not in ("PUSHED", "DONE", "FAILED")]
             term = [e for e in P if st.get(e["tag"], {}).get("state") in ("DONE", "FAILED")]
             active = [t for t, v in st.items() if v.get("state") == "PUSHED"]
-            free = GA.ks_mod().free_slots() if todo else 0
-            log.info("ORCH gates=%s free=%d todo=%d active=%s done/failed=%d/%d",
-                     {k: v["status"] for k, v in g.items()}, free, len(todo), active, len(term), len(P))
+            free, used, unk = free_slots() if todo else (0, -1, -1)
+            log.info("ORCH gates=%s free=%d (used=%d unknown=%d) todo=%d active=%s done/failed=%d/%d",
+                     {k: v["status"] for k, v in g.items()}, free, used, unk, len(todo), active, len(term), len(P))
             if main_fail:
                 log.error("CONG FAIL -> KHONG push Pha 1 (cho MASTER)")
             for e in todo:
@@ -299,7 +334,7 @@ def run():
                 return
         except Exception as ex:  # noqa: BLE001
             log.error("ORCH loi: %s", str(ex)[:300])
-        time.sleep(150)
+        time.sleep(240)
 
 
 def status():
