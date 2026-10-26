@@ -110,6 +110,8 @@ def ho(tags):
     Wd["NE"] = int(min(NE, Wd["NW"] + 2 * 1440))
     U, mt = SA.build(tags, D, 8)
     log.info("MTM check %s", {k: v for k, v in mt.items() if k not in ("tail", "nofile_list")})
+    if mt.get("nofile_list"):
+        log.error("NOFILE %s", mt["nofile_list"][:30])
     assert mt["miss"] == 0 and mt["nofile"] == 0 and mt["fetch"]["ok"] == 0 and mt["fetch"]["fail"] == 0, "MTM HO thieu gia"
     arrs, chk = {}, {}
     for i, t in enumerate(tags):

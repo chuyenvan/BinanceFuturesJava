@@ -14,6 +14,7 @@ Usage:
 """
 import json
 import logging
+import socket
 import os
 import sys
 import time
@@ -24,6 +25,7 @@ OUT = "/home/ubuntu/kaggle_sim/out/%s/"
 MAXPAR = 5
 POLL = 60
 
+socket.setdefaulttimeout(30)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", stream=sys.stdout, force=True)
 log = logging.getLogger("nup")
 
@@ -61,7 +63,7 @@ ARMS = {
     "a7": {"GATE_TIER2_ENABLED": "true", "GATE_TIER2_PCT": 0.99985, "GATE_TIER2_U_MAX": 0.20,
            "GATE_TIER2_CRASH_RET": -0.01, "GATE_TIER2_SIZE_MULT": 0.5},
 }
-NEWJAR_ARMS = {"a7", "a7off"}
+NEWJAR_ARMS = {"a7", "a7off", "a7off2"}
 
 
 def load_state():
@@ -92,7 +94,7 @@ def ov_dev(arm, seed):
 
 
 def ov_ho(arm, seed, fl):
-    q = T.Q()
+    q = ho_q()
     ov = dict(q.CFGS["k24"], SIM_LOSER_TS_EXT_HOURS=336, SIM_LOSER_TS_EXT_DAYS=fl["ranges"])
     if arm in ARMS:
         ov.update(ARMS[arm])
@@ -120,13 +122,22 @@ def push_dev(arm, seed):
     return tag
 
 
+def ho_q():
+    sys.path.insert(0, "/home/ubuntu/src/BinanceFuturesJava/research/analysis")
+    import ho4p1_queue as q
+    logging.getLogger().removeHandler(q._fh)
+    q.JAR_DS = JAR_DS_OLD
+    q.JAR_SHA = sha256("/home/ubuntu/src_wt_bcd/target/binance-java-sdk-1.2.4.jar")
+    return q
+
+
 def push_ho(arm, seed, fl):
     st = load_state()
     tag = "nup-ho-%s-s%d" % (arm, int(seed))
     if st.get(tag, {}).get("state") in ("PUSHED", "DONE"):
         log.info("SKIP %s state=%s", tag, st[tag]["state"])
         return tag
-    q = T.Q()
+    q = ho_q()
     ov = ov_ho(arm, seed, fl)
     jards = JAR_DS_NEW if arm in NEWJAR_ARMS else JAR_DS_OLD
     if jards == JAR_DS_NEW:
@@ -156,7 +167,15 @@ def poll(fetch_done=True):
         try:
             s = ks._status(ref(tag))
         except Exception as ex:  # noqa: BLE001
-            log.warning("status %s %s", tag, str(ex)[:120])
+            msg = str(ex)
+            if "404" in msg or "No runs found" in msg:
+                log.warning("status %s 404 -> FAILED", tag)
+                e["state"] = "FAILED"
+                e["kstatus"] = "NORUN"
+                changed = True
+                save_state(st)
+            else:
+                log.warning("status %s %s", tag, msg[:120])
             continue
         if s in ks.TERMINAL:
             log.info("%s -> %s", tag, s)
@@ -172,9 +191,39 @@ def poll(fetch_done=True):
             else:
                 e["state"] = "FAILED"
             changed = True
-    if changed:
-        save_state(st)
+            save_state(st)
     return st
+
+
+def orch(name):
+    ks = T.GA.ks_mod()
+    plan = json.load(open(W + "/plan_%s.json" % name))
+    fl = json.load(open("/home/ubuntu/claude_master/tsx/ho/ho_flags.json"))
+    log.info("ORCH %s start plan=%d", name, len(plan))
+    while True:
+        try:
+            st = poll()
+            alltodo = [e for e in plan if st.get(e["tag"], {}).get("state") not in ("DONE", "FAILED")]
+            pending = [e for e in alltodo if st.get(e["tag"], {}).get("state") not in ("PUSHED",)]
+            active = len([e for e in alltodo if st.get(e["tag"], {}).get("state") == "PUSHED"])
+            done = len([e for e in plan if st.get(e["tag"], {}).get("state") == "DONE"])
+            if not alltodo:
+                log.info("ORCH %s XONG done=%d/%d", name, done, len(plan))
+                return
+            free = max(0, MAXPAR - active)
+            log.info("ORCH %s free=%d pending=%d active=%d done=%d", name, free, len(pending), active, done)
+            for e in pending:
+                if free <= 0:
+                    break
+                if e["scope"] == "DEV":
+                    push_dev(e["arm"], e["seed"])
+                else:
+                    push_ho(e["arm"], e["seed"], fl)
+                free -= 1
+                time.sleep(20)
+        except Exception as ex:  # noqa: BLE001
+            log.error("ORCH loi: %s", str(ex)[:300])
+        time.sleep(90)
 
 
 def cmd_push(scope, arm, seeds):
@@ -186,6 +235,32 @@ def cmd_push(scope, arm, seeds):
         assert fl["v1"]["ok"] and fl["n_days"] > 0
         for s in seeds:
             push_ho(arm, s, fl)
+
+
+def orch(name):
+    ks = T.GA.ks_mod()
+    plan = json.load(open(W + "/plan_%s.json" % name))
+    fl = json.load(open("/home/ubuntu/claude_master/tsx/ho/ho_flags.json"))
+    while True:
+        st = poll()
+        alltodo = [e for e in plan if st.get(e["tag"], {}).get("state") not in ("DONE", "FAILED")]
+        pending = [e for e in alltodo if st.get(e["tag"], {}).get("state") not in ("PUSHED",)]
+        done = [e for e in plan if st.get(e["tag"], {}).get("state") == "DONE"]
+        if not alltodo:
+            log.info("ORCH %s XONG done=%d/%d", name, len(done), len(plan))
+            return
+        free = ks.free_slots()
+        log.info("ORCH %s free=%d pending=%d active=%d done=%d", name, free, len(pending), len(alltodo) - len(pending), len(done))
+        for e in pending:
+            if free <= 0:
+                break
+            if e["scope"] == "DEV":
+                push_dev(e["arm"], e["seed"])
+            else:
+                push_ho(e["arm"], e["seed"], fl)
+            free -= 1
+            time.sleep(30)
+        time.sleep(180)
 
 
 def main():
@@ -202,6 +277,8 @@ def main():
         ks = T.GA.ks_mod()
         for t in sys.argv[2:]:
             ks.fetch(t)
+    elif c == "orch":
+        orch(sys.argv[2])
     elif c == "status":
         st = load_state()
         from collections import Counter
