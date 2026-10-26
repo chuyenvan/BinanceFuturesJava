@@ -1,0 +1,27 @@
+{
+ "G-OFF-A1": {
+  "status": "PASS",
+  "md5": "dc62609b6d7169093c001f2ce0d198ed",
+  "b0_md5": "dc62609b6d7169093c001f2ce0d198ed"
+ },
+ "G-OFF-S7": {
+  "status": "PASS",
+  "md5": "622b03e264fdd0b59a1673e144f4148f",
+  "b0_md5": "622b03e264fdd0b59a1673e144f4148f"
+ },
+ "G-INV-A1": {
+  "status": "PASS",
+  "md5_base_filtered": "dc62609b6d7169093c001f2ce0d198ed",
+  "b0_md5": "dc62609b6d7169093c001f2ce0d198ed",
+  "n_sleeve_rows": 2778,
+  "n_rows": 6309,
+  "u_total_max": 0.809356,
+  "u_total_ok": true,
+  "opened": 2740,
+  "overlap": 1704
+ },
+ "SMOKE-V2": {
+  "status": "PASS",
+  "run_state": "DONE"
+ }
+}
