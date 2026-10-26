@@ -48,6 +48,8 @@ public final class GateRollingRatio {
     // q2 cache theo GIO: chi tinh 1 lan/gio trong threshold(), khong tinh lai moi candidate.
     private static float currentTier2Q = Float.NaN;
     private static final float[] t2q = new float[2];
+    // [NUP3-SLEEVE 2026-10-26] true <=> q2 dang phuc vu so sleeve (khong phai TIER2 cua NUP).
+    private static boolean sleeveQ2 = false;
 
     private static final GateRatioBuffer buffer = new GateRatioBuffer();
     private static boolean warnedBeforeFirst = false;
@@ -105,6 +107,28 @@ public final class GateRollingRatio {
                         Configs.GATE_TIER2_U_MAX, Configs.GATE_TIER2_CRASH_RET, Configs.GATE_TIER2_SIZE_MULT);
             }
         }
+        // [NUP3-SLEEVE 2026-10-26] docs/prereg/PREREG_NUP3.md §2: q2 = phan vi SLEEVE_PCT tren CUNG buffer r, tinh MOT
+        //   lan/gio boi CUNG co che TIER2 (addAndQuery2: q1 y het addAndQuery, q2 chi doc ban sao scratch).
+        //   KHONG bat Configs.GATE_TIER2_ENABLED => duong createOrder cua so nen khong co nhanh tier2. TAT => khong lam gi.
+        if (Configs.SLEEVE_ENABLED) {
+            if (tier2On) {
+                throw new IllegalStateException("[NUP3-SLEEVE] GATE_TIER2_ENABLED va SLEEVE_ENABLED khong duoc bat cung luc");
+            }
+            if (!(Configs.SLEEVE_PCT > 0f && Configs.SLEEVE_PCT < pct)) {
+                throw new IllegalStateException("[NUP3-SLEEVE] SLEEVE_PCT=" + Configs.SLEEVE_PCT
+                        + " phai trong (0, gate pct=" + pct + ")");
+            }
+            tier2On = true;
+            tier2Pct = Configs.SLEEVE_PCT;
+            sleeveQ2 = true;
+            LOG.warn("*** [NUP3-SLEEVE] q2 BAT: pct={} (gate chinh {}) | chi doc, khong nap r, khong quota ***",
+                    String.format("%.8f", tier2Pct), String.format("%.8f", pct));
+        }
+    }
+
+    /** [NUP3-SLEEVE] q2 sleeve san sang (gate ratio BAT + SLEEVE_ENABLED da bat q2 trong init()). */
+    public static boolean sleeveQ2On() {
+        return on && tier2On && sleeveQ2;
     }
 
     public static boolean isOn() {

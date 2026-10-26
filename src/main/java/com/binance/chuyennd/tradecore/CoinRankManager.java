@@ -97,6 +97,20 @@ public class CoinRankManager {
         return CoinTier.TIER_3_SHITCOIN;
     }
 
+    /**
+     * [NUP3-SLEEVE 2026-10-26] Tier cho so SLEEVE. STATIC: ham theo thoi gian => goi getCoinTier.
+     * Dong (HistoryManager): KHONG goi checkAndUpdate — updateRanking chay theo nhip goi cua so NEN; sleeve goi o
+     * phut ma nen khong goi se doi trang thai ranking ma nen doc ve sau. Tra tier hien tai (cung bieu thuc getCoinTier).
+     */
+    public CoinTier peekCoinTier(short symbolId, long currentTime) {
+        if (Configs.WFO_STATIC_RANK && isStaticLoaded()) return getCoinTier(symbolId, currentTime);
+        if (symbolId >= 0 && symbolId < symbolTiersShort.length) {
+            CoinTier tier = symbolTiersShort[symbolId];
+            return tier == CoinTier.UNKNOWN ? CoinTier.TIER_3_SHITCOIN : tier;
+        }
+        return CoinTier.TIER_3_SHITCOIN;
+    }
+
     public float getBudgetMultiplier(short symbolId) {
         if (symbolId >= 0 && symbolId < symbolTiersShort.length) {
             CoinTier t = symbolTiersShort[symbolId];

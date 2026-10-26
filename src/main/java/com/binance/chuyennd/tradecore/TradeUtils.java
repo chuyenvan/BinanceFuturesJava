@@ -141,4 +141,22 @@ public class TradeUtils {
         if (ladder <= 0f) ladder = 1f;
         return balanceBasic * Configs.F_BASE * throttle / ladder;
     }
+
+    /**
+     * [NUP3-SLEEVE 2026-10-26] docs/prereg/PREREG_NUP3.md §2 — CUNG cong thuc {@link #managerBudget} (FROZEN v1)
+     * nhung U = U_s = margin SLEEVE / equity CHUNG, tran va throttle theo {@code uMax} = SLEEVE_U_MAX
+     * (throttle = clamp(1 - U_s/uMax, 0, 1); U_s >= uMax => null). Ham THUAN, khong doc/ghi state.
+     */
+    public static Float managerBudgetSleeve(Float marginRunningSleeve, Float equityCommon, float uMax) {
+        if (equityCommon == null || equityCommon <= 0f) return null;
+        if (!(uMax > 0f)) return null;
+        float used = marginRunningSleeve != null ? marginRunningSleeve : 0f;
+        float u = used / equityCommon;
+        if (u >= uMax) return null;
+        float throttle = 1f - u / uMax;
+        if (throttle < 0f) throttle = 0f; else if (throttle > 1f) throttle = 1f;
+        float ladder = Configs.dcaGridTotalWeight();
+        if (ladder <= 0f) ladder = 1f;
+        return equityCommon * Configs.F_BASE * throttle / ladder;
+    }
 }

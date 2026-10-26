@@ -96,6 +96,11 @@ public class BudgetManagerSimple {
         threadLocalInstance.remove();
     }
 
+    /** [NUP3-SLEEVE 2026-10-26] Doi instance cua thread (Simulator chuyen so nen <-> sleeve trong mot tick). */
+    public static void setInstanceForThread(BudgetManagerSimple b) {
+        threadLocalInstance.set(b);
+    }
+
     /**
      * Cập nhật đáy unrealized THẬT của danh mục (đo lường, không quyết định). Gọi MỖI TICK từ Simulator.
      *

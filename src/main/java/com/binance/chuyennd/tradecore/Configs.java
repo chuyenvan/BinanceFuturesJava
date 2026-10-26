@@ -176,6 +176,20 @@ public class Configs {
     public static float GATE_TIER2_CRASH_RET = -0.01f;
     public static float GATE_TIER2_SIZE_MULT = 0.5f;
 
+    // [NUP3-SLEEVE 2026-10-26] docs/prereg/PREREG_NUP3.md §2-3. Mac dinh TAT => khong nhanh nao chay => byte-identical.
+    //   Sleeve = so lenh thu hai, ngan sach phoi nhiem rieng (U_s = margin sleeve / equity CHUNG < SLEEVE_U_MAX).
+    //   Ung vien = PREDICT top-K bi gate nen REJECT nhung QUA phan vi SLEEVE_PCT tren CUNG buffer r (q2/gio TIER2).
+    //   SLEEVE_ARM: V0 khong dieu kien | V1 khong mo khi #leg dau cum (nen+sleeve) trong [t-BURST_MIN', t) >= BURST_N
+    //               | V2 chi mo khi phut t nam trong khoang co cua SLEEVE_MKT_FLAG_FILE (W_mkt, dung san nhan qua).
+    public static boolean SLEEVE_ENABLED = false;
+    public static float SLEEVE_PCT = 0.99985f;
+    public static float SLEEVE_SIZE_MULT = 1.0f;
+    public static float SLEEVE_U_MAX = 0.35f;
+    public static String SLEEVE_ARM = "V0";
+    public static int SLEEVE_BURST_N = 10;
+    public static int SLEEVE_BURST_MIN = 60;
+    public static String SLEEVE_MKT_FLAG_FILE = "";
+
 
 
     // =========================================================
@@ -927,6 +941,15 @@ public class Configs {
             if ((v = Cfg.get("GATE_TIER2_U_MAX")) != null) GATE_TIER2_U_MAX = Float.parseFloat(v.trim());
             if ((v = Cfg.get("GATE_TIER2_CRASH_RET")) != null) GATE_TIER2_CRASH_RET = Float.parseFloat(v.trim());
             if ((v = Cfg.get("GATE_TIER2_SIZE_MULT")) != null) GATE_TIER2_SIZE_MULT = Float.parseFloat(v.trim());
+            // [NUP3-SLEEVE 2026-10-26] docs/prereg/PREREG_NUP3.md (khong khai => TAT)
+            if ((v = Cfg.get("SLEEVE_ENABLED")) != null) SLEEVE_ENABLED = Boolean.parseBoolean(v.trim());
+            if ((v = Cfg.get("SLEEVE_PCT")) != null) SLEEVE_PCT = Float.parseFloat(v.trim());
+            if ((v = Cfg.get("SLEEVE_SIZE_MULT")) != null) SLEEVE_SIZE_MULT = Float.parseFloat(v.trim());
+            if ((v = Cfg.get("SLEEVE_U_MAX")) != null) SLEEVE_U_MAX = Float.parseFloat(v.trim());
+            if ((v = Cfg.get("SLEEVE_ARM")) != null) SLEEVE_ARM = v.trim().toUpperCase();
+            if ((v = Cfg.get("SLEEVE_BURST_N")) != null) SLEEVE_BURST_N = Integer.parseInt(v.trim());
+            if ((v = Cfg.get("SLEEVE_BURST_MIN")) != null) SLEEVE_BURST_MIN = Integer.parseInt(v.trim());
+            if ((v = Cfg.get("SLEEVE_MKT_FLAG_FILE")) != null) SLEEVE_MKT_FLAG_FILE = v.trim();
             // [GATE_QUOTA_SKIPFULL 2026-10-04] docs/prereg/PREREG_GATE_QUOTA_SKIPFULL.md (sim + live cung key; khong khai => false)
             if ((v = Cfg.get("GATE_QUOTA_SKIP_WHEN_FULL")) != null) GATE_QUOTA_SKIP_WHEN_FULL = Boolean.parseBoolean(v.trim());
             // [BURST-COOLDOWN 2026-10-16] docs/prereg/PREREG_BURST_COOLDOWN.md (khong khai => 0 => tat)

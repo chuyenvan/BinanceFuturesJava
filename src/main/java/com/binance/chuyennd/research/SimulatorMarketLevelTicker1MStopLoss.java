@@ -116,7 +116,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     static long tsxDeferTicks = 0L;
     static long tsxDeferClusters = 0L;
     static long tsxCutAfterDefer = 0L;
-    static final java.util.Set<String> tsxDeferred = new java.util.HashSet<>();
+    // [NUP3-SLEEVE] bo final: tham chieu duoc doi theo so (nen/sleeve) trong pha sleeve; noi dung/hanh vi nen khong doi.
+    static java.util.Set<String> tsxDeferred = new java.util.HashSet<>();
     private BurstCooldown burstCooldown = BurstCooldown.off();
     private boolean concPerCoinModeLogged = false;
     public int activeRunningCount = 0;
@@ -234,6 +235,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                         try {
                             long startTimeRun = System.currentTimeMillis();
                             KlineObjectSimple[] symbol2Ticker = entry.getValue();
+                            if (sleeveBook != null) sleeveCands.clear();   // [NUP3-SLEEVE] ung vien chi song trong 1 tick
 
                             // STATIC RANK: bỏ HistoryManager (CoinRank đọc tier tĩnh) -> cắt overhead/phút + bỏ phụ thuộc totalUsdt.
                             if (!Configs.WFO_STATIC_RANK) {
@@ -483,6 +485,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                 }
                             }
                             logByProcessTime(startTimeRun, "Done budget data", time);
+                            // [NUP3-SLEEVE] pha sleeve CUOI tick, SAU toan bo so nen (nen khong doc state sleeve). TAT => bo qua.
+                            if (sleeveBook != null) sleevePhase(time, symbol2Ticker, marketData, levelChange, predict, tickBlocked);
                             // [TICKLOG] read-only: tong hop moc 15 phut (equity mark-to-market + pool).
                             if (TickDecisionLog.ON) {
                                 TickDecisionLog.ctxRank = -1;
@@ -569,6 +573,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             }
         }
 
+        if (sleeveBook != null) sleeveFlushOpenToDone();   // [NUP3-SLEEVE] cum sleeve con mo cuoi ky (cung quy uoc nen)
         Calendar cal = Calendar.getInstance();
         cal.setTimeInMillis(startTime);
         int finalYear = cal.get(Calendar.YEAR);
@@ -580,6 +585,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 Storage.writeObject2File(FILE_STORAGE_ORDER_DONE, allOrderDone);
                 Storage.writeObject2File("storage/BalanceIndex.data", BudgetManagerSimple.getInstance().balanceIndex);
                 TraceOrderDone.printOrderTestDone("storage/printDone.csv", allOrderDone);
+                if (sleeveBook != null) sleeveWriteOutputs();   // [NUP3-SLEEVE] noi dong book=sleeve SAU moi dong nen
                 if (Configs.LOSER_TS_EXT_HOURS > 0) {
                     LOG.info("[TSX] extHours={} extDays={} deferTicks={} deferClusters={} cutAfterDefer={}",
                             Configs.LOSER_TS_EXT_HOURS, Configs.LOSER_TS_EXT_DAYS.size(), tsxDeferTicks, tsxDeferClusters,
@@ -993,6 +999,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             LOG.info("[GATE-RECAL] OFF (P15_Q={})", com.binance.chuyennd.tradecore.EntryGate.P15_Q);
         }
 
+        initSleeve();   // [NUP3-SLEEVE] SAU GateRollingRatio.init() (can q2). TAT => sleeveBook = null.
         Utils.printMemoryUsage("Load time2FundingPre (time2SymbolPred)");
         LOG.info("✅ TẤT CẢ DỮ LIỆU ĐÃ SẴN SÀNG. BẮT ĐẦU SIMULATE...");
     }
@@ -1319,6 +1326,568 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         return BudgetManagerSimple.getInstance().marginRunning;
     }
 
+    // ===================== [NUP3-SLEEVE 2026-10-26] docs/prereg/PREREG_NUP3.md =====================
+    //  So SLEEVE: ngan sach phoi nhiem rieng; so NEN bat bien (printDone loc book=sleeve == B0 tung byte).
+    //  Co che: Simulator chi co MOT bo field so lenh. Pha sleeve (CUOI moi tick, SAU toan bo so nen) DOI (swap) bo field
+    //  + BudgetManagerSimple cua thread sang so sleeve, goi LAI dung cac ham cua nen (startUpdateOldOrderTrading,
+    //  DcaProcessor.getDCA, createOrder, closeOrder, updateSymbolDeListed), roi tra lai. So nen KHONG doc state sleeve
+    //  (ngoai bo dem do-luong overlap). SLEEVE_ENABLED=false => sleeveBook == null => khong nhanh nao chay.
+
+    /** Bo field rieng cua MOT so lenh (nen hoac sleeve). */
+    static final class Book {
+        TreeMap<Long, OrderTargetInfoTest> allOrderDone;
+        List<OrderTargetInfoTest>[] symbol2OrdersEntry;
+        OrderTargetInfoTest[] symbol2OrderRunning;
+        short[] activeRunningIds;
+        int activeRunningCount;
+        BudgetManagerSimple bm;
+        java.util.Set<String> tsxDeferred;
+        long tsxDeferTicks, tsxDeferClusters, tsxCutAfterDefer;
+        int orderKeyCollisions;
+        long entryBigDown, entryPredictSymbol, entryDcaLevel, entryOther, concPerCoinBlocked;
+
+        @SuppressWarnings("unchecked")
+        static Book fresh() {
+            Book b = new Book();
+            b.allOrderDone = new TreeMap<>();
+            b.symbol2OrdersEntry = new ArrayList[1000];
+            b.symbol2OrderRunning = new OrderTargetInfoTest[1000];
+            b.activeRunningIds = new short[1000];
+            b.activeRunningCount = 0;
+            b.bm = new BudgetManagerSimple();
+            b.tsxDeferred = new java.util.HashSet<>();
+            return b;
+        }
+    }
+
+    /** Ung vien sleeve cua tick: PREDICT top-K, bi gate nen REJECT, QUA q2 (SLEEVE_PCT) tren cung buffer r. */
+    static final class SleeveCand {
+        final short sid;
+        final KlineObjectSimple ticker;
+        final MarketDataObject md;
+        final Float sp;
+        final Integer rank;
+        final float p15;
+        final boolean bookFull;
+
+        SleeveCand(short sid, KlineObjectSimple ticker, MarketDataObject md, Float sp, Integer rank, float p15,
+                   boolean bookFull) {
+            this.sid = sid;
+            this.ticker = ticker;
+            this.md = md;
+            this.sp = sp;
+            this.rank = rank;
+            this.p15 = p15;
+            this.bookFull = bookFull;
+        }
+    }
+
+    /** null <=> SLEEVE_ENABLED=false (moi nhanh sleeve kiem dieu nay truoc). */
+    Book sleeveBook = null;
+    /** Giu field so NEN trong luc pha sleeve chay. */
+    private final Book baseStash = new Book();
+    /** true CHI giua enterSleeve/exitSleeve. */
+    boolean inSleeve = false;
+    private final java.util.List<SleeveCand> sleeveCands = new java.util.ArrayList<>();
+    /** Moc leg DAU cum (nen + sleeve), tang dan theo thoi gian sim — W_burst (V1) + do luong. */
+    final java.util.ArrayDeque<Long> sleeveFirstLegTimes = new java.util.ArrayDeque<>();
+    private long[] sleeveFlagStart = new long[0];
+    private long[] sleeveFlagEnd = new long[0];
+    private long sleeveFlagMinutes = 0L;
+    private String sleeveArm = "V0";
+    private final StringBuilder sleeveCandLog = new StringBuilder();
+    long slCand, slCandBookFull, slOpened, slOpenedBookFull, slSkipHeldBase, slSkipHeldSleeve, slSkipBurst,
+            slSkipNoFlag, slNotOpened, slOverlap, slClustersSleeve, slClustersBase, slUTotFail, slUTotMaxT, slCombMaxDDT;
+    float slUTotMax = 0f, slUTotMarginMax = 0f, slCombPeak = Float.NaN, slCombMaxDD = 0f, slCombMaxDDPct = 0f;
+    int slMaxPosTotal = 0;
+
+    /** Khoi tao sleeve (initData, SAU GateRollingRatio.init()). TAT => sleeveBook = null. Sai cau hinh => fail-fast. */
+    void initSleeve() {
+        sleeveBook = null;
+        inSleeve = false;
+        sleeveCands.clear();
+        sleeveFirstLegTimes.clear();
+        sleeveCandLog.setLength(0);
+        if (!Configs.SLEEVE_ENABLED) return;
+        if (!com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.sleeveQ2On()) {
+            throw new IllegalStateException("[NUP3-SLEEVE] can gate ratio BAT (SIM_GATE_ROLLING_MODE=ratio) va q2 sleeve BAT");
+        }
+        String arm = Configs.SLEEVE_ARM == null ? "" : Configs.SLEEVE_ARM.trim().toUpperCase();
+        if (!("V0".equals(arm) || "V1".equals(arm) || "V2".equals(arm))) {
+            throw new IllegalStateException("[NUP3-SLEEVE] SLEEVE_ARM phai la V0/V1/V2, nhan: " + arm);
+        }
+        if (!(Configs.SLEEVE_U_MAX > 0f && Configs.SLEEVE_U_MAX < 1f) || !(Configs.SLEEVE_SIZE_MULT > 0f)
+                || Configs.SLEEVE_BURST_N <= 0 || Configs.SLEEVE_BURST_MIN <= 0) {
+            throw new IllegalStateException("[NUP3-SLEEVE] tham so sleeve khong hop le");
+        }
+        sleeveArm = arm;
+        if ("V2".equals(arm)) {
+            java.io.File f = resolveSleeveFile(Configs.SLEEVE_MKT_FLAG_FILE);
+            long[][] iv;
+            try {
+                iv = loadFlagIntervals(f);
+            } catch (IOException e) {
+                throw new IllegalStateException("[NUP3-SLEEVE] doc file co W_mkt loi: " + f, e);
+            }
+            sleeveFlagStart = iv[0];
+            sleeveFlagEnd = iv[1];
+            if (sleeveFlagStart.length == 0) throw new IllegalStateException("[NUP3-SLEEVE] file co W_mkt rong: " + f);
+            sleeveFlagMinutes = 0L;
+            for (int i = 0; i < sleeveFlagStart.length; i++) {
+                sleeveFlagMinutes += (sleeveFlagEnd[i] - sleeveFlagStart[i]) / Utils.TIME_MINUTE;
+            }
+            LOG.warn("[NUP3-SLEEVE] W_mkt file={} intervals={} flagMinutes={} firstStartMs={} lastEndMs={}", f,
+                    sleeveFlagStart.length, sleeveFlagMinutes, sleeveFlagStart[0], sleeveFlagEnd[sleeveFlagEnd.length - 1]);
+        }
+        sleeveBook = Book.fresh();
+        LOG.warn("*** [NUP3-SLEEVE] BAT arm={} pct={} sizeMult={} uSMax={} burstN={} burstMin={} ***", sleeveArm,
+                String.format("%.8f", Configs.SLEEVE_PCT), Configs.SLEEVE_SIZE_MULT, Configs.SLEEVE_U_MAX,
+                Configs.SLEEVE_BURST_N, Configs.SLEEVE_BURST_MIN);
+    }
+
+    /** Unit test: bat sleeve khong can Cfg/du lieu. */
+    void initSleeveForTest(String arm) {
+        sleeveBook = Book.fresh();
+        sleeveArm = arm;
+        inSleeve = false;
+    }
+
+    /** Duong dan file co: dung nguyen neu ton tai, khong thi tim theo ten file trong /kaggle/input (mount Kaggle). */
+    static java.io.File resolveSleeveFile(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalStateException("[NUP3-SLEEVE] thieu SLEEVE_MKT_FLAG_FILE");
+        }
+        java.io.File f = new java.io.File(name.trim());
+        if (f.isFile()) return f;
+        final String base = f.getName();
+        java.nio.file.Path root = java.nio.file.Paths.get("/kaggle/input");
+        if (java.nio.file.Files.isDirectory(root)) {
+            try (java.util.stream.Stream<java.nio.file.Path> st = java.nio.file.Files.walk(root, 8)) {
+                java.util.Optional<java.nio.file.Path> hit = st.filter(p -> p.getFileName() != null
+                        && base.equals(p.getFileName().toString()) && java.nio.file.Files.isRegularFile(p))
+                        .sorted().findFirst();
+                if (hit.isPresent()) return hit.get().toFile();
+            } catch (IOException e) {
+                throw new IllegalStateException("[NUP3-SLEEVE] quet /kaggle/input loi", e);
+            }
+        }
+        throw new IllegalStateException("[NUP3-SLEEVE] khong tim thay file co W_mkt: " + name);
+    }
+
+    /** Doc khoang co [start_ms, end_ms) (CSV, header "start_ms,end_ms"); kiem bat phut, tang chat, khong chong/ke. */
+    static long[][] loadFlagIntervals(java.io.File f) throws IOException {
+        java.util.List<String> lines = java.nio.file.Files.readAllLines(f.toPath());
+        long[] s = new long[lines.size()];
+        long[] e = new long[lines.size()];
+        int n = 0;
+        long prevEnd = Long.MIN_VALUE;
+        for (String raw : lines) {
+            String ln = raw.trim();
+            if (ln.isEmpty() || ln.startsWith("start")) continue;
+            String[] p = ln.split(",");
+            if (p.length != 2) throw new IOException("dong sai: " + ln);
+            long a = Long.parseLong(p[0].trim());
+            long b = Long.parseLong(p[1].trim());
+            if (a % Utils.TIME_MINUTE != 0 || b % Utils.TIME_MINUTE != 0 || b <= a || a <= prevEnd) {
+                throw new IOException("khoang sai / khong tang / chong lan: " + ln);
+            }
+            s[n] = a;
+            e[n] = b;
+            n++;
+            prevEnd = b;
+        }
+        return new long[][]{Arrays.copyOf(s, n), Arrays.copyOf(e, n)};
+    }
+
+    /** Co W_mkt tai phut t <=> t thuoc mot khoang [s_i, e_i). */
+    static boolean flagAt(long[] s, long[] e, long t) {
+        if (s.length == 0) return false;
+        int r = Arrays.binarySearch(s, t);
+        int i = r >= 0 ? r : (-r - 1) - 1;
+        return i >= 0 && t < e[i];
+    }
+
+    /** So leg dau cum trong [t - windowMs, t). Cat dau cac moc &lt; t - windowMs (moc tang dan). */
+    static int burstCount(java.util.ArrayDeque<Long> dq, long t, long windowMs) {
+        long from = t - windowMs;
+        while (!dq.isEmpty() && dq.peekFirst() < from) dq.pollFirst();
+        int atOrAfter = 0;
+        java.util.Iterator<Long> it = dq.descendingIterator();
+        while (it.hasNext()) {
+            if (it.next() >= t) atOrAfter++;
+            else break;
+        }
+        return dq.size() - atOrAfter;
+    }
+
+    /** Dieu kien MO cua arm (PREREG_NUP3 §3). */
+    static boolean sleeveArmAllows(String arm, int burst, int burstN, boolean mktFlag) {
+        if ("V0".equals(arm)) return true;
+        if ("V1".equals(arm)) return burst < burstN;
+        if ("V2".equals(arm)) return mktFlag;
+        throw new IllegalArgumentException("[NUP3-SLEEVE] arm khong hop le: " + arm);
+    }
+
+    /** Symbol doc quyen phia sleeve: KHONG mo khi so nen HOAC so sleeve dang giu symbol. */
+    static boolean sleeveSymbolFree(OrderTargetInfoTest[] baseRunning, OrderTargetInfoTest[] sleeveRunning, short sid) {
+        return baseRunning[sid] == null && sleeveRunning[sid] == null;
+    }
+
+    /** Equity CHUNG = equity nen (cung nhip sizing nen) + realized/unrealized cua sleeve. */
+    static float equityCommon(float baseEquity, float sleeveBalanceCurrent, float sleeveBalanceBasic, float sleeveUnProfit) {
+        return baseEquity + (sleeveBalanceCurrent - sleeveBalanceBasic) + sleeveUnProfit;
+    }
+
+    /** U tong = notional (nen + sleeve) / equity; equity &lt;= 0 => +inf. */
+    static float uTotal(float notional, float equity) {
+        return equity > 0f ? notional / equity : Float.POSITIVE_INFINITY;
+    }
+
+    /** FAIL ky thuat khi U tong &gt; 1.0 (CROSS 1x). */
+    static boolean uTotalFail(float u) {
+        return u > 1.0f;
+    }
+
+    /** acc[0] += notional@close, acc[1] += unrealized@close, acc[2] += unrealized@low. */
+    static void accPosition(float qty, float entry, float close, float low, float[] acc) {
+        acc[0] += qty * close;
+        acc[1] += qty * (close - entry);
+        acc[2] += qty * (low - entry);
+    }
+
+    static void accBook(OrderTargetInfoTest[] running, short[] ids, int n, KlineObjectSimple[] tk, float[] acc) {
+        for (int i = 0; i < n; i++) {
+            short id = ids[i];
+            OrderTargetInfoTest cl = running[id];
+            if (cl == null || cl.priceEntry == null || cl.quantity == null) continue;
+            KlineObjectSimple t = tk[id];
+            float close = (t != null && t.priceClose > 0f) ? t.priceClose
+                    : (cl.lastPrice != null ? cl.lastPrice : cl.priceEntry);
+            float low = (t != null && t.minPrice > 0f) ? t.minPrice : close;
+            accPosition(cl.quantity, cl.priceEntry, close, low, acc);
+        }
+    }
+
+    /** Nhan book cho dong printDone cua sleeve: dat o cot cuoi (khong ten) cua header => so cot giu nguyen. */
+    static String labelSleeveLine(String ln) {
+        return ln.endsWith(",") ? ln + "book=sleeve" : ln + ",book=sleeve";
+    }
+
+    /** Sizing equity cua sleeve (chi goi trong pha sleeve). */
+    private Float sleeveEquityCommonNow() {
+        BudgetManagerSimple b = baseStash.bm;
+        BudgetManagerSimple s = BudgetManagerSimple.getInstance();
+        if (!Configs.FIX_B3) return b.balanceBasic + (s.balanceCurrent - s.balanceBasic);
+        return equityCommon(b.equityNow(), s.balanceCurrent, s.balanceBasic, s.unProfit != null ? s.unProfit : 0f);
+    }
+
+    private void saveBook(Book b) {
+        b.allOrderDone = allOrderDone;
+        b.symbol2OrdersEntry = symbol2OrdersEntry;
+        b.symbol2OrderRunning = symbol2OrderRunning;
+        b.activeRunningIds = activeRunningIds;
+        b.activeRunningCount = activeRunningCount;
+        b.bm = BudgetManagerSimple.getInstance();
+        b.tsxDeferred = tsxDeferred;
+        b.tsxDeferTicks = tsxDeferTicks;
+        b.tsxDeferClusters = tsxDeferClusters;
+        b.tsxCutAfterDefer = tsxCutAfterDefer;
+        b.orderKeyCollisions = orderKeyCollisions;
+        b.entryBigDown = entryBigDown;
+        b.entryPredictSymbol = entryPredictSymbol;
+        b.entryDcaLevel = entryDcaLevel;
+        b.entryOther = entryOther;
+        b.concPerCoinBlocked = concPerCoinBlocked;
+    }
+
+    private void loadBook(Book b) {
+        allOrderDone = b.allOrderDone;
+        symbol2OrdersEntry = b.symbol2OrdersEntry;
+        symbol2OrderRunning = b.symbol2OrderRunning;
+        activeRunningIds = b.activeRunningIds;
+        activeRunningCount = b.activeRunningCount;
+        BudgetManagerSimple.setInstanceForThread(b.bm);
+        tsxDeferred = b.tsxDeferred;
+        tsxDeferTicks = b.tsxDeferTicks;
+        tsxDeferClusters = b.tsxDeferClusters;
+        tsxCutAfterDefer = b.tsxCutAfterDefer;
+        orderKeyCollisions = b.orderKeyCollisions;
+        entryBigDown = b.entryBigDown;
+        entryPredictSymbol = b.entryPredictSymbol;
+        entryDcaLevel = b.entryDcaLevel;
+        entryOther = b.entryOther;
+        concPerCoinBlocked = b.concPerCoinBlocked;
+    }
+
+    void enterSleeve() {
+        if (sleeveBook == null || inSleeve) throw new IllegalStateException("[NUP3-SLEEVE] enterSleeve sai trang thai");
+        saveBook(baseStash);
+        loadBook(sleeveBook);
+        inSleeve = true;
+    }
+
+    void exitSleeve() {
+        if (!inSleeve) throw new IllegalStateException("[NUP3-SLEEVE] exitSleeve sai trang thai");
+        saveBook(sleeveBook);
+        loadBook(baseStash);
+        inSleeve = false;
+    }
+
+    /** Goi tu nhanh gate REJECT cua so NEN. CHI DOC q2 (cache/gio); khong doi buffer/quota/bo dem nen. */
+    private void sleeveNoteCandidate(MarketLevelChange lc, boolean dcaSignal, short sid, KlineObjectSimple ticker,
+                                     MarketDataObject md, Float sp, Integer rank, AiPredictionData predict,
+                                     boolean bookFull) {
+        if (inSleeve || lc != MarketLevelChange.PREDICT_SYMBOL_TRADE || dcaSignal || sp == null || rank == null) return;
+        if (!com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.tier2Pass(ticker.startTime, predict.predReturn15M, sp)) {
+            return;
+        }
+        sleeveCands.add(new SleeveCand(sid, ticker, md, sp, rank, predict.predReturn15M, bookFull));
+    }
+
+    /** Ghi moc leg DAU cum (nen + sleeve). Nen mo symbol ma sleeve dang giu => dem overlap (chi do luong). */
+    void sleeveNoteNewCluster(short sid, long t) {
+        if (sleeveBook == null) return;
+        sleeveFirstLegTimes.addLast(t);
+        if (inSleeve) {
+            slClustersSleeve++;
+        } else {
+            slClustersBase++;
+            if (sleeveBook.symbol2OrderRunning[sid] != null) {
+                slOverlap++;
+                LOG.info("SLEEVE-OVERLAP sid={} tMs={} (so nen mo symbol sleeve dang giu)", sid, t);
+            }
+        }
+    }
+
+    /** Pha sleeve cua tick (CUOI tick, sau toan bo so nen): exit -> DCA -> lenh moi -> delist/balance. */
+    private void sleevePhase(long time, KlineObjectSimple[] symbol2Ticker, MarketDataObject marketData,
+                             MarketLevelChange levelChange, AiPredictionData predict, boolean tickBlocked) {
+        enterSleeve();
+        try {
+            // (1) cap nhat / thoat cum sleeve — CUNG ham cua nen
+            if (activeRunningCount > 0) {
+                short[] currentIds = Arrays.copyOf(activeRunningIds, activeRunningCount);
+                for (short id : currentIds) {
+                    KlineObjectSimple tk = symbol2Ticker[id];
+                    if (tk != null) startUpdateOldOrderTrading(time, id, tk);
+                }
+                float unrealAtLow = 0f;
+                float notionalAtLow = 0f;
+                for (int i = 0; i < activeRunningCount; i++) {
+                    short id = activeRunningIds[i];
+                    OrderTargetInfoTest cl = symbol2OrderRunning[id];
+                    KlineObjectSimple tk = symbol2Ticker[id];
+                    if (cl != null && cl.priceEntry != null && cl.quantity != null && tk != null && tk.minPrice > 0) {
+                        unrealAtLow += cl.quantity * (tk.minPrice - cl.priceEntry);
+                        notionalAtLow += cl.quantity * tk.minPrice;
+                    }
+                }
+                BudgetManagerSimple.getInstance().updateTrueUnrealizedMin(unrealAtLow, time);
+                BudgetManagerSimple.getInstance().updateEquityMtm(unrealAtLow, notionalAtLow, time);
+            }
+            // (2) DCA theo level — CUNG dieu kien/ham voi nen, chi tren cum sleeve
+            if (!tickBlocked && predict != null && marketData != null && levelChange != null && activeRunningCount > 0) {
+                List<Short> dca = DcaProcessor.getDCA(levelChange, time, BudgetManagerSimple.getInstance().getBudget(),
+                        getActiveOrderMap());
+                dca = dsFilterGrid(dca, time);
+                for (short sid : dca) {
+                    KlineObjectSimple tk = symbol2Ticker[sid];
+                    if (Utils.isTickerAvailable(tk)) {
+                        createOrderBUY(sid, tk, MarketLevelChange.DCA_LEVEL1, time2MarketData.get(time), null);
+                    }
+                }
+            }
+            // (3) DCA alt — CUNG dieu kien/ham voi nen
+            if (marketData != null && !tickBlocked && activeRunningCount > 0
+                    && MarketBigChangeDetector.isDcaAlt(marketData.rateDown15MAvg, marketData.rateDownAvg, marketData.rateUpAvg)) {
+                List<Short> dca = DcaProcessor.getDCA(null, time, BudgetManagerSimple.getInstance().getBudget(),
+                        getActiveOrderMap());
+                dca = dsFilterGrid(dca, time);
+                for (short sid : dca) {
+                    KlineObjectSimple tk = symbol2Ticker[sid];
+                    if (Utils.isTickerAvailable(tk)) {
+                        createOrderBUY(sid, tk, MarketLevelChange.DCA_LEVEL1, time2MarketData.get(time), null);
+                    }
+                }
+            }
+            // (4) lenh sleeve moi (thu tu rank cua tick)
+            int burst = burstCount(sleeveFirstLegTimes, time, (long) Configs.SLEEVE_BURST_MIN * Utils.TIME_MINUTE);
+            for (SleeveCand c : sleeveCands) sleeveTryOpen(c, time, burst);
+            // (5) delist + balance cung nhip nen; KHONG in dong "Update ... b:" (kernel parse dong do cho so nen)
+            if (time % Utils.TIME_DAY == 0) {
+                BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, getActiveIdSet(), symbol2OrderRunning,
+                        symbol2OrdersEntry, false);
+                BudgetManagerSimple s = BudgetManagerSimple.getInstance();
+                LOG.info("SLEEVE-DAY {} bal={} unP={} margin={} run={} done={}", Utils.normalizeDateYYYYMMDDHHmm(time),
+                        s.balanceCurrent, s.unProfit, s.marginRunning, activeRunningCount, allOrderDone.size());
+            } else if (time % (60 * Utils.TIME_MINUTE) == 0) {
+                short[] currentIds = Arrays.copyOf(activeRunningIds, activeRunningCount);
+                for (short sid : currentIds) {
+                    if (!Utils.isTickerAvailable(symbol2Ticker[sid])) updateSymbolDeListed(sid, time);
+                }
+                BudgetManagerSimple.getInstance().updateBalance(time, allOrderDone, getActiveIdSet(), symbol2OrderRunning,
+                        symbol2OrdersEntry, false);
+            }
+        } finally {
+            exitSleeve();
+            sleeveCands.clear();
+        }
+        sleeveMeasureTotals(time, symbol2Ticker);
+    }
+
+    /** Mo mot ung vien sleeve (trong pha sleeve). Thu tu kiem: symbol doc quyen -> dieu kien arm -> createOrder. */
+    private void sleeveTryOpen(SleeveCand c, long time, int burst) {
+        slCand++;
+        if (c.bookFull) slCandBookFull++;
+        boolean flag = flagAt(sleeveFlagStart, sleeveFlagEnd, time);
+        String dec;
+        if (!sleeveSymbolFree(baseStash.symbol2OrderRunning, symbol2OrderRunning, c.sid)) {
+            if (baseStash.symbol2OrderRunning[c.sid] != null) {
+                slSkipHeldBase++;
+                dec = "SKIP_HELD_BASE";
+            } else {
+                slSkipHeldSleeve++;
+                dec = "SKIP_HELD_SLEEVE";
+            }
+        } else if (!sleeveArmAllows(sleeveArm, burst, Configs.SLEEVE_BURST_N, flag)) {
+            if ("V1".equals(sleeveArm)) {
+                slSkipBurst++;
+                dec = "SKIP_BURST";
+            } else {
+                slSkipNoFlag++;
+                dec = "SKIP_NOFLAG";
+            }
+        } else if (!Utils.isTickerAvailable(c.ticker)) {
+            slNotOpened++;
+            dec = "NO_TICKER";
+        } else {
+            createOrderBUY(c.sid, c.ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE, c.md, c.sp, c.rank);
+            if (symbol2OrderRunning[c.sid] != null) {
+                slOpened++;
+                if (c.bookFull) slOpenedBookFull++;
+                dec = "OPEN";
+            } else {
+                slNotOpened++;
+                dec = "NOT_OPENED";
+            }
+        }
+        sleeveCandLog.append(time).append(',').append(c.sid).append(',').append(c.rank).append(',').append(c.sp)
+                .append(',').append(c.p15).append(',').append(c.bookFull ? 1 : 0).append(',').append(burst)
+                .append(',').append(flag ? 1 : 0).append(',').append(dec).append('\n');
+    }
+
+    /** Do luong moi tick (doc 2 so, khong quyet dinh): U tong, maxDD MTM gop @bar.low, so vi the. */
+    private void sleeveMeasureTotals(long time, KlineObjectSimple[] tk) {
+        float[] acc = new float[3];
+        accBook(symbol2OrderRunning, activeRunningIds, activeRunningCount, tk, acc);
+        accBook(sleeveBook.symbol2OrderRunning, sleeveBook.activeRunningIds, sleeveBook.activeRunningCount, tk, acc);
+        BudgetManagerSimple b = BudgetManagerSimple.getInstance();
+        BudgetManagerSimple s = sleeveBook.bm;
+        float realized = b.balanceBasic + b.profit + s.profit;
+        float eq = realized + acc[1];
+        float u = uTotal(acc[0], eq);
+        float um = uTotal(b.marginRunning + s.marginRunning, eq);
+        if (u > slUTotMax) {
+            slUTotMax = u;
+            slUTotMaxT = time;
+        }
+        if (um > slUTotMarginMax) slUTotMarginMax = um;
+        if (uTotalFail(u)) {
+            slUTotFail++;
+            if (slUTotFail <= 20) {
+                LOG.warn("SLEEVE-UTOT-FAIL t={} U={} notional={} eq={}", Utils.normalizeDateYYYYMMDDHHmm(time), u, acc[0], eq);
+            }
+        }
+        float eqLow = realized + acc[2];
+        if (Float.isNaN(slCombPeak) || eqLow > slCombPeak) slCombPeak = eqLow;
+        float dd = slCombPeak - eqLow;
+        if (dd > slCombMaxDD) {
+            slCombMaxDD = dd;
+            slCombMaxDDPct = slCombPeak > 0f ? dd / slCombPeak : 0f;
+            slCombMaxDDT = time;
+        }
+        int npos = activeRunningCount + sleeveBook.activeRunningCount;
+        if (npos > slMaxPosTotal) slMaxPosTotal = npos;
+    }
+
+    /** Cum sleeve con mo cuoi ky -> done: CHEP quy uoc vong "add all order running to done" cua nen. */
+    private void sleeveFlushOpenToDone() {
+        enterSleeve();
+        try {
+            for (int i = 0; i < activeRunningCount; i++) {
+                short id = activeRunningIds[i];
+                List<OrderTargetInfoTest> orderRunningList = symbol2OrdersEntry[id];
+                if (orderRunningList != null) {
+                    OrderTargetInfoTest clusterOpen = symbol2OrderRunning[id];
+                    if (clusterOpen != null) clusterOpen.computeFundingOnClose();
+                    boolean fundingAssigned = false;
+                    for (OrderTargetInfoTest orderInfo : orderRunningList) {
+                        orderInfo.lastPrice = symbol2OrderRunning[id].lastPrice;
+                        orderInfo.priceTP = orderInfo.lastPrice;
+                        orderInfo.minPrice = symbol2OrderRunning[id].minPrice;
+                        orderInfo.maeLow = symbol2OrderRunning[id].maeLow;
+                        orderInfo.maePeak = symbol2OrderRunning[id].maePeak;
+                        orderInfo.timeUpdate = symbol2OrderRunning[id].timeUpdate;
+                        if (!fundingAssigned) {
+                            orderInfo.time2FundingFee = symbol2OrderRunning[id].time2FundingFee;
+                            fundingAssigned = true;
+                        }
+                        putOrderDone(orderInfo);
+                    }
+                }
+            }
+        } finally {
+            exitSleeve();
+        }
+    }
+
+    /** Noi dong sleeve (nhan book=sleeve) SAU moi dong nen trong printDone.csv + sleeve_cand.csv + sleeve_summary.json. */
+    private void sleeveWriteOutputs() throws IOException {
+        java.io.File raw = new java.io.File("storage/printDone_sleeve_raw.csv");
+        TraceOrderDone.printOrderTestDone(raw.getPath(), sleeveBook.allOrderDone);
+        java.util.List<String> lines = java.nio.file.Files.readAllLines(raw.toPath());
+        StringBuilder sb = new StringBuilder();
+        int n = 0;
+        for (int i = 1; i < lines.size(); i++) {
+            String ln = lines.get(i);
+            if (ln.trim().isEmpty()) continue;
+            sb.append(labelSleeveLine(ln)).append('\n');
+            n++;
+        }
+        java.nio.file.Files.write(java.nio.file.Paths.get("storage/printDone.csv"),
+                sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8), java.nio.file.StandardOpenOption.APPEND);
+        if (!raw.delete()) LOG.warn("[NUP3-SLEEVE] khong xoa duoc {}", raw);
+        java.nio.file.Files.write(java.nio.file.Paths.get("storage/sleeve_cand.csv"),
+                ("ts_ms,sid,rank,sp,p15,book_full,burst60,mkt_flag,decision\n" + sleeveCandLog)
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        String js = sleeveSummaryJson(n);
+        java.nio.file.Files.write(java.nio.file.Paths.get("storage/sleeve_summary.json"),
+                js.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        LOG.info("[NUP3-SLEEVE] SUMMARY {}", js);
+    }
+
+    private String sleeveSummaryJson(int nRows) {
+        BudgetManagerSimple s = sleeveBook.bm;
+        return String.format(java.util.Locale.ROOT,
+                "{\"arm\":\"%s\",\"pct\":%.8f,\"size_mult\":%.4f,\"u_s_max\":%.4f,\"burst_n\":%d,\"burst_min\":%d,"
+                        + "\"flag_intervals\":%d,\"flag_minutes\":%d,\"cand\":%d,\"cand_book_full\":%d,\"opened\":%d,"
+                        + "\"opened_book_full\":%d,\"skip_held_base\":%d,\"skip_held_sleeve\":%d,\"skip_burst\":%d,"
+                        + "\"skip_noflag\":%d,\"not_opened\":%d,\"clusters_sleeve\":%d,\"clusters_base\":%d,"
+                        + "\"overlap_base_opens_sleeve_sym\":%d,\"sleeve_legs_done\":%d,\"printdone_sleeve_rows\":%d,"
+                        + "\"sleeve_profit\":%.4f,\"sleeve_fee\":%.4f,\"u_total_max\":%.6f,\"u_total_max_t\":\"%s\","
+                        + "\"u_total_margin_max\":%.6f,\"u_total_fail_ticks\":%d,\"u_total_ok\":%s,"
+                        + "\"comb_maxdd_mtm_low_usd\":%.2f,\"comb_maxdd_mtm_low_pct\":%.6f,\"comb_maxdd_t\":\"%s\","
+                        + "\"max_pos_total\":%d}",
+                sleeveArm, Configs.SLEEVE_PCT, Configs.SLEEVE_SIZE_MULT, Configs.SLEEVE_U_MAX, Configs.SLEEVE_BURST_N,
+                Configs.SLEEVE_BURST_MIN, sleeveFlagStart.length, sleeveFlagMinutes, slCand, slCandBookFull, slOpened,
+                slOpenedBookFull, slSkipHeldBase, slSkipHeldSleeve, slSkipBurst, slSkipNoFlag, slNotOpened,
+                slClustersSleeve, slClustersBase, slOverlap, sleeveBook.allOrderDone.size(), nRows,
+                s.profit, s.fee, slUTotMax, Utils.normalizeDateYYYYMMDDHHmm(slUTotMaxT), slUTotMarginMax, slUTotFail,
+                slUTotFail == 0 ? "true" : "false", slCombMaxDD, slCombMaxDDPct,
+                Utils.normalizeDateYYYYMMDDHHmm(slCombMaxDDT), slMaxPosTotal);
+    }
+    // ===================== [/NUP3-SLEEVE] =====================
+
     // ===================== [NUP-TIER2 2026-10-26] =====================
     /** Bo dem/log cho TIER2 (0 khi cờ TẮT). */
     private static long tier2Entered = 0;
@@ -1418,7 +1987,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             return;
         }
         boolean tier2 = false;   // [NUP-TIER2] true = leg nay vao qua cong phu, size x GATE_TIER2_SIZE_MULT
-        if (!levelChange.equals(MarketLevelChange.BIG_DOWN)) {
+        if (inSleeve) {
+            // [NUP3-SLEEVE] so sleeve KHONG goi aiRejectFilter (khong cham buffer r / quota / bo dem cua nen):
+            //   leg MO cum (PREDICT) da QUA q2 o sleeveNoteCandidate; leg DCA_LEVEL1 dung CUNG nguong co so nhu nen
+            //   (entryGate voi sp=null <=> !(p15 < EntryGate.threshold(MIN_MOMENTUM_15M, null)) = EntryGate.pass).
+            if (levelChange != MarketLevelChange.PREDICT_SYMBOL_TRADE && !levelChange.equals(MarketLevelChange.BIG_DOWN)
+                    && !EntryGate.pass(predict.predReturn15M, Configs.MIN_MOMENTUM_15M, null)) {
+                return;
+            }
+        } else if (!levelChange.equals(MarketLevelChange.BIG_DOWN)) {
                 // [L7 2026-09-11, docs/experiment/L7_LEAN_GATE.md] MOT cong entry duy nhat, DUNG CHUNG voi
                 //   LIVE (DetectEntrySignal2TradeNormal.createOrderBuyRequest goi cung ham nay).
                 //   Cong thuc nguong nam o com.binance.chuyennd.tradecore.EntryGate.
@@ -1447,6 +2024,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                     } else {
                         if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_GATE_REJECT, symbolId, ticker, levelChange, symbolPred, predict);
                         if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE) predictSymbolRejectedGate++; // TASK-134
+                        // [NUP3-SLEEVE] ung vien sleeve: CHI DOC q2 cache/gio (khong nap r, khong quota). TAT => bo qua.
+                        if (sleeveBook != null) sleeveNoteCandidate(levelChange, dcaSignal, symbolId, ticker, marketData,
+                                symbolPred, selRank, predict, bookFull);
                         return;
                     }
                 }
@@ -1499,7 +2079,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         Integer leverage = Configs.LEVERAGE_ORDER;
 
         long currentTs = ticker.startTime;
-        CoinRankManager.CoinTier myTier = CoinRankManager.getInstance().getCoinTier(symbolId, currentTs);
+        CoinRankManager.CoinTier myTier = inSleeve
+                ? CoinRankManager.getInstance().peekCoinTier(symbolId, currentTs)   // [NUP3-SLEEVE] khong doi ranking nen
+                : CoinRankManager.getInstance().getCoinTier(symbolId, currentTs);
         if (myTier == CoinRankManager.CoinTier.TIER_3_SHITCOIN) {
             if (levelChange == MarketLevelChange.DCA_LEVEL1) {
                 if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_TIER3_DCA, symbolId, ticker, levelChange, symbolPred, predict);
@@ -1513,10 +2095,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         //   u = marginRunning/equity (tran U_MAX cung do tren equity — nhat quan, khong lech pha).
         //   Duong LIVE (DetectEntrySignal2TradeNormal:556) KHONG doi: no truyen
         //   BudgetManager.balanceBasic rieng cua no, khong di qua day.
-        Float balanceBasic = sizingEquity();
+        Float balanceBasic = inSleeve ? sleeveEquityCommonNow() : sizingEquity();   // [NUP3-SLEEVE] sleeve: equity CHUNG
         Float budget = BudgetManagerSimple.getInstance().getBudget();
 
-        budget = TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange);
+        budget = inSleeve
+                ? TradeUtils.managerBudgetSleeve(marginRunning, balanceBasic, Configs.SLEEVE_U_MAX)   // [NUP3-SLEEVE] U_s/U_S_MAX
+                : TradeUtils.managerBudget(budget, marginRunning, balanceBasic, levelChange);
 
         if (budget == null) {
             if (TickDecisionLog.ON) tlCand(TickDecisionLog.D_NO_BUDGET, symbolId, ticker, levelChange, symbolPred, predict);
@@ -1581,6 +2165,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // [NUP-TIER2] size nho hon cho leg vao qua cong phu, SAU tierMultiplier/grid ratio va TRUOC
         //   calQuantityTest => dung nghia "SIZE_MULT x size thuong". Cờ TẮT => tier2=false => khong nhan.
         if (tier2) budget *= Configs.GATE_TIER2_SIZE_MULT;
+        if (inSleeve) budget *= Configs.SLEEVE_SIZE_MULT;   // [NUP3-SLEEVE] x SLEEVE_SIZE_MULT (prereg 1.0)
 
         String symbolStr = SimpleSymbolMapper.getInstance().getSymbol(symbolId);
         Float quantity = Utils.calQuantityTest(budget, leverage, entry, symbolStr);
@@ -1656,7 +2241,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         //   dong PREARM_SL cua X2. tOpen in dung dinh dang cot `start` cua printDone.
         order.selRank = selRank;
         order.dcaSignalLeg = dcaSignal;   // [DCA-SIGNAL] false o moi call-site cu => byte-identical
-        if (selRank != null) {
+        if (selRank != null && inSleeve) {
+            LOG.info("SLEEVE-OPEN sym={} tOpen={} tMs={} rank={} pred={} arm={}", symbolStr,
+                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime), ticker.startTime, selRank, symbolPred, sleeveArm);
+        } else if (selRank != null) {
             LOG.info("SELRANK sym={} tOpen={} tMs={} rank={} pred={}", symbolStr,
                     Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime), ticker.startTime, selRank, symbolPred);
         }
@@ -1665,6 +2253,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         if (orders == null) {
             orders = new ArrayList<>();
             symbol2OrdersEntry[symbolId] = orders;
+            if (sleeveBook != null) sleeveNoteNewCluster(symbolId, ticker.startTime);   // [NUP3-SLEEVE] do luong/W_burst
         }
         orders.add(order);
         if (tier2) logTier2Entered(symbolStr, ticker.startTime, order.calMargin());
