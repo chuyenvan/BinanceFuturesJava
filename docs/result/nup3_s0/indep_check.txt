@@ -1,0 +1,22 @@
+a2_cl 7319 b0_cl 2871 extra 6362 common 957
+('2022', 'W_book', 'TRONG') pipeline n=357 pnl_s=-2185.0607 | indep n=357 pnl_s=-2185.0607 | OK
+('2022', 'W_book', 'NGOAI') pipeline n=702 pnl_s=-1434.2652 | indep n=702 pnl_s=-1434.2652 | OK
+('2022', 'W_quiet', 'TRONG') pipeline n=396 pnl_s=-3956.3129 | indep n=396 pnl_s=-3956.3129 | OK
+('2022', 'W_quiet', 'NGOAI') pipeline n=663 pnl_s=336.9869 | indep n=663 pnl_s=336.9869 | OK
+('2023', 'W_book', 'TRONG') pipeline n=285 pnl_s=4200.7459 | indep n=285 pnl_s=4200.7459 | OK
+('2023', 'W_book', 'NGOAI') pipeline n=1152 pnl_s=20569.6771 | indep n=1152 pnl_s=20569.6771 | OK
+('2023', 'W_quiet', 'TRONG') pipeline n=397 pnl_s=4723.4094 | indep n=397 pnl_s=4723.4094 | OK
+('2023', 'W_quiet', 'NGOAI') pipeline n=1040 pnl_s=20047.0136 | indep n=1040 pnl_s=20047.0136 | OK
+('2024', 'W_book', 'TRONG') pipeline n=390 pnl_s=4708.1943 | indep n=390 pnl_s=4708.1943 | OK
+('2024', 'W_book', 'NGOAI') pipeline n=1778 pnl_s=28058.1596 | indep n=1778 pnl_s=28058.1596 | OK
+('2024', 'W_quiet', 'TRONG') pipeline n=755 pnl_s=12752.1422 | indep n=755 pnl_s=12752.1422 | OK
+('2024', 'W_quiet', 'NGOAI') pipeline n=1413 pnl_s=20014.2117 | indep n=1413 pnl_s=20014.2117 | OK
+('2025', 'W_book', 'TRONG') pipeline n=161 pnl_s=150.5291 | indep n=161 pnl_s=150.5291 | OK
+('2025', 'W_book', 'NGOAI') pipeline n=1537 pnl_s=21343.2295 | indep n=1537 pnl_s=21343.2295 | OK
+('2025', 'W_quiet', 'TRONG') pipeline n=414 pnl_s=4649.7358 | indep n=414 pnl_s=4649.7358 | OK
+('2025', 'W_quiet', 'NGOAI') pipeline n=1284 pnl_s=16844.0228 | indep n=1284 pnl_s=16844.0228 | OK
+('DEV_T', 'W_book', 'TRONG') pipeline n=1193 pnl_s=6874.4087 | indep n=1193 pnl_s=6874.4087 | OK
+('DEV_T', 'W_book', 'NGOAI') pipeline n=5169 pnl_s=68536.8009 | indep n=5169 pnl_s=68536.8009 | OK
+('DEV_T', 'W_quiet', 'TRONG') pipeline n=1962 pnl_s=18168.9746 | indep n=1962 pnl_s=18168.9746 | OK
+('DEV_T', 'W_quiet', 'NGOAI') pipeline n=4400 pnl_s=57242.2350 | indep n=4400 pnl_s=57242.2350 | OK
+INDEP_OK True
