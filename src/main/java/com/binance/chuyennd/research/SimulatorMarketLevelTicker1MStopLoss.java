@@ -345,6 +345,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                                     // Chép ID đang chạy vào Set để khóa
                                     for (int i = 0; i < activeRunningCount; i++) symbolLocked.add(activeRunningIds[i]);
+                                    // [NUP3B] BASE_SKIP_SLEEVE_SYMBOLS: symbol sleeve dang giu = dang giu (TAT => khong lam gi)
+                                    if (Configs.BASE_SKIP_SLEEVE_SYMBOLS && sleeveBook != null) addSleeveLocked(symbolLocked, time);
 
                                     if (levelChange.equals(MarketLevelChange.SMALL_UP) ||
                                             levelChange.equals(MarketLevelChange.SMALL_DOWN_15M)) {
@@ -439,7 +441,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         if (TickDecisionLog.ON && isSymbolRunning(targetId)) {
                                             TickDecisionLog.candAlreadyOpen(time, targetId, MarketLevelChange.PREDICT_SYMBOL_TRADE, symbolPred);
                                         }
-                                        if (!isSymbolRunning(targetId)) {
+                                        if (baseSkipSleeveSym(targetId, time, MarketLevelChange.PREDICT_SYMBOL_TRADE)) {
+                                            // [NUP3B] BASE_SKIP_SLEEVE_SYMBOLS: sleeve dang giu => bo qua nhu 'dang giu' (khong vao gate)
+                                        } else if (!isSymbolRunning(targetId)) {
                                             KlineObjectSimple ticker = symbol2Ticker[targetId];
                                             if (Utils.isTickerAvailable(ticker)) {
                                                 createOrderBUY(targetId, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE, marketData, symbolPred, selRank);
@@ -1408,7 +1412,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         sleeveCands.clear();
         sleeveFirstLegTimes.clear();
         sleeveCandLog.setLength(0);
+        if (Configs.BASE_SKIP_SLEEVE_SYMBOLS && !Configs.SLEEVE_ENABLED) {
+            throw new IllegalStateException("[NUP3B] BASE_SKIP_SLEEVE_SYMBOLS=true can SLEEVE_ENABLED=true");
+        }
         if (!Configs.SLEEVE_ENABLED) return;
+        if (Configs.BASE_SKIP_SLEEVE_SYMBOLS) LOG.warn("*** [NUP3B] BASE_SKIP_SLEEVE_SYMBOLS=true: nen bo qua symbol sleeve dang giu ***");
         if (!com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.sleeveQ2On()) {
             throw new IllegalStateException("[NUP3-SLEEVE] can gate ratio BAT (SIM_GATE_ROLLING_MODE=ratio) va q2 sleeve BAT");
         }
@@ -1877,14 +1885,43 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                         + "\"sleeve_profit\":%.4f,\"sleeve_fee\":%.4f,\"u_total_max\":%.6f,\"u_total_max_t\":\"%s\","
                         + "\"u_total_margin_max\":%.6f,\"u_total_fail_ticks\":%d,\"u_total_ok\":%s,"
                         + "\"comb_maxdd_mtm_low_usd\":%.2f,\"comb_maxdd_mtm_low_pct\":%.6f,\"comb_maxdd_t\":\"%s\","
-                        + "\"max_pos_total\":%d}",
+                        + "\"max_pos_total\":%d,\"base_skip_sleeve_symbols\":%s,\"base_skip_pred_cand_ticks\":%d,"
+                        + "\"base_skip_locked_ticks\":%d,\"base_skip_distinct_sleeve_clusters\":%d,\"base_skip_backstop\":%d}",
                 sleeveArm, Configs.SLEEVE_PCT, Configs.SLEEVE_SIZE_MULT, Configs.SLEEVE_U_MAX, Configs.SLEEVE_BURST_N,
                 Configs.SLEEVE_BURST_MIN, sleeveFlagStart.length, sleeveFlagMinutes, slCand, slCandBookFull, slOpened,
                 slOpenedBookFull, slSkipHeldBase, slSkipHeldSleeve, slSkipBurst, slSkipNoFlag, slNotOpened,
                 slClustersSleeve, slClustersBase, slOverlap, sleeveBook.allOrderDone.size(), nRows,
                 s.profit, s.fee, slUTotMax, Utils.normalizeDateYYYYMMDDHHmm(slUTotMaxT), slUTotMarginMax, slUTotFail,
                 slUTotFail == 0 ? "true" : "false", slCombMaxDD, slCombMaxDDPct,
-                Utils.normalizeDateYYYYMMDDHHmm(slCombMaxDDT), slMaxPosTotal);
+                Utils.normalizeDateYYYYMMDDHHmm(slCombMaxDDT), slMaxPosTotal,
+                Configs.BASE_SKIP_SLEEVE_SYMBOLS ? "true" : "false", slBaseSkipPred, slBaseSkipLocked,
+                slBaseSkipDistinct.size(), slBaseSkipBackstop);
+    }
+    // ===================== [NUP3B 2026-10-27] BASE_SKIP_SLEEVE_SYMBOLS =====================
+    long slBaseSkipPred, slBaseSkipLocked, slBaseSkipBackstop;
+    /** (sid|t0 cum sleeve) da bi nen bo qua — dem cum nen bi bo MOT lan moi cum sleeve. */
+    final java.util.Set<String> slBaseSkipDistinct = new java.util.HashSet<>();
+
+    /** true <=> so NEN phai bo qua symbol sid vi sleeve dang giu (co BAT, khong trong pha sleeve, nen chua giu). */
+    boolean baseSkipSleeveSym(short sid, long time, MarketLevelChange lc) {
+        if (!Configs.BASE_SKIP_SLEEVE_SYMBOLS || sleeveBook == null || inSleeve) return false;
+        OrderTargetInfoTest sc = sleeveBook.symbol2OrderRunning[sid];
+        if (sc == null || symbol2OrderRunning[sid] != null) return false;
+        if (lc == MarketLevelChange.PREDICT_SYMBOL_TRADE) slBaseSkipPred++;
+        else slBaseSkipLocked++;
+        long t0 = sc.clusterFirstLegTime > 0L ? sc.clusterFirstLegTime : sc.timeStart;
+        if (slBaseSkipDistinct.add(sid + "|" + t0)) {
+            LOG.info("BASE-SKIP-SLEEVE sid={} tMs={} lvl={} sleeveT0={}", sid, time, lc, t0);
+        }
+        return true;
+    }
+
+    /** Them symbol sleeve dang giu (ma nen chua giu) vao tap khoa cua tick (chon leg BIG_DOWN / market-signal). */
+    void addSleeveLocked(Set<Short> locked, long time) {
+        for (int i = 0; i < sleeveBook.activeRunningCount; i++) {
+            short sid = sleeveBook.activeRunningIds[i];
+            if (!locked.contains(sid) && baseSkipSleeveSym(sid, time, MarketLevelChange.BIG_DOWN)) locked.add(sid);
+        }
     }
     // ===================== [/NUP3-SLEEVE] =====================
 
@@ -1959,6 +1996,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
      */
     private void createOrder(OrderSide side, short symbolId, KlineObjectSimple ticker, MarketLevelChange levelChange,
                              MarketDataObject marketData, Float symbolPred, Integer selRank, boolean dcaSignal) {
+        // [NUP3B] lop chan cuoi: so nen KHONG mo cum moi tren symbol sleeve dang giu (TAT => false ngay).
+        if (Configs.BASE_SKIP_SLEEVE_SYMBOLS && !inSleeve && sleeveBook != null && symbol2OrdersEntry[symbolId] == null
+                && sleeveBook.symbol2OrderRunning[symbolId] != null) {
+            slBaseSkipBackstop++;
+            return;
+        }
 
 
 

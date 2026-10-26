@@ -189,6 +189,9 @@ public class Configs {
     public static int SLEEVE_BURST_N = 10;
     public static int SLEEVE_BURST_MIN = 60;
     public static String SLEEVE_MKT_FLAG_FILE = "";
+    // [NUP3B 2026-10-27] docs/prereg/PREREG_NUP3B.md §2 (S1x): so NEN KHONG mo cum moi tren symbol SLEEVE dang giu
+    //   (coi nhu 'dang giu' o buoc chon ung vien — giong one-way live). Mac dinh false => byte-identical.
+    public static boolean BASE_SKIP_SLEEVE_SYMBOLS = false;
 
 
 
@@ -950,6 +953,7 @@ public class Configs {
             if ((v = Cfg.get("SLEEVE_BURST_N")) != null) SLEEVE_BURST_N = Integer.parseInt(v.trim());
             if ((v = Cfg.get("SLEEVE_BURST_MIN")) != null) SLEEVE_BURST_MIN = Integer.parseInt(v.trim());
             if ((v = Cfg.get("SLEEVE_MKT_FLAG_FILE")) != null) SLEEVE_MKT_FLAG_FILE = v.trim();
+            if ((v = Cfg.get("BASE_SKIP_SLEEVE_SYMBOLS")) != null) BASE_SKIP_SLEEVE_SYMBOLS = Boolean.parseBoolean(v.trim());
             // [GATE_QUOTA_SKIPFULL 2026-10-04] docs/prereg/PREREG_GATE_QUOTA_SKIPFULL.md (sim + live cung key; khong khai => false)
             if ((v = Cfg.get("GATE_QUOTA_SKIP_WHEN_FULL")) != null) GATE_QUOTA_SKIP_WHEN_FULL = Boolean.parseBoolean(v.trim());
             // [BURST-COOLDOWN 2026-10-16] docs/prereg/PREREG_BURST_COOLDOWN.md (khong khai => 0 => tat)
