@@ -264,11 +264,12 @@ def gates(st=None):
 
 
 _TERM = {}
+WINDOW_H = 4.0   # sim NUP/NUP3 timeout <= 3h; kernel khac chay >4h truoc khong con chay
 
 
 def free_slots():
     """Slot CPU trong cua account. ks.free_slots() goc chi xet 50 kernel theo 'hotness' (khong thay sim-* moi chay)
-    va goi status moi kernel => 429. O day: list theo dateRun, chi xet kernel chay trong 12,5h, cache trang thai
+    va goi status moi kernel => 429. O day: list theo dateRun, chi xet kernel chay trong WINDOW_H gio, cache trang thai
     ket thuc theo (ref, lastRunTime); loi/429 => tinh la DANG CHAY (than trong)."""
     ks = GA.ks_mod()
     L = ks._api().kernels_list(mine=True, page_size=50, sort_by="dateRun")
@@ -276,7 +277,7 @@ def free_slots():
     used = unknown = 0
     for k in L:
         lr = k.lastRunTime
-        if lr is None or (now - lr).total_seconds() > 12.5 * 3600:
+        if lr is None or (now - lr).total_seconds() > WINDOW_H * 3600:
             continue
         key = (k.ref, str(lr))
         if key in _TERM:
@@ -294,6 +295,7 @@ def free_slots():
         else:
             unknown += 1
         time.sleep(1)
+    log.info("free_slots: listed=%d cached_term=%d used=%d unknown=%d", len(L), len(_TERM), used, unknown)
     return max(0, ks.MAX_CONCURRENT - used - unknown), used, unknown
 
 
@@ -303,6 +305,7 @@ def run():
     ov_base()
     while True:
         try:
+            log.info("loop: poll")
             st = poll()
             g = gates(st)
             main_ok = all(g[k]["status"] == "PASS" for k in ("G-OFF-A1", "G-OFF-S7", "G-INV-A1"))
