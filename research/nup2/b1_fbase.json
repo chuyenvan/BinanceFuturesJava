@@ -1,0 +1,13 @@
+{
+ "arm": "B1",
+ "f_base": 0.006305,
+ "rF": 0.42033709,
+ "target": 0.5,
+ "f_med": 0.5,
+ "u_med": 0.14788942470547103,
+ "n": 6951,
+ "seeds": ["a1", "s7"],
+ "baseline": "tsx-x14-a1, tsx-x14-s7",
+ "method": "bisection median f(rF,U)=0.50, ADDENDUM A formula; U tu B0 equity parquet",
+ "date": "2026-10-26"
+}
