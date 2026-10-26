@@ -1,0 +1,55 @@
+{
+ "prereg": "docs/prereg/PREREG_NUP3.md c2b4c462",
+ "definition": "expm1(sum ew_r bar [t-1440',t-1']) <= -0.08",
+ "sources": {
+  "/home/ubuntu/claude_master/edge_attr/index.npz": "fd50eed82adbefab448ad58cb7aee7bc",
+  "/home/ubuntu/claude_master/tsx/ho/ew_out/ew_2026.npz": "e2e24027a64822a1a508b053f39ee6d8"
+ },
+ "ew_bars": 2761655,
+ "grid_first_ms": 1625097660000,
+ "grid_bars": 2761919,
+ "first_eval_ms": 1625184060000,
+ "last_eval_ms": 1790812800000,
+ "n_eval_minutes": 2760480,
+ "n_intervals": 2121,
+ "n_flag_minutes": 91482,
+ "n_nan_minutes": 0,
+ "per_year": {
+  "2021": {
+   "minutes": 263519,
+   "flag_minutes": 12197,
+   "flag_days_utc": 46
+  },
+  "2022": {
+   "minutes": 525600,
+   "flag_minutes": 28663,
+   "flag_days_utc": 85
+  },
+  "2023": {
+   "minutes": 525600,
+   "flag_minutes": 7131,
+   "flag_days_utc": 30
+  },
+  "2024": {
+   "minutes": 527040,
+   "flag_minutes": 18823,
+   "flag_days_utc": 59
+  },
+  "2025": {
+   "minutes": 525600,
+   "flag_minutes": 22140,
+   "flag_days_utc": 66
+  },
+  "2026": {
+   "minutes": 393121,
+   "flag_minutes": 2528,
+   "flag_days_utc": 12
+  }
+ },
+ "indep_probe": 12295,
+ "indep_mismatch": 0,
+ "indep_near_thr": 0,
+ "s0_diff_minutes": 0,
+ "csv_md5": "f3435d9baa5841dca541c3b39e4dddb2",
+ "csv_bytes": 59404
+}
