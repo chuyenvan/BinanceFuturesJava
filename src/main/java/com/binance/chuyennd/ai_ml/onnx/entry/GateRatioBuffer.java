@@ -50,6 +50,34 @@ final class GateRatioBuffer {
         return currentQ;
     }
 
+    /**
+     * [NUP-TIER2] Nhu addAndQuery nhung tinh them q2 (pct2) MOT LAN khi qua gio moi, tren CUNG
+     * cua so TRUOC-add. out[0]=q1, out[1]=q2 (NaN neu khong phai gio moi).
+     * q2 KHONG duoc tinh lai moi ung vien (chi phi O(m) moi gio, khong phai moi candidate).
+     */
+    float addAndQuery2(long ts, float r, float pct, float pct2, int days, float fallbackBase, float[] out) {
+        nQuery++;
+        long h = (ts / HOUR) * HOUR;
+        if (h != lastHour) {
+            currentQ = computeQ(h, pct, days, fallbackBase);
+            out[1] = computeQPct(h, pct2, days, fallbackBase);
+            lastHour = h;
+        } else {
+            out[1] = Float.NaN;
+        }
+        add(ts, r);
+        out[0] = currentQ;
+        return currentQ;
+    }
+
+    /** Phan vi pct tren cua so hien tai (head da duoc computeQ cat cho h). KHONG nap mau. */
+    private float computeQPct(long h, float pct, int days, float fallbackBase) {
+        int m = tail - head;
+        if (firstTs == Long.MIN_VALUE || m == 0 || (h - firstTs) < WARMUP_MS) return fallbackBase;
+        int k = Math.min(m - 1, Math.max(0, (int) Math.floor((double) pct * (m - 1))));
+        return kthSmallest(head, m, k);
+    }
+
     /** Nạp nhiều (ts, r) (sort ts tăng) — cho warm-up seed / nạp lại file persist. */
     void bulkAdd(long[] ts, float[] r) {
         for (int i = 0; i < ts.length; i++) add(ts[i], r[i]);

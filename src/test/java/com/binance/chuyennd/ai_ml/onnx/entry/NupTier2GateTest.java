@@ -20,17 +20,16 @@ public class NupTier2GateTest {
             long ts = t0 + (long) i * (8L * D / 1000L);
             GateRollingRatio.addAndQuery(ts, i);
         }
-        return t0 + 999L * (8L * D / 1000L) + 60_000L;   // 1 phut sau mau cuoi, cung gio
+        return t0 + 999L * (8L * D / 1000L) + 3_600_000L;  // gio ke tiep -> buoc tinh q1/q2
     }
 
     @Test
     public void q2PassesWhenQ1Fails() {
         long ts = seedBuffer();
-        // dua candidate vao cung gio: nap r=700 qua addAndQuery nhu gate chinh
-        GateRollingRatio.addAndQuery(ts, 700f);
-        // p15 sao cho r = p15/(factor*gs); factor = 1.2876 (sp=0.15), gs=1.0
+        // dua candidate vao cung gio qua CHINH threshold() (nap r + tinh q1/q2 mot lan/gio)
         float factor = Math.max(EntryGate.DYN_MIN, (0.15f / EntryGate.SCORE_BASE) * EntryGate.DYN_MULT);
-        float p15 = 700f * factor;
+        float p15 = 700f * factor * EntryGate.GATE_DYN_SCALE;
+        GateRollingRatio.threshold(ts, p15, 0.15f);
         // q1 ~ 989 => 700 < q1 => gate chinh REJECT; q2 ~ 499 => tier2 PASS
         assertTrue("tier2 phai pass khi q1 reject", GateRollingRatio.tier2Pass(ts, p15, 0.15f));
     }
@@ -38,30 +37,30 @@ public class NupTier2GateTest {
     @Test
     public void q2FailsWhenBelowTier2Quantile() {
         long ts = seedBuffer();
-        GateRollingRatio.addAndQuery(ts, 100f);
         float factor = Math.max(EntryGate.DYN_MIN, (0.15f / EntryGate.SCORE_BASE) * EntryGate.DYN_MULT);
-        assertFalse("r=100 duoi q2 0.50", GateRollingRatio.tier2Pass(ts, 100f * factor, 0.15f));
+        GateRollingRatio.threshold(ts, 100f * factor * EntryGate.GATE_DYN_SCALE, 0.15f);
+        assertFalse("r=100 duoi q2 0.50", GateRollingRatio.tier2Pass(ts, 100f * factor * EntryGate.GATE_DYN_SCALE, 0.15f));
     }
 
     @Test
     public void tier2OffAlwaysFalse() {
         long ts = seedBuffer();
-        GateRollingRatio.addAndQuery(ts, 700f);
-        GateRollingRatio.configureTier2ForTest(false, 0.50f);
         float factor = Math.max(EntryGate.DYN_MIN, (0.15f / EntryGate.SCORE_BASE) * EntryGate.DYN_MULT);
-        assertFalse(GateRollingRatio.tier2Pass(ts, 700f * factor, 0.15f));
+        GateRollingRatio.threshold(ts, 700f * factor * EntryGate.GATE_DYN_SCALE, 0.15f);
+        GateRollingRatio.configureTier2ForTest(false, 0.50f);
+        assertFalse(GateRollingRatio.tier2Pass(ts, 700f * factor * EntryGate.GATE_DYN_SCALE, 0.15f));
     }
 
     @Test
     public void tier2DoesNotChangeBufferOrQuota() {
         long ts = seedBuffer();
-        GateRollingRatio.addAndQuery(ts, 700f);
+        float factor = Math.max(EntryGate.DYN_MIN, (0.15f / EntryGate.SCORE_BASE) * EntryGate.DYN_MULT);
+        GateRollingRatio.threshold(ts, 700f * factor * EntryGate.GATE_DYN_SCALE, 0.15f);
         int m0 = GateRollingRatio.bufferSizeForTest();
         long pass0 = GateRollingRatio.passForTest();
         long seen0 = GateRollingRatio.seenForTest();
         long skip0 = GateRollingRatio.skipFullForTest();
-        float factor = Math.max(EntryGate.DYN_MIN, (0.15f / EntryGate.SCORE_BASE) * EntryGate.DYN_MULT);
-        for (int i = 0; i < 5; i++) GateRollingRatio.tier2Pass(ts, 700f * factor, 0.15f);
+        for (int i = 0; i < 5; i++) GateRollingRatio.tier2Pass(ts, 700f * factor * EntryGate.GATE_DYN_SCALE, 0.15f);
         assertEquals("buffer khong doi", m0, GateRollingRatio.bufferSizeForTest());
         assertEquals("pass counter khong doi", pass0, GateRollingRatio.passForTest());
         assertEquals("seen counter khong doi", seen0, GateRollingRatio.seenForTest());

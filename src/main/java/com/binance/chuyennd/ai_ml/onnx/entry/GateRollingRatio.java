@@ -45,6 +45,9 @@ public final class GateRollingRatio {
     // [NUP-TIER2 2026-10-26] docs/prereg/PREREG_NUP.md §1.2. Mac dinh TAT => khong nhanh nao chay.
     private static boolean tier2On = false;
     private static float tier2Pct = 0.99985f;
+    // q2 cache theo GIO: chi tinh 1 lan/gio trong threshold(), khong tinh lai moi candidate.
+    private static float currentTier2Q = Float.NaN;
+    private static final float[] t2q = new float[2];
 
     private static final GateRatioBuffer buffer = new GateRatioBuffer();
     private static boolean warnedBeforeFirst = false;
@@ -135,7 +138,14 @@ public final class GateRollingRatio {
         float factor = Math.max(EntryGate.DYN_MIN, (sp / EntryGate.SCORE_BASE) * EntryGate.DYN_MULT);
         float gs = EntryGate.GATE_REGIME_ADAPTIVE ? EntryGate.CURRENT_REGIME_SCALE : EntryGate.GATE_DYN_SCALE;
         float r = p15 / (factor * gs);
-        float q = buffer.addAndQuery(ts, r, pct, days, Configs.MIN_MOMENTUM_15M);
+        float q;
+        if (tier2On) {
+            buffer.addAndQuery2(ts, r, pct, tier2Pct, days, Configs.MIN_MOMENTUM_15M, t2q);
+            q = t2q[0];
+            if (!Float.isNaN(t2q[1])) currentTier2Q = t2q[1];
+        } else {
+            q = buffer.addAndQuery(ts, r, pct, days, Configs.MIN_MOMENTUM_15M);
+        }
         if (!warnedBeforeFirst && buffer.nBeforeFirst() > 0) {
             warnedBeforeFirst = true;
             LOG.warn("[GATE-RATIO] truy vấn TRƯỚC khi đủ 7 ngày dữ liệu (m={}) -> fallback base {}",
@@ -154,7 +164,8 @@ public final class GateRollingRatio {
         float scale = (sp / EntryGate.SCORE_BASE) * EntryGate.DYN_MULT;
         float gs = EntryGate.GATE_REGIME_ADAPTIVE ? EntryGate.CURRENT_REGIME_SCALE : EntryGate.GATE_DYN_SCALE;
         float factor = Math.max(EntryGate.DYN_MIN, scale);
-        float q2 = buffer.queryPctExcludingLast(ts, tier2Pct, days, Configs.MIN_MOMENTUM_15M);
+        float q2 = currentTier2Q;
+        if (Float.isNaN(q2)) return false;
         // Cung bieu thuc voi EntryGate.threshold(q2, sp): pass <=> !(p15 < q2*factor*gs).
         return !(p15 < q2 * factor * gs);
     }
@@ -163,6 +174,7 @@ public final class GateRollingRatio {
     static void configureTier2ForTest(boolean enabled, float pctValue) {
         tier2On = enabled;
         tier2Pct = pctValue;
+        currentTier2Q = Float.NaN;
     }
 
     /** Lõi: tính (nếu qua giờ mới) q cho giờ của ts, trả q, rồi nạp (ts, r) — package-private cho unit test. */
@@ -177,6 +189,7 @@ public final class GateRollingRatio {
         pct = pctValue;
         days = daysValue;
         buffer.reset();
+        currentTier2Q = Float.NaN;
         warnedBeforeFirst = false;
         predictSeen = predictPass = 0;
         predictSkipFull = 0;
@@ -185,6 +198,10 @@ public final class GateRollingRatio {
 
     static int bufferSizeForTest() {
         return buffer.size();
+    }
+
+    static float tier2QForTest() {
+        return currentTier2Q;
     }
 
     static long passForTest() {
