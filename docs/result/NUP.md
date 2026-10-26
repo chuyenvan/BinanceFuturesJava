@@ -12,9 +12,9 @@ Code chấm `research/nup/` (`run.py`, `mtm_parquet.py`, `score.py`, `summarize.
   A1, A4, A6 qua G1/G3 nhưng trượt G2; A3 trượt G1 rất sát (×1,28 < 1,30); A5 là **no-op**
   (byte-identical B0); A7 **không có số** (xem §6).
 - **Pha 2 (A2):** DEV 8 seed **qua G1–G3** (cụm ×2,574; ΣPnL ×0,953; stress ×0,886; maxDD
-  median −27,68 %, tệ nhất −27,96 %). **HO 2026 trượt G4 nặng**: ΣPnL median **0,50× B0**
-  (5 seed đã xong: 0,407 / 0,585 / 0,726 / 0,501 / 0,461), maxDD realized đã −13,65 % ở seed tệ
-  nhất (MTM sẽ sâu hơn). Với 5/8 seed < 0,73, median 8 seed **không thể ≥ 0,80** ⇒ G4 FAIL.
+  median −27,68 %, tệ nhất −27,96 %). **HO 2026 trượt G4 nặng**: ΣPnL median **0,543× B0**
+  (8 seed: 0,407 / 0,585 / 0,726 / 0,501 / 0,461 / 0,454 / 1,383 / 1,198), maxDD realized
+  −13,65 % ở seed tệ nhất (MTM sẽ sâu hơn). 6/8 seed < 0,73 ⇒ G4 FAIL.
 - Kết luận theo luật: **NO-GO**. Frontier để owner tự cân ở §4. A2 là điểm tốt nhất trên DEV
   nhưng đánh đổi sang HO quá lớn — đúng cảnh báo N_DEEP: lệnh mới ROI thấp, tương quan cao,
   không đa dạng hoá.
