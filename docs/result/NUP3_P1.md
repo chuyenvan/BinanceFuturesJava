@@ -13,6 +13,10 @@ Code chấm: `research/nup3/score_p1.py` (check → mtm → score), `research/nu
 | V1 | PASS | PASS | **FAIL** (−36,49 % / −36,89 %) | TRƯỢT |
 | V2 | **FAIL** (2023 = 1,147× < 1,15) | PASS | **FAIL** (median −34,38 % < −32; tệ −34,65 % ≥ −36 đạt) | TRƯỢT |
 
+- **ADDENDUM (c), §9:** MASTER đã mở 2021H2 cho V0/V1 để mẫu số đúng với equity sim dùng. Sau khi mở, G3 **vẫn FAIL**:
+  - V0: −36,33 % / −36,62 %;
+  - V1: −34,99 % / −36,20 %.
+  - Kết luận không đổi.
 - **Đề xuất Pha 2 theo luật §4.3: KHÔNG có arm nào** (không arm nào qua đủ G1–G3). Không push gì.
 - Sleeve có edge thật trên DEV: ROI/lệnh khoảng +2,3–2,6 %, 4/4 seed dương, 3/4 năm dương. Nhưng nó **dồn rủi ro vào đúng cú sập của
   nền**: maxDD của cả 12 run đều nằm ở cùng một đoạn, đỉnh 2022-05-05, đáy 2022-05-12 (LUNA), giống B0. DD tăng từ −22,5 % lên
@@ -179,3 +183,66 @@ Overlap từng seed (a1/s7/s21/s99):
   - **(c)** Chấp nhận rằng V2 đã trượt G1 (không phụ thuộc X) ⇒ kỳ 2021H2 không còn cần bảo vệ cho NUP3 ⇒ mở 2021H2 cho V0/V1.
 - Ngoài ra, kể cả khi G3 lật, Calmar vẫn giảm (1,72 → ~1,4), DD dồn đúng vào cú sập, và margin@entry vượt equity. Đây là các rủi ro
   live mà G1–G3 không bắt được.
+
+## 9. ADDENDUM (c) — mở 2021H2 cho V0/V1 (MASTER 2026-10-27)
+
+**Quyết định và lý do.**
+- V2 đã trượt G1 theo đúng chữ prereg (2023 = 1,147 < 1,15). Điều này không phụ thuộc mẫu số.
+- Vì vậy kỳ xác nhận 2021H2 không còn cần cho V2. MASTER mở 2021H2 cho **V0/V1** để tính mẫu số đúng. **V2 vẫn niêm phong.**
+- Luật và ngưỡng KHÔNG đổi.
+
+**Cách tính.**
+- Equity toàn danh mục = eq_B0 + eq_sleeve(toàn kỳ, gồm 2021H2) − vốn, cùng pipeline NUP. MTM missing = 0.
+- Code `research/nup3/p1_addc.py`. Số máy `docs/result/nup3/p1c_runs.csv`, `p1c_arms.csv`.
+- **Kiểm chéo với sim:** U notional@mark max toàn kỳ, U margin@entry max toàn kỳ và số vị thế max của tôi **trùng** số sim tự đo
+  (`sleeve_summary.json`) ở cả 8 run, lệch ≤ 1e-6. Như vậy equity này đúng là equity sim dùng để size. Giải thích khả dĩ ở §5
+  (mẫu số thiếu X) được xác nhận.
+
+**X = PnL sleeve 2021H2 (giờ đóng +07), so với B0 2021H2.**
+
+| seed | X V0 (stress) | X V1 (stress) | B0 2021H2 |
+|---|---|---|---|
+| a1 | 2 839 (2 462) | 2 476 (2 140) | 6 947 |
+| s7 | 1 256 (907) | 1 587 (1 265) | 6 674 |
+| s21 | 2 794 (2 421) | 3 020 (2 680) | 6 951 |
+| s99 | 535 (193) | 866 (549) | 6 583 |
+| median | 2 025 | 2 032 | 6 810 |
+
+X nhỏ hơn ngưỡng lật ở §5 (V0 8,6k / 2,9k; V1 6,6k / 1,1k). Riêng V1 s99 có X = 866 < 1 126 ⇒ seed tệ vẫn trượt sát.
+
+**Trước / sau (median 4 seed).** G1/G2 không đổi: cụm, PnL và tỷ lệ từng năm trùng tuyệt đối ở 8/8 run.
+
+| chỉ số | V0 trước → sau | V1 trước → sau |
+|---|---|---|
+| maxDD 2022–25 median | −37,81 → **−36,33** | −36,49 → **−34,99** |
+| maxDD 2022–25 seed tệ | −38,17 → **−36,62** | −36,89 → **−36,20** |
+| CAGR22 % | 51,85 → 50,42 | 51,17 → 49,55 |
+| Calmar (B0 1,716) | 1,369 → 1,388 | 1,407 → 1,426 |
+| U notional@mark max (median / tệ) | 0,782 / 0,795 → 0,764 / 0,781 | 0,763 / 0,787 → 0,743 / 0,773 |
+| U margin@entry max (median / tệ) | 1,189 / 1,209 → 1,113 / 1,187 | 1,131 / 1,204 → 1,060 / 1,169 |
+| leg sleeve mở khi Σ margin > equity, DEV (a1/s7/s21/s99) | 5/4/3/0 → 2/2/0/0 | 4/2/9/5 → 0/0/0/3 |
+| G3 | FAIL → **FAIL** | FAIL → **FAIL** |
+
+⇒ Kết luận Pha 1 không đổi: không arm nào qua G1–G3, không vào Pha 2.
+
+**Chỉ mô tả, không phải tiêu chí.**
+- maxDD toàn kỳ 2021-07 → 2025-12 = maxDD 2022–25 ở cả 8 run và cả B0:
+  - V0 median −36,33 %, V1 −34,99 %, B0 −22,47 %.
+  - Lý do: đáy toàn kỳ cũng là 2022-05-12 14:17 +07.
+  - Bản đã sửa bug pipeline (§6) cho cùng số.
+- **Ước lượng TUYẾN TÍNH hệ số size sleeve s\*, chưa có sim**, để maxDD median 2022–25 = −30 %.
+  - Cách tính: eq(s) = eq_B0 + s·(eq_sleeve − vốn) trên chính đường equity, tức PnL sleeve toàn kỳ (gồm X) nhân s. Giải s bằng
+    chia đôi.
+
+  | arm | s\* | maxDD tại s\* (median / tệ) | ΣPnL ×B0 tại s\* | cụm/năm ×B0 | s theo công thức DD_nền + s·ΔDD |
+  |---|---|---|---|---|---|
+  | V0 | **0,525** | −30,0 / −30,98 | 1,325 | 1,815 | 0,543 |
+  | V1 | **0,574** | −30,0 / −30,27 | 1,333 | 1,712 | 0,601 |
+
+  - Giả định và giới hạn:
+    - (i) Coi PnL và MTM sleeve tỷ lệ tuyến tính với size. Sim thật có throttle `1 − U_s/U_S_MAX` (0,35), trần per-coin 0,15 và
+      leg `not_opened` vì U_s chạm trần. Khi size nhỏ hơn, U_s thấp hơn ⇒ throttle nhẹ hơn ⇒ size hiệu dụng > s và số leg mở có
+      thể tăng nhẹ. Sổ nền không đổi.
+    - (ii) Cụm/năm giữ ×B0 như ở s = 1, vì luật ứng viên và độc quyền symbol không phụ thuộc size. Số này có thể lệch nhẹ do (i).
+    - (iii) Đáy DD đều rơi vào 2022-05 (LUNA). s\* thực chất được hiệu chỉnh trên một cú sập duy nhất.
+    - (iv) Cần sim với `SLEEVE_SIZE_MULT = s` để xác nhận trước khi dùng cho NUP3b.
