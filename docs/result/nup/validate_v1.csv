@@ -1,0 +1,26 @@
+tag,arm,seed,java_rc,ok,jar_ok,diff,diff_ok
+nup-a1-a1,a1,a1,1,True,True,['SIM_GATE_ROLLING_PCT'],True
+nup-a1-s7,a1,s7,1,True,True,['SIM_GATE_ROLLING_PCT'],True
+nup-a1-s21,a1,s21,1,True,True,['SIM_GATE_ROLLING_PCT'],True
+nup-a1-s99,a1,s99,1,True,True,['SIM_GATE_ROLLING_PCT'],True
+nup-a2-a1,a2,a1,1,True,True,['SIM_GATE_ROLLING_PCT'],True
+nup-a2-s7,a2,s7,1,True,True,['SIM_GATE_ROLLING_PCT'],True
+nup-a2-s21,a2,s21,1,True,True,['SIM_GATE_ROLLING_PCT'],True
+nup-a2-s99,a2,s99,1,True,True,['SIM_GATE_ROLLING_PCT'],True
+nup-a3-a1,a3,a1,1,True,True,['SELECTOR_RANK_TOPK'],True
+nup-a3-s7,a3,s7,1,True,True,['SELECTOR_RANK_TOPK'],True
+nup-a3-s21,a3,s21,1,True,True,['SELECTOR_RANK_TOPK'],True
+nup-a3-s99,a3,s99,1,True,True,['SELECTOR_RANK_TOPK'],True
+nup-a4-a1,a4,a1,1,True,True,"['SELECTOR_RANK_TOPK', 'SIM_GATE_ROLLING_PCT']",True
+nup-a4-s7,a4,s7,1,True,True,"['SELECTOR_RANK_TOPK', 'SIM_GATE_ROLLING_PCT']",True
+nup-a4-s21,a4,s21,1,True,True,"['SELECTOR_RANK_TOPK', 'SIM_GATE_ROLLING_PCT']",True
+nup-a4-s99,a4,s99,1,True,True,"['SELECTOR_RANK_TOPK', 'SIM_GATE_ROLLING_PCT']",True
+nup-a5-a1,a5,a1,1,True,True,['SIM_GATE_DYN_SCALE'],True
+nup-a5-s7,a5,s7,1,True,True,['SIM_GATE_DYN_SCALE'],True
+nup-a5-s21,a5,s21,1,True,True,['SIM_GATE_DYN_SCALE'],True
+nup-a5-s99,a5,s99,1,True,True,['SIM_GATE_DYN_SCALE'],True
+nup-a6-a1,a6,a1,1,True,True,"['SELECTOR_RANK_TOPK', 'SIM_F_BASE', 'SIM_GATE_ROLLING_PCT']",True
+nup-a6-s7,a6,s7,1,True,True,"['SELECTOR_RANK_TOPK', 'SIM_F_BASE', 'SIM_GATE_ROLLING_PCT']",True
+nup-a6-s21,a6,s21,1,True,True,"['SELECTOR_RANK_TOPK', 'SIM_F_BASE', 'SIM_GATE_ROLLING_PCT']",True
+nup-a6-s99,a6,s99,1,True,True,"['SELECTOR_RANK_TOPK', 'SIM_F_BASE', 'SIM_GATE_ROLLING_PCT']",True
+nup-a7-a1,a7,a1,-9,False,False,"['GATE_TIER2_CRASH_RET', 'GATE_TIER2_ENABLED', 'GATE_TIER2_PCT', 'GATE_TIER2_SIZE_MULT', 'GATE_TIER2_U_MAX']",True
