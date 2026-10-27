@@ -172,3 +172,32 @@ ngưỡng ở §2–§5 giữ nguyên, không tune sau khi thấy kết quả.
 Giới hạn CỨNG trong code canary (không ghi đè được bằng config): notional ≤ 25 USDT/lệnh (lệnh chuẩn 20 USDT), tổng mở ≤ 40 USDT, trần lỗ
 2 USDT (chạm ⇒ tự flatten rồi dừng phiên), chỉ 2 symbol do luật chọn, không chạm vị thế/lệnh ngoài 2 symbol đó, từ chối chạy khi runtime
 c3_live chính (adapter live) đang giữ lock tài khoản con, từ chối khi tài khoản có vị thế/lệnh của symbol khác.
+
+## §ADD-1 CANARY-EARLY (MASTER 10-27, owner duyệt)
+
+Ghi bởi agent v12exit theo chỉ thị MASTER (round 3b, 2026-10-27), TRƯỚC khi viết code/script mode early. §ADD-1 có hiệu lực hơn §2 cho
+riêng canary-early; mọi mục khác (§1, §3–§7, §10) giữ nguyên, không tune sau khi thấy kết quả.
+
+- **Phạm vi:** canary-early chỉ kiểm **CƠ CHẾ sàn** (K0–K8, K6b, K7b) bằng lệnh do kịch bản bắn tay; **không** chạy tín hiệu strategy, không
+  dùng JVM bot, không đọc/ghi Aerospike/Redis/symbol_mapper. Chạy được NGAY (owner duyệt 10-27), trước khi deploy dry và trước khi cửa sổ
+  promotion v1.1 đóng (2026-11-18).
+- **Điều kiện vào KHÔNG áp cho canary-early:** §2.2 "G-PROMO v1.1 ĐẠT" và §2.3 "dry ≥ 5 ngày sạch" (MỞ-1). Hai điều kiện này **vẫn áp nguyên
+  cho G-MICRO** (và cho G-CANARY bản chuẩn sau deploy dry).
+- **Điều kiện vào THAY THẾ (tất cả phải đúng; thiếu 1 ⇒ không chạy):**
+  1. G-CODE ĐẠT cho đúng jar canary-early; **A1 audit vòng 3 + 3b ĐẠT** (MASTER tạo file gate `~/claude_master/deploy/gates/GOLIVE_GATE_CODE_V12.ok`
+     trên Oracle SAU khi A1 ĐẠT; thiếu file ⇒ script từ chối).
+  2. Canary chạy ở **thư mục riêng** `/home/chuyennd/java/c3canary` trên 242 (jar riêng, sổ/state/journal/lock riêng `run/`), **JVM riêng**,
+     env sạch (không `LIVE_PROFILE` / `TRADING_PROFILE` / `LIVE_TS_MKT_EXT`).
+  3. **v_t_m không bị đổi:** md5 jar (`target/binance-java-sdk-1.2.4.jar`), md5 `conf/env.sh` + `bin/start.sh`, PID process bot chụp trước phiên
+     và so TRƯỚC + SAU mỗi bước; lệch ⇒ dừng ngay + flatten (TRƯỢT "v_t_m"). v_t_m phải đang chạy `LIVE_PROFILE=c3_shadow` +
+     `SHADOW_NO_PUSH=true`, không `LIVE_ADAPTER=live` (tài khoản chính không bị đụng).
+  4. **RAM trống 242 (MemAvailable) ≥ 1 GB** trước khi start (install/K0 và đầu phiên); trước mỗi bước sau đó ≥ 768 MB, thấp hơn ⇒ dừng +
+     flatten.
+  5. Các mục còn lại của §2 giữ nguyên: key/tài khoản con (§2.4), USDT = 0 + phương án B (§2.5, MỞ-2), time_ok + owner có mặt (§2.6),
+     tài khoản con 0 vị thế / 0 lệnh / 0 algo (K0).
+- **Giữ nguyên:** mọi giới hạn cứng (§10), kịch bản §4, tiêu chí tổng §5, MỞ-1..5 (MỞ-5 tiêm timeout mặc định TẮT).
+- **Phương án B (MỞ-2):** USDT = 0 và K1 TRƯỢT vì −2019 ⇒ dừng; owner nạp 50 USDT vào tài khoản con; MASTER quyết chạy lại và ghi "cấu hình
+  pilot USDT = 0 KHÔNG đạt".
+- **Kết quả:** 1 file txt trên Oracle (`~/claude_master/canary/canary_early_result_<TS>.txt`, không chứa key) cho MASTER/A1; A1 kiểm jsonl
+  độc lập trước khi MASTER ký kết quả canary-early. Kết quả canary-early **không** thay G-CANARY bản chuẩn trước G-MICRO nếu jar đổi
+  (§5: lặp lại bản rút gọn sau mọi thay đổi jar).
