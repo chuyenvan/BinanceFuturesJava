@@ -18,12 +18,15 @@ import socket
 import os
 import sys
 import time
+import datetime
 
 W = "/home/ubuntu/claude_master/nup2_wk"
 STATE = W + "/state.json"
 OUT = "/home/ubuntu/kaggle_sim/out/%s/"
 MAXPAR = 5
 POLL = 60
+SLOT_WINDOW_H = 4
+_TERM = {}
 
 socket.setdefaulttimeout(30)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", stream=sys.stdout, force=True)
@@ -51,6 +54,43 @@ def jar_new_sha():
     if not os.path.exists(JAR_NEW_PATH):
         return None
     return sha256(JAR_NEW_PATH)
+
+
+def free_slots():
+    """Slot CPU con trong account, dem theo dateRun trong cua so 4h (sua loi ks.free_slots()).
+
+    ks.free_slots() goc xep theo 'hotness' nen khong thay sim-* moi push va goi status
+    moi kernel => 429. O day: kernels_list(mine, sort_by=dateRun), chi xet kernel co
+    lastRunTime trong SLOT_WINDOW_H gio, cache trang thai ket thuc theo (ref,lastRunTime).
+    Loi/429 khi hoi status => tinh la DANG CHAY (than trong).
+    """
+    ks = T.GA.ks_mod()
+    api = ks._api()
+    L = api.kernels_list(mine=True, page_size=50, sort_by="dateRun")
+    now = datetime.datetime.utcnow()
+    used = unknown = 0
+    for k in L:
+        lr = k.lastRunTime
+        if lr is None or (now - lr).total_seconds() > SLOT_WINDOW_H * 3600:
+            continue
+        key = (k.ref, str(lr))
+        if key in _TERM:
+            continue
+        try:
+            s = ks._status(k.ref)
+        except Exception:  # noqa: BLE001
+            unknown += 1
+            time.sleep(5)
+            continue
+        if s in ks.TERMINAL:
+            _TERM[key] = s
+        elif s in ("RUNNING", "QUEUED"):
+            used += 1
+        else:
+            unknown += 1
+        time.sleep(1)
+    log.info("free_slots: listed=%d cached_term=%d used=%d unknown=%d", len(L), len(_TERM), used, unknown)
+    return max(0, ks.MAX_CONCURRENT - used - unknown)
 
 
 ARMS = {
@@ -145,7 +185,7 @@ def orch_plan2(name):
             st = poll()
             todo = [e for e in plan if st.get(e["tag"], {}).get("state") not in ("DONE", "FAILED")]
             pending = [e for e in todo if st.get(e["tag"], {}).get("state") != "PUSHED"]
-            free = ks.free_slots()
+            free = free_slots()
             done = len([e for e in plan if st.get(e["tag"], {}).get("state") == "DONE"])
             log.info("ORCH2 %s free=%d pending=%d active=%d done=%d", name, free, len(pending), len(todo) - len(pending), done)
             for e in pending:
@@ -215,11 +255,16 @@ def poll(fetch_done=True):
         except Exception as ex:  # noqa: BLE001
             msg = str(ex)
             if "404" in msg or "No runs found" in msg:
-                log.warning("status %s 404 -> FAILED", tag)
-                e["state"] = "FAILED"
-                e["kstatus"] = "NORUN"
-                changed = True
-                save_state(st)
+                # 404 ngay sau push la Kaggle chua dang ky version (transient) -> cho 20 phut
+                age = (time.time() - time.mktime(time.strptime(e.get("at", "2026-01-01 00:00"), "%Y-%m-%d %H:%M"))) / 60
+                if age < 20:
+                    log.warning("status %s 404 nhung moi push %.1f phut -> thu lai", tag, age)
+                else:
+                    log.warning("status %s 404 -> FAILED", tag)
+                    e["state"] = "FAILED"
+                    e["kstatus"] = "NORUN"
+                    changed = True
+                    save_state(st)
             else:
                 log.warning("status %s %s", tag, msg[:120])
             continue
@@ -295,7 +340,7 @@ def orch(name):
         if not alltodo:
             log.info("ORCH %s XONG done=%d/%d", name, len(done), len(plan))
             return
-        free = ks.free_slots()
+        free = free_slots()
         log.info("ORCH %s free=%d pending=%d active=%d done=%d", name, free, len(pending), len(alltodo) - len(pending), len(done))
         for e in pending:
             if free <= 0:

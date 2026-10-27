@@ -24,6 +24,7 @@ OV = {
     "a7": {"GATE_TIER2_ENABLED": "true", "GATE_TIER2_PCT": "0.99985", "GATE_TIER2_U_MAX": "0.2",
            "GATE_TIER2_CRASH_RET": "-0.01", "GATE_TIER2_SIZE_MULT": "0.5"},
 }
+OV["a7r"] = OV["a7"]
 
 
 def prof(tag):
@@ -58,7 +59,7 @@ def main(tags):
     rows = []
     for t in tags:
         arm, seed = arm_of(t)
-        if arm.startswith("b") or arm == "a7":
+        if arm.startswith("b") or arm in ("a7", "a7r"):
             seed = t.rsplit("-", 1)[-1]
         elif t.startswith("nup2-c-"):
             seed = t.rsplit("-", 1)[-1]
@@ -72,7 +73,7 @@ def main(tags):
         wrong = {k: (v, exp[k]) for k, v in diff.items() if k in exp and str(v[1]) != exp[k]}
         rj = json.load(open(KS + t + "/result.json"))
         rows.append(dict(tag=t, java_rc=rj.get("java_rc"), ok=rj.get("ok"),
-                         jar_ok=(rj.get("jar_sha256") == (J7 if arm == "a7" else J0)),
+                         jar_ok=(rj.get("jar_sha256") == (J7 if arm in ("a7", "a7r") else J0)),
                          diff_keys=",".join(sorted(diff)), extra=",".join(sorted(extra)),
                          wrong=json.dumps(wrong) if wrong else "", secs=rj.get("secs"), n=rj.get("n_trades")))
     D = pd.DataFrame(rows)
