@@ -18,8 +18,8 @@ SCP_242=${SCP_242:-"scp -P 2222 -o BatchMode=yes -i /home/ubuntu/.ssh/id_rsa_chu
 RHOST=${RHOST-"root@103.157.218.242:"}
 A=${APP_DIR:-/home/chuyennd/java/v_t_m}
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}   # mau nhan dien process app (test: process gia)
-NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12dry_3}
-NJ_MD5=${NJ_MD5:-e702cc2d85e2402e8f9c1cf841eef875}   # jar vong 3 (dung chung dry + canary; pin ca trong ops/c3live/canary/canary_lib.sh)
+NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12dry_3b}
+NJ_MD5=${NJ_MD5:-5405dfb2d076768ed7d751095818fb07}   # jar vong 3b (dung chung dry + canary; pin ca trong ops/c3live/canary/canary_lib.sh)
 OLD_MD5=${OLD_MD5:-dcae2e2bbb1a357bc15703b416d4dccb}
 KILLSW_SH=${KILLSW_SH:-/home/ubuntu/claude_master/v12/c3live/ops/killsw_reset.sh}
 KILLSW_MD5=${KILLSW_MD5:-6f8d83481904f91b3f92601b31720ace}   # [2c MIN-12] pin md5 ops/killsw_reset.sh (commit vong 2c)
