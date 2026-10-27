@@ -214,4 +214,26 @@ public class CanaryGuardTest {
         assertNotNull("lenh canary ket thuc => da nha lock", again);
         again.release();
     }
+
+    // ------------------------------------------------------------------ [V12 3b] env sach (khong Aerospike/symbol_mapper/Redis)
+    @Test
+    public void canaryRefusesUncleanEnvBeforeLockOrClient() throws Exception {
+        File f = new File(tmp.getRoot(), "run/c3live_account.lock");
+        for (String k : C3LiveCanary.FORBIDDEN_ENV) {
+            Map<String, String> env = new HashMap<>();
+            env.put(C3LiveAccountLock.KEY_FILE, f.getPath());
+            env.put("CANARY_DIR", new File(tmp.getRoot(), "run/canary").getPath());
+            env.put(k, "LIVE_TS_MKT_EXT".equals(k) ? "1" : "c3_shadow");
+            for (String cmd : new String[]{"preflight", "status", "flatten"}) {
+                int code = C3LiveCanary.run(new String[]{cmd}, env::get);
+                assertEquals(k + " " + cmd, 2, code);
+                assertTrue(C3LiveCanary.lastLine, C3LiveCanary.lastLine.contains("env khong sach: " + k));
+            }
+        }
+        assertFalse("env bi tu choi TRUOC lock: chua tao file lock", f.exists());
+        assertFalse("khong tao thu muc canary", new File(tmp.getRoot(), "run/canary").exists());
+        Map<String, String> clean = new HashMap<>();
+        clean.put("LIVE_PROFILE", "  ");   // rong = sach
+        assertNull(C3LiveCanary.isolationProblem(clean::get));
+    }
 }

@@ -66,6 +66,25 @@ public final class C3LiveCanary {
         System.exit(code);
     }
 
+    /**
+     * [V12 3b] Bien env cam trong JVM canary. TrailingStopManager goi X14 (tradecore.selector): voi LIVE_PROFILE=c3_shadow|c3_live +
+     * LIVE_TS_MKT_EXT=1, X14 doc kline tu Aerospike 242 (DataManagerAerospikeFloatSim, phu thuoc symbol_mapper); TRADING_PROFILE
+     * nap profile bot qua Cfg (sai => System.exit). Canary chi kiem co che san => cam ca 3 (script chay JVM bang env -i).
+     */
+    static final String[] FORBIDDEN_ENV = {"LIVE_PROFILE", "TRADING_PROFILE", "LIVE_TS_MKT_EXT"};
+
+    /**
+     * null = env sach. X14 chi BAT khi Cfg(LIVE_TS_MKT_EXT)=1 VA LiveProfileC3.on() (LIVE_PROFILE) — Cfg doc env hoac profile
+     * TRADING_PROFILE; cam ca 3 nguon => X14 tat chac chan (khong tham chieu lop X14 o day: test cau truc chi cho 3 file dung X14).
+     */
+    static String isolationProblem(Function<String, String> env) {
+        for (String k : FORBIDDEN_ENV) {
+            String v = env.apply(k);
+            if (v != null && !v.trim().isEmpty()) return k + " dang dat";
+        }
+        return null;
+    }
+
     static String env(String k) {
         String v = System.getenv(k);
         return v != null ? v : System.getProperty(k);
@@ -77,6 +96,12 @@ public final class C3LiveCanary {
             return 2;
         }
         String cmd = args[0].trim().toLowerCase(Locale.ROOT);
+        String iso = isolationProblem(env);
+        if (iso != null) {
+            out("RESULT " + cmd + " TU_CHOI | env khong sach: " + iso
+                    + " — JVM canary phai chay env sach (khong profile bot, khong X14 => khong doc Aerospike/symbol_mapper)");
+            return 2;
+        }
         File dir = new File(or(env.apply("CANARY_DIR"), "run/canary"));
         if ("status".equals(cmd)) {
             out(CanaryState.load(dir).toJson());
