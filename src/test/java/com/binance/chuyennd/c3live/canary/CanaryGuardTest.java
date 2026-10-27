@@ -330,4 +330,34 @@ public class CanaryGuardTest {
         }
         assertEquals("KHONG gui lai len san", 0, mock.calls("setLeverage"));
     }
+
+    // ------------------------------------------------------------------ [3h MINOR]
+    @Test
+    public void stopPreCheckRateLimitedReadIsRetriedNotRefused() {
+        final int[] left = {1};
+        com.binance.chuyennd.c3live.api.ExchangeGateway px = (com.binance.chuyennd.c3live.api.ExchangeGateway) java.lang.reflect.Proxy
+                .newProxyInstance(getClass().getClassLoader(), new Class<?>[]{com.binance.chuyennd.c3live.api.ExchangeGateway.class},
+                        (p, m, a) -> {
+                            if (left[0] > 0 && "positions".equals(m.getName())) {
+                                left[0]--;   // IP nang: guard client tu choi lan doc vi the trong kiem truoc stop
+                                throw new GatewayException(com.binance.chuyennd.c3live.api.ErrorKind.RATE_LIMIT, 0, 0, "rate guard (gia lap)",
+                                        true, 5_000L, null);
+                            }
+                            try {
+                                return m.invoke(mock, a);
+                            } catch (java.lang.reflect.InvocationTargetException e) {
+                                throw e.getCause();
+                            }
+                        });
+        mock.setPosition("C00USDT", new BigDecimal("5"), BigDecimal.ONE);
+        CanaryJournal j = new CanaryJournal(new File(tmp.getRoot(), "j3.jsonl"), System::currentTimeMillis);
+        CanaryGateway g = new CanaryGateway(px, new LinkedHashSet<>(Arrays.asList("C00USDT", "C01USDT")), j, () -> 5, lossHit::get);
+        g.canaryQty = s -> new BigDecimal("5");
+        final long[] slept = {0};
+        g.guardSleep = ms -> slept[0] += ms;
+        g.newStopMarket("C00USDT", Side.SELL, null, new BigDecimal("0.96"), "c3s-C00USDT-9-1", true);
+        assertEquals("stop van dat sau khi cho (khong PROTECT_FAIL)", 1, mock.calls("newStopMarket"));
+        assertTrue(slept[0] >= 5_000L);
+        assertTrue(j.entries().stream().anyMatch(x -> "GUARD_WAIT_RETRY".equals(x.get("type"))));
+    }
 }

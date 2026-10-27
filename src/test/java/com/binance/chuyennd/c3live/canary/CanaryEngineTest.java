@@ -904,9 +904,18 @@ public class CanaryEngineTest {
         CanaryEngine.Result f = e.flatten();
         e.close();
         assertEquals(f.line(), CanaryEngine.TRUOT, f.verdict);
-        assertTrue(f.line(), f.line().contains(CanaryEngine.TRUOT_DO));
+        assertTrue(f.line(), f.line().contains("NOREAD"));
+        assertFalse("[3h MAJOR-A] doc loi KHONG phai bang chung lan", f.line().contains(CanaryEngine.TRUOT_DO));
         assertEquals("0 lenh dong", mo, mock.calls("newMarketOrder"));
         assertEquals(0, mine.compareTo(mock.position(MAIN)));
+        assertFalse("stop bao ve van giu", mock.openStops(MAIN).isEmpty());
+        assertTrue("khong luu red", CanaryState.load(dir).red.isEmpty());
+        fail[0] = false;   // doc lai duoc => flatten dong binh thuong
+        CanaryEngine e2 = engineRaw(cfg(), raw, rg);
+        CanaryEngine.Result f2 = e2.flatten();
+        e2.close();
+        ok(f2);
+        assertEquals(0, mock.position(MAIN).signum());
     }
 
     @Test

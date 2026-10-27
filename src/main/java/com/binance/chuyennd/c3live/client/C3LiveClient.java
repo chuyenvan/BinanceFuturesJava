@@ -233,6 +233,19 @@ public final class C3LiveClient implements ExchangeGateway {
     }
 
     @Override
+    public Optional<OrderInfo> queryOrderById(String symbol, long orderId) {   // [3h]
+        Map<String, String> p = new LinkedHashMap<>();
+        p.put("symbol", symbol);
+        p.put("orderId", Long.toString(orderId));
+        try {
+            return Optional.of(parseOrder(call("GET", "/fapi/v1/order", p, Sec.SIGNED, W_QUERY, 0).getAsJsonObject()));
+        } catch (GatewayException e) {
+            if (e.getKind() == ErrorKind.UNKNOWN_ORDER) return Optional.empty();
+            throw e;
+        }
+    }
+
+    @Override
     public Optional<OrderInfo> queryOrder(String symbol, String clientOrderId) {
         Map<String, String> p = new LinkedHashMap<>();
         p.put("symbol", symbol);

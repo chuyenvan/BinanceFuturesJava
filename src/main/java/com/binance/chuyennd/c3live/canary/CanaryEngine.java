@@ -997,10 +997,13 @@ public final class CanaryEngine {
                             red0 = pr2;
                         }
                     } catch (RuntimeException e2) {
-                        String why = "RED " + sym + ": khong doc duoc pham vi 2 lan (" + e2.getClass().getSimpleName()
-                                + ") — KHONG dong khi chua chung minh duoc chi co phan canary (§3g MIN-7)";
-                        markRed(sym, why, "flatten " + reason);
-                        red0 = why;
+                        // [3h MAJOR-A] KHONG doc duoc != bang chung lan: KHONG dong, GIU stop c3s-, KHONG luu red; thu lai lan sau
+                        String why = "khong doc duoc pham vi 2 lan (" + e2.getClass().getSimpleName() + ") — KHONG dong, stop c3s- van giu,"
+                                + " thu lai sau";
+                        journal.ev("SCOPE_NOREAD_HOLD", "symbol", sym, "where", "flatten " + reason, "why", why);
+                        alert("canary " + sym + ": khong doc duoc pham vi, stop van giu — KHONG dong (flatten " + reason + "), thu lai sau");
+                        out.put(sym + ".NOREAD", why);
+                        continue;
                     }
                 }
             }
@@ -1125,18 +1128,19 @@ public final class CanaryEngine {
             if (p1.compareTo(led) < 0 && p2.compareTo(led2) < 0 && p2.signum() >= 0) {
                 // [3g MAJOR-1] CHI co ledger khi co bang chung canary: stop c3s- TRIGGERED/FINISHED co actualOrderId
                 // (khop c3x- da tru ledger luc response). Khong co => vi the giam do lenh KHONG phai canary => TRUOT-DO.
-                String ev = ownStopTriggered(s, null);
-                if (ev == null) {
-                    return "RED " + s + ": vi the san " + p2.toPlainString() + " < canary " + led2.toPlainString() + " (2 lan doc cach "
-                            + SCOPE_RECHECK_MS / 1000 + " s) KHONG co bang chung canary (c3x- / stop c3s- kich) — lenh ngoai canary"
-                            + " ban cong don one-way";
+                // [3h MAJOR-B] bang chung DINH LUONG: ledger -= executedQty cua lenh thuong (actualOrderId) cua stop c3s- da kich;
+                // KHONG bao gio dat ledger theo vi the san. Sau do san phai = ledger (+- 1 buoc lot), khac => RED (chung minh duoc).
+                String ev = applyStopEvidence(s);
+                BigDecimal nl = ledger(s);
+                BigDecimal tol = lotStep(s);
+                if (ev == null || p2.subtract(nl).abs().compareTo(tol) > 0) {
+                    return "RED " + s + ": vi the san " + p2.toPlainString() + " != canary " + nl.toPlainString()
+                            + (ev == null ? " — KHONG co bang chung canary (c3x- / stop c3s- kich co executedQty)"
+                            : " sau khi tru stop canary da kich (" + ev + ")")
+                            + " — lenh ngoai canary cong don one-way";
                 }
-                BigDecimal nv = p1.max(p2);
-                synchronized (stateLock) {
-                    state.canaryQty.put(s, nv.toPlainString());
-                }
-                saveState();
-                journal.ev("LEDGER_SHRINK", "symbol", s, "from", led2.toPlainString(), "to", nv.toPlainString(), "evidence", ev);
+                journal.ev("LEDGER_STOP_EVIDENCE", "symbol", s, "from", led2.toPlainString(), "to", nl.toPlainString(), "exchange",
+                        p2.toPlainString(), "evidence", ev);
             }
         }
         String pf = pendingForeignProblem(s);
@@ -1322,6 +1326,79 @@ public final class CanaryEngine {
             }
         }
         return null;
+    }
+
+    /** Buoc lot cua symbol (MARKET_LOT_SIZE, LOT_SIZE); khong biet => eps. */
+    BigDecimal lotStep(String s) {
+        try {
+            if (rules != null) {
+                Optional<com.binance.chuyennd.c3live.api.SymbolMeta> m = rules.meta(s);
+                if (m.isPresent()) {
+                    BigDecimal st0 = m.get().getMarketStepSize() != null ? m.get().getMarketStepSize() : m.get().getStepSize();
+                    if (st0 != null && st0.signum() > 0) return st0;
+                }
+            }
+        } catch (RuntimeException e) {
+            journal.ev("LOT_STEP_NOREAD", "symbol", s, "err", e.getClass().getSimpleName());
+        }
+        return QTY_EPS;
+    }
+
+    /**
+     * [3h MAJOR-B] Ap bang chung stop canary DINH LUONG: moi stop c3s- cua symbol TRIGGERED/FINISHED co actualOrderId => doc lenh thuong
+     * (queryOrderById) => ledger -= executedQty (khoa "c3s-fill:&lt;id&gt;", khong tinh 2 lan voi stream). Khong doc duoc executedQty:
+     * stop closePosition FINISHED => ledger = 0; stop qty => ledger -= qty cua stop (toi da). null = khong co stop canary nao da kich.
+     */
+    String applyStopEvidence(String s) {
+        Set<String> cids = new LinkedHashSet<>();
+        if (book != null) {
+            Optional<LiveBookC3.ClusterView> c = book.cluster(s);
+            if (c.isPresent()) {
+                if (c.get().stopClientAlgoId != null) cids.add(c.get().stopClientAlgoId);
+                if (c.get().pendingStopCid != null) cids.add(c.get().pendingStopCid);
+                if (c.get().orphanStops != null) cids.addAll(c.get().orphanStops);
+            }
+        }
+        for (OrderInfo o : gw.stopResponses()) if (s.equals(o.getSymbol()) && o.getClientOrderId() != null) cids.add(o.getClientOrderId());
+        List<String> used = new ArrayList<>();
+        int n = 0;
+        for (String cid : cids) {
+            if (!CanaryGateway.canaryAlgoCid(cid) || n++ >= 8) continue;
+            Optional<OrderInfo> q;
+            try {
+                q = gw.queryStop(s, cid);
+            } catch (RuntimeException e) {
+                journal.ev("STOP_EVIDENCE_NOREAD", "symbol", s, "cid", cid, "err", e.getClass().getSimpleName());
+                continue;
+            }
+            if (!q.isPresent()) continue;
+            OrderStatus st0 = q.get().getStatus();
+            String ai = q.get().getActualOrderId();
+            if (!(st0 == OrderStatus.TRIGGERED || st0 == OrderStatus.FINISHED) || !validAi(ai)) continue;
+            canaryAlgoOrderIds.add(ai.trim());
+            BigDecimal exec = null;
+            try {
+                Optional<OrderInfo> o = gw.queryOrderById(s, Long.parseLong(ai.trim()));
+                if (o.isPresent() && o.get().getExecutedQty() != null) exec = o.get().getExecutedQty();
+            } catch (RuntimeException e) {
+                journal.ev("STOP_EXEC_NOREAD", "symbol", s, "cid", cid, "ai", ai, "err", e.getClass().getSimpleName());
+            }
+            if (exec != null) {
+                onCanaryExec(s, STOP_FILL_KEY + ai.trim(), exec);
+                used.add(cid + " " + st0 + " ai=" + ai.trim() + " executedQty=" + exec.toPlainString());
+            } else if (q.get().isClosePosition() && st0 == OrderStatus.FINISHED) {
+                synchronized (stateLock) {
+                    state.canaryQty.put(s, "0");
+                    state.canaryCidQty.put(STOP_FILL_KEY + ai.trim(), "closePosition");
+                }
+                saveState();
+                used.add(cid + " FINISHED closePosition ai=" + ai.trim() + " executedQty KHONG doc duoc => ledger 0");
+            } else if (q.get().getOrigQty() != null && q.get().getOrigQty().signum() > 0) {
+                onCanaryExec(s, STOP_FILL_KEY + ai.trim(), q.get().getOrigQty());
+                used.add(cid + " " + st0 + " ai=" + ai.trim() + " executedQty KHONG doc duoc => tru qty stop " + q.get().getOrigQty());
+            }
+        }
+        return used.isEmpty() ? null : String.join("; ", used);
     }
 
     /** [3g MAJOR-1] khop khong cid canary tren symbol canary: giai thich duoc (stop canary) => tinh; khong => "RED ..". */
@@ -2523,6 +2600,10 @@ public final class CanaryEngine {
                 red = new LinkedHashMap<>(state.red);
             }
             for (String s : canarySyms()) {
+                if (out.containsKey(s + ".NOREAD")) {   // [3h MAJOR-A] chua doc duoc: chua dong, stop giu — chay lai flatten sau
+                    st.check(false, s + ": NOREAD — khong doc duoc pham vi, stop van giu, chua dong; chay lai flatten sau");
+                    continue;
+                }
                 if (red.containsKey(s)) {   // [3f §ADD-4 C]
                     st.check(false, TRUOT_DO + " " + s + ": KHONG dong (vi the lan LEGACY) — bao MASTER, KHONG chay lai flatten: " + red.get(s));
                     continue;

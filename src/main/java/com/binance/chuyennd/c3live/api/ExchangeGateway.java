@@ -62,6 +62,14 @@ public interface ExchangeGateway {
      */
     Optional<OrderInfo> queryOrder(String symbol, String clientOrderId);
 
+    /**
+     * [3h] Tra lenh thuong theo orderId (vd actualOrderId cua stop algo da kich). Khong ton tai -> empty. Mac dinh: khong ho tro
+     * (nem UnsupportedOperationException => nguoi goi coi la KHONG doc duoc).
+     */
+    default Optional<OrderInfo> queryOrderById(String symbol, long orderId) {
+        throw new UnsupportedOperationException("queryOrderById khong ho tro boi " + name());
+    }
+
     /** Nhu {@link #queryOrder} cho lenh algo (clientAlgoId). */
     Optional<OrderInfo> queryStop(String symbol, String clientAlgoId);
 

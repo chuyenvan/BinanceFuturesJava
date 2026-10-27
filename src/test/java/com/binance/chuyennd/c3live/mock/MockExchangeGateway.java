@@ -267,6 +267,13 @@ public class MockExchangeGateway implements ExchangeGateway {
     }
 
     @Override
+    public synchronized Optional<OrderInfo> queryOrderById(String symbol, long orderId) {   // [3h]
+        enter("queryOrderById");
+        for (OrderInfo o : orders.values()) if (o.getOrderId() == orderId && symbol.equals(o.getSymbol())) return Optional.of(o);
+        return Optional.empty();
+    }
+
+    @Override
     public synchronized Optional<OrderInfo> queryOrder(String symbol, String cid) {
         enter("queryOrder");
         return Optional.ofNullable(orders.get(cid));
