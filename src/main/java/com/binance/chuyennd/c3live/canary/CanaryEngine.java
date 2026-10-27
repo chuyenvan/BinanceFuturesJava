@@ -1093,6 +1093,7 @@ public final class CanaryEngine {
         if (sym == null || cid == null || executed == null) return;
         BigDecimal led;
         synchronized (stateLock) {
+            if (CP_MARK.equals(state.canaryCidQty.get(cid))) return;   // [3h] stop closePosition da dua ledger ve 0 => khop muon khong tru lan 2
             BigDecimal prev = dec(state.canaryCidQty.get(cid));
             BigDecimal delta = executed.subtract(prev == null ? BigDecimal.ZERO : prev);
             if (delta.signum() <= 0) return;
@@ -1349,6 +1350,8 @@ public final class CanaryEngine {
      * (queryOrderById) => ledger -= executedQty (khoa "c3s-fill:&lt;id&gt;", khong tinh 2 lan voi stream). Khong doc duoc executedQty:
      * stop closePosition FINISHED => ledger = 0; stop qty => ledger -= qty cua stop (toi da). null = khong co stop canary nao da kich.
      */
+    static final String CP_MARK = "closePosition";
+
     String applyStopEvidence(String s) {
         Set<String> cids = new LinkedHashSet<>();
         if (book != null) {
@@ -1388,8 +1391,10 @@ public final class CanaryEngine {
                 used.add(cid + " " + st0 + " ai=" + ai.trim() + " executedQty=" + exec.toPlainString());
             } else if (q.get().isClosePosition() && st0 == OrderStatus.FINISHED) {
                 synchronized (stateLock) {
+                    // [3h] stop nay da tinh roi (ledger co the da tang lai do canary mo cum moi) => khong dat 0 lan nua
+                    if (state.canaryCidQty.containsKey(STOP_FILL_KEY + ai.trim())) continue;
                     state.canaryQty.put(s, "0");
-                    state.canaryCidQty.put(STOP_FILL_KEY + ai.trim(), "closePosition");
+                    state.canaryCidQty.put(STOP_FILL_KEY + ai.trim(), CP_MARK);
                 }
                 saveState();
                 used.add(cid + " FINISHED closePosition ai=" + ai.trim() + " executedQty KHONG doc duoc => ledger 0");

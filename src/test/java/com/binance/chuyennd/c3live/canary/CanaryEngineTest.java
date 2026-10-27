@@ -784,6 +784,33 @@ public class CanaryEngineTest {
     }
 
     @Test
+    public void h3ClosePositionStopEvidenceIsAppliedOnlyOnce() throws Exception {
+        preflight();
+        ok(run("K1"));
+        mock.triggerStops(MAIN, new BigDecimal("0.95"));   // stop closePosition canary kich giua 2 JVM
+        CanaryEngine e = engine(cfg());
+        e.build();   // gateway + book nhu luc chay buoc (khong goi san)
+        mock.failNext("queryOrderById", new GatewayException(com.binance.chuyennd.c3live.api.ErrorKind.OTHER, "x", true));
+        String ev = e.applyStopEvidence(MAIN);
+        assertNotNull(ev);
+        assertTrue(ev, ev.contains("closePosition"));
+        assertEquals(0, CanaryEngine.dec(CanaryState.load(dir).canaryQty.get(MAIN)).signum());
+        String key = null;
+        for (java.util.Map.Entry<String, String> en : CanaryState.load(dir).canaryCidQty.entrySet()) {
+            if (en.getKey().startsWith("c3s-fill:") && CanaryEngine.CP_MARK.equals(en.getValue())) key = en.getKey();
+        }
+        assertNotNull(key);
+        e.onCanaryExec(MAIN, "c3-h3new", new BigDecimal("20"));   // canary mo cum moi sau do
+        mock.failNext("queryOrderById", new GatewayException(com.binance.chuyennd.c3live.api.ErrorKind.OTHER, "x", true));
+        e.applyStopEvidence(MAIN);                                 // stop cu van FINISHED: KHONG dua ledger ve 0 lan nua
+        assertEquals(0, new BigDecimal("20").compareTo(CanaryEngine.dec(CanaryState.load(dir).canaryQty.get(MAIN))));
+        e.onCanaryExec(MAIN, key, new BigDecimal("20"));           // khop muon cua lenh stop cu: KHONG tru lan 2
+        assertEquals(0, new BigDecimal("20").compareTo(CanaryEngine.dec(CanaryState.load(dir).canaryQty.get(MAIN))));
+
+        e.close();
+    }
+
+    @Test
     public void g3StopFillWithNonCanaryCidMatchedByActualOrderIdAlgoFirst() throws Exception {
         stopFillCase(false);
     }
