@@ -46,6 +46,8 @@ def plan():
             if any(e["tag"] == t for e in P):
                 continue
             P.append(dict(tag=t, seed=s, phase="p1", arm=arm, ov=ARMS[arm], extra=[]))
+    # rerun 1 lan: nup3b-s0b-s99 FAILED/NORUN (kernels_push khong tao kernel, 404) — cung cau hinh, cung jar
+    P.append(dict(tag="nup3b-s0b-s99r", seed="S99", phase="p1", arm="s0b", ov=ARMS["s0b"], extra=[]))
     return P
 
 

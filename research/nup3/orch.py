@@ -165,7 +165,11 @@ def push(e):
               "competition_sources": [], "kernel_sources": []}
         with open(os.path.join(folder, "kernel-metadata.json"), "w") as f:
             json.dump(md, f, indent=1)
-        ks._api().kernels_push(folder)
+        r = ks._api().kernels_push(folder)
+        err = getattr(r, "error", None) or getattr(r, "errorMessage", None)
+        log.info("push %s -> url=%s err=%s", ref, getattr(r, "url", None), err)
+        if err or not getattr(r, "url", None):
+            raise RuntimeError("kernels_push %s bi tu choi: %s" % (tag, err or r))
     st = load_state()
     st[tag] = {"state": "PUSHED", "seed": e["seed"], "phase": e["phase"], "ov": ov, "end": end, "extra": extra,
                "jar_ds": JAR_DS, "at": time.strftime("%F %T"), "t": time.time()}
