@@ -85,6 +85,12 @@ public final class CanaryGateway implements ExchangeGateway {
     };
     /** [3f] cho toi da truoc khi thu lai call bi guard client tu choi (het phut + 1 s). */
     public static final long GUARD_RETRY_MAX_WAIT_MS = 61_000L;
+    /** [3i] call DOC bi guard client tu choi: toi da so lan cho nay (moi lan <= 61 s) roi moi loi. */
+    public static final int READ_MAX_WAITS = CanaryLimits.READ_GUARD_MAX_WAITS;
+    /** [3i] chinh sach canary cua RateGuard (null = tat): lenh ghi thuong ngu qua cua so burst LEGACY TRUOC khi kiem truoc ghi. */
+    public volatile RateGuard.CanaryPolicy burst;
+    /** [3i] moc lan gui THAT dau tien theo cid (dong ho ownClock, truoc khi gui) — moc "khop" cho han stop bao ve 61 s. */
+    private final Map<String, Long> firstSentMs = new ConcurrentHashMap<>();
     static final BigDecimal QTY_EPS = new BigDecimal("0.000000001");
 
     /** [3f] khoi luong da khop cua 1 lenh cid canary. */
@@ -140,6 +146,12 @@ public final class CanaryGateway implements ExchangeGateway {
 
     public int sends(String cid) {
         return sendsByCid.getOrDefault(cid, 0);
+    }
+
+    /** [3i] moc (ownClock) ngay truoc lan gui THAT dau tien cua cid; -1 = chua gui. */
+    public long firstSentMs(String cid) {
+        Long v = cid == null ? null : firstSentMs.get(cid);
+        return v == null ? -1L : v;
     }
 
     public Map<String, Integer> sendsByCid() {
@@ -299,6 +311,7 @@ public final class CanaryGateway implements ExchangeGateway {
             } catch (GatewayException e) {
                 if (e instanceof GuardException || !guardRetryable(e) || i >= 2) throw e;
                 long w = Math.min(GUARD_RETRY_MAX_WAIT_MS, e.getRetryAfterMs() + 1_000L);
+                if (pastUrgentDeadline(api, sym, w)) throw e;   // [3i] stop bao ve: khong cho qua han 61 s
                 j.ev("GUARD_WAIT_RETRY", "api", api, "symbol", sym, "cid", cid, "waitMs", w, "why", "kiem truoc ghi: " + e.getMessage());
                 guardSleep.accept(w);
             }
@@ -401,6 +414,26 @@ public final class CanaryGateway implements ExchangeGateway {
                 a.getTotalUnrealizedProfit(), a.getAssets(), a.getTimeMs(), ps);
     }
 
+    /** [3i] dang trong pham vi KHAN (stop bao ve) va cho {@code w} ms se qua han => KHONG cho (journal GUARD_DEADLINE). */
+    private boolean pastUrgentDeadline(String api, String sym, long w) {
+        long dl = RateGuard.urgentDeadlineMs();
+        if (dl == Long.MAX_VALUE) return false;
+        long now = ownClock.getAsLong();
+        if (now + w <= dl) return false;
+        j.ev("GUARD_DEADLINE", "api", api, "symbol", sym, "waitMs", w, "leftMs", dl - now);
+        return true;
+    }
+
+    /** [3i] lenh ghi thuong trong cua so burst LEGACY => ngu toi giay resume TRUOC kiem truoc ghi (khong khan cap, khong stop bao ve). */
+    private void burstWait(String api, String sym) {
+        RateGuard.CanaryPolicy p = burst;
+        if (p == null || RateGuard.inEmergencyLane() || RateGuard.inUrgent()) return;
+        long ms = RateGuard.burstDelayMs(ownClock.getAsLong(), p);
+        if (ms <= 0) return;
+        j.ev("BURST_WAIT", "api", api, "symbol", sym, "waitMs", ms);
+        guardSleep.accept(ms);
+    }
+
     /** [3f §ADD-4 I] guard CLIENT tu choi (chua gui) ngoai lan khan cap, cho <= 61 s => thu lai sang phut sau. */
     private static boolean guardRetryable(GatewayException e) {
         return e.getKind() == ErrorKind.RATE_LIMIT && e.getHttpStatus() == 0 && e.isDefinitelyNotExecuted()
@@ -417,6 +450,7 @@ public final class CanaryGateway implements ExchangeGateway {
      * khong gui, khong CALL_W) VA chay LAI truoc moi lan thu sau GUARD_WAIT_RETRY. Lenh ghi khong co {@code pre} KHONG bao gio duoc thu lai.
      */
     private <T> T call(String api, String sym, String cid, boolean mut, Runnable pre, Supplier<T> f) {
+        if (mut) burstWait(api, sym);   // [3i] truoc kiem truoc ghi => kiem -> gui lien nhau
         if (pre != null) runPre(api, sym, cid, pre);
         long t0 = System.nanoTime();
         boolean sent = true;
@@ -431,19 +465,25 @@ public final class CanaryGateway implements ExchangeGateway {
         }
         try {
             T r;
-            try {
-                r = f.get();
-            } catch (GatewayException e) {
-                if (!guardRetryable(e)) throw e;
-                if (mut && pre == null) throw e;   // [3g MAJOR-2] khong gui lai lenh ghi tren kiem cu
-                long w = Math.min(GUARD_RETRY_MAX_WAIT_MS, e.getRetryAfterMs() + 1_000L);
-                j.ev("GUARD_WAIT_RETRY", "api", api, "symbol", sym, "waitMs", w, "why", e.getMessage());
-                guardSleep.accept(w);
-                if (pre != null) {
-                    j.ev("GUARD_RECHECK", "api", api, "symbol", sym, "cid", cid);
-                    runPre(api, sym, cid, pre);   // [3g MAJOR-2] kiem LAI sau khi cho (LEGACY co the vua vao symbol)
+            int waits = 0;
+            while (true) {
+                try {
+                    r = f.get();
+                    break;
+                } catch (GatewayException e) {
+                    if (!guardRetryable(e)) throw e;
+                    if (mut && pre == null) throw e;   // [3g MAJOR-2] khong gui lai lenh ghi tren kiem cu
+                    if (waits >= (mut ? 1 : READ_MAX_WAITS)) throw e;   // [3i] ghi: 1 lan thu lai (kiem lai); doc: <= 2 lan cho
+                    long w = Math.min(GUARD_RETRY_MAX_WAIT_MS, e.getRetryAfterMs() + 1_000L);
+                    if (pastUrgentDeadline(api, sym, w)) throw e;   // [3i] stop bao ve: khong cho qua han 61 s
+                    waits++;
+                    j.ev("GUARD_WAIT_RETRY", "api", api, "symbol", sym, "waitMs", w, "n", waits, "why", e.getMessage());
+                    guardSleep.accept(w);
+                    if (pre != null) {
+                        j.ev("GUARD_RECHECK", "api", api, "symbol", sym, "cid", cid);
+                        runPre(api, sym, cid, pre);   // [3g MAJOR-2] kiem LAI sau khi cho (LEGACY co the vua vao symbol)
+                    }
                 }
-                r = f.get();
             }
             m.put("ok", true);
             describe(m, r);
@@ -563,15 +603,21 @@ public final class CanaryGateway implements ExchangeGateway {
         Runnable pre = open ? () -> preOpen(symbol, qty) : () -> preSell(symbol, qty);   // [3g MAJOR-2] kiem LAI moi lan thu
         String key = clientOrderId == null ? "?" : clientOrderId;
         OrderInfo o = call("newMarketOrder:" + side + (reduceOnly ? ":RO" : ""), symbol, clientOrderId, true, pre, () -> {
+            long ta = ownClock.getAsLong();   // [3i] moc truoc khi gui (<= luc khop)
             try {
                 OrderInfo r = d.newMarketOrder(symbol, side, qty, clientOrderId, reduceOnly);
                 sendsByCid.merge(key, 1, Integer::sum);
+                firstSentMs.putIfAbsent(key, ta);
                 return r;
             } catch (GatewayException e) {
-                if (!(e.getKind() == ErrorKind.RATE_LIMIT && e.getHttpStatus() == 0)) sendsByCid.merge(key, 1, Integer::sum);
+                if (!(e.getKind() == ErrorKind.RATE_LIMIT && e.getHttpStatus() == 0)) {
+                    sendsByCid.merge(key, 1, Integer::sum);
+                    firstSentMs.putIfAbsent(key, ta);
+                }
                 throw e;
             } catch (RuntimeException e) {
                 sendsByCid.merge(key, 1, Integer::sum);
+                firstSentMs.putIfAbsent(key, ta);
                 throw e;
             }
         });

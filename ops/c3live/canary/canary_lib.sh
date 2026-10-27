@@ -254,6 +254,12 @@ cl_run() {
   local a id n=0 rc="" t0 got line
   # [3g MIN-3] lo cong don cac phien truoc => engine tinh tran phien min(2, 4 - prior) (chi khi cl_cum_loss da chay)
   [[ "${CL_CUM_PRIOR:-}" =~ ^[0-9]+(\.[0-9]+)?$ ]] && envs="${envs:+$envs }CANARY_PRIOR_LOSS_USDT=$CL_CUM_PRIOR"
+  # [3i] nguong weight IP (header X-MBX-USED-WEIGHT-1M, chung LEGACY) cho call thuong cua JVM canary — KHONG can file gate;
+  #      khong dat => JVM mac dinh 1800 (75 % x 2400); JVM kep <= 1920. KHONG nang tran lo / tran engine nao khac.
+  if [ -n "${CANARY_IP_WEIGHT_CAP:-}" ]; then
+    [[ "$CANARY_IP_WEIGHT_CAP" =~ ^[0-9]{1,4}$ ]] || die "CANARY_IP_WEIGHT_CAP='$CANARY_IP_WEIGHT_CAP' khong phai so nguyen (mac dinh 1800, tran 1920)"
+    envs="${envs:+$envs }CANARY_IP_WEIGHT_CAP=$CANARY_IP_WEIGHT_CAP"
+  fi
   for a in "$@" $envs; do [[ "$a" =~ ^[A-Za-z0-9_=.]+$ ]] || die "tham so la: $a"; done
   id="${TS}_$$_${RANDOM}"
   say "--> JVM canary: $* ${envs:+(env $envs)}"

@@ -784,6 +784,59 @@ public class CanaryEngineTest {
     }
 
     @Test
+    public void i3ProtectiveStopNotPlaceableWithin61sFlattensCanaryQtyOnly() throws Exception {
+        preflight();
+        mock.setPosition("C05USDT", new BigDecimal("7"), BigDecimal.ONE);   // LEGACY (symbol khac, cung tai khoan)
+        final long[] buyAt = {-1L}, sellAt = {-1L};
+        final boolean[] sellInLane = {false};
+        ExchangeGateway px = (ExchangeGateway) java.lang.reflect.Proxy.newProxyInstance(ExchangeGateway.class.getClassLoader(),
+                new Class<?>[]{ExchangeGateway.class}, (p0, m, a) -> {
+                    if ("newStopMarket".equals(m.getName())) {   // IP LEGACY bao hoa: stop bao ve luon bi guard client tu choi
+                        throw new GatewayException(ErrorKind.RATE_LIMIT, 0, 0, "rate guard: het ngan sach (gia lap IP)", true, 60_500L, null);
+                    }
+                    if ("newMarketOrder".equals(m.getName())) {
+                        if (Boolean.TRUE.equals(a[4])) {
+                            if (sellAt[0] < 0) sellAt[0] = now.get();
+                            sellInLane[0] = RateGuard.inEmergencyLane();
+                        } else if (buyAt[0] < 0) {
+                            buyAt[0] = now.get();
+                            Object o;
+                            try {
+                                o = m.invoke(mock, a);
+                            } catch (java.lang.reflect.InvocationTargetException ex) {
+                                throw ex.getCause();
+                            }
+                            mock.now = now.addAndGet(2_000L);   // tre REST 2 s cua lenh mo => cho guard 61 s se qua han
+                            return o;
+                        }
+                    }
+                    try {
+                        return m.invoke(mock, a);
+                    } catch (java.lang.reflect.InvocationTargetException ex) {
+                        throw ex.getCause();
+                    }
+                });
+        RateGuard rg = new RateGuard(RateGuard.Limits.binanceDefault(), 0.5, 2_000L, rgClock());
+        CanaryEngine e = engineRaw(cfg(), px, rg);
+        CanaryEngine.Result r = e.step("K1");
+        boolean deadline = e.journal().entries().stream().anyMatch(x -> "GUARD_DEADLINE".equals(x.get("type")));
+        boolean protectFail = e.journal().entries().stream().anyMatch(x -> "PROTECT_FAIL".equals(x.get("type")));
+        System.out.println("I3 K1: " + r.line() + " buy->sell ms=" + (sellAt[0] - buyAt[0]));
+        e.close();
+        assertEquals(r.line(), CanaryEngine.TRUOT, r.verdict);
+        assertTrue(r.line(), r.line().contains("stop bao ve"));
+        assertTrue(protectFail);
+        assertTrue("khong cho qua han 61 s (GUARD_DEADLINE)", deadline);
+        assertTrue(buyAt[0] >= 0 && sellAt[0] >= 0);
+        assertTrue("dong bat dau <= 61 s tu luc gui lenh mo: " + (sellAt[0] - buyAt[0]), sellAt[0] - buyAt[0] <= 61_000L);
+        assertTrue("dong qua lan khan cap", sellInLane[0]);
+        assertEquals("phan canary da dong", 0, mock.position(MAIN).signum());
+        assertEquals("LEGACY nguyen ven", 0, new BigDecimal("7").compareTo(mock.position("C05USDT")));
+        assertEquals("khong lenh nao tren symbol LEGACY", 0L, mock.callLog().stream().filter(x -> x.contains(":C05USDT:")).count());
+        assertEquals(0, mock.openStops(MAIN).size());
+    }
+
+    @Test
     public void h3ClosePositionStopEvidenceIsAppliedOnlyOnce() throws Exception {
         preflight();
         ok(run("K1"));

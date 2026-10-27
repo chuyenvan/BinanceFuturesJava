@@ -23,6 +23,11 @@ import java.util.Optional;
  *   <li>429 -> back-off (Retry-After hoac 2s*2^n, tran 120s); 418 (ban IP) -> Retry-After hoac 300s*2^n; chan moi call toi het han.</li>
  *   <li>[3e] {@link Lane} KHAN CAP theo luong (flatten / cleanup): khong bao gio bi ngan sach noi bo / so weight IP tu choi;
  *       van lui khi san 429/418 va khi cham 100 % gioi han san.</li>
+ *   <li>[3i] {@link CanaryPolicy} (CHI JVM canary, IP chung LEGACY): call thuong nhan khi header IP + cost &lt;= ipAdmitCap (1800 =
+ *       75 % x 2400) VA weight canary tu goi (cua so truot 60 s) + cost &lt;= ownCap (600); call DOC bi tu choi => cho sang phut moi
+ *       (&lt;= 61 s) toi da 2 lan; call doc thuong trong giay [27, 40] cua phut => ngu toi giay 41 (tranh burst LEGACY). Lan khan cap
+ *       GIU NGUYEN. Khong co chinh sach (null) => hanh vi cu (c3_live chinh).</li>
+ *   <li>[3i] {@link Urgent} (stop bao ve ngay sau khop): khong ngu burst; moi lan cho phai xong truoc han (khong thi loi ngay).</li>
  * </ul>
  */
 public final class RateGuard {
@@ -114,6 +119,8 @@ public final class RateGuard {
 
     private long peakWeight1m, peakOrders10s, peakOrders1m, waitsTotalMs, rejects;
     private long emergencyCalls, emergencyOverBudget, emergencyBlocked;
+    private final CanaryPolicy policy;
+    private long readWaitsTotal, burstSleeps, burstSleepMsTotal;
 
     /** [3e] Lan khan cap cho toi da khi san DANG chan (429/418): > back-off 429 toi da (120 s); chan lau hon (418) => loi san. */
     public static final long EMERGENCY_MAX_BLOCK_WAIT_MS = 125_000L;
@@ -150,7 +157,94 @@ public final class RateGuard {
         return EMERGENCY_DEPTH.get()[0] > 0;
     }
 
+    // ------------------------------------------------------------------ [3i] chinh sach canary + pham vi KHAN (stop bao ve)
+    /** [3i] Chinh sach rieng JVM canary (tai khoan chinh, IP chung LEGACY). Gia tri do CanaryLimits truyen vao. */
+    public static final class CanaryPolicy {
+        /** header X-MBX-USED-WEIGHT-1M (ca IP, cung phut co dinh) + cost &gt; muc nay => cho / tu choi call thuong. */
+        public final int ipAdmitCap;
+        /** weight canary TU GOI (JVM nay, cua so truot 60 s) + cost &gt; muc nay => cho / tu choi call thuong. */
+        public final int ownCap;
+        /** giay trong phut [burstFromSec, burstToSec] => call doc thuong ngu toi giay burstResumeSec (heuristic burst LEGACY :30). */
+        public final int burstFromSec;
+        public final int burstToSec;
+        public final int burstResumeSec;
+        /** so lan cho toi da cua 1 call DOC bi tu choi. */
+        public final int readMaxWaits;
+        /** moi lan cho cua call doc &lt;= muc nay (het phut + 1 s). */
+        public final long readWaitMaxMs;
+
+        public CanaryPolicy(int ipAdmitCap, int ownCap, int burstFromSec, int burstToSec, int burstResumeSec, int readMaxWaits,
+                            long readWaitMaxMs) {
+            this.ipAdmitCap = ipAdmitCap;
+            this.ownCap = ownCap;
+            this.burstFromSec = burstFromSec;
+            this.burstToSec = burstToSec;
+            this.burstResumeSec = burstResumeSec;
+            this.readMaxWaits = readMaxWaits;
+            this.readWaitMaxMs = readWaitMaxMs;
+        }
+
+        @Override
+        public String toString() {
+            return "ip<=" + ipAdmitCap + " own<=" + ownCap + " burst[" + burstFromSec + "," + burstToSec + "]->" + burstResumeSec
+                    + " readWaits<=" + readMaxWaits + "x" + readWaitMaxMs + "ms";
+        }
+    }
+
+    private static final ThreadLocal<long[]> URGENT_DEADLINE = ThreadLocal.withInitial(() -> new long[]{Long.MAX_VALUE});
+
+    /**
+     * [3i] Pham vi KHAN theo LUONG: dat stop bao ve ngay sau khi lenh mo khop. Khong ngu cua so burst; moi lan cho cua guard
+     * (RateGuard / CanaryGateway) phai ket thuc truoc {@code deadlineMs} — khong thi loi ngay de engine dong vi the qua lan khan cap.
+     * Ngan sach / nguong IP van ap dung (KHONG phai lan khan cap).
+     */
+    public static final class Urgent implements AutoCloseable {
+        private final long prev;
+        private boolean closed;
+
+        private Urgent(long deadlineMs) {
+            long[] d = URGENT_DEADLINE.get();
+            prev = d[0];
+            d[0] = Math.min(prev, deadlineMs);
+        }
+
+        @Override
+        public void close() {
+            if (closed) return;
+            closed = true;
+            URGENT_DEADLINE.get()[0] = prev;
+        }
+    }
+
+    public static Urgent urgent(long deadlineMs) {
+        return new Urgent(deadlineMs);
+    }
+
+    public static boolean inUrgent() {
+        return URGENT_DEADLINE.get()[0] != Long.MAX_VALUE;
+    }
+
+    /** Han cua pham vi KHAN (epoch ms); Long.MAX_VALUE = khong co. */
+    public static long urgentDeadlineMs() {
+        return URGENT_DEADLINE.get()[0];
+    }
+
+    /** [3i] ms phai ngu truoc khi gui call thuong (0 = khong): giay trong phut thuoc [from, to] => toi giay resume. */
+    public static long burstDelayMs(long nowMs, CanaryPolicy p) {
+        if (p == null) return 0L;
+        long inMin = Math.floorMod(nowMs, 60_000L);
+        long sec = inMin / 1000L;
+        if (sec < p.burstFromSec || sec > p.burstToSec) return 0L;
+        return Math.max(0L, p.burstResumeSec * 1000L - inMin);
+    }
+
     public RateGuard(Limits limits, double fraction, long maxWaitMs, Clock clock) {
+        this(limits, fraction, maxWaitMs, clock, null);
+    }
+
+    /** [3i] {@code policy} != null => chinh sach canary (xem {@link CanaryPolicy}); null = hanh vi cu. */
+    public RateGuard(Limits limits, double fraction, long maxWaitMs, Clock clock, CanaryPolicy policy) {
+        this.policy = policy;
         double f = fraction <= 0 || Double.isNaN(fraction) ? MAX_FRACTION : Math.min(MAX_FRACTION, fraction);
         this.fraction = f;
         this.maxWaitMs = Math.max(0L, maxWaitMs);
@@ -166,9 +260,11 @@ public final class RateGuard {
         this.budgetWeight1m = Math.max(1, (int) Math.floor(l.weight1m * fraction));
         this.budgetOrders10s = Math.max(1, (int) Math.floor(l.orders10s * fraction));
         this.budgetOrders1m = Math.max(1, (int) Math.floor(l.orders1m * fraction));
-        LOG.info("[C3-RATE] limits {} fraction={} -> budget w1m={} o10s={} o1m={}", l, fraction, budgetWeight1m,
-                budgetOrders10s, budgetOrders1m);
+        LOG.info("[C3-RATE] limits {} fraction={} -> budget w1m={} o10s={} o1m={}{}", l, fraction, budgetWeight1m,
+                budgetOrders10s, budgetOrders1m, policy == null ? "" : " canary(" + policy + ")");
     }
+
+    public CanaryPolicy policy() { return policy; }
 
     public synchronized Limits getLimits() { return limits; }
     public synchronized int budgetWeight1m() { return budgetWeight1m; }
@@ -185,41 +281,83 @@ public final class RateGuard {
      * Cho toi khi du ngan sach (toi da maxWait) roi GHI NHAN su dung. Khong du trong han -> RATE_LIMIT (request CHUA gui).
      */
     public void acquire(int weight, int orders, long maxWait) {
+        acquire(weight, orders, maxWait, false);
+    }
+
+    /**
+     * [3i] {@code read} = call CHI DOC (GET). Chinh sach canary: call doc bi tu choi qua maxWait => cho (can cho + 1 s, &lt;= 61 s)
+     * toi da readMaxWaits lan roi moi loi (retryAfter = 0 => lop tren KHONG cho them); call doc thuong trong cua so burst => ngu toi
+     * giay resume truoc. Lenh ghi: nhu cu (cho &lt;= maxWait; qua => RATE_LIMIT kem retryAfter, CanaryGateway kiem lai roi thu lai).
+     * Pham vi {@link Urgent}: khong ngu burst, khong cho qua han.
+     */
+    public void acquire(int weight, int orders, long maxWait, boolean read) {
         if (weight < 0 || orders < 0) throw new IllegalArgumentException("weight/orders am");
         if (inEmergencyLane()) {   // [3e] flatten/cleanup: khong bao gio bi ngan sach rieng tu choi
             acquireEmergency(weight, orders);
             return;
         }
+        if (policy != null && read) burstSleep();
         long start = clock.nowMs();
         long deadline = start + Math.max(0L, maxWait);
+        int readWaits = 0;
         while (true) {
-            long wait;
-            long now;
+            long sleep;
             synchronized (this) {
-                now = clock.nowMs();
-                if (weight > budgetWeight1m || orders > budgetOrders10s || orders > budgetOrders1m) {
+                long now = clock.nowMs();
+                int capW = policy != null ? policy.ownCap : budgetWeight1m;
+                if (weight > capW || orders > budgetOrders10s || orders > budgetOrders1m) {
                     rejects++;
                     throw new GatewayException(ErrorKind.RATE_LIMIT, 0, 0, "rate guard: 1 request vuot ngan sach (w=" + weight
                             + " o=" + orders + ")", true, 0L, null);
                 }
-                wait = waitNeeded(now, weight, orders);
+                long wait = waitNeeded(now, weight, orders);
                 if (wait <= 0) {
                     record(now, weight, orders);
                     waitsTotalMs += Math.max(0L, now - start);
                     return;
                 }
-                if (now + wait > deadline) {
+                if (now + wait <= deadline && now + wait <= urgentDeadlineMs()) {
+                    sleep = wait;
+                } else if (policy != null && read && readWaits < policy.readMaxWaits && wait + 1_000L <= policy.readWaitMaxMs
+                        && now + wait + 1_000L <= urgentDeadlineMs()) {
+                    readWaits++;
+                    readWaitsTotal++;
+                    sleep = wait + 1_000L;
+                    LOG.warn("[C3-RATE] canary: call doc w={} bi tu choi (header IP {} / rieng {} trong 60 s) -> cho {} ms (lan {}/{})",
+                            weight, serverWeight, weightSum, sleep, readWaits, policy.readMaxWaits);
+                } else {
                     rejects++;
+                    boolean readFinal = policy != null && read;
                     throw new GatewayException(ErrorKind.RATE_LIMIT, 0, 0, "rate guard: het ngan sach, can cho " + wait
-                            + " ms > han " + maxWait + " ms", true, wait, null);
+                            + " ms > han " + maxWait + " ms" + (readFinal ? " (call doc: da cho " + readWaits + " lan)" : ""), true,
+                            readFinal ? 0L : wait, null);
                 }
             }
             try {
-                clock.sleepMs(wait);
+                clock.sleepMs(sleep);
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
                 throw new GatewayException(ErrorKind.RATE_LIMIT, 0, 0, "rate guard: bi interrupt khi cho", true, 0L, ie);
             }
+        }
+    }
+
+    /** [3i] call doc thuong trong cua so burst LEGACY => ngu toi giay resume (khong ap dung lan khan cap / pham vi KHAN). */
+    private void burstSleep() {
+        if (inUrgent()) return;
+        long ms = burstDelayMs(clock.nowMs(), policy);
+        if (ms <= 0) return;
+        synchronized (this) {
+            burstSleeps++;
+            burstSleepMsTotal += ms;
+        }
+        LOG.info("[C3-RATE] canary: dang trong cua so burst LEGACY [{}, {}] s -> ngu {} ms toi giay {}", policy.burstFromSec,
+                policy.burstToSec, ms, policy.burstResumeSec);
+        try {
+            clock.sleepMs(ms);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            throw new GatewayException(ErrorKind.RATE_LIMIT, 0, 0, "rate guard: bi interrupt khi cho burst", true, 0L, ie);
         }
     }
 
@@ -282,8 +420,11 @@ public final class RateGuard {
         long w = 0;
         // weight / 1m
         int srvW = serverWeightBucket == now / WEIGHT_WINDOW_MS ? serverWeight : -1;
-        if (weightSum + weight > budgetWeight1m) w = Math.max(w, expiryWait(weightEv, weightSum, weight, budgetWeight1m, WEIGHT_WINDOW_MS, now));
-        if (srvW >= 0 && srvW + weight > budgetWeight1m) w = Math.max(w, WEIGHT_WINDOW_MS - (now % WEIGHT_WINDOW_MS) + 1);
+        // [3i] canary: rieng = ownCap (weight tu goi), IP = ipAdmitCap (header ca IP chung LEGACY); khong chinh sach => 50 % ca hai
+        int capOwn = policy != null ? policy.ownCap : budgetWeight1m;
+        int capIp = policy != null ? Math.min(policy.ipAdmitCap, limits.weight1m) : budgetWeight1m;
+        if (weightSum + weight > capOwn) w = Math.max(w, expiryWait(weightEv, weightSum, weight, capOwn, WEIGHT_WINDOW_MS, now));
+        if (srvW >= 0 && srvW + weight > capIp) w = Math.max(w, WEIGHT_WINDOW_MS - (now % WEIGHT_WINDOW_MS) + 1);
         if (orders > 0) {
             int s10 = serverOrder10Bucket == now / ORDER10_WINDOW_MS ? serverOrder10 : -1;
             int s60 = serverOrder60Bucket == now / ORDER60_WINDOW_MS ? serverOrder60 : -1;
@@ -334,8 +475,9 @@ public final class RateGuard {
         if (usedWeight1m != null) { serverWeight = usedWeight1m; serverWeightBucket = now / WEIGHT_WINDOW_MS; }
         if (orderCount10s != null) { serverOrder10 = orderCount10s; serverOrder10Bucket = now / ORDER10_WINDOW_MS; }
         if (orderCount1m != null) { serverOrder60 = orderCount1m; serverOrder60Bucket = now / ORDER60_WINDOW_MS; }
-        if (usedWeight1m != null && usedWeight1m > budgetWeight1m) {
-            LOG.warn("[C3-RATE] san bao used weight 1m = {} > ngan sach {} (IP chung LEGACY?) -> c3_live cho het phut", usedWeight1m, budgetWeight1m);
+        int warnAt = policy != null ? policy.ipAdmitCap : budgetWeight1m;
+        if (usedWeight1m != null && usedWeight1m > warnAt) {
+            LOG.warn("[C3-RATE] san bao used weight 1m = {} > nguong {} (IP chung LEGACY?) -> call thuong cho het phut", usedWeight1m, warnAt);
         }
     }
 
@@ -375,4 +517,7 @@ public final class RateGuard {
     public synchronized long emergencyCalls() { return emergencyCalls; }
     public synchronized long emergencyOverBudget() { return emergencyOverBudget; }
     public synchronized long emergencyBlocked() { return emergencyBlocked; }
+    public synchronized long readWaitsTotal() { return readWaitsTotal; }
+    public synchronized long burstSleeps() { return burstSleeps; }
+    public synchronized long burstSleepMsTotal() { return burstSleepMsTotal; }
 }

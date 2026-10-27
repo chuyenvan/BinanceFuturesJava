@@ -21,6 +21,9 @@
 # Dung khan cap: touch ~/claude_master/canary/CANARY_STOP (phien dung o lan kiem ke tiep + flatten) hoac canary_early_flatten.sh.
 # Ket qua: ~/claude_master/canary/canary_early_all_<TS>.txt (+ file ket qua phien canary_early_result_<TS>.txt). Khong chua key.
 # Moc test (test_fake242.sh): CL_WAIT_MAX_S, CL_WAIT_POLL_S, CL_FLAT_RECHECK_S, CL_FAKE_HM, CANARY_TG_SINK, CANARY_TG_ENV.
+# [3i] Tuy chon (khong can file gate): CANARY_IP_WEIGHT_CAP=<so> nguong weight IP cho call thuong cua JVM canary (mac dinh 1800,
+#      tran 1920). Trong luc CHO khung gio, keycheck khong doc duoc (vd guard IP tam thoi) => thu lai o lan poll sau; DUNG khi
+#      10 lan lien tiep.
 # =============================================================================
 export CANARY_MODE=early
 . "$(cd "$(dirname "$0")" && pwd)/canary_lib.sh"
@@ -177,27 +180,58 @@ must_flat() {
   ok "pham vi canary phang ($1: $CL_FLAT)"
 }
 
+# [3i] flat_poll <nhan>: nhu must_flat, NHUNG keycheck khong doc duoc (vd guard IP tam thoi khi LEGACY burst) => KHONG dung ngay:
+#   dem lien tiep, tra 1 (thu lai o lan poll sau); DUNG khi KC_FAIL_MAX (10) lan lien tiep. Doc duoc + KHONG phang => DUNG nhu cu.
+readonly KC_FAIL_MAX=10
+KC_FAILS=0
+flat_poll() {
+  local r
+  cl_flat_read; r=$?
+  if [ "$r" = 2 ]; then
+    KC_FAILS=$((KC_FAILS + 1))
+    [ "$KC_FAILS" -ge "$KC_FAIL_MAX" ] && die "khong doc duoc trang thai pham vi canary $KC_FAILS lan lien tiep ($1): $CL_FLAT_WHY"
+    say "keycheck chua doc duoc ($1, lan $KC_FAILS/$KC_FAIL_MAX lien tiep): $CL_FLAT_WHY — chua gui lenh nao, thu lai o lan poll sau (${WPOLL}s)"
+    return 1
+  fi
+  KC_FAILS=0
+  [ "$r" = 0 ] || die "pham vi canary KHONG phang ($1: $CL_FLAT) — KHONG cho khung gio khi con vi the/lenh/stop canary (MAJ-C1)"
+  ok "pham vi canary phang ($1: $CL_FLAT)"
+  return 0
+}
+
 # wait_window <nhan>: cho khung gio hop le CHI KHI phang (kiem phang luc vao, moi RECHECK s, va ngay truoc khi qua). Toi da WAIT_MAX s.
+# [3i] lan kiem phang chua doc duoc => okflat=0: KHONG qua khung gio, doc lai moi poll (toi da 10 lan lien tiep).
 wait_window() {
-  local t0 last now
+  local t0 last now okflat=0
   STAGE="cho khung gio ($1)"
   t0=$(date +%s)
   step_guard "cho khung gio $1"
-  must_flat "vao cho $1"; last=$(date +%s)
-  if win_ok; then ok "dang trong khung gio ($1)"; return 0; fi
-  say "ngoai khung gio — CHO (toi da ${WAIT_MAX}s, kiem phang moi ${RECHECK}s; tai khoan phang nen an toan)"
+  flat_poll "vao cho $1" && okflat=1; last=$(date +%s)
+  if [ "$okflat" = 1 ] && win_ok; then ok "dang trong khung gio ($1)"; return 0; fi
+  [ "$okflat" = 1 ] && say "ngoai khung gio — CHO (toi da ${WAIT_MAX}s, kiem phang moi ${RECHECK}s; tai khoan phang nen an toan)"
   while :; do
     sleep "$WPOLL"
     now=$(date +%s)
     [ -e "$STOPF" ] && die "co file STOP $STOPF trong luc cho khung gio"
-    if win_ok; then
+    if [ "$okflat" = 0 ]; then
+      step_guard "doc lai $1"
+      if flat_poll "doc lai $1"; then
+        okflat=1
+        if win_ok; then ok "vao khung gio ($1) sau $(( $(date +%s) - t0 ))s"; return 0; fi
+        say "ngoai khung gio — CHO (toi da ${WAIT_MAX}s, kiem phang moi ${RECHECK}s; tai khoan phang nen an toan)"
+      fi
+      last=$(date +%s)
+    elif win_ok; then
       step_guard "het cho $1"
-      must_flat "het cho $1"
-      if win_ok; then ok "vao khung gio ($1) sau $(( $(date +%s) - t0 ))s"; return 0; fi
+      if flat_poll "het cho $1"; then
+        if win_ok; then ok "vao khung gio ($1) sau $(( $(date +%s) - t0 ))s"; return 0; fi
+      else
+        okflat=0
+      fi
       last=$(date +%s)
     elif [ $(( now - last )) -ge "$RECHECK" ]; then
       step_guard "dang cho $1"
-      must_flat "dang cho $1"; last=$(date +%s)
+      flat_poll "dang cho $1" || okflat=0; last=$(date +%s)
     fi
     [ $(( $(date +%s) - t0 )) -ge "$WAIT_MAX" ] && die "cho khung gio qua $(( WAIT_MAX / 60 )) phut ($1) — chay lai lenh sau"
   done

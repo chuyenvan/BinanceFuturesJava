@@ -64,6 +64,8 @@ public final class C3LiveClient implements ExchangeGateway {
     static final int W_TIME = 1, W_EXINFO = 1, W_ORDER = 1, W_QUERY = 1, W_OPEN_SYM = 1, W_OPEN_ALL = 40,
             W_POSITION = 5, W_ACCOUNT = 5, W_MULTI = 30, W_DUAL = 30, W_SYMCFG = 5, W_SET = 1, W_LISTEN = 1,
             W_TICKER_SYM = 1, W_TICKER_ALL = 40;
+    /** [3i] dang trong 1 call GHI cua luong nay: GET long ben trong (dong bo gio) KHONG ngu burst / cho => kiem truoc ghi -> gui lien nhau. */
+    private static final ThreadLocal<int[]> IN_WRITE = ThreadLocal.withInitial(() -> new int[1]);
 
     private enum Sec { NONE, API_KEY, SIGNED }
 
@@ -452,8 +454,20 @@ public final class C3LiveClient implements ExchangeGateway {
 
     private JsonElement call(String method, String path, Map<String, String> params, Sec sec, int weight, int orders) {
         boolean mutating = !"GET".equals(method);
-        rate.acquire(weight, orders, cfg.rateMaxWaitMs());
-        if (sec == Sec.SIGNED) maybeSyncTime();
+        // [3i] GET = doc (chinh sach canary: ngu burst / cho sang phut moi); GET long trong lenh ghi (dong bo gio) = khong cho
+        rate.acquire(weight, orders, cfg.rateMaxWaitMs(), !mutating && IN_WRITE.get()[0] == 0);
+        if (sec == Sec.SIGNED) {
+            if (mutating) {
+                IN_WRITE.get()[0]++;
+                try {
+                    maybeSyncTime();
+                } finally {
+                    IN_WRITE.get()[0]--;
+                }
+            } else {
+                maybeSyncTime();
+            }
+        }
         StringBuilder q = new StringBuilder();
         for (Map.Entry<String, String> e : params.entrySet()) {
             if (q.length() > 0) q.append('&');

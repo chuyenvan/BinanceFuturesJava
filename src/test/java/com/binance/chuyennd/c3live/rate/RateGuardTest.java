@@ -260,4 +260,182 @@ public class RateGuardTest {
         assertFalse("luong khac khong thua lan khan cap", other[0]);
         assertFalse(RateGuard.inEmergencyLane());
     }
+
+    // ------------------------------------------------------------------ [3i] chinh sach canary (IP chung LEGACY)
+    static RateGuard.CanaryPolicy canaryPolicy() {
+        return new RateGuard.CanaryPolicy(1800, 600, 27, 40, 41, 2, 61_000L);
+    }
+
+    static long atSecond(long t, int sec) {
+        return Math.floorDiv(t, 60_000L) * 60_000L + 60_000L + sec * 1000L;
+    }
+
+    /** weight cac call cua keycheck (W_* C3LiveClient): serverTime, account, multiAssets, dual, positions, openOrders all, openStops all. */
+    static final int[] KEYCHECK_W = {1, 5, 30, 30, 5, 40, 40};
+
+    @Test
+    public void i3KeycheckAtSecond30WithIpHeader1494WaitsAndSucceedsNeverAboveCap() {
+        // 3h that 05:11:42: header IP 1494 (LEGACY) > ngan sach 50 % = 1200 => keycheck TRUOT "can cho 15660 ms > han 2000 ms"
+        FakeClock c0 = new FakeClock();
+        c0.now = atSecond(c0.now, 30);
+        RateGuard old = new RateGuard(RateGuard.Limits.binanceDefault(), 0.5, 2_000L, c0);
+        old.onHeaders(1494, null, null);
+        try {
+            old.acquire(1, 0, 2_000L);
+            fail("hanh vi 3h: phai bi tu choi");
+        } catch (GatewayException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("het ngan sach"));
+        }
+        // 3i: nguong IP 1800, rieng 600, burst [27, 40] => ngu toi :41 roi gui; KHONG lan gui nao co IP + cost > 1800
+        FakeClock c = new FakeClock();
+        c.now = atSecond(c.now, 30);
+        long minute = Math.floorDiv(c.now, 60_000L);
+        RateGuard g = new RateGuard(RateGuard.Limits.binanceDefault(), 0.5, 2_000L, c, canaryPolicy());
+        int ip = 1494;   // weight IP cua phut nay (LEGACY), san bao qua header
+        g.onHeaders(ip, null, null);
+        List<long[]> sends = new ArrayList<>();
+        for (int w : KEYCHECK_W) {
+            g.acquire(w, 0, 2_000L, true);
+            sends.add(new long[]{c.now, ip, w});
+            ip += w;                                  // san tinh weight cua call vua gui
+            g.onHeaders(ip, null, null);
+            c.now += 20;
+        }
+        assertEquals(KEYCHECK_W.length, sends.size());
+        assertEquals("cung phut (khong cho sang phut moi)", minute, Math.floorDiv(sends.get(0)[0], 60_000L));
+        assertTrue("ngu qua cua so burst toi giay 41", Math.floorMod(sends.get(0)[0], 60_000L) >= 41_000L);
+        assertEquals(1, g.burstSleeps());
+        for (long[] s : sends) assertTrue("IP " + s[1] + " + " + s[2] + " <= 1800", s[1] + s[2] <= 1800);
+        assertEquals(0, g.readWaitsTotal());
+        assertEquals(0, g.rejects());
+    }
+
+    @Test
+    public void i3ReadWithIpHeader2300WaitsAtMostTwiceThenFailsCleanly() {
+        final RateGuard[] ref = new RateGuard[1];
+        final List<Long> sleeps = new ArrayList<>();
+        final long[] t = {atSecond(1_761_400_000_000L, 5)};
+        RateGuard.Clock c = new RateGuard.Clock() {
+            @Override public long nowMs() { return t[0]; }
+            @Override public void sleepMs(long ms) {
+                t[0] += ms;
+                sleeps.add(ms);
+                ref[0].onHeaders(2300, null, null);   // gia lap: IP VAN bao hoa o phut moi (LEGACY)
+            }
+        };
+        RateGuard g = new RateGuard(RateGuard.Limits.binanceDefault(), 0.5, 2_000L, c, canaryPolicy());
+        ref[0] = g;
+        g.onHeaders(2300, null, null);
+        try {
+            g.acquire(5, 0, 2_000L, true);
+            fail("phai loi sau 2 lan cho");
+        } catch (GatewayException e) {
+            assertEquals(ErrorKind.RATE_LIMIT, e.getKind());
+            assertTrue(e.isDefinitelyNotExecuted());
+            assertEquals("retryAfter 0 => lop tren khong cho them", 0L, e.getRetryAfterMs());
+            assertTrue(e.getMessage(), e.getMessage().contains("da cho 2 lan"));
+        }
+        assertEquals(2, sleeps.size());
+        for (long s : sleeps) assertTrue("moi lan cho <= 61 s: " + s, s > 0 && s <= 61_000L);
+        assertEquals("khong gui", 0L, g.usedWeight1m());
+        assertEquals(2, g.readWaitsTotal());
+        // lenh GHI: khong cho trong RateGuard (CanaryGateway kiem lai roi thu lai) — loi ngay kem retryAfter <= 61 s
+        sleeps.clear();
+        try {
+            g.acquire(1, 1, 2_000L, false);
+            fail("ghi phai bi tu choi");
+        } catch (GatewayException e) {
+            assertTrue(e.getRetryAfterMs() > 0 && e.getRetryAfterMs() <= 61_000L);
+        }
+        assertTrue(sleeps.isEmpty());
+    }
+
+    @Test
+    public void i3ReadRefusedOnceSucceedsAfterMinuteRolls() {
+        FakeClock c = new FakeClock();
+        c.now = atSecond(c.now, 50);
+        RateGuard g = new RateGuard(RateGuard.Limits.binanceDefault(), 0.5, 2_000L, c, canaryPolicy());
+        g.onHeaders(1795, null, null);   // 1795 + 40 > 1800
+        long m0 = Math.floorDiv(c.now, 60_000L);
+        g.acquire(40, 0, 2_000L, true);
+        assertEquals("gui o phut sau", m0 + 1, Math.floorDiv(c.now, 60_000L));
+        assertTrue(c.slept <= 61_000L);
+        assertEquals(1, g.readWaitsTotal());
+    }
+
+    @Test
+    public void i3OwnWeightCap600() {
+        FakeClock c = new FakeClock();
+        c.now = atSecond(c.now, 0);
+        RateGuard g = new RateGuard(RateGuard.Limits.binanceDefault(), 0.5, 2_000L, c, canaryPolicy());
+        Recorder r = new Recorder(c, g);
+        for (int i = 0; i < 15; i++) r.call(40, 0);   // 600 = tran rieng (header khong co)
+        assertEquals(0L, c.slept);
+        long t = c.now;
+        g.acquire(40, 0, 2_000L, true);             // 640 > 600 => cho call cu nhat het han (doc: <= 61 s)
+        assertTrue(c.now - t > 2_000L && c.now - t <= 61_000L);
+        assertEquals(1, g.readWaitsTotal());
+        try {
+            g.acquire(601, 0, 2_000L, true);
+            fail("1 call > tran rieng");
+        } catch (GatewayException e) {
+            assertTrue(e.getMessage().contains("vuot ngan sach"));
+        }
+    }
+
+    @Test
+    public void i3BurstWindowSleepSkippedOnEmergencyLaneAndUrgentAndWrites() {
+        FakeClock c = new FakeClock();
+        c.now = atSecond(c.now, 30);
+        RateGuard g = new RateGuard(RateGuard.Limits.binanceDefault(), 0.5, 2_000L, c, canaryPolicy());
+        try (RateGuard.Lane l = RateGuard.emergencyLane()) {
+            g.acquire(5, 0, 2_000L, true);
+            g.acquire(1, 1, 2_000L, false);
+        }
+        assertEquals("lan khan cap: khong ngu burst", 0L, c.slept);
+        assertEquals(2, g.emergencyCalls());
+        try (RateGuard.Urgent u = RateGuard.urgent(c.now + 61_000L)) {
+            g.acquire(5, 0, 2_000L, true);           // stop bao ve: doc xac nhan
+            g.acquire(1, 1, 2_000L, false);          // dat stop
+        }
+        assertEquals("pham vi KHAN (stop bao ve): khong ngu burst", 0L, c.slept);
+        assertFalse(RateGuard.inUrgent());
+        g.acquire(1, 1, 2_000L, false);              // lenh ghi thuong: CanaryGateway ngu burst TRUOC kiem (khong ngu o day)
+        assertEquals(0L, c.slept);
+        g.acquire(5, 0, 2_000L, true);               // doc thuong trong [27, 40] => ngu toi :41
+        assertEquals(11_000L, c.slept);
+        assertEquals(1, g.burstSleeps());
+        c.now = atSecond(c.now, 26);
+        long s0 = c.slept;
+        g.acquire(5, 0, 2_000L, true);               // giay 26: ngoai cua so
+        assertEquals(s0, c.slept);
+        assertEquals(0L, RateGuard.burstDelayMs(atSecond(0L, 41), canaryPolicy()));
+        assertEquals(1_000L, RateGuard.burstDelayMs(atSecond(0L, 40), canaryPolicy()));
+        assertEquals(0L, RateGuard.burstDelayMs(atSecond(0L, 30), null));
+    }
+
+    @Test
+    public void i3UrgentDeadlineNeverWaitedPast() {
+        FakeClock c = new FakeClock();
+        c.now = atSecond(c.now, 50);
+        RateGuard g = new RateGuard(RateGuard.Limits.binanceDefault(), 0.5, 2_000L, c, canaryPolicy());
+        g.onHeaders(1799, null, null);   // can cho sang phut moi (~10 s)
+        try (RateGuard.Urgent u = RateGuard.urgent(c.now + 5_000L)) {
+            g.acquire(5, 0, 2_000L, true);
+            fail("doc trong pham vi KHAN khong duoc cho qua han");
+        } catch (GatewayException e) {
+            assertEquals(ErrorKind.RATE_LIMIT, e.getKind());
+        }
+        assertEquals(0L, c.slept);
+    }
+
+    @Test
+    public void i3NoPolicyKeepsOldBehaviour() {
+        FakeClock c = new FakeClock();
+        c.now = atSecond(c.now, 30);
+        RateGuard g = new RateGuard(RateGuard.Limits.binanceDefault(), 0.5, 2_000L, c);
+        g.acquire(5, 0, 2_000L, true);   // khong chinh sach: khong ngu burst
+        assertEquals(0L, c.slept);
+        assertNull(g.policy());
+    }
 }

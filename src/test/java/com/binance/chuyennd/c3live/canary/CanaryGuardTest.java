@@ -360,4 +360,112 @@ public class CanaryGuardTest {
         assertTrue(slept[0] >= 5_000L);
         assertTrue(j.entries().stream().anyMatch(x -> "GUARD_WAIT_RETRY".equals(x.get("type"))));
     }
+
+    // ------------------------------------------------------------------ [3i] guard doc / burst / han stop bao ve
+    private static GatewayException guardRefusal(long retryAfterMs) {
+        return new GatewayException(com.binance.chuyennd.c3live.api.ErrorKind.RATE_LIMIT, 0, 0, "rate guard: het ngan sach (gia lap)",
+                true, retryAfterMs, null);
+    }
+
+    @Test
+    public void i3ReadRefusedByGuardIsWaitedAtMostTwice() {
+        CanaryJournal j = new CanaryJournal(new File(tmp.getRoot(), "j3i.jsonl"), System::currentTimeMillis);
+        CanaryGateway g = new CanaryGateway(mock, new LinkedHashSet<>(Arrays.asList("C00USDT", "C01USDT")), j, () -> 5, lossHit::get);
+        List<Long> sleeps = new ArrayList<>();
+        g.guardSleep = sleeps::add;
+        mock.failNext("positions", guardRefusal(30_000L));
+        mock.failNext("positions", guardRefusal(30_000L));
+        g.positions();   // 2 lan cho roi doc duoc
+        assertEquals(Arrays.asList(31_000L, 31_000L), sleeps);
+        assertEquals(2L, j.entries().stream().filter(x -> "GUARD_WAIT_RETRY".equals(x.get("type"))).count());
+        sleeps.clear();
+        for (int i = 0; i < 3; i++) mock.failNext("positions", guardRefusal(30_000L));
+        try {
+            g.positions();
+            fail("lan tu choi thu 3 => loi (khong cho lan 3)");
+        } catch (GatewayException e) {
+            assertTrue(e.isDefinitelyNotExecuted());
+        }
+        assertEquals(2, sleeps.size());
+    }
+
+    @Test
+    public void i3WriteBurstWindowSleepsBeforePreCheckExceptEmergencyAndUrgent() {
+        CanaryJournal j = new CanaryJournal(new File(tmp.getRoot(), "j3b.jsonl"), System::currentTimeMillis);
+        CanaryGateway g = new CanaryGateway(mock, new LinkedHashSet<>(Arrays.asList("C00USDT", "C01USDT")), j, () -> 5, lossHit::get);
+        final long[] t = {Math.floorDiv(System.currentTimeMillis(), 60_000L) * 60_000L + 30_000L};
+        List<Long> sleeps = new ArrayList<>();
+        g.ownClock = () -> t[0];
+        g.guardSleep = ms -> {
+            sleeps.add(ms);
+            t[0] += ms;
+        };
+        g.burst = new com.binance.chuyennd.c3live.rate.RateGuard.CanaryPolicy(1800, 600, 27, 40, 41, 2, 61_000L);
+        g.newMarketOrder("C00USDT", Side.BUY, new BigDecimal("20"), "c3-C00USDT-1-0", false);
+        assertEquals("lenh mo thuong luc :30 => ngu toi :41", Collections.singletonList(11_000L), sleeps);
+        List<Map<String, Object>> es = j.entries();
+        int burst = -1, firstRead = -1;
+        for (int i = 0; i < es.size(); i++) {
+            if (burst < 0 && "BURST_WAIT".equals(es.get(i).get("type"))) burst = i;
+            if (firstRead < 0 && "CALL_R".equals(es.get(i).get("type"))) firstRead = i;
+        }
+        assertTrue("ngu burst TRUOC doc kiem truoc ghi (kiem -> gui lien nhau)", burst >= 0 && firstRead > burst);
+        assertTrue(g.firstSentMs("c3-C00USDT-1-0") >= t[0] - 1);
+        t[0] = Math.floorDiv(t[0], 60_000L) * 60_000L + 60_000L + 30_000L;
+        sleeps.clear();
+        try (com.binance.chuyennd.c3live.rate.RateGuard.Lane l = com.binance.chuyennd.c3live.rate.RateGuard.emergencyLane()) {
+            g.newMarketOrder("C00USDT", Side.SELL, new BigDecimal("10"), "c3x-C00USDT-1-1", true);
+        }
+        assertTrue("lan khan cap: khong ngu burst", sleeps.isEmpty());
+        try (com.binance.chuyennd.c3live.rate.RateGuard.Urgent u = com.binance.chuyennd.c3live.rate.RateGuard.urgent(t[0] + 61_000L)) {
+            g.newStopMarket("C00USDT", Side.SELL, null, new BigDecimal("0.96"), "c3s-C00USDT-1-0", false);
+        }
+        assertTrue("stop bao ve (pham vi KHAN): khong ngu burst", sleeps.isEmpty());
+        assertEquals(1, mock.calls("newStopMarket"));
+    }
+
+    @Test
+    public void i3UrgentDeadlineStopsGuardWaitsForStop() {
+        CanaryJournal j = new CanaryJournal(new File(tmp.getRoot(), "j3u.jsonl"), System::currentTimeMillis);
+        CanaryGateway g = new CanaryGateway(mock, new LinkedHashSet<>(Arrays.asList("C00USDT", "C01USDT")), j, () -> 5, lossHit::get);
+        final long[] t = {1_000_000L};
+        List<Long> sleeps = new ArrayList<>();
+        g.ownClock = () -> t[0];
+        g.guardSleep = ms -> {
+            sleeps.add(ms);
+            t[0] += ms;
+        };
+        g.newMarketOrder("C00USDT", Side.BUY, new BigDecimal("20"), "c3-C00USDT-1-0", false);
+        try (com.binance.chuyennd.c3live.rate.RateGuard.Urgent u = com.binance.chuyennd.c3live.rate.RateGuard.urgent(t[0] + 10_000L)) {
+            mock.failNext("newStopMarket", guardRefusal(30_000L));
+            try {
+                g.newStopMarket("C00USDT", Side.SELL, null, new BigDecimal("0.96"), "c3s-C00USDT-1-0", false);
+                fail("cho 31 s > han 10 s => loi ngay");
+            } catch (GatewayException e) {
+                assertTrue(e.isDefinitelyNotExecuted());
+            }
+            mock.failNext("positions", guardRefusal(30_000L));   // doc trong kiem truoc stop (preStop)
+            try {
+                g.newStopMarket("C00USDT", Side.SELL, null, new BigDecimal("0.96"), "c3s-C00USDT-1-1", false);
+                fail("kiem truoc stop: cho qua han => loi ngay");
+            } catch (GatewayException e) {
+                assertTrue(e.isDefinitelyNotExecuted());
+            }
+        }
+        assertTrue("khong cho qua han", sleeps.isEmpty());
+        assertEquals(2L, j.entries().stream().filter(x -> "GUARD_DEADLINE".equals(x.get("type"))).count());
+        assertEquals(0, mock.openStops("C00USDT").size());
+    }
+
+    @Test
+    public void i3IpWeightCapEnvParsing() {
+        assertEquals(1800, CanaryLimits.ipWeightCap(null));
+        assertEquals(1800, CanaryLimits.ipWeightCap(" "));
+        assertEquals(1700, CanaryLimits.ipWeightCap("1700"));
+        assertEquals(1920, CanaryLimits.ipWeightCap("2400"));
+        assertEquals(1800, CanaryLimits.ipWeightCap("abc"));
+        assertEquals(1800, CanaryLimits.ipWeightCap("0"));
+        assertEquals(1800, CanaryLimits.IP_WEIGHT_ADMIT_DEFAULT);
+        assertEquals(1920, CanaryLimits.IP_WEIGHT_ADMIT_MAX);
+    }
 }

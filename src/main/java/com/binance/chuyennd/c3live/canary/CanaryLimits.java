@@ -37,6 +37,42 @@ public final class CanaryLimits {
     /** Du phong phi dong + truot khi stop kich (USDT), tru vao ngan sach khi tinh stop bao ve. */
     public static final double STOP_FEE_RESERVE_USDT = 0.10d;
 
+    // ------------------------------------------------------------------ [3i] rate guard JVM canary (IP chung LEGACY)
+    /**
+     * [3i] Call thuong cua canary chi duoc gui khi header X-MBX-USED-WEIGHT-1M (CA IP, chung LEGACY) + cost &lt;= muc nay (75 % x 2400).
+     * Mac dinh; script co the ha / nang qua env CANARY_IP_WEIGHT_CAP (khong can file gate) — NGOAI LE duy nhat doc tu env, kep
+     * &lt;= {@link #IP_WEIGHT_ADMIT_MAX}.
+     */
+    public static final int IP_WEIGHT_ADMIT_DEFAULT = 1800;
+    /** [3i] tran CUNG cua nguong IP (80 % x 2400): env lon hon bi kep ve day. */
+    public static final int IP_WEIGHT_ADMIT_MAX = 1920;
+    /** [3i] weight canary TU GOI trong 60 s (tieu chi 5 §ADD-4 I) + cost &gt; muc nay => cho. */
+    public static final int OWN_WEIGHT_1M_CAP = 600;
+    /**
+     * [3i] Heuristic tranh burst LEGACY: v_t_m TickerIngestor2AerospikeNew chot nen 1 phut quanh giay :30 roi LEGACY goi REST
+     * don dap (~1300 weight/phut) => call thuong (khong khan cap, khong stop bao ve) trong giay [27, 40] ngu toi giay 41.
+     */
+    public static final int BURST_FROM_SEC = 27;
+    public static final int BURST_TO_SEC = 40;
+    public static final int BURST_RESUME_SEC = 41;
+    /** [3i] call DOC bi guard tu choi: cho sang phut moi (&lt;= 61 s) toi da so lan nay roi moi loi. */
+    public static final int READ_GUARD_MAX_WAITS = 2;
+    /** [3i] tu luc gui lenh mo (khop) toi luc stop bao ve duoc XAC NHAN tren san: qua han => dong vi the canary (lan khan cap), TRUOT. */
+    public static final long PROTECT_MAX_MS = 61_000L;
+
+    /** [3i] nguong IP tu env CANARY_IP_WEIGHT_CAP: rong / sai / &lt;= 0 => mac dinh 1800; &gt; 1920 => 1920. */
+    public static int ipWeightCap(String raw) {
+        if (raw == null || raw.trim().isEmpty()) return IP_WEIGHT_ADMIT_DEFAULT;
+        int v;
+        try {
+            v = Integer.parseInt(raw.trim());
+        } catch (NumberFormatException e) {
+            return IP_WEIGHT_ADMIT_DEFAULT;
+        }
+        if (v <= 0) return IP_WEIGHT_ADMIT_DEFAULT;
+        return Math.min(v, IP_WEIGHT_ADMIT_MAX);
+    }
+
     private CanaryLimits() {
     }
 }

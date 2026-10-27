@@ -179,7 +179,16 @@ public final class C3LiveCanary {
     private static int runLocked(String cmd, String[] args, Function<String, String> env, File dir) throws IOException {
         Heartbeat hb = new Heartbeat(dir, cmd);
         hb.beat(true);
-        RateGuard rg = RateGuard.defaults();
+        // [3i] chinh sach canary: nguong IP 1800 (env CANARY_IP_WEIGHT_CAP, kep <= 1920), rieng 600, doc cho <= 2 x 61 s, tranh burst
+        String ipRaw = env.apply("CANARY_IP_WEIGHT_CAP");
+        int ipCap = CanaryLimits.ipWeightCap(ipRaw);
+        if (ipRaw != null && !ipRaw.trim().isEmpty() && !String.valueOf(ipCap).equals(ipRaw.trim())) {
+            LOG.warn("[CANARY] CANARY_IP_WEIGHT_CAP='{}' khong hop le / vuot tran {} => dung {}", ipRaw.trim(),
+                    CanaryLimits.IP_WEIGHT_ADMIT_MAX, ipCap);
+        }
+        RateGuard rg = new RateGuard(RateGuard.Limits.binanceDefault(), RateGuard.MAX_FRACTION, 2_000L, RateGuard.SYSTEM,
+                new RateGuard.CanaryPolicy(ipCap, CanaryLimits.OWN_WEIGHT_1M_CAP, CanaryLimits.BURST_FROM_SEC, CanaryLimits.BURST_TO_SEC,
+                        CanaryLimits.BURST_RESUME_SEC, CanaryLimits.READ_GUARD_MAX_WAITS, CanaryGateway.GUARD_RETRY_MAX_WAIT_MS));
         C3LiveClient client;
         try {
             client = C3LiveClient.create(C3LiveClientConfig.fromEnv(env), rg);

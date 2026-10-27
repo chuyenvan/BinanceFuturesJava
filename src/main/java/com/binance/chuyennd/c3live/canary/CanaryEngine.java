@@ -384,6 +384,7 @@ public final class CanaryEngine {
         gw.canaryQty = this::ledger;                       // [3f §ADD-4 C] lenh mo: vi the san <= ledger canary
         gw.execListener = this::onCanaryExec;              // [3f] ledger theo khop lenh cid canary
         gw.guardSleep = sleeper::sleep;                    // [3f §ADD-4 I] guard client tu choi => cho sang phut sau
+        gw.burst = deps.rateGuard == null ? null : deps.rateGuard.policy();   // [3i] lenh ghi thuong tranh cua so burst LEGACY
         gw.cidListener = (sym, cid) -> {
             long m = Math.floorDiv(clock.getAsLong(), 60_000L);
             synchronized (stateLock) {
@@ -747,6 +748,15 @@ public final class CanaryEngine {
      * (hoac ngan sach < 1 %) => DONG vi the ngay roi TRUOT. Ratchet: stop dang co chat hon thi giu.
      */
     void protect(String sym) {
+        protect(sym, clock.getAsLong() + CanaryLimits.PROTECT_MAX_MS);
+    }
+
+    /**
+     * [3i A1 3h MINOR-1] {@code deadlineMs} = moc gui lenh mo (&lt;= luc khop) + 61 s: dat + XAC NHAN stop trong pham vi
+     * {@link RateGuard.Urgent} (khong ngu burst, moi lan cho guard phai xong truoc han); qua han / khong xac nhan duoc => dong
+     * phan canary qua lan khan cap roi TRUOT.
+     */
+    void protect(String sym, long deadlineMs) {
         LiveBookC3.ClusterView c = book.cluster(sym).orElseThrow(() -> new Abort(TRUOT, "stop bao ve: khong co cum " + sym));
         double notional = c.confirmedQty.doubleValue() * c.avgPrice;
         double d = protectDistance(sym, notional);
@@ -754,22 +764,38 @@ public final class CanaryEngine {
         if (d < CanaryLimits.MIN_STOP_DIST) {
             why = "ngan sach lo con lai chi du stop " + fmt(d * 100d) + " % (< " + CanaryLimits.MIN_STOP_DIST * 100d + " %)";
         } else {
-            try {
-                trailRate(sym, (float) -d);
-            } catch (RuntimeException e) {
-                why = "dat stop loi " + e;
-            }
-            if (why == null) {
-                LiveBookC3.ClusterView c2 = book.cluster(sym).orElse(null);
-                String sid = c2 == null ? null : c2.stopClientAlgoId;
-                if (sid == null || ownStops(sym).stream().noneMatch(o -> sid.equals(o.getClientOrderId()))) {
-                    why = "khong thay stop bao ve NEW tren san";
-                } else if (c2.stopPrice < c2.avgPrice * (1d - d - CanaryLimits.STOP_ROUND_TOL)) {
-                    why = "stop " + c2.stopPrice + " xa hon -" + fmt(d * 100d) + " % so gia vao " + c2.avgPrice;
-                } else {
-                    journal.ev("PROTECT", "symbol", sym, "cid", sid, "stop", c2.stopPrice, "entry", c2.avgPrice, "distPct", d * 100d,
-                            "notional", notional);
-                    return;
+            try (RateGuard.Urgent urgent = RateGuard.urgent(deadlineMs)) {
+                try {
+                    trailRate(sym, (float) -d);
+                } catch (RuntimeException e) {
+                    why = "dat stop loi " + e;
+                }
+                if (why == null) {
+                    LiveBookC3.ClusterView c2 = book.cluster(sym).orElse(null);
+                    String sid = c2 == null ? null : c2.stopClientAlgoId;
+                    boolean seen = false;
+                    if (sid != null) {
+                        try {
+                            seen = ownStops(sym).stream().anyMatch(o -> sid.equals(o.getClientOrderId()));
+                        } catch (RuntimeException e) {
+                            why = "khong doc duoc lenh algo de xac nhan stop bao ve (" + e.getClass().getSimpleName() + ")";
+                        }
+                    }
+                    long late = clock.getAsLong() - deadlineMs;
+                    if (why != null) {
+                        // giu ly do doc loi
+                    } else if (!seen) {
+                        why = "khong thay stop bao ve NEW tren san";
+                    } else if (late > 0L) {
+                        why = "stop bao ve chi xac nhan SAU han " + CanaryLimits.PROTECT_MAX_MS / 1000L + " s tu luc gui lenh mo (tre "
+                                + late + " ms)";
+                    } else if (c2.stopPrice < c2.avgPrice * (1d - d - CanaryLimits.STOP_ROUND_TOL)) {
+                        why = "stop " + c2.stopPrice + " xa hon -" + fmt(d * 100d) + " % so gia vao " + c2.avgPrice;
+                    } else {
+                        journal.ev("PROTECT", "symbol", sym, "cid", sid, "stop", c2.stopPrice, "entry", c2.avgPrice, "distPct", d * 100d,
+                                "notional", notional, "deadlineLeftMs", -late);
+                        return;
+                    }
                 }
             }
         }
@@ -854,7 +880,9 @@ public final class CanaryEngine {
         l.fillEventMs = firstEventTs("ORDER_TRADE_UPDATE", cid, "FILLED");
         journal.ev("LEG_DONE", "symbol", sym, "cid", l.cid, "confirmed", l.confirmed, "avg", l.avg, "err", l.error,
                 "streamLatMs", l.fillEventMs < 0 ? null : l.fillEventMs - l.sendMs, "waitMs", w);
-        if (l.confirmed) protect(sym);   // [3c MAJ-C1] moi vi the vua mo co NGAY stop bao ve truoc khi buoc ket thuc
+        long sentRef = gw.firstSentMs(l.cid);   // [3i] moc gui that (<= luc khop); khong co => moc LEG_SEND (som hon, chat hon)
+        if (sentRef < 0L) sentRef = l.sendMs;
+        if (l.confirmed) protect(sym, sentRef + CanaryLimits.PROTECT_MAX_MS);   // [3c MAJ-C1][3i] stop bao ve <= 61 s tu luc khop
         return l;
     }
 
@@ -2795,6 +2823,9 @@ public final class CanaryEngine {
             st.put("rate.emergencyCalls", deps.rateGuard.emergencyCalls());
             st.put("rate.emergencyOverBudget", deps.rateGuard.emergencyOverBudget());
             st.put("rate.guardRejects", deps.rateGuard.rejects());
+            st.put("rate.readWaits", deps.rateGuard.readWaitsTotal());     // [3i]
+            st.put("rate.burstSleeps", deps.rateGuard.burstSleeps());
+            if (deps.rateGuard.policy() != null) st.put("rate.policy", deps.rateGuard.policy().toString());
         }
         CanaryState.StepRecord rec0 = new CanaryState.StepRecord();
         rec0.result = verdict;

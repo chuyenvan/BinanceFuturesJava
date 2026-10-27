@@ -189,11 +189,17 @@ D=${CANARY_DIR:-run/canary}; mkdir -p "$D"
 # [3d] FAKE_SLOW: JVM gia chay 6 s, ghi moc ket thuc (kiem lenh ssh khoi dong tra ve TRUOC khi JVM xong)
 [ -f FAKE_SLOW ] && { trap 'echo "END $(date +%s%3N)" >> FAKE_SLOW.log' EXIT; sleep 6; }
 echo "$CMD $K TMB=${CANARY_EXPECT_TMB:-} INJ=${CANARY_INJECT_TIMEOUT:-} KF=${LIVE_C3_KEYS_FILE:-} CWD=$(pwd) ENVX=$(env | grep -c -E '^(LIVE_PROFILE|TRADING_PROFILE|LIVE_TS_MKT_EXT)=') REUSE=${CANARY_K0_REUSE_KEEPALIVE:-}" >> "$D/fake_calls.log"
+echo "$CMD IPCAP=${CANARY_IP_WEIGHT_CAP:-}" >> "$D/fake_env.log"   # [3i] env -i cua cl_run co truyen nguong IP khong
 sleep 1
 [ -f FAKE_CANARY_LOCK ] && { echo "RESULT $CMD TU_CHOI | lock tai khoan con dang bi giu (gia)"; exit 2; }
 case "$CMD" in
   keycheck)   # [3d] tmb theo file FAKE_TMB; pos=1 neu co FAKE_NOT_FLAT (flatten xoa, tru khi FAKE_NOT_FLAT_STICKY)
     T=10000; [ -f FAKE_TMB ] && T=$(cat FAKE_TMB); P=0; [ -f FAKE_NOT_FLAT ] && P=1
+    # [3i] FAKE_KC_FAIL=<n>: n lan keycheck dau TRUOT vi guard IP (nhu 3h that 05:11:42), roi DAT
+    if [ -f FAKE_KC_FAIL ] && [ "$(cat FAKE_KC_FAIL)" -gt 0 ]; then
+      echo $(( $(cat FAKE_KC_FAIL) - 1 )) > FAKE_KC_FAIL
+      echo "RESULT keycheck TRUOT | GatewayException: rate guard: het ngan sach, can cho 15660 ms > han 2000 ms (gia)"; exit 3
+    fi
     echo "KEYCHECK serverTime=1 tmb=$T multiAssets=true dual=false assets={BFUSD=10000.00000000, USDT=1000.00000000} scope=C00USDT,C01USDT legacy=pos:44,orders:3,algos:1 pos=$P orders=0 algos=0"
     echo "RESULT keycheck DAT"; exit 0 ;;
   status) cat "$D/canary_state.json" 2>/dev/null; echo; echo "RESULT status DAT"; exit 0 ;;
@@ -603,6 +609,22 @@ echo '{"symMain":"C00USDT","symAux":"C01USDT","cumFeeStable":0.45,"cumRealized":
 OUT=$(printf 'YES\n' | ca bash $CN/canary_early_all.sh 2>&1); RC=$?
 chk "all: lo cong don 3.95 => tran phien 0.05 <= 0.10 => DUNG truoc K0" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'tran lo phien min(2, 4 - lo cong don 3.9500) = 0.0500' && ! grep -q '^preflight' $C3/run/canary/fake_calls.log"
 rm -rf $C3/run/canary_prev_29990102_000000
+echo "== 20. [V12 3i] guard IP LEGACY: keycheck loi tam thoi luc cho khung gio => thu lai (DUNG sau 10 lan lien tiep); CANARY_IP_WEIGHT_CAP"
+echo "-- 20a keycheck TRUOT (guard IP) 2 lan luc vao cho => KHONG dung; doc lai duoc => phien DAT"
+fresh; echo 2 > $C3/FAKE_KC_FAIL
+OUT=$(printf 'YES\n' | ca bash $CN/canary_early_all.sh 2>&1); RC=$?
+chk "all: keycheck loi 2 lan => thu lai o lan poll sau, KHONG dung; phang => phien DAT" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'keycheck chua doc duoc (vao cho SETUP/K0, lan 1/10' && echo \"\$OUT\" | grep -q 'keycheck chua doc duoc (doc lai SETUP/K0, lan 2/10' && echo \"\$OUT\" | grep -q 'pham vi canary phang (doc lai SETUP/K0' && grep -q '^CANARY-EARLY DAT' $TG"
+echo "-- 20b keycheck loi lien tiep => DUNG sau dung 10 lan, khong SETUP/K0"
+fresh; echo 99 > $C3/FAKE_KC_FAIL
+OUT=$(printf 'YES\n' | ca bash $CN/canary_early_all.sh 2>&1); RC=$?
+chk "all: keycheck loi 10 lan lien tiep => DUNG (rc 2), khong preflight/setup, Telegram LOI" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'khong doc duoc trang thai pham vi canary 10 lan lien tiep' && echo \"\$OUT\" | grep -q 'lan 9/10' && ! echo \"\$OUT\" | grep -q 'lan 10/10' && ! grep -qE '^(preflight|setup)' $C3/run/canary/fake_calls.log && [ \$(grep -c '^keycheck' $C3/run/canary/fake_calls.log) -ge 10 ] && grep -q '^CANARY-EARLY LOI' $TG"
+echo "-- 20c CANARY_IP_WEIGHT_CAP (khong can file gate) qua env -i cua cl_run; sai dinh dang => DUNG truoc JVM"
+fresh
+OUT=$(ce CANARY_MODE=early CANARY_IP_WEIGHT_CAP=1700 bash -c ". $CN/canary_lib.sh; cl_run '' keycheck; echo RC=\$?" 2>&1)
+chk "cl_run: CANARY_IP_WEIGHT_CAP=1700 toi JVM canary" "echo \"\$OUT\" | grep -q 'RC=0' && grep -qx 'keycheck IPCAP=1700' $C3/run/canary/fake_env.log"
+OUT=$(ce CANARY_MODE=early CANARY_IP_WEIGHT_CAP=17x0 bash -c ". $CN/canary_lib.sh; cl_run '' keycheck; echo RC=\$?" 2>&1)
+chk "cl_run: CANARY_IP_WEIGHT_CAP sai dinh dang => DUNG, khong chay JVM" "! echo \"\$OUT\" | grep -q 'RC=' && echo \"\$OUT\" | grep -q 'CANARY_IP_WEIGHT_CAP=.17x0. khong phai so nguyen' && [ \$(grep -c . $C3/run/canary/fake_env.log) = 1 ]"
+fresh
 chk "v_t_m KHONG doi qua muc 17" "[ \"\$(vmd5)\" = $V0 ] && [ ! -e $F/run/canary ]"
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
