@@ -252,7 +252,11 @@ public final class C3LiveClient implements ExchangeGateway {
         try {
             return Optional.of(parseAlgo(call("GET", "/fapi/v1/algoOrder", p, Sec.SIGNED, W_QUERY, 0).getAsJsonObject(), null));
         } catch (GatewayException e) {
-            if (e.getKind() == ErrorKind.UNKNOWN_ORDER) return Optional.empty();
+            if (e.getKind() == ErrorKind.UNKNOWN_ORDER) {   // [3e] ghi ma san (doc-sau-ghi tre vs khong ton tai)
+                LOG.info("[C3-LIVE] queryStop {} {}: san bao khong co (http={} code={})", symbol, clientAlgoId, e.getHttpStatus(),
+                        e.getExchangeCode());
+                return Optional.empty();
+            }
             throw e;
         }
     }

@@ -69,6 +69,11 @@ public final class CanaryGateway implements ExchangeGateway {
     private final AtomicInteger maxWeight = new AtomicInteger(-1);
     private final AtomicInteger rateLimited = new AtomicInteger();
     private final List<OrderInfo> stopResponses = Collections.synchronizedList(new ArrayList<>());
+    /** [3e] dong ho dem weight canary tu goi (engine gan = dong ho phien). */
+    public volatile LongSupplier ownClock = System::currentTimeMillis;
+    private long ownBucket = Long.MIN_VALUE;
+    private int ownInBucket;
+    private final AtomicInteger maxOwn = new AtomicInteger(0);
 
     public CanaryGateway(ExchangeGateway delegate, Set<String> allowedSymbols, CanaryJournal journal, IntSupplier usedWeight1m,
                          BooleanSupplier lossCapHit) {
@@ -118,6 +123,31 @@ public final class CanaryGateway implements ExchangeGateway {
 
     public int rateLimitedCount() {
         return rateLimited.get();
+    }
+
+    /** [3e] Weight canary TU GOI lon nhat trong 1 phut co dinh (uoc tinh bao thu nhu W_* cua C3LiveClient; chi JVM nay). */
+    public int maxOwnWeight1m() {
+        return maxOwn.get();
+    }
+
+    /** [3e] Weight uoc tinh 1 call — khop hang W_* cua C3LiveClient (khong symbol => ban toan tai khoan). */
+    static int estWeight(String api, String sym) {
+        String a = api == null ? "" : api;
+        if (a.startsWith("positions") || a.startsWith("account") || a.startsWith("symbolConfig")) return 5;
+        if ("multiAssetsMargin".equals(a) || "dualSidePosition".equals(a)) return 30;
+        if ("openOrders".equals(a) || "openStops".equals(a) || "tickers24h".equals(a)) return sym == null ? 40 : 1;
+        return 1;
+    }
+
+    private synchronized int addOwnWeight(int w) {
+        long b = Math.floorDiv(ownClock.getAsLong(), 60_000L);
+        if (b != ownBucket) {
+            ownBucket = b;
+            ownInBucket = 0;
+        }
+        ownInBucket += w;
+        maxOwn.accumulateAndGet(ownInBucket, Math::max);
+        return ownInBucket;
     }
 
     public List<OrderInfo> stopResponses() {
@@ -187,6 +217,7 @@ public final class CanaryGateway implements ExchangeGateway {
     // ------------------------------------------------------------------ ghi nhat ky
     private <T> T call(String api, String sym, String cid, boolean mut, Supplier<T> f) {
         long t0 = System.nanoTime();
+        boolean sent = true;
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("api", api);
         if (sym != null) m.put("symbol", sym);
@@ -207,6 +238,7 @@ public final class CanaryGateway implements ExchangeGateway {
             m.put("errCode", e.getExchangeCode());
             m.put("http", e.getHttpStatus());
             m.put("msg", e.getMessage());
+            if (e.getKind() == ErrorKind.RATE_LIMIT && e.getHttpStatus() == 0) sent = false;   // [3e] guard client: chua gui
             if (e.getHttpStatus() == 429 || e.getHttpStatus() == 418) rateLimited.incrementAndGet();
             throw e;
         } catch (RuntimeException e) {
@@ -215,6 +247,7 @@ public final class CanaryGateway implements ExchangeGateway {
             throw e;
         } finally {
             m.put("latMs", (System.nanoTime() - t0) / 1_000_000L);
+            m.put("wOwn", addOwnWeight(sent ? estWeight(api, sym) : 0));   // [3e] weight canary tu goi trong phut (uoc tinh)
             int w = weight.getAsInt();
             if (w >= 0) {
                 m.put("w1m", w);

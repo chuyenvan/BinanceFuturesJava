@@ -21,6 +21,8 @@ import java.util.Optional;
  *       dung max(dem noi bo, so san bao trong cung cua so co dinh) -> khi LEGACY dung nhieu weight IP, c3_live tu nhuong.</li>
  *   <li>Het ngan sach -> cho toi da maxWaitMs, qua -> GatewayException(RATE_LIMIT, notExecuted=true).</li>
  *   <li>429 -> back-off (Retry-After hoac 2s*2^n, tran 120s); 418 (ban IP) -> Retry-After hoac 300s*2^n; chan moi call toi het han.</li>
+ *   <li>[3e] {@link Lane} KHAN CAP theo luong (flatten / cleanup): khong bao gio bi ngan sach noi bo / so weight IP tu choi;
+ *       van lui khi san 429/418 va khi cham 100 % gioi han san.</li>
  * </ul>
  */
 public final class RateGuard {
@@ -111,6 +113,42 @@ public final class RateGuard {
     private int consecutive418;
 
     private long peakWeight1m, peakOrders10s, peakOrders1m, waitsTotalMs, rejects;
+    private long emergencyCalls, emergencyOverBudget, emergencyBlocked;
+
+    /** [3e] Lan khan cap cho toi da khi san DANG chan (429/418): > back-off 429 toi da (120 s); chan lau hon (418) => loi san. */
+    public static final long EMERGENCY_MAX_BLOCK_WAIT_MS = 125_000L;
+    private static final ThreadLocal<int[]> EMERGENCY_DEPTH = ThreadLocal.withInitial(() -> new int[1]);
+
+    /**
+     * [3e] Lan uu tien KHAN CAP theo LUONG (flatten / cleanup / dong vi the khi stop bao ve loi). Moi call trong lan nay KHONG bao
+     * gio bi ngan sach noi bo (50 %) hay so weight IP san bao (LEGACY dung chung IP) tu choi. Van ton trong san: dang bi chan vi
+     * HTTP 429/418 => cho het han (toi da {@link #EMERGENCY_MAX_BLOCK_WAIT_MS}, qua => RATE_LIMIT do san); so san bao + weight vuot
+     * 100 % gioi han san => cho sang phut moi (gui se an 429). Mo va dong tren CUNG luong:
+     * {@code try (RateGuard.Lane l = RateGuard.emergencyLane()) { ... }}.
+     */
+    public static final class Lane implements AutoCloseable {
+        private boolean closed;
+
+        private Lane() {
+            EMERGENCY_DEPTH.get()[0]++;
+        }
+
+        @Override
+        public void close() {
+            if (closed) return;
+            closed = true;
+            int[] d = EMERGENCY_DEPTH.get();
+            if (d[0] > 0) d[0]--;
+        }
+    }
+
+    public static Lane emergencyLane() {
+        return new Lane();
+    }
+
+    public static boolean inEmergencyLane() {
+        return EMERGENCY_DEPTH.get()[0] > 0;
+    }
 
     public RateGuard(Limits limits, double fraction, long maxWaitMs, Clock clock) {
         double f = fraction <= 0 || Double.isNaN(fraction) ? MAX_FRACTION : Math.min(MAX_FRACTION, fraction);
@@ -148,6 +186,10 @@ public final class RateGuard {
      */
     public void acquire(int weight, int orders, long maxWait) {
         if (weight < 0 || orders < 0) throw new IllegalArgumentException("weight/orders am");
+        if (inEmergencyLane()) {   // [3e] flatten/cleanup: khong bao gio bi ngan sach rieng tu choi
+            acquireEmergency(weight, orders);
+            return;
+        }
         long start = clock.nowMs();
         long deadline = start + Math.max(0L, maxWait);
         while (true) {
@@ -179,6 +221,59 @@ public final class RateGuard {
                 throw new GatewayException(ErrorKind.RATE_LIMIT, 0, 0, "rate guard: bi interrupt khi cho", true, 0L, ie);
             }
         }
+    }
+
+    /** [3e] Lan khan cap: chi cho vi SAN (429/418 dang chan, hoac vuot 100 % gioi han san); KHONG tu choi vi ngan sach. */
+    private void acquireEmergency(int weight, int orders) {
+        long start = clock.nowMs();
+        while (true) {
+            long wait;
+            synchronized (this) {
+                long now = clock.nowMs();
+                wait = emergencyWait(now, weight, orders);
+                if (wait <= 0) {
+                    boolean over = weight > budgetWeight1m || orders > budgetOrders10s || orders > budgetOrders1m
+                            || waitNeeded(now, weight, orders) > 0;
+                    record(now, weight, orders);
+                    emergencyCalls++;
+                    waitsTotalMs += Math.max(0L, now - start);
+                    if (over) {
+                        emergencyOverBudget++;
+                        LOG.warn("[C3-RATE] lan KHAN CAP: call w={} o={} vuot ngan sach thuong (dem noi bo {}/{}, san bao {}) -> van gui",
+                                weight, orders, weightSum, budgetWeight1m, serverWeight);
+                    }
+                    return;
+                }
+                if (now < blockedUntilMs && blockedUntilMs - now > EMERGENCY_MAX_BLOCK_WAIT_MS) {
+                    emergencyBlocked++;
+                    long left = blockedUntilMs - now;
+                    throw new GatewayException(ErrorKind.RATE_LIMIT, 0, 0, "san dang chan (HTTP 429/418) con " + left + " ms > "
+                            + EMERGENCY_MAX_BLOCK_WAIT_MS + " ms (lan khan cap van ton trong san)", true, left, null);
+                }
+            }
+            LOG.warn("[C3-RATE] lan KHAN CAP: cho {} ms (san chan 429/418 hoac cham 100 % gioi han san)", wait);
+            try {
+                clock.sleepMs(wait);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                throw new GatewayException(ErrorKind.RATE_LIMIT, 0, 0, "rate guard: bi interrupt khi cho (khan cap)", true, 0L, ie);
+            }
+        }
+    }
+
+    /** [3e] Cho cua lan khan cap: chi theo san (chan 429/418; so san bao + call > 100 % gioi han san cung cua so co dinh). */
+    private long emergencyWait(long now, int weight, int orders) {
+        if (now < blockedUntilMs) return blockedUntilMs - now;
+        long w = 0;
+        int srvW = serverWeightBucket == now / WEIGHT_WINDOW_MS ? serverWeight : -1;
+        if (srvW >= 0 && srvW + weight > limits.weight1m) w = Math.max(w, WEIGHT_WINDOW_MS - (now % WEIGHT_WINDOW_MS) + 1);
+        if (orders > 0) {
+            int s10 = serverOrder10Bucket == now / ORDER10_WINDOW_MS ? serverOrder10 : -1;
+            int s60 = serverOrder60Bucket == now / ORDER60_WINDOW_MS ? serverOrder60 : -1;
+            if (s10 >= 0 && s10 + orders > limits.orders10s) w = Math.max(w, ORDER10_WINDOW_MS - (now % ORDER10_WINDOW_MS) + 1);
+            if (s60 >= 0 && s60 + orders > limits.orders1m) w = Math.max(w, ORDER60_WINDOW_MS - (now % ORDER60_WINDOW_MS) + 1);
+        }
+        return w;
     }
 
     private long waitNeeded(long now, int weight, int orders) {
@@ -277,4 +372,7 @@ public final class RateGuard {
     public synchronized long peakOrders10s() { return peakOrders10s; }
     public synchronized long peakOrders1m() { return peakOrders1m; }
     public synchronized long rejects() { return rejects; }
+    public synchronized long emergencyCalls() { return emergencyCalls; }
+    public synchronized long emergencyOverBudget() { return emergencyOverBudget; }
+    public synchronized long emergencyBlocked() { return emergencyBlocked; }
 }

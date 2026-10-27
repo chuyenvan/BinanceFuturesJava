@@ -2,7 +2,11 @@ package com.binance.chuyennd.c3live.canary;
 
 import com.binance.chuyennd.c3live.entry.C3LiveFixtures;
 import com.binance.chuyennd.c3live.fill.UserStream;
+import com.binance.chuyennd.c3live.api.ErrorKind;
+import com.binance.chuyennd.c3live.api.ExchangeGateway;
+import com.binance.chuyennd.c3live.api.GatewayException;
 import com.binance.chuyennd.c3live.mock.MockExchangeGateway;
+import com.binance.chuyennd.c3live.rate.RateGuard;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -465,5 +469,130 @@ public class CanaryEngineTest {
             assertFalse(s.contains("signature"));
         }
         assertEquals("{\"listenKey\":\"***\"}", CanaryJournal.mask("{\"listenKey\":\"abcdef123\"}"));
+    }
+
+    // ------------------------------------------------------------------ [3e]
+    /** Dong ho RateGuard = dong ho gia cua test (ngu => tien dong ho chung + mock). */
+    RateGuard.Clock rgClock() {
+        return new RateGuard.Clock() {
+            @Override public long nowMs() { return now.get(); }
+            @Override public void sleepMs(long ms) { mock.now = now.addAndGet(ms); }
+        };
+    }
+
+    /** Gateway "that" gia: moi call qua RateGuard nhu C3LiveClient (weight uoc tinh nhu W_*), roi toi mock. */
+    static ExchangeGateway guarded(ExchangeGateway inner, RateGuard rg) {
+        return (ExchangeGateway) java.lang.reflect.Proxy.newProxyInstance(ExchangeGateway.class.getClassLoader(),
+                new Class<?>[]{ExchangeGateway.class}, (proxy, m, args) -> {
+                    String n = m.getName();
+                    if (!"name".equals(n) && !"toString".equals(n) && !"hashCode".equals(n) && !"equals".equals(n)) {
+                        Object a0 = args != null && args.length > 0 ? args[0] : null;
+                        boolean order = n.startsWith("newMarketOrder") || n.startsWith("newStopMarket");
+                        rg.acquire(CanaryGateway.estWeight(n, a0 instanceof String ? (String) a0 : null), order ? 1 : 0);
+                    }
+                    try {
+                        return m.invoke(inner, args);
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        throw e.getCause();
+                    }
+                });
+    }
+
+    CanaryEngine engineRaw(CanaryEngine.Config cfg, ExchangeGateway raw, RateGuard rg) throws Exception {
+        CanaryEngine.Deps d = new CanaryEngine.Deps();
+        d.raw = raw;
+        d.dir = dir;
+        d.clock = now::get;
+        d.sleeper = ms -> {
+            long t = now.addAndGet(ms);
+            mock.now = t;
+            hook.accept(t);
+        };
+        d.connector = fakeWs();
+        d.wsUrls = UserStream.parseUrls(UserStream.DEFAULT_URLS);
+        d.alert = telegram::add;
+        d.legacy = s -> false;
+        d.usedWeight1m = rg::lastServerWeight1m;
+        d.rateGuard = rg;
+        d.journalName = "j_" + now.get() + "_" + System.nanoTime() + ".jsonl";
+        d.jarId = () -> jarIdVal;
+        return new CanaryEngine(d, cfg);
+    }
+
+    @Test
+    public void queryStopBackoffSumsToBound() {
+        long s = 0;
+        for (long w : CanaryEngine.QUERY_STOP_BACKOFF_MS) s += w;
+        assertEquals(CanaryEngine.QUERY_STOP_MAX_WAIT_MS, s);
+    }
+
+    @Test
+    public void k2QueryStopReadAfterWriteLagRetriedWithinBound() throws Exception {
+        preflight();
+        ok(run("K1"));
+        mock.queryStopLagCalls = 2;   // 2 lan dau moi cid: GET algoOrder chua thay (openStops da thay) — nhu 10-27
+        CanaryEngine.Result r = run("K2");
+        ok(r);
+        for (String l : new String[]{"a", "b", "d"}) {
+            assertEquals(l, 3, ((Number) r.data.get(l + ".queryStopAttempts")).intValue());
+            assertTrue(l, ((Number) r.data.get(l + ".queryStopMs")).longValue() <= CanaryEngine.QUERY_STOP_MAX_WAIT_MS);
+            assertEquals(l, "NEW", r.data.get(l + ".queryStop"));
+        }
+        assertTrue(((Number) r.data.get("ownWeight1mMax")).intValue() > 0);
+    }
+
+    @Test
+    public void k2QueryStopStillMissingAfterBoundFails() throws Exception {
+        preflight();
+        ok(run("K1"));
+        mock.queryStopLagCalls = 1_000;   // khong bao gio thay => tieu chi K2 KHONG noi long
+        CanaryEngine.Result r = run("K2");
+        assertEquals(r.line(), CanaryEngine.TRUOT, r.verdict);
+        assertTrue(r.line(), r.line().contains("queryStop"));
+        assertEquals(1 + CanaryEngine.QUERY_STOP_BACKOFF_MS.length, ((Number) r.data.get("a.queryStopAttempts")).intValue());
+        assertEquals("KHONG CO", r.data.get("a.queryStop"));
+        assertEquals("TRUOT => dong", 0, mock.position(MAIN).signum());
+    }
+
+    @Test
+    public void emergencyFlattenNotBlockedByOwnRateGuard() throws Exception {
+        preflight();
+        ok(run("K1"));
+        assertTrue(mock.position(MAIN).signum() > 0);
+        RateGuard rg = new RateGuard(RateGuard.Limits.binanceDefault(), 0.5, 2_000L, rgClock());
+        rg.onHeaders(1494, null, null);   // nhu 10-27 22:18:46: IP chung LEGACY 1494 > ngan sach 1200
+        ExchangeGateway raw = guarded(mock, rg);
+        try {   // doi chung: lan thuong bi chinh guard cua ta tu choi
+            raw.positions();
+            fail("lan thuong phai bi tu choi");
+        } catch (GatewayException e) {
+            assertEquals(ErrorKind.RATE_LIMIT, e.getKind());
+        }
+        CanaryEngine ef = engineRaw(cfg(), raw, rg);
+        CanaryEngine.Result f = ef.flatten();
+        long rejects = rg.rejects();
+        ef.close();
+        ok(f);
+        assertEquals(0, mock.position(MAIN).signum());
+        assertTrue(mock.openStops(null).isEmpty());
+        assertEquals("chi lan doi chung bi tu choi", 1L, rejects);
+        assertTrue(rg.emergencyCalls() > 0);
+        assertTrue("flatten chay khi ngan sach thuong da het", rg.emergencyOverBudget() > 0);
+        assertEquals(rg.emergencyCalls(), ((Number) f.data.get("rate.emergencyCalls")).longValue());
+    }
+
+    @Test
+    public void stepRefusedByRateGuardStillAutoFlattens() throws Exception {
+        preflight();
+        ok(run("K1"));
+        RateGuard rg = new RateGuard(RateGuard.Limits.binanceDefault(), 0.5, 2_000L, rgClock());
+        rg.onHeaders(1494, null, null);
+        CanaryEngine e = engineRaw(cfg(), guarded(mock, rg), rg);
+        CanaryEngine.Result r = e.step("K2");
+        e.close();
+        assertEquals(r.line(), CanaryEngine.TRUOT, r.verdict);
+        assertTrue(r.line(), r.line().contains("rate guard"));
+        assertEquals("tu flatten (lan khan cap) van dong vi the", 0, mock.position(MAIN).signum());
+        assertTrue(mock.openStops(null).isEmpty());
     }
 }

@@ -155,4 +155,109 @@ public class RateGuardTest {
         RateGuard g = new RateGuard(new RateGuard.Limits(20, 300, 1200, true), 0.5, 5_000L, new FakeClock());
         try { g.acquire(11, 0); fail(); } catch (GatewayException e) { assertEquals(ErrorKind.RATE_LIMIT, e.getKind()); }
     }
+
+    // ------------------------------------------------------------------ [3e] lan khan cap (flatten / cleanup)
+    static long alignedAt(FakeClock c, long secMs) {
+        c.now = (c.now / 60_000L) * 60_000L + secMs;
+        return c.now;
+    }
+
+    @Test
+    public void emergencyLaneRunsWhenServerWeightExceedsBudget() {
+        FakeClock c = new FakeClock();
+        RateGuard g = new RateGuard(RateGuard.Limits.binanceDefault(), 0.5, 2_000L, c);
+        alignedAt(c, 46_000L);              // giay :46 nhu flatten 10-27 22:18:46
+        g.onHeaders(1494, null, null);      // IP chung LEGACY: 1494 > ngan sach 1200
+        try {
+            g.acquire(5, 0);
+            fail("lan thuong phai bi tu choi (can cho > 2 s)");
+        } catch (GatewayException e) {
+            assertEquals(ErrorKind.RATE_LIMIT, e.getKind());
+        }
+        long slept0 = c.slept;
+        try (RateGuard.Lane lane = RateGuard.emergencyLane()) {
+            assertTrue(RateGuard.inEmergencyLane());
+            for (int i = 0; i < 20; i++) g.acquire(5, 0);
+            g.acquire(1, 1);
+        }
+        assertEquals("khan cap: khong cho", slept0, c.slept);
+        assertEquals(21, g.emergencyCalls());
+        assertEquals(21, g.emergencyOverBudget());
+        assertFalse(RateGuard.inEmergencyLane());
+        try {
+            g.acquire(5, 0);
+            fail("ra khoi lan khan cap => lai bi chan");
+        } catch (GatewayException e) {
+            assertEquals(ErrorKind.RATE_LIMIT, e.getKind());
+        }
+    }
+
+    @Test
+    public void emergencyLaneRunsWhenInternalBudgetExhausted() {
+        FakeClock c = new FakeClock();
+        RateGuard g = new RateGuard(RateGuard.Limits.binanceDefault(), 0.5, 2_000L, c);
+        for (int i = 0; i < 30; i++) g.acquire(40, 0);   // 1200 = het ngan sach noi bo
+        try {
+            g.acquire(5, 0);
+            fail();
+        } catch (GatewayException e) {
+            assertEquals(ErrorKind.RATE_LIMIT, e.getKind());
+        }
+        try (RateGuard.Lane lane = RateGuard.emergencyLane()) {
+            g.acquire(5, 0);
+            g.acquire(1, 1);
+            g.acquire(2_000, 0);   // ca 1 call > ngan sach cung khong bi tu choi trong lan khan cap
+        }
+        assertEquals(0L, c.slept);
+        assertEquals(3, g.emergencyCalls());
+    }
+
+    @Test
+    public void emergencyLaneStillBacksOffOnExchange429And418() {
+        FakeClock c = new FakeClock();
+        RateGuard g = new RateGuard(RateGuard.Limits.binanceDefault(), 0.5, 2_000L, c);
+        g.onRateLimited(429, 5_000L);
+        try (RateGuard.Lane lane = RateGuard.emergencyLane()) {
+            g.acquire(5, 0);
+        }
+        assertTrue("429: van cho het back-off cua san", c.slept >= 5_000L);
+        g.onRateLimited(418, 300_000L);
+        try (RateGuard.Lane lane = RateGuard.emergencyLane()) {
+            g.acquire(5, 0);
+            fail("418 chan 300 s > 125 s => loi san");
+        } catch (GatewayException e) {
+            assertEquals(ErrorKind.RATE_LIMIT, e.getKind());
+            assertTrue(e.getMessage(), e.getMessage().contains("429/418"));
+        }
+        assertEquals(1, g.emergencyBlocked());
+    }
+
+    @Test
+    public void emergencyLaneWaitsForNextMinuteOnlyAtFullExchangeLimit() {
+        FakeClock c = new FakeClock();
+        RateGuard g = new RateGuard(RateGuard.Limits.binanceDefault(), 0.5, 2_000L, c);
+        alignedAt(c, 50_000L);
+        g.onHeaders(2398, null, null);      // 2398 + 5 > 2400 (100 % gioi han san) => gui se an 429
+        try (RateGuard.Lane lane = RateGuard.emergencyLane()) {
+            g.acquire(5, 0);
+        }
+        assertTrue("cho sang phut moi, khong tu choi: " + c.slept, c.slept > 0 && c.slept <= 10_001L);
+        assertEquals(1, g.emergencyCalls());
+    }
+
+    @Test
+    public void emergencyLaneIsPerThreadAndNested() throws Exception {
+        final boolean[] other = new boolean[1];
+        try (RateGuard.Lane a = RateGuard.emergencyLane()) {
+            try (RateGuard.Lane b = RateGuard.emergencyLane()) {
+                assertTrue(RateGuard.inEmergencyLane());
+            }
+            assertTrue("long nhau: van trong lan", RateGuard.inEmergencyLane());
+            Thread t = new Thread(() -> other[0] = RateGuard.inEmergencyLane());
+            t.start();
+            t.join();
+        }
+        assertFalse("luong khac khong thua lan khan cap", other[0]);
+        assertFalse(RateGuard.inEmergencyLane());
+    }
 }

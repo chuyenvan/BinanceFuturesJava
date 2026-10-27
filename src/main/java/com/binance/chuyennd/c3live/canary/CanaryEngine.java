@@ -24,6 +24,7 @@ import com.binance.chuyennd.c3live.log.OrderAuditLog;
 import com.binance.chuyennd.c3live.recon.FlatConfirm;
 import com.binance.chuyennd.c3live.recon.OwnStopGuard;
 import com.binance.chuyennd.c3live.recon.Reconciler;
+import com.binance.chuyennd.c3live.rate.RateGuard;
 import com.binance.chuyennd.c3live.risk.C3LiveFlattener;
 import com.binance.chuyennd.ops.KillSwitchEngine;
 import org.slf4j.Logger;
@@ -107,6 +108,8 @@ public final class CanaryEngine {
         public Predicate<String> legacy;
         public IntSupplier usedWeight1m;
         public String journalName;
+        /** [3e] RateGuard cua client that (null = khong co, vd mock): so lieu lan khan cap vao data buoc. */
+        public RateGuard rateGuard;
         /** [3d] dinh danh jar dang chay: {md5, mtimeMs}; null / md5 null = khong xac dinh (=> khong dung lai keepAlive). */
         public java.util.function.Supplier<String[]> jarId;
     }
@@ -336,6 +339,7 @@ public final class CanaryEngine {
         C3LiveOrderExecutor.ApiObserver api = (a, ok) -> { };
         Consumer<String> al = this::alert;
         gw = new CanaryGateway(deps.raw, allowedSymbols(), journal, deps.usedWeight1m, this::lossCapHit);
+        gw.ownClock = clock;
         gw.cidListener = (sym, cid) -> {
             long m = Math.floorDiv(clock.getAsLong(), 60_000L);
             synchronized (stateLock) {
@@ -725,7 +729,7 @@ public final class CanaryEngine {
         }
         journal.ev("PROTECT_FAIL", "symbol", sym, "why", why);
         alert("canary: KHONG dat duoc stop bao ve " + sym + " (" + why + ") => dong vi the");
-        try {
+        try (RateGuard.Lane lane = RateGuard.emergencyLane()) {   // [3e] dong khan cap
             closeCluster(sym, "PROTECT_FAIL");
         } catch (RuntimeException e) {
             journal.ev("PROTECT_FAIL_CLOSE", "symbol", sym, "err", e.toString());
@@ -910,6 +914,12 @@ public final class CanaryEngine {
      * => MARKET reduce-only c3x- truc tiep; roi huy stop c3s- qua guard (chi khi positionRisk + account deu phang).
      */
     Map<String, Object> flattenAll(String reason) {
+        try (RateGuard.Lane lane = RateGuard.emergencyLane()) {   // [3e] dong khan cap: khong bao gio bi rate guard rieng chan
+            return flattenAll0(reason);
+        }
+    }
+
+    private Map<String, Object> flattenAll0(String reason) {
         Map<String, Object> out = new LinkedHashMap<>();
         gw.failPositions = false;
         gw.failAccount = false;
@@ -1419,10 +1429,38 @@ public final class CanaryEngine {
         st.put("trail.stats", trailing.stats());
     }
 
+    /** [3e] Lui khi doc stop ngay sau dat: GET /fapi/v1/algoOrder tre so voi openAlgoOrders (~0,3 s, phien 10-27 22:18). */
+    static final long[] QUERY_STOP_BACKOFF_MS = {250L, 500L, 1_000L, 1_250L};
+    /** [3e] Tong cho toi da cua {@link #QUERY_STOP_BACKOFF_MS}. */
+    public static final long QUERY_STOP_MAX_WAIT_MS = 3_000L;
+
+    /**
+     * [3e] queryStop co lui GIOI HAN: CHI lap khi san bao KHONG CO (doc-sau-ghi tre); co trang thai (ke ca khac NEW) => tra ngay.
+     * Moi lan lap ghi journal QUERY_STOP_RETRY; so lan + ms ghi vao data buoc. Tieu chi K2 khong doi (phai CO + NEW).
+     */
+    Optional<OrderInfo> queryStopSettled(Step st, String s, String cid, String label) {
+        long t0 = clock.getAsLong();
+        int attempts = 0;
+        Optional<OrderInfo> q;
+        while (true) {
+            attempts++;
+            q = gw.queryStop(s, cid);
+            if (q.isPresent() || attempts > QUERY_STOP_BACKOFF_MS.length) break;
+            long wait = QUERY_STOP_BACKOFF_MS[attempts - 1];
+            journal.ev("QUERY_STOP_RETRY", "symbol", s, "cid", cid, "label", label, "attempt", attempts, "waitMs", wait);
+            sleeper.sleep(wait);
+        }
+        long ms = clock.getAsLong() - t0;
+        st.put(label + ".queryStopAttempts", attempts);
+        st.put(label + ".queryStopMs", ms);
+        journal.ev("QUERY_STOP_DONE", "symbol", s, "cid", cid, "label", label, "attempts", attempts, "ms", ms, "present", q.isPresent());
+        return q;
+    }
+
     /** queryStop theo clientAlgoId khop + algoStatus NEW trong response dat stop. */
     private void stopStatus(Step st, String s, String cid, String label, boolean placedInThisJvm) {
         if (cid == null) return;
-        Optional<OrderInfo> q = gw.queryStop(s, cid);
+        Optional<OrderInfo> q = queryStopSettled(st, s, cid, label);
         st.put(label + ".queryStop", q.map(o -> o.getRawStatus()).orElse("KHONG CO"));
         st.check(q.isPresent() && q.get().getStatus() == OrderStatus.NEW, label + ": queryStop " + cid + " khong NEW");
         if (!placedInThisJvm) {   // response dat stop nam trong journal cua JVM buoc truoc (K1)
@@ -1847,13 +1885,11 @@ public final class CanaryEngine {
     /** Khan cap: dong 2 symbol canary (khong cham symbol khac), huy stop c3s- qua guard. Chay ca khi phien da DUNG. */
     public Result flatten() {
         Step st = new Step("FLATTEN");
-        try {
+        try (RateGuard.Lane lane = RateGuard.emergencyLane()) {   // [3e] flatten khan cap: khong bao gio bi rate guard rieng chan
             if (!state.symbolsChosen()) throw new Abort(TU_CHOI, "chua chon symbol — khong co gi de dong");
             build();
             ExchangeInfo ei = gw.exchangeInfo();
             rules = new SymbolRules(ei, clock.getAsLong());
-            List<String> f = foreignExposure();
-            st.put("foreign_KHONG_CHAM", f);
             st.put("streamMs", ensureStream());
             Map<String, Object> out = flattenAll("OWNER");
             st.put("result", out);
@@ -1861,6 +1897,7 @@ public final class CanaryEngine {
                 st.check(posAmt(s).signum() == 0, s + " con vi the " + posAmt(s));
                 st.check(ownStops(s).isEmpty(), s + " con stop c3s-");
             }
+            st.put("foreign_KHONG_CHAM", foreignExposure());   // [3e] chi thong tin => doc SAU khi dong (khong tre lenh dong)
         } catch (Abort e) {
             return refused(st, e);
         } catch (RuntimeException e) {
@@ -1872,7 +1909,7 @@ public final class CanaryEngine {
     /** Ket thuc: 0 vi the / 0 algo / 0 lenh tren TOAN tai khoan (doc). */
     public Result cleanupCheck() {
         Step st = new Step("CLEANUP");
-        try {
+        try (RateGuard.Lane lane = RateGuard.emergencyLane()) {   // [3e] kiem cuoi phien: khong bi rate guard rieng chan
             build();
             int np = 0;
             for (PositionInfo p : gw.positions()) if (p.getPositionAmt() != null && p.getPositionAmt().signum() != 0) np++;
@@ -1924,6 +1961,12 @@ public final class CanaryEngine {
             st.put("maxWeight1m", gw.maxWeight1m());
             st.put("http429_418", gw.rateLimitedCount());
             st.put("guardRefused", gw.refusedCalls());
+            st.put("ownWeight1mMax", gw.maxOwnWeight1m());   // [3e] uoc tinh W_*: chi weight canary tu goi (JVM nay)
+        }
+        if (deps.rateGuard != null) {
+            st.put("rate.emergencyCalls", deps.rateGuard.emergencyCalls());
+            st.put("rate.emergencyOverBudget", deps.rateGuard.emergencyOverBudget());
+            st.put("rate.guardRejects", deps.rateGuard.rejects());
         }
         CanaryState.StepRecord rec0 = new CanaryState.StepRecord();
         rec0.result = verdict;

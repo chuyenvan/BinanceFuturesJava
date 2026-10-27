@@ -120,8 +120,14 @@ else:
     C(4, "0 latch kill-switch ngoai kich ban", latch_n == 0, "dong [KILLSW] LATCH log bot tu luc mo phien = %s" % latch_n)
 ws = [e.get("w1m") for e in J if isinstance(e.get("w1m"), (int, float))]
 n429 = sum(1 for e in J if e.get("http") in (429, 418))
+# [3e] thong tin (KHONG doi verdict): wOwn = weight canary TU GOI trong phut (uoc tinh W_*, moi JVM); header - wOwn = phan IP ngoai canary
+wo = [e.get("wOwn") for e in J if isinstance(e.get("wOwn"), (int, float))]
+bg = [e.get("w1m") - e.get("wOwn") for e in J if isinstance(e.get("w1m"), (int, float)) and isinstance(e.get("wOwn"), (int, float))
+      and e.get("w1m") >= e.get("wOwn")]
 C(5, "weight < 1200 (50% cua 2400), 0 HTTP 429/418", len(ws) > 0 and max(ws) < 1200 and n429 == 0,
-  "max X-MBX-USED-WEIGHT-1M=%s (mau=%d); 429/418=%d" % (max(ws) if ws else "KHONG DO DUOC", len(ws), n429))
+  "max X-MBX-USED-WEIGHT-1M=%s (mau=%d); 429/418=%d; [thong tin] canary tu goi max/phut (uoc tinh W_*, moi JVM)=%s;"
+  " phan IP ngoai canary cung phut (header - canary) max=%s"
+  % (max(ws) if ws else "KHONG DO DUOC", len(ws), n429, max(wo) if wo else "khong co", max(bg) if bg else "khong co"))
 s242 = sum(int(x[2]) + int(x[3]) + int(x[4]) + int(x[5]) + int(x[6]) for x in sec)
 C(6, "0 bi mat trong log", keys_read and s242 == 0 and loc == 0,
   "242: %d file, tong dem=%d (key doc duoc tren 242=%s); log script Oracle=%d" % (len(sec), s242, keys_read, loc))

@@ -202,6 +202,7 @@ public final class C3LiveCanary {
         d.alert = tg::send;
         d.legacy = legacySet(new File(or(env.apply("LIVE_LEGACY_FILE"), "run/legacy_symbols.csv")))::contains;
         d.usedWeight1m = rg::lastServerWeight1m;
+        d.rateGuard = rg;   // [3e] so lieu lan khan cap vao data buoc
         d.journalName = "canary_" + ts() + "_" + cmd + (args.length > 1 ? "_" + args[1].replaceAll("[^A-Za-z0-9_]", "") : "") + ".jsonl";
         CanaryEngine.Config cfg = new CanaryEngine.Config();
         String et = env.apply("CANARY_EXPECT_TMB");

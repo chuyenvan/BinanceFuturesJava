@@ -266,10 +266,19 @@ public class MockExchangeGateway implements ExchangeGateway {
         return Optional.ofNullable(orders.get(cid));
     }
 
+    /** [3e] gia lap doc-sau-ghi tre cua GET algoOrder: N lan queryStop dau tien moi cid tra KHONG CO (openStops van thay). */
+    public volatile int queryStopLagCalls = 0;
+    private final java.util.Map<String, Integer> queryStopMiss = new java.util.HashMap<>();
+
     @Override
     public synchronized Optional<OrderInfo> queryStop(String symbol, String cid) {
         enter("queryStop");
-        return Optional.ofNullable(stops.get(cid));
+        OrderInfo o = stops.get(cid);
+        if (o != null && queryStopLagCalls > 0) {
+            int n = queryStopMiss.merge(cid, 1, Integer::sum);
+            if (n <= queryStopLagCalls) return Optional.empty();
+        }
+        return Optional.ofNullable(o);
     }
 
     @Override
