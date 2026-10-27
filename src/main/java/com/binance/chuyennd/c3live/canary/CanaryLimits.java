@@ -20,6 +20,18 @@ public final class CanaryLimits {
     public static final int SYMBOLS = 2;
     /** Leverage duy nhat duoc dat. */
     public static final int LEVERAGE = 1;
+    /**
+     * [V12 3c MAJ-C1, prereg §ADD-2] Khoang cach TOI DA cua stop SELL so gia vao (entry): moi vi the canary vua mo co NGAY stop
+     * bao ve closePosition MARK_PRICE o -4,5 % (40 USDT x 4,5 % = 1,8 USDT) => tran lo giu duoc ca khi khong JVM nao canh.
+     * CanaryGateway tu choi moi stop SELL thap hon entry x (1 - 4,5 % - dung sai lam tron).
+     */
+    public static final double MAX_STOP_DIST = 0.045d;
+    /** Dung sai lam tron gia stop (FLOOR theo tick; luat §3: tick/gia <= 0,01 %) — 2 bp. */
+    public static final double STOP_ROUND_TOL = 0.0002d;
+    /** Khoang cach stop bao ve TOI THIEU; ngan sach lo con lai khong cho du khoang nay => KHONG mo (hoac dong ngay). */
+    public static final double MIN_STOP_DIST = 0.01d;
+    /** Du phong phi dong + truot khi stop kich (USDT), tru vao ngan sach khi tinh stop bao ve. */
+    public static final double STOP_FEE_RESERVE_USDT = 0.10d;
 
     private CanaryLimits() {
     }

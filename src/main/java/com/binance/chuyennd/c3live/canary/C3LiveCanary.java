@@ -85,6 +85,40 @@ public final class C3LiveCanary {
         return null;
     }
 
+    /** [3c MIN-C3] File heartbeat trong CANARY_DIR: "pid=&lt;pid&gt; ms=&lt;epoch ms&gt; cmd=&lt;lenh&gt;". */
+    static final String HEARTBEAT_FILE = "canary_jvm.hb";
+
+    /**
+     * [3c MIN-C3] Heartbeat cua LUONG CHINH (goi tu sleeper cua engine, toi da 1 lan / 5 s): script flatten chi kill JVM canary
+     * (cwd = thu muc canary, giu lock > 10') khi heartbeat cu > 3' — JVM dang chay binh thuong (ke ca K0 65', K4 30') van ghi.
+     */
+    static final class Heartbeat {
+        private final File dir;
+        private final String cmd;
+        private long last;
+
+        Heartbeat(File dir, String cmd) {
+            this.dir = dir;
+            this.cmd = cmd;
+        }
+
+        synchronized void beat(boolean force) {
+            long now = System.currentTimeMillis();
+            if (!force && now - last < 5_000L) return;
+            last = now;
+            try {
+                if (!dir.exists() && !dir.mkdirs()) return;
+                File tmp = new File(dir, HEARTBEAT_FILE + ".tmp");
+                Files.write(tmp.toPath(), ("pid=" + ProcessHandle.current().pid() + " ms=" + now + " cmd=" + cmd + "\n")
+                        .getBytes(StandardCharsets.UTF_8));
+                Files.move(tmp.toPath(), new File(dir, HEARTBEAT_FILE).toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+            } catch (IOException | RuntimeException e) {
+                LOG.warn("[CANARY] khong ghi duoc heartbeat: {}", e.toString());
+            }
+        }
+    }
+
     static String env(String k) {
         String v = System.getenv(k);
         return v != null ? v : System.getProperty(k);
@@ -123,6 +157,8 @@ public final class C3LiveCanary {
     }
 
     private static int runLocked(String cmd, String[] args, Function<String, String> env, File dir) throws IOException {
+        Heartbeat hb = new Heartbeat(dir, cmd);
+        hb.beat(true);
         RateGuard rg = RateGuard.defaults();
         C3LiveClient client;
         try {
@@ -137,7 +173,10 @@ public final class C3LiveCanary {
         d.raw = client;
         d.dir = dir;
         d.clock = System::currentTimeMillis;
-        d.sleeper = C3LiveCanary::sleepQuiet;
+        d.sleeper = ms -> {   // [3c MIN-C3] moi vong ngu cua engine (luong chinh) ghi heartbeat
+            hb.beat(false);
+            sleepQuiet(ms);
+        };
         d.connector = UserStream.okHttp(60_000L);
         d.wsUrls = UserStream.parseUrls(or(env.apply("LIVE_C3_WS_URLS"), UserStream.DEFAULT_URLS));
         d.alert = tg::send;

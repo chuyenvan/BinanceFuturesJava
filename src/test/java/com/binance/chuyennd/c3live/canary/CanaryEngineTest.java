@@ -137,6 +137,7 @@ public class CanaryEngineTest {
         assertTrue("query-by-cid", mock.calls("queryOrder") >= 1);
         assertTrue(e1.state().injectTimeoutUsed);
         assertEquals(0, new BigDecimal("20").compareTo(mock.position(MAIN)));
+        assertProtect(MAIN, CanaryLimits.MAX_STOP_DIST);   // [3c MAJ-C1] K1 KHONG de vi the tran qua ranh gioi JVM
 
         // K2: stop -20 % -> -19 % -> closePosition thu 2 (-4130) -> -18 % (qty+reduceOnly)
         mock.rejectSecondClosePosition = true;
@@ -181,6 +182,7 @@ public class CanaryEngineTest {
 
         // K6: mo + arm, "kill", JVM moi
         ok(run("K6_OPEN"));
+        assertProtect(MAIN, CanaryLimits.MAX_STOP_DIST);
         int ord = mock.calls("newMarketOrder");
         int stp = mock.calls("newStopMarket");
         CanaryEngine.Result k6 = run("K6_RESTART");
@@ -234,6 +236,60 @@ public class CanaryEngineTest {
         }
         assertTrue("phi da ghi", st.cumFeeStable > 0d);
         assertTrue("0 lenh ngoai 2 symbol", mock.callLog().stream().noneMatch(x -> x.contains("C02USDT") || x.contains("C05USDT")));
+    }
+
+    /** 1 stop c3s- closePosition, stop / gia vao = 1 - dist (+- dung sai lam tron). */
+    private void assertProtect(String sym, double dist) {
+        List<com.binance.chuyennd.c3live.api.OrderInfo> s = mock.openStops(sym);
+        assertEquals("so stop " + sym, 1, s.size());
+        assertTrue(s.get(0).isClosePosition());
+        double r = s.get(0).getStopPrice().doubleValue() / entry(sym);
+        assertTrue("stop/entry=" + r, r >= 1d - dist - CanaryLimits.STOP_ROUND_TOL && r <= 1d - dist + CanaryLimits.STOP_ROUND_TOL);
+    }
+
+    private double entry(String sym) {
+        for (com.binance.chuyennd.c3live.api.PositionInfo p : mock.positions()) {
+            if (sym.equals(p.getSymbol()) && p.getPositionAmt() != null && p.getPositionAmt().signum() != 0) {
+                return p.getEntryPrice().doubleValue();
+            }
+        }
+        fail("khong co vi the " + sym);
+        return 0d;
+    }
+
+    // ------------------------------------------------------------------ [3c MAJ-C1] stop bao ve (prereg §ADD-2)
+    @Test
+    public void protectiveStopTightensWhenLossBudgetShrinks() throws Exception {
+        preflight();
+        mock.deposit(new BigDecimal("-1.5"));   // tmb0 - tmb = 1,5 => ngan sach (2 - 0,1 - 1,5) / 20 ~ 2 %
+        ok(run("K1"));
+        List<com.binance.chuyennd.c3live.api.OrderInfo> s = mock.openStops(MAIN);
+        assertEquals(1, s.size());
+        double r = s.get(0).getStopPrice().doubleValue() / entry(MAIN);
+        assertTrue("stop/entry=" + r, r > 0.975d && r < 0.985d);
+    }
+
+    @Test
+    public void noOpenWhenLossBudgetTooSmall() throws Exception {
+        preflight();
+        mock.deposit(new BigDecimal("-1.85"));   // ngan sach 0,05 USDT => stop 0,25 % < 1 %
+        CanaryEngine.Result r = run("K1");
+        assertEquals(r.line(), CanaryEngine.TRUOT, r.verdict);
+        assertTrue(r.line(), r.line().contains("ngan sach"));
+        assertEquals("khong gui lenh mo", 0, mock.calls("newMarketOrder"));
+    }
+
+    @Test
+    public void protectFailureClosesPositionImmediately() throws Exception {
+        preflight();
+        mock.rejectAllStops = true;
+        for (String k : new String[]{"K1", "K6_OPEN"}) {
+            CanaryEngine.Result r = run(k);
+            assertEquals(k + " " + r.line(), CanaryEngine.TRUOT, r.verdict);
+            assertTrue(r.line(), r.line().contains("stop bao ve"));
+            assertEquals(k + ": vi the da dong ngay", 0, mock.position(MAIN).signum());
+            assertTrue(mock.openStops(null).isEmpty());
+        }
     }
 
     // ------------------------------------------------------------------ guard cung

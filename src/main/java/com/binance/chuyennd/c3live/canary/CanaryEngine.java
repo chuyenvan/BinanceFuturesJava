@@ -349,7 +349,7 @@ public final class CanaryEngine {
         flattener = new C3LiveFlattener(gw, book, () -> KillSwitchEngine.Action.NONE, al, api, clock, 5, 10_000L, cfg.safeRetryMs, flat);
         flattener.setStopGuard(guard);
         trailing = TrailingStopManager.builder().gateway(gw).book(book).rules(() -> rules).closer(flattener::closeCluster)
-                .trail((peak, pred, sym) -> trailTarget.getOrDefault(sym, -0.20f)).defer((s, t, n) -> false)
+                .trail((peak, pred, sym) -> trailTarget.getOrDefault(sym, (float) -CanaryLimits.MAX_STOP_DIST)).defer((s, t, n) -> false)
                 .armHook((s, t, n) -> { }).action(() -> KillSwitchEngine.Action.NONE).api(api).alert(al).clock(clock)
                 .armRate(-1f).timeStopHours(1_000_000).safeRetryMs(cfg.safeRetryMs).sleeper(sleeper::sleep)
                 .events((type, s, n, v, d) -> journal.ev("TRAIL_EVENT", "event", type, "symbol", s, "value", v, "detail", d))
@@ -642,8 +642,93 @@ public final class CanaryEngine {
 
     private Map<String, Float> px(String sym) {
         Map<String, Float> m = new HashMap<>();
-        m.put(sym, mark(sym).floatValue());
+        BigDecimal p;
+        try {
+            p = mark(sym);
+        } catch (RuntimeException e) {
+            p = lastPrice(sym);   // positionRisk loi (K7b tiem phia client) => van dat duoc stop bao ve theo gia khop cuoi
+        }
+        m.put(sym, p.floatValue());
         return m;
+    }
+
+    // ------------------------------------------------------------------ [3c MAJ-C1] stop bao ve (prereg §ADD-2)
+    /** Lo xau nhat cua vi the dang mo (tru symbol {@code except}) neu stop kich: qty x (gia vao - stop); khong stop => ca notional. */
+    double worstOpenLoss(String except) {
+        double w = 0d;
+        for (String s : new String[]{state.symMain, state.symAux}) {
+            if (s == null || s.equals(except)) continue;
+            Optional<LiveBookC3.ClusterView> c = book.cluster(s);
+            if (c.isPresent() && c.get().confirmedQty.signum() > 0) {
+                double q = c.get().confirmedQty.doubleValue();
+                double e = c.get().avgPrice;
+                double sp = c.get().stopPrice;
+                w += c.get().stopClientAlgoId != null && sp > 0d ? Math.max(0d, q * (e - sp)) : q * e;
+                continue;
+            }
+            try {   // vi the ngoai so (vd sau K6b): khong biet stop => tinh ca notional
+                Optional<PositionInfo> p = pos(s);
+                if (p.isPresent() && p.get().getEntryPrice() != null) {
+                    w += p.get().getPositionAmt().abs().doubleValue() * p.get().getEntryPrice().doubleValue();
+                }
+            } catch (RuntimeException e) {
+                journal.ev("WORST_LOSS_NOREAD", "symbol", s, "err", e.getClass().getSimpleName());
+            }
+        }
+        return w;
+    }
+
+    /** Khoang cach stop bao ve cho vi the {@code notional} cua {@code sym}: min(4,5 %, ngan sach lo con lai / notional). */
+    double protectDistance(String sym, double notional) {
+        double budget = CanaryLimits.LOSS_CAP_USDT - CanaryLimits.STOP_FEE_RESERVE_USDT - Math.max(0d, lossNow()) - worstOpenLoss(sym);
+        if (notional <= 0d) return CanaryLimits.MAX_STOP_DIST;
+        return Math.min(CanaryLimits.MAX_STOP_DIST, budget / notional);
+    }
+
+    /**
+     * Dat NGAY stop bao ve closePosition MARK_PRICE cho cum vua mo: -d so gia vao (d = protectDistance). Khong dat/kiem duoc
+     * (hoac ngan sach < 1 %) => DONG vi the ngay roi TRUOT. Ratchet: stop dang co chat hon thi giu.
+     */
+    void protect(String sym) {
+        LiveBookC3.ClusterView c = book.cluster(sym).orElseThrow(() -> new Abort(TRUOT, "stop bao ve: khong co cum " + sym));
+        double notional = c.confirmedQty.doubleValue() * c.avgPrice;
+        double d = protectDistance(sym, notional);
+        String why = null;
+        if (d < CanaryLimits.MIN_STOP_DIST) {
+            why = "ngan sach lo con lai chi du stop " + fmt(d * 100d) + " % (< " + CanaryLimits.MIN_STOP_DIST * 100d + " %)";
+        } else {
+            try {
+                trailRate(sym, (float) -d);
+            } catch (RuntimeException e) {
+                why = "dat stop loi " + e;
+            }
+            if (why == null) {
+                LiveBookC3.ClusterView c2 = book.cluster(sym).orElse(null);
+                String sid = c2 == null ? null : c2.stopClientAlgoId;
+                if (sid == null || ownStops(sym).stream().noneMatch(o -> sid.equals(o.getClientOrderId()))) {
+                    why = "khong thay stop bao ve NEW tren san";
+                } else if (c2.stopPrice < c2.avgPrice * (1d - d - CanaryLimits.STOP_ROUND_TOL)) {
+                    why = "stop " + c2.stopPrice + " xa hon -" + fmt(d * 100d) + " % so gia vao " + c2.avgPrice;
+                } else {
+                    journal.ev("PROTECT", "symbol", sym, "cid", sid, "stop", c2.stopPrice, "entry", c2.avgPrice, "distPct", d * 100d,
+                            "notional", notional);
+                    return;
+                }
+            }
+        }
+        journal.ev("PROTECT_FAIL", "symbol", sym, "why", why);
+        alert("canary: KHONG dat duoc stop bao ve " + sym + " (" + why + ") => dong vi the");
+        try {
+            closeCluster(sym, "PROTECT_FAIL");
+        } catch (RuntimeException e) {
+            journal.ev("PROTECT_FAIL_CLOSE", "symbol", sym, "err", e.toString());
+        }
+        throw new Abort(TRUOT, "stop bao ve " + sym + ": " + why + " (da dong vi the)");
+    }
+
+    /** Cum dang giu phai co stop bao ve (cum tu buoc truoc da co; khong co => dat ngay). */
+    void ensureProtected(String sym) {
+        if (book.cluster(sym).map(c -> c.stopClientAlgoId).orElse(null) == null) protect(sym);
     }
 
     // ------------------------------------------------------------------ hanh dong (qua dung lop c3_live)
@@ -677,6 +762,12 @@ public final class CanaryEngine {
         AccountModeGuard.Result mg = modeGuard.checkSymbol(sym);
         if (!mg.isOk()) throw new Abort(TRUOT, "AccountModeGuard chan " + sym + ": " + mg.getProblems());
         waitNewMinute(sym);
+        // [3c MAJ-C1] ngan sach lo phai du cho stop bao ve >= 1 % TRUOC khi gui lenh mo
+        double dPre = protectDistance(sym, CanaryLimits.ORDER_NOTIONAL_USDT.doubleValue());
+        if (dPre < CanaryLimits.MIN_STOP_DIST) {
+            throw new Abort(TRUOT, "ngan sach lo con lai chi du stop " + fmt(dPre * 100d) + " % cho leg 20 USDT (< "
+                    + CanaryLimits.MIN_STOP_DIST * 100d + " %) — KHONG mo " + sym);
+        }
         BigDecimal px = lastPrice(sym);
         SymbolRules.Sizing sz = rules.sizeMarketBuy(sym, CanaryLimits.ORDER_NOTIONAL_USDT, px);
         if (!sz.isOk()) throw new Abort(TRUOT, "khong tinh duoc qty " + sym + ": " + sz);
@@ -706,6 +797,7 @@ public final class CanaryEngine {
         l.fillEventMs = firstEventTs("ORDER_TRADE_UPDATE", cid, "FILLED");
         journal.ev("LEG_DONE", "symbol", sym, "cid", l.cid, "confirmed", l.confirmed, "avg", l.avg, "err", l.error,
                 "streamLatMs", l.fillEventMs < 0 ? null : l.fillEventMs - l.sendMs, "waitMs", w);
+        if (l.confirmed) protect(sym);   // [3c MAJ-C1] moi vi the vua mo co NGAY stop bao ve truoc khi buoc ket thuc
         return l;
     }
 
@@ -1099,8 +1191,10 @@ public final class CanaryEngine {
             st.check(false, "loi " + e);
             safeFlatten(st, key);
         }
-        if (!st.fails.isEmpty() && !key.endsWith("_OPEN") && !"K8".equals(key) && !"K6B_RESTART".equals(key)) {
-            safeFlatten(st, key);   // prereg: mac dinh khi TRUOT => dong het
+        // prereg: mac dinh khi TRUOT => dong het. [3c] ca buoc _OPEN that bai (JVM khong halt) cung dong ngay — khong de vi the
+        // qua ranh gioi JVM khi buoc khong DAT (MAJ-C1). K8 (doi chieu) va K6B_RESTART (stop phai CON) giu nguyen.
+        if (!st.fails.isEmpty() && !"K8".equals(key) && !"K6B_RESTART".equals(key)) {
+            safeFlatten(st, key);
         }
         return finish(st);
     }
@@ -1204,31 +1298,37 @@ public final class CanaryEngine {
         st.check(l.size() == expect, label + ": " + l.size() + " stop c3s- NEW (phai " + expect + ")");
     }
 
-    /** K2: dat stop closePosition MARK -20 % (trailing ARM), doi len -19 % (MOVE), thu closePosition thu 2, doi -18 %. */
+    /**
+     * K2 (§ADD-2): (a) stop bao ve closePosition MARK -4,5 % (dat ngay luc mo — K1 — hoac dat o day), (b) doi len -4,0 % (MOVE),
+     * (c) thu closePosition thu 2 cung chieu o -4,2 %, (d) doi -3,5 %. Moi muc >= -4,5 % so gia vao (MAJ-C1).
+     */
     void k2(Step st) {
         begin("K2", true);
         String s = state.symMain;
         ensurePosition(s, st);
         LiveBookC3.ClusterView c0 = book.cluster(s).get();
         st.check(c0.stopClientAlgoId == null || ownStops(s).size() == 1, "dau K2: stop trong so khong khop san");
-        trailRate(s, -0.20f);
+        boolean aHere = c0.stopClientAlgoId == null;
+        ensureProtected(s);
         String a = book.cluster(s).get().stopClientAlgoId;
         st.put("a.cid", a);
-        st.check(a != null, "(a) khong dat duoc stop");
+        st.put("a.from", aHere ? "K2" : "stop bao ve dat luc mo (buoc truoc)");
+        st.put("a.stop", book.cluster(s).get().stopPrice);
+        st.check(a != null, "(a) khong co stop bao ve");
         countStops(st, s, "a", 1);
-        stopStatus(st, s, a, "a");
-        trailRate(s, -0.19f);
+        stopStatus(st, s, a, "a", aHere);
+        trailRate(s, -0.040f);
         String b = book.cluster(s).get().stopClientAlgoId;
         st.put("b.cid", b);
         st.put("b.qtyMode", book.cluster(s).get().stopQtyMode);
         st.check(b != null && !b.equals(a), "(b) stop khong doi");
         countStops(st, s, "b", 1);
-        stopStatus(st, s, b, "b");
+        stopStatus(st, s, b, "b", true);
         st.check(ownStops(s).stream().noneMatch(o -> o.getClientOrderId().equals(a)), "(b) stop cu A van mo");
         // (c) closePosition thu 2 cung chieu khi B con: du lieu (-4130 hay chap nhan)
         long now = clock.getAsLong();
         String cc = C3LiveCids.stop(s, Math.floorDiv(now, 60_000L), book.nextStopSeq(s, now));
-        BigDecimal pc = rules.roundStopPriceForLong(s, mark(s).multiply(new BigDecimal("0.75")));
+        BigDecimal pc = rules.roundStopPriceForLong(s, BigDecimal.valueOf(book.cluster(s).get().avgPrice * (1d - 0.042d)));
         try {
             OrderInfo o = gw.newStopMarket(s, Side.SELL, null, pc, cc, true);
             st.put("c.result", "CHAP NHAN status=" + o.getRawStatus());
@@ -1239,22 +1339,26 @@ public final class CanaryEngine {
             st.put("c.result", "TU CHOI " + e.getKind() + ":" + e.getExchangeCode() + " " + e.getMessage());
         }
         countStops(st, s, "c", 1);
-        trailRate(s, -0.18f);
+        trailRate(s, -0.035f);
         String d = book.cluster(s).get().stopClientAlgoId;
         st.put("d.cid", d);
         st.put("d.qtyMode", book.cluster(s).get().stopQtyMode);
         st.check(d != null && !d.equals(b), "(d) stop khong doi");
         countStops(st, s, "d", 1);
-        stopStatus(st, s, d, "d");
+        stopStatus(st, s, d, "d", true);
         st.put("trail.stats", trailing.stats());
     }
 
     /** queryStop theo clientAlgoId khop + algoStatus NEW trong response dat stop. */
-    private void stopStatus(Step st, String s, String cid, String label) {
+    private void stopStatus(Step st, String s, String cid, String label, boolean placedInThisJvm) {
         if (cid == null) return;
         Optional<OrderInfo> q = gw.queryStop(s, cid);
         st.put(label + ".queryStop", q.map(o -> o.getRawStatus()).orElse("KHONG CO"));
         st.check(q.isPresent() && q.get().getStatus() == OrderStatus.NEW, label + ": queryStop " + cid + " khong NEW");
+        if (!placedInThisJvm) {   // response dat stop nam trong journal cua JVM buoc truoc (K1)
+            st.put(label + ".algoStatus", "xem journal buoc dat stop");
+            return;
+        }
         String algoStatus = null;
         for (OrderInfo o : gw.stopResponses()) if (cid.equals(o.getClientOrderId())) algoStatus = o.getRawStatus();
         st.put(label + ".algoStatus", algoStatus);
@@ -1357,7 +1461,7 @@ public final class CanaryEngine {
         begin("K5", true);
         String s = state.symMain;
         ensurePosition(s, st);
-        if (book.cluster(s).get().stopClientAlgoId == null) trailRate(s, -0.20f);
+        ensureProtected(s);   // [3c] stop bao ve (da dat luc mo)
         String sid = book.cluster(s).get().stopClientAlgoId;
         st.put("stop", sid);
         st.check(sid != null, "khong co stop truoc khi dong");
@@ -1408,7 +1512,7 @@ public final class CanaryEngine {
         begin(st.k, true);
         String s = state.symMain;
         ensurePosition(s, st);
-        if (book.cluster(s).get().stopClientAlgoId == null) trailRate(s, -0.20f);
+        ensureProtected(s);   // [3c] stop bao ve (da dat luc mo)
         LiveBookC3.ClusterView c = book.cluster(s).get();
         st.check(c.stopClientAlgoId != null, "khong arm duoc stop");
         countStops(st, s, "open", 1);
@@ -1500,7 +1604,7 @@ public final class CanaryEngine {
         begin("K7", true);
         String s = state.symMain;
         ensurePosition(s, st);
-        if (book.cluster(s).get().stopClientAlgoId == null) trailRate(s, -0.20f);
+        ensureProtected(s);   // [3c] stop bao ve (da dat luc mo)
         String sid = book.cluster(s).get().stopClientAlgoId;
         BigDecimal qty0 = book.cluster(s).get().confirmedQty;
         st.check(stream.isConnected(), "stream chua ket noi truoc khi cat");
@@ -1554,7 +1658,7 @@ public final class CanaryEngine {
         st.put("startup.blocks", rec.blocks().toString());
         if (!st.check(r0.ok && rec.blocks().isEmpty(), "reconcile khoi dong khong sach: " + r0 + " blocks=" + rec.blocks())) return;
         ensurePosition(s1, st);
-        if (book.cluster(s1).get().stopClientAlgoId == null) trailRate(s1, -0.20f);
+        ensureProtected(s1);   // [3c] stop bao ve (da dat luc mo)
         waitNewMinuteForClose(s1);
         gw.failPositions = true;
         long tInj = clock.getAsLong();

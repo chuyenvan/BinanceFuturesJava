@@ -150,6 +150,21 @@ public final class CanaryGateway implements ExchangeGateway {
         throw refuse("newMarketOrder", sym, "khong co gia tham chieu");
     }
 
+    /** Gia vao cua vi the long (doc thang delegate). null = khong co vi the / khong doc duoc (stop van duoc dat: giam rui ro). */
+    private BigDecimal entryPrice(String sym) {
+        try {
+            for (PositionInfo p : d.positions()) {
+                if (sym.equals(p.getSymbol()) && p.getPositionAmt() != null && p.getPositionAmt().signum() > 0
+                        && p.getEntryPrice() != null && p.getEntryPrice().signum() > 0) {
+                    return p.getEntryPrice();
+                }
+            }
+        } catch (RuntimeException e) {
+            j.ev("GUARD_STOP_NOREAD", "symbol", sym, "err", e.getClass().getSimpleName());
+        }
+        return null;
+    }
+
     private BigDecimal openNotional(String sym) {
         List<PositionInfo> ps;
         try {
@@ -319,6 +334,15 @@ public final class CanaryGateway implements ExchangeGateway {
         requireAllowed("newStopMarket", symbol);
         if (side != Side.SELL) throw refuse("newStopMarket", symbol, "stop chi SELL (dong long)");
         if (qty != null && !reduceOnly) throw refuse("newStopMarket", symbol, "stop qty bat buoc reduceOnly");
+        // [3c MAJ-C1] stop KHONG BAO GIO xa hon -4,5 % so gia vao (vi the doc tu san, khong qua tiem loi)
+        BigDecimal entry = entryPrice(symbol);
+        if (entry != null && stopPrice != null) {
+            BigDecimal floor = entry.multiply(BigDecimal.valueOf(1d - CanaryLimits.MAX_STOP_DIST - CanaryLimits.STOP_ROUND_TOL));
+            if (stopPrice.compareTo(floor) < 0) {
+                throw refuse("newStopMarket", symbol, "stop " + stopPrice.toPlainString() + " thap hon entry " + entry.toPlainString()
+                        + " x (1 - " + CanaryLimits.MAX_STOP_DIST + ") — tran lo giua 2 JVM (§ADD-2)");
+            }
+        }
         OrderInfo o = call("newStopMarket" + (qty == null ? ":closePosition" : ":qtyRO"), symbol, clientOrderId, true,
                 () -> d.newStopMarket(symbol, side, qty, stopPrice, clientOrderId, reduceOnly));
         stopResponses.add(o);

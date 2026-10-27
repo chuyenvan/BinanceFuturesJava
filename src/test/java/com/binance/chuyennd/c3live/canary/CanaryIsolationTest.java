@@ -27,8 +27,10 @@ public class CanaryIsolationTest {
 
     static final Pattern LOAD = Pattern.compile("\\[class,load\\] (\\S+)");
     static final Pattern FORBIDDEN = Pattern.compile(
-            "^(com\\.aerospike\\.|redis\\.clients\\.|io\\.lettuce\\.|org\\.redisson\\.|com\\.binance\\.chuyennd\\.aerospike\\.)"
-                    + "|(?i)symbol_?mapper");
+            "^(com\\.aerospike\\.|redis\\.clients\\.|io\\.lettuce\\.|org\\.redisson\\.|com\\.binance\\.chuyennd\\.aerospike\\."
+                    // [3c MIN-C6] client/key cua tai khoan CHINH: khong duoc nap trong JVM canary
+                    + "|com\\.binance\\.client\\.|com\\.binance\\.chuyennd\\.config\\.)"
+                    + "|PrivateConfig|ClientSingleton|(?i)symbol_?mapper");
 
     @Rule
     public TemporaryFolder tmp = new TemporaryFolder();

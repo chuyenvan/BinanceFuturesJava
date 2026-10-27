@@ -49,6 +49,8 @@ public class MockExchangeGateway implements ExchangeGateway {
     public volatile boolean stickLeverage = false;
     public volatile boolean rejectSecondClosePosition = false;
     public volatile boolean rejectWouldTrigger = false;
+    /** [V12 3c] tu choi MOI lenh dat stop (test stop bao ve khong dat duoc => dong ngay). */
+    public volatile boolean rejectAllStops = false;
     public volatile BigDecimal feeRate = BigDecimal.ZERO;
     public volatile Consumer<String> wsSink = null;
     public volatile ExchangeInfo exchangeInfo = new ExchangeInfo(0L, Collections.emptyList(), Collections.emptyList());
@@ -166,6 +168,9 @@ public class MockExchangeGateway implements ExchangeGateway {
         enter("newStopMarket");
         callLog.add("newStopMarket:" + symbol + ":" + cid);
         if (stops.containsKey(cid)) throw dup();
+        if (rejectAllStops) {
+            throw new GatewayException(ErrorKind.OTHER, 400, -1000, "stop bi tu choi (mock rejectAllStops)", true, 0L, null);
+        }
         if (qty == null && rejectSecondClosePosition) {
             for (OrderInfo s : stops.values()) {
                 if (!s.getStatus().isFinal() && s.getSymbol().equals(symbol) && s.isClosePosition() && s.getSide() == side) {

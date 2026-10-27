@@ -96,6 +96,19 @@ public class CanaryGuardTest {
         assertEquals(13, gw.refusedCalls());
     }
 
+    /** [3c MAJ-C1] stop SELL khong bao gio xa hon -4,5 % so gia vao (dung sai lam tron 2 bp). */
+    @Test
+    public void stopFartherThanMaxDistFromEntryRefused() {
+        gw.newMarketOrder("C00USDT", Side.BUY, new BigDecimal("20"), "c3-C00USDT-1-0", false);   // entry 1
+        refused(() -> gw.newStopMarket("C00USDT", Side.SELL, null, new BigDecimal("0.80"), "c3s-C00USDT-1-1", true));
+        refused(() -> gw.newStopMarket("C00USDT", Side.SELL, null, new BigDecimal("0.9547"), "c3s-C00USDT-1-2", true));
+        refused(() -> gw.newStopMarket("C00USDT", Side.SELL, new BigDecimal("20"), new BigDecimal("0.9"), "c3s-C00USDT-1-3", true));
+        gw.newStopMarket("C00USDT", Side.SELL, null, new BigDecimal("0.9550"), "c3s-C00USDT-1-4", true);   // dung -4,5 %
+        gw.newStopMarket("C00USDT", Side.SELL, new BigDecimal("20"), new BigDecimal("0.99"), "c3s-C00USDT-1-5", true);
+        assertEquals(2, mock.calls("newStopMarket"));
+        assertEquals(3, gw.refusedCalls());
+    }
+
     @Test
     public void foreignPositionBlocksOpen() {
         mock.setPosition("C05USDT", new BigDecimal("3"), BigDecimal.ONE);
