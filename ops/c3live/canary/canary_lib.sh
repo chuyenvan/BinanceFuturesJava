@@ -31,8 +31,8 @@ else
 fi
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}            # process bot — chi DOC env/PID/cwd, khong cham
 JAVA_242=${JAVA_242:-java}
-CANARY_JAR=${CANARY_JAR:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12dry_3d}   # jar Oracle copy len 242 (early)
-CANARY_JAR_MD5=${CANARY_JAR_MD5:-ddd8fe17ffe0405a6a49a7c7e7e377a5}   # [V12 3d] pin jar v12dry_3d (dung chung dry + canary)
+CANARY_JAR=${CANARY_JAR:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12dry_3e}   # jar Oracle copy len 242 (early)
+CANARY_JAR_MD5=${CANARY_JAR_MD5:-f3fd2cc3d048122f79306e251d916b9b}   # [V12 3e] pin jar v12dry_3e (dung chung dry + canary)
 KEYS_FILE=${CANARY_KEYS_FILE:-/root/.config/c3live/keys.env}
 KEYS_OWNER=${CANARY_KEYS_OWNER:-root}
 LOGDIR=${LOGDIR:-/home/ubuntu/claude_master/canary}
