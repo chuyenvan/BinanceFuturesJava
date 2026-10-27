@@ -54,6 +54,17 @@ public final class CanaryState {
     public Map<String, Long> lastCidMinute = new LinkedHashMap<>();
     /** Phut gui lenh dong gan nhat cua symbol (cid c3x- khong trung qua cac cum). */
     public Map<String, Long> lastCloseMinute = new LinkedHashMap<>();
+    /** [3f §ADD-4] ledger: so luong canary theo symbol (+ BUY c3-, - SELL c3x- theo khop; co lai theo san khi nho hon 2 lan doc). */
+    public Map<String, String> canaryQty = new LinkedHashMap<>();
+    /** [3f] khoi luong da tinh theo cid (response / queryOrder / stream — khong tinh 2 lan, ca qua JVM). */
+    public Map<String, String> canaryCidQty = new LinkedHashMap<>();
+    /** [3f §ADD-4 C] symbol TRUOT-DO (vi the ngoai canary / cong don LEGACY): KHONG dong, KHONG dat lenh — MASTER quyet. */
+    public Map<String, String> red = new LinkedHashMap<>();
+    /** [3f §ADD-4 D] anh chup LEGACY luc K0: vi the "qty@entry", lenh / algo "SYMBOL|cid|type|side". */
+    public Map<String, String> legacyK0Positions = new LinkedHashMap<>();
+    public List<String> legacyK0Orders = new ArrayList<>();
+    public List<String> legacyK0Algos = new ArrayList<>();
+    public Long legacyK0Ms;
 
     public static CanaryState load(File dir) throws IOException {
         File f = new File(dir, FILE_NAME);
@@ -67,6 +78,12 @@ public final class CanaryState {
         if (st.feeOther == null) st.feeOther = new LinkedHashMap<>();
         if (st.lastCidMinute == null) st.lastCidMinute = new LinkedHashMap<>();
         if (st.lastCloseMinute == null) st.lastCloseMinute = new LinkedHashMap<>();
+        if (st.canaryQty == null) st.canaryQty = new LinkedHashMap<>();
+        if (st.canaryCidQty == null) st.canaryCidQty = new LinkedHashMap<>();
+        if (st.red == null) st.red = new LinkedHashMap<>();
+        if (st.legacyK0Positions == null) st.legacyK0Positions = new LinkedHashMap<>();
+        if (st.legacyK0Orders == null) st.legacyK0Orders = new ArrayList<>();
+        if (st.legacyK0Algos == null) st.legacyK0Algos = new ArrayList<>();
         return st;
     }
 

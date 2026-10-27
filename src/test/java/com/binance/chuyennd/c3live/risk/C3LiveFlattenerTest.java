@@ -2,6 +2,8 @@ package com.binance.chuyennd.c3live.risk;
 
 import com.binance.chuyennd.c3live.api.AccountSnapshot;
 import com.binance.chuyennd.c3live.api.ErrorKind;
+import com.binance.chuyennd.c3live.api.ExchangeGateway;
+import com.binance.chuyennd.c3live.rate.RateGuard;
 import com.binance.chuyennd.c3live.api.GatewayException;
 import com.binance.chuyennd.c3live.api.OrderInfo;
 import com.binance.chuyennd.c3live.api.Side;
@@ -180,5 +182,58 @@ public class C3LiveFlattenerTest {
     private static AccountSnapshot snap(String tmb) {
         BigDecimal v = new BigDecimal(tmb);
         return new AccountSnapshot(v, v, v, BigDecimal.ZERO, Collections.emptyList(), 0L);
+    }
+
+    // ------------------------------------------------------------------ [3f]
+    @Test
+    public void killSwitchFlattenAndCloseClusterUseEmergencyLane() {
+        MockExchangeGateway mock = new MockExchangeGateway();
+        AtomicLong now = new AtomicLong(1_793_114_327_000L);   // giay :47 (nhu flatten 10-27)
+        RateGuard rg = new RateGuard(RateGuard.Limits.binanceDefault(), 0.5, 2_000L, new RateGuard.Clock() {
+            @Override public long nowMs() { return now.get(); }
+            @Override public void sleepMs(long ms) { now.addAndGet(ms); }
+        });
+        ExchangeGateway gw = (ExchangeGateway) java.lang.reflect.Proxy.newProxyInstance(ExchangeGateway.class.getClassLoader(),
+                new Class<?>[]{ExchangeGateway.class}, (p, m, a) -> {
+                    String n = m.getName();
+                    if (!"name".equals(n) && !"toString".equals(n) && !"hashCode".equals(n) && !"equals".equals(n)) {
+                        rg.acquire(n.startsWith("positions") || n.startsWith("account") ? 5 : 1, n.startsWith("newMarketOrder") ? 1 : 0);
+                    }
+                    try {
+                        return m.invoke(mock, a);
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        throw e.getCause();
+                    }
+                });
+        LiveBookC3 b = new LiveBookC3(null, 1.0);
+        open(mock, b, "AUSDT", now.get());
+        open(mock, b, "BUSDT", now.get());
+        rg.onHeaders(1494, null, null);   // IP chung LEGACY > ngan sach 1200
+        try {
+            gw.positions();
+            fail("lan thuong phai bi chan");
+        } catch (GatewayException e) {
+            assertEquals(ErrorKind.RATE_LIMIT, e.getKind());
+        }
+        AtomicReference<KillSwitchEngine.Action> act = new AtomicReference<>(KillSwitchEngine.Action.FLATTEN);
+        C3LiveFlattener f = new C3LiveFlattener(gw, b, act::get, m -> { }, null, now::get, 5, 10_000L, 10_000L);
+        assertEquals(1, f.closeCluster("AUSDT", "TIME_STOP"));
+        assertEquals(0, mock.position("AUSDT").signum());
+        assertTrue(f.step() >= 1);
+        assertEquals(0, mock.position("BUSDT").signum());
+        assertTrue(rg.emergencyOverBudget() > 0);
+        assertEquals("chi lan doi chung bi tu choi", 1L, rg.rejects());
+    }
+
+    @Test
+    public void closeNeverSellsMoreThanC3Qty() {
+        MockExchangeGateway gw = new MockExchangeGateway();
+        AtomicLong now = new AtomicLong(1_000_000L);
+        LiveBookC3 b = new LiveBookC3(null, 1.0);
+        open(gw, b, "AUSDT", now.get());   // c3: 10
+        gw.newMarketOrder("AUSDT", Side.BUY, new BigDecimal("7"), "web_legacy_1", false);   // LEGACY 7 cung symbol (one-way)
+        C3LiveFlattener f = new C3LiveFlattener(gw, b, () -> KillSwitchEngine.Action.NONE, m -> { }, null, now::get, 5, 10_000L, 10_000L);
+        assertEquals(1, f.closeCluster("AUSDT", "TIME_STOP"));
+        assertEquals("chi ban phan c3", 0, new BigDecimal("7").compareTo(gw.position("AUSDT")));
     }
 }

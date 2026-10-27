@@ -111,8 +111,45 @@ public class CanaryGuardTest {
 
     @Test
     public void foreignPositionBlocksOpen() {
+        // [3f §ADD-4] LEGACY tren symbol khac: binh thuong; vi the / lenh ngoai canary TREN symbol canary => tu choi
         mock.setPosition("C05USDT", new BigDecimal("3"), BigDecimal.ONE);
-        refused(() -> gw.newMarketOrder("C00USDT", Side.BUY, BigDecimal.ONE, "c3-C00USDT-1-0", false));
+        gw.newMarketOrder("C00USDT", Side.BUY, BigDecimal.ONE, "c3-C00USDT-1-0", false);
+        gw.canaryQty = s -> "C00USDT".equals(s) ? BigDecimal.ONE : BigDecimal.ZERO;
+        mock.setPosition("C01USDT", new BigDecimal("2"), BigDecimal.ONE);
+        refused(() -> gw.newMarketOrder("C01USDT", Side.BUY, BigDecimal.ONE, "c3-C01USDT-1-0", false));
+        refused(() -> gw.setLeverage("C01USDT", 1));
+        mock.setPosition("C01USDT", BigDecimal.ZERO, BigDecimal.ONE);
+        mock.addRestingOrder("C01USDT", "web_1", Side.BUY, BigDecimal.ONE);
+        refused(() -> gw.newMarketOrder("C01USDT", Side.BUY, BigDecimal.ONE, "c3-C01USDT-2-0", false));
+        refused(() -> gw.setMarginType("C01USDT", "CROSSED"));
+        assertEquals(0, new BigDecimal("3").compareTo(mock.position("C05USDT")));
+    }
+
+    @Test
+    public void nonCanaryCidAndAccountLevelWritesRefused() {
+        refused(() -> gw.newMarketOrder("C00USDT", Side.BUY, BigDecimal.ONE, "web_x", false));
+        refused(() -> gw.newMarketOrder("C00USDT", Side.BUY, BigDecimal.ONE, "c3x-C00USDT-1-1", false));
+        refused(() -> gw.newMarketOrder("C00USDT", Side.SELL, BigDecimal.ONE, "c3-C00USDT-1-0", true));
+        refused(() -> gw.newStopMarket("C00USDT", Side.SELL, null, BigDecimal.ONE, "web_s", true));
+        refused(() -> gw.cancelStop("C00USDT", "web_s"));
+        refused(() -> gw.cancelOrder("C00USDT", "web_o"));
+        refused(() -> gw.setDualSidePosition(false));
+        assertEquals(0, mock.calls("setDualSidePosition"));
+    }
+
+    @Test
+    public void readViewIsScopedToCanarySymbols() {
+        mock.setPosition("C05USDT", new BigDecimal("3"), BigDecimal.ONE);
+        mock.addRestingOrder("C04USDT", "web_1", Side.BUY, BigDecimal.ONE);
+        mock.addRestingStop("C04USDT", "web_2", BigDecimal.ONE, new BigDecimal("0.5"));
+        assertTrue(gw.positions().isEmpty());
+        assertTrue(gw.openOrders(null).isEmpty());
+        assertTrue(gw.openStops(null).isEmpty());
+        assertTrue(gw.openOrders("C04USDT").isEmpty());
+        assertEquals(1, gw.positionsAll().size());
+        assertEquals(1, gw.openOrdersAll().size());
+        assertEquals(1, gw.openStopsAll().size());
+        for (com.binance.chuyennd.c3live.api.PositionInfo p : gw.account().getPositions()) assertNotEquals("C05USDT", p.getSymbol());
     }
 
     @Test

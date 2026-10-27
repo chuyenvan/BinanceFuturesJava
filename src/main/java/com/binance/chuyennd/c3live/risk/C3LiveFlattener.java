@@ -13,6 +13,7 @@ import com.binance.chuyennd.c3live.exec.C3LiveOrderExecutor;
 import com.binance.chuyennd.c3live.recon.FlatConfirm;
 import com.binance.chuyennd.c3live.recon.OwnStopGuard;
 import com.binance.chuyennd.ops.KillSwitchEngine;
+import com.binance.chuyennd.c3live.rate.RateGuard;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -94,6 +95,12 @@ public final class C3LiveFlattener {
             doneAnnounced = false;
             return 0;
         }
+        try (RateGuard.Lane lane = RateGuard.emergencyLane()) {   // [3f] FLATTEN kill-switch: khong bao gio bi rate guard rieng chan
+            return flattenStep(now);
+        }
+    }
+
+    private int flattenStep(long now) {
         if (!announced) {
             announced = true;
             doneAnnounced = false;
@@ -127,7 +134,9 @@ public final class C3LiveFlattener {
         if (!c.isPresent() || c.get().hasUnresolved) return 0;
         long now = clock.getAsLong();
         if (pacerFull(now)) return 0;
-        return closeOne(c.get(), positions(), reason, now);
+        try (RateGuard.Lane lane = RateGuard.emergencyLane()) {   // [3f] dong cum: lan khan cap
+            return closeOne(c.get(), positions(), reason, now);
+        }
     }
 
     private int closeOne(LiveBookC3.ClusterView c, Map<String, BigDecimal> pos, String reason, long now) {
@@ -140,6 +149,9 @@ public final class C3LiveFlattener {
         if (pos != null) {
             BigDecimal p = pos.get(sym);
             qty = p == null ? BigDecimal.ZERO : p.max(BigDecimal.ZERO);
+            // [3f §ADD-4] KHONG bao gio dong qua phan cua c3 (tai khoan chinh: cung symbol co the co vi the khac)
+            BigDecimal mine = c.confirmedQty.subtract(c.exitQty == null ? BigDecimal.ZERO : c.exitQty).max(BigDecimal.ZERO);
+            qty = qty.min(mine.signum() > 0 ? mine : c.confirmedQty);
         } else {
             qty = c.confirmedQty;
         }

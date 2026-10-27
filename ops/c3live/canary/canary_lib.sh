@@ -462,6 +462,7 @@ cl_flat_read() {
   l=$(printf '%s' "$CL_LAST_OUT" | grep '^KEYCHECK ' | tail -1)
   CL_TMB=$(printf '%s' "$l" | sed -n 's/.* tmb=\([0-9][0-9.]*\) .*/\1/p')
   CL_ASSETS=$(printf '%s' "$l" | sed -n 's/.* assets=\({[^}]*}\).*/\1/p')
+  CL_LEGACY=$(printf '%s' "$l" | sed -n 's/.* legacy=\([^ ]*\) .*/\1/p')   # [3f §ADD-4] LEGACY chi dem (khong tinh vao "phang")
   CL_USDT=$(printf '%s' "$CL_ASSETS" | sed -nE 's/.*[{ ]USDT=([0-9.-]+).*/\1/p')
   p=$(printf '%s' "$l" | sed -n 's/.* pos=\([0-9]*\) .*/\1/p')
   o=$(printf '%s' "$l" | sed -n 's/.* orders=\([0-9]*\) .*/\1/p')
@@ -470,7 +471,7 @@ cl_flat_read() {
     CL_FLAT_WHY="keycheck khong in pos/orders/algos (jar tren 242 cu hon 3d?)"; return 2
   fi
   CL_FLAT="pos=$p orders=$o algos=$g"
-  say "keycheck (chi doc): tmb=${CL_TMB:-?} assets=${CL_ASSETS:-?} $CL_FLAT"
+  say "keycheck (chi doc, pham vi canary §ADD-4 C): tmb=${CL_TMB:-?} assets=${CL_ASSETS:-?} $CL_FLAT${CL_LEGACY:+ ; LEGACY (chi dem) $CL_LEGACY}"
   [ "$p" = 0 ] && [ "$o" = 0 ] && [ "$g" = 0 ]
 }
 

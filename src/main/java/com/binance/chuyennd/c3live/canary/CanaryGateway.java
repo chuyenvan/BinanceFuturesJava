@@ -10,6 +10,8 @@ import com.binance.chuyennd.c3live.api.PositionInfo;
 import com.binance.chuyennd.c3live.api.Side;
 import com.binance.chuyennd.c3live.api.SymbolConfig;
 import com.binance.chuyennd.c3live.api.Ticker24h;
+import com.binance.chuyennd.c3live.exec.C3LiveCids;
+import com.binance.chuyennd.c3live.rate.RateGuard;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -69,6 +71,41 @@ public final class CanaryGateway implements ExchangeGateway {
     private final AtomicInteger maxWeight = new AtomicInteger(-1);
     private final AtomicInteger rateLimited = new AtomicInteger();
     private final List<OrderInfo> stopResponses = Collections.synchronizedList(new ArrayList<>());
+    /** [3f §ADD-4] so luong canary (ledger) cua symbol; null = khong kiem (test truc tiep gateway). */
+    public volatile java.util.function.Function<String, BigDecimal> canaryQty;
+    /** [3f] nhan khoi luong da khop cua lenh cid canary (response / queryOrder) => engine cap nhat ledger. */
+    public volatile ExecListener execListener;
+    /** [3f §ADD-4 I] ngu khi guard client tu choi call thuong (IP nang): cho sang phut sau roi thu lai 1 lan. */
+    public volatile java.util.function.LongConsumer guardSleep = ms -> {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+        }
+    };
+    /** [3f] cho toi da truoc khi thu lai call bi guard client tu choi (het phut + 1 s). */
+    public static final long GUARD_RETRY_MAX_WAIT_MS = 61_000L;
+    static final BigDecimal QTY_EPS = new BigDecimal("0.000000001");
+
+    /** [3f] khoi luong da khop cua 1 lenh cid canary. */
+    public interface ExecListener {
+        void onExec(String symbol, String cid, BigDecimal executedQty);
+    }
+
+    /** [3f] cid lenh thuong cua canary (mo c3- / dong c3x-). */
+    public static boolean canaryOrderCid(String cid) {
+        return cid != null && (cid.startsWith(C3LiveCids.ENTRY_PREFIX) || cid.startsWith(C3LiveCids.CLOSE_PREFIX));
+    }
+
+    /** [3f] cid algo (stop) cua canary (c3s-). */
+    public static boolean canaryAlgoCid(String cid) {
+        return cid != null && cid.startsWith(C3LiveCids.STOP_PREFIX);
+    }
+
+    public static boolean canaryAnyCid(String cid) {
+        return canaryOrderCid(cid) || canaryAlgoCid(cid);
+    }
+
     /** [3e] dong ho dem weight canary tu goi (engine gan = dong ho phien). */
     public volatile LongSupplier ownClock = System::currentTimeMillis;
     private long ownBucket = Long.MIN_VALUE;
@@ -136,6 +173,7 @@ public final class CanaryGateway implements ExchangeGateway {
         if (a.startsWith("positions") || a.startsWith("account") || a.startsWith("symbolConfig")) return 5;
         if ("multiAssetsMargin".equals(a) || "dualSidePosition".equals(a)) return 30;
         if ("openOrders".equals(a) || "openStops".equals(a) || "tickers24h".equals(a)) return sym == null ? 40 : 1;
+        if ("openOrdersAll".equals(a) || "openStopsAll".equals(a)) return 40;
         return 1;
     }
 
@@ -205,13 +243,82 @@ public final class CanaryGateway implements ExchangeGateway {
         BigDecimal sum = BigDecimal.ZERO;
         for (PositionInfo p : ps) {
             if (p.getPositionAmt() == null || p.getPositionAmt().signum() == 0) continue;
-            if (!allowed.contains(p.getSymbol())) throw refuse("newMarketOrder", sym, "tai khoan co vi the symbol khac " + p.getSymbol());
+            if (!allowed.contains(p.getSymbol())) continue;   // [3f §ADD-4] LEGACY tren symbol khac: binh thuong, khong tinh, khong cham
+            java.util.function.Function<String, BigDecimal> cq = canaryQty;
+            if (cq != null && sym.equals(p.getSymbol())) {
+                BigDecimal led = cq.apply(sym);
+                if (led == null || p.getPositionAmt().compareTo(led.add(QTY_EPS)) > 0) {
+                    throw refuse("newMarketOrder", sym, "vi the san " + p.getPositionAmt().toPlainString() + " > canary " + led
+                            + " (vi the ngoai canary tren symbol canary, §ADD-4 C)");
+                }
+            }
             BigDecimal px = p.getMarkPrice() != null && p.getMarkPrice().signum() > 0 ? p.getMarkPrice() : p.getEntryPrice();
             BigDecimal n = p.getNotional() != null && p.getNotional().signum() != 0 ? p.getNotional().abs()
                     : p.getPositionAmt().abs().multiply(px == null ? BigDecimal.ZERO : px);
             sum = sum.add(n);
         }
         return sum;
+    }
+
+    /** [3f §ADD-4 A/C/F] lenh/algo KHONG mang cid canary tren symbol (doc thang delegate, khong qua view). */
+    private List<String> foreignOn(String api, String sym) {
+        List<String> out = new ArrayList<>();
+        try {
+            for (OrderInfo o : d.openOrders(sym)) if (!canaryOrderCid(o.getClientOrderId())) out.add("lenh " + o.getClientOrderId());
+            for (OrderInfo o : d.openStops(sym)) if (!canaryAlgoCid(o.getClientOrderId())) out.add("algo " + o.getClientOrderId());
+        } catch (RuntimeException e) {
+            throw refuse(api, sym, "khong doc duoc lenh/algo cua symbol (" + e.getClass().getSimpleName() + ")");
+        }
+        return out;
+    }
+
+    /** [3f §ADD-4 F] doi leverage/margin chi khi symbol khong co vi the va khong co lenh/algo ngoai canary. */
+    private void requireScopeClean(String api, String sym) {
+        BigDecimal amt = BigDecimal.ZERO;
+        try {
+            for (PositionInfo p : d.positions()) {
+                if (sym.equals(p.getSymbol()) && p.getPositionAmt() != null) amt = amt.add(p.getPositionAmt());
+            }
+        } catch (RuntimeException e) {
+            throw refuse(api, sym, "khong doc duoc vi the (" + e.getClass().getSimpleName() + ")");
+        }
+        if (amt.signum() != 0) throw refuse(api, sym, "symbol dang co vi the " + amt.toPlainString() + " (§ADD-4 F)");
+        List<String> f = foreignOn(api, sym);
+        if (!f.isEmpty()) throw refuse(api, sym, "co lenh/algo ngoai canary " + f + " (§ADD-4 F)");
+    }
+
+    private void requireCid(String api, String sym, String cid, boolean ok, String want) {
+        if (!ok) throw refuse(api, sym, "cid '" + cid + "' khong phai cid canary " + want + " (§ADD-4 A)");
+    }
+
+    private void notifyExec(String sym, String cid, OrderInfo o) {
+        ExecListener l = execListener;
+        if (l == null || o == null || !canaryOrderCid(cid) || o.getExecutedQty() == null) return;
+        try {
+            l.onExec(sym, cid, o.getExecutedQty());
+        } catch (RuntimeException e) {
+            j.ev("EXEC_LISTENER_ERROR", "symbol", sym, "cid", cid, "err", e.toString());
+        }
+    }
+
+    private List<PositionInfo> scopePositions(List<PositionInfo> in) {
+        List<PositionInfo> out = new ArrayList<>();
+        if (in == null) return out;
+        for (PositionInfo p : in) if (p.getSymbol() != null && allowed.contains(p.getSymbol())) out.add(p);
+        return out;
+    }
+
+    private AccountSnapshot scopeAccount(AccountSnapshot a) {
+        if (a == null) return null;
+        List<PositionInfo> ps = a.getPositions() == null ? null : scopePositions(a.getPositions());
+        return new AccountSnapshot(a.getTotalMarginBalance(), a.getTotalWalletBalance(), a.getAvailableBalance(),
+                a.getTotalUnrealizedProfit(), a.getAssets(), a.getTimeMs(), ps);
+    }
+
+    /** [3f §ADD-4 I] guard CLIENT tu choi (chua gui) ngoai lan khan cap, cho <= 61 s => thu lai sang phut sau. */
+    private static boolean guardRetryable(GatewayException e) {
+        return e.getKind() == ErrorKind.RATE_LIMIT && e.getHttpStatus() == 0 && e.isDefinitelyNotExecuted()
+                && !RateGuard.inEmergencyLane() && e.getRetryAfterMs() > 0L && e.getRetryAfterMs() <= GUARD_RETRY_MAX_WAIT_MS;
     }
 
     // ------------------------------------------------------------------ ghi nhat ky
@@ -228,7 +335,16 @@ public final class CanaryGateway implements ExchangeGateway {
             if (l != null && sym != null && cid != null) l.accept(sym, cid);
         }
         try {
-            T r = f.get();
+            T r;
+            try {
+                r = f.get();
+            } catch (GatewayException e) {
+                if (!guardRetryable(e)) throw e;
+                long w = Math.min(GUARD_RETRY_MAX_WAIT_MS, e.getRetryAfterMs() + 1_000L);
+                j.ev("GUARD_WAIT_RETRY", "api", api, "symbol", sym, "waitMs", w, "why", e.getMessage());
+                guardSleep.accept(w);
+                r = f.get();
+            }
             m.put("ok", true);
             describe(m, r);
             return r;
@@ -336,6 +452,13 @@ public final class CanaryGateway implements ExchangeGateway {
         boolean open = side == Side.BUY && !reduceOnly;
         if (side == Side.SELL && !reduceOnly) throw refuse("newMarketOrder", symbol, "SELL khong reduceOnly (mo short) bi cam");
         if (side == Side.BUY && reduceOnly) throw refuse("newMarketOrder", symbol, "BUY reduceOnly bi cam (chi long)");
+        if (side == Side.BUY) {
+            requireCid("newMarketOrder", symbol, clientOrderId, clientOrderId != null && clientOrderId.startsWith(C3LiveCids.ENTRY_PREFIX),
+                    C3LiveCids.ENTRY_PREFIX);
+        } else {
+            requireCid("newMarketOrder", symbol, clientOrderId, clientOrderId != null && clientOrderId.startsWith(C3LiveCids.CLOSE_PREFIX),
+                    C3LiveCids.CLOSE_PREFIX);
+        }
         if (open) {
             if (lossCapHit.getAsBoolean()) throw refuse("newMarketOrder", symbol, "da cham tran lo " + CanaryLimits.LOSS_CAP_USDT + " USDT");
             BigDecimal px = freshPrice(symbol);
@@ -343,6 +466,8 @@ public final class CanaryGateway implements ExchangeGateway {
             if (notional.compareTo(CanaryLimits.MAX_ORDER_NOTIONAL_USDT) > 0) {
                 throw refuse("newMarketOrder", symbol, "notional " + notional.toPlainString() + " > " + CanaryLimits.MAX_ORDER_NOTIONAL_USDT);
             }
+            List<String> fo = foreignOn("newMarketOrder", symbol);
+            if (!fo.isEmpty()) throw refuse("newMarketOrder", symbol, "co lenh/algo ngoai canary tren symbol " + fo + " (§ADD-4 C)");
             BigDecimal openNow = openNotional(symbol);
             if (openNow.add(notional).compareTo(CanaryLimits.MAX_OPEN_NOTIONAL_USDT) > 0) {
                 throw refuse("newMarketOrder", symbol, "tong mo " + openNow.add(notional).toPlainString() + " > "
@@ -352,6 +477,7 @@ public final class CanaryGateway implements ExchangeGateway {
         sendsByCid.merge(clientOrderId == null ? "?" : clientOrderId, 1, Integer::sum);
         OrderInfo o = call("newMarketOrder:" + side + (reduceOnly ? ":RO" : ""), symbol, clientOrderId, true,
                 () -> d.newMarketOrder(symbol, side, qty, clientOrderId, reduceOnly));
+        notifyExec(symbol, clientOrderId, o);   // [3f] ledger canary (ca khi MO-5 tiem timeout ngay sau)
         if (open && timeoutAfterNextOpen) {
             timeoutAfterNextOpen = false;
             j.ev("INJECT_TIMEOUT", "symbol", symbol, "cid", clientOrderId, "realStatus", String.valueOf(o.getStatus()));
@@ -365,6 +491,7 @@ public final class CanaryGateway implements ExchangeGateway {
     public OrderInfo newStopMarket(String symbol, Side side, BigDecimal qty, BigDecimal stopPrice, String clientOrderId,
                                    boolean reduceOnly) {
         requireAllowed("newStopMarket", symbol);
+        requireCid("newStopMarket", symbol, clientOrderId, canaryAlgoCid(clientOrderId), C3LiveCids.STOP_PREFIX);
         if (side != Side.SELL) throw refuse("newStopMarket", symbol, "stop chi SELL (dong long)");
         if (qty != null && !reduceOnly) throw refuse("newStopMarket", symbol, "stop qty bat buoc reduceOnly");
         // [3c MAJ-C1] stop KHONG BAO GIO xa hon -4,5 % so gia vao (vi the doc tu san, khong qua tiem loi)
@@ -385,18 +512,22 @@ public final class CanaryGateway implements ExchangeGateway {
     @Override
     public OrderInfo cancelOrder(String symbol, String clientOrderId) {
         requireAllowed("cancelOrder", symbol);
+        requireCid("cancelOrder", symbol, clientOrderId, canaryOrderCid(clientOrderId), "c3-/c3x-");
         return call("cancelOrder", symbol, clientOrderId, true, () -> d.cancelOrder(symbol, clientOrderId));
     }
 
     @Override
     public OrderInfo cancelStop(String symbol, String clientAlgoId) {
         requireAllowed("cancelStop", symbol);
+        requireCid("cancelStop", symbol, clientAlgoId, canaryAlgoCid(clientAlgoId), C3LiveCids.STOP_PREFIX);
         return call("cancelStop", symbol, clientAlgoId, true, () -> d.cancelStop(symbol, clientAlgoId));
     }
 
     @Override
     public Optional<OrderInfo> queryOrder(String symbol, String clientOrderId) {
-        return call("queryOrder", symbol, clientOrderId, false, () -> d.queryOrder(symbol, clientOrderId));
+        Optional<OrderInfo> r = call("queryOrder", symbol, clientOrderId, false, () -> d.queryOrder(symbol, clientOrderId));
+        if (r.isPresent()) notifyExec(symbol, clientOrderId, r.get());
+        return r;
     }
 
     @Override
@@ -406,12 +537,35 @@ public final class CanaryGateway implements ExchangeGateway {
 
     @Override
     public List<OrderInfo> openOrders(String symbolOrNull) {
-        return call("openOrders", symbolOrNull, null, false, () -> d.openOrders(symbolOrNull));
+        // [3f §ADD-4 A] view cua lop c3_live: CHI 2 symbol canary (doc theo symbol, 1 weight/symbol)
+        if (symbolOrNull != null) {
+            if (!allowed.contains(symbolOrNull)) return new ArrayList<>();
+            return call("openOrders", symbolOrNull, null, false, () -> d.openOrders(symbolOrNull));
+        }
+        List<OrderInfo> out = new ArrayList<>();
+        for (String s : allowed) out.addAll(call("openOrders", s, null, false, () -> d.openOrders(s)));
+        return out;
+    }
+
+    /** [3f §ADD-4 B/D] CHI DOC toan tai khoan (chon symbol, anh chup LEGACY, lenh canary ngoai pham vi). */
+    public List<OrderInfo> openOrdersAll() {
+        return call("openOrdersAll", null, null, false, () -> d.openOrders(null));
     }
 
     @Override
     public List<OrderInfo> openStops(String symbolOrNull) {
-        return call("openStops", symbolOrNull, null, false, () -> d.openStops(symbolOrNull));
+        if (symbolOrNull != null) {
+            if (!allowed.contains(symbolOrNull)) return new ArrayList<>();
+            return call("openStops", symbolOrNull, null, false, () -> d.openStops(symbolOrNull));
+        }
+        List<OrderInfo> out = new ArrayList<>();
+        for (String s : allowed) out.addAll(call("openStops", s, null, false, () -> d.openStops(s)));
+        return out;
+    }
+
+    /** [3f §ADD-4 B/D] CHI DOC toan tai khoan. */
+    public List<OrderInfo> openStopsAll() {
+        return call("openStopsAll", null, null, false, () -> d.openStops(null));
     }
 
     @Override
@@ -420,7 +574,16 @@ public final class CanaryGateway implements ExchangeGateway {
             j.ev("INJECT_READ_ERROR", "api", "positions");
             throw new GatewayException(ErrorKind.OTHER, 0, 0, "canary: TIEM loi doc positionRisk (phia client, K7b)", true, 0L, null);
         }
-        return call("positions", null, null, false, d::positions);
+        return call("positions", null, null, false, () -> scopePositions(d.positions()));   // [3f] view 2 symbol canary
+    }
+
+    /** [3f §ADD-4 B/D] CHI DOC toan tai khoan (anh chup LEGACY, chon symbol). */
+    public List<PositionInfo> positionsAll() {
+        if (failPositions) {
+            j.ev("INJECT_READ_ERROR", "api", "positionsAll");
+            throw new GatewayException(ErrorKind.OTHER, 0, 0, "canary: TIEM loi doc positionRisk (phia client, K7b)", true, 0L, null);
+        }
+        return call("positionsAll", null, null, false, d::positions);
     }
 
     @Override
@@ -429,7 +592,7 @@ public final class CanaryGateway implements ExchangeGateway {
             j.ev("INJECT_READ_ERROR", "api", "account");
             throw new GatewayException(ErrorKind.OTHER, 0, 0, "canary: TIEM loi doc account (phia client, K7b)", true, 0L, null);
         }
-        return call("account", null, null, false, d::account);
+        return call("account", null, null, false, () -> scopeAccount(d.account()));   // [3f] mang positions: 2 symbol canary
     }
 
     @Override
@@ -444,11 +607,9 @@ public final class CanaryGateway implements ExchangeGateway {
 
     @Override
     public void setDualSidePosition(boolean dualSidePosition) {
-        if (dualSidePosition) throw refuse("setDualSidePosition", null, "chi cho phep one-way (false)");
-        call("setDualSidePosition", null, null, true, () -> {
-            d.setDualSidePosition(false);
-            return Boolean.TRUE;
-        });
+        // [3f §ADD-4 E] cap tai khoan CHI DOC: khong bao gio goi doi (ke ca ve one-way) — lenh nay KHONG toi san
+        throw refuse("setDualSidePosition", null, "§ADD-4 E: cap tai khoan CHI DOC — khong bao gio doi (yeu cau "
+                + dualSidePosition + ")");
     }
 
     @Override
@@ -465,6 +626,7 @@ public final class CanaryGateway implements ExchangeGateway {
     public int setLeverage(String symbol, int leverage) {
         requireAllowed("setLeverage", symbol);
         if (leverage != CanaryLimits.LEVERAGE) throw refuse("setLeverage", symbol, "chi leverage " + CanaryLimits.LEVERAGE);
+        requireScopeClean("setLeverage", symbol);
         return call("setLeverage", symbol, null, true, () -> d.setLeverage(symbol, leverage));
     }
 
@@ -474,6 +636,7 @@ public final class CanaryGateway implements ExchangeGateway {
         if (!SymbolConfig.CROSSED.equals(SymbolConfig.normalizeMarginType(marginType))) {
             throw refuse("setMarginType", symbol, "chi CROSSED");
         }
+        requireScopeClean("setMarginType", symbol);
         call("setMarginType", symbol, null, true, () -> {
             d.setMarginType(symbol, marginType);
             return Boolean.TRUE;

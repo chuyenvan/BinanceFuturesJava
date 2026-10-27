@@ -323,7 +323,7 @@ public class CanaryEngineTest {
     @Test
     public void protectiveStopTightensWhenLossBudgetShrinks() throws Exception {
         preflight();
-        mock.deposit(new BigDecimal("-1.5"));   // tmb0 - tmb = 1,5 => ngan sach (2 - 0,1 - 1,5) / 20 ~ 2 %
+        setRealizedLoss(1.5);   // [3f §ADD-4 G] lo canary da chot 1,5 => ngan sach (2 - 0,1 - 1,5) / 20 ~ 2 %
         ok(run("K1"));
         List<com.binance.chuyennd.c3live.api.OrderInfo> s = mock.openStops(MAIN);
         assertEquals(1, s.size());
@@ -334,7 +334,7 @@ public class CanaryEngineTest {
     @Test
     public void noOpenWhenLossBudgetTooSmall() throws Exception {
         preflight();
-        mock.deposit(new BigDecimal("-1.85"));   // ngan sach 0,05 USDT => stop 0,25 % < 1 %
+        setRealizedLoss(1.85);   // [3f] ngan sach 0,05 USDT => stop 0,25 % < 1 %
         CanaryEngine.Result r = run("K1");
         assertEquals(r.line(), CanaryEngine.TRUOT, r.verdict);
         assertTrue(r.line(), r.line().contains("ngan sach"));
@@ -378,7 +378,7 @@ public class CanaryEngineTest {
     public void lossCapFlattensAndStopsSession() throws Exception {
         preflight();
         ok(run("K1"));
-        mock.deposit(new BigDecimal("-2.5"));   // tmb giam 2,5 USDT (lo/phi) => cham tran 2 USDT
+        mock.setPrice(MAIN, new BigDecimal("0.88"));   // [3f §ADD-4 G] lo chua chot canary 20 x 0,12 = 2,4 USDT => cham tran 2
         CanaryEngine.Result r = run("K2");
         assertEquals(r.line(), CanaryEngine.TRUOT, r.verdict);
         assertTrue(r.line(), r.line().contains("tran lo"));
@@ -398,12 +398,10 @@ public class CanaryEngineTest {
     @Test
     public void foreignPositionRefusesWithoutTouchingIt() throws Exception {
         preflight();
-        mock.setPosition("C05USDT", new BigDecimal("10"), BigDecimal.ONE);
-        int w0 = writes();
+        mock.setPosition("C05USDT", new BigDecimal("10"), BigDecimal.ONE);   // [3f §ADD-4] LEGACY symbol khac: binh thuong
         CanaryEngine.Result r = run("K1");
-        assertEquals(r.line(), CanaryEngine.TU_CHOI, r.verdict);
-        assertTrue(r.line(), r.line().contains("C05USDT"));
-        assertEquals(w0, writes());
+        ok(r);
+        assertEquals("LEGACY khong bi cham", 0, new BigDecimal("10").compareTo(mock.position("C05USDT")));
         CanaryEngine ef = engine(cfg());
         CanaryEngine.Result f = ef.flatten();
         ef.close();
@@ -429,13 +427,19 @@ public class CanaryEngineTest {
 
     @Test
     public void k0FailsWithoutExpectedTmbOrWrongMarginMode() throws Exception {
+        // [3f §ADD-4 H] khong kiem tmb tuyet doi; availableBalance < 50 USDT => TRUOT
+        mock.dynamicAccount = false;
+        mock.accountSnapshot = new com.binance.chuyennd.c3live.api.AccountSnapshot(new BigDecimal("10000"), new BigDecimal("10000"),
+                new BigDecimal("10"), BigDecimal.ZERO, Collections.emptyList(), T0);
         CanaryEngine.Config c = new CanaryEngine.Config();
         CanaryEngine e = engine(c);
         CanaryEngine.Result r = e.preflight();
         e.close();
         assertEquals(CanaryEngine.TRUOT, r.verdict);
-        assertTrue(r.line(), r.line().contains("CANARY_EXPECT_TMB"));
+        assertTrue(r.line(), r.line().contains("availableBalance"));
+        assertFalse(r.line(), r.line().contains("CANARY_EXPECT_TMB"));
         assertNull("khong co moc tmb", CanaryState.load(dir).tmb0);
+        mock.dynamicAccount = true;
         mock.setSymbolConfig(MAIN, "ISOLATED", 3);
         CanaryEngine e2 = engine(cfg());
         CanaryEngine.Result r2 = e2.preflight();
@@ -583,16 +587,152 @@ public class CanaryEngineTest {
 
     @Test
     public void stepRefusedByRateGuardStillAutoFlattens() throws Exception {
+        // [3f §ADD-4 I] call thuong bi guard client tu choi (IP nang) => cho sang phut sau roi thu lai, KHONG TRUOT ngay
         preflight();
         ok(run("K1"));
         RateGuard rg = new RateGuard(RateGuard.Limits.binanceDefault(), 0.5, 2_000L, rgClock());
         rg.onHeaders(1494, null, null);
         CanaryEngine e = engineRaw(cfg(), guarded(mock, rg), rg);
         CanaryEngine.Result r = e.step("K2");
+        boolean retried = e.journal().entries().stream().anyMatch(x -> "GUARD_WAIT_RETRY".equals(x.get("type")));
         e.close();
+        ok(r);
+        assertTrue("co GUARD_WAIT_RETRY", retried);
+    }
+
+    // ------------------------------------------------------------------ [3f §ADD-4] tai khoan CHINH (LEGACY cung tai khoan)
+    private void setRealizedLoss(double v) throws Exception {
+        CanaryState s = CanaryState.load(dir);
+        s.cumFeeStable = v;
+        s.save(dir);
+    }
+
+    private CanaryEngine.Result cleanup() throws Exception {
+        CanaryEngine e = engine(cfg());
+        CanaryEngine.Result r = e.cleanupCheck();
+        e.close();
+        return r;
+    }
+
+    private CanaryEngine.Result flattenRun() throws Exception {
+        CanaryEngine e = engine(cfg());
+        CanaryEngine.Result r = e.flatten();
+        e.close();
+        return r;
+    }
+
+    private boolean noWriteOn(String... syms) {
+        return mock.callLog().stream().noneMatch(x -> {
+            for (String s : syms) if (x.contains(s)) return true;
+            return false;
+        });
+    }
+
+    @Test
+    public void legacyElsewhereUntouchedAndPickExcludesLegacySymbols() throws Exception {
+        mock.setPosition("C00USDT", new BigDecimal("5"), BigDecimal.ONE);                               // LEGACY vi the (top 1)
+        mock.addRestingOrder("C01USDT", "web_legacy_o1", com.binance.chuyennd.c3live.api.Side.BUY, new BigDecimal("3"));   // top 2
+        mock.addRestingStop("C04USDT", "web_legacy_a1", new BigDecimal("2"), new BigDecimal("0.5"));
+        CanaryEngine e0 = engine(cfg());
+        CanaryEngine.Result k0 = e0.preflight();
+        e0.close();
+        ok(k0);
+        assertEquals("loai symbol LEGACY", "C02USDT", e0.state().symMain);
+        assertEquals("C03USDT", e0.state().symAux);
+        assertEquals(1, ((Number) k0.data.get("legacy.positions")).intValue());
+        assertEquals(1, ((Number) k0.data.get("legacy.orders")).intValue());
+        assertEquals(1, ((Number) k0.data.get("legacy.algos")).intValue());
+        ok(run("K1"));
+        assertTrue(mock.position("C02USDT").signum() > 0);
+        ok(flattenRun());
+        assertEquals(0, mock.position("C02USDT").signum());
+        CanaryEngine.Result c = cleanup();
+        ok(c);
+        assertEquals(0, ((Number) c.data.get("legacy.callsOutside")).intValue());
+        assertEquals(0, ((Number) c.data.get("legacy.canaryOutside")).intValue());
+        assertEquals(1, ((Number) c.data.get("legacy.positionsEnd")).intValue());
+        assertTrue(String.valueOf(c.data.get("legacy.summary")).startsWith("LEGACY vi the K0=1 cuoi=1"));
+        // LEGACY nguyen ven, 0 lenh ghi tren symbol LEGACY, cap tai khoan chi doc
+        assertEquals(0, new BigDecimal("5").compareTo(mock.position("C00USDT")));
+        assertEquals(1, mock.openOrders("C01USDT").size());
+        assertEquals(1, mock.openStops("C04USDT").size());
+        assertTrue(mock.callLog().toString(), noWriteOn("C00USDT", "C01USDT", "C04USDT", "C05USDT"));
+        assertEquals(0, mock.calls("setDualSidePosition"));
+    }
+
+    @Test
+    public void legacyFillOnMainBetweenStepsIsRedAndNothingIsClosed() throws Exception {
+        preflight();
+        ok(run("K1"));
+        BigDecimal mine = mock.position(MAIN);
+        mock.newMarketOrder(MAIN, com.binance.chuyennd.c3live.api.Side.BUY, new BigDecimal("7"), "web_legacy_9", false);   // one-way cong don
+        int mo = mock.calls("newMarketOrder");
+        CanaryEngine.Result r = run("K2");
         assertEquals(r.line(), CanaryEngine.TRUOT, r.verdict);
-        assertTrue(r.line(), r.line().contains("rate guard"));
-        assertEquals("tu flatten (lan khan cap) van dong vi the", 0, mock.position(MAIN).signum());
-        assertTrue(mock.openStops(null).isEmpty());
+        assertTrue(r.line(), r.line().contains(CanaryEngine.TRUOT_DO));
+        assertEquals("KHONG dong", 0, mine.add(new BigDecimal("7")).compareTo(mock.position(MAIN)));
+        assertEquals("0 lenh dong", mo, mock.calls("newMarketOrder"));
+        assertTrue("stop canary da huy (tranh dong ca LEGACY)", mock.openStops(MAIN).isEmpty());
+        assertTrue(CanaryState.load(dir).aborted.startsWith(CanaryEngine.TRUOT_DO));
+        assertEquals(CanaryEngine.TU_CHOI, run("K3").verdict);
+        CanaryEngine.Result f = flattenRun();
+        assertEquals(f.line(), CanaryEngine.TRUOT, f.verdict);
+        assertTrue(f.line(), f.line().contains(CanaryEngine.TRUOT_DO));
+        assertEquals("flatten KHONG dong", 0, mine.add(new BigDecimal("7")).compareTo(mock.position(MAIN)));
+        assertEquals(mo, mock.calls("newMarketOrder"));
+        assertEquals(CanaryEngine.TRUOT, cleanup().verdict);
+    }
+
+    @Test
+    public void legacyFillOnMainMidStepIsRedAndNothingIsClosed() throws Exception {
+        preflight();
+        ok(run("K1"));
+        BigDecimal mine = mock.position(MAIN);
+        final long t0 = now.get();
+        final boolean[] fired = {false};
+        hook = t -> {
+            if (!fired[0] && t - t0 > 90_000L) {
+                fired[0] = true;
+                mock.newMarketOrder(MAIN, com.binance.chuyennd.c3live.api.Side.BUY, new BigDecimal("7"), "web_legacy_m", false);
+            }
+        };
+        CanaryEngine.Result r = run("K4");   // stop khong kich (gia dung yen) => K4 dang cho thi LEGACY vao MAIN
+        hook = t -> { };
+        assertTrue("LEGACY da vao giua buoc", fired[0]);
+        assertEquals(r.line(), CanaryEngine.TRUOT, r.verdict);
+        assertTrue(r.line(), r.line().contains(CanaryEngine.TRUOT_DO));
+        assertTrue("phat hien nhanh (< 5')", now.get() - t0 < 5 * 60_000L);
+        assertEquals("KHONG dong", 0, mine.add(new BigDecimal("7")).compareTo(mock.position(MAIN)));
+        assertTrue(mock.openStops(MAIN).isEmpty());
+    }
+
+    @Test
+    public void legacyRestingOrderOnCanarySymbolClosesCanaryPartOnly() throws Exception {
+        preflight();
+        ok(run("K1"));
+        mock.addRestingOrder(MAIN, "web_legacy_r", com.binance.chuyennd.c3live.api.Side.BUY, new BigDecimal("3"));
+        CanaryEngine.Result r = run("K2");
+        assertEquals(r.line(), CanaryEngine.TRUOT, r.verdict);
+        assertTrue(r.line(), r.line().contains("ngoai canary"));
+        assertEquals("phan canary da dong reduce-only", 0, mock.position(MAIN).signum());
+        assertEquals("lenh LEGACY van nguyen", 1, mock.openOrders(MAIN).size());
+        assertTrue(CanaryState.load(dir).aborted.startsWith("SCOPE"));
+        assertEquals(CanaryEngine.TU_CHOI, run("K3").verdict);
+    }
+
+    @Test
+    public void accountLevelSettingsAreOnlyRead() throws Exception {
+        mock.dualSide = true;   // hedge: canary KHONG doi (§ADD-4 E)
+        CanaryEngine e = engine(cfg());
+        CanaryEngine.Result k0 = e.preflight();
+        e.close();
+        assertEquals(k0.line(), CanaryEngine.TRUOT, k0.verdict);
+        assertTrue(k0.line(), k0.line().contains("dualSidePosition"));
+        CanaryEngine e2 = engine(cfg());
+        CanaryEngine.Result s = e2.setup();
+        e2.close();
+        assertNotEquals(s.line(), CanaryEngine.DAT, s.verdict);
+        assertEquals("khong bao gio goi doi cap tai khoan", 0, mock.calls("setDualSidePosition"));
+        assertTrue(mock.dualSide);
     }
 }

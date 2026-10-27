@@ -6,10 +6,11 @@
 #   0. chuan bi: gate CODE, jar Oracle = pin, 242 chi doc (v_t_m c3_shadow + SHADOW_NO_PUSH, RAM >= 1 GB, khong JVM canary khac),
 #      lo cong don <= tran, chup v_t_m, phien cu (co giao dich => can CANARY_RESET=1), copy jar pin vao c3canary, LEGACY, logback.
 #   1. CHO khung gio hop le (phut :10-:40 de con du thoi gian, tranh 07/19 h, 00:50-01:20, 12:50-13:20) CHI KHI tai khoan PHANG
-#      (keycheck chi doc: 0 vi the, 0 lenh mo, 0 algo/stop) — kiem lai phang moi CL_FLAT_RECHECK_S (600 s) va ngay truoc khi qua;
+#      (keycheck chi doc — [3f §ADD-4 C] PHAM VI CANARY: 2 symbol canary 0 vi the/lenh/algo + 0 cid canary o moi noi; LEGACY chi dem) — kiem lai phang moi CL_FLAT_RECHECK_S (600 s) va ngay truoc khi qua;
 #      khong phang => DUNG (khong bao gio cho khi co vi the — MAJ-C1). Toi da CL_WAIT_MAX_S (7200 s = 2 h) moi lan cho.
 #   2. SETUP (CROSSED/1x cho 2 symbol theo luat) — neu phien da chon symbol (chua chon => K0 chon truoc, SETUP sau).
-#   3. K0 voi CANARY_EXPECT_TMB = tmb doc NGAY LUC DO (keycheck chi doc; log ro gia tri); tmb < 9500 hoac > 12000 => DUNG.
+#   3. K0 (tai khoan CHINH, §ADD-4 H): KHONG kiem tmb tuyet doi — tmb doc duoc chi GHI (file tom tat, KHONG Telegram); engine
+#      kiem availableBalance >= 50 USDT, loai symbol LEGACY, chup anh LEGACY. (truoc 3f: tmb trong [9500, 12000] — da bo)
 #      CANARY_K0_REUSE_KEEPALIVE=1: engine bo phan cho keepAlive 65' neu K0 truoc (<= 24 h, CUNG jar) da DAT keepAlive >= 2 —
 #      ly do bo / khong bo ghi trong log + file ket qua. K0 TRUOT chi vi marginType/leverage => cho khung gio -> SETUP -> K0 lai (1 lan).
 #   4. cho khung gio lai (tai khoan phang) -> canary_early_run.sh (CANARY_INJECT_TIMEOUT=1): K1..K8, report, cleanup.
@@ -38,7 +39,8 @@ if [ -z "${CANARY_BG:-}" ]; then
   [ -e "$STOPF" ] && die "dang co file $STOPF (lan dung khan cap truoc) — xoa co chu dich roi chay lai"
   if [ "$YES" != 1 ]; then
     echo "CANARY-EARLY MOT LENH: cho khung gio (<= 2 h, chi khi tai khoan phang) -> SETUP -> K0 (~65' hoac bo neu dung lai duoc)"
-    echo "  -> phien TIEN THAT K1..K8 tren tai khoan con (moi lenh 20 USDT, tran lo 2 USDT, 2 symbol theo luat) -> Telegram ket qua."
+    echo "  -> phien TIEN THAT K1..K8 tren TAI KHOAN CHINH (cung LEGACY; chi 2 symbol canary + cid c3-/c3s-/c3x-; moi lenh 20 USDT,"
+    echo "     tran lo 2 USDT, LEGACY KHONG bao gio bi cham — lan LEGACY tren symbol canary => TRUOT-DO, khong dong, bao MASTER) -> Telegram."
     read -r -p "Go YES (in hoa) de bat dau: " ANS || ANS=""
     [ "$ANS" = YES ] || die "khong go YES — khong chay"
   fi
@@ -58,7 +60,9 @@ fi
 cl_init early_all
 SUMF=$LOGDIR/canary_early_all_${TS}.txt
 FLF=$LOGDIR/.early_all_flat_${TS}
-STAGE="chuan bi"; DONE=0; JAR_READY=0; LASTMSG=""; LASTV=""; RUN_RESF=""; K0_TMB=""; K0_KA=""; K0_RES=""; NOTES=""
+STAGE="chuan bi"; DONE=0; JAR_READY=0; LASTMSG=""; LASTV=""; RUN_RESF=""; K0_TMB=""; K0_KA=""; K0_RES=""; NOTES=""; K0_BAL=""
+# [3f §ADD-4 D] dong LEGACY (chi dem, khong so du) tu file ket qua phien
+leg_line() { { [ -n "$RUN_RESF" ] && grep -m1 '^LEGACY' "$RUN_RESF" 2>/dev/null; } || echo "LEGACY: khong co du lieu (phien K1..K8 chua chay / chua cleanup)"; }
 note() { NOTES+="$*"$'\n'; say "ghi chu: $*"; }
 # die cua lib: ghi ly do roi thoat => trap on_exit (kiem phang / flatten + Telegram)
 die() { LASTMSG="$*"; say "DUNG: $*"; say "KET QUA: ${LASTV:-TU_CHOI}"; [ -n "${CL_LOG:-}" ] && say "Log: $CL_LOG"; exit 2; }
@@ -75,19 +79,22 @@ safe_flat() {
   echo "flatten: chua xong (loi giua chung)" > "$FLF"
   cl_kill_hung
   cl_run "" flatten; rf=$?
-  if [ "$rf" = 0 ]; then echo "flatten (mode early): DAT | $CL_LAST_RESULT" > "$FLF"
+  if printf '%s' "$CL_LAST_RESULT" | grep -q 'TRUOT-DO'; then
+    echo "flatten (mode early): TRUOT-DO — KHONG dong (vi the lan LEGACY tren symbol canary, §ADD-4 C) — BAO MASTER, KHONG chay canary_early_flatten.sh | $CL_LAST_RESULT" > "$FLF"
+  elif [ "$rf" = 0 ]; then echo "flatten (mode early): DAT | $CL_LAST_RESULT" > "$FLF"
   else echo "flatten (mode early): $(cl_verdict $rf) | $CL_LAST_RESULT — OWNER CHAY NGAY: bash $CL_HERE/canary_early_flatten.sh" > "$FLF"; fi
 }
 
 write_sum() {   # <ket qua> <1 dong>
   {
-    echo "CANARY-EARLY MOT LENH — $TS (prereg docs/prereg/GCANARY_PREREG.md §ADD-1/§ADD-2/§ADD-3)"
+    echo "CANARY-EARLY MOT LENH — $TS (prereg docs/prereg/GCANARY_PREREG.md §ADD-1/§ADD-2/§ADD-3/§ADD-4 tai khoan CHINH)"
     echo "KET QUA: $1"
     echo "TOM TAT: $2"
     echo "buoc cuoi: $STAGE"
     echo "jar 242: $A/$CJAR md5 pin $CANARY_JAR_MD5 ; v_t_m: $VTM (chi doc)"
     echo "K0: CANARY_EXPECT_TMB=${K0_TMB:-chua chay} ; ${K0_RES:-}"
     [ -n "$K0_KA" ] && echo "K0 keepAlive: $K0_KA"
+    [ -n "$K0_BAL" ] && echo "K0 so du (chi file nay, KHONG gui Telegram): $K0_BAL"
     [ -n "$NOTES" ] && { echo "ghi chu:"; printf '%s' "$NOTES" | sed 's/^/  - /'; }
     echo "file ket qua phien K1..K8: ${RUN_RESF:-khong co (phien K1..K8 chua chay)}"
     echo "log: $CL_LOG"
@@ -151,9 +158,9 @@ step_guard() {
 must_flat() {
   local r
   cl_flat_read; r=$?
-  [ "$r" = 2 ] && die "khong doc duoc trang thai tai khoan con ($1): $CL_FLAT_WHY"
-  [ "$r" = 0 ] || die "tai khoan con KHONG phang ($1: $CL_FLAT) — KHONG cho khung gio khi con vi the/lenh/stop (MAJ-C1)"
-  ok "tai khoan con phang ($1: $CL_FLAT)"
+  [ "$r" = 2 ] && die "khong doc duoc trang thai pham vi canary ($1): $CL_FLAT_WHY"
+  [ "$r" = 0 ] || die "pham vi canary KHONG phang ($1: $CL_FLAT) — KHONG cho khung gio khi con vi the/lenh/stop canary (MAJ-C1)"
+  ok "pham vi canary phang ($1: $CL_FLAT)"
 }
 
 # wait_window <nhan>: cho khung gio hop le CHI KHI phang (kiem phang luc vao, moi RECHECK s, va ngay truoc khi qua). Toi da WAIT_MAX s.
@@ -200,12 +207,11 @@ run_k0() {
   step_guard "truoc K0 ($1)"
   must_flat "truoc K0 ($1)"
   [[ "$CL_TMB" =~ ^[0-9]+(\.[0-9]+)?$ ]] || die "khong doc duoc tmb tu keycheck ('$CL_TMB')"
-  python3 -I -c "import sys; t=float('$CL_TMB'); sys.exit(0 if $TMB_MIN <= t <= $TMB_MAX else 1)" \
-    || die "tmb doc duoc $CL_TMB ngoai [$TMB_MIN, $TMB_MAX] USDT — KHONG chay K0 (§ADD-3); owner/MASTER kiem so du"
-  K0_TMB=$CL_TMB
-  say "CANARY_EXPECT_TMB=$K0_TMB (= tmb doc ngay luc nay bang keycheck chi doc; trong [$TMB_MIN, $TMB_MAX])"
+  K0_TMB=$CL_TMB   # [3f §ADD-4 H] tai khoan CHINH: KHONG kiem tmb tuyet doi — chi GHI (file tom tat, KHONG Telegram)
+  K0_BAL="tmb=$CL_TMB USDT=${CL_USDT:-?} assets=${CL_ASSETS:-?}"
+  say "CANARY_EXPECT_TMB=$K0_TMB (chi GHI — §ADD-4 H: khong kiem tmb tuyet doi tren tai khoan chinh; engine kiem availableBalance >= 50)"
   if [ -n "$CL_USDT" ] && python3 -I -c "import sys; sys.exit(0 if float('$CL_USDT') != 0 else 1)" 2>/dev/null; then
-    case "$NOTES" in *"pilot USDT = 0"*) ;; *) note "USDT = $CL_USDT != 0 (assets $CL_ASSETS) => cau hinh pilot USDT = 0 KHONG duoc kiem (MO-2)";; esac
+    case "$NOTES" in *"pilot USDT = 0"*) ;; *) note "USDT != 0 => cau hinh pilot USDT = 0 KHONG duoc kiem (MO-2)";; esac
   fi
   cl_run "CANARY_EXPECT_TMB=$K0_TMB CANARY_K0_REUSE_KEEPALIVE=1" preflight; K0_RC=$?
   K0_RES="K0 ($1): $(cl_verdict $K0_RC) | $CL_LAST_RESULT"
@@ -302,14 +308,14 @@ rm -f "$ROUT"
 [ -n "$RUN_RESF" ] && [ -f "$RUN_RESF" ] || RUN_RESF=""
 if [ "$RRC" = 0 ] && [ -n "$RUN_RESF" ] && grep -q '^KET QUA PHIEN: DAT' "$RUN_RESF"; then
   DONE=1
-  finish_tg DAT "KET QUA PHIEN: $SESS | K0 tmb=$K0_TMB; $K0_KA$( [ -n "$NOTES" ] && printf ' | %s' "$(printf '%s' "$NOTES" | tr '\n' ' ')")"
+  finish_tg DAT "KET QUA PHIEN: $SESS | $(leg_line) | $K0_KA$( [ -n "$NOTES" ] && printf ' | %s' "$(printf '%s' "$NOTES" | tr '\n' ' ')")"
   exit 0
 fi
 if [ "$RRC" = 1 ] && [ -n "$RUN_RESF" ]; then
   # phien chay het (TRUOT): canary_early_run da flatten khi dung giua chung + cleanup; kiem phang lai cho chac
   DONE=1
   rm -f "$FLF"; ( safe_flat ); FL=$(cat "$FLF" 2>/dev/null); rm -f "$FLF"; say "${FL:=flatten: khong ro — OWNER CHAY canary_early_flatten.sh}"
-  finish_tg TRUOT "KET QUA PHIEN: $SESS | $FL"
+  finish_tg TRUOT "KET QUA PHIEN: $SESS | $FL | $(leg_line)"
   exit 3
 fi
 die "canary_early_run.sh thoat rc=$RRC ($( [ -n "$SESS" ] && echo "KET QUA PHIEN: $SESS" || echo 'khong co ket qua phien'))"

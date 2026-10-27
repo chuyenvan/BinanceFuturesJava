@@ -323,6 +323,20 @@ public class MockExchangeGateway implements ExchangeGateway {
         return q.signum() > 0 && c.signum() > 0 ? c.divide(q, MathContext.DECIMAL64) : def;
     }
 
+    /** [3f] lenh LEGACY dang cho (chua khop) — gia lap lenh tai khoan chinh ngoai canary. */
+    public synchronized void addRestingOrder(String symbol, String cid, Side side, BigDecimal qty) {
+        orders.put(cid, OrderInfo.builder().kind(OrderKind.REGULAR).symbol(symbol).orderId(ids.incrementAndGet()).clientOrderId(cid)
+                .side(side).type("LIMIT").status(OrderStatus.NEW).rawStatus("NEW").origQty(qty).executedQty(BigDecimal.ZERO)
+                .updateTimeMs(now).build());
+    }
+
+    /** [3f] algo LEGACY dang cho (stop qty reduce-only) — gia lap algo tai khoan chinh ngoai canary. */
+    public synchronized void addRestingStop(String symbol, String cid, BigDecimal qty, BigDecimal stopPrice) {
+        stops.put(cid, OrderInfo.builder().kind(OrderKind.ALGO).symbol(symbol).orderId(ids.incrementAndGet()).clientOrderId(cid)
+                .side(Side.SELL).type("STOP_MARKET").status(OrderStatus.NEW).rawStatus("NEW").origQty(qty).stopPrice(stopPrice)
+                .reduceOnly(true).closePosition(false).updateTimeMs(now).build());
+    }
+
     /** [2b] dat vi the truc tiep (test "vi the la" / lech so). */
     public synchronized void setPosition(String symbol, BigDecimal qty, BigDecimal entry) {
         positionAmt.put(symbol, qty);

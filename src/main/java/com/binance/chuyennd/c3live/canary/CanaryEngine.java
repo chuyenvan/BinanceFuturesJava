@@ -27,6 +27,10 @@ import com.binance.chuyennd.c3live.recon.Reconciler;
 import com.binance.chuyennd.c3live.rate.RateGuard;
 import com.binance.chuyennd.c3live.risk.C3LiveFlattener;
 import com.binance.chuyennd.ops.KillSwitchEngine;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -293,22 +297,30 @@ public final class CanaryEngine {
 
     private volatile double cachedLoss;
 
-    /** Lo hien tai = max(phi + lo da chot tu su kien stream, tmb0 - tmb). Khong doc duoc tmb => chi phan da chot. */
+    /**
+     * [3f §ADD-4 G] Lo hien tai = phi - PnL da chot cua lenh canary (su kien stream CHI 2 symbol canary) + lo chua chot cua vi the
+     * canary (positionRisk 2 symbol canary). KHONG dung tmb (tai khoan chinh co LEGACY); funding khong quy duoc cho canary => bo.
+     */
     double lossNow() {
         double realized;
         synchronized (stateLock) {
-            realized = state.cumFeeStable - state.cumRealized - state.cumFunding;
+            realized = state.cumFeeStable - state.cumRealized;
         }
-        double drop = Double.NaN;
-        if (state.tmb0 != null && gw != null) {
+        double unreal = 0d;
+        if (gw != null && state.symbolsChosen()) {
             try {
-                AccountSnapshot a = gw.account();
-                if (a.getTotalMarginBalance() != null) drop = state.tmb0 - a.getTotalMarginBalance().doubleValue();
+                for (String s : canarySyms()) {
+                    if (ledger(s).signum() <= 0) continue;
+                    Optional<PositionInfo> p = pos(s);
+                    if (p.isPresent() && p.get().getUnrealizedProfit() != null) {
+                        unreal += Math.max(0d, -p.get().getUnrealizedProfit().doubleValue());
+                    }
+                }
             } catch (RuntimeException e) {
-                drop = Double.NaN;
+                unreal = Double.NaN;
             }
         }
-        double l = Double.isNaN(drop) ? realized : Math.max(realized, drop);
+        double l = Double.isNaN(unreal) ? realized : realized + unreal;
         cachedLoss = l;
         return l;
     }
@@ -340,6 +352,9 @@ public final class CanaryEngine {
         Consumer<String> al = this::alert;
         gw = new CanaryGateway(deps.raw, allowedSymbols(), journal, deps.usedWeight1m, this::lossCapHit);
         gw.ownClock = clock;
+        gw.canaryQty = this::ledger;                       // [3f §ADD-4 C] lenh mo: vi the san <= ledger canary
+        gw.execListener = this::onCanaryExec;              // [3f] ledger theo khop lenh cid canary
+        gw.guardSleep = sleeper::sleep;                    // [3f §ADD-4 I] guard client tu choi => cho sang phut sau
         gw.cidListener = (sym, cid) -> {
             long m = Math.floorDiv(clock.getAsLong(), 60_000L);
             synchronized (stateLock) {
@@ -367,7 +382,7 @@ public final class CanaryEngine {
                 .build();
         trailing.setStopGuard(guard);
         executor = new C3LiveOrderExecutor(gw, book, api, null, clock, sleeper::sleep, cfg.safeRetryMs, 3, Runnable::run);
-        modeGuard = new AccountModeGuard(gw, CanaryLimits.LEVERAGE, al, clock, 60_000L);
+        modeGuard = new AccountModeGuard(gw, CanaryLimits.LEVERAGE, al, clock, 60_000L).globalPolicy(false, false);   // [3f §ADD-4 E]
         tap = new StreamTap(deps.connector);
         stream = new UserStream(gw, tap, deps.wsUrls, acct, this::fallbackRest, al, api, clock, 15_000L, 10_000L, 60_000L, 300_000L);
     }
@@ -415,7 +430,9 @@ public final class CanaryEngine {
                 }
 
                 @Override
-                public void onText(String text) {
+                public void onText(String raw) {
+                    String text = scopeFilter(raw);   // [3f §ADD-4 A] lop c3_live CHI thay 2 symbol canary
+                    if (text == null) return;
                     onStreamText(text);
                     synchronized (held) {
                         if (holding) {
@@ -514,6 +531,7 @@ public final class CanaryEngine {
             m.put("ot", u.origType);
             m.put("z", u.cumQty == null ? null : u.cumQty.toPlainString());
             m.put("ap", u.avgPrice == null ? null : u.avgPrice.toPlainString());
+            if (CanaryGateway.canaryOrderCid(u.clientOrderId) && u.cumQty != null) onCanaryExec(u.symbol, u.clientOrderId, u.cumQty);
             if (u.isTrade()) {
                 String key = u.orderId + ":" + u.tradeTimeMs + ":" + u.lastQty + ":" + u.cumQty;
                 if (seenTrades.add(key)) {
@@ -545,14 +563,8 @@ public final class CanaryEngine {
             for (UserStreamEvents.Position p : a.positions) ps.add(p.symbol + "=" + (p.positionAmt == null ? "?" : p.positionAmt.toPlainString()));
             m.put("P", ps);
             if ("FUNDING_FEE".equals(a.reason)) {
-                double f = 0d;
-                for (UserStreamEvents.Balance b : a.balances) {
-                    if (b.asset != null && STABLE.contains(b.asset) && b.balanceChange != null) f += b.balanceChange.doubleValue();
-                }
-                synchronized (stateLock) {
-                    state.cumFunding += f;
-                }
-                saveState();
+                // [3f §ADD-4 G] funding la so du TOAN tai khoan (LEGACY) — khong quy duoc cho canary => khong cong
+                m.put("fundingIgnored", true);
             }
         }
         streamEvents.add(m);
@@ -568,6 +580,7 @@ public final class CanaryEngine {
         if (stream != null) stream.tick(now);
         if (rec != null) rec.confirmPendingFlat();
         checkLoss(false);
+        checkScope();   // [3f §ADD-4 C] pham vi canary moi 30 s (hoac ngay khi stream thay lenh la tren symbol canary)
     }
 
     /** Bom vong trong ms (ngu tung 1 s). */
@@ -914,8 +927,12 @@ public final class CanaryEngine {
      * => MARKET reduce-only c3x- truc tiep; roi huy stop c3s- qua guard (chi khi positionRisk + account deu phang).
      */
     Map<String, Object> flattenAll(String reason) {
+        boolean prev = flattening;
+        flattening = true;   // [3f] khong kiem pham vi trong luc dong (da kiem tung symbol ben duoi)
         try (RateGuard.Lane lane = RateGuard.emergencyLane()) {   // [3e] dong khan cap: khong bao gio bi rate guard rieng chan
             return flattenAll0(reason);
+        } finally {
+            flattening = prev;
         }
     }
 
@@ -926,17 +943,37 @@ public final class CanaryEngine {
         if (tap != null) tap.release();
         for (String sym : allowedSymbols()) {
             if (sym.startsWith("__")) continue;
+            String red0;
+            synchronized (stateLock) {
+                red0 = state.red.get(sym);
+            }
+            if (red0 == null) {
+                try {
+                    String pr = scopeProblem(sym);
+                    if (pr != null && pr.startsWith("RED")) {
+                        markRed(sym, pr, "flatten " + reason);
+                        red0 = pr;
+                    }
+                } catch (RuntimeException e) {
+                    journal.ev("SCOPE_NOREAD", "symbol", sym, "where", "flatten", "err", e.getClass().getSimpleName());
+                }
+            }
+            if (red0 != null) {   // [3f §ADD-4 C] TRUOT-DO: KHONG dong (vi the lan LEGACY) — MASTER quyet
+                out.put(sym + "." + TRUOT_DO, "KHONG dong: " + red0);
+                continue;
+            }
             try {
                 if (book.isHolding(sym)) {
                     long w = closeCluster(sym, "FLATTEN_" + reason);
                     out.put(sym + ".cluster", w >= 0 ? "dong" : "CHUA dong sau " + cfg.closeWaitMs + " ms");
                 }
                 BigDecimal amt = posAmt(sym);
-                if (amt.signum() > 0) {
+                BigDecimal mine = amt.min(ledger(sym));   // [3f §ADD-4 C] chi phan canary
+                if (mine.signum() > 0) {
                     waitNewMinuteForClose(sym);
                     String cid = C3LiveCids.close(sym, Math.floorDiv(clock.getAsLong(), 60_000L), 9);
                     try {
-                        OrderInfo o = gw.newMarketOrder(sym, Side.SELL, amt, cid, true);
+                        OrderInfo o = gw.newMarketOrder(sym, Side.SELL, mine, cid, true);
                         out.put(sym + ".directClose", o.getStatus() + " " + o.getExecutedQty());
                     } catch (GatewayException e) {
                         out.put(sym + ".directClose", "LOI " + e.getKind() + ":" + e.getExchangeCode());
@@ -966,18 +1003,337 @@ public final class CanaryEngine {
     }
 
     // ------------------------------------------------------------------ dieu kien chung truoc moi lenh
-    /** Vi the / lenh / stop cua symbol NGOAI canary (khong bao gio cham; co => tu choi chay). */
-    List<String> foreignExposure() {
-        Set<String> allow = allowedSymbols();
-        List<String> out = new ArrayList<>();
-        for (PositionInfo p : gw.positions()) {
-            if (p.getPositionAmt() != null && p.getPositionAmt().signum() != 0 && !allow.contains(p.getSymbol())) {
-                out.add("vi the " + p.getSymbol() + "=" + p.getPositionAmt().toPlainString());
+    // ------------------------------------------------------------------ [3f §ADD-4] pham vi canary tren TAI KHOAN CHINH
+    static final long SCOPE_EVERY_MS = 30_000L;
+    static final long SCOPE_RECHECK_MS = 3_000L;
+    static final BigDecimal MIN_AVAILABLE_USDT = new BigDecimal("50");
+    static final BigDecimal QTY_EPS = new BigDecimal("0.000000001");
+    public static final String TRUOT_DO = "TRUOT-DO";
+    private final Set<String> suspect = ConcurrentHashMap.newKeySet();
+    private volatile long lastScopeMs = Long.MIN_VALUE / 2;
+    private volatile boolean flattening;
+
+    List<String> canarySyms() {
+        List<String> l = new ArrayList<>();
+        if (state.symMain != null) l.add(state.symMain);
+        if (state.symAux != null && !state.symAux.equals(state.symMain)) l.add(state.symAux);
+        return l;
+    }
+
+    static BigDecimal dec(String s) {
+        if (s == null || s.trim().isEmpty()) return null;
+        try {
+            return new BigDecimal(s.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /** [3f] ledger: so luong canary dang giu tren symbol (chua co ban ghi => so trong so, khong co => 0). */
+    BigDecimal ledger(String sym) {
+        BigDecimal v;
+        synchronized (stateLock) {
+            v = dec(state.canaryQty.get(sym));
+        }
+        if (v != null) return v;
+        if (book != null) {
+            Optional<LiveBookC3.ClusterView> c = book.cluster(sym);
+            if (c.isPresent()) return c.get().confirmedQty;
+        }
+        return BigDecimal.ZERO;
+    }
+
+    /** [3f] khop lenh cid canary (response / queryOrder / stream z) => ledger: chi phan TANG theo cid; c3- cong, c3x- tru. */
+    void onCanaryExec(String sym, String cid, BigDecimal executed) {
+        if (sym == null || cid == null || executed == null) return;
+        BigDecimal led;
+        synchronized (stateLock) {
+            BigDecimal prev = dec(state.canaryCidQty.get(cid));
+            BigDecimal delta = executed.subtract(prev == null ? BigDecimal.ZERO : prev);
+            if (delta.signum() <= 0) return;
+            state.canaryCidQty.put(cid, executed.toPlainString());
+            BigDecimal cur = dec(state.canaryQty.get(sym));
+            if (cur == null) cur = BigDecimal.ZERO;
+            led = cid.startsWith(C3LiveCids.ENTRY_PREFIX) ? cur.add(delta) : cur.subtract(delta).max(BigDecimal.ZERO);
+            state.canaryQty.put(sym, led.toPlainString());
+        }
+        saveState();
+        journal.ev("LEDGER", "symbol", sym, "cid", cid, "executed", executed.toPlainString(), "canaryQty", led.toPlainString());
+    }
+
+    /**
+     * [3f §ADD-4 C] van de pham vi 1 symbol canary: null = sach; "RED .." = vi the san &gt; ledger canary (2 lan doc cach 3 s) hoac am;
+     * "FOREIGN .." = lenh/algo khong mang cid canary. San &lt; ledger 2 lan doc (stop kich / da dong) => co ledger lai.
+     */
+    String scopeProblem(String s) {
+        BigDecimal p1 = posAmt(s);
+        List<String> fo = new ArrayList<>();
+        for (OrderInfo o : gw.openOrders(s)) if (!CanaryGateway.canaryOrderCid(o.getClientOrderId())) fo.add("lenh " + o.getClientOrderId());
+        for (OrderInfo o : gw.openStops(s)) if (!CanaryGateway.canaryAlgoCid(o.getClientOrderId())) fo.add("algo " + o.getClientOrderId());
+        if (p1.signum() < 0) return "RED " + s + ": vi the AM " + p1.toPlainString() + " (canary chi long)";
+        BigDecimal led = ledger(s);
+        if (p1.compareTo(led) != 0) {
+            sleeper.sleep(SCOPE_RECHECK_MS);
+            BigDecimal p2 = posAmt(s);
+            BigDecimal led2 = ledger(s);
+            if (p1.compareTo(led.add(QTY_EPS)) > 0 && p2.compareTo(led2.add(QTY_EPS)) > 0) {
+                return "RED " + s + ": vi the san " + p2.toPlainString() + " > canary " + led2.toPlainString() + " (2 lan doc cach "
+                        + SCOPE_RECHECK_MS / 1000 + " s) — vi the ngoai canary / one-way cong don";
+            }
+            if (p1.compareTo(led) < 0 && p2.compareTo(led2) < 0 && p2.signum() >= 0) {
+                BigDecimal nv = p1.max(p2);
+                synchronized (stateLock) {
+                    state.canaryQty.put(s, nv.toPlainString());
+                }
+                saveState();
+                journal.ev("LEDGER_SHRINK", "symbol", s, "from", led2.toPlainString(), "to", nv.toPlainString());
             }
         }
-        for (OrderInfo o : gw.openOrders(null)) if (!allow.contains(o.getSymbol())) out.add("lenh mo " + o.getSymbol());
-        for (OrderInfo o : gw.openStops(null)) if (!allow.contains(o.getSymbol())) out.add("algo mo " + o.getSymbol());
-        return out;
+        if (!fo.isEmpty()) return "FOREIGN " + s + ": " + (fo.size() > 3 ? fo.subList(0, 3) + " +" + (fo.size() - 3) : fo);
+        return null;
+    }
+
+    /** [3f §ADD-4 C] kiem pham vi 2 symbol canary. strict: loi doc => nem (cong vao buoc); khong strict: bo qua lan nay. */
+    void enforceScope(String where, boolean strict) {
+        if (!state.symbolsChosen() || gw == null) return;
+        List<String> red = new ArrayList<>();
+        List<String> foreign = new ArrayList<>();
+        for (String s : canarySyms()) {
+            String pr;
+            try {
+                pr = scopeProblem(s);
+            } catch (RuntimeException e) {
+                if (strict) throw e;
+                journal.ev("SCOPE_NOREAD", "symbol", s, "where", where, "err", e.getClass().getSimpleName());
+                continue;
+            }
+            if (pr == null) continue;
+            if (pr.startsWith("RED")) {
+                markRed(s, pr, where);
+                red.add(pr);
+            } else {
+                foreign.add(pr);
+            }
+        }
+        lastScopeMs = clock.getAsLong();
+        if (!red.isEmpty()) {
+            throw new Abort(TRUOT, TRUOT_DO + " (" + where + "): " + red + " — KHONG dong, dung, bao MASTER (§ADD-4 C)");
+        }
+        if (!foreign.isEmpty()) {
+            synchronized (stateLock) {
+                if (state.aborted == null) state.aborted = "SCOPE (" + where + "): " + foreign + " luc " + clock.getAsLong();
+            }
+            saveState();
+            journal.ev("SCOPE_FOREIGN", "where", where, "what", foreign.toString());
+            alert("canary: lenh/algo NGOAI canary tren symbol canary " + foreign + " => dong phan canary reduce-only, DUNG phien");
+            throw new Abort(TRUOT, "lenh/algo ngoai canary tren symbol canary (" + where + "): " + foreign
+                    + " — dong phan canary reduce-only, dung (§ADD-4 C)");
+        }
+    }
+
+    /**
+     * [3f §ADD-4 C] TRUOT-DO: ghi state (moi buoc sau TU CHOI; flatten KHONG dong symbol nay), huy stop c3s- CUA CANARY tren symbol
+     * (stop closePosition / qty se dong ca phan LEGACY khi kich), KHONG dong vi the, Telegram.
+     */
+    void markRed(String s, String why, String where) {
+        boolean first;
+        synchronized (stateLock) {
+            first = !state.red.containsKey(s);
+            state.red.put(s, why);
+            if (state.aborted == null || !state.aborted.startsWith(TRUOT_DO)) {
+                state.aborted = TRUOT_DO + " " + s + " (" + where + "): " + why + " luc " + clock.getAsLong();
+            }
+        }
+        saveState();
+        journal.ev("TRUOT_DO", "symbol", s, "where", where, "why", why);
+        if (!first) return;
+        List<String> cancelled = new ArrayList<>();
+        try (RateGuard.Lane lane = RateGuard.emergencyLane()) {
+            for (OrderInfo o : gw.openStops(s)) {
+                if (!CanaryGateway.canaryAlgoCid(o.getClientOrderId()) || o.getStatus() == null || o.getStatus().isFinal()) continue;
+                try {
+                    gw.cancelStop(s, o.getClientOrderId());
+                    cancelled.add(o.getClientOrderId());
+                } catch (RuntimeException e) {
+                    journal.ev("TRUOT_DO_CANCEL_ERROR", "symbol", s, "cid", o.getClientOrderId(), "err", e.toString());
+                }
+            }
+        } catch (RuntimeException e) {
+            journal.ev("TRUOT_DO_NOREAD", "symbol", s, "err", e.toString());
+        }
+        journal.ev("TRUOT_DO_STOPS_CANCELLED", "symbol", s, "cids", cancelled);
+        alert("canary " + TRUOT_DO + " " + s + ": " + why + " — KHONG dong vi the; da huy " + cancelled.size()
+                + " stop c3s- cua canary (tranh dong ca phan LEGACY); DUNG, bao MASTER");
+    }
+
+    private void checkScope() {
+        if (flattening || gw == null || book == null || !state.symbolsChosen()) return;
+        long now = clock.getAsLong();
+        if (suspect.isEmpty() && now - lastScopeMs < SCOPE_EVERY_MS) return;
+        suspect.clear();
+        lastScopeMs = now;
+        enforceScope("nhip", false);
+    }
+
+    static String jstr(JsonObject o, String k) {
+        if (o == null) return null;
+        JsonElement e = o.get(k);
+        return e == null || e.isJsonNull() || !e.isJsonPrimitive() ? null : e.getAsString();
+    }
+
+    static JsonObject jobj(JsonObject o, String k) {
+        if (o == null) return null;
+        JsonElement e = o.get(k);
+        return e != null && e.isJsonObject() ? e.getAsJsonObject() : null;
+    }
+
+    @SuppressWarnings("deprecation")
+    static JsonObject parseObj(String t) {
+        JsonElement e = new JsonParser().parse(t);
+        return e != null && e.isJsonObject() ? e.getAsJsonObject() : null;
+    }
+
+    /**
+     * [3f §ADD-4 A] loc su kien stream TRUOC lop c3_live: lenh/algo/cau hinh cua symbol NGOAI canary => bo (journal gon LEGACY_EVENT);
+     * ACCOUNT_UPDATE: chi giu vi the 2 symbol canary; lenh/algo la tren symbol canary => nghi van (kiem pham vi ngay). null = bo.
+     */
+    String scopeFilter(String text) {
+        JsonObject o;
+        try {
+            o = parseObj(text);
+        } catch (RuntimeException e) {
+            return text;
+        }
+        if (o == null) return text;
+        String e = jstr(o, "e");
+        if (e == null) return text;
+        Set<String> allow = allowedSymbols();
+        switch (e) {
+            case "ORDER_TRADE_UPDATE":
+            case "ALGO_UPDATE": {
+                JsonObject x = jobj(o, "o");
+                String s = jstr(x, "s");
+                String cid = "ALGO_UPDATE".equals(e) ? jstr(x, "caid") : jstr(x, "c");
+                if (s != null && !allow.contains(s)) {
+                    journal.ev("LEGACY_EVENT", "e", e, "s", s, "c", cid, "X", jstr(x, "X"));
+                    return null;
+                }
+                if (s != null && !CanaryGateway.canaryAnyCid(cid)) {
+                    suspect.add(s);
+                    journal.ev("FOREIGN_ON_CANARY", "e", e, "s", s, "c", cid, "X", jstr(x, "X"));
+                }
+                return text;
+            }
+            case "TRADE_LITE": {
+                String s = jstr(o, "s");
+                if (s != null && !allow.contains(s)) return null;
+                if (s != null && !CanaryGateway.canaryAnyCid(jstr(o, "c"))) suspect.add(s);
+                return text;
+            }
+            case "ACCOUNT_UPDATE": {
+                JsonObject a = jobj(o, "a");
+                if (a == null || !a.has("P") || !a.get("P").isJsonArray()) return text;
+                JsonArray in = a.getAsJsonArray("P");
+                JsonArray keep = new JsonArray();
+                int dropped = 0;
+                for (JsonElement pe : in) {
+                    String s = pe.isJsonObject() ? jstr(pe.getAsJsonObject(), "s") : null;
+                    if (s == null || allow.contains(s)) keep.add(pe); else dropped++;
+                }
+                if (dropped == 0) return text;
+                a.add("P", keep);
+                return o.toString();
+            }
+            case "ACCOUNT_CONFIG_UPDATE": {
+                String s = jstr(jobj(o, "ac"), "s");
+                return s != null && !allow.contains(s) ? null : text;
+            }
+            default:
+                return text;
+        }
+    }
+
+    static Set<String> busySymbols(List<PositionInfo> ps, List<OrderInfo> oo, List<OrderInfo> oa) {
+        Set<String> s = new java.util.TreeSet<>();
+        for (PositionInfo p : ps) if (p.getSymbol() != null && p.getPositionAmt() != null && p.getPositionAmt().signum() != 0) s.add(p.getSymbol());
+        for (OrderInfo o : oo) if (o.getSymbol() != null) s.add(o.getSymbol());
+        for (OrderInfo o : oa) if (o.getSymbol() != null) s.add(o.getSymbol());
+        return s;
+    }
+
+    /** [3f §ADD-4 D] vi the LEGACY (ngoai 2 symbol canary): symbol -> "qty@entry". */
+    static Map<String, String> legacyPositions(List<PositionInfo> all, Set<String> allow) {
+        Map<String, String> m = new java.util.TreeMap<>();
+        for (PositionInfo p : all) {
+            if (p.getSymbol() == null || allow.contains(p.getSymbol()) || p.getPositionAmt() == null || p.getPositionAmt().signum() == 0) continue;
+            String v = p.getPositionAmt().stripTrailingZeros().toPlainString() + "@"
+                    + (p.getEntryPrice() == null ? "-" : p.getEntryPrice().stripTrailingZeros().toPlainString());
+            m.merge(p.getSymbol(), v, (x, y) -> x + "+" + y);
+        }
+        return m;
+    }
+
+    /** [3f §ADD-4 D] lenh / algo LEGACY (ngoai 2 symbol canary, khong cid canary): "SYMBOL|cid|type|side". */
+    static List<String> legacyOrders(List<OrderInfo> all, Set<String> allow) {
+        List<String> l = new ArrayList<>();
+        for (OrderInfo o : all) {
+            if (o.getSymbol() == null || allow.contains(o.getSymbol()) || CanaryGateway.canaryAnyCid(o.getClientOrderId())) continue;
+            l.add(o.getSymbol() + "|" + o.getClientOrderId() + "|" + o.getType() + "|" + o.getSide());
+        }
+        Collections.sort(l);
+        return l;
+    }
+
+    /** [3f §ADD-4 D] lenh / algo mang cid canary tren symbol NGOAI pham vi (phai = 0). */
+    static List<String> canaryOutside(List<OrderInfo> all, Set<String> allow) {
+        List<String> l = new ArrayList<>();
+        for (OrderInfo o : all) {
+            if (CanaryGateway.canaryAnyCid(o.getClientOrderId()) && !allow.contains(o.getSymbol())) l.add(o.getSymbol() + "|" + o.getClientOrderId());
+        }
+        return l;
+    }
+
+    /** [3f §ADD-4 D] quet moi journal phien: CALL_W tren symbol ngoai pham vi + symbol co su kien LEGACY (lenh khong cid canary). */
+    Map<String, Object> sessionJournalScan(Set<String> allow) {
+        int files = 0;
+        int outside = 0;
+        Set<String> legacySyms = new java.util.TreeSet<>();
+        File[] fs = dir.listFiles((d0, n) -> n.startsWith("canary_") && n.endsWith(".jsonl"));
+        if (fs != null) {
+            for (File f : fs) {
+                files++;
+                List<String> lines;
+                try {
+                    lines = Files.readAllLines(f.toPath(), StandardCharsets.UTF_8);
+                } catch (IOException e) {
+                    journal.ev("JOURNAL_SCAN_ERROR", "file", f.getName(), "err", e.getClass().getSimpleName());
+                    continue;
+                }
+                for (String line : lines) {
+                    if (line.trim().isEmpty()) continue;
+                    JsonObject o;
+                    try {
+                        o = parseObj(line);
+                    } catch (RuntimeException e) {
+                        continue;
+                    }
+                    if (o == null) continue;
+                    String t = jstr(o, "type");
+                    if ("CALL_W".equals(t)) {
+                        String s = jstr(o, "symbol");
+                        if (s != null && !allow.contains(s)) outside++;
+                    } else if ("LEGACY_EVENT".equals(t)) {
+                        String s = jstr(o, "s");
+                        if (s != null) legacySyms.add(s);
+                    }
+                }
+            }
+        }
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("files", files);
+        m.put("callsOutside", outside);
+        m.put("legacyEventSymbols", legacySyms);
+        return m;
     }
 
     /** Kiem lai 2 symbol trong trang thai van dung LUAT (khong xet hang) — chong sua tay file trang thai. */
@@ -997,8 +1353,7 @@ public final class CanaryEngine {
         if (!state.symbolsChosen()) throw new Abort(TU_CHOI, "chua chon symbol (chay canary_preflight truoc)");
         if (state.tmb0 == null) throw new Abort(TU_CHOI, "chua co moc tmb (K0 chua DAT)");
         build();
-        List<String> f = foreignExposure();
-        if (!f.isEmpty()) throw new Abort(TU_CHOI, "tai khoan co vi the/lenh ngoai canary: " + f);
+        enforceScope(k, true);   // [3f §ADD-4 C] thay "tai khoan 0 vi the/lenh": 2 symbol canary sach (LEGACY noi khac: binh thuong)
         ExchangeInfo ei = gw.exchangeInfo();
         List<String> bad = revalidateSymbols(ei);
         if (!bad.isEmpty()) throw new Abort(TU_CHOI, String.join("; ", bad));
@@ -1024,7 +1379,17 @@ public final class CanaryEngine {
             long mut0 = gw.mutatingCalls();
             ExchangeInfo ei = gw.exchangeInfo();
             List<Ticker24h> tk = gw.tickers24h(null);
-            SymbolPicker.Pick p = SymbolPicker.pick(ei, tk, deps.legacy, clock.getAsLong());
+            // [3f §ADD-4 B/D] tai khoan CHINH: doc (CHI DOC) vi the + lenh + algo TOAN tai khoan 1 lan => loai symbol ban + anh chup LEGACY
+            List<PositionInfo> posAll = gw.positionsAll();
+            List<OrderInfo> ooAll = gw.openOrdersAll();
+            List<OrderInfo> oaAll = gw.openStopsAll();
+            Set<String> busy = busySymbols(posAll, ooAll, oaAll);
+            st.put("pick.legacyBusy", busy.size());
+            st.put("pick.legacySource", "vi the != 0 + lenh mo + algo mo TOAN tai khoan luc K0 + run/legacy_symbols.csv;"
+                    + " userTrades 7 ngay BO (weight ~5 x moi symbol trong universe — §ADD-4 B cho phep)");
+            Predicate<String> leg0 = deps.legacy;
+            Predicate<String> legacy = s -> busy.contains(s) || (leg0 != null && leg0.test(s));
+            SymbolPicker.Pick p = SymbolPicker.pick(ei, tk, legacy, clock.getAsLong());
             st.put("pick.scanned", p.scanned);
             st.put("pick.eligible", p.eligible);
             st.put("pick.rejects", p.rejectCounts);
@@ -1054,20 +1419,21 @@ public final class CanaryEngine {
             st.put("tmb", tmb);
             st.put("twb", a.getTotalWalletBalance() == null ? null : a.getTotalWalletBalance().toPlainString());
             st.put("assets", assetMap(a));
+            st.put("availableBalance", a.getAvailableBalance() == null ? null : a.getAvailableBalance().toPlainString());
+            st.put("tmbCheck", "KHONG_AP §ADD-4 H (tai khoan chinh, LEGACY): chi ghi tmb/twb; kiem availableBalance >= "
+                    + MIN_AVAILABLE_USDT + " USDT");
             st.check(tmb > 0d, "tmb <= 0");
-            if (Double.isNaN(cfg.expectTmb) || cfg.expectTmb <= 0d) {
-                st.check(false, "thieu CANARY_EXPECT_TMB (so da nap) => khong do duoc tmb ~ so da nap");
-            } else {
-                double d = Math.abs(tmb - cfg.expectTmb) / cfg.expectTmb;
-                st.put("tmbDiffFrac", d);
-                st.check(d <= 0.01d, "tmb " + fmt(tmb) + " lech so da nap " + fmt(cfg.expectTmb) + " > 1%");
-            }
-            boolean multi = gw.multiAssetsMargin();
+            st.check(a.getAvailableBalance() != null && a.getAvailableBalance().compareTo(MIN_AVAILABLE_USDT) >= 0,
+                    "availableBalance < " + MIN_AVAILABLE_USDT + " USDT (§ADD-4 H)");
             boolean dual = gw.dualSidePosition();
-            st.put("multiAssetsMargin", multi);
             st.put("dualSidePosition", dual);
-            st.check(multi, "multiAssetsMargin=false");
-            st.check(!dual, "dualSidePosition=true (hedge)");
+            try {
+                st.put("multiAssetsMargin", gw.multiAssetsMargin());
+            } catch (RuntimeException e) {
+                st.put("multiAssetsMargin", "loi " + e.getClass().getSimpleName());
+            }
+            st.put("accountLevel", "§ADD-4 E: multiAssets / dualSide CHI DOC, khong bao gio doi; ky vong one-way (multiAssets chi ghi)");
+            st.check(!dual, "dualSidePosition=true (hedge) — §ADD-4 E: khong doi => TU CHOI");
             for (String s : new String[]{state.symMain, state.symAux}) {
                 SymbolConfig sc = gw.symbolConfig(s);
                 st.put("symbolConfig." + s, sc.getMarginType() + "/" + sc.getLeverage() + "x");
@@ -1084,19 +1450,43 @@ public final class CanaryEngine {
             for (PositionInfo x : pr) if (x.getPositionAmt() != null && x.getPositionAmt().signum() != 0) nPos++;
             st.put("positionRisk.nonZero", nPos);
             st.put("positionRisk.rows", pr.size());
-            st.check(nPos == 0, "positionRisk co " + nPos + " vi the");
+            st.check(nPos == 0, "positionRisk: " + nPos + " vi the tren 2 symbol canary");
             List<PositionInfo> ap = a.getPositions();
             st.put("account.positions", ap == null ? "null" : String.valueOf(ap.size()));
             int nAcc = 0;
             if (ap != null) for (PositionInfo x : ap) if (x.getPositionAmt() != null && x.getPositionAmt().signum() != 0) nAcc++;
             st.check(ap != null, "account() khong co mang positions");
-            st.check(nAcc == 0, "account().positions co " + nAcc + " vi the");
-            int no = gw.openOrders(null).size();
+            st.check(nAcc == 0, "account().positions: " + nAcc + " vi the tren 2 symbol canary");
+            int no = gw.openOrders(null).size();   // view 2 symbol canary (moi cid)
             int ns = gw.openStops(null).size();
             st.put("openOrders", no);
             st.put("openAlgo", ns);
-            st.check(no == 0, no + " lenh mo");
-            st.check(ns == 0, ns + " algo mo");
+            st.check(no == 0, no + " lenh mo tren 2 symbol canary");
+            st.check(ns == 0, ns + " algo mo tren 2 symbol canary");
+            Set<String> allow = allowedSymbols();
+            List<String> outO = canaryOutside(ooAll, allow);
+            List<String> outA = canaryOutside(oaAll, allow);
+            st.put("canaryOutside", outO.size() + outA.size());
+            st.check(outO.isEmpty() && outA.isEmpty(), "lenh/algo cid canary con mo NGOAI pham vi: " + outO + outA);
+            // [3f §ADD-4 D] anh chup LEGACY luc K0 (positions symbol/qty/entry + lenh/algo ngoai canary)
+            Map<String, String> lp = legacyPositions(posAll, allow);
+            List<String> lo = legacyOrders(ooAll, allow);
+            List<String> la = legacyOrders(oaAll, allow);
+            st.put("legacy.positions", lp.size());
+            st.put("legacy.orders", lo.size());
+            st.put("legacy.algos", la.size());
+            if (!hasTradeSteps()) {
+                synchronized (stateLock) {
+                    state.legacyK0Positions = new LinkedHashMap<>(lp);
+                    state.legacyK0Orders = new ArrayList<>(lo);
+                    state.legacyK0Algos = new ArrayList<>(la);
+                    state.legacyK0Ms = clock.getAsLong();
+                    for (String s : canarySyms()) state.canaryQty.put(s, "0");   // ledger canary bat dau 0 (2 symbol phang)
+                }
+                saveState();
+            } else {
+                st.put("legacy.snapshotK0", "GIU anh chup cu (phien da co buoc giao dich)");
+            }
             // websocket: mo <= 5 s qua >= 1 URL; keepAlive 2 lan trong k0RunMs
             long t0 = clock.getAsLong();
             long w = ensureStream();
@@ -1221,8 +1611,7 @@ public final class CanaryEngine {
             if (!state.symbolsChosen()) throw new Abort(TU_CHOI, "chua chon symbol (chay canary_preflight truoc)");
             if (state.aborted != null) throw new Abort(TU_CHOI, "phien da DUNG: " + state.aborted);
             build();
-            List<String> f = foreignExposure();
-            if (!f.isEmpty()) throw new Abort(TU_CHOI, "tai khoan co vi the/lenh ngoai canary: " + f);
+            enforceScope("SETUP", true);   // [3f §ADD-4 C/F] 2 symbol canary sach truoc khi doi leverage/margin
             AccountModeGuard.Result g = modeGuard.checkGlobal();
             st.put("global", g.toString());
             st.check(g.isOk(), "GLOBAL: " + g.getProblems());
@@ -1874,7 +2263,7 @@ public final class CanaryEngine {
         st.put("diffFrac", diff / tmb);
         st.put("balances", assetMap(a));
         st.put("cost", state.cumFeeStable - state.cumRealized - state.cumFunding);
-        st.check(diff / tmb <= 0.01d, "equity so cai lech tmb " + fmt(diff / tmb * 100) + "% > 1%");
+        st.put("equityCheck", "KHONG_AP §ADD-4 G/H: tai khoan chinh co LEGACY — lech tmb chi ghi thong tin (chi phi canary kiem ben duoi)");
         st.check(state.cumFeeStable - state.cumRealized - state.cumFunding <= CanaryLimits.LOSS_CAP_USDT,
                 "chi phi > " + CanaryLimits.LOSS_CAP_USDT + " USDT");
         st.check(state.feeOther.isEmpty(), "phi tra bang tai san ngoai stable " + state.feeOther + " (so cai khong quy doi duoc)");
@@ -1885,6 +2274,8 @@ public final class CanaryEngine {
     /** Khan cap: dong 2 symbol canary (khong cham symbol khac), huy stop c3s- qua guard. Chay ca khi phien da DUNG. */
     public Result flatten() {
         Step st = new Step("FLATTEN");
+        boolean prevF = flattening;
+        flattening = true;
         try (RateGuard.Lane lane = RateGuard.emergencyLane()) {   // [3e] flatten khan cap: khong bao gio bi rate guard rieng chan
             if (!state.symbolsChosen()) throw new Abort(TU_CHOI, "chua chon symbol — khong co gi de dong");
             build();
@@ -1893,36 +2284,153 @@ public final class CanaryEngine {
             st.put("streamMs", ensureStream());
             Map<String, Object> out = flattenAll("OWNER");
             st.put("result", out);
-            for (String s : new String[]{state.symMain, state.symAux}) {
+            Map<String, String> red;
+            synchronized (stateLock) {
+                red = new LinkedHashMap<>(state.red);
+            }
+            for (String s : canarySyms()) {
+                if (red.containsKey(s)) {   // [3f §ADD-4 C]
+                    st.check(false, TRUOT_DO + " " + s + ": KHONG dong (vi the lan LEGACY) — bao MASTER, KHONG chay lai flatten: " + red.get(s));
+                    continue;
+                }
                 st.check(posAmt(s).signum() == 0, s + " con vi the " + posAmt(s));
                 st.check(ownStops(s).isEmpty(), s + " con stop c3s-");
             }
-            st.put("foreign_KHONG_CHAM", foreignExposure());   // [3e] chi thong tin => doc SAU khi dong (khong tre lenh dong)
         } catch (Abort e) {
             return refused(st, e);
         } catch (RuntimeException e) {
             st.check(false, "loi " + e);
+        } finally {
+            flattening = prevF;
         }
         return finish(st);
     }
 
-    /** Ket thuc: 0 vi the / 0 algo / 0 lenh tren TOAN tai khoan (doc). */
+    /**
+     * [3f §ADD-4 C/D] Ket thuc (CHI DOC): 2 symbol canary 0 vi the / 0 lenh / 0 algo; 0 lenh-algo cid canary NGOAI pham vi; 0 TRUOT-DO;
+     * journal phien: 0 lenh ghi tren symbol ngoai pham vi; anh chup LEGACY cuoi phien so voi K0 (chi dem).
+     */
     public Result cleanupCheck() {
         Step st = new Step("CLEANUP");
+        boolean prevF = flattening;
+        flattening = true;
         try (RateGuard.Lane lane = RateGuard.emergencyLane()) {   // [3e] kiem cuoi phien: khong bi rate guard rieng chan
             build();
+            Set<String> allow = allowedSymbols();
+            boolean pre3f;
+            synchronized (stateLock) {
+                pre3f = state.canaryQty.isEmpty();
+            }
             int np = 0;
-            for (PositionInfo p : gw.positions()) if (p.getPositionAmt() != null && p.getPositionAmt().signum() != 0) np++;
-            int no = gw.openOrders(null).size();
-            int ns = gw.openStops(null).size();
+            List<String> npl = new ArrayList<>();
+            for (PositionInfo p : gw.positions()) {
+                if (p.getPositionAmt() != null && p.getPositionAmt().signum() != 0) {
+                    np++;
+                    npl.add(p.getSymbol() + "=" + p.getPositionAmt().toPlainString());
+                }
+            }
+            int no = 0;
+            int ns = 0;
+            for (OrderInfo o : gw.openOrders(null)) if (!pre3f || CanaryGateway.canaryAnyCid(o.getClientOrderId())) no++;
+            for (OrderInfo o : gw.openStops(null)) if (!pre3f || CanaryGateway.canaryAnyCid(o.getClientOrderId())) ns++;
+            List<PositionInfo> posAll = gw.positionsAll();
+            List<OrderInfo> ooAll = gw.openOrdersAll();
+            List<OrderInfo> oaAll = gw.openStopsAll();
             st.put("positions", np);
             st.put("openOrders", no);
             st.put("openAlgo", ns);
-            st.check(np == 0, np + " vi the");
-            st.check(no == 0, no + " lenh mo");
-            st.check(ns == 0, ns + " algo mo");
+            if (pre3f && np > 0) {
+                st.put("positions.note", "phien truoc 3f (chua co ledger §ADD-4): vi the tren symbol cu " + npl
+                        + " KHONG quy cho canary — chi kiem lenh/algo cid canary");
+            } else {
+                st.check(np == 0, np + " vi the tren 2 symbol canary " + npl);
+            }
+            st.check(no == 0, no + " lenh mo tren 2 symbol canary");
+            st.check(ns == 0, ns + " algo mo tren 2 symbol canary");
+            List<String> outO = canaryOutside(ooAll, allow);
+            List<String> outA = canaryOutside(oaAll, allow);
+            st.put("legacy.canaryOutside", outO.size() + outA.size());
+            st.check(outO.isEmpty() && outA.isEmpty(), "lenh/algo cid canary NGOAI pham vi: " + outO + outA);
+            Map<String, String> red;
+            Map<String, String> lpK0;
+            List<String> loK0;
+            List<String> laK0;
+            Long k0ms;
+            synchronized (stateLock) {
+                red = new LinkedHashMap<>(state.red);
+                lpK0 = new LinkedHashMap<>(state.legacyK0Positions);
+                loK0 = new ArrayList<>(state.legacyK0Orders);
+                laK0 = new ArrayList<>(state.legacyK0Algos);
+                k0ms = state.legacyK0Ms;
+            }
+            st.check(red.isEmpty(), TRUOT_DO + " con: " + red.keySet() + " — MASTER quyet (vi the khong dong)");
+            // [3f §ADD-4 D] anh chup LEGACY cuoi phien vs K0 — CHI DEM (khong so du)
+            Map<String, String> lpEnd = legacyPositions(posAll, allow);
+            List<String> loEnd = legacyOrders(ooAll, allow);
+            List<String> laEnd = legacyOrders(oaAll, allow);
+            Set<String> changedSyms = new java.util.TreeSet<>();
+            int changed = 0;
+            int added = 0;
+            int gone = 0;
+            for (Map.Entry<String, String> e : lpEnd.entrySet()) {
+                String w = lpK0.get(e.getKey());
+                if (w == null) {
+                    added++;
+                    changedSyms.add(e.getKey());
+                } else if (!w.equals(e.getValue())) {
+                    changed++;
+                    changedSyms.add(e.getKey());
+                }
+            }
+            for (String k : lpK0.keySet()) {
+                if (!lpEnd.containsKey(k)) {
+                    gone++;
+                    changedSyms.add(k);
+                }
+            }
+            int oNew = 0;
+            int oGone = 0;
+            for (String x : loEnd) if (!loK0.contains(x)) oNew++;
+            for (String x : loK0) if (!loEnd.contains(x)) oGone++;
+            int aNew = 0;
+            int aGone = 0;
+            for (String x : laEnd) if (!laK0.contains(x)) aNew++;
+            for (String x : laK0) if (!laEnd.contains(x)) aGone++;
+            Map<String, Object> scan = sessionJournalScan(allow);
+            int callsOutside = ((Number) scan.get("callsOutside")).intValue();
+            st.check(callsOutside == 0, callsOutside + " lenh ghi canary tren symbol NGOAI pham vi (journal phien)");
+            @SuppressWarnings("unchecked")
+            Set<String> evSyms = (Set<String>) scan.get("legacyEventSymbols");
+            int explained = 0;
+            for (String s : changedSyms) if (evSyms.contains(s)) explained++;
+            st.put("legacy.k0Ms", k0ms);
+            st.put("legacy.positionsK0", lpK0.size());
+            st.put("legacy.positionsEnd", lpEnd.size());
+            st.put("legacy.positionsChanged", changed);
+            st.put("legacy.positionsNew", added);
+            st.put("legacy.positionsGone", gone);
+            st.put("legacy.ordersK0", loK0.size());
+            st.put("legacy.ordersEnd", loEnd.size());
+            st.put("legacy.ordersNew", oNew);
+            st.put("legacy.ordersGone", oGone);
+            st.put("legacy.algosK0", laK0.size());
+            st.put("legacy.algosEnd", laEnd.size());
+            st.put("legacy.algosNew", aNew);
+            st.put("legacy.algosGone", aGone);
+            st.put("legacy.changedSymbols", changedSyms.size());
+            st.put("legacy.explainedByStream", explained);
+            st.put("legacy.callsOutside", callsOutside);
+            st.put("legacy.journalFiles", scan.get("files"));
+            if (k0ms == null) st.put("legacy.note", "KHONG co anh chup K0 (phien truoc 3f) — so sanh khong co nghia");
+            st.put("legacy.summary", String.format(Locale.ROOT,
+                    "LEGACY vi the K0=%d cuoi=%d (doi=%d moi=%d mat=%d); lenh K0=%d cuoi=%d; algo K0=%d cuoi=%d; symbol LEGACY doi=%d"
+                            + " (co su kien stream lenh khong cid canary=%d; con lai: giua JVM / ngoai stream); lenh canary ngoai pham vi=%d",
+                    lpK0.size(), lpEnd.size(), changed, added, gone, loK0.size(), loEnd.size(), laK0.size(), laEnd.size(),
+                    changedSyms.size(), explained, callsOutside + outO.size() + outA.size()));
         } catch (RuntimeException e) {
             st.check(false, "loi " + e);
+        } finally {
+            flattening = prevF;
         }
         return finish(st);
     }

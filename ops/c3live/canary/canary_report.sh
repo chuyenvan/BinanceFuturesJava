@@ -124,10 +124,22 @@ n429 = sum(1 for e in J if e.get("http") in (429, 418))
 wo = [e.get("wOwn") for e in J if isinstance(e.get("wOwn"), (int, float))]
 bg = [e.get("w1m") - e.get("wOwn") for e in J if isinstance(e.get("w1m"), (int, float)) and isinstance(e.get("wOwn"), (int, float))
       and e.get("w1m") >= e.get("wOwn")]
-C(5, "weight < 1200 (50% cua 2400), 0 HTTP 429/418", len(ws) > 0 and max(ws) < 1200 and n429 == 0,
-  "max X-MBX-USED-WEIGHT-1M=%s (mau=%d); 429/418=%d; [thong tin] canary tu goi max/phut (uoc tinh W_*, moi JVM)=%s;"
-  " phan IP ngoai canary cung phut (header - canary) max=%s"
-  % (max(ws) if ws else "KHONG DO DUOC", len(ws), n429, max(wo) if wo else "khong co", max(bg) if bg else "khong co"))
+# [3f §ADD-4 I] tieu chi 5 = weight canary TU GOI < 600/phut + 0 HTTP 429/418; header IP (LEGACY cung IP) chi ghi thong tin
+ow = [((steps.get(k) or {}).get("data") or {}).get("ownWeight1mMax") for k in steps]
+ow = [x for x in ow if isinstance(x, (int, float))] + wo
+C(5, "weight canary tu goi < 600/phut (§ADD-4 I), 0 HTTP 429/418", len(ow) > 0 and max(ow) < 600 and n429 == 0,
+  "canary tu goi max/phut (uoc tinh W_*, moi JVM)=%s; 429/418=%d; [thong tin] max X-MBX-USED-WEIGHT-1M (IP chung LEGACY)=%s"
+  " (mau=%d); phan IP ngoai canary cung phut max=%s"
+  % (max(ow) if ow else "KHONG DO DUOC", n429, max(ws) if ws else "khong co", len(ws), max(bg) if bg else "khong co"))
+if mode == "early":
+    # [3f §ADD-4 A/D] 0 lenh canary ngoai pham vi; LEGACY: anh chup K0 vs cuoi phien (chi dem); 0 TRUOT-DO
+    cld = (steps.get("CLEANUP") or {}).get("data") or {}
+    k0d = (steps.get("K0") or {}).get("data") or {}
+    red = sorted((st.get("red") or {}).keys())
+    C(11, "§ADD-4 A/D pham vi canary + LEGACY khong bi cham", bool(cld) and cld.get("legacy.callsOutside") == 0
+      and cld.get("legacy.canaryOutside") == 0 and not red,
+      "%s | K0 LEGACY: vi the=%s lenh=%s algo=%s | TRUOT-DO=%s" % (cld.get("legacy.summary", "CHUA co buoc CLEANUP"),
+      k0d.get("legacy.positions"), k0d.get("legacy.orders"), k0d.get("legacy.algos"), red or 0))
 s242 = sum(int(x[2]) + int(x[3]) + int(x[4]) + int(x[5]) + int(x[6]) for x in sec)
 C(6, "0 bi mat trong log", keys_read and s242 == 0 and loc == 0,
   "242: %d file, tong dem=%d (key doc duoc tren 242=%s); log script Oracle=%d" % (len(sec), s242, keys_read, loc))

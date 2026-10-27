@@ -187,7 +187,7 @@ public final class C3LiveCanary {
             out("RESULT " + cmd + " TU_CHOI | khong tao duoc client: " + e.getClass().getSimpleName() + ": " + e.getMessage());
             return 2;
         }
-        if ("keycheck".equals(cmd)) return keycheck(client);
+        if ("keycheck".equals(cmd)) return keycheck(client, dir);
         C3LiveAlerts tg = new C3LiveAlerts(Utils::sendSms2Telegram);
         CanaryEngine.Deps d = new CanaryEngine.Deps();
         d.raw = client;
@@ -203,6 +203,7 @@ public final class C3LiveCanary {
         d.legacy = legacySet(new File(or(env.apply("LIVE_LEGACY_FILE"), "run/legacy_symbols.csv")))::contains;
         d.usedWeight1m = rg::lastServerWeight1m;
         d.rateGuard = rg;   // [3e] so lieu lan khan cap vao data buoc
+        // [3f §ADD-4 J] key RIENG tai khoan chinh tu C3LiveClientConfig (keys.env) — KHONG dung PrivateConfig / key LEGACY
         d.journalName = "canary_" + ts() + "_" + cmd + (args.length > 1 ? "_" + args[1].replaceAll("[^A-Za-z0-9_]", "") : "") + ".jsonl";
         CanaryEngine.Config cfg = new CanaryEngine.Config();
         String et = env.apply("CANARY_EXPECT_TMB");
@@ -244,18 +245,38 @@ public final class C3LiveCanary {
      * Doc thu key (chi doc): gio server, tmb, multiAssets, dual + [3d] so vi the != 0 / lenh mo / algo mo toan tai khoan
      * ({@code pos= orders= algos=}, de canary_early_all.sh kiem "tai khoan phang" ma KHONG ghi buoc vao state). Khong in key.
      */
-    static int keycheck(C3LiveClient c) {
+    static int keycheck(C3LiveClient c, File dir) {
         try {
             long st = c.serverTime();
             AccountSnapshot a = c.account();
             boolean multi = c.multiAssetsMargin();
             boolean dual = c.dualSidePosition();
-            int pos = 0;
-            for (PositionInfo p : c.positions()) if (p.getPositionAmt() != null && p.getPositionAmt().signum() != 0) pos++;
-            int ord = c.openOrders(null).size();
-            int alg = c.openStops(null).size();
-            out("KEYCHECK serverTime=" + st + " tmb=" + a.getTotalMarginBalance() + " multiAssets=" + multi + " dual=" + dual
-                    + " assets=" + CanaryEngine.assetMap(a) + " pos=" + pos + " orders=" + ord + " algos=" + alg);
+            // [3f §ADD-4 C] "phang" = PHAM VI CANARY (2 symbol trong state + cid canary o moi noi); LEGACY chi dem
+            Set<String> scope = new HashSet<>();
+            try {
+                CanaryState s = CanaryState.load(dir);
+                if (s.symbolsChosen()) {
+                    scope.add(s.symMain);
+                    scope.add(s.symAux);
+                }
+            } catch (IOException | RuntimeException e) {
+                LOG.warn("[CANARY] keycheck: khong doc duoc trang thai phien ({}) => pham vi = cid canary", e.getClass().getSimpleName());
+            }
+            int pos = 0, lpos = 0, ord = 0, lord = 0, alg = 0, lalg = 0;
+            for (PositionInfo p : c.positions()) {
+                if (p.getPositionAmt() == null || p.getPositionAmt().signum() == 0) continue;
+                if (scope.contains(p.getSymbol())) pos++; else lpos++;
+            }
+            for (com.binance.chuyennd.c3live.api.OrderInfo o : c.openOrders(null)) {
+                if (scope.contains(o.getSymbol()) || CanaryGateway.canaryAnyCid(o.getClientOrderId())) ord++; else lord++;
+            }
+            for (com.binance.chuyennd.c3live.api.OrderInfo o : c.openStops(null)) {
+                if (scope.contains(o.getSymbol()) || CanaryGateway.canaryAnyCid(o.getClientOrderId())) alg++; else lalg++;
+            }
+            out("KEYCHECK serverTime=" + st + " tmb=" + a.getTotalMarginBalance() + " avail=" + a.getAvailableBalance()
+                    + " multiAssets=" + multi + " dual=" + dual + " assets=" + CanaryEngine.assetMap(a)
+                    + " scope=" + (scope.isEmpty() ? "cid_canary" : String.join(",", new java.util.TreeSet<>(scope)))
+                    + " legacy=pos:" + lpos + ",orders:" + lord + ",algos:" + lalg + " pos=" + pos + " orders=" + ord + " algos=" + alg);
             out("RESULT keycheck DAT");
             return 0;
         } catch (RuntimeException e) {

@@ -25,7 +25,7 @@ if [ -z "${CANARY_BG:-}" ]; then
   mkdir -p "$LOGDIR" || die "khong tao duoc $LOGDIR"
   [ -e "$STOPF" ] && die "dang co file $STOPF (lan dung khan cap truoc) — xoa co chu dich roi chay lai"
   if [ "$YES" != 1 ]; then
-    echo "CANARY-EARLY: phien TIEN THAT tren tai khoan con (moi lenh 20 USDT, tran lo 2 USDT, chi 2 symbol theo luat)."
+    echo "CANARY-EARLY: phien TIEN THAT tren TAI KHOAN CHINH (cung LEGACY; chi 2 symbol canary + cid canary; 20 USDT/lenh, tran lo 2 USDT)."
     read -r -p "Go YES (in hoa) de bat dau: " ANS || ANS=""
     [ "$ANS" = YES ] || die "khong go YES — khong chay"
   fi
@@ -100,7 +100,11 @@ if [ -n "$FAIL" ]; then
   cl_run "" flatten; RF=$?
   FLAT="flatten: $(cl_verdict $RF) | $CL_LAST_RESULT"
   say "$FLAT"
-  [ "$RF" = 0 ] || say "!! flatten KHONG DAT — owner chay ngay: bash $(dirname "$0")/canary_early_flatten.sh ; bao MASTER"
+  if printf '%s' "$CL_LAST_RESULT" | grep -q 'TRUOT-DO'; then
+    say "!! TRUOT-DO (§ADD-4 C): vi the lan LEGACY tren symbol canary — KHONG dong; BAO MASTER; KHONG chay canary_early_flatten.sh"
+  elif [ "$RF" != 0 ]; then
+    say "!! flatten KHONG DAT — owner chay ngay: bash $(dirname "$0")/canary_early_flatten.sh ; bao MASTER"
+  fi
   cl_vtm_check "sau flatten" && vlog "sau flatten: khong doi" || vlog "SAU flatten: DOI $CL_VTM_DIFF"
 fi
 PLANB=""
@@ -108,14 +112,24 @@ if printf '%s' "$K1OUT" | grep -q -- '-2019'; then
   PLANB="K1 gap -2019 (margin khong du) voi USDT = 0 => PHUONG AN B (MO-2): owner nap 50 USDT vao tai khoan con, bao MASTER; MASTER quyet chay lai (ghi 'cau hinh pilot USDT = 0 KHONG dat')."
   say "$PLANB"
 fi
-# ---- bao cao + cleanup
+# ---- [3f §ADD-4 C/D] cleanup TRUOC (CHI DOC: pham vi canary + anh chup LEGACY cuoi phien), roi bao cao (doc ca buoc CLEANUP)
+cl_run "" cleanup; RCC=$?
+CLEAN="cleanup (2 symbol canary 0 vi the / 0 algo / 0 lenh; 0 lenh canary ngoai pham vi): $(cl_verdict $RCC) | $CL_LAST_RESULT"
+say "$CLEAN"
+LEGACY=$(printf '%s' "$CL_LAST_OUT" | grep '^DATA ' | tail -1 | python3 -I -c '
+import json, sys
+t = sys.stdin.read().strip()
+try: m = json.loads(t[5:]) if t.startswith("DATA ") else {}
+except Exception: m = {}
+v = m.get("legacy.summary")
+print(v if isinstance(v, str) and v.startswith("LEGACY") else "")
+')
+[ -n "$LEGACY" ] || LEGACY="LEGACY: khong co du lieu (cleanup khong in legacy.summary)"
+say "$LEGACY"
 say "---- canary_report (mode early)"
 ROUT=$(LOGDIR=$LOGDIR CL_TS= bash "$CL_HERE/canary_report.sh" 2>&1); RRC=$?
 printf '%s\n' "$ROUT" | sed 's/^/   r| /' | tail -60
 RPT=$(printf '%s\n' "$ROUT" | sed -n 's/.*Bao cao: //p' | tail -1)
-cl_run "" cleanup; RCC=$?
-CLEAN="cleanup (0 vi the / 0 algo / 0 lenh): $(cl_verdict $RCC) | $CL_LAST_RESULT"
-say "$CLEAN"
 SESSION=DAT; [ -n "$FAIL" ] && SESSION=TRUOT; [ "$RRC" = 0 ] || SESSION=TRUOT; [ "$RCC" = 0 ] || SESSION=TRUOT
 RENAME="giu nguyen $A/$CDIR (phien KHONG DAT — bang chung + trang thai cho MASTER/A1)"
 if [ "$SESSION" = DAT ]; then
@@ -126,7 +140,8 @@ cl_vtm_check "cuoi phien" && vlog "cuoi phien: khong doi" || { vlog "CUOI phien:
 cl_cum_loss info   # [3c MIN-C2] ghi vao file ket qua
 # ---- 1 file ket qua (khong key)
 {
-  echo "CANARY-EARLY — KET QUA PHIEN $TS (prereg docs/prereg/GCANARY_PREREG.md §ADD-1 + §4/§5)"
+  echo "CANARY-EARLY — KET QUA PHIEN $TS (prereg docs/prereg/GCANARY_PREREG.md §ADD-1 + §ADD-4 tai khoan CHINH + §4/§5)"
+  echo "$LEGACY"
   echo "jar 242: $A/$CJAR md5 $CANARY_JAR_MD5 ; v_t_m: $VTM (chi doc)"
   echo "KET QUA PHIEN: $SESSION$( [ -n "$FAIL" ] && echo " (dung o $FAIL: $WHY)")"
   [ -n "$PLANB" ] && echo "!! $PLANB"

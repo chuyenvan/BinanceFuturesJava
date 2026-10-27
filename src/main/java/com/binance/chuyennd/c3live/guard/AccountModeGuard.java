@@ -142,11 +142,24 @@ public final class AccountModeGuard {
         this.globalTtlMs = Math.max(0L, globalTtlMs);
     }
 
+    private volatile boolean requireMultiAssets = true;
+    private volatile boolean fixDualSide = true;
+
+    /**
+     * [3f §ADD-4 E] chinh sach toan cuc. Mac dinh (true, true) = nhu cu. Canary tai khoan chinh: (false, false) — chi DOC dualSide,
+     * KHONG goi doi; multiAssets khong bat buoc (khong doc).
+     */
+    public AccountModeGuard globalPolicy(boolean requireMultiAssets, boolean fixDualSide) {
+        this.requireMultiAssets = requireMultiAssets;
+        this.fixDualSide = fixDualSide;
+        return this;
+    }
+
     /** Kiem toan cuc (luc start). */
     public synchronized Result checkGlobal() {
         List<String> problems = new ArrayList<>();
         List<String> actions = new ArrayList<>();
-        try {
+        if (requireMultiAssets) try {
             if (!gw.multiAssetsMargin()) {
                 problems.add("multiAssetsMargin=false (yeu cau true; KHONG tu doi - owner chay set_c3live_multiassets.sh)");
             }
@@ -154,7 +167,10 @@ public final class AccountModeGuard {
             problems.add("khong doc duoc multiAssetsMargin: " + e.getKind());
         }
         try {
-            if (gw.dualSidePosition()) {
+            boolean dualNow = gw.dualSidePosition();
+            if (dualNow && !fixDualSide) {
+                problems.add("dualSidePosition=true (hedge) — chi DOC, KHONG doi (§ADD-4 E) => TU CHOI");
+            } else if (dualNow) {
                 actions.add("setDualSidePosition(false)");
                 try {
                     gw.setDualSidePosition(false);
