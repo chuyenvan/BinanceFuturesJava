@@ -212,8 +212,14 @@ public class MockExchangeGateway implements ExchangeGateway {
                     stops.put(s.getClientOrderId(), s.toBuilder().status(OrderStatus.EXPIRED).rawStatus("EXPIRED").build());
                     continue;
                 }
-                stops.put(s.getClientOrderId(), s.toBuilder().status(OrderStatus.FINISHED).rawStatus("FINISHED").build());
-                fill(symbol, Side.SELL, q, s.getClientOrderId(), true, price, "STOP_MARKET", ev);
+                // [3g] nhu Algo Service: stop FINISHED mang actualOrderId (lenh thuong sinh ra) + ALGO_UPDATE (ai)
+                String fcid = triggeredFillCidPrefix == null ? s.getClientOrderId() : triggeredFillCidPrefix + (ids.get() + 1);
+                int at = ev.size();
+                OrderInfo fo = fill(symbol, Side.SELL, q, fcid, true, price, "STOP_MARKET", ev);
+                String ai = String.valueOf(fo.getOrderId());
+                stops.put(s.getClientOrderId(), s.toBuilder().status(OrderStatus.FINISHED).rawStatus("FINISHED").actualOrderId(ai).build());
+                String ae = algoEvent(s, "FINISHED", ai);
+                if (algoUpdateAfterFill) ev.add(ae); else ev.add(at, ae);
                 n++;
             }
         }
@@ -321,6 +327,30 @@ public class MockExchangeGateway implements ExchangeGateway {
         BigDecimal q = positionAmt.getOrDefault(sym, BigDecimal.ZERO);
         BigDecimal c = positionCost.getOrDefault(sym, BigDecimal.ZERO);
         return q.signum() > 0 && c.signum() > 0 ? c.divide(q, MathContext.DECIMAL64) : def;
+    }
+
+    /** [3g] cid lenh thuong khi stop kich: null = cid cua stop (c3s-); khac => "<prefix><id>" (san that co the KHONG mang c3s-). */
+    public volatile String triggeredFillCidPrefix = null;
+    /** [3g] ALGO_UPDATE (FINISHED, ai) phat SAU su kien khop (mac dinh: truoc). */
+    public volatile boolean algoUpdateAfterFill = false;
+
+    private String algoEvent(OrderInfo s, String status, String ai) {
+        JsonObject o = new JsonObject();
+        o.addProperty("caid", s.getClientOrderId());
+        o.addProperty("aid", s.getOrderId());
+        o.addProperty("at", "CONDITIONAL");
+        o.addProperty("o", "STOP_MARKET");
+        o.addProperty("s", s.getSymbol());
+        o.addProperty("S", "SELL");
+        o.addProperty("X", status);
+        o.addProperty("ai", ai);
+        o.addProperty("cp", s.isClosePosition());
+        JsonObject r = new JsonObject();
+        r.addProperty("e", "ALGO_UPDATE");
+        r.addProperty("T", now);
+        r.addProperty("E", now);
+        r.add("o", o);
+        return r.toString();
     }
 
     /** [3f] lenh LEGACY dang cho (chua khop) — gia lap lenh tai khoan chinh ngoai canary. */

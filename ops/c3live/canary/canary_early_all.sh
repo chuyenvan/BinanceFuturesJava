@@ -67,6 +67,17 @@ note() { NOTES+="$*"$'\n'; say "ghi chu: $*"; }
 # die cua lib: ghi ly do roi thoat => trap on_exit (kiem phang / flatten + Telegram)
 die() { LASTMSG="$*"; say "DUNG: $*"; say "KET QUA: ${LASTV:-TU_CHOI}"; [ -n "${CL_LOG:-}" ] && say "Log: $CL_LOG"; exit 2; }
 
+# pre3f_state: state phien da chon symbol + co buoc giao dich nhung KHONG co ledger canaryQty (truoc 3f) => 0
+pre3f_state() {   # chi DOC file state tren 242 (khong chay JVM)
+  $SSH_242 "cat $A/$CDIR/canary_state.json 2>/dev/null" < /dev/null | python3 -I -c '
+import json, sys
+try: s = json.loads(sys.stdin.read().strip() or "{}")
+except Exception: sys.exit(1)
+trade = [k for k in (s.get("steps") or {}) if k not in ("K0", "SETUP")]
+sys.exit(0 if s.get("symMain") and trade and not s.get("canaryQty") else 1)
+'
+}
+
 # safe_flat (chay trong subshell — die ben trong chi thoat subshell): kiem phang chi doc; khong phang / khong doc duoc => kill JVM
 # treo + flatten. Ghi 1 dong ket qua vao $FLF.
 safe_flat() {
@@ -74,6 +85,9 @@ safe_flat() {
   cl_flat_read; r=$?
   if [ "$r" = 0 ]; then
     echo "tai khoan PHANG ($CL_FLAT, keycheck chi doc) — khong can flatten" > "$FLF"; return 0
+  fi
+  if pre3f_state; then   # [3g MIN-5] phien truoc 3f (tai khoan con cu, khong co ledger canary): KHONG flatten tren tai khoan chinh
+    echo "phien truoc 3f (state khong co ledger canary — tai khoan cu): KHONG flatten tren tai khoan chinh — BAO MASTER" > "$FLF"; return 0
   fi
   [ "$r" = 1 ] && say "tai khoan KHONG phang ($CL_FLAT) — flatten" || say "khong doc duoc trang thai ($CL_FLAT_WHY) — flatten cho chac"
   echo "flatten: chua xong (loi giua chung)" > "$FLF"
@@ -119,7 +133,7 @@ on_exit() {
   trap - EXIT
   DONE=1
   [ -n "$LASTMSG" ] || LASTMSG="thoat bat thuong rc=$rc o buoc $STAGE"
-  fl="khong flatten (jar pin chua san tren 242 — chua gui lenh ghi nao)"
+  fl="khong flatten (chua qua kiem chuan bi: jar pin / lo cong don / phien cu — chua gui lenh ghi nao)"
   if [ "$JAR_READY" = 1 ]; then
     rm -f "$FLF"
     ( safe_flat )
@@ -251,14 +265,15 @@ cl_gates
 [ "$(md5sum < "$CANARY_JAR" | cut -c1-32)" = "$CANARY_JAR_MD5" ] || die "md5 jar Oracle $CANARY_JAR khac pin $CANARY_JAR_MD5"
 ok "jar Oracle md5 = pin $CANARY_JAR_MD5"
 cl_check_242 early_nojar
-[ "$(pv JAR)" = "$CANARY_JAR_MD5" ] && JAR_READY=1
-cl_cum_loss check   # [3c MIN-C2]
+cl_cum_loss check   # [3c MIN-C2] + [3g MIN-3] tran phien
 cl_vtm_baseline
 cl_early_old
 case "$CL_OLD" in
   NONE|K0ONLY) ;;
   *) [ "$CANARY_RESET" = 1 ] || die "da co phien canary ($CL_OLD) trong $A/$CDIR — MASTER quyet chay lai: them CANARY_RESET=1" ;;
 esac
+# [3g MIN-5] JAR_READY (=> trap duoc kiem phang/flatten) CHI sau khi qua kiem lo cong don + phien cu
+[ "$(pv JAR)" = "$CANARY_JAR_MD5" ] && JAR_READY=1
 STAGE="cai jar + thu muc rieng"
 cl_early_jar
 JAR_READY=1

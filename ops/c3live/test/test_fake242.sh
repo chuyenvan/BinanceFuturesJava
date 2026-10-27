@@ -560,6 +560,7 @@ echo "-- 17g phien cu co giao dich, khong CANARY_RESET => TU CHOI"
 rm -f $TG
 OUT=$(printf 'YES\n' | ca bash $CN/canary_early_all.sh 2>&1); RC=$?
 chk "all: phien cu TRADE => DUNG (can CANARY_RESET=1), khong K0 moi" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'CANARY_RESET=1' && [ \$(grep -c '^preflight' $C3/run/canary/fake_calls.log) = 1 ] && grep -q '^CANARY-EARLY LOI' $TG"
+chk "all: [3g MIN-5] phien cu => KHONG kiem phang/flatten (JAR_READY sau kiem phien cu)" "! echo \"\$OUT\" | grep -q -- '--> JVM canary: flatten' && grep -q 'khong flatten (chua qua kiem chuan bi' $TG"
 echo "-- 17h K0 TRUOT vi ly do khac SETUP => DUNG, khong SETUP, Telegram TRUOT"
 fresh; touch $C3/FAKE_TRUOT_K0
 OUT=$(printf 'YES\n' | ca bash $CN/canary_early_all.sh 2>&1); RC=$?
@@ -589,6 +590,19 @@ chk "set_key: YES => ghi 600 + thu muc 700 + 2 dong dung key moi + backup ban cu
 chk "set_key: keycheck chi doc (jar pin da tren 242 gia), KHONG lo key/secret ra output/log, KHONG in so du" "echo \"\$OUT\" | grep -q 'KET QUA: DAT' && ! echo \"\$OUT\" | grep -qF \"$FK2\" && ! echo \"\$OUT\" | grep -qF \"$FS2\" && ! grep -rqF \"$FK2\" $W/canarylog && ! grep -rqF \"$FS2\" $W/canarylog && ! echo \"\$OUT\" | grep -q 'keycheck (chi doc): .*tmb='"
 OUT=$(printf 'YES\nabc\nxyz\n' | ce bash $CN/canary_set_key.sh 2>&1); RC=$?
 chk "set_key: key sai dinh dang => TU_CHOI, giu key cu" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'sai dinh dang' && grep -qxF \"C3_LIVE_API_KEY=$FK2\" $W/keys/c3live/keys.env"
+echo "== 19. [V12 3g] MIN-8 legacy_symbols.csv rong/thieu => TU CHOI; MIN-3 tran phien <= 0,10 => TU CHOI"
+fresh; mv $F/run/legacy_symbols.csv $W/legacy.bak
+OUT=$(printf 'YES\n' | ca bash $CN/canary_early_all.sh 2>&1); RC=$?
+chk "all: thieu legacy_symbols.csv => DUNG truoc K0" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'legacy_symbols.csv RONG hoac THIEU' && ! grep -q '^preflight' $C3/run/canary/fake_calls.log"
+fresh; : > $F/run/legacy_symbols.csv
+OUT=$(printf 'YES\n' | ca bash $CN/canary_early_all.sh 2>&1); RC=$?
+chk "all: legacy_symbols.csv rong => DUNG truoc K0" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'legacy_symbols.csv RONG hoac THIEU' && ! grep -q '^preflight' $C3/run/canary/fake_calls.log"
+mv -f $W/legacy.bak $F/run/legacy_symbols.csv
+fresh; mkdir -p $C3/run/canary_prev_29990102_000000
+echo '{"symMain":"C00USDT","symAux":"C01USDT","cumFeeStable":0.45,"cumRealized":-3.5,"cumFunding":0.0,"steps":{}}' > $C3/run/canary_prev_29990102_000000/canary_state.json
+OUT=$(printf 'YES\n' | ca bash $CN/canary_early_all.sh 2>&1); RC=$?
+chk "all: lo cong don 3.95 => tran phien 0.05 <= 0.10 => DUNG truoc K0" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'tran lo phien min(2, 4 - lo cong don 3.9500) = 0.0500' && ! grep -q '^preflight' $C3/run/canary/fake_calls.log"
+rm -rf $C3/run/canary_prev_29990102_000000
 chk "v_t_m KHONG doi qua muc 17" "[ \"\$(vmd5)\" = $V0 ] && [ ! -e $F/run/canary ]"
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"

@@ -286,4 +286,48 @@ public class CanaryGuardTest {
         clean.put("LIVE_PROFILE", "  ");   // rong = sach
         assertNull(C3LiveCanary.isolationProblem(clean::get));
     }
+
+    // ------------------------------------------------------------------ [3g]
+    @Test
+    public void stopRefusedWhenExchangePositionAboveLedgerOrUnreadable() {
+        gw.canaryQty = s -> BigDecimal.ZERO;
+        mock.setPosition("C00USDT", new BigDecimal("5"), BigDecimal.ONE);   // vi the ngoai canary tren symbol canary
+        refused(() -> gw.newStopMarket("C00USDT", Side.SELL, null, new BigDecimal("0.96"), "c3s-C00USDT-1-1", true));
+        gw.canaryQty = s -> new BigDecimal("5");
+        mock.failNext("positions", new GatewayException(com.binance.chuyennd.c3live.api.ErrorKind.OTHER, "x", true));
+        refused(() -> gw.newStopMarket("C00USDT", Side.SELL, null, new BigDecimal("0.96"), "c3s-C00USDT-1-2", true));
+        gw.newStopMarket("C00USDT", Side.SELL, null, new BigDecimal("0.96"), "c3s-C00USDT-1-3", true);   // vi the = ledger: DAT
+        assertEquals(1, mock.calls("newStopMarket"));
+        refused(() -> gw.newMarketOrder("C00USDT", Side.SELL, new BigDecimal("6"), "c3x-C00USDT-1-1", true));   // ban > ledger
+    }
+
+    @Test
+    public void guardRetryRechecksBeforeResendingWrite() {
+        final boolean[] once = {true};
+        com.binance.chuyennd.c3live.api.ExchangeGateway px = (com.binance.chuyennd.c3live.api.ExchangeGateway) java.lang.reflect.Proxy
+                .newProxyInstance(getClass().getClassLoader(), new Class<?>[]{com.binance.chuyennd.c3live.api.ExchangeGateway.class},
+                        (p, m, a) -> {
+                            if (once[0] && "setLeverage".equals(m.getName())) {
+                                once[0] = false;
+                                mock.addRestingOrder("C00USDT", "web_legacy_lev", Side.BUY, BigDecimal.ONE);   // LEGACY vao trong luc cho
+                                throw new GatewayException(com.binance.chuyennd.c3live.api.ErrorKind.RATE_LIMIT, 0, 0, "rate guard (gia lap)",
+                                        true, 5_000L, null);
+                            }
+                            try {
+                                return m.invoke(mock, a);
+                            } catch (java.lang.reflect.InvocationTargetException e) {
+                                throw e.getCause();
+                            }
+                        });
+        CanaryJournal j = new CanaryJournal(new File(tmp.getRoot(), "j2.jsonl"), System::currentTimeMillis);
+        CanaryGateway g = new CanaryGateway(px, new LinkedHashSet<>(Arrays.asList("C00USDT", "C01USDT")), j, () -> 5, lossHit::get);
+        g.guardSleep = ms -> { };
+        try {
+            g.setLeverage("C00USDT", 1);
+            fail("kiem lai sau khi cho phai TU CHOI (co lenh ngoai canary)");
+        } catch (CanaryGateway.GuardException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("ngoai canary"));
+        }
+        assertEquals("KHONG gui lai len san", 0, mock.calls("setLeverage"));
+    }
 }

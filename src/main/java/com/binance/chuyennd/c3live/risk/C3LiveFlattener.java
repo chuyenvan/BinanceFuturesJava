@@ -151,7 +151,7 @@ public final class C3LiveFlattener {
             qty = p == null ? BigDecimal.ZERO : p.max(BigDecimal.ZERO);
             // [3f §ADD-4] KHONG bao gio dong qua phan cua c3 (tai khoan chinh: cung symbol co the co vi the khac)
             BigDecimal mine = c.confirmedQty.subtract(c.exitQty == null ? BigDecimal.ZERO : c.exitQty).max(BigDecimal.ZERO);
-            qty = qty.min(mine.signum() > 0 ? mine : c.confirmedQty);
+            qty = qty.min(mine);   // [3g MIN-6] phan c3 = 0 => KHONG dong gi (khong bao gio lay confirmedQty)
         } else {
             qty = c.confirmedQty;
         }

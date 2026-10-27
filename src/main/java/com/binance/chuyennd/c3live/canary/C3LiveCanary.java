@@ -200,7 +200,9 @@ public final class C3LiveCanary {
         d.connector = UserStream.okHttp(60_000L);
         d.wsUrls = UserStream.parseUrls(or(env.apply("LIVE_C3_WS_URLS"), UserStream.DEFAULT_URLS));
         d.alert = tg::send;
-        d.legacy = legacySet(new File(or(env.apply("LIVE_LEGACY_FILE"), "run/legacy_symbols.csv")))::contains;
+        Set<String> legSet = legacySet(new File(or(env.apply("LIVE_LEGACY_FILE"), "run/legacy_symbols.csv")));
+        d.legacy = legSet::contains;
+        d.legacySize = legSet.size();   // [3g MIN-8] rong / thieu => K0 TU CHOI tren tai khoan chinh
         d.usedWeight1m = rg::lastServerWeight1m;
         d.rateGuard = rg;   // [3e] so lieu lan khan cap vao data buoc
         // [3f §ADD-4 J] key RIENG tai khoan chinh tu C3LiveClientConfig (keys.env) — KHONG dung PrivateConfig / key LEGACY
@@ -210,6 +212,8 @@ public final class C3LiveCanary {
         if (et != null && !et.trim().isEmpty()) cfg.expectTmb = Double.parseDouble(et.trim());
         cfg.injectTimeout = "1".equals(or(env.apply("CANARY_INJECT_TIMEOUT"), "0").trim());
         cfg.reuseKeepAlive = "1".equals(or(env.apply("CANARY_K0_REUSE_KEEPALIVE"), "0").trim());   // [3d §ADD-3] engine tu kiem
+        String pl = env.apply("CANARY_PRIOR_LOSS_USDT");   // [3g MIN-3] lo cong don cac phien truoc (script tinh)
+        if (pl != null && !pl.trim().isEmpty()) cfg.priorLossUsdt = Double.parseDouble(pl.trim());
         d.jarId = C3LiveCanary::runningJarId;
         CanaryEngine e = new CanaryEngine(d, cfg);
         CanaryEngine.Result r;
@@ -255,7 +259,7 @@ public final class C3LiveCanary {
             Set<String> scope = new HashSet<>();
             try {
                 CanaryState s = CanaryState.load(dir);
-                if (s.symbolsChosen()) {
+                if (s.symbolsChosen() && !s.canaryQty.isEmpty()) {   // [3g MIN-5] phien truoc 3f (tai khoan cu): pham vi = cid canary
                     scope.add(s.symMain);
                     scope.add(s.symAux);
                 }

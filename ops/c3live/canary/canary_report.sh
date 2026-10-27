@@ -159,9 +159,12 @@ walk(steps)
 def pp(a): return "p50=%s p100=%s n=%d" % (a[len(a) // 2], a[-1], len(a)) if a else "khong co"
 crit.append((8, "do tre leg (thong tin, khong nguong)", "GHI", "gui->response MARKET: %s; FILLED->stream: %s" % (pp(lat), pp(sorted(sl)))))
 cost = None
-if st: cost = float(st.get("cumFeeStable", 0)) - float(st.get("cumRealized", 0)) - float(st.get("cumFunding", 0))
-C(9, "chi phi <= 2 USDT", cost is not None and cost <= 2.0 and not st.get("feeOther"),
-  "phi+lo da chot=%s USDT; phi tai san khac=%s; aborted=%s" % (None if cost is None else round(cost, 4), st.get("feeOther"), st.get("aborted")))
+fou = st.get("feeOtherUsd") if st else None   # [3g MIN-4] phi tai san khac (BNB) da quy USDT
+if st: cost = float(st.get("cumFeeStable", 0)) - float(st.get("cumRealized", 0)) - float(st.get("cumFunding", 0)) + float(fou or 0)
+C(9, "chi phi <= 2 USDT (ca phi tai san khac quy USDT)", cost is not None and cost <= 2.0
+  and (not st.get("feeOther") or isinstance(fou, (int, float))),
+  "phi+lo da chot=%s USDT; phi tai san khac=%s (quy USDT=%s); aborted=%s" % (None if cost is None else round(cost, 4),
+  st.get("feeOther"), fou, st.get("aborted")))
 C(10, "diem CHUA XAC MINH §7 co ket qua", all(k in steps for k in ["K0", "K1", "K2", "K3", "K4", "K8"]), "xem 'Du lieu tung buoc' (K0 so du, K1 so du/phi, K2 c, K3 ma loi, K4 san tu huy?, K8 so cai)")
 allK = alldat(REQ)
 okAll = allK and all(c[2] in ("DAT", "GHI", "KHONG_AP") for c in crit)

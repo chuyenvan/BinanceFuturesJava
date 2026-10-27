@@ -593,7 +593,8 @@ public final class C3LiveClient implements ExchangeGateway {
         return OrderInfo.builder().kind(OrderKind.ALGO).symbol(str(o, "symbol")).orderId(lng(o, "algoId"))
                 .clientOrderId(str(o, "clientAlgoId")).side(Side.parse(str(o, "side"))).type(type).status(st)
                 .rawStatus(rs != null ? rs : st.name()).origQty(dec(o, "quantity")).stopPrice(dec(o, "triggerPrice"))
-                .reduceOnly(bool(o, "reduceOnly")).closePosition(bool(o, "closePosition")).updateTimeMs(ut).build();
+                .reduceOnly(bool(o, "reduceOnly")).closePosition(bool(o, "closePosition")).updateTimeMs(ut)
+                .actualOrderId(str(o, "actualOrderId")).build();
     }
 
     private static JsonArray asArray(JsonElement j) {

@@ -241,6 +241,10 @@ cl_copy_legacy() {
   r=$($SSH_242 "mkdir -p $A/run && if [ -f $VTM/run/legacy_symbols.csv ]; then cat $VTM/run/legacy_symbols.csv > $A/run/legacy_symbols.csv.tmp && mv -f $A/run/legacy_symbols.csv.tmp $A/run/legacy_symbols.csv && echo \"LEGACY=\$(grep -c . $A/run/legacy_symbols.csv) dong\"; else rm -f $A/run/legacy_symbols.csv; echo LEGACY=none; fi" < /dev/null)
   say "LEGACY (luat §3): ${r#LEGACY=} $( [ "$r" = LEGACY=none ] && echo '(v_t_m khong co run/legacy_symbols.csv => tap rong)')"
   CL_LEGACY=${r#LEGACY=}
+  # [3g MIN-8] tai khoan CHINH: tap LEGACY rong / thieu => KHONG loai duoc symbol LEGACY => TU CHOI
+  case "$r" in
+    LEGACY=none|"LEGACY=0 dong"|"") die "v_t_m run/legacy_symbols.csv RONG hoac THIEU — tai khoan chinh TU CHOI (§ADD-4 B, §3g MIN-8)" ;;
+  esac
 }
 
 # cl_run <env "K=V K=V" (da kiem)> <lenh C3LiveCanary...>: chay JVM canary tren 242 bang nohup+setsid (mat ssh KHONG giet JVM),
@@ -248,6 +252,8 @@ cl_copy_legacy() {
 cl_run() {
   local envs=$1; shift
   local a id n=0 rc="" t0 got line
+  # [3g MIN-3] lo cong don cac phien truoc => engine tinh tran phien min(2, 4 - prior) (chi khi cl_cum_loss da chay)
+  [[ "${CL_CUM_PRIOR:-}" =~ ^[0-9]+(\.[0-9]+)?$ ]] && envs="${envs:+$envs }CANARY_PRIOR_LOSS_USDT=$CL_CUM_PRIOR"
   for a in "$@" $envs; do [[ "$a" =~ ^[A-Za-z0-9_=.]+$ ]] || die "tham so la: $a"; done
   id="${TS}_$$_${RANDOM}"
   say "--> JVM canary: $* ${envs:+(env $envs)}"
@@ -387,25 +393,34 @@ for line in sys.stdin.read().splitlines():
     else:
         buf.append(line)
 if cur is not None: blocks.append((cur, "\n".join(buf)))
-tot, resets = 0.0, 0
+tot, resets, prior = 0.0, 0, 0.0
 for d, t in blocks:
     try: s = json.loads(t)
     except Exception: print("SESS %s HONG (coi lo = 2.0)" % d); tot += 2.0; continue
     l = float(s.get("cumFeeStable") or 0) - float(s.get("cumRealized") or 0) - float(s.get("cumFunding") or 0)
+    l += float(s.get("feeOtherUsd") or 0)   # [3g MIN-4] phi tai san khac (BNB) da quy USDT
     l = max(0.0, l)
     tot += l
+    if d != "run/canary": prior += l      # [3g MIN-3] lo cac phien TRUOC (engine: tran phien = min(2, 4 - prior))
     if d.startswith("run/canary_prev_"): resets += 1
     print("SESS %s lo=%.4f aborted=%s" % (d, l, s.get("aborted")))
-print("CUM %.4f %d %d" % (tot, resets, len(blocks)))
+print("CUM %.4f %d %d %.4f" % (tot, resets, len(blocks), prior))
 ') || die "khong tinh duoc lo cong don"
   CL_CUM_DETAIL=$(printf '%s\n' "$out" | grep '^SESS ')
   CL_CUM_LOSS=$(printf '%s\n' "$out" | awk '/^CUM / {print $2}')
   CL_RESETS=$(printf '%s\n' "$out" | awk '/^CUM / {print $3}')
+  CL_CUM_PRIOR=$(printf '%s\n' "$out" | awk '/^CUM / {print $5}')   # [3g MIN-3] truyen vao moi JVM (cl_run)
   say "lo cong don moi phien canary-early: ${CL_CUM_LOSS:-?} USDT (tran $CL_CUM_CAP), so lan CANARY_RESET: ${CL_RESETS:-?}"
   printf '%s\n' "$CL_CUM_DETAIL" | sed '/^$/d; s/^/   /'
   [ -n "$CL_CUM_LOSS" ] || die "khong tinh duoc lo cong don"
   if [ "$mode" = check ] && python3 -I -c "import sys; sys.exit(0 if float('$CL_CUM_LOSS') > float('$CL_CUM_CAP') else 1)"; then
     die "tong lo cong don $CL_CUM_LOSS USDT > tran $CL_CUM_CAP USDT (MIN-C2) — KHONG chay phien moi; MASTER quyet"
+  fi
+  # [3g MIN-3] tran lo PHIEN = min(2, tran cong don - lo cong don); <= 0,10 => TU CHOI (engine kiem lai voi CANARY_PRIOR_LOSS_USDT)
+  CL_SESSION_CAP=$(python3 -I -c "print('%.4f' % min(2.0, float('$CL_CUM_CAP') - float('$CL_CUM_LOSS')))")
+  say "tran lo phien = min(2, $CL_CUM_CAP - $CL_CUM_LOSS) = $CL_SESSION_CAP USDT (engine: min(2, 4 - lo cac phien truoc ${CL_CUM_PRIOR:-?}))"
+  if [ "$mode" = check ] && python3 -I -c "import sys; sys.exit(0 if float('$CL_SESSION_CAP') <= 0.10 else 1)"; then
+    die "tran lo phien min(2, $CL_CUM_CAP - lo cong don $CL_CUM_LOSS) = $CL_SESSION_CAP USDT <= 0.10 — KHONG chay (§3g MIN-3); MASTER quyet"
   fi
   return 0
 }

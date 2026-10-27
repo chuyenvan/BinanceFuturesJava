@@ -86,12 +86,17 @@ public class CanaryEngineTest {
         d.usedWeight1m = () -> 7;
         d.journalName = "j_" + now.get() + "_" + System.nanoTime() + ".jsonl";
         d.jarId = () -> jarIdVal;
+        d.legacySize = legacySizeVal;
         return new CanaryEngine(d, cfg);
     }
+
+    /** [3g MIN-8] so dong legacy_symbols.csv cho engine() (-1 = khong ap dung). */
+    int legacySizeVal = -1;
 
     static CanaryEngine.Config cfg() {
         CanaryEngine.Config c = new CanaryEngine.Config();
         c.expectTmb = 10_000d;
+        c.priorLossUsdt = 0d;   // [3g MIN-3] lo cong don cac phien truoc (script truyen CANARY_PRIOR_LOSS_USDT)
         return c;
     }
 
@@ -734,5 +739,204 @@ public class CanaryEngineTest {
         assertNotEquals(s.line(), CanaryEngine.DAT, s.verdict);
         assertEquals("khong bao gio goi doi cap tai khoan", 0, mock.calls("setDualSidePosition"));
         assertTrue(mock.dualSide);
+    }
+
+    // ------------------------------------------------------------------ [3g] sua FAIL A1 tren 3f
+    private CanaryEngine.Result runCfg(String step, CanaryEngine.Config c) throws Exception {
+        CanaryEngine e = engine(c);
+        CanaryEngine.Result r = e.step(step);
+        e.close();
+        return r;
+    }
+
+    @Test
+    public void g3LegacySellFillSeenOnStreamMidStepIsUrgentRedNoClose() throws Exception {
+        preflight();
+        ok(run("K1"));
+        BigDecimal mine = mock.position(MAIN);
+        final long t0 = now.get();
+        final boolean[] fired = {false};
+        hook = t -> {
+            if (!fired[0] && t - t0 > 90_000L) {
+                fired[0] = true;   // LEGACY SELL (khong reduceOnly) cong don one-way vao vi the long canary
+                mock.newMarketOrder(MAIN, com.binance.chuyennd.c3live.api.Side.SELL, new BigDecimal("5"), "web_legacy_sell", false);
+            }
+        };
+        CanaryEngine.Result r = run("K4");
+        hook = t -> { };
+        assertTrue(fired[0]);
+        assertEquals(r.line(), CanaryEngine.TRUOT, r.verdict);
+        assertTrue(r.line(), r.line().contains(CanaryEngine.TRUOT_DO));
+        assertEquals("KHONG dong phan con lai", 0, mine.subtract(new BigDecimal("5")).compareTo(mock.position(MAIN)));
+        assertTrue("Telegram KHAN CAP", telegram.stream().anyMatch(m -> m.contains("URGENT") && m.contains(CanaryEngine.TRUOT_DO)));
+    }
+
+    @Test
+    public void g3StopTriggeredBetweenJvmsShrinksLedgerOnlyWithEvidence() throws Exception {
+        preflight();
+        ok(run("K1"));
+        mock.triggerStops(MAIN, new BigDecimal("0.95"));   // khong co JVM (khong stream): stop canary kich
+        assertEquals(0, mock.position(MAIN).signum());
+        CanaryEngine.Result r = run("K2");
+        assertFalse(r.line(), r.line().contains(CanaryEngine.TRUOT_DO));
+        CanaryState s = CanaryState.load(dir);
+        assertTrue(String.valueOf(s.red), s.red.isEmpty());
+    }
+
+    @Test
+    public void g3StopFillWithNonCanaryCidMatchedByActualOrderIdAlgoFirst() throws Exception {
+        stopFillCase(false);
+    }
+
+    @Test
+    public void g3StopFillWithNonCanaryCidMatchedByActualOrderIdFillFirst() throws Exception {
+        stopFillCase(true);
+    }
+
+    private void stopFillCase(boolean after) throws Exception {
+        {
+            mock.triggeredFillCidPrefix = "autoclose-algo-";   // lenh thuong cua stop KHONG mang c3s-
+            mock.algoUpdateAfterFill = after;                  // ALGO_UPDATE (ai) toi truoc / sau khop
+            preflight();
+            ok(run("K1"));
+            final long t0 = now.get();
+            final boolean[] fired = {false};
+            hook = t -> {
+                if (!fired[0] && t - t0 > 60_000L && !mock.openStops(MAIN).isEmpty()) {
+                    fired[0] = true;
+                    mock.triggerStops(MAIN, new BigDecimal("0.998"));
+                }
+            };
+            CanaryEngine.Result r = run("K4");
+            hook = t -> { };
+            assertTrue(fired[0]);
+            assertFalse("after=" + after + " " + r.line(), r.line().contains(CanaryEngine.TRUOT_DO));
+            assertTrue(CanaryState.load(dir).red.isEmpty());
+            assertEquals(0, CanaryEngine.dec(CanaryState.load(dir).canaryQty.get(MAIN)).signum());
+        }
+    }
+
+    @Test
+    public void g3SessionCapIsMinOfTwoAndFourMinusPrior() throws Exception {
+        preflight();
+        CanaryEngine.Config c = cfg();
+        c.priorLossUsdt = Double.NaN;
+        CanaryEngine.Result r0 = runCfg("K1", c);
+        assertEquals(r0.line(), CanaryEngine.TU_CHOI, r0.verdict);
+        assertTrue(r0.line(), r0.line().contains("CANARY_PRIOR_LOSS_USDT"));
+        c.priorLossUsdt = 3.95d;   // tran phien 0,05 <= 0,10
+        CanaryEngine.Result r1 = runCfg("K1", c);
+        assertEquals(r1.line(), CanaryEngine.TU_CHOI, r1.verdict);
+        assertTrue(r1.line(), r1.line().contains("tran lo phien"));
+        assertEquals("0 lenh", 0, mock.calls("newMarketOrder"));
+        c.priorLossUsdt = 3.3d;    // tran phien 0,7 => ngan sach (0,7 - 0,1) / 20 = 3 %
+        ok(runCfg("K1", c));
+        List<com.binance.chuyennd.c3live.api.OrderInfo> s = mock.openStops(MAIN);
+        assertEquals(1, s.size());
+        double ratio = s.get(0).getStopPrice().doubleValue() / mock.positions().get(0).getEntryPrice().doubleValue();
+        assertTrue("stop/entry=" + ratio, ratio > 0.965d && ratio < 0.975d);
+    }
+
+    @Test
+    public void g3BnbFeeCountedAtMarkOrRefused() throws Exception {
+        preflight();
+        ok(run("K1"));
+        CanaryState s = CanaryState.load(dir);
+        s.feeOther.put("BNB", 0.004d);   // phi BNB 0,004 x 600 = 2,4 USDT => cham tran 2
+        s.save(dir);
+        mock.setPrice("BNBUSDT", new BigDecimal("600"));
+        CanaryEngine.Result r = run("K2");
+        assertEquals(r.line(), CanaryEngine.TRUOT, r.verdict);
+        assertTrue(r.line(), r.line().contains("tran lo"));
+        assertEquals(0, mock.position(MAIN).signum());
+    }
+
+    @Test
+    public void g3NonStableFeeWithoutPriceStopsSession() throws Exception {
+        preflight();
+        ok(run("K1"));
+        CanaryState s2 = CanaryState.load(dir);
+        s2.feeOther.put("XYZ", 1d);   // khong co gia XYZUSDT => khong quy doi duoc => dung + flatten
+        s2.save(dir);
+        CanaryEngine.Result r2 = run("K2");
+        assertEquals(r2.line(), CanaryEngine.TRUOT, r2.verdict);
+        assertTrue(r2.line(), r2.line().contains("KHONG quy doi"));
+        assertEquals(0, mock.position(MAIN).signum());
+    }
+
+    @Test
+    public void g3PreAddFourStateLedgerIsZeroAndNothingIsClosed() throws Exception {
+        preflight();
+        ok(run("K1"));
+        BigDecimal mine = mock.position(MAIN);
+        CanaryState s = CanaryState.load(dir);
+        s.canaryQty.clear();   // phien truoc 3f (tai khoan cu): khong co ledger => 0, KHONG lay so
+        s.save(dir);
+        CanaryEngine e = engine(cfg());
+        CanaryEngine.Result f = e.flatten();
+        e.close();
+        assertEquals(f.line(), CanaryEngine.TRUOT, f.verdict);
+        assertTrue(f.line(), f.line().contains(CanaryEngine.TRUOT_DO));
+        assertEquals("KHONG dong vi the khong chung minh la canary", 0, mine.compareTo(mock.position(MAIN)));
+    }
+
+    @Test
+    public void g3FlattenDoesNotCloseWhenScopeUnreadable() throws Exception {
+        preflight();
+        ok(run("K1"));
+        BigDecimal mine = mock.position(MAIN);
+        final boolean[] fail = {false};
+        ExchangeGateway raw = (ExchangeGateway) java.lang.reflect.Proxy.newProxyInstance(ExchangeGateway.class.getClassLoader(),
+                new Class<?>[]{ExchangeGateway.class}, (p, m, a) -> {
+                    if (fail[0] && "positions".equals(m.getName())) {
+                        throw new GatewayException(ErrorKind.OTHER, 500, 0, "positionRisk loi (gia lap)", true, 0L, null);
+                    }
+                    try {
+                        return m.invoke(mock, a);
+                    } catch (java.lang.reflect.InvocationTargetException ex) {
+                        throw ex.getCause();
+                    }
+                });
+        RateGuard rg = new RateGuard(RateGuard.Limits.binanceDefault(), 0.5, 2_000L, rgClock());
+        CanaryEngine e = engineRaw(cfg(), raw, rg);
+        int mo = mock.calls("newMarketOrder");
+        fail[0] = true;
+        CanaryEngine.Result f = e.flatten();
+        e.close();
+        assertEquals(f.line(), CanaryEngine.TRUOT, f.verdict);
+        assertTrue(f.line(), f.line().contains(CanaryEngine.TRUOT_DO));
+        assertEquals("0 lenh dong", mo, mock.calls("newMarketOrder"));
+        assertEquals(0, mine.compareTo(mock.position(MAIN)));
+    }
+
+    @Test
+    public void g3RealizedLossCountsOnlyCanaryCidFills() throws Exception {
+        preflight();
+        CanaryState s0 = CanaryState.load(dir);
+        double fee0 = s0.cumFeeStable;
+        double rp0 = s0.cumRealized;
+        CanaryEngine e = engine(cfg());
+        String foreign = "{\"e\":\"ORDER_TRADE_UPDATE\",\"E\":1,\"T\":1,\"o\":{\"s\":\"" + MAIN + "\",\"c\":\"web_x\",\"S\":\"SELL\","
+                + "\"o\":\"MARKET\",\"x\":\"TRADE\",\"X\":\"FILLED\",\"i\":777,\"l\":\"5\",\"L\":\"1\",\"z\":\"5\",\"ap\":\"1\","
+                + "\"n\":\"1.5\",\"N\":\"USDT\",\"rp\":\"-3\",\"R\":false,\"T\":1,\"t\":91}}";
+        String canary = foreign.replace("web_x", "c3x-" + MAIN + "-1-1").replace("777", "778").replace("1.5", "0.01")
+                .replace("-3", "-0.02").replace("\"t\":91", "\"t\":92");
+        e.onStreamText(foreign);
+        e.onStreamText(canary);
+        e.close();
+        CanaryState s = CanaryState.load(dir);
+        assertEquals("chi phi lenh canary", fee0 + 0.01d, s.cumFeeStable, 1e-9);
+        assertEquals("chi PnL lenh canary", rp0 - 0.02d, s.cumRealized, 1e-9);
+    }
+
+    @Test
+    public void g3EmptyLegacyFileRefusesK0OnMainAccount() throws Exception {
+        legacySizeVal = 0;
+        CanaryEngine e = engine(cfg());
+        CanaryEngine.Result r = e.preflight();
+        e.close();
+        assertEquals(r.line(), CanaryEngine.TRUOT, r.verdict);
+        assertTrue(r.line(), r.line().contains("legacy_symbols.csv"));
+        assertNull(CanaryState.load(dir).tmb0);
     }
 }

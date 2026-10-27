@@ -236,4 +236,18 @@ public class C3LiveFlattenerTest {
         assertEquals(1, f.closeCluster("AUSDT", "TIME_STOP"));
         assertEquals("chi ban phan c3", 0, new BigDecimal("7").compareTo(gw.position("AUSDT")));
     }
+
+    // ------------------------------------------------------------------ [3g MIN-6]
+    @Test
+    public void mineZeroNeverClosesConfirmedQty() {
+        MockExchangeGateway gw = new MockExchangeGateway();
+        AtomicLong now = new AtomicLong(1_000_000L);
+        LiveBookC3 b = new LiveBookC3(null, 1.0);
+        open(gw, b, "AUSDT", now.get());                       // c3: 10
+        b.addExitFill("AUSDT", BigDecimal.TEN, 1.0, now.get());  // so: da thoat het (phan c3 = 0) nhung san van 10
+        C3LiveFlattener f = new C3LiveFlattener(gw, b, () -> KillSwitchEngine.Action.NONE, m -> { }, null, now::get, 5, 10_000L, 10_000L);
+        f.closeCluster("AUSDT", "TIME_STOP");
+        assertEquals("KHONG ban (phan c3 = 0)", 0, gw.calls("newMarketOrder") - 1);
+        assertEquals(0, BigDecimal.TEN.compareTo(gw.position("AUSDT")));
+    }
 }

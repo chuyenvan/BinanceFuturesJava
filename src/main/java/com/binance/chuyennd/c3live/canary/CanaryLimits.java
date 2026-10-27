@@ -16,6 +16,10 @@ public final class CanaryLimits {
     public static final BigDecimal MAX_OPEN_NOTIONAL_USDT = new BigDecimal("40");
     /** Tran lo cua phien (USDT): lo da chot + phi, hoac tmb0 - tmb hien tai; cham => flatten roi dung phien. */
     public static final double LOSS_CAP_USDT = 2.0d;
+    /** [3g MIN-3] tran lo cong don moi phien (prereg MIN-C2): tran phien = min(2, 4 - lo cac phien truoc). */
+    public static final double CUM_LOSS_CAP_USDT = 4.0d;
+    /** [3g MIN-3] tran phien <= muc nay => TU CHOI mo lenh. */
+    public static final double MIN_SESSION_CAP_USDT = 0.10d;
     /** So symbol canary (chinh + phu cho K7b). */
     public static final int SYMBOLS = 2;
     /** Leverage duy nhat duoc dat. */

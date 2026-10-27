@@ -95,6 +95,8 @@ public final class CanaryEngine {
         public boolean injectTimeout;
         /** [3d §ADD-3] cho phep K0 dung lai keepAlive cua K0 truoc (engine tu kiem: <= 24 h, keepAliveOk >= 2, cung jar). */
         public boolean reuseKeepAlive;
+        /** [3g MIN-3] lo cong don cac phien canary-early TRUOC (USDT, script tinh); NaN = khong biet => TU CHOI buoc giao dich. */
+        public double priorLossUsdt = Double.NaN;
     }
 
     /** [3d §ADD-3] K0 truoc chi duoc dung lai keepAlive trong cua so nay. */
@@ -114,6 +116,8 @@ public final class CanaryEngine {
         public String journalName;
         /** [3e] RateGuard cua client that (null = khong co, vd mock): so lieu lan khan cap vao data buoc. */
         public RateGuard rateGuard;
+        /** [3g MIN-8] so symbol trong run/legacy_symbols.csv (0 = rong/thieu => K0 TU CHOI tren tai khoan chinh; -1 = khong ap dung/test). */
+        public int legacySize = -1;
         /** [3d] dinh danh jar dang chay: {md5, mtimeMs}; null / md5 null = khong xac dinh (=> khong dung lai keepAlive). */
         public java.util.function.Supplier<String[]> jarId;
     }
@@ -292,7 +296,21 @@ public final class CanaryEngine {
     }
 
     boolean lossCapHit() {
-        return state.aborted != null || cachedLoss >= CanaryLimits.LOSS_CAP_USDT;
+        double cap = sessionCap();
+        return state.aborted != null || Double.isNaN(cap) || cap <= CanaryLimits.MIN_SESSION_CAP_USDT || cachedLoss >= cap;
+    }
+
+    /** [3g MIN-3] tran lo phien = min(2, 4 - lo cong don cac phien truoc); NaN = chua biet lo cong don. */
+    double sessionCap() {
+        double prior = cfg.priorLossUsdt;
+        if (Double.isNaN(prior) || prior < 0d) return Double.NaN;
+        return Math.min(CanaryLimits.LOSS_CAP_USDT, CanaryLimits.CUM_LOSS_CAP_USDT - prior);
+    }
+
+    /** Tran dung cho kiem lo / ngan sach stop: tran phien, chua biet => 2 USDT (buoc giao dich da bi TU CHOI o cong vao). */
+    double capOrDefault() {
+        double c = sessionCap();
+        return Double.isNaN(c) ? CanaryLimits.LOSS_CAP_USDT : c;
     }
 
     private volatile double cachedLoss;
@@ -320,7 +338,9 @@ public final class CanaryEngine {
                 unreal = Double.NaN;
             }
         }
-        double l = Double.isNaN(unreal) ? realized : realized + unreal;
+        double fx = feeOtherUsd();   // [3g MIN-4] phi BNB (hoac tai san khac) quy USDT theo gia
+        feeConvFail = Double.isNaN(fx);
+        double l = (Double.isNaN(unreal) ? realized : realized + unreal) + (feeConvFail ? 0d : fx);
         cachedLoss = l;
         return l;
     }
@@ -331,8 +351,17 @@ public final class CanaryEngine {
         if (!force && now - lastLossCheckMs < 30_000L) return;
         lastLossCheckMs = now;
         double l = lossNow();
-        if (l >= CanaryLimits.LOSS_CAP_USDT && state.aborted == null) {
-            state.aborted = "LOSS_CAP lo=" + fmt(l) + " >= " + CanaryLimits.LOSS_CAP_USDT + " USDT luc " + now;
+        if (feeConvFail && state.aborted == null) {   // [3g MIN-4]
+            state.aborted = "PHI_KHONG_QUY_DOI " + feeConvWhy + " luc " + now;
+            saveState();
+            alert("KHONG quy doi duoc phi tra bang tai san ngoai stable (" + feeConvWhy + ") sang USDT => FLATTEN + DUNG PHIEN");
+            journal.ev("ABORT", "why", state.aborted);
+            flattenAll("FEE_CONV");
+            throw new Abort(TRUOT, "phi tai san ngoai stable KHONG quy doi duoc (" + feeConvWhy + ") — da flatten, phien dung (§3g MIN-4)");
+        }
+        double cap = capOrDefault();
+        if (l >= cap && state.aborted == null) {
+            state.aborted = "LOSS_CAP lo=" + fmt(l) + " >= " + fmt(cap) + " USDT (tran phien min(2, 4 - lo cong don)) luc " + now;
             saveState();
             alert("CHAM TRAN LO " + fmt(l) + " USDT => FLATTEN + DUNG PHIEN canary");
             journal.ev("ABORT", "why", state.aborted);
@@ -531,23 +560,23 @@ public final class CanaryEngine {
             m.put("ot", u.origType);
             m.put("z", u.cumQty == null ? null : u.cumQty.toPlainString());
             m.put("ap", u.avgPrice == null ? null : u.avgPrice.toPlainString());
-            if (CanaryGateway.canaryOrderCid(u.clientOrderId) && u.cumQty != null) onCanaryExec(u.symbol, u.clientOrderId, u.cumQty);
+            boolean stopFill = isCanaryStopFill(u);
+            if (CanaryGateway.canaryOrderCid(u.clientOrderId) && u.cumQty != null) {
+                onCanaryExec(u.symbol, u.clientOrderId, u.cumQty);
+            } else if (stopFill && u.cumQty != null) {
+                onCanaryExec(u.symbol, STOP_FILL_KEY + u.orderId, u.cumQty);   // [3g MAJOR-1] stop canary kich: bang chung canary
+            }
             if (u.isTrade()) {
-                String key = u.orderId + ":" + u.tradeTimeMs + ":" + u.lastQty + ":" + u.cumQty;
-                if (seenTrades.add(key)) {
-                    double rp = u.realizedPnl == null ? 0d : u.realizedPnl.doubleValue();
-                    double fee = u.commission == null ? 0d : u.commission.doubleValue();
-                    String fa = u.commissionAsset == null ? "?" : u.commissionAsset;
-                    synchronized (stateLock) {
-                        state.cumRealized += rp;
-                        state.fills++;
-                        if (STABLE.contains(fa)) {
-                            state.cumFeeStable += fee;
-                        } else if (fee != 0d) {
-                            state.feeOther.merge(fa, fee, Double::sum);
-                        }
+                if (CanaryGateway.canaryOrderCid(u.clientOrderId) || stopFill) {
+                    accountTrade(u);   // [3g MIN-7c] lo da chot CHI tu khop cua lenh canary
+                } else {
+                    synchronized (pendingForeign) {   // [3g MAJOR-1] khop KHONG cid canary tren symbol canary => TRUOT-DO neu khong giai thich duoc
+                        pendingForeign.computeIfAbsent(u.orderId, x -> new ArrayList<>()).add(u);
+                        pendingSeenMs.putIfAbsent(u.orderId, now);
                     }
-                    saveState();
+                    suspect.add(u.symbol);
+                    journal.ev("FOREIGN_FILL", "s", u.symbol, "c", u.clientOrderId, "i", u.orderId, "z",
+                            u.cumQty == null ? null : u.cumQty.toPlainString(), "S", u.side);
                 }
             }
         } else if (e instanceof UserStreamEvents.AlgoUpdate) {
@@ -556,6 +585,10 @@ public final class CanaryEngine {
             m.put("caid", a.clientAlgoId);
             m.put("X", a.status);
             m.put("ai", a.actualOrderId);
+            if (OwnStopGuard.isOwn(a.clientAlgoId) && validAi(a.actualOrderId)) {   // [3g MAJOR-1] lenh thuong cua stop canary
+                canaryAlgoOrderIds.add(a.actualOrderId);
+                explainPending(a.actualOrderId, "ALGO_UPDATE " + a.clientAlgoId + " " + a.status);
+            }
         } else if (e instanceof UserStreamEvents.AccountUpdate) {
             UserStreamEvents.AccountUpdate a = (UserStreamEvents.AccountUpdate) e;
             m.put("m", a.reason);
@@ -704,7 +737,7 @@ public final class CanaryEngine {
 
     /** Khoang cach stop bao ve cho vi the {@code notional} cua {@code sym}: min(4,5 %, ngan sach lo con lai / notional). */
     double protectDistance(String sym, double notional) {
-        double budget = CanaryLimits.LOSS_CAP_USDT - CanaryLimits.STOP_FEE_RESERVE_USDT - Math.max(0d, lossNow()) - worstOpenLoss(sym);
+        double budget = capOrDefault() - CanaryLimits.STOP_FEE_RESERVE_USDT - Math.max(0d, lossNow()) - worstOpenLoss(sym);
         if (notional <= 0d) return CanaryLimits.MAX_STOP_DIST;
         return Math.min(CanaryLimits.MAX_STOP_DIST, budget / notional);
     }
@@ -956,6 +989,19 @@ public final class CanaryEngine {
                     }
                 } catch (RuntimeException e) {
                     journal.ev("SCOPE_NOREAD", "symbol", sym, "where", "flatten", "err", e.getClass().getSimpleName());
+                    sleeper.sleep(1_000L);   // [3g MIN-7b] doc lai 1 lan; van loi => TRUOT-DO, KHONG dong
+                    try {
+                        String pr2 = scopeProblem(sym);
+                        if (pr2 != null && pr2.startsWith("RED")) {
+                            markRed(sym, pr2, "flatten " + reason);
+                            red0 = pr2;
+                        }
+                    } catch (RuntimeException e2) {
+                        String why = "RED " + sym + ": khong doc duoc pham vi 2 lan (" + e2.getClass().getSimpleName()
+                                + ") — KHONG dong khi chua chung minh duoc chi co phan canary (§3g MIN-7)";
+                        markRed(sym, why, "flatten " + reason);
+                        red0 = why;
+                    }
                 }
             }
             if (red0 != null) {   // [3f §ADD-4 C] TRUOT-DO: KHONG dong (vi the lan LEGACY) — MASTER quyet
@@ -1036,11 +1082,7 @@ public final class CanaryEngine {
             v = dec(state.canaryQty.get(sym));
         }
         if (v != null) return v;
-        if (book != null) {
-            Optional<LiveBookC3.ClusterView> c = book.cluster(sym);
-            if (c.isPresent()) return c.get().confirmedQty;
-        }
-        return BigDecimal.ZERO;
+        return BigDecimal.ZERO;   // [3g MIN-5] khong co ban ghi ledger (phien truoc 3f / tai khoan cu) => 0, KHONG lay so cu
     }
 
     /** [3f] khop lenh cid canary (response / queryOrder / stream z) => ledger: chi phan TANG theo cid; c3- cong, c3x- tru. */
@@ -1081,14 +1123,24 @@ public final class CanaryEngine {
                         + SCOPE_RECHECK_MS / 1000 + " s) — vi the ngoai canary / one-way cong don";
             }
             if (p1.compareTo(led) < 0 && p2.compareTo(led2) < 0 && p2.signum() >= 0) {
+                // [3g MAJOR-1] CHI co ledger khi co bang chung canary: stop c3s- TRIGGERED/FINISHED co actualOrderId
+                // (khop c3x- da tru ledger luc response). Khong co => vi the giam do lenh KHONG phai canary => TRUOT-DO.
+                String ev = ownStopTriggered(s, null);
+                if (ev == null) {
+                    return "RED " + s + ": vi the san " + p2.toPlainString() + " < canary " + led2.toPlainString() + " (2 lan doc cach "
+                            + SCOPE_RECHECK_MS / 1000 + " s) KHONG co bang chung canary (c3x- / stop c3s- kich) — lenh ngoai canary"
+                            + " ban cong don one-way";
+                }
                 BigDecimal nv = p1.max(p2);
                 synchronized (stateLock) {
                     state.canaryQty.put(s, nv.toPlainString());
                 }
                 saveState();
-                journal.ev("LEDGER_SHRINK", "symbol", s, "from", led2.toPlainString(), "to", nv.toPlainString());
+                journal.ev("LEDGER_SHRINK", "symbol", s, "from", led2.toPlainString(), "to", nv.toPlainString(), "evidence", ev);
             }
         }
+        String pf = pendingForeignProblem(s);
+        if (pf != null) return pf;
         if (!fo.isEmpty()) return "FOREIGN " + s + ": " + (fo.size() > 3 ? fo.subList(0, 3) + " +" + (fo.size() - 3) : fo);
         return null;
     }
@@ -1162,7 +1214,7 @@ public final class CanaryEngine {
             journal.ev("TRUOT_DO_NOREAD", "symbol", s, "err", e.toString());
         }
         journal.ev("TRUOT_DO_STOPS_CANCELLED", "symbol", s, "cids", cancelled);
-        alert("canary " + TRUOT_DO + " " + s + ": " + why + " — KHONG dong vi the; da huy " + cancelled.size()
+        alert("KHAN CAP (URGENT) canary " + TRUOT_DO + " " + s + ": " + why + " — KHONG dong vi the; da huy " + cancelled.size()
                 + " stop c3s- cua canary (tranh dong ca phan LEGACY); DUNG, bao MASTER");
     }
 
@@ -1173,6 +1225,172 @@ public final class CanaryEngine {
         suspect.clear();
         lastScopeMs = now;
         enforceScope("nhip", false);
+    }
+
+    // ------------------------------------------------------------------ [3g] bang chung canary cho khop / giam vi the, phi BNB
+    static final String STOP_FILL_KEY = "c3s-fill:";
+    private final Set<String> canaryAlgoOrderIds = ConcurrentHashMap.newKeySet();
+    private final Map<Long, List<UserStreamEvents.OrderUpdate>> pendingForeign = new LinkedHashMap<>();
+    private final Map<Long, Long> pendingSeenMs = new HashMap<>();
+    private volatile boolean feeConvFail;
+    private volatile String feeConvWhy = "";
+    private final Map<String, double[]> feePx = new ConcurrentHashMap<>();
+
+    static boolean validAi(String ai) {
+        return ai != null && !ai.trim().isEmpty() && !"0".equals(ai.trim());
+    }
+
+    /** Khop cua stop canary: cid c3s- hoac orderId = actualOrderId cua stop c3s- (ALGO_UPDATE / queryStop). */
+    boolean isCanaryStopFill(UserStreamEvents.OrderUpdate u) {
+        return (u.clientOrderId != null && u.clientOrderId.startsWith(C3LiveCids.STOP_PREFIX))
+                || canaryAlgoOrderIds.contains(String.valueOf(u.orderId));
+    }
+
+    /** So cai doc lap: PnL + phi cua 1 khop canary (1 lan / trade). */
+    void accountTrade(UserStreamEvents.OrderUpdate u) {
+        String key = u.orderId + ":" + u.tradeTimeMs + ":" + u.lastQty + ":" + u.cumQty;
+        if (!seenTrades.add(key)) return;
+        double rp = u.realizedPnl == null ? 0d : u.realizedPnl.doubleValue();
+        double fee = u.commission == null ? 0d : u.commission.doubleValue();
+        String fa = u.commissionAsset == null ? "?" : u.commissionAsset;
+        synchronized (stateLock) {
+            state.cumRealized += rp;
+            state.fills++;
+            if (STABLE.contains(fa)) {
+                state.cumFeeStable += fee;
+            } else if (fee != 0d) {
+                state.feeOther.merge(fa, fee, Double::sum);
+            }
+        }
+        saveState();
+    }
+
+    /** Khop "la" hoa ra la lenh thuong cua stop canary (actualOrderId) => tinh vao so cai + ledger. */
+    void explainPending(String actualId, String why) {
+        long id;
+        try {
+            id = Long.parseLong(actualId.trim());
+        } catch (NumberFormatException e) {
+            return;
+        }
+        List<UserStreamEvents.OrderUpdate> l;
+        synchronized (pendingForeign) {
+            l = pendingForeign.remove(id);
+            pendingSeenMs.remove(id);
+        }
+        if (l == null) return;
+        BigDecimal z = BigDecimal.ZERO;
+        String sym = null;
+        for (UserStreamEvents.OrderUpdate u : l) {
+            accountTrade(u);
+            sym = u.symbol;
+            if (u.cumQty != null && u.cumQty.compareTo(z) > 0) z = u.cumQty;
+        }
+        if (sym != null && z.signum() > 0) onCanaryExec(sym, STOP_FILL_KEY + id, z);
+        journal.ev("FOREIGN_FILL_EXPLAINED", "i", id, "why", why);
+    }
+
+    /**
+     * Bang chung canary: 1 stop c3s- cua symbol (so: active / orphan / pending; JVM nay: moi stop da dat) o trang thai TRIGGERED / FINISHED
+     * co actualOrderId (= matchId neu co). null = khong co.
+     */
+    String ownStopTriggered(String s, String matchId) {
+        Set<String> cids = new LinkedHashSet<>();
+        if (book != null) {
+            Optional<LiveBookC3.ClusterView> c = book.cluster(s);
+            if (c.isPresent()) {
+                if (c.get().stopClientAlgoId != null) cids.add(c.get().stopClientAlgoId);
+                if (c.get().pendingStopCid != null) cids.add(c.get().pendingStopCid);
+                if (c.get().orphanStops != null) cids.addAll(c.get().orphanStops);
+            }
+        }
+        for (OrderInfo o : gw.stopResponses()) if (s.equals(o.getSymbol()) && o.getClientOrderId() != null) cids.add(o.getClientOrderId());
+        int n = 0;
+        for (String cid : cids) {
+            if (!CanaryGateway.canaryAlgoCid(cid) || n++ >= 8) continue;
+            try {
+                Optional<OrderInfo> q = gw.queryStop(s, cid);
+                if (!q.isPresent()) continue;
+                OrderStatus st0 = q.get().getStatus();
+                String ai = q.get().getActualOrderId();
+                if ((st0 == OrderStatus.TRIGGERED || st0 == OrderStatus.FINISHED) && validAi(ai) && (matchId == null || matchId.equals(ai.trim()))) {
+                    canaryAlgoOrderIds.add(ai.trim());
+                    return "stop " + cid + " " + st0 + " actualOrderId=" + ai.trim();
+                }
+            } catch (RuntimeException e) {
+                journal.ev("STOP_EVIDENCE_NOREAD", "symbol", s, "cid", cid, "err", e.getClass().getSimpleName());
+            }
+        }
+        return null;
+    }
+
+    /** [3g MAJOR-1] khop khong cid canary tren symbol canary: giai thich duoc (stop canary) => tinh; khong => "RED ..". */
+    String pendingForeignProblem(String s) {
+        List<Long> ids = new ArrayList<>();
+        long oldest = Long.MAX_VALUE;
+        synchronized (pendingForeign) {
+            for (Map.Entry<Long, List<UserStreamEvents.OrderUpdate>> e : pendingForeign.entrySet()) {
+                if (!e.getValue().isEmpty() && s.equals(e.getValue().get(0).symbol)) {
+                    ids.add(e.getKey());
+                    oldest = Math.min(oldest, pendingSeenMs.getOrDefault(e.getKey(), 0L));
+                }
+            }
+        }
+        if (ids.isEmpty()) return null;
+        long age = clock.getAsLong() - oldest;
+        if (age < SCOPE_RECHECK_MS) sleeper.sleep(SCOPE_RECHECK_MS - age);   // cho ALGO_UPDATE (ai) neu la stop canary vua kich
+        List<String> bad = new ArrayList<>();
+        for (Long id : ids) {
+            String sid = String.valueOf(id);
+            if (!canaryAlgoOrderIds.contains(sid) && ownStopTriggered(s, sid) == null) {
+                List<UserStreamEvents.OrderUpdate> l;
+                synchronized (pendingForeign) {
+                    l = pendingForeign.get(id);
+                }
+                UserStreamEvents.OrderUpdate u = l == null || l.isEmpty() ? null : l.get(l.size() - 1);
+                bad.add("orderId=" + id + (u == null ? "" : " cid=" + u.clientOrderId + " " + u.side + " z=" + u.cumQty));
+                continue;
+            }
+            explainPending(sid, "bang chung stop canary");
+        }
+        return bad.isEmpty() ? null : "RED " + s + ": lenh KHONG cid canary KHOP tren symbol canary " + bad
+                + " — giao dich ngoai canary cung symbol (§ADD-4 C)";
+    }
+
+    /** [3g MIN-4] phi tai san ngoai stable (vd BNB) quy USDT theo gia &lt;ASSET&gt;USDT (cache 60 s; loi => gia cu). NaN = khong quy doi duoc. */
+    double feeOtherUsd() {
+        Map<String, Double> fo;
+        synchronized (stateLock) {
+            fo = new LinkedHashMap<>(state.feeOther);
+        }
+        if (fo.isEmpty()) return 0d;
+        double sum = 0d;
+        for (Map.Entry<String, Double> e : fo.entrySet()) {
+            double px = assetPx(e.getKey());
+            if (Double.isNaN(px)) {
+                feeConvWhy = e.getKey() + "=" + e.getValue() + " (khong co gia " + e.getKey() + "USDT)";
+                return Double.NaN;
+            }
+            sum += e.getValue() * px;
+        }
+        synchronized (stateLock) {
+            state.feeOtherUsd = sum;
+        }
+        return sum;
+    }
+
+    private double assetPx(String asset) {
+        long now = clock.getAsLong();
+        double[] c = feePx.get(asset);
+        if (c != null && now - (long) c[1] < 60_000L) return c[0];
+        if (gw == null) return c != null ? c[0] : Double.NaN;
+        try {
+            double p = lastPrice(asset + "USDT").doubleValue();
+            feePx.put(asset, new double[]{p, now});
+            return p;
+        } catch (RuntimeException e) {
+            return c != null ? c[0] : Double.NaN;
+        }
     }
 
     static String jstr(JsonObject o, String k) {
@@ -1350,6 +1568,15 @@ public final class CanaryEngine {
     /** Dieu kien chung cho moi buoc K (tru preflight/flatten/cleanup/status). */
     void begin(String k, boolean needStream) {
         if (state.aborted != null) throw new Abort(TU_CHOI, "phien da DUNG: " + state.aborted);
+        if (!"K8".equals(k)) {   // [3g MIN-3] tran phien = min(2, 4 - lo cong don); K8 (chi doc) van chay
+            double cap = sessionCap();
+            if (Double.isNaN(cap)) throw new Abort(TU_CHOI, "thieu CANARY_PRIOR_LOSS_USDT (lo cong don cac phien truoc) — khong tinh duoc tran phien");
+            if (cap <= CanaryLimits.MIN_SESSION_CAP_USDT) {
+                throw new Abort(TU_CHOI, "tran lo phien min(2, 4 - " + fmt(cfg.priorLossUsdt) + ") = " + fmt(cap) + " <= "
+                        + CanaryLimits.MIN_SESSION_CAP_USDT + " USDT — KHONG mo lenh (§3g MIN-3)");
+            }
+            journal.ev("SESSION_CAP", "k", k, "capUsdt", cap, "priorLossUsdt", cfg.priorLossUsdt);
+        }
         if (!state.symbolsChosen()) throw new Abort(TU_CHOI, "chua chon symbol (chay canary_preflight truoc)");
         if (state.tmb0 == null) throw new Abort(TU_CHOI, "chua co moc tmb (K0 chua DAT)");
         build();
@@ -1390,6 +1617,8 @@ public final class CanaryEngine {
             Predicate<String> leg0 = deps.legacy;
             Predicate<String> legacy = s -> busy.contains(s) || (leg0 != null && leg0.test(s));
             SymbolPicker.Pick p = SymbolPicker.pick(ei, tk, legacy, clock.getAsLong());
+            st.put("legacy.fileSymbols", deps.legacySize);
+            st.check(deps.legacySize != 0, "run/legacy_symbols.csv RONG hoac THIEU — tai khoan chinh TU CHOI (§ADD-4 B, §3g MIN-8)");
             st.put("pick.scanned", p.scanned);
             st.put("pick.eligible", p.eligible);
             st.put("pick.rejects", p.rejectCounts);
@@ -2266,7 +2495,12 @@ public final class CanaryEngine {
         st.put("equityCheck", "KHONG_AP §ADD-4 G/H: tai khoan chinh co LEGACY — lech tmb chi ghi thong tin (chi phi canary kiem ben duoi)");
         st.check(state.cumFeeStable - state.cumRealized - state.cumFunding <= CanaryLimits.LOSS_CAP_USDT,
                 "chi phi > " + CanaryLimits.LOSS_CAP_USDT + " USDT");
-        st.check(state.feeOther.isEmpty(), "phi tra bang tai san ngoai stable " + state.feeOther + " (so cai khong quy doi duoc)");
+        double fx = feeOtherUsd();   // [3g MIN-4]
+        st.put("ledger.feeOtherUsd", Double.isNaN(fx) ? "KHONG quy doi duoc" : fx);
+        st.check(!Double.isNaN(fx), "phi tra bang tai san ngoai stable " + state.feeOther + " KHONG quy doi duoc sang USDT (§3g MIN-4)");
+        if (!Double.isNaN(fx)) {
+            st.check(state.cumFeeStable - state.cumRealized + fx <= capOrDefault(), "chi phi canary (ca phi quy doi) > tran phien");
+        }
         st.put("maxWeight1m", gw.maxWeight1m());
     }
 

@@ -22,6 +22,8 @@ public final class OrderInfo {
     private final boolean reduceOnly;
     private final boolean closePosition;
     private final long updateTimeMs;
+    /** [3g] algo: actualOrderId (lenh thuong sinh ra khi stop kich); null = khong co / khong phai algo. */
+    private final String actualOrderId;
 
     private OrderInfo(Builder b) {
         this.kind = b.kind == null ? OrderKind.REGULAR : b.kind;
@@ -39,6 +41,7 @@ public final class OrderInfo {
         this.reduceOnly = b.reduceOnly;
         this.closePosition = b.closePosition;
         this.updateTimeMs = b.updateTimeMs;
+        this.actualOrderId = b.actualOrderId;
     }
 
     public static Builder builder() { return new Builder(); }
@@ -47,7 +50,7 @@ public final class OrderInfo {
         return new Builder().kind(kind).symbol(symbol).orderId(orderId).clientOrderId(clientOrderId).side(side)
                 .type(type).status(status).rawStatus(rawStatus).origQty(origQty).executedQty(executedQty)
                 .avgPrice(avgPrice).stopPrice(stopPrice).reduceOnly(reduceOnly).closePosition(closePosition)
-                .updateTimeMs(updateTimeMs);
+                .updateTimeMs(updateTimeMs).actualOrderId(actualOrderId);
     }
 
     public OrderKind getKind() { return kind; }
@@ -69,6 +72,7 @@ public final class OrderInfo {
     public boolean isReduceOnly() { return reduceOnly; }
     public boolean isClosePosition() { return closePosition; }
     public long getUpdateTimeMs() { return updateTimeMs; }
+    public String getActualOrderId() { return actualOrderId; }
 
     @Override
     public boolean equals(Object o) {
@@ -109,6 +113,7 @@ public final class OrderInfo {
         private boolean reduceOnly;
         private boolean closePosition;
         private long updateTimeMs;
+        private String actualOrderId;
 
         public Builder kind(OrderKind v) { this.kind = v; return this; }
         public Builder symbol(String v) { this.symbol = v; return this; }
@@ -125,6 +130,7 @@ public final class OrderInfo {
         public Builder reduceOnly(boolean v) { this.reduceOnly = v; return this; }
         public Builder closePosition(boolean v) { this.closePosition = v; return this; }
         public Builder updateTimeMs(long v) { this.updateTimeMs = v; return this; }
+        public Builder actualOrderId(String v) { this.actualOrderId = v; return this; }
         public OrderInfo build() { return new OrderInfo(this); }
     }
 }

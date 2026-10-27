@@ -65,6 +65,8 @@ public final class CanaryState {
     public List<String> legacyK0Orders = new ArrayList<>();
     public List<String> legacyK0Algos = new ArrayList<>();
     public Long legacyK0Ms;
+    /** [3g MIN-4] phi tra bang tai san ngoai stable (vd BNB) quy ra USDT theo gia luc tinh lo gan nhat. */
+    public Double feeOtherUsd;
 
     public static CanaryState load(File dir) throws IOException {
         File f = new File(dir, FILE_NAME);
