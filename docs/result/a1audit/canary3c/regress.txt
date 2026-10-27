@@ -1,0 +1,7 @@
+parity 2026-10-23:
+out_BT e0918a333a52be3aefe2a3b62a5ac8f4
+out_NEW2 e0918a333a52be3aefe2a3b62a5ac8f4
+fund_BT a81b3b03915a44d418ee23488d71d226
+fund_NEW2 8dea3f700aaddfd6abad961af1c65ea7
+fake242: TEST PASS 115/115
+bytecode ref-vs-new differ=26

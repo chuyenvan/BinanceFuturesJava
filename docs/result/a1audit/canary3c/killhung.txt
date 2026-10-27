@@ -1,0 +1,45 @@
+T1 (cwd v_t_m):
+     kill-hung: GIU 1429717 cwd=/home/ubuntu/claude_master/v12/a3c_parity/kh/v_t_m (khong phai thu muc canary rieng)
+     kill-hung: JVM_CANARY=1
+  CL_KILLED=0
+  p1=ALIVE
+T2 (no exact main arg):
+     kill-hung: GIU 1429717 cwd=/home/ubuntu/claude_master/v12/a3c_parity/kh/v_t_m (khong phai thu muc canary rieng)
+     kill-hung: JVM_CANARY=1
+  CL_KILLED=0
+  p2=ALIVE
+T3 (shell wrapper):
+     kill-hung: GIU 1429717 cwd=/home/ubuntu/claude_master/v12/a3c_parity/kh/v_t_m (khong phai thu muc canary rieng)
+     kill-hung: JVM_CANARY=1
+  CL_KILLED=0
+  p3=ALIVE
+T4 (not lock holder):
+     kill-hung: GIU 1429717 cwd=/home/ubuntu/claude_master/v12/a3c_parity/kh/v_t_m (khong phai thu muc canary rieng)
+     kill-hung: GIU 1429834 (khong phai pid giu lock: 999999)
+     kill-hung: JVM_CANARY=2
+  CL_KILLED=0
+  p4=ALIVE
+T5 (hb fresh):
+     kill-hung: GIU 1429717 cwd=/home/ubuntu/claude_master/v12/a3c_parity/kh/v_t_m (khong phai thu muc canary rieng)
+     kill-hung: GIU 1429834 dang song (lock=902s hb=0s; kill khi >= 600s va >= 180s)
+     kill-hung: JVM_CANARY=2
+  CL_KILLED=0
+  p4=ALIVE
+T6 (lock young):
+     kill-hung: GIU 1429717 cwd=/home/ubuntu/claude_master/v12/a3c_parity/kh/v_t_m (khong phai thu muc canary rieng)
+     kill-hung: GIU 1429834 dang song (lock=120s hb=402s; kill khi >= 600s va >= 180s)
+     kill-hung: JVM_CANARY=2
+  CL_KILLED=0
+  p4=ALIVE
+T8 (hung):
+     kill-hung: GIU 1429717 cwd=/home/ubuntu/claude_master/v12/a3c_parity/kh/v_t_m (khong phai thu muc canary rieng)
+     kill-hung: KILLED 1429834 lock=902s hb=402s
+     kill-hung: JVM_CANARY=2
+  CL_KILLED=1
+  p4=DEAD
+T9 (hb other pid):
+     kill-hung: GIU 1429717 cwd=/home/ubuntu/claude_master/v12/a3c_parity/kh/v_t_m (khong phai thu muc canary rieng)
+     kill-hung: KILLED 1430010 lock=906s hb=906s
+     kill-hung: JVM_CANARY=2
+  CL_KILLED=1
+  p5=DEAD
