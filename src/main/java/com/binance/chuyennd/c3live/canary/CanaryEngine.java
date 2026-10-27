@@ -88,7 +88,12 @@ public final class CanaryEngine {
         public long orphanWaitMs = 60_000L;
         public double expectTmb = Double.NaN;
         public boolean injectTimeout;
+        /** [3d §ADD-3] cho phep K0 dung lai keepAlive cua K0 truoc (engine tu kiem: <= 24 h, keepAliveOk >= 2, cung jar). */
+        public boolean reuseKeepAlive;
     }
+
+    /** [3d §ADD-3] K0 truoc chi duoc dung lai keepAlive trong cua so nay. */
+    public static final long KEEPALIVE_REUSE_MAX_AGE_MS = 24L * 3_600_000L;
 
     /** Phu thuoc ngoai. */
     public static final class Deps {
@@ -102,6 +107,8 @@ public final class CanaryEngine {
         public Predicate<String> legacy;
         public IntSupplier usedWeight1m;
         public String journalName;
+        /** [3d] dinh danh jar dang chay: {md5, mtimeMs}; null / md5 null = khong xac dinh (=> khong dung lai keepAlive). */
+        public java.util.function.Supplier<String[]> jarId;
     }
 
     /** Ket qua 1 lenh. */
@@ -998,6 +1005,10 @@ public final class CanaryEngine {
     /** preflight = K0 chi doc (prereg §4) + chon 2 symbol theo LUAT + moc tmb. 0 lenh ghi. */
     public Result preflight() {
         Step st = new Step("K0");
+        CanaryState.StepRecord prevK0 = state.steps.get("K0");   // [3d] K0 truoc (truoc khi K0 nay ghi de)
+        String[] jar = jarIdentity();
+        st.put("jar.md5", jar[0]);
+        st.put("jar.mtimeMs", jar[1]);
         try {
             build();
             long mut0 = gw.mutatingCalls();
@@ -1082,14 +1093,26 @@ public final class CanaryEngine {
             st.put("ws.openMs", w);
             st.put("ws.url", tap.lastOpenUrl);
             st.check(w >= 0 && w <= 5_000L, "websocket khong mo trong 5 s");
-            int ka0 = keepAliveOk();
-            pump(Math.max(0L, cfg.k0RunMs - (clock.getAsLong() - t0)));
-            int ka = keepAliveOk() - ka0;
-            st.put("ws.keepAliveOk", ka);
-            st.put("ws.state", stream.state().name());
-            st.put("ws.stats", stream.stats());
-            st.put("k0RunMin", (clock.getAsLong() - t0) / 60_000L);
-            st.check(ka >= 2, "keepAlive OK " + ka + " lan (yeu cau >= 2 trong " + cfg.k0RunMs / 60_000L + "')");
+            String reuse = cfg.reuseKeepAlive ? keepAliveReuse(prevK0, jar) : null;
+            if (reuse != null && reuse.startsWith("OK ")) {
+                // [3d §ADD-3] K0 truoc (<= 24 h, cung jar) da DAT keepAlive >= 2 => khong chay lai 65'
+                st.put("ws.keepAliveSkipped", reuse.substring(3));
+                st.put("ws.keepAliveOk", ((Number) prevK0.data.get("ws.keepAliveOk")).intValue());
+                st.put("ws.state", stream.state().name());
+                st.put("k0RunMin", (clock.getAsLong() - t0) / 60_000L);
+                journal.ev("K0_KEEPALIVE_REUSED", "why", reuse.substring(3));
+            } else {
+                if (reuse != null) st.put("ws.keepAliveReuse", "khong dung lai duoc: " + reuse.substring(3) + " => chay du "
+                        + cfg.k0RunMs / 60_000L + "'");
+                int ka0 = keepAliveOk();
+                pump(Math.max(0L, cfg.k0RunMs - (clock.getAsLong() - t0)));
+                int ka = keepAliveOk() - ka0;
+                st.put("ws.keepAliveOk", ka);
+                st.put("ws.state", stream.state().name());
+                st.put("ws.stats", stream.stats());
+                st.put("k0RunMin", (clock.getAsLong() - t0) / 60_000L);
+                st.check(ka >= 2, "keepAlive OK " + ka + " lan (yeu cau >= 2 trong " + cfg.k0RunMs / 60_000L + "')");
+            }
             st.put("apiRestrictions", "KHONG doc bang client futures (sapi) — owner xac nhan quyen rut TAT + IP restrict khi tao key");
             st.check(gw.mutatingCalls() == 0 && mut0 == 0, "K0 da gui " + (gw.mutatingCalls() + mut0) + " lenh ghi (phai 0)");
             if (st.fails.isEmpty() && hasTradeSteps() && state.tmb0 != null) {
@@ -1107,6 +1130,53 @@ public final class CanaryEngine {
             st.check(false, "loi " + e);
         }
         return finish(st);
+    }
+
+    /** {md5, mtimeMs} cua jar dang chay (Deps.jarId); khong xac dinh => {null, null}. */
+    String[] jarIdentity() {
+        try {
+            String[] j = deps.jarId == null ? null : deps.jarId.get();
+            if (j != null && j.length >= 2) return j;
+        } catch (RuntimeException e) {
+            LOG.warn("[CANARY] khong xac dinh duoc jar: {}", e.toString());
+        }
+        return new String[]{null, null};
+    }
+
+    /**
+     * [3d §ADD-3] "OK &lt;ly do&gt;" neu K0 truoc dung lai duoc phan keepAlive: K0 do THAT SU chay keepAlive (khong phai ban dung lai),
+     * ws.keepAliveOk >= 2, ws.openMs trong [0, 5 s], cach <= 24 h, cung jar (md5 ghi trong K0 do = md5 hien tai; K0 cu khong ghi md5
+     * => jar hien tai khong doi tu luc K0 do theo mtime). Khong thi "NO &lt;vi sao&gt;".
+     */
+    String keepAliveReuse(CanaryState.StepRecord p, String[] jar) {
+        if (p == null || p.data == null) return "NO chua co K0 truoc trong phien";
+        if (p.data.get("ws.keepAliveSkipped") != null) return "NO K0 truoc cung la ban dung lai (khong dung lai noi tiep)";
+        Object ka = p.data.get("ws.keepAliveOk");
+        if (!(ka instanceof Number) || ((Number) ka).intValue() < 2) return "NO K0 truoc ws.keepAliveOk=" + ka;
+        Object om = p.data.get("ws.openMs");
+        if (!(om instanceof Number) || ((Number) om).longValue() < 0L || ((Number) om).longValue() > 5_000L) {
+            return "NO K0 truoc ws.openMs=" + om;
+        }
+        long age = clock.getAsLong() - p.ms;
+        if (age < 0L || age > KEEPALIVE_REUSE_MAX_AGE_MS) return "NO K0 truoc cach " + age / 60_000L + "' (> 24 h)";
+        if (jar == null || jar[0] == null) return "NO khong xac dinh duoc jar hien tai";
+        Object pm = p.data.get("jar.md5");
+        String how;
+        if (pm != null) {
+            if (!jar[0].equals(String.valueOf(pm))) return "NO jar khac K0 truoc (" + pm + " != " + jar[0] + ")";
+            how = "md5 jar trung " + jar[0];
+        } else {
+            long mt;
+            try {
+                mt = Long.parseLong(jar[1]);
+            } catch (RuntimeException e) {
+                return "NO K0 truoc khong ghi md5 jar va khong doc duoc mtime jar";
+            }
+            if (mt > p.ms) return "NO K0 truoc khong ghi md5 jar va jar da doi sau K0 do (mtime " + mt + " > " + p.ms + ")";
+            how = "K0 truoc khong ghi md5; jar " + jar[0] + " khong doi tu luc do (mtime " + mt + " <= " + p.ms + ")";
+        }
+        return "OK K0 luc " + p.ms + " (cach " + age / 60_000L + "', ket qua " + p.result + ") da DAT keepAliveOk=" + ka
+                + ", ws.openMs=" + om + "; " + how;
     }
 
     private boolean hasTradeSteps() {

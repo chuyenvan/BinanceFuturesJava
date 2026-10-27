@@ -37,6 +37,7 @@ public class CanaryEngineTest {
     File dir;
     final List<String> telegram = Collections.synchronizedList(new ArrayList<>());
     volatile Consumer<Long> hook = t -> { };
+    volatile String[] jarIdVal = {"jarA", String.valueOf(T0 - 3_600_000L)};
 
     @Before
     public void setUp() throws Exception {
@@ -80,6 +81,7 @@ public class CanaryEngineTest {
         d.legacy = s -> false;
         d.usedWeight1m = () -> 7;
         d.journalName = "j_" + now.get() + "_" + System.nanoTime() + ".jsonl";
+        d.jarId = () -> jarIdVal;
         return new CanaryEngine(d, cfg);
     }
 
@@ -255,6 +257,62 @@ public class CanaryEngineTest {
         }
         fail("khong co vi the " + sym);
         return 0d;
+    }
+
+    // ------------------------------------------------------------------ [3d §ADD-3] K0 dung lai keepAlive
+    private CanaryEngine.Result k0(boolean reuse) throws Exception {
+        CanaryEngine.Config c = cfg();
+        c.reuseKeepAlive = reuse;
+        CanaryEngine e = engine(c);
+        CanaryEngine.Result r = e.preflight();
+        e.close();
+        ok(r);
+        return r;
+    }
+
+    @Test
+    public void k0ReusesKeepAliveOnlyFromRealK0SameJarWithin24h() throws Exception {
+        CanaryEngine.Result r0 = k0(false);   // K0 that: 65' + keepAlive >= 2
+        assertEquals("jarA", r0.data.get("jar.md5"));
+        long t1 = now.get();
+        CanaryEngine.Result r1 = k0(true);
+        assertTrue(String.valueOf(r1.data), String.valueOf(r1.data.get("ws.keepAliveSkipped")).contains("md5 jar trung jarA"));
+        assertTrue("khong chay lai 65'", now.get() - t1 < 10 * 60_000L);
+        long t2 = now.get();
+        CanaryEngine.Result r2 = k0(true);   // K0 truoc la ban dung lai => khong noi tiep
+        assertNull(r2.data.get("ws.keepAliveSkipped"));
+        assertTrue(String.valueOf(r2.data.get("ws.keepAliveReuse")).contains("noi tiep"));
+        assertTrue(now.get() - t2 >= 65 * 60_000L);
+        jarIdVal = new String[]{"jarB", String.valueOf(T0)};
+        long t3 = now.get();
+        CanaryEngine.Result r3 = k0(true);   // jar khac
+        assertTrue(String.valueOf(r3.data.get("ws.keepAliveReuse")).contains("jar khac"));
+        assertTrue(now.get() - t3 >= 65 * 60_000L);
+        now.addAndGet(25L * 3_600_000L);
+        mock.now = now.get();
+        long t4 = now.get();
+        CanaryEngine.Result r4 = k0(true);   // > 24 h
+        assertTrue(String.valueOf(r4.data.get("ws.keepAliveReuse")).contains("> 24 h"));
+        assertTrue(now.get() - t4 >= 65 * 60_000L);
+        long t5 = now.get();
+        CanaryEngine.Result r5 = k0(false);   // khong bat co => luon chay du, khong ghi reuse
+        assertNull(r5.data.get("ws.keepAliveReuse"));
+        assertNull(r5.data.get("ws.keepAliveSkipped"));
+        assertTrue(now.get() - t5 >= 65 * 60_000L);
+    }
+
+    @Test
+    public void k0LegacyRecordWithoutJarMd5ReusesOnlyIfJarUnchangedSince() throws Exception {
+        jarIdVal = new String[]{null, null};
+        k0(false);                                                       // K0 cu: khong ghi md5 jar
+        jarIdVal = new String[]{"jarA", String.valueOf(T0 - 3_600_000L)};   // jar co tu truoc K0 do
+        CanaryEngine.Result r1 = k0(true);
+        assertTrue(String.valueOf(r1.data), String.valueOf(r1.data.get("ws.keepAliveSkipped")).contains("khong doi tu luc do"));
+        jarIdVal = new String[]{null, null};
+        k0(false);
+        jarIdVal = new String[]{"jarA", String.valueOf(now.get() + 60_000L)};   // jar thay SAU K0 do
+        CanaryEngine.Result r2 = k0(true);
+        assertTrue(String.valueOf(r2.data.get("ws.keepAliveReuse")).contains("jar da doi sau K0 do"));
     }
 
     // ------------------------------------------------------------------ [3c MAJ-C1] stop bao ve (prereg §ADD-2)

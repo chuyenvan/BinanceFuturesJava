@@ -2,6 +2,7 @@ package com.binance.chuyennd.c3live.canary;
 
 import com.binance.chuyennd.c3live.alert.C3LiveAlerts;
 import com.binance.chuyennd.c3live.api.AccountSnapshot;
+import com.binance.chuyennd.c3live.api.PositionInfo;
 import com.binance.chuyennd.c3live.client.C3LiveClient;
 import com.binance.chuyennd.c3live.client.C3LiveClientConfig;
 import com.binance.chuyennd.c3live.fill.UserStream;
@@ -119,6 +120,25 @@ public final class C3LiveCanary {
         }
     }
 
+    /** [3d] {md5, mtimeMs} cua jar chua lop nay (jar canary dang chay); khong phai file .jar => {null, null}. */
+    static String[] runningJarId() {
+        try {
+            File f = new File(C3LiveCanary.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+            if (!f.isFile() || !f.getName().endsWith(".jar")) return new String[]{null, null};
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");
+            try (java.io.InputStream in = Files.newInputStream(f.toPath())) {
+                byte[] buf = new byte[1 << 16];
+                for (int n; (n = in.read(buf)) > 0; ) md.update(buf, 0, n);
+            }
+            StringBuilder sb = new StringBuilder();
+            for (byte b : md.digest()) sb.append(String.format(Locale.ROOT, "%02x", b));
+            return new String[]{sb.toString(), String.valueOf(f.lastModified())};
+        } catch (Exception e) {
+            LOG.warn("[CANARY] khong doc duoc md5 jar: {}", e.toString());
+            return new String[]{null, null};
+        }
+    }
+
     static String env(String k) {
         String v = System.getenv(k);
         return v != null ? v : System.getProperty(k);
@@ -187,6 +207,8 @@ public final class C3LiveCanary {
         String et = env.apply("CANARY_EXPECT_TMB");
         if (et != null && !et.trim().isEmpty()) cfg.expectTmb = Double.parseDouble(et.trim());
         cfg.injectTimeout = "1".equals(or(env.apply("CANARY_INJECT_TIMEOUT"), "0").trim());
+        cfg.reuseKeepAlive = "1".equals(or(env.apply("CANARY_K0_REUSE_KEEPALIVE"), "0").trim());   // [3d §ADD-3] engine tu kiem
+        d.jarId = C3LiveCanary::runningJarId;
         CanaryEngine e = new CanaryEngine(d, cfg);
         CanaryEngine.Result r;
         switch (cmd) {
@@ -217,15 +239,22 @@ public final class C3LiveCanary {
         return r.ok() ? 0 : (CanaryEngine.TU_CHOI.equals(r.verdict) ? 2 : 3);
     }
 
-    /** Doc thu key (chi doc): gio server, tmb, multiAssets, dual. Khong in key. */
+    /**
+     * Doc thu key (chi doc): gio server, tmb, multiAssets, dual + [3d] so vi the != 0 / lenh mo / algo mo toan tai khoan
+     * ({@code pos= orders= algos=}, de canary_early_all.sh kiem "tai khoan phang" ma KHONG ghi buoc vao state). Khong in key.
+     */
     static int keycheck(C3LiveClient c) {
         try {
             long st = c.serverTime();
             AccountSnapshot a = c.account();
             boolean multi = c.multiAssetsMargin();
             boolean dual = c.dualSidePosition();
+            int pos = 0;
+            for (PositionInfo p : c.positions()) if (p.getPositionAmt() != null && p.getPositionAmt().signum() != 0) pos++;
+            int ord = c.openOrders(null).size();
+            int alg = c.openStops(null).size();
             out("KEYCHECK serverTime=" + st + " tmb=" + a.getTotalMarginBalance() + " multiAssets=" + multi + " dual=" + dual
-                    + " assets=" + CanaryEngine.assetMap(a));
+                    + " assets=" + CanaryEngine.assetMap(a) + " pos=" + pos + " orders=" + ord + " algos=" + alg);
             out("RESULT keycheck DAT");
             return 0;
         } catch (RuntimeException e) {
