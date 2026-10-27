@@ -246,3 +246,17 @@ trần lỗ cộng dồn, stop bảo vệ §ADD-2).
   `ws.keepAliveOk ≥ 2` và `ws.openMs ≤ 5 s`, cách **≤ 24 h**, và **cùng jar** (md5 jar ghi trong K0 đó = md5 jar hiện tại; K0 cũ không ghi md5
   ⇒ jar không đổi kể từ K0 đó theo mtime). Engine tự kiểm (không tin script), ghi `ws.keepAliveSkipped` = lý do (hoặc `ws.keepAliveReuse` =
   vì sao không dùng được ⇒ chạy đủ 65′). Phần WS mở ≤ 5 s qua ít nhất 1 URL vẫn kiểm lại mỗi K0. Mọi tiêu chí K0 khác giữ nguyên.
+
+## §ADD-4 (MASTER 2026-10-27) — canary-early trên TÀI KHOẢN CHÍNH (thay §ADD-1 phần "tài khoản phụ trống")
+
+A. Phạm vi: mọi đọc-ghi lệnh/stop/vị thế/leverage chỉ trên 2 symbol canary (S_main, S_aux) và cid tiền tố c3-/c3s-. Cấm cancel/close/modify bất kỳ lệnh/algo/vị thế nào ngoài phạm vi; vi phạm phát hiện ở bất kỳ đâu = TRƯỢT + dừng.
+B. Chọn symbol: loại symbol có vị thế ≠0, lệnh mở hoặc algo mở không thuộc canary, symbol trong danh sách LEGACY (positions + openOrders + openAlgo + userTrades 7 ngày của toàn tài khoản trên universe đã lọc — nếu userTrades quá nặng weight thì dùng positions+openOrders+openAlgo và ghi rõ), cộng các bộ lọc cũ.
+C. K0 / trước mỗi bước / cleanup: thay "tài khoản 0 vị thế/0 lệnh" bằng "2 symbol canary: vị thế 0 (trước mở), 0 lệnh/algo không phải canary". Nếu xuất hiện vị thế/lệnh không phải canary trên symbol canary bất kỳ lúc nào → flatten phần canary bằng lệnh reduceOnly/closePosition chỉ khi không lẫn lộn được; nếu one-way đã cộng dồn với LEGACY → KHÔNG đóng, dừng, báo MASTER (TRƯỢT-ĐỎ).
+D. Ảnh chụp LEGACY: K0 và cuối phiên chụp positions (symbol, qty, entry) + openOrders/openAlgo ngoài canary. Tiêu chí: mọi thay đổi giữa 2 ảnh phải giải thích được bằng lệnh không mang cid canary (LEGACY tự giao dịch là bình thường); 0 lệnh canary trên symbol ngoài phạm vi.
+E. Cấp tài khoản chỉ ĐỌC: multiAssetsMargin, dualSidePosition, (nếu có) asset mode — không bao giờ gọi đổi. Không khớp kỳ vọng (one-way) → TỪ CHỐI.
+F. Leverage/margin type: chỉ đổi trên S_main/S_aux khi symbol đó không có vị thế/lệnh ngoài canary; ghi trước/sau.
+G. Ngân sách lỗ: trần lỗ phiên 2 USDT, cộng dồn 4 USDT, chỉ tính PnL+phí của lệnh cid canary. Stop bảo vệ d = min(4.5%, (2 − 0.10 − lỗ canary hiện tại − lỗ xấu nhất các vị thế canary khác)/notional) — KHÔNG tính vị thế LEGACY.
+H. K0 số dư: bỏ kiểm tmb tuyệt đối (10000); thay bằng ghi tmb/twb + availableBalance ≥ 50 USDT. Kill-switch tmb không áp dụng (như ADD-1).
+I. Tiêu chí 5 sửa: weight canary tự gọi (ownWeight1mMax) < 600/phút VÀ 0 HTTP 429/418; header IP X-MBX-USED-WEIGHT-1M ghi thông tin (LEGACY cùng IP). Call thường bị guard từ chối do IP nặng → thử lại sang phút sau trong hạn bước, không TRƯỢT ngay; lane khẩn cấp giữ nguyên.
+J. Key: key RIÊNG của tài khoản chính (Futures trade bật, rút tiền TẮT, IP 242), file /root/.config/c3live/keys.env; không dùng key LEGACY/PrivateConfig.
+K. Mọi phần khác của prereg giữ nguyên.
