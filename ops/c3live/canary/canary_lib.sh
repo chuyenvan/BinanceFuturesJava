@@ -31,19 +31,22 @@ else
 fi
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}            # process bot — chi DOC env/PID/cwd, khong cham
 JAVA_242=${JAVA_242:-java}
-CANARY_JAR=${CANARY_JAR:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12dry_3b}   # jar Oracle copy len 242 (early)
-CANARY_JAR_MD5=${CANARY_JAR_MD5:-5405dfb2d076768ed7d751095818fb07}   # [V12 3b] pin jar v12dry_3b (dung chung dry + canary)
+CANARY_JAR=${CANARY_JAR:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12dry_3c}   # jar Oracle copy len 242 (early)
+CANARY_JAR_MD5=${CANARY_JAR_MD5:-5de6c9899b09758965a14b91ac836ef7}   # [V12 3c] pin jar v12dry_3c (dung chung dry + canary)
 KEYS_FILE=${CANARY_KEYS_FILE:-/root/.config/c3live/keys.env}
 KEYS_OWNER=${CANARY_KEYS_OWNER:-root}
 LOGDIR=${LOGDIR:-/home/ubuntu/claude_master/canary}
 POLL_S=${POLL_S:-15}
 STEP_MAX_S=${STEP_MAX_S:-7200}
 DRY_MIN_DAYS=${DRY_MIN_DAYS:-5}                               # MO-1: >= 5 ngay dry sach (KHONG ap cho early, §ADD-1)
-TIME_WAIT_MAX_S=${TIME_WAIT_MAX_S:-3600}
 MEMINFO=${MEMINFO_FILE:-/proc/meminfo}
 readonly MIN_RAM_MB=1024                                      # §ADD-1: MemAvailable 242 >= 1 GB truoc khi start (hang so)
 readonly MIN_RAM_STEP_MB=768                                  # §ADD-1: truoc moi buoc sau do (hang so)
 readonly MIN_DISK_MB=400                                      # copy jar ~100 MB + journal
+readonly KILL_LOCK_MIN_S=600                                  # [3c MIN-C3] JVM canary giu lock >= 10' ...
+readonly KILL_HB_STALE_S=180                                  #   ... va heartbeat luong chinh cu >= 3' => coi la TREO
+readonly CUM_LOSS_CAP_USDT=4                                  # [3c MIN-C2] tong lo moi phien canary-early (MASTER doi bang file gate)
+CUM_CAP_FILE=${CUM_CAP_FILE:-/home/ubuntu/claude_master/deploy/gates/CANARY_EARLY_CUM_CAP.ok}
 YES=${YES:-0}
 FORCE_TIME=${FORCE_TIME:-0}
 CDIR=run/canary
@@ -86,23 +89,19 @@ need_yes() { [ "$YES" = 1 ] || die "can YES=1 (vd: YES=1 bash $0 ${*:-}) — scr
 time_ok() {
   local H M
   H=$(TZ=Asia/Ho_Chi_Minh date +%-H); M=$(TZ=Asia/Ho_Chi_Minh date +%-M)
+  # moc test (test_fake242): CL_FAKE_HM = file "H M" (gio +07 gia lap) — chi lam gate CHAT hon/long hon nhu FORCE_TIME
+  if [ -n "${CL_FAKE_HM:-}" ] && [ -f "$CL_FAKE_HM" ]; then read -r H M < "$CL_FAKE_HM"; fi
   [ "$M" -ge 10 ] && [ "$M" -le 44 ] || return 1          # chi phut :10-:44
   case "$H" in 7|19) return 1;; esac                       # 07:xx/19:xx
   if [ "$H" -eq 1 ] || [ "$H" -eq 13 ]; then [ "$M" -gt 20 ] || return 1; fi   # tranh 00:50-01:20, 12:50-13:20
   return 0
 }
-# cl_time_gate die|wait: ngoai khung gio => dung (die) hoac cho toi TIME_WAIT_MAX_S (wait, giua cac buoc)
+# cl_time_gate die: ngoai khung gio => DUNG. [3c MAJ-C1] CHI goi o DAU phien / dau lenh (tai khoan phang) — KHONG BAO GIO cho khung
+# gio giua cac buoc (luc do co the con vi the/stop canary mo, khong JVM nao canh tran lo).
 cl_time_gate() {
   [ "$FORCE_TIME" = 1 ] && { say "FORCE_TIME=1: bo chot gio (chi khi MASTER bao)"; return 0; }
   time_ok && return 0
-  [ "$1" = die ] && die "gio $(TZ=Asia/Ho_Chi_Minh date +%H:%M) (+07) khong hop le: chi phut :10-:44, tranh 07:xx, 19:xx, 00:50-01:20, 12:50-13:20"
-  local t0; t0=$(date +%s)
-  say "ngoai khung gio — cho (toi da ${TIME_WAIT_MAX_S}s)"
-  while ! time_ok; do
-    [ $(( $(date +%s) - t0 )) -ge "$TIME_WAIT_MAX_S" ] && return 1
-    sleep 30
-  done
-  return 0
+  die "gio +07 khong hop le: chi phut :10-:44, tranh 07:xx, 19:xx, 00:50-01:20, 12:50-13:20 (khong cho — chay lai trong khung gio)"
 }
 
 # cl_probe: (CHI DOC tren 242) jar canary, process bot (PID/cwd/env), JVM canary, RAM, md5 v_t_m, o dia, (standard) moc dry.
@@ -315,4 +314,95 @@ cl_macro() {
       return $rf ;;
     *) die "buoc la: $k (SETUP K1..K8 K6 K6B K7B K6_OPEN K6_RESTART K6B_OPEN K6B_RESTART)" ;;
   esac
+}
+
+# cl_kill_hung (CHI mode early, MIN-C3): kill JVM canary TREO truoc khi flatten. Chi kill process: cwd = CANARY_HOME (khong bao gio
+#   v_t_m), co arg dung = lop main C3LiveCanary (khong phai vo shell), la pid dang giu lock tai khoan con (run/c3live_account.lock
+#   "... pid=<p> since=<ms>") >= KILL_LOCK_MIN_S, va heartbeat luong chinh (run/canary/canary_jvm.hb "pid=<p> ms=<ms>") cu >=
+#   KILL_HB_STALE_S (khong co heartbeat cua pid do => tinh tu luc giu lock). Dat CL_KILLED (so JVM da kill).
+CL_KILLED=0
+cl_kill_hung() {
+  CL_KILLED=0
+  [ "$CANARY_MODE" = early ] || { say "mode chuan: KHONG tu kill JVM canary (cwd = v_t_m) — kiem tay"; return 0; }
+  local r
+  r=$($SSH_242 "bash -s -- $A $KILL_LOCK_MIN_S $KILL_HB_STALE_S $VTM" <<'EOF'
+A=$(readlink -f "$1"); LK_MIN=$2; HB_MIN=$3; V=$(readlink -f "$4")
+M=com.binance.chuyennd.c3live.canary.C3LiveCanary
+now=$(date +%s)
+LK=$A/run/c3live_account.lock; HB=$A/run/canary/canary_jvm.hb
+lk_pid=$(sed -n 's/.* pid=\([0-9]*\).*/\1/p' "$LK" 2>/dev/null | head -1)
+lk_ms=$(sed -n 's/.* since=\([0-9]*\).*/\1/p' "$LK" 2>/dev/null | head -1)
+hb_pid=$(sed -n 's/^pid=\([0-9]*\) .*/\1/p' "$HB" 2>/dev/null | head -1)
+hb_ms=$(sed -n 's/.* ms=\([0-9]*\).*/\1/p' "$HB" 2>/dev/null | head -1)
+n=0
+for p in $(pgrep -f "[c]om.binance.chuyennd.c3live.canary.C3LiveCanary" 2>/dev/null); do
+  tr '\0' '\n' < /proc/$p/cmdline 2>/dev/null | grep -qxF "$M" || continue   # vo shell bao quanh / lenh ssh: khong phai JVM
+  n=$((n + 1))
+  cwd=$(readlink -f /proc/$p/cwd 2>/dev/null)
+  if [ "$cwd" != "$A" ] || [ "$cwd" = "$V" ]; then echo "GIU $p cwd=$cwd (khong phai thu muc canary rieng)"; continue; fi
+  if [ -z "$lk_ms" ] || [ "$p" != "$lk_pid" ]; then echo "GIU $p (khong phai pid giu lock: ${lk_pid:-?})"; continue; fi
+  lk_age=$(( now - lk_ms / 1000 ))
+  if [ "$hb_pid" = "$p" ] && [ -n "$hb_ms" ]; then hb_age=$(( now - hb_ms / 1000 )); else hb_age=$lk_age; fi
+  if [ "$lk_age" -ge "$LK_MIN" ] && [ "$hb_age" -ge "$HB_MIN" ]; then
+    kill -TERM "$p" 2>/dev/null
+    for i in 1 2 3 4 5 6 7 8 9 10; do kill -0 "$p" 2>/dev/null || break; sleep 1; done
+    kill -0 "$p" 2>/dev/null && kill -KILL "$p" 2>/dev/null && sleep 1
+    if kill -0 "$p" 2>/dev/null; then echo "KILL_FAIL $p"; else echo "KILLED $p lock=${lk_age}s hb=${hb_age}s"; fi
+  else
+    echo "GIU $p dang song (lock=${lk_age}s hb=${hb_age}s; kill khi >= ${LK_MIN}s va >= ${HB_MIN}s)"
+  fi
+done
+echo "JVM_CANARY=$n"
+EOF
+)
+  printf '%s\n' "$r" | sed 's/^/   kill-hung: /'
+  CL_KILLED=$(printf '%s\n' "$r" | grep -c '^KILLED')
+  [ "$CL_KILLED" -gt 0 ] && sleep 2
+  return 0
+}
+
+# cl_cum_loss check|info (CHI mode early, MIN-C2): tong lo MOI phien canary-early tren 242 (run/canary, run/canary_done_*,
+#   run/canary_prev_*: moi phien max(0, phi + lo da chot - funding) tu canary_state.json) + so lan CANARY_RESET (= so canary_prev_*).
+#   check: tong > tran (4 USDT, hoac so MASTER ghi trong CUM_CAP_FILE) => DUNG. Dat CL_CUM_LOSS, CL_RESETS, CL_CUM_CAP, CL_CUM_DETAIL.
+CL_CUM_LOSS=0; CL_RESETS=0; CL_CUM_CAP=$CUM_LOSS_CAP_USDT; CL_CUM_DETAIL=""
+cl_cum_loss() {
+  local mode=${1:-check} raw out c
+  CL_CUM_CAP=$CUM_LOSS_CAP_USDT
+  if [ -s "$CUM_CAP_FILE" ]; then
+    c=$(tr -d ' \r\n' < "$CUM_CAP_FILE")
+    if [[ "$c" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then CL_CUM_CAP=$c; say "tran lo cong don do MASTER dat ($CUM_CAP_FILE): $c USDT"; fi
+  fi
+  raw=$($SSH_242 "cd $A 2>/dev/null || exit 0; for d in run/canary run/canary_done_* run/canary_prev_*; do [ -f \$d/canary_state.json ] && { echo \"==DIR \$d\"; cat \$d/canary_state.json; echo; }; done; true" < /dev/null) \
+    || die "khong doc duoc trang thai cac phien canary tren 242 (MIN-C2)"
+  out=$(printf '%s\n' "$raw" | python3 -I -c '
+import json, sys
+blocks, cur, buf = [], None, []
+for line in sys.stdin.read().splitlines():
+    if line.startswith("==DIR "):
+        if cur is not None: blocks.append((cur, "\n".join(buf)))
+        cur, buf = line[6:].strip(), []
+    else:
+        buf.append(line)
+if cur is not None: blocks.append((cur, "\n".join(buf)))
+tot, resets = 0.0, 0
+for d, t in blocks:
+    try: s = json.loads(t)
+    except Exception: print("SESS %s HONG (coi lo = 2.0)" % d); tot += 2.0; continue
+    l = float(s.get("cumFeeStable") or 0) - float(s.get("cumRealized") or 0) - float(s.get("cumFunding") or 0)
+    l = max(0.0, l)
+    tot += l
+    if d.startswith("run/canary_prev_"): resets += 1
+    print("SESS %s lo=%.4f aborted=%s" % (d, l, s.get("aborted")))
+print("CUM %.4f %d %d" % (tot, resets, len(blocks)))
+') || die "khong tinh duoc lo cong don"
+  CL_CUM_DETAIL=$(printf '%s\n' "$out" | grep '^SESS ')
+  CL_CUM_LOSS=$(printf '%s\n' "$out" | awk '/^CUM / {print $2}')
+  CL_RESETS=$(printf '%s\n' "$out" | awk '/^CUM / {print $3}')
+  say "lo cong don moi phien canary-early: ${CL_CUM_LOSS:-?} USDT (tran $CL_CUM_CAP), so lan CANARY_RESET: ${CL_RESETS:-?}"
+  printf '%s\n' "$CL_CUM_DETAIL" | sed '/^$/d; s/^/   /'
+  [ -n "$CL_CUM_LOSS" ] || die "khong tinh duoc lo cong don"
+  if [ "$mode" = check ] && python3 -I -c "import sys; sys.exit(0 if float('$CL_CUM_LOSS') > float('$CL_CUM_CAP') else 1)"; then
+    die "tong lo cong don $CL_CUM_LOSS USDT > tran $CL_CUM_CAP USDT (MIN-C2) — KHONG chay phien moi; MASTER quyet"
+  fi
+  return 0
 }

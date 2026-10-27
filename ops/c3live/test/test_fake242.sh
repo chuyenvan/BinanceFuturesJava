@@ -222,6 +222,7 @@ if [ -f FAKE_VTM_PATH ]; then
   [ -f "FAKE_VTM_RESTART_$N" ] && (cd "$VP" && bin/daemon.sh stop; bin/daemon.sh start) > /dev/null 2>&1
 fi
 [ -f "FAKE_RAM_LOW_$N" ] && printf 'MemTotal: 8000000 kB\nMemAvailable: 500000 kB\n' > "$(cat FAKE_MEMINFO_PATH)"
+[ -f "FAKE_HM_AFTER_$N" ] && cp "FAKE_HM_AFTER_$N" "$(cat FAKE_HM_PATH)"   # [3c] dong ho gia: het khung gio ngay sau buoc nay
 MSG=""; [ -f "FAKE_MSG_$N" ] && MSG=" $(cat "FAKE_MSG_$N")"
 echo "JOURNAL $J"
 echo "DATA {\"symMain\":\"C00USDT\",\"symAux\":\"C01USDT\"}"
@@ -330,6 +331,17 @@ OUT=$(cv FORCE_TIME=1 YES=1 bash $CN/canary_step.sh SETUP 2>&1); RC=$?
 chk "step SETUP => lenh setup, khong flatten" "[ $RC = 0 ] && [ \"\$(calls | awk '{print \$NF}')\" = setup ]"
 chk "khong file nao trong log Oracle chua key/secret" "! grep -rqF \"$FK\" $W/canarylog && ! grep -rqF \"$FS\" $W/canarylog"
 
+echo "-- 14h [3c MAJ-C1] canary.sh: khung gio dong GIUA phien (sau K1) => KHONG cho, chay tiep; ngoai gio o DAU phien => tu choi"
+echo "10 15" > $W/hm; echo "$W/hm" > $F/FAKE_HM_PATH; echo "10 50" > $F/FAKE_HM_AFTER_K1
+rm -f $F/run/canary/fake_calls.log
+T0=$(date +%s)
+OUT=$(cv YES=1 CL_FAKE_HM=$W/hm bash $CN/canary.sh 2>&1); RC=$?; DT=$(( $(date +%s) - T0 ))
+chk "canary.sh: gio dong giua phien => khong cho, chuoi day du, ${DT}s" "[ $RC = 0 ] && [ \"\$(calls)\" = 'K1 K2 K3 K4 K5 K6_OPEN K6_RESTART K6B_OPEN K6B_RESTART flatten K7 K7B K8' ] && ! echo \"\$OUT\" | grep -q 'ngoai khung gio' && [ $DT -lt 200 ]"
+rm -f $F/run/canary/fake_calls.log
+OUT=$(cv YES=1 CL_FAKE_HM=$W/hm bash $CN/canary.sh 2>&1); RC=$?
+chk "canary.sh: ngoai khung gio o DAU phien => TU_CHOI, khong JVM" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'khong hop le' && [ ! -s $F/run/canary/fake_calls.log ]"
+rm -f $F/FAKE_HM_PATH $F/FAKE_HM_AFTER_K1 $W/hm
+
 echo "== 15. [V12 3b] CANARY-EARLY (§ADD-1): thu muc rieng c3canary, v_t_m shadow CHI DOC + kiem khong doi moi buoc"
 C3=$W/c3canary
 cat > $F/conf/env.sh <<'EOF'
@@ -424,7 +436,60 @@ chk "early run: co CANARY_STOP => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT\" | grep
 rm -f $W/canarylog/CANARY_STOP
 OUT=$(ce CANARY_MODE=early YES=1 bash $CN/canary.sh 2>&1); RC=$?
 chk "canary.sh: CANARY_MODE=early => TU_CHOI (dung canary_early_run.sh)" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'canary_early_run'"
-chk "v_t_m KHONG doi qua toan bo muc 15 (tru thao tac cua chinh test), khong run/canary trong v_t_m" "[ \"\$(vmd5)\" = $V0 ] && [ ! -e $F/run/canary ]"
+echo "== 16. [V12 3c] MAJ-C1 khung gio / MIN-C2 lo cong don / MIN-C3 kill JVM treo / MIN-C4 canary_early_flatten.sh"
+echo "-- 16a early run: khung gio dong GIUA phien (sau K1) => KHONG cho, chuoi day du"
+newsession; echo "10 15" > $W/hm; echo "$W/hm" > $C3/FAKE_HM_PATH; echo "10 50" > $C3/FAKE_HM_AFTER_K1
+T0=$(date +%s)
+OUT=$(printf 'YES\n' | ce FORCE_TIME=0 CL_FAKE_HM=$W/hm bash $CN/canary_early_run.sh 2>&1); RC=$?; DT=$(( $(date +%s) - T0 )); RES=$(lastres)
+DONE4=$(ls -td $C3/run/canary_done_* 2>/dev/null | head -1)
+chk "early run: gio dong sau K1 => khong cho, DAT, ${DT}s" "[ $RCI = 0 ] && [ $RC = 0 ] && grep -q '^KET QUA PHIEN: DAT' \"$RES\" && [ \"\$(callsC $DONE4/fake_calls.log | awk '{print \$NF}')\" = cleanup ] && ! echo \"\$OUT\" | grep -q 'ngoai khung gio' && [ $DT -lt 200 ]"
+chk "early run: file ket qua ghi lo cong don + so lan CANARY_RESET" "grep -q 'lo cong don MOI phien canary-early: 0.0000 USDT (tran 4' \"$RES\" && grep -q 'so lan CANARY_RESET: [1-9]' \"$RES\""
+OUT=$(printf 'YES\n' | ce FORCE_TIME=0 CL_FAKE_HM=$W/hm bash $CN/canary_early_run.sh 2>&1); RC=$?
+chk "early run: ngoai khung gio o DAU phien => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'khong hop le'"
+rm -f $W/hm
+echo "-- 16b lo cong don moi phien > 4 USDT => tu choi phien moi; MASTER doi tran bang file gate"
+mkdir -p $C3/run/canary_prev_29990101_000000
+echo '{"symMain":"C00USDT","symAux":"C01USDT","cumFeeStable":0.5,"cumRealized":-4.0,"cumFunding":0.0,"steps":{}}' > $C3/run/canary_prev_29990101_000000/canary_state.json
+OUT=$(ce YES=1 CANARY_RESET=1 CANARY_EXPECT_TMB=10000 CUM_CAP_FILE=$W/cumcap.ok bash $CN/canary_early_install.sh 2>&1); RC=$?
+chk "early install: lo cong don 4.5 > 4 USDT => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'tong lo cong don 4.5000 USDT > tran 4'"
+OUT=$(printf 'YES\n' | ce CUM_CAP_FILE=$W/cumcap.ok bash $CN/canary_early_run.sh 2>&1); RC=$?
+chk "early run: lo cong don > 4 USDT => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'tong lo cong don'"
+echo 10 > $W/cumcap.ok
+OUT=$(ce YES=1 CANARY_RESET=1 CANARY_EXPECT_TMB=10000 CUM_CAP_FILE=$W/cumcap.ok bash $CN/canary_early_install.sh 2>&1); RC=$?
+chk "early install: MASTER dat tran 10 (file gate) => chay duoc" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'tran lo cong don do MASTER dat'"
+rm -rf $C3/run/canary_prev_29990101_000000 $W/cumcap.ok
+echo "-- 16c MIN-C3: canary_early_flatten.sh kill JVM canary TREO (chi cwd c3canary, giu lock >= 10', heartbeat cu >= 3')"
+cat > $W/hang.sh <<'HG'
+#!/usr/bin/env bash
+# gia lap JVM canary TREO: $1 = thu muc canary; ghi "lock" (since 20' truoc) + heartbeat (cu 10' hoac moi neu HB_FRESH=1) voi pid nay
+D=$1; mkdir -p "$D/run/canary"
+echo "c3live-canary step pid=$$ since=$(( ($(date +%s) - 1200) * 1000 ))" > "$D/run/c3live_account.lock"
+if [ -n "${HB_FRESH:-}" ]; then echo "pid=$$ ms=$(date +%s%3N) cmd=step" > "$D/run/canary/canary_jvm.hb"
+else echo "pid=$$ ms=$(( ($(date +%s) - 600) * 1000 )) cmd=step" > "$D/run/canary/canary_jvm.hb"; fi
+sleep 120
+HG
+hangpid() { pgrep -f "hang.sh $C3 com.binance.chuyennd.c3live.canary.C3LiveCanary" | head -1; }
+(cd $C3 && bash $W/hang.sh $C3 com.binance.chuyennd.c3live.canary.C3LiveCanary step K2) > /dev/null 2>&1 &
+sleep 1; HP=$(hangpid)
+OUT=$(printf 'YES\n' | ce bash $CN/canary_early_flatten.sh 2>&1); RC=$?
+chk "early flatten: JVM treo (cwd c3canary, lock 20', hb cu 10') => KILL roi flatten DAT" "[ -n \"$HP\" ] && [ $RC = 0 ] && echo \"\$OUT\" | grep -q \"KILLED $HP\" && ! kill -0 $HP 2>/dev/null && echo \"\$OUT\" | grep -q 'KET QUA: DAT'"
+rm -f $W/canarylog/CANARY_STOP
+(cd $C3 && HB_FRESH=1 bash $W/hang.sh $C3 com.binance.chuyennd.c3live.canary.C3LiveCanary step K2) > /dev/null 2>&1 &
+sleep 1; HP=$(hangpid)
+OUT=$(printf 'YES\n' | ce bash $CN/canary_early_flatten.sh 2>&1); RC=$?
+chk "early flatten: JVM canary heartbeat MOI => KHONG kill, flatten TU_CHOI (phien tu dong)" "[ -n \"$HP\" ] && [ $RC = 2 ] && kill -0 $HP 2>/dev/null && echo \"\$OUT\" | grep -q \"GIU $HP dang song\""
+kill $HP 2>/dev/null; rm -f $W/canarylog/CANARY_STOP
+(cd $F && bash $W/hang.sh $C3 com.binance.chuyennd.c3live.canary.C3LiveCanary step K2) > /dev/null 2>&1 &
+sleep 1; HP=$(hangpid)
+OUT=$(printf 'YES\n' | ce bash $CN/canary_early_flatten.sh 2>&1); RC=$?
+chk "early flatten: process cwd = v_t_m => KHONG BAO GIO kill" "[ -n \"$HP\" ] && kill -0 $HP 2>/dev/null && echo \"\$OUT\" | grep -q \"GIU $HP cwd=\""
+kill $HP 2>/dev/null; rm -f $W/canarylog/CANARY_STOP
+OUT=$(printf 'no\n' | ce bash $CN/canary_early_flatten.sh 2>&1); RC=$?
+chk "canary_early_flatten.sh: khong go YES => khong lam gi" "[ $RC = 2 ] && [ ! -e $W/canarylog/CANARY_STOP ]"
+OUT=$(printf 'YES\n' | ce bash $CN/canary_early_flatten.sh 2>&1); RC=$?
+chk "canary_early_flatten.sh: 1 lenh, tu dat CANARY_MODE=early (flatten trong c3canary) + tao STOP" "[ $RC = 0 ] && grep -q '^flatten .*CWD=$C3' $C3/run/canary/fake_calls.log && [ -f $W/canarylog/CANARY_STOP ]"
+rm -f $W/canarylog/CANARY_STOP
+chk "v_t_m KHONG doi qua toan bo muc 15-16 (tru thao tac cua chinh test), khong run/canary trong v_t_m" "[ \"\$(vmd5)\" = $V0 ] && [ ! -e $F/run/canary ]"
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]

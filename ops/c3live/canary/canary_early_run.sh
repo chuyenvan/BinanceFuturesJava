@@ -10,7 +10,9 @@
 # Cuoi phien (ca khi TRUOT): canary_report + kiem cleanup; DAT ca phien => doi ten run/canary -> run/canary_done_<TS>.
 # Ket qua: 1 file txt tren Oracle  ~/claude_master/canary/canary_early_result_<TS>.txt  (KHONG chua key) — gui MASTER.
 # Phien chay NEN (setsid): dong terminal KHONG dung phien. Dung khan cap: touch ~/claude_master/canary/CANARY_STOP
-#   (phien dung sau buoc dang chay + flatten), hoac CANARY_MODE=early YES=1 bash canary_flatten.sh (tu tao file STOP).
+#   (phien dung sau buoc dang chay + flatten), hoac bash canary_early_flatten.sh (tu tao file STOP, kill JVM treo, flatten).
+# [3c MAJ-C1] Khung gio CHI kiem o dau phien (tai khoan phang) — KHONG cho giua cac buoc; moi vi the co stop bao ve -4,5 % ngay khi mo.
+# [3c MIN-C2] Tong lo moi phien canary-early > 4 USDT => tu choi; file ket qua ghi tong lo + so lan CANARY_RESET.
 # Phuong an B (MO-2): USDT = 0 va K1 TRUOT vi -2019 => owner nap 50 USDT vao tai khoan con, bao MASTER (MASTER quyet chay lai).
 # =============================================================================
 export CANARY_MODE=early
@@ -44,6 +46,7 @@ RESF=$LOGDIR/canary_early_result_${TS}.txt
 cl_time_gate die
 cl_gates
 cl_check_242 early
+cl_cum_loss check   # [3c MIN-C2] tong lo moi phien canary-early > 4 USDT => khong chay (MASTER quyet)
 cl_vtm_baseline
 VTM_LOG=""
 vlog() { VTM_LOG+="$*"$'\n'; }
@@ -77,7 +80,7 @@ declare -A RES
 FAIL=""; WHY=""; K1OUT=""
 for k in $SEQ; do
   [ -e "$STOPF" ] && { FAIL=$k; WHY="file STOP (owner dung khan cap)"; break; }
-  cl_time_gate wait || { FAIL=$k; WHY="ngoai khung gio qua ${TIME_WAIT_MAX_S}s"; break; }
+  # [3c MAJ-C1] KHONG cho khung gio giua cac buoc (co the con vi the/stop mo) — khung gio chi kiem o dau phien (tren)
   if ! cl_vtm_check "truoc $k"; then FAIL=$k; WHY="v_t_m bi doi truoc $k: $CL_VTM_DIFF"; vlog "TRUOC $k: DOI $CL_VTM_DIFF"; break; fi
   vlog "truoc $k: khong doi (pid $(pv BOT)) RAM $(pv MEM_MB) MB"
   cl_ram_check "$MIN_RAM_STEP_MB" || { FAIL=$k; WHY="MemAvailable $(pv MEM_MB) MB < $MIN_RAM_STEP_MB MB"; break; }
@@ -93,10 +96,11 @@ done
 FLAT=""
 if [ -n "$FAIL" ]; then
   say "DUNG o buoc $FAIL ($WHY) — dong het vi the 2 symbol canary (flatten)"
+  cl_kill_hung   # [3c MIN-C3] JVM canary treo (giu lock, khong heartbeat) => kill truoc, roi flatten
   cl_run "" flatten; RF=$?
   FLAT="flatten: $(cl_verdict $RF) | $CL_LAST_RESULT"
   say "$FLAT"
-  [ "$RF" = 0 ] || say "!! flatten KHONG DAT — owner chay ngay: CANARY_MODE=early YES=1 bash $(dirname "$0")/canary_flatten.sh ; bao MASTER"
+  [ "$RF" = 0 ] || say "!! flatten KHONG DAT — owner chay ngay: bash $(dirname "$0")/canary_early_flatten.sh ; bao MASTER"
   cl_vtm_check "sau flatten" && vlog "sau flatten: khong doi" || vlog "SAU flatten: DOI $CL_VTM_DIFF"
 fi
 PLANB=""
@@ -119,12 +123,15 @@ if [ "$SESSION" = DAT ]; then
   if [ "$R" = DOI_TEN_XONG ]; then RENAME="$A/$CDIR -> $A/run/canary_done_$TS"; else RENAME="KHONG doi ten duoc $CDIR"; SESSION=TRUOT; fi
 fi
 cl_vtm_check "cuoi phien" && vlog "cuoi phien: khong doi" || { vlog "CUOI phien: DOI $CL_VTM_DIFF"; SESSION=TRUOT; }
+cl_cum_loss info   # [3c MIN-C2] ghi vao file ket qua
 # ---- 1 file ket qua (khong key)
 {
   echo "CANARY-EARLY — KET QUA PHIEN $TS (prereg docs/prereg/GCANARY_PREREG.md §ADD-1 + §4/§5)"
   echo "jar 242: $A/$CJAR md5 $CANARY_JAR_MD5 ; v_t_m: $VTM (chi doc)"
   echo "KET QUA PHIEN: $SESSION$( [ -n "$FAIL" ] && echo " (dung o $FAIL: $WHY)")"
   [ -n "$PLANB" ] && echo "!! $PLANB"
+  echo "lo cong don MOI phien canary-early: $CL_CUM_LOSS USDT (tran $CL_CUM_CAP — vuot => phien moi bi tu choi); so lan CANARY_RESET: $CL_RESETS"
+  printf '%s\n' "$CL_CUM_DETAIL" | sed '/^$/d; s/^/  /'
   echo
   echo "== Buoc"
   for k in $SEQ; do echo "  $k: ${RES[$k]:-CHUA_CHAY}"; done

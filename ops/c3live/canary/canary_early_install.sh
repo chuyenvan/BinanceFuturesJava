@@ -26,6 +26,7 @@ cl_gates
 [ "$(md5sum < "$CANARY_JAR" | cut -c1-32)" = "$CANARY_JAR_MD5" ] || die "md5 jar Oracle $CANARY_JAR khac pin $CANARY_JAR_MD5"
 ok "jar Oracle md5 = pin $CANARY_JAR_MD5"
 cl_check_242 early_nojar
+cl_cum_loss check   # [3c MIN-C2] tong lo moi phien canary-early > 4 USDT => khong chay phien moi (MASTER quyet)
 cl_vtm_baseline
 # phien cu?
 ST=$($SSH_242 "cat $A/$CDIR/canary_state.json 2>/dev/null" < /dev/null)

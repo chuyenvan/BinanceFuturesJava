@@ -11,6 +11,13 @@ need_yes "gui lenh dong vi the THAT"
 if [ "$CANARY_MODE" = early ]; then
   # canary-early: phien chay nen co the dang chay => dat file STOP truoc (phien dung sau buoc hien tai, khong mo them)
   touch "$LOGDIR/CANARY_STOP" && say "da dat $LOGDIR/CANARY_STOP (phien canary_early_run dung o buoc ke; xoa co chu dich truoc phien moi)"
+  # [3c MIN-C3] JVM canary TREO (cwd = c3canary, giu lock >= 10', heartbeat cu >= 3') => kill truoc khi flatten; JVM con song => giu
+  cl_kill_hung
+  cl_probe
+  if [ "$(pv CANARY_JVM)" != 0 ]; then
+    say "JVM canary dang chay BINH THUONG (heartbeat moi) — phien nen se dung sau buoc nay va TU flatten (file STOP)."
+    say "Cho 1-2 phut roi chay lai lenh nay neu van con vi the."
+  fi
 fi
 cl_check_242
 cl_push_logback

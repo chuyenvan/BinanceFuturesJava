@@ -5,7 +5,8 @@
 #   YES=1 bash ops/c3live/canary/canary.sh
 #   YES=1 CANARY_INJECT_TIMEOUT=1 bash ops/c3live/canary/canary.sh   (MO-5: tiem timeout phia client 1 lan trong K1 — mac dinh TAT)
 # Thu tu: K1 K2 K3 K4 K5 K6(OPEN+kill+RESTART) K6b(OPEN+kill+doi ten so+RESTART+dong tay) K7 K7b K8.
-# Dung o buoc dau tien KHONG DAT => tu chay flatten (chi 2 symbol canary) + in TRUOT. Giua cac buoc: ngoai khung gio => cho.
+# Dung o buoc dau tien KHONG DAT => tu chay flatten (chi 2 symbol canary) + in TRUOT. Khung gio CHI kiem o dau phien (tai khoan
+# phang) — [3c MAJ-C1] khong bao gio cho giua cac buoc; moi vi the da co stop bao ve -4,5 % ngay khi mo (§ADD-2).
 # Gioi han CUNG nam trong code (khong config): 20 USDT/lenh (<= 25), tong mo <= 40, tran lo 2 USDT, chi 2 symbol theo luat.
 # Ket qua: "KET QUA: DAT|TRUOT|TU_CHOI". Sau DAT: canary_report.sh roi canary_cleanup.sh.
 # =============================================================================
@@ -25,7 +26,7 @@ done
 declare -A RES
 FAIL=""
 for k in $SEQ; do
-  cl_time_gate wait || { FAIL="$k(ngoai khung gio qua ${TIME_WAIT_MAX_S}s)"; break; }
+  # [3c MAJ-C1] KHONG cho khung gio giua cac buoc (co the con vi the/stop mo): khung gio chi kiem 1 lan o dau phien (tren)
   say "==== buoc $k"
   cl_macro "$k"; RC=$?
   RES[$k]=$(cl_verdict $RC)
