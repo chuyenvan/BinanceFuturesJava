@@ -49,7 +49,7 @@ Ghi chú production c3_live (ngoài canary): `C3LiveRuntime` vẫn dùng client 
 ## 4. Test
 - `mvn -o -q package -DskipTests=false`: **667 test, 0 fail, 0 error, 1 skip** (3e: 658; +5 CanaryEngineTest, +2 CanaryGuardTest, +2 C3LiveFlattenerTest; sửa 6 test cũ theo §ADD-4: LEGACY symbol khác ⇒ K1 ĐẠT; lỗ = PnL canary (không dùng tmb); K0 bỏ CANARY_EXPECT_TMB, kiểm availableBalance; guard từ chối ⇒ thử lại phút sau).
 - Mới: `legacyElsewhereUntouchedAndPickExcludesLegacySymbols` (LEGACY vị thế/lệnh/algo 3 symbol khác ⇒ chọn C02/C03, K1+flatten+cleanup ĐẠT, LEGACY nguyên vẹn, 0 lệnh ghi trên symbol LEGACY, 0 setDualSide), `legacyFillOnMainBetweenStepsIsRedAndNothingIsClosed`, `legacyFillOnMainMidStepIsRedAndNothingIsClosed` (LEGACY vào S_main giữa K4 ⇒ TRƯỢT-ĐỎ < 5', không đóng), `legacyRestingOrderOnCanarySymbolClosesCanaryPartOnly`, `accountLevelSettingsAreOnlyRead`; CanaryGuardTest `nonCanaryCidAndAccountLevelWritesRefused`, `readViewIsScopedToCanarySymbols`; C3LiveFlattenerTest `killSwitchFlattenAndCloseClusterUseEmergencyLane`, `closeNeverSellsMoreThanC3Qty`.
-- `test_fake242.sh` tren ban sao ops (6efcf094 + chk 14d sua theo tieu chi 5 moi): **TEST PASS 139/139** (134 cu + muc 17 cap nhat §ADD-4 + 4 moi muc 18 canary_set_key.sh + 1 Telegram khong so du).
+- `test_fake242.sh` tren ban sao ops (6efcf094 + chk 14d sua theo tieu chi 5 moi): **TEST PASS 139/139** trong khung gio (141/141 ngoai khung gio: 2 kiem "ngoai gio" — muc 1 rollback, 14b preflight — chi chay khi ngoai khung gio; A1 do 141) (134 cu + muc 17 cap nhat §ADD-4 + 4 moi muc 18 canary_set_key.sh + 1 Telegram khong so du).
 
 ## 5. Jar
 `~/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12dry_3f`, md5 **`d2f1b52c348b57939efc7e0165b9fdee`**, pin `canary_lib.sh`
