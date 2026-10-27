@@ -229,3 +229,20 @@ Ghi bởi agent v12exit theo chỉ thị MASTER (round 3c), TRƯỚC khi sửa c
   vào v_t_m. Mode chuẩn (cwd = v_t_m): không tự kill, chỉ báo.
 - **MIN-C1 (để vòng sau):** lock tài khoản con dùng đường dẫn tuyệt đối chung (vd `/root/.config/c3live/account.lock`) cho runtime live và
   canary — làm trước G-GOLIVE.
+
+## §ADD-3 Một lệnh canary-early + dùng lại keepAlive K0 (MASTER 10-27 tối)
+
+Ghi bởi agent v12exit theo chỉ thị MASTER (round 3d), TRƯỚC khi sửa code. Mọi mục khác giữ nguyên (guard tiền, v_t_m, RAM, trần lỗ phiên,
+trần lỗ cộng dồn, stop bảo vệ §ADD-2).
+
+- **Một lệnh** `canary_early_all.sh`: owner gõ YES một lần; toàn bộ chạy nền (setsid): chuẩn bị (jar/LEGACY/logback) → keycheck → kiểm tài
+  khoản PHẲNG → chờ khung giờ (CHỈ khi phẳng: 0 vị thế / 0 lệnh / 0 algo đọc bằng lệnh chỉ đọc; tối đa 2 h) → SETUP (CROSSED/1x 2 symbol theo
+  luật) → K0 → (nếu K0 chỉ thiếu CROSSED/1x vì luật chọn symbol khác: SETUP + K0 lại 1 lần) → kiểm phẳng + chờ khung giờ → run (K1..K8,
+  K6b, K7b; `CANARY_INJECT_TIMEOUT=1`, MỞ-5 dùng 1 lần) → report + cleanup → Telegram (ĐẠT / TRƯỢT / LỖI + 1 dòng + đường dẫn file kết quả,
+  không key). Lỗi ở bất kỳ bước nào ⇒ flatten (mode early) ⇒ dừng ⇒ báo.
+- **K0 — mốc tmb:** `CANARY_EXPECT_TMB` = tmb đọc (keycheck, chỉ đọc) NGAY trước K0, ghi log; tmb ngoài **[9 500, 12 000]** USDT ⇒ dừng.
+  (Owner đã nạp thêm 1 000 USDT: 10 000 BFUSD + 1 000 USDT. Lưu ý MỞ-2: USDT ≠ 0 ⇒ file kết quả ghi "cấu hình pilot USDT = 0 KHÔNG được kiểm".)
+- **K0 — dùng lại keepAlive:** bỏ phần chạy 65′ chờ keepAlive ≥ 2 **chỉ khi** lần K0 gần nhất trong cùng thư mục phiên (state) đã có
+  `ws.keepAliveOk ≥ 2` và `ws.openMs ≤ 5 s`, cách **≤ 24 h**, và **cùng jar** (md5 jar ghi trong K0 đó = md5 jar hiện tại; K0 cũ không ghi md5
+  ⇒ jar không đổi kể từ K0 đó theo mtime). Engine tự kiểm (không tin script), ghi `ws.keepAliveSkipped` = lý do (hoặc `ws.keepAliveReuse` =
+  vì sao không dùng được ⇒ chạy đủ 65′). Phần WS mở ≤ 5 s qua ít nhất 1 URL vẫn kiểm lại mỗi K0. Mọi tiêu chí K0 khác giữ nguyên.
