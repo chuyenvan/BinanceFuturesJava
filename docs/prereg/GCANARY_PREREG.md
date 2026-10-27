@@ -201,3 +201,31 @@ riêng canary-early; mọi mục khác (§1, §3–§7, §10) giữ nguyên, kh�
 - **Kết quả:** 1 file txt trên Oracle (`~/claude_master/canary/canary_early_result_<TS>.txt`, không chứa key) cho MASTER/A1; A1 kiểm jsonl
   độc lập trước khi MASTER ký kết quả canary-early. Kết quả canary-early **không** thay G-CANARY bản chuẩn trước G-MICRO nếu jar đổi
   (§5: lặp lại bản rút gọn sau mọi thay đổi jar).
+
+## §ADD-2 Trần lỗ giữa 2 JVM — stop bảo vệ −4,5 % (MASTER 10-27, sửa MAJ-C1 của A1 `audit/a1@9d60cd5b` A1_CANARY.md)
+
+Ghi bởi agent v12exit theo chỉ thị MASTER (round 3c), TRƯỚC khi sửa code. Áp cho canary-early và G-CANARY chuẩn. Mọi mục khác giữ nguyên.
+
+- **Lý do (MAJ-C1):** mỗi bước = 1 JVM; trần lỗ 2 USDT chỉ được canh khi có JVM. K1 để lại vị thế 20 USDT **không stop** cho K2; K2→K3,
+  K6→K6b để lại stop −18/−20 % (3,6–4 USDT > trần); script còn có thể chờ khung giờ tới 3600 s giữa hai bước; mất ssh ⇒ flatten cũng không chạy.
+- **Stop bảo vệ (bắt buộc):** mọi vị thế canary vừa mở (K1 và mọi bước có mở lệnh: K4, K5, K6_OPEN, K6B_OPEN, K7, K7b chính + phụ) có
+  NGAY stop **closePosition MARK_PRICE ở −d so giá vào** trước khi bước kết thúc, với
+  `d = min(4,5 %, (2 − 0,10 − lỗ hiện tại − lỗ xấu nhất của vị thế canary khác đang mở) / notional)`
+  (0,10 USDT = dự phòng phí đóng + trượt; lỗ hiện tại = max(phí + lỗ đã chốt, tmb0 − tmb)). Trường hợp thường: 40 USDT × 4,5 % = 1,8 USDT
+  + phí ≤ 2 USDT ⇒ trần giữ được **kể cả khi không JVM nào canh**. `d < 1 %` ⇒ KHÔNG mở lệnh. Không đặt / không thấy stop NEW trên sàn /
+  stop xa hơn −d ⇒ **đóng vị thế ngay** rồi TRƯỢT. Gateway canary từ chối mọi stop SELL thấp hơn `giá vào × (1 − 4,5 % − 2 bp)`
+  (2 bp = dung sai làm tròn FLOOR theo tick; luật §3: tick/giá ≤ 0,01 %). Bước `_OPEN` không ĐẠT cũng tự flatten trong JVM.
+- **Đổi số K2 (§4):** (a) stop bảo vệ −4,5 % (đặt lúc mở ở K1, hoặc đặt ở K2 nếu chưa có) — kiểm `queryStop` NEW, `algoStatus` NEW chỉ khi đặt
+  trong chính bước; (b) dời lên **−4,0 %**; (c) thử closePosition thứ 2 cùng chiều ở **−4,2 %** (ghi −4130 hay chấp nhận); (d) dời **−3,5 %**.
+  Tiêu chí ĐẠT giữ nguyên (đúng 1 stop c3s- NEW sau mỗi lần dời, queryStop khớp, response algoStatus NEW). Mọi mức ≥ −4,5 % so giá vào.
+- **K4 giữ nguyên** (stop mark −0,15 %, dời sát giá chờ kích). K5/K6/K6b/K7/K7b: stop −20 % cũ thay bằng stop bảo vệ.
+- **Khung giờ:** script KHÔNG chờ khung giờ trước bất kỳ bước nào trong phiên; `time_ok` chỉ kiểm ở **đầu phiên** (tài khoản phẳng; K1 là
+  bước mở đầu tiên). Ngoài khung giờ ở đầu phiên ⇒ từ chối, không chờ.
+- **MIN-C2:** canary-early ghi vào file kết quả số lần `CANARY_RESET` và **tổng lỗ cộng dồn mọi phiên** (mỗi phiên: max(0, phí + lỗ đã chốt
+  − funding) từ `canary_state.json` của run/canary, run/canary_done_*, run/canary_prev_*); tổng > **4 USDT** ⇒ từ chối phiên mới (install và run);
+  chạy tiếp cần MASTER (file gate `~/claude_master/deploy/gates/CANARY_EARLY_CUM_CAP.ok` chứa trần mới, MASTER tạo).
+- **MIN-C3:** flatten (mode early) tự kill JVM canary treo trước khi flatten — CHỈ process có cwd = thư mục canary riêng, đúng main class
+  `C3LiveCanary`, là pid đang giữ lock tài khoản con ≥ 10′ và heartbeat luồng chính (`run/canary/canary_jvm.hb`) cũ ≥ 3′; không bao giờ động
+  vào v_t_m. Mode chuẩn (cwd = v_t_m): không tự kill, chỉ báo.
+- **MIN-C1 (để vòng sau):** lock tài khoản con dùng đường dẫn tuyệt đối chung (vd `/root/.config/c3live/account.lock`) cho runtime live và
+  canary — làm trước G-GOLIVE.
