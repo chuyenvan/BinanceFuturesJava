@@ -251,10 +251,13 @@ cl_run() {
   for a in "$@" $envs; do [[ "$a" =~ ^[A-Za-z0-9_=.]+$ ]] || die "tham so la: $a"; done
   id="${TS}_$$_${RANDOM}"
   say "--> JVM canary: $* ${envs:+(env $envs)}"
-  $SSH_242 "cd $A && mkdir -p $CDIR && ( nohup setsid env -i PATH=\"\$PATH\" HOME=\"\$HOME\" LANG=C.UTF-8 CANARY_DIR=$CDIR \
+  # [3d] { ( ... ) ... & }: CHI subshell JVM chay nen (fd da chuyen /dev/null) — truoc day ca chuoi "cd && mkdir && (...)" bi dua
+  # nen voi fd kenh ssh => lenh ssh khoi dong KHONG tra ve toi khi JVM xong (K0 ~65'), STEP_MAX_S/poll khong co tac dung, mat
+  # mang giua chung => script die trong khi JVM van chay. Nay ssh tra ve ngay, poll theo doi nhu thiet ke.
+  $SSH_242 "cd $A && mkdir -p $CDIR && { ( nohup setsid env -i PATH=\"\$PATH\" HOME=\"\$HOME\" LANG=C.UTF-8 CANARY_DIR=$CDIR \
     LIVE_C3_KEYS_FILE=$KEYS_FILE LIVE_C3_KEYS_OWNER=$KEYS_OWNER $envs \
     $JAVA_242 -Xmx384m -XX:+UseSerialGC -XX:MaxMetaspaceSize=256m -Dlogback.configurationFile=$CDIR/logback-canary.xml -cp $CJAR $MAIN $* \
-    > $CDIR/.jvm_$id.out 2>&1 < /dev/null; echo \$? > $CDIR/.jvm_$id.rc.tmp; mv -f $CDIR/.jvm_$id.rc.tmp $CDIR/.jvm_$id.rc ) > /dev/null 2>&1 < /dev/null &" < /dev/null \
+    > $CDIR/.jvm_$id.out 2>&1 < /dev/null; echo \$? > $CDIR/.jvm_$id.rc.tmp; mv -f $CDIR/.jvm_$id.rc.tmp $CDIR/.jvm_$id.rc ) > /dev/null 2>&1 < /dev/null & }" < /dev/null \
     || die "khong khoi dong duoc JVM canary"
   CL_LAST_OUT=""; t0=$(date +%s)
   while :; do
@@ -405,4 +408,89 @@ print("CUM %.4f %d %d" % (tot, resets, len(blocks)))
     die "tong lo cong don $CL_CUM_LOSS USDT > tran $CL_CUM_CAP USDT (MIN-C2) — KHONG chay phien moi; MASTER quyet"
   fi
   return 0
+}
+
+# ---------------------------------------------------------------------------- [3d] dung chung install / canary_early_all.sh
+# cl_early_old: (chi doc) phien canary cu trong CANARY_HOME/run/canary => CL_OLD = NONE | K0ONLY | TRADE <buoc,..> | ABORTED | HONG
+#   (K0 / SETUP khong tinh la buoc giao dich; FLATTEN / CLEANUP / K1.. co tinh — giong engine hasTradeSteps)
+CL_OLD=""
+cl_early_old() {
+  local st
+  st=$($SSH_242 "cat $A/$CDIR/canary_state.json 2>/dev/null" < /dev/null)
+  CL_OLD=$(printf '%s' "$st" | python3 -I -c '
+import json, sys
+t = sys.stdin.read().strip()
+if not t: print("NONE"); sys.exit()
+try: s = json.loads(t)
+except Exception: print("HONG"); sys.exit()
+k = [x for x in (s.get("steps") or {}) if x not in ("K0", "SETUP")]
+print("TRADE " + ",".join(sorted(k)) if k else ("ABORTED" if s.get("aborted") else "K0ONLY"))
+')
+  say "phien canary cu tren 242: $CL_OLD"
+}
+
+# cl_early_jar: thu muc rieng CANARY_HOME (700) + jar pin (copy neu 242 chua co / khac pin; kiem md5 TREN 242). Dung probe gan nhat.
+cl_early_jar() {
+  local r
+  $SSH_242 "umask 077 && mkdir -p $A/run && chmod 700 $A" < /dev/null || die "khong tao duoc $A tren 242"
+  if [ "$(pv JAR)" != "$CANARY_JAR_MD5" ]; then
+    say "copy jar -> 242:$A/$CJAR"
+    $SCP_242 "$CANARY_JAR" "${RHOST}$A/$CJAR.tmp" || die "scp jar loi"
+    r=$($SSH_242 "cd $A && [ \"\$(md5sum < $CJAR.tmp | cut -c1-32)\" = $CANARY_JAR_MD5 ] && mv -f $CJAR.tmp $CJAR && echo JAR_OK || { rm -f $CJAR.tmp; echo JAR_SAI; }" < /dev/null)
+    [ "$r" = JAR_OK ] || die "md5 jar tren 242 sau copy khac pin — da xoa ban tam"
+  fi
+  ok "jar 242:$A/$CJAR md5 = pin"
+}
+
+# cl_early_reset: CANARY_RESET=1 va phien cu co giao dich => cleanup (tai khoan con PHAI phang) + doi ten run/canary_prev_<TS>
+cl_early_reset() {
+  [ "${CANARY_RESET:-0}" = 1 ] && [ "$CL_OLD" != NONE ] && [ "$CL_OLD" != K0ONLY ] || return 0
+  cl_push_logback
+  cl_run "" cleanup || die "CANARY_RESET: tai khoan con CHUA phang ($CL_LAST_RESULT) — chay bash $CL_HERE/canary_early_flatten.sh truoc"
+  $SSH_242 "cd $A && mv $CDIR run/canary_prev_$TS" < /dev/null || die "khong doi ten phien cu"
+  ok "phien cu -> $A/run/canary_prev_$TS"
+}
+
+# cl_flat_read: (CHI DOC) keycheck => CL_TMB, CL_FLAT ("pos=.. orders=.. algos=.."), CL_USDT, CL_ASSETS. KHONG ghi buoc vao state
+#   (khac cleanup/flatten — 2 lenh do ghi buoc CLEANUP/FLATTEN, bi tinh la buoc giao dich). 0 = phang, 1 = KHONG phang,
+#   2 = khong doc duoc (CL_FLAT_WHY).
+CL_TMB=""; CL_FLAT=""; CL_FLAT_WHY=""; CL_USDT=""; CL_ASSETS=""
+cl_flat_read() {
+  local l p o g
+  CL_TMB=""; CL_FLAT=""; CL_FLAT_WHY=""; CL_USDT=""; CL_ASSETS=""
+  cl_run "" keycheck || { CL_FLAT_WHY="keycheck khong DAT (${CL_LAST_RESULT:-khong co RESULT})"; return 2; }
+  l=$(printf '%s' "$CL_LAST_OUT" | grep '^KEYCHECK ' | tail -1)
+  CL_TMB=$(printf '%s' "$l" | sed -n 's/.* tmb=\([0-9][0-9.]*\) .*/\1/p')
+  CL_ASSETS=$(printf '%s' "$l" | sed -n 's/.* assets=\({[^}]*}\).*/\1/p')
+  CL_USDT=$(printf '%s' "$CL_ASSETS" | sed -nE 's/.*[{ ]USDT=([0-9.-]+).*/\1/p')
+  p=$(printf '%s' "$l" | sed -n 's/.* pos=\([0-9]*\) .*/\1/p')
+  o=$(printf '%s' "$l" | sed -n 's/.* orders=\([0-9]*\) .*/\1/p')
+  g=$(printf '%s' "$l" | sed -n 's/.* algos=\([0-9]*\)$/\1/p')
+  if ! [[ "$p" =~ ^[0-9]+$ && "$o" =~ ^[0-9]+$ && "$g" =~ ^[0-9]+$ ]]; then
+    CL_FLAT_WHY="keycheck khong in pos/orders/algos (jar tren 242 cu hon 3d?)"; return 2
+  fi
+  CL_FLAT="pos=$p orders=$o algos=$g"
+  say "keycheck (chi doc): tmb=${CL_TMB:-?} assets=${CL_ASSETS:-?} $CL_FLAT"
+  [ "$p" = 0 ] && [ "$o" = 0 ] && [ "$g" = 0 ]
+}
+
+# cl_tg <tin>: gui Telegram qua kenh san co tren Oracle (CANARY_TG_ENV, mac dinh ~/.config/health242/tg.env, cung cach doc nhu
+#   ops/health_242.sh). Token KHONG vao argv / log (curl -K - doc url tu stdin); tin nhan che mau bi mat truoc khi gui.
+#   Test: CANARY_TG_SINK=<file> => ghi tin vao file, KHONG goi mang. 0 = da gui.
+CANARY_TG_ENV=${CANARY_TG_ENV:-/home/ubuntu/.config/health242/tg.env}
+cl_tg() {
+  local msg code tok chat
+  msg=$(printf '%s' "$1" | sed -E 's/signature=[^ "]*/[CHE]/g; s/[0-9]{8,10}:[A-Za-z0-9_-]{35}/[CHE]/g; s/[A-Za-z0-9]{56,}/[CHE]/g' | head -c 3500)
+  if [ -n "${CANARY_TG_SINK:-}" ]; then
+    { printf '%s\n' "$msg"; echo "----"; } >> "$CANARY_TG_SINK"; say "Telegram (test sink): da ghi $CANARY_TG_SINK"; return 0
+  fi
+  [ -r "$CANARY_TG_ENV" ] || { say "!! khong doc duoc $CANARY_TG_ENV — KHONG gui duoc Telegram"; return 1; }
+  tok=$(sed -nE 's/^[[:space:]]*(export[[:space:]]+)?(TG_TOKEN=|tele-token:[[:space:]]*)//p' "$CANARY_TG_ENV" | head -1 | tr -d '\r"')
+  chat=$(sed -nE 's/^[[:space:]]*(export[[:space:]]+)?(TG_CHAT=|tele-chat-id:[[:space:]]*)//p' "$CANARY_TG_ENV" | head -1 | tr -d '\r"')
+  [ -n "$tok" ] && [ -n "$chat" ] || { say "!! $CANARY_TG_ENV thieu TG_TOKEN/TG_CHAT — KHONG gui duoc Telegram"; return 1; }
+  code=$(printf 'url = "https://api.telegram.org/bot%s/sendMessage"\n' "$tok" | curl -s -m 15 -o /dev/null -w '%{http_code}' -K - \
+    --data-urlencode "chat_id=$chat" --data-urlencode "text=$msg" 2>/dev/null)
+  tok=""
+  if [ "$code" = 200 ]; then say "Telegram: da gui (HTTP 200)"; return 0; fi
+  say "!! Telegram KHONG gui duoc (HTTP ${code:-loi})"; return 1
 }

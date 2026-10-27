@@ -12,6 +12,7 @@
 # Phien cu co buoc giao dich => TU CHOI; MASTER quyet chay lai: them CANARY_RESET=1 (chi khi tai khoan con phang; giu bang chung
 #   run/canary_prev_<TS>).
 # Tiep theo: bash ops/c3live/canary/canary_early_run.sh   (LENH 2/2)
+# [3d] Cach MOT lenh (cho khung gio + SETUP + K0 tmb doc duoc + run + Telegram): bash ops/c3live/canary/canary_early_all.sh
 # Ket qua: "KET QUA: DAT|TRUOT|TU_CHOI".
 # =============================================================================
 export CANARY_MODE=early
@@ -29,20 +30,10 @@ cl_check_242 early_nojar
 cl_cum_loss check   # [3c MIN-C2] tong lo moi phien canary-early > 4 USDT => khong chay phien moi (MASTER quyet)
 cl_vtm_baseline
 # phien cu?
-ST=$($SSH_242 "cat $A/$CDIR/canary_state.json 2>/dev/null" < /dev/null)
-OLD=$(printf '%s' "$ST" | python3 -I -c '
-import json, sys
-t = sys.stdin.read().strip()
-if not t: print("NONE"); sys.exit()
-try: s = json.loads(t)
-except Exception: print("HONG"); sys.exit()
-k = [x for x in (s.get("steps") or {}) if x not in ("K0", "SETUP")]
-print("TRADE " + ",".join(sorted(k)) if k else ("ABORTED" if s.get("aborted") else "K0ONLY"))
-')
-say "phien canary cu tren 242: $OLD"
-case "$OLD" in
+cl_early_old
+case "$CL_OLD" in
   NONE|K0ONLY) ;;
-  *) [ "$CANARY_RESET" = 1 ] || die "da co phien canary ($OLD) trong $A/$CDIR — MASTER quyet chay lai: them CANARY_RESET=1" ;;
+  *) [ "$CANARY_RESET" = 1 ] || die "da co phien canary ($CL_OLD) trong $A/$CDIR — MASTER quyet chay lai: them CANARY_RESET=1" ;;
 esac
 if [ "$YES" != 1 ]; then
   say "CHI KIEM: dieu kien vao §ADD-1 DAT (chua ghi gi len 242). Chay that: YES=1 CANARY_EXPECT_TMB=$ET bash $0"
@@ -50,21 +41,8 @@ if [ "$YES" != 1 ]; then
   exit 0
 fi
 # --- (3) thu muc rieng + jar
-$SSH_242 "umask 077 && mkdir -p $A/run && chmod 700 $A" < /dev/null || die "khong tao duoc $A tren 242"
-if [ "$(pv JAR)" != "$CANARY_JAR_MD5" ]; then
-  say "copy jar -> 242:$A/$CJAR"
-  $SCP_242 "$CANARY_JAR" "${RHOST}$A/$CJAR.tmp" || die "scp jar loi"
-  R=$($SSH_242 "cd $A && [ \"\$(md5sum < $CJAR.tmp | cut -c1-32)\" = $CANARY_JAR_MD5 ] && mv -f $CJAR.tmp $CJAR && echo JAR_OK || { rm -f $CJAR.tmp; echo JAR_SAI; }" < /dev/null)
-  [ "$R" = JAR_OK ] || die "md5 jar tren 242 sau copy khac pin — da xoa ban tam"
-fi
-ok "jar 242:$A/$CJAR md5 = pin"
-if [ "$CANARY_RESET" = 1 ] && [ "$OLD" != NONE ] && [ "$OLD" != K0ONLY ]; then
-  cl_push_logback
-  cl_run "" cleanup; RC=$?
-  [ "$RC" = 0 ] || die "CANARY_RESET: tai khoan con CHUA phang ($CL_LAST_RESULT) — chay CANARY_MODE=early YES=1 bash $(dirname "$0")/canary_flatten.sh truoc"
-  $SSH_242 "cd $A && mv $CDIR run/canary_prev_$TS" < /dev/null || die "khong doi ten phien cu"
-  ok "phien cu -> $A/run/canary_prev_$TS"
-fi
+cl_early_jar
+cl_early_reset
 cl_copy_legacy
 cl_push_logback
 cl_check_242 early
