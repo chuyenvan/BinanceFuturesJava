@@ -1,0 +1,24 @@
+# A1 canary proofs (summary) — 2026-10-27, worktree 5a66444e, jar class-identical to v12dry_3b
+## class-load (unshare -rn, env -i); forbidden = PrivateConfig|ClientSingleton|BinanceFuturesClientSingleton|com.binance.client.|aerospike|redis|mapper|chuyennd.config.
+chk/iso1/cl.log loaded=3840 forbidden=0 utils=0
+chk/iso3/cl_cleanup.log loaded=3482 forbidden=0 utils=1
+chk/iso3/cl_flatten.log loaded=3086 forbidden=0 utils=1
+chk/iso3/cl_keycheck.log loaded=2829 forbidden=0 utils=0
+chk/iso3/cl_preflight.log loaded=3472 forbidden=0 utils=1
+chk/iso3/cl_step_K1.log loaded=3086 forbidden=0 utils=1
+chk/h/cl.log loaded=2520 forbidden=0 utils=1
+## JVM results
+out_cleanup.txt: RESULT CLEANUP TRUOT | loi GatewayException{OTHER, http=0, code=0, notExecuted=true, msg=GET /fapi/v1/time: khong ket noi duoc}
+out_flatten.txt: RESULT FLATTEN TU_CHOI | chua chon symbol — khong co gi de dong
+out_keycheck.txt: RESULT keycheck TRUOT | GatewayException: GET /fapi/v1/time: khong ket noi duoc
+out_preflight.txt: RESULT K0 TRUOT | loi GatewayException{OTHER, http=0, code=0, notExecuted=true, msg=GET /fapi/v1/exchangeInfo: khong ket noi duoc}
+out_step_K1.txt: RESULT K1 TU_CHOI | chua chon symbol (chay canary_preflight truoc)
+iso1 junit: OK (20 tests)
+## forbidden env: -DLIVE_TS_MKT_EXT=1 and TRADING_PROFILE => RESULT status TU_CHOI (env khong sach)
+## test_fake242: TEST PASS 102/102
+## parity 2026-10-23
+out_BT e0918a333a52be3aefe2a3b62a5ac8f4
+out_NEW2 e0918a333a52be3aefe2a3b62a5ac8f4
+fund_BT a81b3b03915a44d418ee23488d71d226
+fund_NEW2 8dea3f700aaddfd6abad961af1c65ea7
+## bytecode vs dcae2e2b: 26 classes differ; new jar vs v12dry_3b: 0 files differ
