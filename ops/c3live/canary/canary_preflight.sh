@@ -10,6 +10,7 @@
 # =============================================================================
 . "$(cd "$(dirname "$0")" && pwd)/canary_lib.sh"
 cl_init preflight
+[ "$CANARY_MODE" = standard ] || die "canary_preflight.sh chi cho G-CANARY chuan; canary-early dung canary_early_install.sh"
 ET=${CANARY_EXPECT_TMB:-}
 [[ "$ET" =~ ^[0-9]+(\.[0-9]+)?$ ]] || die "thieu/sai CANARY_EXPECT_TMB (so da nap vao tai khoan con, vd 10000) — §4 K0 tmb ~ so da nap +-1 %"
 cl_time_gate die

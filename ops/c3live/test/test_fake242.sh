@@ -186,7 +186,7 @@ cat > "$W/fakejava.sh" <<'FJ'
 while [ $# -gt 0 ] && [ "$1" != com.binance.chuyennd.c3live.canary.C3LiveCanary ]; do shift; done
 shift; CMD=${1:-}; K=${2:-}
 D=${CANARY_DIR:-run/canary}; mkdir -p "$D"
-echo "$CMD $K TMB=${CANARY_EXPECT_TMB:-} INJ=${CANARY_INJECT_TIMEOUT:-} KF=${LIVE_C3_KEYS_FILE:-}" >> "$D/fake_calls.log"
+echo "$CMD $K TMB=${CANARY_EXPECT_TMB:-} INJ=${CANARY_INJECT_TIMEOUT:-} KF=${LIVE_C3_KEYS_FILE:-} CWD=$(pwd) ENVX=$(env | grep -c -E '^(LIVE_PROFILE|TRADING_PROFILE|LIVE_TS_MKT_EXT)=')" >> "$D/fake_calls.log"
 sleep 1
 [ -f FAKE_CANARY_LOCK ] && { echo "RESULT $CMD TU_CHOI | lock tai khoan con dang bi giu (gia)"; exit 2; }
 case "$CMD" in
@@ -208,15 +208,24 @@ NOW=$(date +%s%3N)
 echo "{\"ts\":$NOW,\"type\":\"CALL_W\",\"api\":\"newMarketOrder:BUY\",\"symbol\":\"C00USDT\",\"cid\":\"c3-C00USDT-$N-$RANDOM$RANDOM\",\"ok\":true,\"latMs\":42,\"w1m\":17}" >> "$J"
 echo "{\"ts\":$NOW,\"type\":\"STEP_RESULT\",\"k\":\"$N\",\"verdict\":\"$V\"}" >> "$J"
 python3 -I - "$D/canary_state.json" "$N" "$V" <<'PY'
-import json, os, sys
+import json, os, sys, time
 f, n, v = sys.argv[1:4]
 s = json.load(open(f)) if os.path.exists(f) else {"symMain": "C00USDT", "symAux": "C01USDT", "steps": {}}
-s.setdefault("steps", {})[n] = {"result": v, "fails": [] if v == "DAT" else ["gia"], "data": {"openLeg": {"streamLatMs": 120}}}
+s.setdefault("steps", {})[n] = {"result": v, "ms": int(time.time() * 1000), "fails": [] if v == "DAT" else ["gia"],
+                                "data": {"openLeg": {"streamLatMs": 120}}}
 json.dump(s, open(f, "w"))
 PY
+# [3b] moc test: doi v_t_m / restart bot / ha RAM ngay trong buoc (gia lap su co ngoai canary)
+if [ -f FAKE_VTM_PATH ]; then
+  VP=$(cat FAKE_VTM_PATH)
+  [ -f "FAKE_VTM_TOUCH_$N" ] && echo "# doi boi test" >> "$VP/conf/env.sh"
+  [ -f "FAKE_VTM_RESTART_$N" ] && (cd "$VP" && bin/daemon.sh stop; bin/daemon.sh start) > /dev/null 2>&1
+fi
+[ -f "FAKE_RAM_LOW_$N" ] && printf 'MemTotal: 8000000 kB\nMemAvailable: 500000 kB\n' > "$(cat FAKE_MEMINFO_PATH)"
+MSG=""; [ -f "FAKE_MSG_$N" ] && MSG=" $(cat "FAKE_MSG_$N")"
 echo "JOURNAL $J"
 echo "DATA {\"symMain\":\"C00USDT\",\"symAux\":\"C01USDT\"}"
-echo "RESULT $N $V$( [ $V = DAT ] || echo ' | gia')"
+echo "RESULT $N $V$( [ $V = DAT ] || echo ' | gia')$MSG"
 exit $RC
 FJ
 mkdir -p "$W/canarylog"; echo ok > "$W/g1.ok"; echo ok > "$W/g2.ok"
@@ -320,6 +329,102 @@ chk "flatten: YES=1 => DAT + in trang thai" "[ $RC = 0 ] && echo \"\$OUT\" | gre
 OUT=$(cv FORCE_TIME=1 YES=1 bash $CN/canary_step.sh SETUP 2>&1); RC=$?
 chk "step SETUP => lenh setup, khong flatten" "[ $RC = 0 ] && [ \"\$(calls | awk '{print \$NF}')\" = setup ]"
 chk "khong file nao trong log Oracle chua key/secret" "! grep -rqF \"$FK\" $W/canarylog && ! grep -rqF \"$FS\" $W/canarylog"
+
+echo "== 15. [V12 3b] CANARY-EARLY (§ADD-1): thu muc rieng c3canary, v_t_m shadow CHI DOC + kiem khong doi moi buoc"
+C3=$W/c3canary
+cat > $F/conf/env.sh <<'EOF'
+export LIVE_PROFILE=c3_shadow
+export SHADOW_NO_PUSH=true
+export LIVE_TS_MKT_EXT=1
+export SYMBOL_MAPPER_DUP_POLICY=WARN
+export LIVE_FEAT_DUMP=200000
+EOF
+(cd $F && bin/daemon.sh stop; bin/daemon.sh start)
+printf 'MemTotal: 8000000 kB\nMemAvailable: 2500000 kB\n' > $W/meminfo
+echo "XRPUSDT" > $F/run/legacy_symbols.csv
+rm -rf $F/run/canary
+ce() { cv CANARY_HOME=$C3 VTM_DIR=$F MEMINFO_FILE=$W/meminfo CANARY_JAR=$W/new.jar CL_RETRY_S=1 FORCE_TIME=1 "$@"; }
+callsC() { awk '{print ($1=="step") ? $2 : $1}' "$1" 2>/dev/null | tr '\n' ' ' | sed 's/ $//'; }
+vmd5() { cat $F/target/binance-java-sdk-1.2.4.jar $F/conf/env.sh $F/bin/start.sh | md5sum | cut -c1-32; }
+lastres() { ls -t $W/canarylog/canary_early_result_*.txt 2>/dev/null | head -1; }
+newsession() {   # phien moi: install lai (CANARY_RESET=1 neu phien cu co giao dich)
+  OUTI=$(ce YES=1 CANARY_RESET=1 CANARY_EXPECT_TMB=10000 bash $CN/canary_early_install.sh 2>&1); RCI=$?
+  rm -f $C3/FAKE_*; echo "$F" > $C3/FAKE_VTM_PATH; echo "$W/meminfo" > $C3/FAKE_MEMINFO_PATH
+}
+V0=$(vmd5); P0=$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)
+echo "-- 15a install: dieu kien vao §ADD-1"
+OUT=$(ce bash $CN/canary_early_install.sh 2>&1); RC=$?
+chk "early install: thieu CANARY_EXPECT_TMB => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q CANARY_EXPECT_TMB"
+OUT=$(ce GATE_FILES=$W/khong_co.ok CANARY_EXPECT_TMB=10000 bash $CN/canary_early_install.sh 2>&1); RC=$?
+chk "early install: thieu gate CODE => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'thieu file gate MASTER'"
+OUT=$(ce CANARY_JAR_MD5=00000000000000000000000000000000 CANARY_EXPECT_TMB=10000 bash $CN/canary_early_install.sh 2>&1); RC=$?
+chk "early install: jar Oracle khac pin => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'khac pin'"
+sed -i 's/^export LIVE_PROFILE=c3_shadow$/export LIVE_PROFILE=c3_live/' $F/conf/env.sh; (cd $F && bin/daemon.sh stop; bin/daemon.sh start)
+OUT=$(ce CANARY_EXPECT_TMB=10000 bash $CN/canary_early_install.sh 2>&1); RC=$?
+sed -i 's/^export LIVE_PROFILE=c3_live$/export LIVE_PROFILE=c3_shadow/' $F/conf/env.sh
+chk "early install: v_t_m khong c3_shadow => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'phai c3_shadow'"
+sed -i '/^export SHADOW_NO_PUSH=true$/d' $F/conf/env.sh; (cd $F && bin/daemon.sh stop; bin/daemon.sh start)
+OUT=$(ce CANARY_EXPECT_TMB=10000 bash $CN/canary_early_install.sh 2>&1); RC=$?
+sed -i '1a export SHADOW_NO_PUSH=true' $F/conf/env.sh; (cd $F && bin/daemon.sh stop; bin/daemon.sh start)
+chk "early install: v_t_m thieu SHADOW_NO_PUSH=true => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'SHADOW_NO_PUSH'"
+printf 'MemTotal: 8000000 kB\nMemAvailable: 900000 kB\n' > $W/meminfo
+OUT=$(ce CANARY_EXPECT_TMB=10000 bash $CN/canary_early_install.sh 2>&1); RC=$?
+printf 'MemTotal: 8000000 kB\nMemAvailable: 2500000 kB\n' > $W/meminfo
+chk "early install: MemAvailable < 1 GB => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'RAM 242 khong du'"
+OUT=$(ce CANARY_EXPECT_TMB=10000 CANARY_HOME=$F/c3canary bash $CN/canary_early_install.sh 2>&1); RC=$?
+chk "early install: CANARY_HOME trong v_t_m => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'nam trong v_t_m'"
+V0=$(vmd5); P0=$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)
+OUT=$(ce CANARY_EXPECT_TMB=10000 bash $CN/canary_early_install.sh 2>&1); RC=$?
+chk "early install: khong YES => chi kiem, KHONG ghi 242" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'CHI KIEM' && [ ! -e $C3 ]"
+echo "-- 15b install YES=1 (copy jar rieng + K0 chi doc); env goi co LIVE_PROFILE/LIVE_TS_MKT_EXT/TRADING_PROFILE => JVM van env sach"
+OUT=$(ce YES=1 CANARY_EXPECT_TMB=10000 LIVE_PROFILE=c3_shadow LIVE_TS_MKT_EXT=1 TRADING_PROFILE=/khong/co bash $CN/canary_early_install.sh 2>&1); RC=$?
+echo "$OUT" | grep -a 'KET QUA\|LEGACY\|v_t_m khong doi' | head -6
+chk "early install: DAT, jar rieng md5 = pin, thu muc 700" "[ $RC = 0 ] && [ \"\$(md5sum < $C3/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEW ] && [ \$(stat -c %a $C3) = 700 ] && echo \"\$OUT\" | grep -q 'KET QUA: DAT'"
+chk "early install: JVM chay trong c3canary, env sach (ENVX=0), keycheck + K0" "[ \"\$(callsC $C3/run/canary/fake_calls.log)\" = 'keycheck preflight' ] && grep -q '^preflight  TMB=10000 .*CWD=$C3 ENVX=0' $C3/run/canary/fake_calls.log && ! grep -q 'ENVX=[1-9]' $C3/run/canary/fake_calls.log"
+chk "early install: LEGACY sao tu v_t_m (chi doc), logback rieng" "cmp -s $F/run/legacy_symbols.csv $C3/run/legacy_symbols.csv && cmp -s $CN/logback-canary.xml $C3/run/canary/logback-canary.xml"
+chk "early install: v_t_m KHONG doi (md5 jar/env/start, PID), khong co run/canary trong v_t_m" "[ \"\$(vmd5)\" = $V0 ] && [ \"\$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)\" = $P0 ] && [ ! -e $F/run/canary ] && echo \"\$OUT\" | grep -q 'v_t_m khong doi (sau K0)'"
+echo "-- 15c run: hoi YES 1 lan; chuoi day du; report + cleanup + 1 file ket qua"
+OUT=$(printf 'no\n' | ce bash $CN/canary_early_run.sh 2>&1); RC=$?
+chk "early run: khong go YES => TU_CHOI, khong buoc nao" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'khong go YES' && [ \"\$(callsC $C3/run/canary/fake_calls.log)\" = 'keycheck preflight' ]"
+echo "$F" > $C3/FAKE_VTM_PATH; echo "$W/meminfo" > $C3/FAKE_MEMINFO_PATH
+OUT=$(printf 'YES\n' | ce LIVE_PROFILE=c3_shadow bash $CN/canary_early_run.sh 2>&1); RC=$?; echo "$OUT" | grep -a 'KET QUA PHIEN\|File ket qua' | tail -2
+DONE3=$(ls -d $C3/run/canary_done_* 2>/dev/null | head -1); RES=$(lastres)
+chk "early run: DAT, dung thu tu, report + cleanup, doi ten canary_done" "[ $RC = 0 ] && [ \"\$(callsC $DONE3/fake_calls.log)\" = 'keycheck preflight status K1 K2 K3 K4 K5 K6_OPEN K6_RESTART K6B_OPEN K6B_RESTART flatten K7 K7B K8 cleanup' ] && [ ! -e $C3/run/canary ]"
+chk "early run: file ket qua DAT + report mode=early (tieu chi 4 KHONG_AP) + v_t_m tung buoc" "grep -q '^KET QUA PHIEN: DAT' \"$RES\" && grep -q 'mode=early' \"$RES\" && grep -q 'KET QUA TONG: DAT' \"$RES\" && grep -q 'KHONG_AP' \"$RES\" && [ \$(grep -c 'khong doi (pid' \"$RES\") -ge 20 ]"
+chk "early run: v_t_m KHONG doi sau ca phien; khong key trong file ket qua/log" "[ \"\$(vmd5)\" = $V0 ] && [ \"\$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)\" = $P0 ] && [ ! -e $F/run/canary ] && ! grep -qF \"$FK\" \"$RES\" && ! grep -rqF \"$FS\" $W/canarylog && ! grep -q 'ENVX=[1-9]' $DONE3/fake_calls.log"
+echo "-- 15d v_t_m bi doi giua phien (env.sh doi trong K3) => DUNG ngay + flatten, khong K4"
+newsession; touch $C3/FAKE_VTM_TOUCH_K3
+OUT=$(printf 'YES\n' | ce bash $CN/canary_early_run.sh 2>&1); RC=$?; RES=$(lastres)
+sed -i '/doi boi test/d' $F/conf/env.sh
+CL=$(callsC $C3/run/canary/fake_calls.log)
+chk "early run: env v_t_m doi sau K3 => TRUOT, flatten, KHONG K4, giu run/canary" "[ $RCI = 0 ] && [ $RC != 0 ] && [ \"\${CL##*K2 }\" = 'K3 flatten cleanup' ] && grep -q 'v_t_m bi doi sau K3' \"$RES\" && grep -q '^KET QUA PHIEN: TRUOT' \"$RES\" && [ -d $C3/run/canary ]"
+OUT=$(ce YES=1 CANARY_EXPECT_TMB=10000 bash $CN/canary_early_install.sh 2>&1); RC=$?
+chk "early install: phien cu co giao dich, khong CANARY_RESET => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'CANARY_RESET=1'"
+echo "-- 15e PID bot v_t_m doi (restart trong K2) => DUNG + flatten"
+newsession; touch $C3/FAKE_VTM_RESTART_K2
+OUT=$(printf 'YES\n' | ce bash $CN/canary_early_run.sh 2>&1); RC=$?; RES=$(lastres)
+CL=$(callsC $C3/run/canary/fake_calls.log)
+chk "early run: PID v_t_m doi sau K2 => TRUOT, flatten, KHONG K3; CANARY_RESET giu phien cu canary_prev" "[ $RCI = 0 ] && [ $RC != 0 ] && [ \"\${CL##*K1 }\" = 'K2 flatten cleanup' ] && grep -q 'v_t_m bi doi sau K2.*BOT=' \"$RES\" && ls -d $C3/run/canary_prev_* >/dev/null 2>&1"
+P0=$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)
+echo "-- 15f RAM tut duoi 768 MB giua phien => DUNG + flatten"
+newsession; touch $C3/FAKE_RAM_LOW_K2
+OUT=$(printf 'YES\n' | ce bash $CN/canary_early_run.sh 2>&1); RC=$?; RES=$(lastres)
+printf 'MemTotal: 8000000 kB\nMemAvailable: 2500000 kB\n' > $W/meminfo
+CL=$(callsC $C3/run/canary/fake_calls.log)
+chk "early run: MemAvailable < 768 MB truoc K3 => TRUOT, flatten, KHONG K3" "[ $RCI = 0 ] && [ $RC != 0 ] && [ \"\${CL##*K1 }\" = 'K2 flatten cleanup' ] && grep -q 'MemAvailable 488 MB < 768' \"$RES\""
+echo "-- 15g K1 -2019 (USDT = 0) => TRUOT + ghi phuong an B"
+newsession; touch $C3/FAKE_TRUOT_K1; echo "-2019 Margin is insufficient." > $C3/FAKE_MSG_K1
+OUT=$(printf 'YES\n' | ce bash $CN/canary_early_run.sh 2>&1); RC=$?; RES=$(lastres)
+chk "early run: K1 -2019 => TRUOT + PHUONG AN B (nap 50 USDT)" "[ $RCI = 0 ] && [ $RC != 0 ] && grep -q 'PHUONG AN B' \"$RES\" && [ \"\$(callsC $C3/run/canary/fake_calls.log | awk '{print \$(NF-2), \$(NF-1), \$NF}')\" = 'K1 flatten cleanup' ]"
+echo "-- 15h dung khan cap: canary_flatten (early) dat file STOP; phien moi bi chan toi khi xoa STOP"
+OUT=$(ce CANARY_MODE=early YES=1 bash $CN/canary_flatten.sh 2>&1); RC=$?
+chk "early flatten: DAT + tao CANARY_STOP" "[ $RC = 0 ] && [ -f $W/canarylog/CANARY_STOP ] && grep -q '^flatten .*CWD=$C3' $C3/run/canary/fake_calls.log"
+OUT=$(printf 'YES\n' | ce bash $CN/canary_early_run.sh 2>&1); RC=$?
+chk "early run: co CANARY_STOP => TU_CHOI" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'CANARY_STOP'"
+rm -f $W/canarylog/CANARY_STOP
+OUT=$(ce CANARY_MODE=early YES=1 bash $CN/canary.sh 2>&1); RC=$?
+chk "canary.sh: CANARY_MODE=early => TU_CHOI (dung canary_early_run.sh)" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'canary_early_run'"
+chk "v_t_m KHONG doi qua toan bo muc 15 (tru thao tac cua chinh test), khong run/canary trong v_t_m" "[ \"\$(vmd5)\" = $V0 ] && [ ! -e $F/run/canary ]"
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]

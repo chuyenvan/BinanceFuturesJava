@@ -67,9 +67,10 @@ for f in "$LOGDIR"/*.log; do
   c=$(grep -a -c -E 'signature=|[0-9]{8,10}:[A-Za-z0-9_-]{35}|[A-Za-z0-9]{56,}' "$f" 2>/dev/null); LOC=$((LOC + ${c:-0}))
 done
 RPT=$OUT/canary_report_$TS.txt
-python3 -I - "$OUT/files" "$OUT/secret_counts_242.txt" "$LOC" "$RPT" "$SD" <<'EOF'
+python3 -I - "$OUT/files" "$OUT/secret_counts_242.txt" "$LOC" "$RPT" "$SD" "$CANARY_MODE" <<'EOF'
 import glob, json, os, re, sys
 fdir, secf, loc, rpt, sd = sys.argv[1], sys.argv[2], int(sys.argv[3]), sys.argv[4], sys.argv[5]
+mode = sys.argv[6] if len(sys.argv) > 6 else "standard"
 L = []
 def p(s=""): L.append(s)
 sec = [l.split() for l in open(secf) if l.startswith("SEC ")]
@@ -111,7 +112,12 @@ r = {k: (steps.get(k) or {}).get("result") for k in REQ}
 def alldat(ks): return all(r.get(k) == "DAT" for k in ks)
 C(2, "0 stop mo coi / 0 luc vi the!=0 ma 0 stop", alldat(["K2", "K4", "K5", "K6", "K7", "K7b"]), "do trong buoc K2 K4 K5 K6 K7 K7b")
 C(3, "so = san 100%", alldat(["K1", "K6", "K7", "K8"]), "do trong buoc K1 K6 K7 K8 (qty, avg +-1 tick)")
-C(4, "0 latch kill-switch ngoai kich ban", latch_n == 0, "dong [KILLSW] LATCH log bot tu luc mo phien = %s" % latch_n)
+if mode == "early":
+    # §ADD-1: canary-early khong co kill-switch c3_live (bot v_t_m la shadow v1.1, KHONG doc log v_t_m); v_t_m kiem bang md5/PID
+    crit.append((4, "0 latch kill-switch ngoai kich ban", "KHONG_AP",
+                 "canary-early (§ADD-1): khong co kill-switch c3_live; v_t_m khong doi kiem md5 jar/env/start + PID moi buoc"))
+else:
+    C(4, "0 latch kill-switch ngoai kich ban", latch_n == 0, "dong [KILLSW] LATCH log bot tu luc mo phien = %s" % latch_n)
 ws = [e.get("w1m") for e in J if isinstance(e.get("w1m"), (int, float))]
 n429 = sum(1 for e in J if e.get("http") in (429, 418))
 C(5, "weight < 1200 (50% cua 2400), 0 HTTP 429/418", len(ws) > 0 and max(ws) < 1200 and n429 == 0,
@@ -140,8 +146,8 @@ C(9, "chi phi <= 2 USDT", cost is not None and cost <= 2.0 and not st.get("feeOt
   "phi+lo da chot=%s USDT; phi tai san khac=%s; aborted=%s" % (None if cost is None else round(cost, 4), st.get("feeOther"), st.get("aborted")))
 C(10, "diem CHUA XAC MINH §7 co ket qua", all(k in steps for k in ["K0", "K1", "K2", "K3", "K4", "K8"]), "xem 'Du lieu tung buoc' (K0 so du, K1 so du/phi, K2 c, K3 ma loi, K4 san tu huy?, K8 so cai)")
 allK = alldat(REQ)
-okAll = allK and all(c[2] in ("DAT", "GHI") for c in crit)
-p("G-CANARY BAO CAO — phien %s (prereg docs/prereg/GCANARY_PREREG.md §5, CHOT MASTER 10-25)" % sd)
+okAll = allK and all(c[2] in ("DAT", "GHI", "KHONG_AP") for c in crit)
+p("G-CANARY BAO CAO — phien %s, mode=%s (prereg docs/prereg/GCANARY_PREREG.md §5%s)" % (sd, mode, " + §ADD-1 CANARY-EARLY" if mode == "early" else ""))
 p("symbol chinh=%s phu=%s chon luc=%s; tmb0=%s; MO-5 tiem timeout da dung=%s" % (st.get("symMain"), st.get("symAux"), st.get("pickedAtMs"), st.get("tmb0"), st.get("injectTimeoutUsed")))
 p("KET QUA TONG: %s" % ("DAT" if okAll else "TRUOT"))
 p("")

@@ -2,9 +2,14 @@
 # =============================================================================
 # canary_lib.sh — ham dung chung cho script owner G-CANARY (ops/c3live/canary/*.sh). KHONG chay truc tiep (source).
 # Chay tren ORACLE; moi lenh JVM canary chay tren 242 (ssh root), JVM RIENG (C3LiveCanary), thu muc run/canary/ — KHONG dung
-# JVM bot (dry), KHONG restart gi. Jar canary = jar dang deploy tren 242 (target/binance-java-sdk-1.2.4.jar), md5 phai = pin.
-# Bien de thu (Oracle, 242 GIA trong test_fake242.sh): SSH_242, SCP_242, RHOST, APP_DIR, PROC_PAT, JAVA_242, LOGDIR,
-#   CANARY_JAR_MD5, CANARY_KEYS_FILE, CANARY_KEYS_OWNER, POLL_S, STEP_MAX_S, GATE_FILES, DRY_MIN_DAYS, TIME_WAIT_MAX_S.
+# JVM bot, KHONG restart gi. JVM luon chay bang `env -i` (khong LIVE_PROFILE/TRADING_PROFILE/LIVE_TS_MKT_EXT => khong Aerospike).
+# 2 che do (CANARY_MODE):
+#   standard (mac dinh, G-CANARY sau deploy dry): APP_DIR = v_t_m, jar = target/binance-java-sdk-1.2.4.jar dang deploy.
+#   early (prereg §ADD-1, canary_early_*.sh dat): thu muc RIENG CANARY_HOME (/home/chuyennd/java/c3canary), jar rieng
+#     binance-java-sdk-1.2.4.jar (copy tu Oracle), v_t_m CHI DOC (md5 jar/env/start, PID, env process) va phai KHONG DOI.
+# Bien de thu (Oracle, 242 GIA trong test_fake242.sh): SSH_242, SCP_242, RHOST, APP_DIR, CANARY_HOME, VTM_DIR, PROC_PAT, JAVA_242,
+#   LOGDIR, CANARY_JAR, CANARY_JAR_MD5, CANARY_KEYS_FILE, CANARY_KEYS_OWNER, POLL_S, STEP_MAX_S, GATE_FILES, DRY_MIN_DAYS,
+#   TIME_WAIT_MAX_S, MEMINFO_FILE.
 # Luat: YES=1 moi ghi/gui lenh; time_ok (FORCE_TIME=1 chi khi MASTER bao); khong in key/secret; log ~/claude_master/canary/.
 # =============================================================================
 set -uo pipefail
@@ -12,26 +17,43 @@ CL_HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 SSH_242=${SSH_242:-"ssh -p 2222 -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=6 -i /home/ubuntu/.ssh/id_rsa_chuyennd root@103.157.218.242"}
 SCP_242=${SCP_242:-"scp -P 2222 -o BatchMode=yes -i /home/ubuntu/.ssh/id_rsa_chuyennd"}
 RHOST=${RHOST-"root@103.157.218.242:"}
-A=${APP_DIR:-/home/chuyennd/java/v_t_m}
-PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}            # process bot (dry) — chi DOC env, khong cham
+CANARY_MODE=${CANARY_MODE:-standard}
+if [ "$CANARY_MODE" = early ]; then
+  VTM=${VTM_DIR:-/home/chuyennd/java/v_t_m}                  # app bot shadow v1.1 — canary KHONG ghi, chi doc md5/PID/env
+  A=${CANARY_HOME:-/home/chuyennd/java/c3canary}             # §ADD-1: thu muc + jar + run/ + lock RIENG
+  CJAR=binance-java-sdk-1.2.4.jar
+  GATE_FILES=${GATE_FILES:-"/home/ubuntu/claude_master/deploy/gates/GOLIVE_GATE_CODE_V12.ok"}   # MASTER tao sau khi A1 DAT
+else
+  A=${APP_DIR:-/home/chuyennd/java/v_t_m}
+  VTM=${VTM_DIR:-$A}                                         # standard: canary chay trong chinh app bot (sau deploy dry)
+  CJAR=target/binance-java-sdk-1.2.4.jar
+  GATE_FILES=${GATE_FILES:-"/home/ubuntu/claude_master/deploy/gates/GOLIVE_GATE_CODE_V12.ok /home/ubuntu/claude_master/deploy/gates/GOLIVE_GATE_PROMO_V11.ok"}
+fi
+PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}            # process bot — chi DOC env/PID/cwd, khong cham
 JAVA_242=${JAVA_242:-java}
-CANARY_JAR_MD5=${CANARY_JAR_MD5:-e702cc2d85e2402e8f9c1cf841eef875}   # [V12 3] pin jar v12dry_3 (dung chung dry + canary)
+CANARY_JAR=${CANARY_JAR:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12dry_3b}   # jar Oracle copy len 242 (early)
+CANARY_JAR_MD5=${CANARY_JAR_MD5:-5405dfb2d076768ed7d751095818fb07}   # [V12 3b] pin jar v12dry_3b (dung chung dry + canary)
 KEYS_FILE=${CANARY_KEYS_FILE:-/root/.config/c3live/keys.env}
 KEYS_OWNER=${CANARY_KEYS_OWNER:-root}
 LOGDIR=${LOGDIR:-/home/ubuntu/claude_master/canary}
 POLL_S=${POLL_S:-15}
 STEP_MAX_S=${STEP_MAX_S:-7200}
-GATE_FILES=${GATE_FILES:-"/home/ubuntu/claude_master/deploy/gates/GOLIVE_GATE_CODE_V12.ok /home/ubuntu/claude_master/deploy/gates/GOLIVE_GATE_PROMO_V11.ok"}
-DRY_MIN_DAYS=${DRY_MIN_DAYS:-5}                               # MO-1: >= 5 ngay dry sach
+DRY_MIN_DAYS=${DRY_MIN_DAYS:-5}                               # MO-1: >= 5 ngay dry sach (KHONG ap cho early, §ADD-1)
 TIME_WAIT_MAX_S=${TIME_WAIT_MAX_S:-3600}
+MEMINFO=${MEMINFO_FILE:-/proc/meminfo}
+readonly MIN_RAM_MB=1024                                      # §ADD-1: MemAvailable 242 >= 1 GB truoc khi start (hang so)
+readonly MIN_RAM_STEP_MB=768                                  # §ADD-1: truoc moi buoc sau do (hang so)
+readonly MIN_DISK_MB=400                                      # copy jar ~100 MB + journal
 YES=${YES:-0}
 FORCE_TIME=${FORCE_TIME:-0}
 CDIR=run/canary
 MAIN=com.binance.chuyennd.c3live.canary.C3LiveCanary
 MAIN_PAT='[c]om.binance.chuyennd.c3live.canary.C3LiveCanary'   # [c]: pgrep khong tu khop dong lenh shell chua mau
-TS=$(TZ=Asia/Ho_Chi_Minh date +%Y%m%d_%H%M%S)
+TS=${CL_TS:-$(TZ=Asia/Ho_Chi_Minh date +%Y%m%d_%H%M%S)}
 CL_LAST_RESULT=""
 CL_LAST_OUT=""
+CL_PROBE=""
+CL_VTM0=""
 
 say()  { echo "[$(TZ=Asia/Ho_Chi_Minh date '+%F %T')] $*"; }
 die()  { say "DUNG: $*"; say "KET QUA: TU_CHOI"; [ -n "${CL_LOG:-}" ] && say "Log: $CL_LOG"; exit 2; }
@@ -42,13 +64,21 @@ cl_init() {
   mkdir -p "$LOGDIR" || { echo "khong tao duoc $LOGDIR"; exit 2; }
   CL_LOG=$LOGDIR/$1_${TS}.log
   exec > >(tee -a "$CL_LOG") 2>&1
-  say "=== $1 TS=$TS APP_DIR=$A jar_pin=$CANARY_JAR_MD5 YES=$YES ==="
+  say "=== $1 TS=$TS MODE=$CANARY_MODE APP_DIR=$A jar_pin=$CANARY_JAR_MD5 YES=$YES ==="
   # chan gia tri la trong bien di vao lenh ssh
-  [[ "$A" =~ ^[A-Za-z0-9_./-]+$ ]] || die "APP_DIR la: $A"
+  [[ "$A" =~ ^[A-Za-z0-9_./-]+$ ]] || die "APP_DIR/CANARY_HOME la: $A"
+  [[ "$VTM" =~ ^[A-Za-z0-9_./-]+$ ]] || die "VTM_DIR la: $VTM"
+  [[ "$MEMINFO" =~ ^[A-Za-z0-9_./-]+$ ]] || die "MEMINFO_FILE la"
   [[ "$KEYS_FILE" =~ ^[A-Za-z0-9_./-]+$ ]] || die "CANARY_KEYS_FILE la"
   [[ "$KEYS_OWNER" =~ ^[a-z_][a-z0-9_-]*$ ]] || die "CANARY_KEYS_OWNER la"
   [[ "$JAVA_242" =~ ^[A-Za-z0-9_./\ -]+$ ]] || die "JAVA_242 la"
+  [[ "$PROC_PAT" =~ ^[A-Za-z0-9_.\ -]+$ ]] || die "PROC_PAT la"
   [[ "$CANARY_JAR_MD5" =~ ^[0-9a-f]{32}$ ]] || die "CANARY_JAR_MD5 chua pin"
+  case "$CANARY_MODE" in standard|early) ;; *) die "CANARY_MODE la: $CANARY_MODE" ;; esac
+  if [ "$CANARY_MODE" = early ]; then
+    case "$A/" in "$VTM"/*) die "CANARY_HOME ($A) nam trong v_t_m ($VTM) — §ADD-1 can thu muc rieng" ;; esac
+    [ "$A" != "$VTM" ] || die "CANARY_HOME = v_t_m"
+  fi
 }
 
 need_yes() { [ "$YES" = 1 ] || die "can YES=1 (vd: YES=1 bash $0 ${*:-}) — script nay $1"; }
@@ -75,53 +105,128 @@ cl_time_gate() {
   return 0
 }
 
-# cl_check_242 [dry]: (chi doc) jar md5 = pin; bot KHONG o LIVE_ADAPTER=live; khong co JVM canary khac.
-#   dry: them dieu kien vao §2.3 — bot o adapter dry >= DRY_MIN_DAYS ngay, 0 [KILLSW] LATCH / 0 [C3-LIVE-ORDER] tu moc start.
-cl_check_242() {
-  local mode=${1:-} out
-  out=$($SSH_242 "PP='$PROC_PAT' MAIN='$MAIN_PAT' bash -s -- $A" <<'EOF'
-A=$1; cd "$A" 2>/dev/null || { echo "ERR=cd"; exit 0; }
-echo "JAR=$(md5sum < target/binance-java-sdk-1.2.4.jar 2>/dev/null | cut -c1-32)"
-P=$(pgrep -f "$PP" | head -1)
-AD=""; [ -n "$P" ] && AD=$(tr '\0' '\n' < /proc/$P/environ 2>/dev/null | grep '^LIVE_ADAPTER=' | cut -d= -f2)
-echo "BOT=${P:-none} ADAPTER=${AD:-none}"
+# cl_probe: (CHI DOC tren 242) jar canary, process bot (PID/cwd/env), JVM canary, RAM, md5 v_t_m, o dia, (standard) moc dry.
+cl_probe() {
+  CL_PROBE=$($SSH_242 "PP='$PROC_PAT' MAIN='$MAIN_PAT' bash -s -- $A $CJAR $VTM $MEMINFO" <<'EOF'
+A=$1; CJ=$2; V=$3; MI=$4
+echo "JAR=$( [ -f "$A/$CJ" ] && md5sum < "$A/$CJ" | cut -c1-32 || echo none)"
+VR=$(readlink -f "$V" 2>/dev/null)
+P=""
+for p in $(pgrep -f -- "$PP" 2>/dev/null); do
+  [ "$(readlink -f /proc/$p/cwd 2>/dev/null)" = "$VR" ] && { P=$p; break; }
+done
+ev() { [ -n "$P" ] && tr '\0' '\n' < /proc/$P/environ 2>/dev/null | grep "^$1=" | head -1 | cut -d= -f2-; }
+echo "BOT=${P:-none}"
+echo "ADAPTER=$(ev LIVE_ADAPTER)"
+echo "PROFILE=$(ev LIVE_PROFILE)"
+echo "NOPUSH=$(ev SHADOW_NO_PUSH)"
 echo "CANARY_JVM=$(pgrep -fc "$MAIN")"
-ST=$(cat run/.v12_start_epoch 2>/dev/null); echo "START=${ST:-none}"
-if [ -n "$ST" ]; then
-  touch -d @"$ST" /tmp/.canary_mk_$$ 2>/dev/null
-  L=0; O=0
-  for f in $(find logs -maxdepth 1 -name 'full.log*' -newer /tmp/.canary_mk_$$ 2>/dev/null); do
-    c=$(zgrep -a -c '\[KILLSW\] LATCH' "$f" 2>/dev/null); L=$((L + ${c:-0}))
-    c=$(zgrep -a -c '\[C3-LIVE-ORDER\]' "$f" 2>/dev/null); O=$((O + ${c:-0}))
-  done
-  rm -f /tmp/.canary_mk_$$
-  echo "LATCH=$L ORDER=$O"
+echo "MEM_MB=$(awk '/^MemAvailable:/ {print int($2/1024)}' "$MI" 2>/dev/null)"
+for f in target/binance-java-sdk-1.2.4.jar conf/env.sh bin/start.sh; do
+  echo "VTM_MD5 $f $( [ -f "$V/$f" ] && md5sum < "$V/$f" | cut -c1-32 || echo none)"
+done
+echo "VTM_CANARY=$( [ -e "$V/run/canary" ] && echo co || echo khong)"
+D=$A; [ -d "$D" ] || D=$(dirname "$A")
+echo "DISK_MB=$(df -Pm "$D" 2>/dev/null | awk 'NR==2 {print $4}')"
+if [ -d "$A" ] && cd "$A" 2>/dev/null; then
+  ST=$(cat run/.v12_start_epoch 2>/dev/null); echo "START=${ST:-none}"
+  if [ -n "$ST" ]; then
+    touch -d @"$ST" /tmp/.canary_mk_$$ 2>/dev/null
+    L=0; O=0
+    for f in $(find logs -maxdepth 1 -name 'full.log*' -newer /tmp/.canary_mk_$$ 2>/dev/null); do
+      c=$(zgrep -a -c '\[KILLSW\] LATCH' "$f" 2>/dev/null); L=$((L + ${c:-0}))
+      c=$(zgrep -a -c '\[C3-LIVE-ORDER\]' "$f" 2>/dev/null); O=$((O + ${c:-0}))
+    done
+    rm -f /tmp/.canary_mk_$$
+    echo "LATCH=$L ORDER=$O"
+  fi
+else
+  echo "ADIR=none"
 fi
 EOF
 )
-  echo "$out" | sed 's/^/   242: /'
-  echo "$out" | grep -q '^ERR=' && die "khong vao duoc $A tren 242"
-  [ "$(echo "$out" | sed -n 's/^JAR=//p')" = "$CANARY_JAR_MD5" ] || die "md5 jar tren 242 khac pin $CANARY_JAR_MD5 (jar chua audit) — khong chay"
-  ok "jar 242 md5 = pin"
-  echo "$out" | grep -q 'ADAPTER=live' && die "bot dang o LIVE_ADAPTER=live (runtime chinh giu tai khoan con) — canary TU CHOI"
-  [ "$(echo "$out" | sed -n 's/^CANARY_JVM=//p')" = 0 ] || die "co JVM canary khac dang chay tren 242"
-  ok "bot khong o adapter live; khong co JVM canary khac"
-  if [ "$mode" = dry ]; then
-    echo "$out" | grep -q 'ADAPTER=dry' || die "bot khong chay LIVE_ADAPTER=dry (dieu kien vao §2.3)"
-    local st now; st=$(echo "$out" | sed -n 's/^START=//p'); now=$(date +%s)
-    [[ "$st" =~ ^[0-9]+$ ]] || die "khong co run/.v12_start_epoch (moc start dry)"
-    local days=$(( (now - st) / 86400 ))
-    [ $((now - st)) -ge $((DRY_MIN_DAYS * 86400)) ] || die "dry moi chay ${days} ngay (< $DRY_MIN_DAYS — MO-1)"
-    ok "dry chay ${days} ngay (>= $DRY_MIN_DAYS)"
-    echo "$out" | grep -q '^LATCH=0 ORDER=0$' || die "log dry tu moc start co [KILLSW] LATCH / [C3-LIVE-ORDER] (§2.3) — MASTER xem"
-    ok "log dry tu moc start: 0 [KILLSW] LATCH, 0 [C3-LIVE-ORDER]"
+}
+pv() { printf '%s\n' "$CL_PROBE" | sed -n "s/^$1=//p" | head -1; }
+# anh chup v_t_m (de so): md5 jar/env/start + PID + env process bot
+cl_vtm_snap() { printf '%s\n' "$CL_PROBE" | grep -E '^(VTM_MD5 |BOT=|PROFILE=|NOPUSH=|ADAPTER=)'; }
+
+# cl_check_242 [dry|early|early_nojar]: (chi doc) dieu kien chay
+#   standard/dry: jar dang deploy = pin; bot KHONG adapter live; khong JVM canary khac; dry: >= DRY_MIN_DAYS ngay sach (§2.3).
+#   early: (§ADD-1) jar canary rieng = pin (early_nojar: chua copy => bo qua); v_t_m chay c3_shadow + SHADOW_NO_PUSH=true, khong
+#     adapter live; khong JVM canary khac; MemAvailable >= 1 GB; v_t_m khong co run/canary; o dia du.
+cl_check_242() {
+  local mode=${1:-}
+  cl_probe || die "khong ssh duoc 242"
+  printf '%s\n' "$CL_PROBE" | sed 's/^/   242: /'
+  [ -n "$(pv JAR)" ] || die "khong doc duoc 242"
+  if [ "$mode" != early_nojar ]; then
+    [ "$(pv JAR)" = "$CANARY_JAR_MD5" ] || die "md5 jar tren 242 khac pin $CANARY_JAR_MD5 ($A/$CJAR = $(pv JAR)) — jar chua audit, khong chay"
+    ok "jar 242 md5 = pin"
   fi
+  [ "$(pv ADAPTER)" = live ] && die "bot dang o LIVE_ADAPTER=live (runtime chinh giu tai khoan con) — canary TU CHOI"
+  [ "$(pv CANARY_JVM)" = 0 ] || die "co JVM canary khac dang chay tren 242"
+  ok "bot khong o adapter live; khong co JVM canary khac"
+  case "$mode" in
+    dry)
+      [ "$(pv ADAPTER)" = dry ] || die "bot khong chay LIVE_ADAPTER=dry (dieu kien vao §2.3)"
+      local st now days; st=$(pv START); now=$(date +%s)
+      [[ "$st" =~ ^[0-9]+$ ]] || die "khong co run/.v12_start_epoch (moc start dry)"
+      days=$(( (now - st) / 86400 ))
+      [ $((now - st)) -ge $((DRY_MIN_DAYS * 86400)) ] || die "dry moi chay ${days} ngay (< $DRY_MIN_DAYS — MO-1)"
+      ok "dry chay ${days} ngay (>= $DRY_MIN_DAYS)"
+      printf '%s\n' "$CL_PROBE" | grep -q '^LATCH=0 ORDER=0$' || die "log dry tu moc start co [KILLSW] LATCH / [C3-LIVE-ORDER] (§2.3) — MASTER xem"
+      ok "log dry tu moc start: 0 [KILLSW] LATCH, 0 [C3-LIVE-ORDER]" ;;
+    early|early_nojar)
+      [ "$CANARY_MODE" = early ] || die "cl_check_242 early ngoai CANARY_MODE=early"
+      [ "$(pv BOT)" != none ] || die "khong thay process bot trong $VTM (§ADD-1: v_t_m phai dang chay c3_shadow)"
+      [ "$(pv PROFILE)" = c3_shadow ] || die "v_t_m LIVE_PROFILE='$(pv PROFILE)' (phai c3_shadow — §ADD-1)"
+      [ "$(pv NOPUSH)" = true ] || die "v_t_m SHADOW_NO_PUSH='$(pv NOPUSH)' (phai true — tai khoan chinh khong duoc dung)"
+      [ -z "$(pv ADAPTER)" ] || die "v_t_m co LIVE_ADAPTER='$(pv ADAPTER)' (canary-early chi khi v_t_m la shadow v1.1)"
+      ok "v_t_m: pid $(pv BOT), c3_shadow, SHADOW_NO_PUSH=true, khong LIVE_ADAPTER"
+      printf '%s\n' "$CL_PROBE" | grep -q '^VTM_MD5 .* none$' && die "v_t_m thieu jar/env/start (khong chup duoc md5)"
+      [ "$(pv VTM_CANARY)" = khong ] || die "v_t_m co run/canary (canary KHONG duoc ghi vao v_t_m) — MASTER xem"
+      cl_ram_check "$MIN_RAM_MB" || die "RAM 242 khong du (§ADD-1)"
+      local dk; dk=$(pv DISK_MB)
+      [[ "$dk" =~ ^[0-9]+$ ]] && [ "$dk" -ge "$MIN_DISK_MB" ] || die "o dia 242 trong ${dk:-?} MB < $MIN_DISK_MB MB" ;;
+  esac
 }
 
-# cl_gates: file gate MASTER ky (Oracle) — §2.1 G-CODE, §2.2 G-PROMO
+# cl_ram_check <MB>: MemAvailable (tu lan probe gan nhat) >= MB
+cl_ram_check() {
+  local m; m=$(pv MEM_MB)
+  if [[ "$m" =~ ^[0-9]+$ ]] && [ "$m" -ge "$1" ]; then ok "MemAvailable 242 = ${m} MB (>= $1)"; return 0; fi
+  say "!! MemAvailable 242 = ${m:-khong doc duoc} MB < $1 MB"
+  return 1
+}
+
+# cl_vtm_baseline: chup v_t_m (tu probe hien tai) => CL_VTM0 + file Oracle
+cl_vtm_baseline() {
+  CL_VTM0=$(cl_vtm_snap)
+  [ -n "$CL_VTM0" ] || die "khong chup duoc v_t_m"
+  printf '%s\n' "$CL_VTM0" > "$LOGDIR/vtm_baseline_${TS}.txt"
+  say "anh chup v_t_m (so truoc/sau moi buoc):"; printf '%s\n' "$CL_VTM0" | sed 's/^/   vtm0: /'
+}
+# cl_vtm_check <nhan>: probe lai, so v_t_m voi anh chup; 0 = khong doi. Dat CL_VTM_DIFF.
+CL_VTM_DIFF=""
+cl_vtm_check() {
+  local i
+  for i in 1 2 3; do   # ssh chap chon: thu 3 lan (10 s) truoc khi coi la "khong kiem duoc" (=> dung, fail-closed)
+    cl_probe && [ -n "$(pv JAR)" ] && break
+    CL_PROBE=""; [ "$i" -lt 3 ] && sleep "${CL_RETRY_S:-10}"
+  done
+  if [ -z "$(pv JAR)" ]; then CL_VTM_DIFF="khong doc duoc 242 ($1)"; say "!! v_t_m $1: $CL_VTM_DIFF"; return 1; fi
+  local now; now=$(cl_vtm_snap)
+  CL_VTM_DIFF=$(diff <(printf '%s\n' "$CL_VTM0") <(printf '%s\n' "$now") | grep '^[<>]' | tr '\n' ';')
+  [ "$(pv VTM_CANARY)" = khong ] || CL_VTM_DIFF+=" v_t_m/run/canary xuat hien;"
+  if [ -n "$CL_VTM_DIFF" ]; then say "!! v_t_m BI DOI ($1): $CL_VTM_DIFF"; return 1; fi
+  say "v_t_m khong doi ($1): pid $(pv BOT), md5 jar/env/start giu nguyen"
+  return 0
+}
+
+# cl_gates: file gate MASTER ky (Oracle). standard: G-CODE + G-PROMO; early: chi G-CODE (§ADD-1)
 cl_gates() {
   local g
-  for g in $GATE_FILES; do [ -s "$g" ] || die "thieu file gate MASTER: $g (§2)"; done
+  for g in $GATE_FILES; do [ -s "$g" ] || die "thieu file gate MASTER: $g (MASTER tao sau khi A1 DAT)"; done
   ok "file gate MASTER co du: $GATE_FILES"
 }
 
@@ -131,16 +236,25 @@ cl_push_logback() {
   $SCP_242 "$CL_HERE/logback-canary.xml" "${RHOST}$A/$CDIR/logback-canary.xml" || die "khong chep duoc logback-canary.xml"
 }
 
+# cl_copy_legacy (early): tap LEGACY tai khoan chinh cho luat §3 — CHI DOC v_t_m/run/legacy_symbols.csv, ghi ban sao vao CANARY_HOME/run
+cl_copy_legacy() {
+  local r
+  r=$($SSH_242 "mkdir -p $A/run && if [ -f $VTM/run/legacy_symbols.csv ]; then cat $VTM/run/legacy_symbols.csv > $A/run/legacy_symbols.csv.tmp && mv -f $A/run/legacy_symbols.csv.tmp $A/run/legacy_symbols.csv && echo \"LEGACY=\$(grep -c . $A/run/legacy_symbols.csv) dong\"; else rm -f $A/run/legacy_symbols.csv; echo LEGACY=none; fi" < /dev/null)
+  say "LEGACY (luat §3): ${r#LEGACY=} $( [ "$r" = LEGACY=none ] && echo '(v_t_m khong co run/legacy_symbols.csv => tap rong)')"
+  CL_LEGACY=${r#LEGACY=}
+}
+
 # cl_run <env "K=V K=V" (da kiem)> <lenh C3LiveCanary...>: chay JVM canary tren 242 bang nohup+setsid (mat ssh KHONG giet JVM),
-# poll ket qua moi POLL_S. Dat CL_LAST_RESULT (dong RESULT) + CL_LAST_OUT; tra ma thoat JVM (0 DAT/2 TU_CHOI/3 TRUOT/4 LOI/5 khong ro).
+# env -i (env sach), poll ket qua moi POLL_S. Dat CL_LAST_RESULT + CL_LAST_OUT; tra ma thoat JVM (0 DAT/2 TU_CHOI/3 TRUOT/4 LOI/5 khong ro).
 cl_run() {
   local envs=$1; shift
   local a id n=0 rc="" t0 got line
   for a in "$@" $envs; do [[ "$a" =~ ^[A-Za-z0-9_=.]+$ ]] || die "tham so la: $a"; done
   id="${TS}_$$_${RANDOM}"
   say "--> JVM canary: $* ${envs:+(env $envs)}"
-  $SSH_242 "cd $A && mkdir -p $CDIR && ( nohup setsid env CANARY_DIR=$CDIR LIVE_C3_KEYS_FILE=$KEYS_FILE LIVE_C3_KEYS_OWNER=$KEYS_OWNER $envs \
-    $JAVA_242 -Xmx384m -Dlogback.configurationFile=$CDIR/logback-canary.xml -cp target/binance-java-sdk-1.2.4.jar $MAIN $* \
+  $SSH_242 "cd $A && mkdir -p $CDIR && ( nohup setsid env -i PATH=\"\$PATH\" HOME=\"\$HOME\" LANG=C.UTF-8 CANARY_DIR=$CDIR \
+    LIVE_C3_KEYS_FILE=$KEYS_FILE LIVE_C3_KEYS_OWNER=$KEYS_OWNER $envs \
+    $JAVA_242 -Xmx384m -XX:+UseSerialGC -XX:MaxMetaspaceSize=256m -Dlogback.configurationFile=$CDIR/logback-canary.xml -cp $CJAR $MAIN $* \
     > $CDIR/.jvm_$id.out 2>&1 < /dev/null; echo \$? > $CDIR/.jvm_$id.rc.tmp; mv -f $CDIR/.jvm_$id.rc.tmp $CDIR/.jvm_$id.rc ) > /dev/null 2>&1 < /dev/null &" < /dev/null \
     || die "khong khoi dong duoc JVM canary"
   CL_LAST_OUT=""; t0=$(date +%s)
@@ -193,8 +307,10 @@ cl_macro() {
       say "K6b: doi ten so canary (gia lap so mat) — $CDIR/c3live_book.json -> .k6b_$TS"
       $SSH_242 "cd $A && mv -f $CDIR/c3live_book.json $CDIR/c3live_book.json.k6b_$TS" < /dev/null || { say "khong doi ten duoc so"; return 3; }
       cl_run "" step K6B_RESTART; rc=$?
+      local r6b=$CL_LAST_RESULT
       say "K6b: dong tay (canary_flatten) theo prereg §4 K6b"
       cl_run "" flatten; local rf=$?
+      CL_LAST_RESULT="$r6b ; sau do $CL_LAST_RESULT"
       [ $rc = 0 ] || return $rc
       return $rf ;;
     *) die "buoc la: $k (SETUP K1..K8 K6 K6B K7B K6_OPEN K6_RESTART K6B_OPEN K6B_RESTART)" ;;

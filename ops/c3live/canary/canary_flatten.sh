@@ -8,6 +8,10 @@
 . "$(cd "$(dirname "$0")" && pwd)/canary_lib.sh"
 cl_init flatten
 need_yes "gui lenh dong vi the THAT"
+if [ "$CANARY_MODE" = early ]; then
+  # canary-early: phien chay nen co the dang chay => dat file STOP truoc (phien dung sau buoc hien tai, khong mo them)
+  touch "$LOGDIR/CANARY_STOP" && say "da dat $LOGDIR/CANARY_STOP (phien canary_early_run dung o buoc ke; xoa co chu dich truoc phien moi)"
+fi
 cl_check_242
 cl_push_logback
 cl_run "" flatten; RC=$?

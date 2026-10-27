@@ -11,6 +11,7 @@
 # =============================================================================
 . "$(cd "$(dirname "$0")" && pwd)/canary_lib.sh"
 cl_init canary
+[ "$CANARY_MODE" = standard ] || die "canary.sh chi cho G-CANARY chuan; canary-early dung canary_early_run.sh"
 need_yes "gui LENH THAT (tien that, 20 USDT/lenh)"
 [[ "${CANARY_INJECT_TIMEOUT:-0}" =~ ^[01]$ ]] || die "CANARY_INJECT_TIMEOUT chi 0/1"
 cl_time_gate die

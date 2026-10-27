@@ -17,9 +17,17 @@ need_yes "$( [ "$K" = SETUP ] && echo "doi marginType/leverage 2 symbol canary" 
 [[ "${CANARY_INJECT_TIMEOUT:-0}" =~ ^[01]$ ]] || die "CANARY_INJECT_TIMEOUT chi 0/1"
 cl_time_gate die
 cl_gates
-cl_check_242 dry
+if [ "$CANARY_MODE" = early ]; then
+  cl_check_242 early      # §ADD-1: v_t_m shadow + RAM; chup v_t_m, so lai sau buoc
+  cl_vtm_baseline
+else
+  cl_check_242 dry
+fi
 cl_push_logback
 cl_macro "$K"; RC=$?
+if [ "$CANARY_MODE" = early ] && ! cl_vtm_check "sau $K"; then
+  say "v_t_m BI DOI sau $K => coi la TRUOT"; [ "$RC" = 0 ] && RC=3
+fi
 V=$(cl_verdict $RC)
 say "$K: $V ($CL_LAST_RESULT)"
 case "$K" in
