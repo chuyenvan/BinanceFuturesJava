@@ -1,0 +1,7 @@
+PREREG_SYMTYPE (MASTER 2026-10-28). Mục đích: MÔ TẢ (không tune universe theo PnL). Chỉ chấp nhận loại trừ khi loại đó KHÁC CẤU TRÚC so với crypto-native.
+Bucket (gán point-in-time tại giờ vào lệnh, mỗi leg đúng 1 nhãn ưu tiên theo thứ tự):
+ B1 TRADFI (exchangeInfo contractType TRADIFI_PERPETUAL hoặc underlyingType≠COIN) ; B2 INDEX/hàng hoá/stable (BTCDOM, DEFI, ALL, FOOTBALL, BLUEBIRD, XAU, PAXG, USDC…) ; B3 PERP-KHÔNG-SPOT: không có cặp spot Binance <BASE>USDT đang giao dịch tại giờ vào lệnh (PIT từ dữ liệu spot Vision; tên 1000X/1000000X quy về BASE) ; B4 MỚI NIÊM YẾT: tuổi hợp đồng < 30 ngày tại giờ vào lệnh (từ kline đầu tiên Vision UM) ; B5 phần còn lại (crypto-native, có spot, ≥30 ngày).
+ Thêm 2 cột mô tả chéo (không phải bucket): tuổi 30–90 ngày; hợp đồng hệ số 1000x.
+Dữ liệu: DEV = run baseline X14 chuẩn (tsx DEV, 8 seed) 2022-01..2025-12; HO = tsx-ho-x14 + ho4 k24-s 2026 (W9/H1/Q3). Không chạy sim mới.
+Chỉ số mỗi bucket × năm (DEV) và × cửa sổ (HO): số leg, % leg, PnL realized, PnL/leg, win-rate, avg hold, avg MAE nếu có, đóng góp vào maxDD (MTM gvz_mtm nếu khả thi, nếu không ghi CHƯA ĐO).
+Luật quyết (chốt trước): một bucket B1–B4 được ĐỀ XUẤT loại khỏi universe chỉ khi ĐỦ CẢ: (i) có lý do cấu trúc ghi rõ; (ii) DEV: N≥300 leg, PnL/leg < 50 % của B5 ở ≥3/4 năm có N≥50; (iii) HO 2026 cùng chiều. Còn lại = "giữ, chỉ theo dõi". Không tách sector L1/L2/meme/AI (không có phân loại point-in-time khách quan ⇒ rủi ro data-mining) — chỉ ghi lý do.
