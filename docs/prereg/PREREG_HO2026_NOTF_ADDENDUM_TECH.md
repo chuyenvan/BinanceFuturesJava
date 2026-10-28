@@ -37,3 +37,19 @@ Prereg gốc: `docs/prereg/PREREG_HO2026_NOTF.md` (96164b72). Addendum này KHÔ
 - **V3:** 0 leg ∈ X trong printDone A1.
 - **V5:** `ho4p1_queue.check` (jar tsx, override, pred md5 A1, `TICKER_HO4P1 ok=273…`, FUND, mapper, penalty, UNSEAL). x14 có `[TSX] extHours=336`; k24 không có. Thêm: các dòng printDone có start < 20251224 trùng với run gốc cùng seed và phí (đoạn DEV không đổi).
 - **V4:** self-check của scorer gốc.
+
+## T4. ADDENDUM_TECH-2 (2026-10-28 08:45, TRƯỚC khi đẩy kernel sim A1 nào) — sửa hạ tầng jar sim
+
+- **Kết quả cổng A0'(b), lần chạy 1** (tất cả dùng jar tsx):
+  - `a0p-k24-b-s42`: md5 `7cc8864c` = ho4-k24-b-s42 ✔.
+  - `a0p-x14-s42`: md5 `bb609455` = tsx-ho-x14-s42 ✔.
+  - `a0p-k24-s-s42`: md5 `7cc8864c`, tức chính là kết quả **k24-b**, và parity `pen=False`. Nguyên nhân: jar tsx cc0f9d11 **không có** key `SIM_CRASH_ENTRY_PENALTY` (`Configs.class` không chứa chuỗi này), nên bản stress chạy như phí gốc.
+  - Kết luận: đây là **lỗi hạ tầng (sai jar), không phải bất định**. Giả định của T1 ("jar tsx dùng được cho cả 3 cấu hình") SAI với k24-s.
+- **Sửa:**
+  - Jar gốc b7c89f09 của ho4-* có bản sao local (`~/src_wt_nsel/target`, `~/kaggle_sim/push_jar_nsel/sim.jar`, sha khớp), nhưng **FAIL sec check** (other 3, max run 65, 3 class com/binance) ⇒ KHÔNG upload. Đã báo MASTER (giống ho4p1-jar-exp).
+  - Build lại từ đúng nguồn của b7c89f09 (`df021437`, NSEL_IMPL_JOINTS §1): `git archive df021437`, PrivateConfig STUB, `mvn -o -DskipTests package`. Kết quả sha256 `877d9ffade1daac377cb6aea1f070f57de23e5b44b03cd39e024f13ae8baf883`, sec check ok=true.
+  - So 7 572/7 572 class với b7c89f09: chỉ khác `PrivateConfig`, `BinanceFuturesClientSingleton`, `ClientSingleton` (hằng inline), giống T1.
+  - Dataset mới `ho2026-notf-sim-jar`: sim.jar + `prof_r4_kg0_k16_f015_g155.properties` (bản copy từ push_jar_nsel). Orchestrator kiểm lại sec check và kiểm prof không có chuỗi ≥ 40 ký tự alnum trước khi upload.
+- **Gán jar:** k24-s, k24-b (A0' và A1) dùng `ho2026-notf-sim-jar` (= nguồn jar gốc ho4-*); x14 dùng `sim-jar-tsx` (= jar gốc tsx-ho-x14).
+- **Cổng A0'(b) làm lại:** `a0p2-k24-s-s42` phải ra `6989a312…`, `a0p2-k24-b-s42` phải ra `7cc8864c…`, cùng `a0p-x14-s42` đã PASS. Ba kernel `a0p-*` lần 1 giữ làm hồ sơ.
+- Không đổi cấu hình, seed, X, luật hay thước.

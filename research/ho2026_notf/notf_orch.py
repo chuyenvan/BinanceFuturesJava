@@ -31,7 +31,12 @@ FLAGS0 = "20260205-20260214,20260216-20260217,20260224-20260225,20260611-2026061
 FLAGS1 = "20260205-20260214,20260216-20260217,20260224-20260225,20260606-20260607,20260610-20260611"
 SEEDS = [42, 7, 13, 21, 99, 123, 777, 2024]
 MAXPAR, POLL = 5, 180
-WANT0 = {"a0p-k24-s-s42": "6989a312", "a0p-k24-b-s42": "7cc8864c", "a0p-x14-s42": "bb609455"}
+WANT0 = {"a0p2-k24-s-s42": "6989a312", "a0p2-k24-b-s42": "7cc8864c", "a0p-x14-s42": "bb609455"}
+# ADDENDUM_TECH-2: jar tsx KHONG co SIM_CRASH_ENTRY_PENALTY (a0p-k24-s-s42 = md5 k24-b) -> k24-s/k24-b dung jar STUB build tu df021437 (nguon b7c89f09)
+SJDS = "ho2026-notf-sim-jar"
+SJAR = W + "/sim_src/target/binance-java-sdk-1.2.4.jar"
+SJAR_SHA = "877d9ffade1daac377cb6aea1f070f57de23e5b44b03cd39e024f13ae8baf883"
+PROF = "/home/ubuntu/kaggle_sim/push_jar_nsel/prof_r4_kg0_k16_f015_g155.properties"
 Q1_MAN = "/home/ubuntu/claude_master/1011/ho4p1/kaggle/out/ho4p1-x26-q1/out/MANIFEST.json"
 STP = W + "/notf_state.json"
 ARTS0 = json.load(open("/home/ubuntu/claude_master/1011/ho4p1/arts.json"))
@@ -47,8 +52,16 @@ def sha256(p):
     return h.hexdigest()
 
 
-q.JAR_SHA = sha256(TSX_JAR)
-assert q.JAR_SHA.startswith("cc0f9d11"), q.JAR_SHA
+TSX_SHA = sha256(TSX_JAR)
+assert TSX_SHA.startswith("cc0f9d11"), TSX_SHA
+q.JAR_SHA = TSX_SHA
+
+
+def use_jar(ov):
+    if "SIM_LOSER_TS_EXT_HOURS" in ov:
+        q.JAR_DS, q.JAR_SHA = "sim-jar-tsx", TSX_SHA
+    else:
+        q.JAR_DS, q.JAR_SHA = SJDS, SJAR_SHA
 KS = q.GA.ks_mod()
 
 # ---------------- exporter kernel (A1: in_uni loai X) ----------------
@@ -235,7 +248,7 @@ def ctx(kind):
 
 def sim_specs():
     k24 = dict(q.CFGS["k24"])
-    sp = {"a0p-k24-s-s42": ("orig", 42, dict(k24, SIM_CRASH_ENTRY_PENALTY=q.PEN)), "a0p-k24-b-s42": ("orig", 42, dict(k24)),
+    sp = {"a0p2-k24-s-s42": ("orig", 42, dict(k24, SIM_CRASH_ENTRY_PENALTY=q.PEN)), "a0p2-k24-b-s42": ("orig", 42, dict(k24)),
           "a0p-x14-s42": ("orig", 42, dict(k24, SIM_LOSER_TS_EXT_HOURS=336, SIM_LOSER_TS_EXT_DAYS=FLAGS0))}
     for s in SEEDS:
         sp["nt-k24-s-s%d" % s] = ("nt", s, dict(k24, SIM_CRASH_ENTRY_PENALTY=q.PEN))
@@ -250,7 +263,7 @@ def tsx_line(txt):
 
 
 def post_sim(tag, kind, seed, ov):
-    ctx(kind)
+    ctx(kind); use_jar(ov)
     ok, chk, md5, n = q.check(tag, ov, seed, True)
     tl = tsx_line(q.kernel_text(tag))
     r = dict(tag=tag, ok=ok, chk=chk, md5=md5, n=n, tsx=tl)
@@ -291,11 +304,7 @@ def jards():
     d = W + "/ds_" + JDS
     from kaggle.api.kaggle_api_extended import KaggleApi
     a = KaggleApi(); a.authenticate()
-    try:
-        st = str(a.dataset_status(USER + "/" + JDS))
-    except Exception:  # noqa: BLE001
-        st = None
-    if st is None or "error" in st.lower():
+    if not os.path.exists(W + "/jards_created"):
         shutil.rmtree(d, ignore_errors=True); os.makedirs(d)
         os.link(NJAR, d + "/sim.jar")
         assert sha256(d + "/sim.jar") == NJAR_SHA
@@ -306,12 +315,44 @@ def jards():
         json.dump({"title": JDS, "id": USER + "/" + JDS, "licenses": [{"name": "CC0-1.0"}]}, open(d + "/dataset-metadata.json", "w"))
         a.dataset_create_new(d, public=False, quiet=True, dir_mode="skip")
         log.info("CREATED dataset %s (jar sec ok)", JDS)
+        open(W + "/jards_created", "w").write(time.strftime("%F %T"))
     for _ in range(60):
-        st = str(a.dataset_status(USER + "/" + JDS))
+        try:
+            st = str(a.dataset_status(USER + "/" + JDS))
+        except Exception as e:  # noqa: BLE001
+            st = "err " + str(e)[:40]
         if "ready" in st.lower():
             log.info("dataset %s ready", JDS); return True
         time.sleep(30)
     raise SystemExit("dataset jar khong ready")
+
+
+def jards_sim():
+    d = W + "/ds_" + SJDS
+    from kaggle.api.kaggle_api_extended import KaggleApi
+    a = KaggleApi(); a.authenticate()
+    if not os.path.exists(W + "/jards_sim_created"):
+        shutil.rmtree(d, ignore_errors=True); os.makedirs(d)
+        os.link(SJAR, d + "/sim.jar")
+        assert sha256(d + "/sim.jar") == SJAR_SHA
+        shutil.copyfile(PROF, d + "/" + os.path.basename(PROF))
+        r = subprocess.run([sys.executable, "-I", "/home/ubuntu/claude_master/nup3_wk/jar_sec_check.py", d + "/sim.jar", W + "/sim_jar_sec_upload.json"],
+                           capture_output=True, text=True)
+        assert r.returncode == 0 and json.load(open(W + "/sim_jar_sec_upload.json"))["ok"] is True, "SIM JAR SEC CHECK FAIL -> KHONG UPLOAD"
+        assert not re.search(r"[A-Za-z0-9]{40,}", open(PROF).read()), "prof co chuoi dai nghi van"
+        json.dump({"title": SJDS, "id": USER + "/" + SJDS, "licenses": [{"name": "CC0-1.0"}]}, open(d + "/dataset-metadata.json", "w"))
+        a.dataset_create_new(d, public=False, quiet=True, dir_mode="skip")
+        open(W + "/jards_sim_created", "w").write(time.strftime("%F %T"))
+        log.info("CREATED dataset %s (jar sec ok)", SJDS)
+    for _ in range(60):
+        try:
+            st = str(a.dataset_status(USER + "/" + SJDS))
+        except Exception as e:  # noqa: BLE001
+            st = "err " + str(e)[:40]
+        if "ready" in st.lower():
+            log.info("dataset %s ready", SJDS); return True
+        time.sleep(30)
+    raise SystemExit("dataset sim jar khong ready")
 
 
 def main():
@@ -325,7 +366,7 @@ def main():
             ("nt-tk26", push_tk, ["nt-x26-q1", "nt-x26-q2", "nt-x26-q3"]),
             ("nt-chain-y26", push_chain, ["nt-x26-q1", "nt-x26-q2", "nt-x26-q3"]),
             ("nt-v1", push_v1, ["nt-tk26"])]
-    order = [t for t, _, _ in DATA[:1]] + ["a0p-k24-s-s42", "a0p-k24-b-s42", "a0p-x14-s42"] + [t for t, _, _ in DATA[1:]]
+    order = [t for t, _, _ in DATA[:1]] + ["a0p2-k24-s-s42", "a0p2-k24-b-s42", "a0p-x14-s42"] + [t for t, _, _ in DATA[1:]]
     for s in SEEDS:
         order += ["nt-k24-s-s%d" % s, "nt-k24-b-s%d" % s, "nt-x14-s%d" % s]
     dspec = {t: (f, deps) for t, f, deps in DATA}
@@ -335,6 +376,8 @@ def main():
     json.dump(st, open(STP, "w"), indent=1)
     if not st.get("jards"):
         jards(); st["jards"] = True; json.dump(st, open(STP, "w"), indent=1)
+    if not st.get("jards_sim"):
+        jards_sim(); st["jards_sim"] = True; json.dump(st, open(STP, "w"), indent=1)
     while True:
         # 1) thu ket qua
         for t in order:
@@ -342,7 +385,7 @@ def main():
             if s["state"] != "pushed" or time.time() - s.get("t", 0) < 300:
                 continue
             try:
-                k = KS._status(USER + "/" + t)
+                k = KS._status(KS.kernel_ref(t) if t in SP else USER + "/" + t)
             except Exception as e:  # noqa: BLE001
                 log.info("status %s %s", t, str(e)[:80]); continue
             if k not in KS.TERMINAL:
@@ -418,7 +461,7 @@ def main():
                     dspec[t][0]()
                 else:
                     kind, seed, ov = SP[t]
-                    ctx(kind)
+                    ctx(kind); use_jar(ov)
                     q.push(KS, t, ov, seed, "20261001", True)
                 s.update(state="pushed", t=time.time(), at=time.strftime("%F %T"))
                 s["pushes"] += 1
