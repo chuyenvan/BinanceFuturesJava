@@ -77,3 +77,11 @@ Tài liệu này được commit TRƯỚC khi dựng dữ liệu hay đẩy kern
 
 ## 8. Ngoài phạm vi
 Universe "như shadow v1.1" (khoảng 223 TF, ngoài mapper 863) không mô phỏng được khi mapper khoá; đây là khoảng trống đã biết.
+
+## 9. ADDENDUM-3 (2026-10-29, commit TRƯỚC khi chấm điểm A1)
+
+Không đổi X, cấu hình, seed, thước, V1–V5 hay D1–D4. Ghi lại nguyên văn yêu cầu của MASTER cho D5, để D5 nằm trong prereg trước khi có bất kỳ số A1 nào được chấm:
+
+**D5 (mô tả, không quyết định):** số leg bị thay thế (slot TF giải phóng chuyển sang crypto) và PnL của chúng, theo cửa sổ W9/H1/Q3.
+
+Hiện thực: đúng §7 D5 (i)(ii)(iii) — khoá leg (sym, start), gộp 8 seed và theo seed, cho từng cấu hình × cửa sổ. Chỉ mô tả; không dùng để quyết, không đổi luật nào.
