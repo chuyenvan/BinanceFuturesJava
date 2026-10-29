@@ -12,6 +12,7 @@ import com.binance.chuyennd.c3live.api.OrderStatus;
 import com.binance.chuyennd.c3live.api.PositionInfo;
 import com.binance.chuyennd.c3live.api.Side;
 import com.binance.chuyennd.c3live.api.SymbolConfig;
+import com.binance.chuyennd.c3live.api.TradeFill;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
@@ -53,6 +54,23 @@ public class MockExchangeGateway implements ExchangeGateway {
     public volatile boolean rejectAllStops = false;
     public volatile BigDecimal feeRate = BigDecimal.ZERO;
     public volatile Consumer<String> wsSink = null;
+    /**
+     * [3j] ACK MARKET tra {@code avgPrice=null} nhu ACK that 10-28 (status FILLED, executedQty > 0, khong co gia);
+     * lenh VAN duoc khop ben trong mock (queryOrder van thay gia that).
+     */
+    public volatile boolean ackWithoutAvgPrice = false;
+    /** [3j] ACK FILLED nhung {@code executedQty=0} (R4: khong duoc huy giu cho). */
+    public volatile boolean ackExecZero = false;
+    /** [3j] queryOrder tra avgPrice=null (doc-sau-ghi chua co gia). */
+    public volatile boolean queryOrderWithoutAvgPrice = false;
+    /** [3j] userTrades luon rong. */
+    public volatile boolean userTradesEmpty = false;
+    /** [3j] giu su kien stream lai (phat sau bang {@link #flushEvents()}) — gia lap stream den TRE hon ACK. */
+    public volatile boolean holdFillEvents = false;
+    /** [3j] ACK tra DUNG OrderInfo nay (tai hien fixture that 10-28); null = ACK tu lenh mock. */
+    public volatile OrderInfo ackTemplate = null;
+    private final List<String> heldEvents = new ArrayList<>();
+    private final Map<Long, List<TradeFill>> trades = new LinkedHashMap<>();
     public volatile ExchangeInfo exchangeInfo = new ExchangeInfo(0L, Collections.emptyList(), Collections.emptyList());
     public volatile AccountSnapshot accountSnapshot = new AccountSnapshot(new BigDecimal("10000"), new BigDecimal("10000"),
             new BigDecimal("10000"), BigDecimal.ZERO,
@@ -129,6 +147,9 @@ public class MockExchangeGateway implements ExchangeGateway {
             if (orders.containsKey(cid)) throw dup();
             BigDecimal px = prices.getOrDefault(symbol, BigDecimal.ONE);
             o = fill(symbol, side, qty, cid, reduceOnly, px, "MARKET", ev);
+            if (ackTemplate != null) o = ackTemplate;
+            if (ackWithoutAvgPrice) o = o.toBuilder().avgPrice(null).build();
+            if (ackExecZero) o = o.toBuilder().executedQty(BigDecimal.ZERO).build();
         }
         emit(ev);
         return o;
@@ -157,6 +178,12 @@ public class MockExchangeGateway implements ExchangeGateway {
         }
         BigDecimal fee = qty.multiply(px).multiply(feeRate);
         fees = fees.add(fee);
+        List<TradeFill> tr = trades.get(o.getOrderId());
+        if (tr == null) {
+            tr = new ArrayList<>();
+            trades.put(o.getOrderId(), tr);
+        }
+        tr.add(new TradeFill(symbol, o.getOrderId(), qty, px, now));
         ev.add(orderEvent(symbol, cid, side, origType, o.getOrderId(), qty, px, fee, rp, reduceOnly));
         ev.add(accountEvent(symbol));
         return o;
@@ -276,7 +303,21 @@ public class MockExchangeGateway implements ExchangeGateway {
     @Override
     public synchronized Optional<OrderInfo> queryOrder(String symbol, String cid) {
         enter("queryOrder");
-        return Optional.ofNullable(orders.get(cid));
+        OrderInfo o = orders.get(cid);
+        if (o != null && queryOrderWithoutAvgPrice) o = o.toBuilder().avgPrice(null).build();
+        return Optional.ofNullable(o);
+    }
+
+    /** [3j R2(c)] khop that cua 1 lenh theo orderId (mock ghi trong fill). */
+    @Override
+    public synchronized List<TradeFill> userTrades(String symbol, long orderId) {
+        enter("userTrades");
+        if (userTradesEmpty) return new ArrayList<>();
+        List<TradeFill> l = trades.get(orderId);
+        if (l == null) return new ArrayList<>();
+        List<TradeFill> out = new ArrayList<>();
+        for (TradeFill t : l) if (symbol == null || symbol.equals(t.getSymbol())) out.add(t);
+        return out;
     }
 
     /** [3e] gia lap doc-sau-ghi tre cua GET algoOrder: N lan queryStop dau tien moi cid tra KHONG CO (openStops van thay). */
@@ -541,7 +582,32 @@ public class MockExchangeGateway implements ExchangeGateway {
     private void emit(List<String> ev) {
         Consumer<String> s = wsSink;
         if (s == null) return;
+        if (holdFillEvents) {
+            synchronized (heldEvents) {
+                heldEvents.addAll(ev);
+            }
+            return;
+        }
         for (String e : ev) s.accept(e);
+    }
+
+    /** [3j] phat cac su kien stream dang bi giu (holdFillEvents) theo dung thu tu. */
+    public void flushEvents() {
+        List<String> q;
+        synchronized (heldEvents) {
+            q = new ArrayList<>(heldEvents);
+            heldEvents.clear();
+        }
+        Consumer<String> s = wsSink;
+        if (s == null) return;
+        for (String e : q) s.accept(e);
+    }
+
+    /** [3j] so su kien stream dang bi giu. */
+    public int heldEventCount() {
+        synchronized (heldEvents) {
+            return heldEvents.size();
+        }
     }
 
     private static GatewayException dup() {
