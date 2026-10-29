@@ -15,6 +15,7 @@ import com.binance.chuyennd.c3live.api.PositionInfo;
 import com.binance.chuyennd.c3live.api.Side;
 import com.binance.chuyennd.c3live.api.SymbolConfig;
 import com.binance.chuyennd.c3live.api.Ticker24h;
+import com.binance.chuyennd.c3live.api.TradeFill;
 import com.binance.chuyennd.c3live.log.OrderAuditLog;
 import com.binance.chuyennd.c3live.rate.RateGuard;
 import com.google.gson.JsonArray;
@@ -63,7 +64,7 @@ public final class C3LiveClient implements ExchangeGateway {
 
     static final int W_TIME = 1, W_EXINFO = 1, W_ORDER = 1, W_QUERY = 1, W_OPEN_SYM = 1, W_OPEN_ALL = 40,
             W_POSITION = 5, W_ACCOUNT = 5, W_MULTI = 30, W_DUAL = 30, W_SYMCFG = 5, W_SET = 1, W_LISTEN = 1,
-            W_TICKER_SYM = 1, W_TICKER_ALL = 40;
+            W_TICKER_SYM = 1, W_TICKER_ALL = 40, W_TRADES = 5;
     /** [3i] dang trong 1 call GHI cua luong nay: GET long ben trong (dong bo gio) KHONG ngu burst / cho => kiem truoc ghi -> gui lien nhau. */
     private static final ThreadLocal<int[]> IN_WRITE = ThreadLocal.withInitial(() -> new int[1]);
 
@@ -258,6 +259,29 @@ public final class C3LiveClient implements ExchangeGateway {
             if (e.getKind() == ErrorKind.UNKNOWN_ORDER) return Optional.empty();
             throw e;
         }
+    }
+
+    /**
+     * [3j R2(c)] GET /fapi/v1/userTrades?symbol=&amp;orderId= — cac khop THAT cua 1 lenh (CHI DOC, weight 5).
+     * orderId khong co khop => list rong (san tra mang rong), khong nem.
+     */
+    @Override
+    public List<TradeFill> userTrades(String symbol, long orderId) {
+        Map<String, String> p = new LinkedHashMap<>();
+        p.put("symbol", symbol);
+        p.put("orderId", Long.toString(orderId));
+        JsonElement j = call("GET", "/fapi/v1/userTrades", p, Sec.SIGNED, W_TRADES, 0);
+        List<TradeFill> out = new ArrayList<>();
+        for (JsonElement e : asArray(j)) {
+            if (!e.isJsonObject()) continue;
+            JsonObject o = e.getAsJsonObject();
+            BigDecimal qty = dec(o, "qty");
+            BigDecimal px = dec(o, "price");
+            if (qty == null || px == null || qty.signum() <= 0 || px.signum() <= 0) continue;
+            String sym = str(o, "symbol");
+            out.add(new TradeFill(sym == null ? symbol : sym, lng(o, "orderId"), qty, px, lng(o, "time")));
+        }
+        return out;
     }
 
     @Override

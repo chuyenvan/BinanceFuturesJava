@@ -75,6 +75,8 @@ public final class LiveBookC3 {
         public final LegState state;
         public final BigDecimal execQty;
         public final double avgPx;
+        /** [3j R2] true = avgPx la gia TAM (mark) vi ACK/stream/query/userTrades chua co gia that. */
+        public final boolean pxProvisional;
         public final long orderId;
         public final long tsCreated;
         public final long lastSendMs;
@@ -93,6 +95,7 @@ public final class LiveBookC3 {
             this.state = l.state;
             this.execQty = l.execQty;
             this.avgPx = l.avgPx;
+            this.pxProvisional = l.pxProvisional;
             this.orderId = l.orderId;
             this.tsCreated = l.tsCreated;
             this.lastSendMs = l.lastSendMs;
@@ -102,7 +105,8 @@ public final class LiveBookC3 {
 
         @Override
         public String toString() {
-            return symbol + "/" + cid + "/" + state + "/qty=" + reqQty + "/exec=" + execQty;
+            return symbol + "/" + cid + "/" + state + "/qty=" + reqQty + "/exec=" + execQty
+                    + (pxProvisional ? "/px=tam" : "");
         }
     }
 
@@ -125,6 +129,9 @@ public final class LiveBookC3 {
         public final int closeAttempts;
         public final long closeSentMs;
         public final boolean hasUnresolved;
+        /** [3j R2] con leg nao dang giu gia TAM (avgPx = mark) — moi tinh toan lo/stop phai dung gia XAU nhat. */
+        public final boolean hasProvisional;
+        public final BigDecimal provisionalQty;
         public final List<LegView> legs;
         // ---- vong 2b
         /** VWAP entry kieu FLOAT y het {@code ShadowBookC3.Cluster.avgEntry()} (dau vao trailing). */
@@ -166,9 +173,20 @@ public final class LiveBookC3 {
             this.closeAttempts = c.closeAttempts;
             this.closeSentMs = c.closeSentMs;
             this.hasUnresolved = c.hasUnresolved();
+            BigDecimal pq = BigDecimal.ZERO;
+            boolean prov = false;
             List<LegView> ls = new ArrayList<>();
-            for (Leg l : c.legs) ls.add(new LegView(c.symbol, l));
+            for (Leg l : c.legs) {
+                LegView v = new LegView(c.symbol, l);
+                ls.add(v);
+                if (l.state == LegState.CONFIRMED && l.pxProvisional) {
+                    prov = true;
+                    pq = pq.add(l.execQty);
+                }
+            }
             this.legs = Collections.unmodifiableList(ls);
+            this.hasProvisional = prov;
+            this.provisionalQty = pq;
             this.avgEntryF = c.avgEntryF();
             this.peakRate = c.peakRate;
             this.priceSL = c.priceSL;
@@ -234,6 +252,7 @@ public final class LiveBookC3 {
         LegState state;
         BigDecimal execQty = BigDecimal.ZERO;
         double avgPx;
+        boolean pxProvisional;
         long orderId;
         long tsCreated;
         long tsUpdated;
@@ -462,6 +481,15 @@ public final class LiveBookC3 {
         return out;
     }
 
+    /** [3j R2] Cac leg da CONFIRMED nhung con giu gia TAM (cho hieu chinh bang gia that). */
+    public synchronized List<LegView> provisionalLegs() {
+        List<LegView> out = new ArrayList<>();
+        for (Cluster c : clusters.values()) {
+            for (Leg l : c.legs) if (l.state == LegState.CONFIRMED && l.pxProvisional) out.add(new LegView(c.symbol, l));
+        }
+        return out;
+    }
+
     /**
      * Trang thai grid cho DCA (port {@code ShadowBookC3.gridStates}) tu vi the THAT: chi cum co qty xac nhan > 0,
      * khong con leg treo va khong dang dong. legCount = so leg khong huy.
@@ -558,23 +586,51 @@ public final class LiveBookC3 {
     }
 
     /**
-     * Xac nhan khop (execQty > 0); execQty <= 0 => huy. Idempotent: leg da ket thuc => false.
+     * Xac nhan khop (execQty > 0, gia that > 0); execQty <= 0 => huy. Idempotent: leg da ket thuc => false.
+     * [3j R1] execQty > 0 ma avgPx <= 0 KHONG duoc coi la "khong khop": giu leg chua giai quyet (return false) de nguoi goi
+     * giai gia (stream/queryOrder/userTrades) hoac ghi gia TAM qua {@link #confirmProvisional}. Bug 10-28 (K4): ACK MARKET
+     * {@code status=FILLED} khong co {@code avgPrice} => ban cu huy giu cho va xoa cum du vi the san CO THAT, khong stop.
      * [2b] leg DCA (legIdx > 0) khop => RESET trailing (peakRate=0, priceSL=NaN, armed=false) y het
      * {@code ShadowBookC3.Cluster.addLeg} (sim mergeOrder tao cum REQUEST moi); stop cu (neu co) do TrailingStopManager huy.
      */
     public synchronized boolean confirm(String cid, BigDecimal execQty, double avgPx, long orderId, long nowMs) {
         Leg l = legOf(cid);
         if (l == null || !l.state.unresolved()) return false;
-        if (execQty == null || execQty.signum() <= 0 || !(avgPx > 0d)) {
+        if (execQty == null || execQty.signum() <= 0) {
             return cancel(cid, "exec=0", nowMs);
         }
+        if (!(avgPx > 0d)) {
+            LOG.error("[C3-LIVE-BOOK] R1: {} execQty={} nhung avgPx={} => KHONG huy giu cho, giu leg cho gia that/gia tam",
+                    cid, execQty.toPlainString(), avgPx);
+            return false;
+        }
+        applyConfirmed(l, execQty, avgPx, orderId, false, nowMs);
+        persist(nowMs);
+        return true;
+    }
+
+    /**
+     * [3j R2] Xac nhan khop khi CHUA co gia that: ghi DU qty voi gia TAM {@code provPx} (current mark) va co
+     * {@code pxProvisional}. Dung lai khi co gia that qua {@link #correctPrice}. Chi nhan qty > 0 va gia tam > 0.
+     */
+    public synchronized boolean confirmProvisional(String cid, BigDecimal execQty, double provPx, long orderId, long nowMs) {
+        Leg l = legOf(cid);
+        if (l == null || !l.state.unresolved()) return false;
+        if (execQty == null || execQty.signum() <= 0 || !(provPx > 0d)) return false;
+        applyConfirmed(l, execQty, provPx, orderId, true, nowMs);
+        persist(nowMs);
+        return true;
+    }
+
+    private void applyConfirmed(Leg l, BigDecimal execQty, double px, long orderId, boolean prov, long nowMs) {
         l.state = LegState.CONFIRMED;
         l.execQty = execQty;
-        l.avgPx = avgPx;
+        l.avgPx = px;
+        l.pxProvisional = prov;
         l.orderId = orderId;
         l.tsUpdated = nowMs;
-        Cluster c = clusters.get(cidToSymbol.get(cid));
-        if (c != null && avgPx > c.peak) c.peak = avgPx;
+        Cluster c = clusters.get(cidToSymbol.get(l.cid));
+        if (c != null && px > c.peak) c.peak = px;
         if (c != null && l.legIdx > 0) {
             c.peakRate = 0f;
             c.priceSL = Float.NaN;
@@ -582,8 +638,31 @@ public final class LiveBookC3 {
             if (c.adjQty != null) {   // da "san thang": cong leg moi vao qty/gia san
                 double q0 = c.adjQty.doubleValue();
                 double q1 = execQty.doubleValue();
-                c.adjAvg = (q0 * c.adjAvg + q1 * avgPx) / (q0 + q1);
+                c.adjAvg = (q0 * c.adjAvg + q1 * px) / (q0 + q1);
                 c.adjQty = c.adjQty.add(execQty);
+            }
+        }
+    }
+
+    /**
+     * [3j R2] Gia THAT den sau khi da ghi gia TAM: thay avgPx, bo co provisional. Moi gia tri dan xuat (VWAP cum, notional
+     * vao, khoang cach stop, dong ledger luc dong cum) tinh lai tu avgPx nay. true = co sua (idempotent: da co gia that => false).
+     */
+    public synchronized boolean correctPrice(String cid, double realPx, long nowMs) {
+        Leg l = legOf(cid);
+        if (l == null || l.state != LegState.CONFIRMED || !l.pxProvisional) return false;
+        if (!(realPx > 0d)) return false;
+        double old = l.avgPx;
+        l.avgPx = realPx;
+        l.pxProvisional = false;
+        l.tsUpdated = nowMs;
+        Cluster c = clusters.get(cidToSymbol.get(cid));
+        if (c != null) {
+            if (realPx > c.peak) c.peak = realPx;
+            if (c.adjQty != null) {
+                double q0 = c.adjQty.doubleValue();
+                double q = l.execQty.doubleValue();
+                if (q0 > 0d && q > 0d && q0 >= q) c.adjAvg = (q0 * c.adjAvg - q * old + q * realPx) / q0;
             }
         }
         persist(nowMs);
@@ -813,6 +892,8 @@ public final class LiveBookC3 {
         if (c == null || qty == null || qty.signum() <= 0 || !(entryPx > 0d)) return false;
         c.adjQty = qty;
         c.adjAvg = entryPx;
+        // [3j] gia vao theo SAN la gia THAT => leg nao con co "gia TAM" thi bo co (khong hieu chinh lung tung nua)
+        for (Leg l : c.legs) l.pxProvisional = false;
         persist(nowMs);
         return true;
     }
@@ -940,6 +1021,7 @@ public final class LiveBookC3 {
                 j.addProperty("state", l.state.name());
                 j.addProperty("exec_qty", l.execQty.toPlainString());
                 j.addProperty("avg_px", l.avgPx);
+                j.addProperty("px_provisional", l.pxProvisional);
                 j.addProperty("order_id", l.orderId);
                 j.addProperty("ts_created", l.tsCreated);
                 j.addProperty("ts_updated", l.tsUpdated);
@@ -1033,6 +1115,7 @@ public final class LiveBookC3 {
                     l.state = LegState.valueOf(j.get("state").getAsString());
                     l.execQty = new BigDecimal(j.get("exec_qty").getAsString());
                     l.avgPx = j.get("avg_px").getAsDouble();
+                    l.pxProvisional = j.has("px_provisional") && j.get("px_provisional").getAsBoolean();
                     l.orderId = j.get("order_id").getAsLong();
                     l.tsCreated = j.get("ts_created").getAsLong();
                     l.tsUpdated = j.get("ts_updated").getAsLong();

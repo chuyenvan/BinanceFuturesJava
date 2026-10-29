@@ -205,6 +205,9 @@ public final class C3LiveRuntime {
         this.refs = refsIn;
         this.book = new LiveBookC3(new File(Cfg.getOr("LIVE_C3_BOOK_FILE", LiveBookC3.DEFAULT_FILE)), 1.0d);
         C3LiveOrderExecutor.ApiObserver api = OpsHooks::onApiResult;
+        // [3j R2] 1 cache gia dung CHUNG: user stream (FillAccounting) -> executor (resolve gia khi ACK thieu avgPrice)
+        com.binance.chuyennd.c3live.exec.FillPriceResolver priceResolver =
+                new com.binance.chuyennd.c3live.exec.FillPriceResolver(System::currentTimeMillis, Thread::sleep, api);
         this.equity = new C3LiveEquity(gw, pilot, (long) parseD(Cfg.get("LIVE_C3_EQUITY_TTL_MS"), 60_000d),
                 System::currentTimeMillis, api);
         // [2c MIN-7] phan chi phuc vu VAO LENH (universe/modeGuard/entry): loi => manage-only (van quan ly vi the cu)
@@ -230,9 +233,11 @@ public final class C3LiveRuntime {
         C3LiveOrderExecutor.FillObserver fillObs = (s, isBuy, f, ref) -> OpsHooks.onFill(s, isBuy, f, ref);
         this.executor = new C3LiveOrderExecutor(gw, book, api, fillObs, System::currentTimeMillis, Thread::sleep, safe,
                 (int) parseD(Cfg.get("LIVE_C3_ORDER_MAX_ATTEMPTS"), C3LiveOrderExecutor.DEFAULT_MAX_ATTEMPTS), ex);
+        this.executor.setPriceResolver(priceResolver);   // [3j R2]
         // [2b C7/C9] ke toan fill + doi chieu
         this.acct = new FillAccounting(book, gw, audit, fillObs, alerts::send, api, System::currentTimeMillis,
                 TrailingStopManager::tsExtOnClosed);
+        this.acct.setPriceResolver(priceResolver);   // [3j R2]
         this.reanchorFile = new File(Cfg.getOr(KEY_REANCHOR_FILE, Reconciler.DEFAULT_REANCHOR_FILE));
         // [2c MAJ-2] 1 bo xac nhan "phang" dung chung cho Reconciler + Flattener
         this.flat = new FlatConfirm(gw, api, alerts::send, FlatConfirm.DEFAULT_MIN_GAP_MS, FlatConfirm.DEFAULT_MIN_READS);
@@ -369,6 +374,7 @@ public final class C3LiveRuntime {
                     lastRecon = now;
                 } else if (now - lastResolve >= RESOLVE_EVERY_MS) {
                     executor.resolveUnresolved(false);
+                    executor.correctProvisional();   // [3j R2] hieu chinh gia TAM (throttle; 0 call khi khong co)
                     lastResolve = now;
                     if (reconciler.blocks().containsKey(Reconciler.BLOCK_STARTUP)) {   // lan dau loi doc san => thu lai
                         Reconciler.Report r2 = reconciler.startup();

@@ -12,6 +12,7 @@ import com.binance.chuyennd.c3live.api.OrderStatus;
 import com.binance.chuyennd.c3live.api.PositionInfo;
 import com.binance.chuyennd.c3live.api.Side;
 import com.binance.chuyennd.c3live.api.SymbolConfig;
+import com.binance.chuyennd.c3live.api.TradeFill;
 import com.binance.chuyennd.c3live.log.OrderAuditLog;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -271,6 +272,21 @@ public final class DryGateway implements ExchangeGateway {
     @Override
     public synchronized Optional<OrderInfo> queryOrder(String symbol, String cid) {
         return Optional.ofNullable(orders.get(cid));
+    }
+
+    /** [3j R2(c)] dry: 1 lenh MARKET khop ngay => 1 khop (qty @ avgPrice cua lenh); khong co => list rong. */
+    @Override
+    public synchronized List<TradeFill> userTrades(String symbol, long orderId) {
+        for (OrderInfo o : orders.values()) {
+            if (o.getOrderId() != orderId) continue;
+            if (!symbol.equals(o.getSymbol())) continue;
+            if (o.getExecutedQty() == null || o.getExecutedQty().signum() <= 0) return new ArrayList<>();
+            if (o.getAvgPrice() == null || o.getAvgPrice().signum() <= 0) return new ArrayList<>();
+            List<TradeFill> out = new ArrayList<>();
+            out.add(new TradeFill(o.getSymbol(), orderId, o.getExecutedQty(), o.getAvgPrice(), o.getUpdateTimeMs()));
+            return out;
+        }
+        return new ArrayList<>();
     }
 
     @Override

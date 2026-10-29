@@ -5,7 +5,9 @@ import com.binance.chuyennd.c3live.api.ExchangeGateway;
 import com.binance.chuyennd.c3live.api.GatewayException;
 import com.binance.chuyennd.c3live.api.OrderInfo;
 import com.binance.chuyennd.c3live.api.OrderStatus;
+import com.binance.chuyennd.c3live.api.PositionInfo;
 import com.binance.chuyennd.c3live.api.Side;
+import com.binance.chuyennd.c3live.api.Ticker24h;
 import com.binance.chuyennd.c3live.book.LiveBookC3;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +34,10 @@ import java.util.function.LongSupplier;
  *       lai CUNG cid (toi da {@code maxAttempts}); tra loi => giu UNKNOWN (khong bao gio gui lai mu), luong dinh ky tra lai.</li>
  *   <li>Sau restart: leg PENDING (chua tung gui) => huy; SENDING/UNKNOWN => tra san; KHONG BAO GIO gui lai (quyet dinh cu
  *       da het han).</li>
+ *   <li>[3j R1/R2/R4] Ket qua san co {@code executedQty > 0} => LUON ghi qty vao so (gia that neu co; khong co gia thi
+ *       giai theo thu tu stream/queryOrder/userTrades, het ngan sach 3 s => ghi gia TAM = mark, co {@code pxProvisional}).
+ *       KHONG BAO GIO suy ra "khong khop" tu gia thieu/0. {@code FILLED} ma executedQty = 0 => UNKNOWN + tra lai san;
+ *       chi huy giu cho khi san noi CANCELED/EXPIRED/REJECTED voi executedQty = 0.</li>
  * </ol>
  * Fill that => {@link FillObserver#onFill} (C2 truot co dau, ref = close nen 1m quyet dinh). Moi call REST =>
  * {@link ApiObserver#onApiResult} (C3 dem loi lien tiep).
@@ -42,6 +48,8 @@ public final class C3LiveOrderExecutor {
 
     public static final long DEFAULT_SAFE_RETRY_MS = 10_000L;
     public static final int DEFAULT_MAX_ATTEMPTS = 3;
+    /** [3j R2] nhip toi thieu giua 2 lan thu hieu chinh gia TAM (0 call khi khong co leg provisional). */
+    public static final long PROVISIONAL_RECHECK_MS = 5_000L;
 
     public enum Resolve { FOUND, ABSENT, ERROR, WAIT }
 
@@ -51,6 +59,11 @@ public final class C3LiveOrderExecutor {
 
     public interface FillObserver {
         void onFill(String symbol, boolean isBuy, double fillPx, double refPx);
+    }
+
+    /** [3j] su kien gia de ghi nhat ky (canary journal / log production): PX_RESOLVED | PX_PROVISIONAL | PX_CORRECTED. */
+    public interface PriceObserver {
+        void onPrice(String type, String symbol, String cid, double px, String source);
     }
 
     public interface Sleeper {
@@ -72,6 +85,10 @@ public final class C3LiveOrderExecutor {
     private final AtomicLong nCancelled = new AtomicLong();
     private final AtomicLong nUnknown = new AtomicLong();
     private final AtomicLong nResend = new AtomicLong();
+    private final AtomicLong nProvisional = new AtomicLong();
+    private volatile FillPriceResolver prices;
+    private volatile PriceObserver priceObs = (t, s, c, p, src) -> { };
+    private volatile long lastProvisionalCheckMs = Long.MIN_VALUE / 2;
 
     public C3LiveOrderExecutor(ExchangeGateway gw, LiveBookC3 book, ApiObserver api, FillObserver fill, LongSupplier clock,
                                Sleeper sleeper, long safeRetryMs, int maxAttempts, Executor exec) {
@@ -84,6 +101,23 @@ public final class C3LiveOrderExecutor {
         this.safeRetryMs = Math.max(0L, safeRetryMs);
         this.maxAttempts = Math.max(1, maxAttempts);
         this.exec = exec;
+        this.prices = new FillPriceResolver(clock, sleeper, this.api);
+    }
+
+    /**
+     * [3j] dung CHUNG 1 FillPriceResolver voi FillAccounting (user stream) — bat buoc trong production/canary de nguon (a)
+     * stream co tac dung. Goi truoc khi su dung; null = giu resolver rieng (chi con (b)/(c)).
+     */
+    public void setPriceResolver(FillPriceResolver r) {
+        if (r != null) this.prices = r;
+    }
+
+    public FillPriceResolver priceResolver() {
+        return prices;
+    }
+
+    public void setPriceObserver(PriceObserver o) {
+        this.priceObs = o == null ? (t, s, c, p, src) -> { } : o;
     }
 
     /** Dua leg da giu cho (PENDING) vao luong gui. Khong chan luong goi. */
@@ -128,7 +162,7 @@ public final class C3LiveOrderExecutor {
             try {
                 OrderInfo o = gw.newMarketOrder(sym, Side.BUY, qty, cid, false);
                 api.onApiResult("newMarketOrder", true);
-                apply(cid, o);
+                apply(cid, o, true, true);
                 return;
             } catch (GatewayException e) {
                 api.onApiResult("newMarketOrder", false);
@@ -182,7 +216,8 @@ public final class C3LiveOrderExecutor {
             Optional<OrderInfo> q = gw.queryOrder(lv.get().symbol, cid);
             api.onApiResult("queryOrder", true);
             if (q.isPresent()) {
-                apply(cid, q.get());
+                // [3j] 1 lan doc da xong: KHONG mo them ngan sach giai gia (stream/query sau se bo sung), khong tra lai san.
+                apply(cid, q.get(), false, false);
                 return Resolve.FOUND;
             }
             return Resolve.ABSENT;
@@ -201,6 +236,16 @@ public final class C3LiveOrderExecutor {
     }
 
     void apply(String cid, OrderInfo o) {
+        apply(cid, o, true, true);
+    }
+
+    /**
+     * Ap ket qua san vao so.
+     *
+     * @param resolvePrice [3j R2] duoc phep giai gia (stream/query/userTrades, <= 3 s) khi executedQty > 0 ma thieu avgPrice
+     * @param requery      [3j R4] duoc phep tra san 1 lan khi FILLED/khong chac chan ma executedQty = 0
+     */
+    private void apply(String cid, OrderInfo o, boolean resolvePrice, boolean requery) {
         Optional<LiveBookC3.LegView> lv = book.leg(cid);
         if (!lv.isPresent()) return;
         long now = clock.getAsLong();
@@ -208,18 +253,152 @@ public final class C3LiveOrderExecutor {
         BigDecimal ex = o.getExecutedQty() == null ? BigDecimal.ZERO : o.getExecutedQty();
         BigDecimal avg = o.getAvgPrice();
         if (st == OrderStatus.FILLED || (st.isFinal() && ex.signum() > 0)) {
-            double px = avg == null ? 0d : avg.doubleValue();
-            if (book.confirm(cid, ex, px, o.getOrderId(), now)) {
-                nConfirmed.incrementAndGet();
-                LOG.info("[C3-LIVE-EXEC] FILL {} {} qty={} avg={} ref={} slip={}", lv.get().symbol, cid, ex.toPlainString(),
-                        px, lv.get().refPx, lv.get().refPx > 0 ? String.format("%.5f", px / lv.get().refPx - 1d) : "NA");
-                if (px > 0d) fill.onFill(lv.get().symbol, true, px, lv.get().refPx);
+            if (ex.signum() <= 0) {
+                // [3j R4] FILLED ma executedQty = 0: KHONG duoc huy giu cho (co the san bao nham / doc-sau-ghi tre).
+                book.markUnknown(cid, "filled_exec0", now);
+                LOG.warn("[C3-LIVE-EXEC] {} {} {} nhung executedQty=0 => UNKNOWN, tra lai san (KHONG huy)", lv.get().symbol, cid, st);
+                requeryIfPossible(cid, lv.get().symbol, requery);
+                return;
             }
-        } else if (st.isFinal()) {
-            if (book.cancel(cid, "final_" + st, now)) nCancelled.incrementAndGet();
-        } else {
-            book.noteOpen(cid, o.getOrderId(), now);
+            double px = avg == null ? 0d : avg.doubleValue();
+            BigDecimal qty = ex;
+            if (px <= 0d && !resolvePrice) {
+                // [3j R2(a)] da doc 1 lan qua queryOrder: van uu tien gia tu stream neu da co (0 call REST)
+                FillPriceResolver.Source cached = prices.cached(cid, o.getOrderId());
+                if (cached != FillPriceResolver.Source.NONE) {
+                    px = prices.cachedPx(cid, o.getOrderId());
+                    priceObs.onPrice("PX_RESOLVED", lv.get().symbol, cid, px, cached.name());
+                }
+            }
+            if (px <= 0d && resolvePrice) {
+                FillPriceResolver.Resolved r = prices.resolve(gw, lv.get().symbol, cid, o.getOrderId());
+                if (r.qty != null && r.qty.signum() > qty.signum()) qty = r.qty;
+                if (r.hasPrice()) {
+                    px = r.px;
+                    priceObs.onPrice("PX_RESOLVED", lv.get().symbol, cid, px, r.source.name());
+                    LOG.info("[C3-LIVE-EXEC] {} {} ACK thieu avgPrice => gia {} tu {} sau {} ms", lv.get().symbol, cid, px,
+                            r.source, r.ms);
+                }
+            }
+            if (px <= 0d) {
+                // [3j R2] khong co gia that trong ngan sach => ghi qty voi gia TAM = mark (R1: qty KHONG duoc mat).
+                double prov = markPrice(lv.get().symbol, lv.get().refPx);
+                if (prov > 0d && book.confirmProvisional(cid, qty, prov, o.getOrderId(), clock.getAsLong())) {
+                    nConfirmed.incrementAndGet();
+                    nProvisional.incrementAndGet();
+                    LOG.warn("[C3-LIVE-EXEC] {} {} PX_PROVISIONAL qty={} gia tam={} (mark; cho gia that)", lv.get().symbol, cid,
+                            qty.toPlainString(), prov);
+                    priceObs.onPrice("PX_PROVISIONAL", lv.get().symbol, cid, prov, "MARK");
+                } else if (prov <= 0d) {
+                    book.markUnknown(cid, "no_price", clock.getAsLong());
+                    LOG.error("[C3-LIVE-EXEC] {} {} executedQty={} nhung KHONG co ca gia tam => giu UNKNOWN (R1: khong huy)",
+                            lv.get().symbol, cid, qty.toPlainString());
+                }
+                return;
+            }
+            if (book.confirm(cid, qty, px, o.getOrderId(), clock.getAsLong())) {
+                nConfirmed.incrementAndGet();
+                LOG.info("[C3-LIVE-EXEC] FILL {} {} qty={} avg={} ref={} slip={}", lv.get().symbol, cid, qty.toPlainString(),
+                        px, lv.get().refPx, lv.get().refPx > 0 ? String.format("%.5f", px / lv.get().refPx - 1d) : "NA");
+                fill.onFill(lv.get().symbol, true, px, lv.get().refPx);
+            } else if (book.correctPrice(cid, px, clock.getAsLong())) {
+                // leg da duoc stream xac nhan TRUOC (CONFIRMED) voi gia tam => hieu chinh lai bang gia that
+                LOG.info("[C3-LIVE-EXEC] {} {} PX_CORRECTED -> {} (leg da CONFIRMED)", lv.get().symbol, cid, px);
+                priceObs.onPrice("PX_CORRECTED", lv.get().symbol, cid, px, "EXEC");
+            }
+            return;
         }
+        if (st == OrderStatus.CANCELED || st == OrderStatus.REJECTED || st == OrderStatus.EXPIRED
+                || st == OrderStatus.EXPIRED_IN_MATCH) {
+            if (ex.signum() <= 0) {
+                if (book.cancel(cid, "final_" + st, now)) nCancelled.incrementAndGet();
+            } else {
+                // co mot phan da khop => khong huy; ghi nhu FILLED (xu ly o nhanh tren o lan doc sau)
+                book.markUnknown(cid, "final_" + st + "_exec_gt0", now);
+                LOG.warn("[C3-LIVE-EXEC] {} {} {} nhung executedQty={} => UNKNOWN, tra lai san", lv.get().symbol, cid, st,
+                        ex.toPlainString());
+                requeryIfPossible(cid, lv.get().symbol, requery);
+            }
+            return;
+        }
+        if (st.isFinal()) {
+            // TRIGGERED/FINISHED (trang thai algo) hoac khong xac dinh: khong ket luan da huy
+            book.markUnknown(cid, "final_unknown_" + st, now);
+            LOG.warn("[C3-LIVE-EXEC] {} {} trang thai {} khong ket luan => UNKNOWN", lv.get().symbol, cid, st);
+            requeryIfPossible(cid, lv.get().symbol, requery);
+            return;
+        }
+        book.noteOpen(cid, o.getOrderId(), now);
+    }
+
+    /** [3j R4] tra san 1 lan (khong ngu) khi trang thai/executedQty khong ket luan duoc. */
+    private void requeryIfPossible(String cid, String symbol, boolean requery) {
+        if (!requery) return;
+        try {
+            Optional<OrderInfo> q = gw.queryOrder(symbol, cid);
+            api.onApiResult("queryOrder", true);
+            if (q.isPresent()) {
+                LOG.warn("[C3-LIVE-EXEC] {} {} tra lai san sau trang thai khong ro: status={} execQty={}", symbol, cid,
+                        q.get().getStatus(), q.get().getExecutedQty());
+                apply(cid, q.get(), false, false);
+            }
+        } catch (GatewayException e) {
+            api.onApiResult("queryOrder", false);
+        } catch (RuntimeException e) {
+            api.onApiResult("queryOrder", false);
+        }
+    }
+
+    /**
+     * [3j R2] Hieu chinh gia TAM cua cac leg da CONFIRMED: stream (cache) truoc, roi queryOrder, roi userTrades.
+     * Throttle {@link #PROVISIONAL_RECHECK_MS}; khong co leg provisional => 0 call.
+     *
+     * @return so leg duoc sua trong lan nay
+     */
+    public int correctProvisional() {
+        List<LiveBookC3.LegView> prov = book.provisionalLegs();
+        if (prov.isEmpty()) return 0;
+        long now = clock.getAsLong();
+        if (now - lastProvisionalCheckMs < PROVISIONAL_RECHECK_MS) return 0;
+        lastProvisionalCheckMs = now;
+        int n = 0;
+        for (LiveBookC3.LegView lv : prov) {
+            FillPriceResolver.Resolved r = prices.resolve(gw, lv.symbol, lv.cid, lv.orderId, 0L);
+            if (!r.hasPrice()) continue;
+            if (book.correctPrice(lv.cid, r.px, clock.getAsLong())) {
+                n++;
+                LOG.info("[C3-LIVE-EXEC] {} {} PX_CORRECTED {} -> {} (tu {})", lv.symbol, lv.cid, lv.avgPx, r.px, r.source);
+                priceObs.onPrice("PX_CORRECTED", lv.symbol, lv.cid, r.px, r.source.name());
+            }
+        }
+        return n;
+    }
+
+    /** [3j R2] gia danh dau hien tai (positionRisk mark; khong co vi the => gia khop cuoi); 0 = khong doc duoc. */
+    private double markPrice(String sym, double refPx) {
+        try {
+            for (PositionInfo p : gw.positions()) {
+                if (sym.equals(p.getSymbol()) && p.getMarkPrice() != null && p.getMarkPrice().signum() > 0) {
+                    return p.getMarkPrice().doubleValue();
+                }
+            }
+        } catch (RuntimeException e) {
+            LOG.warn("[3j] {} khong doc duoc mark tu positions: {}", sym, e.toString());
+        }
+        try {
+            for (Ticker24h t : gw.tickers24h(sym)) {
+                if (sym.equals(t.getSymbol()) && t.getLastPrice() != null && t.getLastPrice().signum() > 0) {
+                    return t.getLastPrice().doubleValue();
+                }
+            }
+        } catch (RuntimeException e) {
+            LOG.warn("[3j] {} khong doc duoc gia cuoi (tickers24h): {}", sym, e.toString());
+        }
+        if (refPx > 0d) {
+            LOG.warn("[3j] {} khong doc duoc gia thi truong => gia TAM = ref {}", sym, refPx);
+            return refPx;
+        }
+        return 0d;
     }
 
     /**
@@ -250,11 +429,13 @@ public final class C3LiveOrderExecutor {
                         lv.state);
             }
         }
+        correctProvisional();
         return book.unresolvedLegs().size();
     }
 
     public String stats() {
         return "send=" + nSend.get() + " confirmed=" + nConfirmed.get() + " cancelled=" + nCancelled.get() + " unknown="
-                + nUnknown.get() + " resend=" + nResend.get() + " inflight=" + inFlight.size();
+                + nUnknown.get() + " resend=" + nResend.get() + " provisional=" + nProvisional.get() + " inflight="
+                + inFlight.size();
     }
 }

@@ -70,6 +70,15 @@ public interface ExchangeGateway {
         throw new UnsupportedOperationException("queryOrderById khong ho tro boi " + name());
     }
 
+    /**
+     * [3j R2(c)] Cac khop THAT cua 1 lenh thuong theo orderId (GET /fapi/v1/userTrades). Nguon gia thu 3 khi ACK
+     * MARKET khong co avgPrice va queryOrder chua tra gia. Khong doc duoc => nem GatewayException; khong co khop => list rong.
+     * Mac dinh: khong ho tro (nem UnsupportedOperationException => nguoi goi coi la KHONG doc duoc).
+     */
+    default List<TradeFill> userTrades(String symbol, long orderId) {
+        throw new UnsupportedOperationException("userTrades khong ho tro boi " + name());
+    }
+
     /** Nhu {@link #queryOrder} cho lenh algo (clientAlgoId). */
     Optional<OrderInfo> queryStop(String symbol, String clientAlgoId);
 

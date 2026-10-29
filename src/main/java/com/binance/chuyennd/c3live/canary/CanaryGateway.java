@@ -10,6 +10,7 @@ import com.binance.chuyennd.c3live.api.PositionInfo;
 import com.binance.chuyennd.c3live.api.Side;
 import com.binance.chuyennd.c3live.api.SymbolConfig;
 import com.binance.chuyennd.c3live.api.Ticker24h;
+import com.binance.chuyennd.c3live.api.TradeFill;
 import com.binance.chuyennd.c3live.exec.C3LiveCids;
 import com.binance.chuyennd.c3live.rate.RateGuard;
 
@@ -185,6 +186,7 @@ public final class CanaryGateway implements ExchangeGateway {
         if (a.startsWith("positions") || a.startsWith("account") || a.startsWith("symbolConfig")) return 5;
         if ("multiAssetsMargin".equals(a) || "dualSidePosition".equals(a)) return 30;
         if ("openOrders".equals(a) || "openStops".equals(a) || "tickers24h".equals(a)) return sym == null ? 40 : 1;
+        if ("userTrades".equals(a)) return 5;   // [3j] GET /fapi/v1/userTrades weight 5
         if ("openOrdersAll".equals(a) || "openStopsAll".equals(a)) return 40;
         return 1;
     }
@@ -661,6 +663,13 @@ public final class CanaryGateway implements ExchangeGateway {
     @Override
     public Optional<OrderInfo> queryOrderById(String symbol, long orderId) {   // [3h] CHI DOC
         return call("queryOrderById", symbol, Long.toString(orderId), false, () -> d.queryOrderById(symbol, orderId));
+    }
+
+    /** [3j R2(c)] khop that cua 1 lenh (CHI DOC; weight 5) — nguon gia thu 3 khi ACK khong co avgPrice. */
+    @Override
+    public List<TradeFill> userTrades(String symbol, long orderId) {
+        requireAllowed("userTrades", symbol);
+        return call("userTrades", symbol, Long.toString(orderId), false, () -> d.userTrades(symbol, orderId));
     }
 
     @Override

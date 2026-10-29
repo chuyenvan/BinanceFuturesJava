@@ -14,6 +14,7 @@ import com.binance.chuyennd.c3live.api.Ticker24h;
 import com.binance.chuyennd.c3live.book.LiveBookC3;
 import com.binance.chuyennd.c3live.exec.C3LiveCids;
 import com.binance.chuyennd.c3live.exec.C3LiveOrderExecutor;
+import com.binance.chuyennd.c3live.exec.FillPriceResolver;
 import com.binance.chuyennd.c3live.exit.TrailingStopManager;
 import com.binance.chuyennd.c3live.fill.FillAccounting;
 import com.binance.chuyennd.c3live.fill.UserStream;
@@ -330,9 +331,17 @@ public final class CanaryEngine {
                 for (String s : canarySyms()) {
                     if (ledger(s).signum() <= 0) continue;
                     Optional<PositionInfo> p = pos(s);
-                    if (p.isPresent() && p.get().getUnrealizedProfit() != null) {
-                        unreal += Math.max(0d, -p.get().getUnrealizedProfit().doubleValue());
+                    if (!p.isPresent() || p.get().getUnrealizedProfit() == null) continue;
+                    double exLoss = Math.max(0d, -p.get().getUnrealizedProfit().doubleValue());
+                    Optional<LiveBookC3.ClusterView> cv = book == null ? Optional.empty() : book.cluster(s);
+                    if (cv.isPresent() && cv.get().hasProvisional) {
+                        // [3j R2] lo phai tinh theo gia vao XAU nhat (max(mark, last)) khi vao lenh chua co gia that
+                        double m = mark(s).doubleValue();
+                        double assumed = Math.max(m, lastPrice(s).doubleValue());
+                        double q = cv.get().provisionalQty.doubleValue();
+                        exLoss = Math.max(exLoss, Math.max(0d, q * (assumed - m)));
                     }
+                    unreal += exLoss;
                 }
             } catch (RuntimeException e) {
                 unreal = Double.NaN;
@@ -393,7 +402,10 @@ public final class CanaryEngine {
             }
         };
         book = new LiveBookC3(new File(dir, BOOK_NAME), 1.0d);
+        // [3j R2] 1 cache gia dung CHUNG: FillAccounting (user stream) -> executor (nguon (a) stream)
+        FillPriceResolver priceResolver = new FillPriceResolver(clock, sleeper::sleep, api);
         acct = new FillAccounting(book, gw, OrderAuditLog.live(), null, al, api, clock, null);
+        acct.setPriceResolver(priceResolver);
         flat = new FlatConfirm(gw, api, al, FlatConfirm.DEFAULT_MIN_GAP_MS, FlatConfirm.DEFAULT_MIN_READS);
         rec = new Reconciler(gw, book, acct, () -> rules, al, api, clock, Reconciler.DEFAULT_EQUITY_TOL,
                 Reconciler.DEFAULT_MATCH_TO_RELEASE, null, flat);
@@ -412,6 +424,9 @@ public final class CanaryEngine {
                 .build();
         trailing.setStopGuard(guard);
         executor = new C3LiveOrderExecutor(gw, book, api, null, clock, sleeper::sleep, cfg.safeRetryMs, 3, Runnable::run);
+        executor.setPriceResolver(priceResolver);
+        executor.setPriceObserver((type, s, c, px, src) ->
+                journal.ev(type, "symbol", s, "cid", c, "px", px, "source", src));   // [3j R2] PX_RESOLVED/PX_PROVISIONAL/PX_CORRECTED
         modeGuard = new AccountModeGuard(gw, CanaryLimits.LEVERAGE, al, clock, 60_000L).globalPolicy(false, false);   // [3f §ADD-4 E]
         tap = new StreamTap(deps.connector);
         stream = new UserStream(gw, tap, deps.wsUrls, acct, this::fallbackRest, al, api, clock, 15_000L, 10_000L, 60_000L, 300_000L);
@@ -561,6 +576,15 @@ public final class CanaryEngine {
             m.put("ot", u.origType);
             m.put("z", u.cumQty == null ? null : u.cumQty.toPlainString());
             m.put("ap", u.avgPrice == null ? null : u.avgPrice.toPlainString());
+            // [3j R2] gia THAT den sau khi da ghi gia TAM => hieu chinh so + nhat ky (FillAccounting cung hieu chinh, idempotent)
+            if (book != null && u.clientOrderId != null && u.avgPrice != null && u.avgPrice.signum() > 0) {
+                Optional<LiveBookC3.LegView> lv0 = book.leg(u.clientOrderId);
+                if (lv0.isPresent() && lv0.get().state == LiveBookC3.LegState.CONFIRMED && lv0.get().pxProvisional
+                        && book.correctPrice(u.clientOrderId, u.avgPrice.doubleValue(), now)) {
+                    journal.ev("PX_CORRECTED", "symbol", u.symbol, "cid", u.clientOrderId, "from", lv0.get().avgPx,
+                            "to", u.avgPrice.doubleValue(), "source", "STREAM_AP");
+                }
+            }
             boolean stopFill = isCanaryStopFill(u);
             if (CanaryGateway.canaryOrderCid(u.clientOrderId) && u.cumQty != null) {
                 onCanaryExec(u.symbol, u.clientOrderId, u.cumQty);
@@ -615,6 +639,7 @@ public final class CanaryEngine {
         if (rec != null) rec.confirmPendingFlat();
         checkLoss(false);
         checkScope();   // [3f §ADD-4 C] pham vi canary moi 30 s (hoac ngay khi stream thay lenh la tren symbol canary)
+        if (executor != null) executor.correctProvisional();   // [3j R2] hieu chinh gia TAM (throttle 5 s; 0 call khi khong co)
     }
 
     /** Bom vong trong ms (ngu tung 1 s). */
@@ -719,7 +744,7 @@ public final class CanaryEngine {
             Optional<LiveBookC3.ClusterView> c = book.cluster(s);
             if (c.isPresent() && c.get().confirmedQty.signum() > 0) {
                 double q = c.get().confirmedQty.doubleValue();
-                double e = c.get().avgPrice;
+                double e = budgetEntry(s, c.get());   // [3j R2] gia XAU nhat khi leg con gia TAM
                 double sp = c.get().stopPrice;
                 w += c.get().stopClientAlgoId != null && sp > 0d ? Math.max(0d, q * (e - sp)) : q * e;
                 continue;
@@ -758,7 +783,9 @@ public final class CanaryEngine {
      */
     void protect(String sym, long deadlineMs) {
         LiveBookC3.ClusterView c = book.cluster(sym).orElseThrow(() -> new Abort(TRUOT, "stop bao ve: khong co cum " + sym));
-        double notional = c.confirmedQty.doubleValue() * c.avgPrice;
+        // [3j R2] leg con gia TAM => ngan sach/stop tinh theo gia vao XAU nhat (max(mark, last)) — long: gia cao => notional/stop cao hon
+        double basePx = budgetEntry(sym, c);
+        double notional = c.confirmedQty.doubleValue() * basePx;
         double d = protectDistance(sym, notional);
         String why = null;
         if (d < CanaryLimits.MIN_STOP_DIST) {
@@ -766,7 +793,11 @@ public final class CanaryEngine {
         } else {
             try (RateGuard.Urgent urgent = RateGuard.urgent(deadlineMs)) {
                 try {
-                    trailRate(sym, (float) -d);
+                    if (c.hasProvisional) {
+                        trailRateAt(sym, basePx, -d);   // stop = gia XAU nhat x (1-d), quy ve ty le so VWAP dang luu
+                    } else {
+                        trailRate(sym, (float) -d);
+                    }
                 } catch (RuntimeException e) {
                     why = "dat stop loi " + e;
                 }
@@ -789,8 +820,9 @@ public final class CanaryEngine {
                     } else if (late > 0L) {
                         why = "stop bao ve chi xac nhan SAU han " + CanaryLimits.PROTECT_MAX_MS / 1000L + " s tu luc gui lenh mo (tre "
                                 + late + " ms)";
-                    } else if (c2.stopPrice < c2.avgPrice * (1d - d - CanaryLimits.STOP_ROUND_TOL)) {
-                        why = "stop " + c2.stopPrice + " xa hon -" + fmt(d * 100d) + " % so gia vao " + c2.avgPrice;
+                    } else if (c2.stopPrice < basePx * (1d - d - CanaryLimits.STOP_ROUND_TOL)) {
+                        why = "stop " + c2.stopPrice + " xa hon -" + fmt(d * 100d) + " % so gia vao " + basePx
+                                + (c2.hasProvisional ? " (gia TAM)" : "");
                     } else {
                         journal.ev("PROTECT", "symbol", sym, "cid", sid, "stop", c2.stopPrice, "entry", c2.avgPrice, "distPct", d * 100d,
                                 "notional", notional, "deadlineLeftMs", -late);
@@ -868,6 +900,12 @@ public final class CanaryEngine {
         executor.submit(l.cid);   // executor dong bo (Runnable::run): gui + (timeout) cho cua so an toan + queryOrder
         tap.release();
         Optional<LiveBookC3.LegView> lv = book.leg(l.cid);
+        if (!lv.isPresent() || lv.get().state != LiveBookC3.LegState.CONFIRMED) {
+            // [3j R4] executor chua ket luan (ACK mat/khong ro) => cho bang chung khop tren stream (bounded) roi doc lai so.
+            final String cid0 = l.cid;
+            waitFor(() -> book.leg(cid0).map(v -> v.state == LiveBookC3.LegState.CONFIRMED).orElse(false), cfg.fillEventWaitMs);
+            lv = book.leg(l.cid);
+        }
         l.confirmed = lv.isPresent() && lv.get().state == LiveBookC3.LegState.CONFIRMED;
         if (lv.isPresent()) {
             l.avg = lv.get().avgPx;
@@ -875,14 +913,27 @@ public final class CanaryEngine {
         } else {
             l.error = "leg bi huy (khong khop)";
         }
+        long sentRef = gw.firstSentMs(l.cid);   // [3i] moc gui that (<= luc khop); khong co => moc LEG_SEND (som hon, chat hon)
+        if (sentRef < 0L) sentRef = l.sendMs;
+        if (l.confirmed) {
+            if (lv.get().pxProvisional) {
+                journal.ev("PX_PROVISIONAL", "symbol", sym, "cid", l.cid, "qty", lv.get().execQty.toPlainString(),
+                        "px", lv.get().avgPx, "note", "gia TAM = mark; cho gia that (stream/queryOrder/userTrades)");
+            }
+            // [3j R3] dat stop bao ve NGAY sau khi executor xac nhan qty (KHONG cho su kien stream FILLED)
+            protect(sym, sentRef + CanaryLimits.PROTECT_MAX_MS);   // [3c MAJ-C1][3i] stop bao ve <= 61 s tu luc gui lenh mo
+        }
         final String cid = l.cid;
         long w = waitFor(() -> firstEventTs("ORDER_TRADE_UPDATE", cid, "FILLED") >= 0, cfg.fillEventWaitMs);
         l.fillEventMs = firstEventTs("ORDER_TRADE_UPDATE", cid, "FILLED");
+        if (l.confirmed) {   // [3j R2] gia that den sau khi dat stop => cap nhat gia vao cua leg (stop da dat theo gia than trong)
+            Optional<LiveBookC3.LegView> after = book.leg(cid);
+            if (after.isPresent() && after.get().pxProvisional) executor.correctProvisional();
+            after = book.leg(cid);
+            if (after.isPresent() && after.get().state == LiveBookC3.LegState.CONFIRMED) l.avg = after.get().avgPx;
+        }
         journal.ev("LEG_DONE", "symbol", sym, "cid", l.cid, "confirmed", l.confirmed, "avg", l.avg, "err", l.error,
                 "streamLatMs", l.fillEventMs < 0 ? null : l.fillEventMs - l.sendMs, "waitMs", w);
-        long sentRef = gw.firstSentMs(l.cid);   // [3i] moc gui that (<= luc khop); khong co => moc LEG_SEND (som hon, chat hon)
-        if (sentRef < 0L) sentRef = l.sendMs;
-        if (l.confirmed) protect(sym, sentRef + CanaryLimits.PROTECT_MAX_MS);   // [3c MAJ-C1][3i] stop bao ve <= 61 s tu luc khop
         return l;
     }
 
@@ -940,6 +991,51 @@ public final class CanaryEngine {
     void trailRate(String sym, float rate) {
         trailTarget.put(sym, rate);
         trailing.step(px(sym));
+    }
+
+    /**
+     * [3j R2] nhu {@link #trailRate} nhung stop tinh tu GIA VAO THUC TE {@code entryPx} (gia XAU nhat khi leg con
+     * gia TAM), roi quy ve ty le so VWAP dang luu trong so (co the la mark) de TrailingStopManager dat dung gia.
+     */
+    void trailRateAt(String sym, double entryPx, double offsetRate) {
+        LiveBookC3.ClusterView c = book.cluster(sym).orElseThrow(() -> new Abort(TRUOT, "khong co cum " + sym));
+        double bookEntry = c.avgEntryF;
+        if (!(entryPx > 0d) || !(bookEntry > 0d)) {
+            trailRate(sym, (float) offsetRate);
+            return;
+        }
+        double stopPx = entryPx * (1d + offsetRate);
+        trailRate(sym, (float) (stopPx / bookEntry - 1d));
+    }
+
+    /**
+     * [3j R2] Gia vao dung cho ngan sach lo / khoang cach stop: leg con gia TAM => XAU nhat cua (mark, gia khop cuoi, gia tam)
+     * — long: gia vao cang cao thi notional/stop cang cao (bao thu). Kem entryPrice cua vi the tren san khi doc duoc: day la
+     * gia vao THAT va cung la moc CanaryGateway dung de tu choi stop qua xa (§ADD-2), nen phai nam trong max.
+     * Cum khong co leg gia TAM => gia binh quan so (nhu cu).
+     */
+    double budgetEntry(String sym, LiveBookC3.ClusterView c) {
+        if (!c.hasProvisional) return c.avgPrice;
+        double m = 0d, l = 0d, ex = 0d;
+        try {
+            m = mark(sym).doubleValue();
+        } catch (RuntimeException e) {
+            journal.ev("PX_PROV_MARK_NOREAD", "symbol", sym, "err", e.getClass().getSimpleName());
+        }
+        try {
+            l = lastPrice(sym).doubleValue();
+        } catch (RuntimeException e) {
+            journal.ev("PX_PROV_LAST_NOREAD", "symbol", sym, "err", e.getClass().getSimpleName());
+        }
+        try {
+            Optional<PositionInfo> p = pos(sym);
+            if (p.isPresent() && p.get().getEntryPrice() != null && p.get().getEntryPrice().signum() > 0) {
+                ex = p.get().getEntryPrice().doubleValue();
+            }
+        } catch (RuntimeException e) {
+            journal.ev("PX_PROV_ENTRY_NOREAD", "symbol", sym, "err", e.getClass().getSimpleName());
+        }
+        return Math.max(Math.max(Math.max(m, l), ex), c.avgPrice);
     }
 
     /** Cho cum bi xoa khoi so (stream / REST / flattener). Goi lai closer moi 5 s neu cum dang dong. */

@@ -7,6 +7,7 @@ import com.binance.chuyennd.c3live.api.OrderInfo;
 import com.binance.chuyennd.c3live.book.LiveBookC3;
 import com.binance.chuyennd.c3live.exec.C3LiveCids;
 import com.binance.chuyennd.c3live.exec.C3LiveOrderExecutor;
+import com.binance.chuyennd.c3live.exec.FillPriceResolver;
 import com.binance.chuyennd.c3live.log.OrderAuditLog;
 import com.binance.chuyennd.c3live.recon.OwnStopGuard;
 import org.slf4j.Logger;
@@ -71,6 +72,7 @@ public final class FillAccounting {
     private volatile OwnStopGuard stopGuard;
     private final Map<String, String> lastExitReason = new ConcurrentHashMap<>();
     private final Set<String> warnedAssets = ConcurrentHashMap.newKeySet();
+    private volatile FillPriceResolver prices;
     private final AtomicLong nOrder = new AtomicLong();
     private final AtomicLong nConfirm = new AtomicLong();
     private final AtomicLong nExitFill = new AtomicLong();
@@ -95,6 +97,14 @@ public final class FillAccounting {
         this.unknownPosition = sink == null ? s -> { } : sink;
     }
 
+    /**
+     * [3j R2] cache gia tu stream dung CHUNG voi C3LiveOrderExecutor (nguon (a) cua FillPriceResolver). Phai tro cung 1
+     * object voi executor (production/canary); null = khong chia se.
+     */
+    public void setPriceResolver(FillPriceResolver r) {
+        this.prices = r;
+    }
+
     public void dispatch(UserStreamEvents.Event e) {
         try {
             if (e instanceof UserStreamEvents.OrderUpdate) {
@@ -114,6 +124,8 @@ public final class FillAccounting {
         nOrder.incrementAndGet();
         String sym = u.symbol;
         String cid = u.clientOrderId;
+        FillPriceResolver pr = prices;
+        if (pr != null) pr.observe(cid, u.orderId, u.avgPrice, u.lastPrice);   // [3j R2(a)] cache gia cho executor
         if (sym == null) return;
         if (u.isTrade()) {
             double comm = commissionUsd(u.commission, u.commissionAsset);
@@ -147,16 +159,42 @@ public final class FillAccounting {
         }
         BigDecimal z = u.cumQty == null ? BigDecimal.ZERO : u.cumQty;
         if ("FILLED".equals(u.status) || (u.isFinal() && z.signum() > 0)) {
-            double px = u.avgPrice == null ? 0d : u.avgPrice.doubleValue();
+            // [3j R1/R2] gia that: ap (binh quan) truoc, roi L (gia khop tung phan). KHONG BAO GIO coi thieu gia la "khong khop".
+            double px = u.avgPrice != null && u.avgPrice.signum() > 0 ? u.avgPrice.doubleValue()
+                    : (u.lastPrice != null && u.lastPrice.signum() > 0 ? u.lastPrice.doubleValue() : 0d);
+            Optional<LiveBookC3.LegView> cur = book.leg(cid);
+            if (cur.isPresent() && cur.get().state == LiveBookC3.LegState.CONFIRMED && cur.get().pxProvisional) {
+                // da ghi qty voi gia TAM (ACK thieu avgPrice) => hieu chinh bang gia that cua stream
+                if (px > 0d && book.correctPrice(cid, px, now)) {
+                    LOG.info("[C3-LIVE-FILL] {} {} PX_CORRECTED {} -> {} (stream)", u.symbol, cid, cur.get().avgPx, px);
+                }
+                return;
+            }
+            if (z.signum() <= 0) {
+                LOG.warn("[C3-LIVE-FILL] {} {} {} nhung z=0 => giu leg cho executor tra san (khong huy)", u.symbol, cid, u.status);
+                return;
+            }
+            if (px <= 0d) {
+                // [3j R1] co qty ma chua co gia: executor dang giai gia (stream/query/userTrades) => KHONG huy giu cho
+                LOG.warn("[C3-LIVE-FILL] {} {} FILLED z={} nhung thieu ca ap/L => giu leg unresolved, cho executor giai gia",
+                        u.symbol, cid, z.toPlainString());
+                return;
+            }
             if (book.confirm(cid, z, px, u.orderId, now)) {
                 nConfirm.incrementAndGet();
                 LOG.info("[C3-LIVE-FILL] xac nhan qua stream {} {} qty={} avg={} ref={}", u.symbol, cid, z.toPlainString(), px,
                         lv.get().refPx);
-                if (px > 0d) fill.onFill(u.symbol, true, px, lv.get().refPx);
+                fill.onFill(u.symbol, true, px, lv.get().refPx);
             }
         } else if (u.isFinal()) {
-            if (book.cancel(cid, "stream_" + u.status, now)) {
-                LOG.warn("[C3-LIVE-FILL] leg {} {} ket thuc {} khong khop => huy giu cho", u.symbol, cid, u.status);
+            // [3j R4] chi huy khi san noi CHAC CHAN khong khop
+            if ("CANCELED".equals(u.status) || "EXPIRED".equals(u.status) || "REJECTED".equals(u.status)
+                    || "EXPIRED_IN_MATCH".equals(u.status)) {
+                if (book.cancel(cid, "stream_" + u.status, now)) {
+                    LOG.warn("[C3-LIVE-FILL] leg {} {} ket thuc {} khong khop => huy giu cho", u.symbol, cid, u.status);
+                }
+            } else {
+                LOG.warn("[C3-LIVE-FILL] leg {} {} trang thai {} khong ket luan => giu leg", u.symbol, cid, u.status);
             }
         } else if (u.orderId > 0) {
             book.noteOpen(cid, u.orderId, now);
