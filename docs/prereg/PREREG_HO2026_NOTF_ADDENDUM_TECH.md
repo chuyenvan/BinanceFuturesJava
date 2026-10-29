@@ -53,3 +53,25 @@ Prereg gốc: `docs/prereg/PREREG_HO2026_NOTF.md` (96164b72). Addendum này KHÔ
 - **Gán jar:** k24-s, k24-b (A0' và A1) dùng `ho2026-notf-sim-jar` (= nguồn jar gốc ho4-*); x14 dùng `sim-jar-tsx` (= jar gốc tsx-ho-x14).
 - **Cổng A0'(b) làm lại:** `a0p2-k24-s-s42` phải ra `6989a312…`, `a0p2-k24-b-s42` phải ra `7cc8864c…`, cùng `a0p-x14-s42` đã PASS. Ba kernel `a0p-*` lần 1 giữ làm hồ sơ.
 - Không đổi cấu hình, seed, X, luật hay thước.
+
+## T5. ADDENDUM_TECH-3 (2026-10-29, TRƯỚC khi chấm bất kỳ số A1 nào)
+
+Không đổi X, cấu hình, seed, thước hay D1–D5. Ghi lại hạ tầng thực tế và một chỗ phải diễn giải.
+
+- **Trạng thái:** 34/34 job COMPLETE: cổng (a) 1, cổng (b) 4 kernel (1 bản tsx-jar làm hồ sơ + 3 bản đúng), dữ liệu 7 (`nt-x26-q1..3`, `nt-tk26`, `nt-chain-y26`, `nt-v1`), sim 24.
+- **Cổng A0'(a):** `a0p-x26-q1` MANIFEST 137/137 file trùng md5 với `ho4p1-x26-q1`.
+- **Cổng A0'(b)** (md5 printDone, so run gốc cùng seed 42):
+  - `a0p2-k24-s-s42` = `6989a3128daa249372be802fb06a8c27` = `ho4-k24-s-s42` ✔ (jar STUB 877d9ffa)
+  - `a0p2-k24-b-s42` = `7cc8864ca12bdd69f0165c9c9d5c74c5` = `ho4-k24-b-s42` ✔ (jar STUB 877d9ffa)
+  - `a0p-x14-s42` = `bb609455e02aaf30ed8afc31342329e2` = `tsx-ho-x14-s42` ✔ (jar tsx cc0f9d11)
+  - `a0p-k24-s-s42` (jar tsx, lần 1) = md5 của k24-b, `pen=False` → đúng như T4, giữ làm hồ sơ, không dùng.
+- **Chạy lại hạ tầng (1 lần, cfg y hệt):** `nt-k24-b-s123` lần 1 COMPLETE nhưng file `result.json` tải về không parse được (`Expecting value: line 2 column 1`) ⇒ đẩy lại 1 lần (`pushes=2`), md5 cuối `7da38ae5e24774416ee47a8adf2ccd91`, pass. Không đổi tham số nào.
+- **Bảo mật (kiểm lại trên bản tải từ Kaggle, không chỉ local):**
+  - `ho2026-notf-jar-exp/sim.jar` sha256 `a485880c…`, sec ok=true;
+  - `ho2026-notf-sim-jar/sim.jar` sha256 `877d9ffa…`, sec ok=true;
+  - `sim-jar-tsx/sim.jar` sha256 `cc0f9d11…`, sec ok=true (7 568 class).
+- **Kiểm độc lập 24 kernel A1** (metadata Kaggle + source CFG + result.json + log + printDone, script `verify_nt.py`): tất cả PASS — jar sha256 đúng theo cấu hình (k24-s/k24-b: 877d9ffa; x14: cc0f9d11), `pred_md5_used` đúng theo seed, `pred_md5_base=22f69456…`, tk `nt-tk26` md5 273/273 = exporter, chain `nt-chain-y26`, override đúng từng key (penalty 0,01675 chỉ k24-s; extHours 336 + 18 ngày chỉ x14), mapper 863, `TICKER_HO4P1 ok=273 bad=0 miss=0 extra=0 other=0`, `FUND_HO4_OK` + selfcheck, `HOLDOUT_UNSEAL DUNG`, `[CRASH-PENALTY]` đúng, `[TSX] extHours=336 extDays=18` cho x14 và không có cho k24.
+- **Diễn giải V3 (nêu rõ để MASTER biết, không đổi luật):** V3 "0 leg ∈ X trong printDone A1" được đọc là **trong cửa sổ chấm A1 (2026)**. Lý do: §2 bắt buộc đoạn ≤ 2025-12-31 giữ NGUYÊN byte như chuỗi gốc, mà chuỗi gốc có leg trên DEFIUSDT/BTCDOMUSDT (INDEX, 2021–2024). Vì vậy đọc V3 theo nghĩa toàn bộ printDone sẽ mâu thuẫn với §2 và không thể đạt. Số liệu: 24/24 kernel có **0 leg X trong 2026**; leg X ngoài cửa sổ (2021–2024, DEFI/BTCDOM) giống hệt A0 cùng seed/phí (đã so từng dòng `start < 20251224`).
+- **V1:** `nt-v1` ok=true, 12/12 ngày: 0 ô X trong A1, cùng tập phút, 0 ô lệch, số ô = số ô tham chiếu ngoài X; universe_by_month q1/q2/q3 ∩ X = ∅; `tk_raw_md5` 273/273 khớp exporter.
+- **V2:** tái dựng độc lập ALT_EW "all" từ `a2v2` khớp `ew_2026.npz` 437 750/437 750 phút, max|Δ| 4,86e-17; noTFIDX (chỉ n_cr) cho đúng 18 ngày §2; chuỗi `SIM_LOSER_TS_EXT_DAYS` trong 8 kernel x14 = đúng 18 ngày đó.
+- **Chưa chấm số A1 nào trước commit này.**

@@ -274,14 +274,16 @@ def post_sim(tag, kind, seed, ov):
     import pandas as pd
     d = pd.read_csv("/home/ubuntu/kaggle_sim/out/%s/storage/printDone.csv" % tag, index_col=False, dtype=str) if md5 else None
     if d is not None:
-        r["x_legs"] = int((d.sym.str.strip() + "USDT").isin(set(X)).sum())
+        _xm = (d.sym.str.strip() + "USDT").isin(set(X))
+        r["x_legs"] = int(_xm.sum())                                  # gom ca doan DEV (DEFI 2021-24, khong doi theo thiet ke)
+        r["x_legs_2026"] = int((_xm & ((d.start >= "20260101 00:00") | (d.end >= "20260101 00:00"))).sum())   # V3
         ref = "ho4-k24-s-s%d" % seed if ov.get("SIM_CRASH_ENTRY_PENALTY") else "ho4-k24-b-s%d" % seed
         b = pd.read_csv("/home/ubuntu/kaggle_sim/out/%s/storage/printDone.csv" % ref, index_col=False, dtype=str)
         cut = "20251224"
         aa = d[d.start < cut].sort_values(list(d.columns)).reset_index(drop=True)
         bb = b[b.start < cut].sort_values(list(b.columns)).reset_index(drop=True)
         r["pre_same_as_" + ref] = bool(aa.equals(bb))
-    r["pass"] = bool(ok and r["tsx_ok"] and (kind == "orig" or r.get("x_legs") == 0))
+    r["pass"] = bool(ok and r["tsx_ok"] and (kind == "orig" or r.get("x_legs_2026") == 0))
     json.dump(r, open(W + "/res/%s.json" % tag, "w"), indent=1)
     log.info("POST %s pass=%s md5=%s n=%s tsx=%s xlegs=%s chk=%s", tag, r["pass"], md5, n, tl, r.get("x_legs"), chk)
     return r
@@ -376,6 +378,14 @@ def main():
     json.dump(st, open(STP, "w"), indent=1)
     if not st.get("jards"):
         jards(); st["jards"] = True; json.dump(st, open(STP, "w"), indent=1)
+    for t in SP:                                                    # cham lai V3 (sua dinh nghia: chi cua so 2026)
+        if st.get(t, {}).get("state") == "failed" and st[t].get("kstatus") == "COMPLETE" and t.startswith("nt-"):
+            kind, seed, ov = SP[t]
+            r = post_sim(t, kind, seed, ov)
+            if r["pass"]:
+                st[t]["state"] = "done"; st[t]["md5"] = r["md5"]
+            log.info("REPOST %s -> %s", t, st[t]["state"])
+    json.dump(st, open(STP, "w"), indent=1)
     if not st.get("jards_sim"):
         jards_sim(); st["jards_sim"] = True; json.dump(st, open(STP, "w"), indent=1)
     while True:
