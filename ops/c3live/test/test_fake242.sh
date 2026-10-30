@@ -699,7 +699,14 @@ EOF
 (cd "$F4" && bin/daemon.sh start)
 D4=$HERE/deploy_v12_dry_r4.sh
 export DEPLOY_TG_SINK=$W/tg_r4.txt   # [R4c] job nen gui Telegram => test LUON ghi file, KHONG gui that
-r4() { env APP_DIR=$F4 NJ=$W/new_r4.jar NJ_MD5=$NEW4 EXINFO_CMD="cat $W/exinfo_r4.json" DEPLOY_TG_SINK=$W/tg_r4.txt "$@"; }
+cat > "$W/exgen.py" <<'EOF'
+# [R4f] nguon gia: exinfo_r4.json voi serverTime = bay gio (nhu san that: moi lan doc moi hon)
+import json, sys, time
+d = json.load(open(sys.argv[1]))
+d["serverTime"] = int(time.time() * 1000)
+sys.stdout.write(json.dumps(d, separators=(",", ":")))
+EOF
+r4() { env APP_DIR=$F4 NJ=$W/new_r4.jar NJ_MD5=$NEW4 EXINFO_CMD="python3 $W/exgen.py $W/exinfo_r4.json" DEPLOY_TG_SINK=$W/tg_r4.txt "$@"; }
 p4env() { tr '\0' '\n' < /proc/$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)/environ; }
 OUT=$(r4 DRY=1 bash "$D4" 2>&1); echo "$OUT" | tail -2
 chk "r4 DRY PASS, in C3_CAPITAL=10000, khong doi env" "echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q 'export C3_CAPITAL=10000' && ! grep -q LIVE_ADAPTER $F4/conf/env.sh"
@@ -785,7 +792,7 @@ rm -f "$F4/FAKE_SSHDROP" "$W/SSH_DOWN"
 OUT=$(echo YES | APP_DIR=$F4 SSH_242="bash $W/fakessh.sh" FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TS4" 2>&1)
 chk "r4c chay dung lenh rollback tay sau khi ssh lai => xong, PAUSE xoa, c3_shadow" "echo \"\$OUT\" | grep -q 'Rollback xong' && [ ! -f $W/PAUSE ] && grep -qx 'export LIVE_PROFILE=c3_shadow' $F4/conf/env.sh"
 rm -f "$TG4" "$W/fg.out"
-setsid bash -c "echo YES | env APP_DIR=$F4 NJ=$W/new_r4.jar NJ_MD5=$NEW4 EXINFO_CMD='cat $W/exinfo_r4.json' DEPLOY_TG_SINK=$TG4 FORCE=1 FORCE_TIME=1 LATCH_WAIT_S=6 bash $D4" > "$W/fg.out" 2>&1 < /dev/null &
+setsid bash -c "echo YES | env APP_DIR=$F4 NJ=$W/new_r4.jar NJ_MD5=$NEW4 EXINFO_CMD='python3 $W/exgen.py $W/exinfo_r4.json' DEPLOY_TG_SINK=$TG4 FORCE=1 FORCE_TIME=1 LATCH_WAIT_S=6 bash $D4" > "$W/fg.out" 2>&1 < /dev/null &
 FGP=$!
 for i in $(seq 1 60); do grep -q 'job NEN pid=' "$W/fg.out" 2>/dev/null && break; sleep 0.5; done
 JP=$(grep -o 'job NEN pid=[0-9]*' "$W/fg.out" | head -1 | cut -d= -f2)
@@ -806,15 +813,15 @@ chk "r4d DRY: ENV_ADD UNIVERSE_A1=1 + UNIVERSE_A1_EXCHANGE_INFO = LIVE_C3_EXCHAN
 OUT=$(r4 DRY=1 EXINFO_CMD="cat $W/exinfo_r4.json.noob" bash "$D4" 2>&1)
 chk "r4d PRE: nguon thieu onboardDate => TU CHOI truoc YES" "echo \"\$OUT\" | grep -q 'FAIL exchangeInfo_nguon' && echo \"\$OUT\" | grep -q 'kiem 242 co muc FAIL' && ! echo \"\$OUT\" | grep -q 'DRY PASS'"
 OUT=$(r4 DRY=1 EXINFO_CMD="cat $W/exinfo_r4.json.nost" bash "$D4" 2>&1)
-chk "r4d PRE: nguon thieu serverTime => TU CHOI truoc YES" "echo \"\$OUT\" | grep -q 'FAIL exchangeInfo_nguon.*serverTime=0'"
+chk "r4d PRE: nguon thieu serverTime => TU CHOI truoc YES" "echo \"\$OUT\" | grep -q 'FAIL exchangeInfo_nguon thieu serverTime'"
 cat > "$W/exflaky.sh" <<'EOF'
 # nguon gia: 2 lan doc dau (PRE foreground + PRE job) tot, lan 3 (buoc chuan bi) thieu serverTime
 n=$(cat "$1/exflaky.n" 2>/dev/null || echo 0); n=$((n + 1)); echo $n > "$1/exflaky.n"
-if [ $n -le 2 ]; then cat "$1/exinfo_r4.json"; else cat "$1/exinfo_r4.json.nost"; fi
+if [ $n -le 2 ]; then python3 "$1/exgen.py" "$1/exinfo_r4.json"; else cat "$1/exinfo_r4.json.nost"; fi
 EOF
 rm -f "$W/exflaky.n"
 OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 EXINFO_CMD="bash $W/exflaky.sh $W" bash "$D4" 2>&1); RC=$?
-chk "r4d PREP: exchangeInfo tai ve thieu serverTime => DUNG, env khoi phuc, jar cu, process c3_shadow" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL exchangeInfo so_symbol=223 .*serverTime=0' && ! grep -q UNIVERSE_A1 $F4/conf/env.sh && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $OLD ] && p4env | grep -qx 'LIVE_PROFILE=c3_shadow'"
+chk "r4d PREP: exchangeInfo tai ve thieu serverTime => DUNG, env khoi phuc, jar cu, process c3_shadow" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL exchangeInfo thieu serverTime' && ! grep -q UNIVERSE_A1 $F4/conf/env.sh && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $OLD ] && p4env | grep -qx 'LIVE_PROFILE=c3_shadow'"
 cat > "$W/fakessh_a1.sh" <<EOF
 # ssh GIA: xoa file A1 ngay o buoc kiem truoc restart (gia lap file mat/hong giua chung)
 case "\$1" in *PRE_RESTART_A1*) [ -f "$W/A1_GONE" ] && rm -f "$F4/run/c3live_exchangeInfo.json";; esac
@@ -900,6 +907,34 @@ chk "r4e khoa nguyen tu: job khac dang giu (pid song) => TU CHOI truoc YES, khon
 kill $LP 2>/dev/null; wait $LP 2>/dev/null
 OUT=$(echo NO | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?
 chk "r4e khoa mo coi (pid chet) => lay lai; tra loi khac YES => huy, khoa duoc xoa" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'khoa mo coi' && echo \"\$OUT\" | grep -q 'Huy. Khong doi gi.' && [ ! -e $LKD ]"
+echo "== 26. [V12 R4f] MINOR-2: 1 bo kiem exchangeInfo chung (PRE + chuan bi + cron) + lam moi lan dau bat buoc trong buoc 4c"
+python3 - "$W" <<'EOF'
+import json, sys
+w = sys.argv[1]
+b = json.load(open(w + '/exinfo_r4.json'))
+del b['symbols'][5]['underlyingType']
+json.dump(b, open(w + '/ex_1nout.json', 'w'), separators=(',', ':'))
+EOF
+OUT=$(r4 DRY=1 EXINFO_CMD="cat $W/ex_1nout.json" bash "$D4" 2>&1)
+chk "r4f PRE dung bo kiem chung: 1 symbol thieu underlyingType (truoc: NU>0 cho qua) => TU CHOI" "echo \"\$OUT\" | grep -q 'FAIL exchangeInfo_nguon 1 symbol thieu onboardDate/underlyingType' && echo \"\$OUT\" | grep -q 'kiem 242 co muc FAIL'"
+OUT=$(r4 DRY=1 EXV_MD5=00000000000000000000000000000000 bash "$D4" 2>&1)
+chk "r4f md5 exinfo_validate.py sai => DUNG" "echo \"\$OUT\" | grep -q 'md5 exinfo_validate.py sai'"
+chk "r4f exinfo_refresh_242.sh + deploy dung CHUNG exinfo_validate.py (khong con python rieng)" "grep -q 'exinfo_validate.py' $HERE/exinfo_refresh_242.sh && ! grep -q \"<<'PY'\" $HERE/exinfo_refresh_242.sh && grep -q 'python3 -I ops/exinfo_validate.py' $D4"
+cat > "$W/exflaky4.sh" <<'EOF'
+# nguon gia: 3 lan dau (PRE fg, PRE job, chuan bi) tot; lan 4 (lam moi lan dau trong 4c) thieu serverTime
+n=$(cat "$1/exflaky4.n" 2>/dev/null || echo 0); n=$((n + 1)); echo $n > "$1/exflaky4.n"
+if [ $n -le 3 ]; then python3 "$1/exgen.py" "$1/exinfo_r4.json"; else cat "$1/exinfo_r4.json.nost"; fi
+EOF
+rm -f "$W/exflaky4.n"; P0=$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 EXINFO_CMD="bash $W/exflaky4.sh $W" bash "$D4" 2>&1); RC=$?
+chk "r4f lam moi lan dau trong 4c FAIL => DUNG truoc restart: env khoi phuc, cron go, bot cu giu (cung pid)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL lam_moi_lan_dau rc=1' && ! grep -q UNIVERSE_A1 $F4/conf/env.sh && ! grep -q C3LIVE_EXINFO_REFRESH $W/crontab.txt && grep -q '# WATCHDOG' $W/crontab.txt && [ \"\$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)\" = \"$P0\" ]"
+touch "$F4/FAKE_R4"
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?
+TS4=$(echo "$OUT" | grep -o 'TS=[0-9_]*' | head -1 | cut -d= -f2)
+chk "r4f XONG: lam moi lan dau rc 0 + fails=0, CHK file moi + cron" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'OK lam_moi_lan_dau rc=0 fails=0' && echo \"\$OUT\" | grep -q 'OK exchangeInfo symbols=223' && grep -qx 'fails=0' $F4/run/c3live_exinfo_refresh.state && cmp -s $HERE/exinfo_validate.py $F4/ops/exinfo_validate.py"
+echo YES | APP_DIR=$F4 FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TS4" >/dev/null 2>&1
+chk "r4f rollback: cron go, c3_shadow" "! grep -q C3LIVE_EXINFO_REFRESH $W/crontab.txt && grep -qx 'export LIVE_PROFILE=c3_shadow' $F4/conf/env.sh"
+rm -f "$F4/FAKE_R4"
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]

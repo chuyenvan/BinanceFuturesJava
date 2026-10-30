@@ -65,6 +65,10 @@ public class MockExchangeGateway implements ExchangeGateway {
     public volatile boolean queryOrderWithoutAvgPrice = false;
     /** [3j] userTrades luon rong. */
     public volatile boolean userTradesEmpty = false;
+    /** [R4f] userTrades NEM cho cac orderId nay (doc loi mot phan). */
+    public final java.util.Set<Long> userTradesFail = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private final java.util.concurrent.atomic.AtomicLong tradeSeq = new java.util.concurrent.atomic.AtomicLong(900_000L);
+    private volatile long lastTradeId = 0L;
     /** [3j] giu su kien stream lai (phat sau bang {@link #flushEvents()}) — gia lap stream den TRE hon ACK. */
     public volatile boolean holdFillEvents = false;
     /** [3j] ACK tra DUNG OrderInfo nay (tai hien fixture that 10-28); null = ACK tu lenh mock. */
@@ -197,7 +201,9 @@ public class MockExchangeGateway implements ExchangeGateway {
             tr = new ArrayList<>();
             trades.put(o.getOrderId(), tr);
         }
-        tr.add(new TradeFill(symbol, o.getOrderId(), qty, px, now));
+        long tid = tradeSeq.incrementAndGet();   // [R4f] id khop nhu san (stream "t" = userTrades "id")
+        lastTradeId = tid;
+        tr.add(new TradeFill(symbol, o.getOrderId(), qty, px, now, tid, fee, "USDT", rp));
         ev.add(orderEvent(symbol, cid, side, origType, o.getOrderId(), qty, px, fee, rp, reduceOnly));
         ev.add(accountEvent(symbol));
         if (side == Side.SELL && expireStopsOnSellFill) {
@@ -353,6 +359,7 @@ public class MockExchangeGateway implements ExchangeGateway {
     public synchronized List<TradeFill> userTrades(String symbol, long orderId) {
         enter("userTrades");
         if (userTradesEmpty) return new ArrayList<>();
+        if (userTradesFail.contains(orderId)) throw new IllegalStateException("userTrades loi (gia lap) orderId " + orderId);
         List<TradeFill> l = trades.get(orderId);
         if (l == null) return new ArrayList<>();
         List<TradeFill> out = new ArrayList<>();
@@ -591,6 +598,7 @@ public class MockExchangeGateway implements ExchangeGateway {
         o.addProperty("n", fee.toPlainString());
         o.addProperty("N", "USDT");
         o.addProperty("rp", rp.toPlainString());
+        o.addProperty("t", lastTradeId);   // [R4f]
         o.addProperty("R", reduceOnly);
         o.addProperty("T", now);
         JsonObject r = new JsonObject();

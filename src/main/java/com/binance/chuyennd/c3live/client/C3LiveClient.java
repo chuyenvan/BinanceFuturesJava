@@ -280,7 +280,8 @@ public final class C3LiveClient implements ExchangeGateway {
             BigDecimal px = dec(o, "price");
             if (qty == null || px == null || qty.signum() <= 0 || px.signum() <= 0) continue;
             String sym = str(o, "symbol");
-            out.add(new TradeFill(sym == null ? symbol : sym, lng(o, "orderId"), qty, px, lng(o, "time")));
+            out.add(new TradeFill(sym == null ? symbol : sym, lng(o, "orderId"), qty, px, lng(o, "time"), lng(o, "id"),
+                    dec(o, "commission"), str(o, "commissionAsset"), dec(o, "realizedPnl")));   // [V12 R4f]
         }
         return out;
     }

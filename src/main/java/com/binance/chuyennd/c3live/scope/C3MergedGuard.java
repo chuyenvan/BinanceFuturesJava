@@ -268,6 +268,17 @@ public final class C3MergedGuard {
      * co => nap khop THAT (userTrades theo orderId) con thieu vao so (realized c3 khong bi thieu khi mat stream) va tra ly do
      * (TRAILING_STOP neu tu stop, nguoc lai ly do dong). Khong co bang chung => null (Reconciler moi gan LOST_FOREIGN).
      */
+    /** [V12 R4f MAJOR-L1] ghi khop khoi phuc DUOI khoa FillAccounting (runtime: FillAccounting::bookRecoveredExit). */
+    public interface ExitBooker {
+        int book(String sym, List<com.binance.chuyennd.c3live.api.TradeFill> fills, boolean merged);
+    }
+
+    private volatile ExitBooker booker;
+
+    public void setExitBooker(ExitBooker b) {
+        this.booker = b;
+    }
+
     public String recoverC3Exit(LiveBookC3.ClusterView c) {
         String sym = c.symbol;
         long now = clock.getAsLong();
@@ -307,10 +318,12 @@ public final class C3MergedGuard {
         BigDecimal q = BigDecimal.ZERO;
         double notional = 0d;
         boolean tradesOk = true;
+        List<com.binance.chuyennd.c3live.api.TradeFill> fills = new ArrayList<>();
         for (Long id : orders.keySet()) {
             try {
                 for (com.binance.chuyennd.c3live.api.TradeFill f : gw.userTrades(sym, id)) {
                     if (f.getQty() == null || f.getPrice() == null) continue;
+                    fills.add(f);
                     q = q.add(f.getQty());
                     notional += f.getQty().doubleValue() * f.getPrice().doubleValue();
                 }
@@ -319,15 +332,19 @@ public final class C3MergedGuard {
                 LOG.warn("[C3-LIVE-MERGED] {} doc userTrades orderId {} loi {}", sym, id, ex.toString());
             }
         }
-        BigDecimal booked = c.exitQty == null ? BigDecimal.ZERO : c.exitQty;
-        BigDecimal miss = q.subtract(booked);
-        if (q.signum() > 0 && miss.compareTo(C3Scope.EPS) > 0) {
-            double vwap = notional / q.doubleValue();
-            double rp = (vwap - c.avgPrice) * miss.doubleValue();   // long: realized gop theo gia vao c3 (phi khong co trong userTrades)
-            book.addExitFill(sym, miss, vwap, now);
-            book.addFillCosts(sym, 0d, rp, now);
-            LOG.warn("[C3-LIVE-MERGED] {} khop thoat c3 KHONG qua stream: nap {} @ {} tu userTrades (orderId {}), realized +{}"
-                    + " (chua tru phi) => equity c3 khong bi thieu", sym, miss.toPlainString(), vwap, orders.keySet(), rp);
+        // [V12 R4f MAJOR-L1] KHONG tinh "thieu" tu anh chup c (cu): ghi DUOI khoa FillAccounting, doc lai cum song, chong trung tradeId
+        ExitBooker bk = booker;
+        if (!tradesOk && q.signum() > 0) {
+            String m = "[C3-LIVE] KHAN: " + sym + " doc userTrades LOI mot phan (orderId " + orders.keySet() + ") => KHONG ghi ket qua mot"
+                    + " phan; realized/phi c3 co the THIEU — owner KIEM";
+            LOG.error("{}", m);
+            alert.accept(m);
+        } else if (q.signum() > 0 && bk != null) {
+            int n = bk.book(sym, fills, scope.isMerged(sym));
+            LOG.warn("[C3-LIVE-MERGED] {} khop thoat c3 qua REST (orderId {}): {} khop moi da ghi / {} (con lai da co tu stream);"
+                    + " vwap {}", sym, orders.keySet(), n, fills.size(), notional / q.doubleValue());
+        } else if (q.signum() > 0) {
+            LOG.error("[C3-LIVE-MERGED] {} chua noi bo ghi khop (ExitBooker) => khong ghi", sym);
         } else if (!tradesOk || q.signum() == 0) {
             String m = "[C3-LIVE] " + sym + " co bang chung thoat c3 (orderId " + orders.keySet() + ") nhung KHONG doc duoc khop"
                     + " (userTrades) => realized c3 co the THIEU, owner KIEM";

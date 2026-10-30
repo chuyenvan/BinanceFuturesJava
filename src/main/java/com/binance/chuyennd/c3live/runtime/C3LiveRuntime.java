@@ -346,6 +346,8 @@ public final class C3LiveRuntime {
         protector.setMergedCloseCheck(merged::exchangeCoversC3);   // [V12 R4b §4]
         reconciler.setLostForeignSink(merged::onLostForeign);       // [V12 R4c A]
         reconciler.setExitRecovery(merged::recoverC3Exit);         // [V12 R4e MINOR-1]
+        merged.setExitBooker(acct::bookRecoveredExit);             // [V12 R4f MAJOR-L1] cung khoa voi stream
+        acct.setAssetUsdPrice(C3LiveRuntime::assetUsdPx);          // [V12 R4f MINOR-1] phi ngoai stable
         this.streamScope = new C3StreamScope(scope, book, System::currentTimeMillis);
         streamScope.setGateway(sgw);   // [V12 R4b MINOR-1] xac nhan khop stop c3 bang queryStop
         streamScope.setForeignFillSink(merged::onForeignFill);
@@ -683,6 +685,18 @@ public final class C3LiveRuntime {
                     + " — phai CUNG 1 file (" + GatewayFactory.KEY_EXCHANGEINFO_FILE + " = " + com.binance.chuyennd.tradecore.selector.UniverseA1Filter.K_FILE + ")");
         }
         LOG.warn("[C3-LIVE] UNIVERSE_A1=1: R7 + bo loc tin hieu cung exchangeInfo {}", ca);
+    }
+
+    /** [V12 R4f MINOR-1] gia <ASSET>USDT (realtime 242, Aerospike) de quy phi; NaN = khong co. */
+    static double assetUsdPx(String asset) {
+        try {
+            String s = asset + "USDT";
+            Map<String, Float> m = DataManagerAerospikeFloatSim.getAllPriceRealtimeLegacy(new HashSet<>(Collections.singletonList(s)));
+            Float v = m == null ? null : m.get(s);
+            return v == null ? Double.NaN : v.doubleValue();
+        } catch (Throwable e) {
+            return Double.NaN;
+        }
     }
 
     /** [V12 R4e MAJOR-1] tuoi toi da cua exchangeInfo (cron 242 lam moi moi <= 23'; chiu 1 lan loi). */

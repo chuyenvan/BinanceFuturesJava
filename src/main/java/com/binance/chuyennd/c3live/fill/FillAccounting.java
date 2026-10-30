@@ -127,10 +127,13 @@ public final class FillAccounting {
         FillPriceResolver pr = prices;
         if (pr != null) pr.observe(cid, u.orderId, u.avgPrice, u.lastPrice);   // [3j R2(a)] cache gia cho executor
         if (sym == null) return;
+        boolean fresh = true;
         if (u.isTrade()) {
-            double comm = commissionUsd(u.commission, u.commissionAsset);
+            double nt = u.lastQty == null || u.lastPrice == null ? 0d : u.lastQty.doubleValue() * u.lastPrice.doubleValue();
+            double comm = commissionUsd(u.commission, u.commissionAsset, nt);
             double rp = u.realizedPnl == null ? 0d : u.realizedPnl.doubleValue();
-            book.addFillCosts(sym, comm, rp, now);
+            fresh = book.addFillCosts(sym, u.tradeId, comm, rp, now);   // [V12 R4f] chong ghi trung theo tradeId
+            if (!fresh) LOG.info("[C3-LIVE-FILL] {} khop t={} DA GHI (khoi phuc REST toi truoc) => bo qua ghi lai", sym, u.tradeId);
             audit.record(OrderAuditLog.Entry.of(now).clientOrderId(cid).orderId(u.orderId).symbol(sym).side(u.side)
                     .type(u.origType == null ? u.orderType : u.origType).qty(u.lastQty).price(u.lastPrice)
                     .status("FILL").latencyMs(Math.max(0L, now - u.tradeTimeMs)).errCode("")
@@ -140,7 +143,7 @@ public final class FillAccounting {
         if (u.isBuy()) {
             onBuy(u, now);
         } else {
-            onSell(u, now);
+            onSell(u, now, fresh);
         }
     }
 
@@ -201,14 +204,14 @@ public final class FillAccounting {
         }
     }
 
-    private void onSell(UserStreamEvents.OrderUpdate u, long now) {
+    private void onSell(UserStreamEvents.OrderUpdate u, long now, boolean fresh) {
         String sym = u.symbol;
         Optional<LiveBookC3.ClusterView> c = book.cluster(sym);
         if (!c.isPresent()) return;
         String reason = exitReason(u.clientOrderId, u.origType, c.get().stopClientAlgoId);
         if (REASON_BOT_CLOSE.equals(reason) && c.get().closeReason != null) reason = c.get().closeReason;
         lastExitReason.put(sym, reason);
-        if (u.isTrade() && u.lastQty != null && u.lastQty.signum() > 0) {
+        if (fresh && u.isTrade() && u.lastQty != null && u.lastQty.signum() > 0) {
             nExitFill.incrementAndGet();
             double px = u.lastPrice == null ? 0d : u.lastPrice.doubleValue();
             book.addExitFill(sym, u.lastQty, px, now);
@@ -416,14 +419,74 @@ public final class FillAccounting {
         return REASON_EXTERNAL;
     }
 
-    double commissionUsd(BigDecimal n, String asset) {
+    /** [V12 R4f MINOR-1] gia &lt;ASSET&gt;USDT de quy phi ngoai stable (vd BNB); NaN = khong co. Runtime noi (gia realtime 242). */
+    private volatile java.util.function.ToDoubleFunction<String> assetUsdPx = a -> Double.NaN;
+    /** Khong co gia: ghi phi THAN TRONG = notional x 0,05 % (taker khong giam, &gt;= phi that) + canh bao. */
+    static final double FEE_FALLBACK_RATE = 0.0005d;
+
+    public void setAssetUsdPrice(java.util.function.ToDoubleFunction<String> f) {
+        if (f != null) this.assetUsdPx = f;
+    }
+
+    double commissionUsd(BigDecimal n, String asset, double notionalUsd) {
         if (n == null || n.signum() == 0) return 0d;
         if (asset == null || STABLE.contains(asset.toUpperCase(Locale.ROOT))) return n.doubleValue();
-        if (warnedAssets.add("fee|" + asset)) {
-            LOG.warn("[C3-LIVE-FILL] phi tra bang {} (khong on dinh) => KHONG quy USD (so phi thieu, doi chieu equity co the lech)",
-                    asset);
+        String a = asset.toUpperCase(Locale.ROOT);
+        double px;
+        try {
+            px = assetUsdPx.applyAsDouble(a);
+        } catch (RuntimeException e) {
+            px = Double.NaN;
         }
-        return 0d;
+        if (Double.isFinite(px) && px > 0d) return n.doubleValue() * px;   // [3g MIN-4] quy theo gia <ASSET>USDT
+        double fb = Math.abs(notionalUsd) * FEE_FALLBACK_RATE;
+        if (warnedAssets.add("fee|" + a)) {
+            String m = "[C3-LIVE] phi tra bang " + a + " KHONG co gia " + a + "USDT => ghi THAN TRONG " + FEE_FALLBACK_RATE * 100
+                    + " % notional (>= phi that); doi chieu equity c3 co the lech nhe — KIEM";
+            LOG.warn("{}", m);
+            alert.accept(m);
+        }
+        return fb;
+    }
+
+    /**
+     * [V12 R4f MAJOR-L1] Ghi khop THOAT khoi phuc qua REST (userTrades) DUOI CUNG khoa voi stream (FillAccounting): doc lai cum SONG;
+     * cum da dong (stream toi truoc) => KHONG ghi; moi khop theo tradeId (da ghi => bo). realized = (gia - gia vao c3) x qty (KHONG
+     * dung rp san: sai khi MERGED; khong MERGED chi doi chieu); phi tru (USDT) / quy theo gia (khac). Tra so khop da ghi.
+     */
+    public synchronized int bookRecoveredExit(String sym, java.util.List<com.binance.chuyennd.c3live.api.TradeFill> fills, boolean merged) {
+        long now = clock.getAsLong();
+        Optional<LiveBookC3.ClusterView> c = book.cluster(sym);
+        if (!c.isPresent()) {
+            LOG.info("[C3-LIVE-FILL] {} cum da dong (stream toi truoc) => KHONG ghi khop khoi phuc", sym);
+            return 0;
+        }
+        double avg = c.get().avgPrice;
+        int n = 0;
+        for (com.binance.chuyennd.c3live.api.TradeFill f : fills) {
+            if (f.getQty() == null || f.getPrice() == null) continue;
+            if (f.getTradeId() <= 0) {
+                String m = "[C3-LIVE] " + sym + " khop khoi phuc orderId " + f.getOrderId() + " KHONG co tradeId => KHONG ghi (khong chong trung"
+                        + " duoc); realized c3 co the THIEU — KIEM";
+                LOG.error("{}", m);
+                alert.accept(m);
+                continue;
+            }
+            double q = f.getQty().doubleValue();
+            double px = f.getPrice().doubleValue();
+            double comm = commissionUsd(f.getCommission(), f.getCommissionAsset(), q * px);
+            double rp = f.getPrice().subtract(BigDecimal.valueOf(avg)).multiply(f.getQty()).doubleValue();   // so hoc nhu stream (BigDecimal)
+            if (!merged && f.getRealizedPnl() != null
+                    && Math.abs(f.getRealizedPnl().doubleValue() - rp) > Math.max(0.01d, 1e-4d * q * px)) {
+                LOG.warn("[C3-LIVE-FILL] {} khop {}: rp san {} khac rp c3 {} (gia vao c3 {}) — doi chieu", sym, f.getTradeId(),
+                        f.getRealizedPnl().toPlainString(), rp, avg);
+            }
+            if (book.addRecoveredExit(sym, f.getTradeId(), f.getQty(), px, comm, rp, now)) {
+                n++;
+                nExitFill.incrementAndGet();
+            }
+        }
+        return n;
     }
 
     private static String plain(BigDecimal v) {

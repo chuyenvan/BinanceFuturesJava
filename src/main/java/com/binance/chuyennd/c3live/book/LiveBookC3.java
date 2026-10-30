@@ -286,6 +286,8 @@ public final class LiveBookC3 {
         boolean pendingStopQtyMode;
         boolean stopQtyMode;
         final List<String> orphanStops = new ArrayList<>();
+        /** [V12 R4f MAJOR-L1] tradeId da ghi vao cum (stream "t" / userTrades "id") — chong ghi trung; persist. */
+        final java.util.LinkedHashSet<Long> tradeIds = new java.util.LinkedHashSet<>();
         double commission;
         double realizedPnl;
         BigDecimal exitQty = BigDecimal.ZERO;
@@ -719,12 +721,16 @@ public final class LiveBookC3 {
     }
 
     private final Map<String, Long> removedAtMs = new TreeMap<>();
+    /** [V12 R4f MAJOR-L1] "SYM:tradeId" cua cum DA DONG (khop toi muon khong ghi lai); toi da RECENT_TRADES_MAX, persist. */
+    private final java.util.LinkedHashSet<String> recentTrades = new java.util.LinkedHashSet<>();
+    static final int RECENT_TRADES_MAX = 5000;
 
     /** Cum da dong het tren san => xoa khoi so (+ 1 dong ledger). */
     public synchronized boolean removeCluster(String symbol, String reason, long nowMs) {
         Cluster c = clusters.remove(symbol);
         if (c == null) return false;
         removedAtMs.put(symbol, nowMs);
+        for (Long t : c.tradeIds) rememberTrade(symbol, t);   // [V12 R4f]
         for (Leg x : c.legs) cidToSymbol.remove(x.cid);
         LOG.info("[C3-LIVE-BOOK] dong cum {} ly do={} legs={} qty={} avg={} exitQty={} exitAvg={} realized={} phi={}",
                 symbol, reason, c.legCount(), c.confirmedQty(), c.avgPrice(), c.exitQty,
@@ -862,6 +868,68 @@ public final class LiveBookC3 {
         persist(nowMs);
     }
 
+    // ------------------------------------------------------------------ [V12 R4f MAJOR-L1] chong ghi trung khop
+    private boolean tradeSeen(String sym, long tid) {
+        Cluster c = clusters.get(sym);
+        return (c != null && c.tradeIds.contains(tid)) || recentTrades.contains(sym + ":" + tid);
+    }
+
+    private void rememberTrade(String sym, long tid) {
+        recentTrades.add(sym + ":" + tid);
+        java.util.Iterator<String> it = recentTrades.iterator();
+        while (recentTrades.size() > RECENT_TRADES_MAX && it.hasNext()) {
+            it.next();
+            it.remove();
+        }
+    }
+
+    public synchronized boolean tradeSeenForTest(String sym, long tid) {
+        return tradeSeen(sym, tid);
+    }
+
+    /**
+     * Phi + realized cua 1 khop STREAM co tradeId. Da ghi (vd khoi phuc REST toi truoc) => false, KHONG ghi lai. Cum KHONG con:
+     * khop moi (tradeId chua thay) van vao tong ke tu moc (khop that toi muon); tradeId &lt;= 0 ma cum khong con => chi phi,
+     * KHONG realized (khong dedup duoc). true = khop moi da ghi.
+     */
+    public synchronized boolean addFillCosts(String symbol, long tradeId, double commissionUsd, double realizedPnl, long nowMs) {
+        if (symbol != null && tradeId > 0) {
+            if (tradeSeen(symbol, tradeId)) return false;
+            Cluster c = clusters.get(symbol);
+            if (c != null) c.tradeIds.add(tradeId);
+            else rememberTrade(symbol, tradeId);
+            persist(nowMs);
+        } else if (symbol == null || !clusters.containsKey(symbol)) {
+            realizedPnl = 0d;
+        }
+        addFillCosts(symbol, commissionUsd, realizedPnl, nowMs);
+        return true;
+    }
+
+    /**
+     * [V12 R4f MAJOR-L1] Khop THOAT khoi phuc qua REST (userTrades) — goi duoi khoa FillAccounting (cung khoa stream). Cum khong
+     * con / tradeId da ghi / khong co tradeId => false, KHONG ghi gi (khong PnL trung). true = da ghi exit + phi + realized.
+     */
+    public synchronized boolean addRecoveredExit(String symbol, long tradeId, BigDecimal qty, double px, double commissionUsd,
+                                                 double realizedPnl, long nowMs) {
+        Cluster c = clusters.get(symbol);
+        if (c == null || tradeId <= 0 || qty == null || qty.signum() <= 0 || !(px > 0d)) return false;
+        if (tradeSeen(symbol, tradeId)) return false;
+        c.tradeIds.add(tradeId);
+        c.exitQty = c.exitQty.add(qty);
+        c.exitNotional += qty.doubleValue() * px;
+        if (Double.isFinite(commissionUsd)) {
+            c.commission += commissionUsd;
+            commissionSinceAnchor += commissionUsd;
+        }
+        if (Double.isFinite(realizedPnl)) {
+            c.realizedPnl += realizedPnl;
+            realizedSinceAnchor += realizedPnl;
+        }
+        persist(nowMs);
+        return true;
+    }
+
     // ------------------------------------------------------------------ [2b] ke toan fill (C7)
     /** Phi (USD, duong = mat) + realizedPnl cua 1 fill; cum khong con => van cong vao tong ke tu moc. */
     public synchronized void addFillCosts(String symbol, double commissionUsd, double realizedPnl, long nowMs) {
@@ -970,6 +1038,9 @@ public final class LiveBookC3 {
         acct.addProperty("funding", fundingSinceAnchor);
         acct.addProperty("transfers", transferSinceAnchor);
         root.add("account", acct);
+        JsonArray rtr = new JsonArray();   // [V12 R4f]
+        for (String x : recentTrades) rtr.add(x);
+        root.add("recent_trade_ids", rtr);
         JsonArray arr = new JsonArray();
         for (Cluster c : clusters.values()) {
             JsonObject o = new JsonObject();
@@ -1000,6 +1071,9 @@ public final class LiveBookC3 {
             JsonArray orph = new JsonArray();
             for (String s : c.orphanStops) orph.add(s);
             o.add("orphan_stops", orph);
+            JsonArray tids = new JsonArray();   // [V12 R4f]
+            for (Long t : c.tradeIds) tids.add(t);
+            o.add("trade_ids", tids);
             o.addProperty("commission", c.commission);
             o.addProperty("realized_pnl", c.realizedPnl);
             o.addProperty("exit_qty", c.exitQty.toPlainString());
@@ -1094,6 +1168,7 @@ public final class LiveBookC3 {
                     c.pendingStopQtyMode = o.has("pending_stop_qty_mode") && o.get("pending_stop_qty_mode").getAsBoolean();
                 }
                 if (o.has("orphan_stops")) for (JsonElement x : o.getAsJsonArray("orphan_stops")) c.orphanStops.add(x.getAsString());
+                if (o.has("trade_ids")) for (JsonElement x : o.getAsJsonArray("trade_ids")) c.tradeIds.add(x.getAsLong());
                 if (o.has("commission")) c.commission = o.get("commission").getAsDouble();
                 if (o.has("realized_pnl")) c.realizedPnl = o.get("realized_pnl").getAsDouble();
                 if (o.has("exit_qty")) c.exitQty = new BigDecimal(o.get("exit_qty").getAsString());
@@ -1132,6 +1207,9 @@ public final class LiveBookC3 {
             double aEq = Double.NaN;
             long aMs = 0L;
             double r = 0d, cm = 0d, fu = 0d, tr = 0d;
+            if (root.has("recent_trade_ids")) {
+                for (JsonElement x : root.getAsJsonArray("recent_trade_ids")) recentTrades.add(x.getAsString());
+            }
             if (root.has("account")) {
                 JsonObject a = root.getAsJsonObject("account");
                 if (a.has("anchor_equity")) aEq = a.get("anchor_equity").getAsDouble();

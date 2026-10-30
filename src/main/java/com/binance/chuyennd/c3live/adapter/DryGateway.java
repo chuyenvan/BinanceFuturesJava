@@ -284,7 +284,8 @@ public final class DryGateway implements ExchangeGateway {
             if (o.getExecutedQty() == null || o.getExecutedQty().signum() <= 0) return new ArrayList<>();
             if (o.getAvgPrice() == null || o.getAvgPrice().signum() <= 0) return new ArrayList<>();
             List<TradeFill> out = new ArrayList<>();
-            out.add(new TradeFill(o.getSymbol(), orderId, o.getExecutedQty(), o.getAvgPrice(), o.getUpdateTimeMs()));
+            out.add(new TradeFill(o.getSymbol(), orderId, o.getExecutedQty(), o.getAvgPrice(), o.getUpdateTimeMs(), orderId,
+                    o.getExecutedQty().multiply(o.getAvgPrice()).multiply(feeRate), "USDT", null));   // [V12 R4f] id = stream "t"
             return out;
         }
         return new ArrayList<>();
@@ -396,6 +397,7 @@ public final class DryGateway implements ExchangeGateway {
         o.addProperty("x", "TRADE");
         o.addProperty("X", "FILLED");
         o.addProperty("i", id);
+        o.addProperty("t", id);   // [V12 R4f] dry: 1 khop / lenh => tradeId = orderId (= userTrades id)
         o.addProperty("q", qty.toPlainString());
         o.addProperty("l", qty.toPlainString());
         o.addProperty("L", px.toPlainString());

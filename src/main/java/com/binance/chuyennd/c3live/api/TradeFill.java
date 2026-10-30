@@ -16,14 +16,34 @@ public final class TradeFill {
     private final BigDecimal qty;
     private final BigDecimal price;
     private final long timeMs;
+    /** [V12 R4f] id khop (userTrades "id" = stream "t") de chong ghi trung; &lt;= 0 = khong co. */
+    private final long tradeId;
+    private final BigDecimal commission;
+    private final String commissionAsset;
+    /** realizedPnl cua san (CHI doi chieu; sai khi MERGED). */
+    private final BigDecimal realizedPnl;
 
     public TradeFill(String symbol, long orderId, BigDecimal qty, BigDecimal price, long timeMs) {
+        this(symbol, orderId, qty, price, timeMs, -1L, null, null, null);
+    }
+
+    public TradeFill(String symbol, long orderId, BigDecimal qty, BigDecimal price, long timeMs, long tradeId,
+                     BigDecimal commission, String commissionAsset, BigDecimal realizedPnl) {
         this.symbol = symbol;
         this.orderId = orderId;
         this.qty = qty;
         this.price = price;
         this.timeMs = timeMs;
+        this.tradeId = tradeId;
+        this.commission = commission;
+        this.commissionAsset = commissionAsset;
+        this.realizedPnl = realizedPnl;
     }
+
+    public long getTradeId() { return tradeId; }
+    public BigDecimal getCommission() { return commission; }
+    public String getCommissionAsset() { return commissionAsset; }
+    public BigDecimal getRealizedPnl() { return realizedPnl; }
 
     public String getSymbol() {
         return symbol;

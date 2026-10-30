@@ -7,11 +7,12 @@
 #   > 100 symbol; MOI symbol co onboardDate + underlyingType; >= 50 hop dong TradFi; so symbol giam <= 10 %.
 #   Hop le => .lastgood + mv -f (nguyen tu; JVM nap lai theo mtime ca A1 lan R7). Khong => GIU file cu, dem loi lien tiep;
 #   lan loi thu 3 (roi moi 4 lan) => Telegram (tg.env cua watchdog 242; khong doc duoc => ALERT_PENDING trong run/).
-# Phan loai TF/INDEX KHONG o day (chi Java UniverseA1Classifier); day chi kiem nguon tho (cung nguong R4b).
+# [R4f] kiem bang exinfo_validate.py (CUNG file voi buoc PRE/chuan bi cua deploy). Phan loai TF/INDEX KHONG o day (chi Java UniverseA1Classifier); day chi kiem nguon tho (cung nguong R4b).
 # Bien (test): APP_DIR, EXINFO_CMD, EXR_TG_ENV, EXR_TG_SINK, MIN_TRADFI, MAX_SYMBOL_DROP.
 # =============================================================================
 set -uo pipefail
 A=${APP_DIR:-$(cd "$(dirname "$0")/.." && pwd)}
+VAL=${EXV_PY:-$(cd "$(dirname "$0")" && pwd)/exinfo_validate.py}   # [R4f MINOR-2] bo kiem CHUNG voi deploy
 cd "$A" || { echo "FAIL cd $A"; exit 1; }
 F=run/c3live_exchangeInfo.json
 NEW=$F.new
@@ -43,42 +44,8 @@ LASTOK=$(grep '^last_ok=' "$STATE" 2>/dev/null | head -1)
 rm -f "$NEW"
 eval "$EXC" > "$NEW" 2>/dev/null
 RC=$?
-MSG=$(python3 -I - "$NEW" "$F" "$MINTF" "$DROP" 2>&1 <<'PY'
-import json, sys
-new, cur, mintf, drop = sys.argv[1], sys.argv[2], int(sys.argv[3]), float(sys.argv[4])
-try:
-    with open(new, encoding='utf-8') as fh:
-        d = json.load(fh)
-except Exception as e:
-    print('JSON hong: %s' % str(e)[:120]); sys.exit(2)
-st = d.get('serverTime') if isinstance(d, dict) else None
-sy = d.get('symbols') if isinstance(d, dict) else None
-if not isinstance(st, int) or isinstance(st, bool) or st <= 0:
-    print('thieu serverTime'); sys.exit(2)
-if not isinstance(sy, list) or len(sy) <= 100:
-    print('chi %d symbol (can > 100)' % (len(sy) if isinstance(sy, list) else 0)); sys.exit(2)
-bad = [s.get('symbol') if isinstance(s, dict) else '?' for s in sy
-       if not isinstance(s, dict) or not s.get('onboardDate') or not s.get('underlyingType')]
-if bad:
-    print('%d symbol thieu onboardDate/underlyingType (vd %s)' % (len(bad), bad[:3])); sys.exit(2)
-tf = sum(1 for s in sy if 'TRADIFI' in str(s.get('contractType', '')).upper() or 'TRADFI' in str(s.get('contractType', '')).upper())
-if tf < mintf:
-    print('chi %d hop dong TradFi (< %d)' % (tf, mintf)); sys.exit(2)
-try:
-    with open(cur, encoding='utf-8') as fh:
-        c = json.load(fh)
-except Exception:
-    c = None
-if isinstance(c, dict):
-    cst = c.get('serverTime') or 0
-    if st <= cst:
-        print('serverTime %d KHONG moi hon file hien tai %d' % (st, cst)); sys.exit(2)
-    n0 = len(c.get('symbols') or [])
-    if n0 and len(sy) < n0 * (1 - drop):
-        print('so symbol giam %d -> %d (> %d %%)' % (n0, len(sy), int(round(drop * 100)))); sys.exit(2)
-print('symbols=%d tf=%d serverTime=%d' % (len(sy), tf, st))
-PY
-)
+[ -f "$VAL" ] || { echo "$(ts) FAIL thieu bo kiem $VAL"; exit 1; }
+MSG=$(python3 -I "$VAL" "$NEW" "$F" "$MINTF" "$DROP" 2>&1)
 VRC=$?
 if [ "$RC" = 0 ] && [ "$VRC" = 0 ]; then
   if cp -f "$NEW" "$F.lastgood.tmp" && mv -f "$F.lastgood.tmp" "$F.lastgood" && mv -f "$NEW" "$F"; then

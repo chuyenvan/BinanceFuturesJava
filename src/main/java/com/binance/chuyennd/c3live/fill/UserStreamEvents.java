@@ -55,6 +55,8 @@ public final class UserStreamEvents {
         public final boolean closePosition;
         public final BigDecimal stopPrice;
         public final long tradeTimeMs;
+        /** [V12 R4f] id khop "t" (= userTrades id) de chong ghi trung; 0 = khong co. */
+        public final long tradeId;
 
         OrderUpdate(long e, JsonObject o) {
             super("ORDER_TRADE_UPDATE", e);
@@ -66,6 +68,7 @@ public final class UserStreamEvents {
             this.execType = str(o, "x");
             this.status = str(o, "X");
             this.orderId = lng(o, "i");
+            this.tradeId = lng(o, "t");
             this.lastQty = dec(o, "l");
             this.lastPrice = dec(o, "L");
             this.cumQty = dec(o, "z");

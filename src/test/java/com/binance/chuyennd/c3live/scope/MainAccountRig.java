@@ -176,6 +176,7 @@ final class MainAccountRig {
         rec.setMergedPredicate(scope::isMerged);                   // [R4b MAJOR-1] nhu runtime
         rec.setLostForeignSink(merged::onLostForeign);             // [R4c A] nhu runtime
         rec.setExitRecovery(merged::recoverC3Exit);                // [R4e MINOR-1] nhu runtime
+        merged.setExitBooker(acct::bookRecoveredExit);             // [R4f MAJOR-L1] nhu runtime
         stream = new C3StreamScope(scope, book, now::get);
         stream.setGateway(sgw);                                    // [R4b MINOR-1] nhu runtime
         stream.setSleeper(ms -> { });
