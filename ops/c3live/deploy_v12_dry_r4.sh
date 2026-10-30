@@ -26,8 +26,8 @@ SCP_242=${SCP_242:-"scp -P 2222 -o BatchMode=yes -i /home/ubuntu/.ssh/id_rsa_chu
 RHOST=${RHOST-"root@103.157.218.242:"}
 A=${APP_DIR:-/home/chuyennd/java/v_t_m}
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}
-NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4f}
-NJ_MD5=${NJ_MD5:-dbe20705984d04ba68668a49da8bf5ef}   # [V12 R4f] jar R4f (docs/c3live/ROUND4F.md)
+NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4j}
+NJ_MD5=${NJ_MD5:-ba71eab2da6aac7bd296d7d5812e2d83}   # [V12 R4j] jar r4j = 4g..4j (docs/c3live/ROUND4J.md; A1 R4J PASS-WITH-MINOR)
 # jar v_t_m dang chay (shadow v1.1 dcae2e2b): deploy_v12_dry.sh / rollback_v12.sh / fix_featdump_242 10-27 ("OK jar_dcae2e2b").
 # Kiem lai tren 242 o buoc 2 — khac => TU CHOI.
 OLD_MD5=${OLD_MD5:-dcae2e2bbb1a357bc15703b416d4dccb}
@@ -150,7 +150,7 @@ time_ok() {
 [[ "$NJ_MD5" =~ ^[0-9a-f]{32}$ ]] || die "NJ_MD5 chua pin"
 [ -f "$NJ" ] || die "khong thay jar $NJ"
 [ "$(md5sum < "$NJ" | cut -c1-32)" = "$NJ_MD5" ] || die "md5 jar moi sai (mong $NJ_MD5)"
-ok "jar R4d md5 $NJ_MD5"
+ok "jar moi $(basename "$NJ") md5 $NJ_MD5"
 [[ "$OLD_MD5" =~ ^[0-9a-f]{32}$ ]] || die "OLD_MD5 (jar dang chay) khong xac dinh => TU CHOI"
 [ -f "$KILLSW_SH" ] || die "khong thay $KILLSW_SH"
 bash -n "$KILLSW_SH" || die "cu phap killsw_reset.sh loi"
