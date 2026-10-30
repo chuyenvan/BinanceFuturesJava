@@ -4,6 +4,7 @@ import com.binance.chuyennd.c3live.api.ExchangeInfo;
 import com.binance.chuyennd.c3live.api.OrderInfo;
 import com.binance.chuyennd.c3live.api.SymbolMeta;
 import com.binance.chuyennd.c3live.fill.UserStream;
+import com.binance.chuyennd.c3live.fill.UserStreamEvents;
 import com.binance.chuyennd.c3live.mock.MockExchangeGateway;
 import org.junit.Before;
 import org.junit.Rule;
@@ -151,21 +152,60 @@ public class CanaryK5StopExpiredTest {
      * report_20261029_112139/files/canary_20261029_112031_step_K5.jsonl, ts=1793247645792) + close order ts=1793247645611,
      * vi the da xac nhan 0 => CHAP NHAN (ket thuc hop le), khong doi hoi guard cancelStop.
      */
+    /** Nguyen van dong WS_EVENT X=EXPIRED trong journal K5 10-29 (ts nhan event = 1793247645792). */
+    static final String RAW_EXPIRED = "{\"e\":\"ALGO_UPDATE\",\"T\":1793247645571,\"E\":1793247645571,\"o\":{\"caid\":"
+            + "\"c3s-ZECUSDT-29887460-1\",\"aid\":1000002650358318,\"at\":\"CONDITIONAL\",\"o\":\"STOP_MARKET\","
+            + "\"s\":\"ZECUSDT\",\"S\":\"SELL\",\"ps\":\"BOTH\",\"f\":\"GTE_GTC\",\"q\":\"0\",\"X\":\"EXPIRED\","
+            + "\"ai\":\"\",\"tp\":\"1180.86\",\"p\":\"0\",\"V\":\"EXPIRE_MAKER\",\"wt\":\"MARK_PRICE\",\"pm\":\"NONE\","
+            + "\"cp\":true,\"pP\":false,\"R\":true,\"tt\":0,\"gtd\":0,\"ia\":false}}";
+    /** Nguyen van dong WS_EVENT X=NEW cua cung stop (doi chung: NEW khong phai terminal). */
+    static final String RAW_NEW = RAW_EXPIRED.replace("\"X\":\"EXPIRED\"", "\"X\":\"NEW\"").replace("\"T\":1793247645571", "\"T\":1793247645273");
+    /** Nguyen van dong CALL_W lenh dong c3x-...-1 FILLED 0.016 @1236.60. */
+    static final String CLOSE_LINE = "{\"ts\":1793247645611,\"type\":\"CALL_W\",\"api\":\"newMarketOrder:SELL:RO\","
+            + "\"symbol\":\"ZECUSDT\",\"cid\":\"c3x-ZECUSDT-29887460-1\",\"ok\":true,\"status\":\"FILLED\","
+            + "\"orderId\":812247181296,\"executedQty\":\"0.016\",\"stopPrice\":\"0.00\",\"origQty\":\"0.016\","
+            + "\"closePosition\":false,\"latMs\":89,\"wOwn\":84}";
+
     @Test
     public void t3RealJournalFixtureIsAccepted() {
         String sid = "c3s-ZECUSDT-29887460-1";
+        UserStreamEvents.Event ev = UserStreamEvents.parse(RAW_EXPIRED);
+        assertTrue("parse phai ra AlgoUpdate", ev instanceof UserStreamEvents.AlgoUpdate);
+        UserStreamEvents.AlgoUpdate a = (UserStreamEvents.AlgoUpdate) ev;
+        assertEquals(sid, a.clientAlgoId);
+        assertEquals("EXPIRED", a.status);
+        assertEquals("ZECUSDT", a.symbol);
+        assertTrue("stop that la closePosition (q=0, cp=true)", RAW_EXPIRED.contains("\"q\":\"0\"")
+                && RAW_EXPIRED.contains("\"cp\":true"));
         Map<String, Object> j = new HashMap<>();
         j.put("type", "WS_EVENT");
         j.put("e", "ALGO_UPDATE");
-        j.put("s", "ZECUSDT");
-        j.put("caid", sid);
-        j.put("X", "EXPIRED");
+        j.put("s", a.symbol);
+        j.put("caid", a.clientAlgoId);
+        j.put("X", a.status);
         j.put("ts", 1793247645792L);   // ts ghi journal (nhan event), su kien T=1793247645571
-        long closeTs = 1793247645611L;  // CALL_W newMarketOrder:SELL:RO (c3x-...-1)
+        j.put("raw", RAW_EXPIRED);
+        long closeTs = 1793247645611L;  // nguyen van CLOSE_LINE (CALL_W newMarketOrder:SELL:RO)
+        assertTrue(CLOSE_LINE.contains("\"status\":\"FILLED\"") && CLOSE_LINE.contains("\"ts\":1793247645611"));
         assertNull(CanaryEngine.stopEndExchangeReject(Arrays.asList(j), sid, "ZECUSDT", closeTs, true, true));
-        // doi chung: su kien TRUOC moc dong (hoac thieu caid) KHONG duoc chap nhan — dung nhu journal that (chi 1 dong EXPIRED)
+        // doi chung: su kien TRUOC moc dong (hoac X=NEW) KHONG duoc chap nhan — dung nhu journal that (chi 1 dong terminal)
         assertEquals("khong co ALGO_UPDATE terminal dung caid sau khi dong",
                 CanaryEngine.stopEndExchangeReject(Arrays.asList(j), sid, "ZECUSDT", 1793247645793L, true, true));
+        assertEquals("X=NEW khong phai terminal", "khong co ALGO_UPDATE terminal dung caid sau khi dong",
+                CanaryEngine.stopEndExchangeReject(Arrays.asList(ev(RAW_NEW)), sid, "ZECUSDT", closeTs, true, true));
+    }
+
+    private static Map<String, Object> ev(String raw) {
+        UserStreamEvents.AlgoUpdate a = (UserStreamEvents.AlgoUpdate) UserStreamEvents.parse(raw);
+        Map<String, Object> m = new HashMap<>();
+        m.put("type", "WS_EVENT");
+        m.put("e", "ALGO_UPDATE");
+        m.put("s", a.symbol);
+        m.put("caid", a.clientAlgoId);
+        m.put("X", a.status);
+        m.put("ts", 1793247645792L);
+        m.put("raw", raw);
+        return m;
     }
 
     /**

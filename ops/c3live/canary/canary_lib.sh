@@ -31,8 +31,8 @@ else
 fi
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}            # process bot — chi DOC env/PID/cwd, khong cham
 JAVA_242=${JAVA_242:-java}
-CANARY_JAR=${CANARY_JAR:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12dry_3j}   # jar Oracle copy len 242 (early)
-CANARY_JAR_MD5=${CANARY_JAR_MD5:-28566071ad87c508f142c2dd2a70a709}   # [V12 3j] pin jar v12dry_3j (canary-early; dry giu pin 3d trong deploy_v12_dry.sh)
+CANARY_JAR=${CANARY_JAR:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12dry_3k}   # jar Oracle copy len 242 (early)
+CANARY_JAR_MD5=${CANARY_JAR_MD5:-fea29aea127886a63f60d23b3b9846dc}   # [V12 3k] pin jar v12dry_3k (canary-early; dry giu pin 3d trong deploy_v12_dry.sh)
 KEYS_FILE=${CANARY_KEYS_FILE:-/root/.config/c3live/keys.env}
 KEYS_OWNER=${CANARY_KEYS_OWNER:-root}
 LOGDIR=${LOGDIR:-/home/ubuntu/claude_master/canary}
@@ -252,6 +252,8 @@ cl_copy_legacy() {
 cl_run() {
   local envs=$1; shift
   local a id n=0 rc="" t0 got line
+  # [3k R2] audit: MOI lan goi JVM in ro prior + luc tinh (bat duoc prior cu sau CANARY_RESET)
+  say "PRIOR_USED cmd=${1:-?} prior=${CL_CUM_PRIOR:-?} tinh_luc=${CL_CUM_PRIOR_AT:-CHUA_TINH}"
   # [3g MIN-3] lo cong don cac phien truoc => engine tinh tran phien min(2, 4 - prior) (chi khi cl_cum_loss da chay)
   [[ "${CL_CUM_PRIOR:-}" =~ ^[0-9]+(\.[0-9]+)?$ ]] && envs="${envs:+$envs }CANARY_PRIOR_LOSS_USDT=$CL_CUM_PRIOR"
   # [3i] nguong weight IP (header X-MBX-USED-WEIGHT-1M, chung LEGACY) cho call thuong cua JVM canary — KHONG can file gate;
@@ -416,7 +418,10 @@ print("CUM %.4f %d %d %.4f" % (tot, resets, len(blocks), prior))
   CL_CUM_LOSS=$(printf '%s\n' "$out" | awk '/^CUM / {print $2}')
   CL_RESETS=$(printf '%s\n' "$out" | awk '/^CUM / {print $3}')
   CL_CUM_PRIOR=$(printf '%s\n' "$out" | awk '/^CUM / {print $5}')   # [3g MIN-3] truyen vao moi JVM (cl_run)
+  CL_CUM_PRIOR_AT=$(TZ=Asia/Ho_Chi_Minh date '+%Y-%m-%d %H:%M:%S')   # [3k R2] moc tinh prior (audit)
+  export CL_CUM_PRIOR CL_CUM_PRIOR_AT   # [3k R2] phien con (canary_early_run.sh) phai thay bien, khong bi "mat" qua sub-shell
   say "lo cong don moi phien canary-early: ${CL_CUM_LOSS:-?} USDT (tran $CL_CUM_CAP), so lan CANARY_RESET: ${CL_RESETS:-?}"
+  say "PRIOR_USED_AT tinh_luc=$CL_CUM_PRIOR_AT lo_cong_don=${CL_CUM_LOSS:-?} prior=${CL_CUM_PRIOR:-?}"
   printf '%s\n' "$CL_CUM_DETAIL" | sed '/^$/d; s/^/   /'
   [ -n "$CL_CUM_LOSS" ] || die "khong tinh duoc lo cong don"
   if [ "$mode" = check ] && python3 -I -c "import sys; sys.exit(0 if float('$CL_CUM_LOSS') > float('$CL_CUM_CAP') else 1)"; then
@@ -470,6 +475,10 @@ cl_early_reset() {
   cl_run "" cleanup || die "CANARY_RESET: tai khoan con CHUA phang ($CL_LAST_RESULT) — chay bash $CL_HERE/canary_early_flatten.sh truoc"
   $SSH_242 "cd $A && mv $CDIR run/canary_prev_$TS" < /dev/null || die "khong doi ten phien cu"
   ok "phien cu -> $A/run/canary_prev_$TS"
+  # [3k R2] SAU mv, phien cu tro thanh "lo cac phien truoc" => PHAI tinh lai prior NGAY. Truoc 3k bien giu gia tri cu
+  # (10-29: 0,0195 thay vi 0,0397) cho moi keycheck/preflight sau reset va keycheck cuoi phien.
+  cl_cum_loss check || die "CANARY_RESET: khong tinh lai duoc lo cong don sau khi archive phien cu"
+  ok "prior sau reset = ${CL_CUM_PRIOR:-?} USDT (tinh luc ${CL_CUM_PRIOR_AT:-?})"
 }
 
 # cl_flat_read: (CHI DOC) keycheck => CL_TMB, CL_FLAT ("pos=.. orders=.. algos=.."), CL_USDT, CL_ASSETS. KHONG ghi buoc vao state

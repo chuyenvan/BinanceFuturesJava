@@ -146,6 +146,7 @@ cl_cum_loss info   # [3c MIN-C2] ghi vao file ket qua
   echo "KET QUA PHIEN: $SESSION$( [ -n "$FAIL" ] && echo " (dung o $FAIL: $WHY)")"
   [ -n "$PLANB" ] && echo "!! $PLANB"
   echo "lo cong don MOI phien canary-early: $CL_CUM_LOSS USDT (tran $CL_CUM_CAP — vuot => phien moi bi tu choi); so lan CANARY_RESET: $CL_RESETS"
+  echo "prior dung cho phien (CANARY_PRIOR_LOSS_USDT): ${CL_CUM_PRIOR:-?} USDT — tinh luc ${CL_CUM_PRIOR_AT:-?}"
   printf '%s\n' "$CL_CUM_DETAIL" | sed '/^$/d; s/^/  /'
   echo
   echo "== Buoc"

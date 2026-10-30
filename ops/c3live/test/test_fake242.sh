@@ -190,6 +190,7 @@ D=${CANARY_DIR:-run/canary}; mkdir -p "$D"
 [ -f FAKE_SLOW ] && { trap 'echo "END $(date +%s%3N)" >> FAKE_SLOW.log' EXIT; sleep 6; }
 echo "$CMD $K TMB=${CANARY_EXPECT_TMB:-} INJ=${CANARY_INJECT_TIMEOUT:-} KF=${LIVE_C3_KEYS_FILE:-} CWD=$(pwd) ENVX=$(env | grep -c -E '^(LIVE_PROFILE|TRADING_PROFILE|LIVE_TS_MKT_EXT)=') REUSE=${CANARY_K0_REUSE_KEEPALIVE:-}" >> "$D/fake_calls.log"
 echo "$CMD IPCAP=${CANARY_IP_WEIGHT_CAP:-}" >> "$D/fake_env.log"   # [3i] env -i cua cl_run co truyen nguong IP khong
+echo "$CMD PRIOR=${CANARY_PRIOR_LOSS_USDT:-}" >> "$D/fake_prior.log"   # [3k] prior truyen vao JVM (file rieng, khong doi format cu)
 sleep 1
 [ -f FAKE_CANARY_LOCK ] && { echo "RESULT $CMD TU_CHOI | lock tai khoan con dang bi giu (gia)"; exit 2; }
 case "$CMD" in
@@ -626,6 +627,17 @@ OUT=$(ce CANARY_MODE=early CANARY_IP_WEIGHT_CAP=17x0 bash -c ". $CN/canary_lib.s
 chk "cl_run: CANARY_IP_WEIGHT_CAP sai dinh dang => DUNG, khong chay JVM" "! echo \"\$OUT\" | grep -q 'RC=' && echo \"\$OUT\" | grep -q 'CANARY_IP_WEIGHT_CAP=.17x0. khong phai so nguyen' && [ \$(grep -c . $C3/run/canary/fake_env.log) = 1 ]"
 fresh
 chk "v_t_m KHONG doi qua muc 17" "[ \"\$(vmd5)\" = $V0 ] && [ ! -e $F/run/canary ]"
+echo "== 21. [V12 3k R2] CANARY_PRIOR_LOSS_USDT phai TINH LAI ngay sau CANARY_RESET (moi lan goi JVM)"
+fresh; rm -rf $C3/run/canary_prev_*
+mkdir -p $C3/run/canary $C3/run/canary_prev_29990101_000000
+echo '{"symMain":"C00USDT","symAux":"C01USDT","cumFeeStable":0.0201,"cumRealized":0.0,"cumFunding":0.0,"steps":{"K1":{"result":"DAT"}}}' > $C3/run/canary/canary_state.json
+echo '{"symMain":"C00USDT","symAux":"C01USDT","cumFeeStable":0.0195,"cumRealized":0.0,"cumFunding":0.0,"steps":{"K1":{"result":"DAT"}}}' > $C3/run/canary_prev_29990101_000000/canary_state.json
+OUT=$(printf 'YES\n' | ca CANARY_RESET=1 bash $CN/canary_early_all.sh 2>&1); RC=$?
+chk "prior: truoc reset = 0.0195 (phien hien tai chua tinh), JVM cleanup thay 0.0195" "echo \"\$OUT\" | grep -q 'PRIOR_USED cmd=cleanup prior=0.0195'"
+chk "prior: SAU reset tinh lai = 0.0396 cho preflight/status/step (khong con 0.0195)" "echo \"\$OUT\" | grep -q 'PRIOR_USED cmd=preflight prior=0.0396' && echo \"\$OUT\" | grep -q 'prior sau reset = 0.0396 USDT' && ! echo \"\$OUT\" | grep -qE 'PRIOR_USED cmd=(preflight|status|setup|step) prior=0.0195'"
+chk "prior: JVM nhan dung CANARY_PRIOR_LOSS_USDT=0.0396 sau reset (fake_prior.log cua phien)" "D=\$(ls -td $C3/run/canary_done_* $C3/run/canary 2>/dev/null | head -1); grep -q 'PRIOR=0.0396' \"\$D/fake_prior.log\" && ! grep -qE '^(preflight|status|step).*PRIOR=0.0195' \"\$D/fake_prior.log\""
+chk "prior: file ket qua ghi prior dung cho phien + luc tinh" "RES=\$(lastres); grep -q 'prior dung cho phien (CANARY_PRIOR_LOSS_USDT): 0.0396 USDT' \"\$RES\""
+rm -rf $C3/run/canary_prev_29990101_000000
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]
