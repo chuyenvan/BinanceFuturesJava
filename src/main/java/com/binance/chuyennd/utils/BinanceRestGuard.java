@@ -82,7 +82,51 @@ public class BinanceRestGuard {
         long prev = BANNED_UNTIL_MS.getAndUpdate(p -> Math.max(p, target));
         if (target > prev) {
             LOG.warn("🔒 REST cooldown ({}) đến {}", why, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(target)));
+            persist(target);
         }
+    }
+
+    // ===== [INGEST-QF3 2026-10-31] ban BEN qua restart JVM (A1_QF2 MAJ-A, prereg ADD2/Q11) — chi bat o JVM goi enablePersistence =====
+    private static volatile java.nio.file.Path persistFile = null;
+
+    /** Bật lưu mốc hết ban ra file + NẠP mốc cũ (JVM mới không gọi fapi trước mốc đó). Gọi ĐẦU main, trước mọi call. */
+    public static synchronized long enablePersistence(java.nio.file.Path file) {
+        persistFile = file;
+        long loaded = readPersisted(file);
+        long now = System.currentTimeMillis();
+        if (loaded > now) {
+            BANNED_UNTIL_MS.getAndUpdate(p -> Math.max(p, loaded));
+            LOG.warn("🔒 [REST-BAN] nap moc ban tu {}: con ban {} s (toi {}) — KHONG goi fapi truoc moc nay", file, (loaded - now) / 1000,
+                    new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(loaded)));
+        } else {
+            LOG.info("[REST-BAN] file {}: khong con ban (moc={})", file, loaded);
+        }
+        return loaded;
+    }
+
+    static long readPersisted(java.nio.file.Path file) {
+        try {
+            return Long.parseLong(new String(java.nio.file.Files.readAllBytes(file), java.nio.charset.StandardCharsets.US_ASCII).trim());
+        } catch (Exception e) {
+            return 0L;
+        }
+    }
+
+    private static void persist(long until) {
+        java.nio.file.Path f = persistFile;
+        if (f == null) return;
+        try {
+            java.nio.file.Path tmp = f.resolveSibling(f.getFileName() + ".tmp");
+            java.nio.file.Files.write(tmp, Long.toString(Math.max(until, BANNED_UNTIL_MS.get())).getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+            java.nio.file.Files.move(tmp, f, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+        } catch (Exception e) {
+            LOG.error("[REST-BAN] khong ghi duoc moc ban {}: {}", f, e.toString());
+        }
+    }
+
+    /** Chỉ cho test: tắt lưu file. */
+    static void disablePersistence() {
+        persistFile = null;
     }
 
     public static void reportBan(String body) {
@@ -93,6 +137,7 @@ public class BinanceRestGuard {
         if (target > prev) {
             LOG.warn("🔒 REST banned, cooldown đến {}",
                     new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(target)));
+            persist(target);   // [INGEST-QF3]
         }
     }
 

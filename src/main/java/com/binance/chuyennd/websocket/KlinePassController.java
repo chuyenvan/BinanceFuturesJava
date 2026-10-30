@@ -55,7 +55,13 @@ final class KlinePassController {
         List<String> needSample = Collections.emptyList();
     }
 
+    /** Cửa sổ live đọc lại nến (KFIX-B, LiveTickerWindow, mặc định 3′). */
+    static final long LIVE_REREAD_MS = 3 * MIN;
+    final AtomicLong cLateHeal = new AtomicLong();
+
     static final class SettleOut {
+        int lateHeal;
+        List<String> lateEx = new java.util.ArrayList<>();
         int wsCovered, suspects, suspectsRequested, suspectLimit, sampleRequested, calls;
         int pendingM, pendingPrev;
         long dropped;
@@ -122,6 +128,19 @@ final class KlinePassController {
         if (!sus.isEmpty()) {
             o.suspectLimit = planner.limitFor(sus, curMin);
             o.sus = core.settle(nowMs, sus, o.suspectLimit);
+            // [QF3, A1_QF2 MIN-A] ô lành SAU cửa sổ đọc lại của live (KFIX-B, mặc định 3′) ⇒ live giữ bản nặn cho phút đó: đếm + ví dụ
+            java.util.Set<String> bad = new java.util.HashSet<>(o.sus.failedSymbols);
+            for (String s : sus) {
+                if (bad.contains(s)) continue;
+                for (long mm : planner.pendingOf(s)) {
+                    if (mm > mature) continue;
+                    if (nowMs - (mm + MIN) > LIVE_REREAD_MS) {
+                        o.lateHeal++;
+                        if (o.lateEx.size() < 5) o.lateEx.add(KlineIngestCore.shortSym(s) + "@" + mm);
+                    }
+                }
+            }
+            cLateHeal.addAndGet(o.lateHeal);
             planner.onSuspectsSettled(sus, o.sus.failedSymbols, curMin, o.suspectLimit, mature);
             cSuspectFetched.addAndGet(o.sus.fetched);
             o.calls += o.sus.fetched + o.sus.failed;

@@ -224,13 +224,32 @@ public final class KlineWsClient {
         return staleMs + watchdogMs;
     }
 
-    /** Chia symbol thành nhóm ≤ streamsPerConn (thứ tự sort cố định) — thuần, test được. */
+    /**
+     * Chia symbol thành ⌈N/size⌉ nhóm ĐỀU NHAU (mỗi nhóm ≤ size, thứ tự sort cố định) — thuần, test được.
+     * [QF3, A1_QF2 MIN-B] trước đây 752 = 5×150 + 2 ⇒ kết nối thứ 6 chỉ 2 symbol ít giao dịch, dễ bị coi "im lặng"; nay 6 × 125–126.
+     */
     static List<List<String>> chunk(Collection<String> symbols, int size) {
         List<String> s = new ArrayList<>(symbols);
         java.util.Collections.sort(s);
         List<List<String>> out = new ArrayList<>();
-        for (int i = 0; i < s.size(); i += size) out.add(new ArrayList<>(s.subList(i, Math.min(i + size, s.size()))));
+        if (s.isEmpty()) return out;
+        int groups = (s.size() + size - 1) / size;
+        int base = s.size() / groups, extra = s.size() % groups, i = 0;
+        for (int g = 0; g < groups; g++) {
+            int n = base + (g < extra ? 1 : 0);
+            out.add(new ArrayList<>(s.subList(i, i + n)));
+            i += n;
+        }
         return out;
+    }
+
+    /** Kết nối ít symbol (&lt; {@link #SMALL_CONN}) = symbol mới niêm yết, có thể vài chục giây không trade ⇒ ngưỡng im lặng dài,
+     *  dựa thêm vào ping 20 s của OkHttp để phát hiện kết nối chết (ADD2). Kết nối thường: staleMs (≤15 s cùng watchdog). */
+    static final int SMALL_CONN = 20;
+    static final long SMALL_CONN_STALE_MS = 90_000L;
+
+    long staleFor(int nSymbols) {
+        return nSymbols < SMALL_CONN ? Math.max(staleMs, SMALL_CONN_STALE_MS) : staleMs;
     }
 
     /** Mở kết nối cho symbol hiện có + luồng watchdog (mỗi watchdogMs) mở lại kết nối chết, xoay chủ động, thêm symbol mới. */
@@ -262,7 +281,7 @@ public final class KlineWsClient {
         Set<String> covered = new HashSet<>();
         for (Conn c : conns) {
             covered.addAll(c.symbols);
-            if (c.alive && now - c.lastMsgMs > staleMs) c.kill("im lang " + (now - c.lastMsgMs) + " ms");
+            if (c.alive && now - c.lastMsgMs > staleFor(c.symbols.size())) c.kill("im lang " + (now - c.lastMsgMs) + " ms");
             if (!c.alive && now >= c.nextRetryMs) c.open();
             if (c.alive && now >= c.rotateAtMs) c.rotate();
         }

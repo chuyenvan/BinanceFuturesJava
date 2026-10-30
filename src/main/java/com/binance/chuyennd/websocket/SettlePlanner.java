@@ -60,6 +60,12 @@ public final class SettlePlanner {
         return pending.size();
     }
 
+    /** [QF3] Bản sao các phút còn chờ của một symbol (rỗng nếu không còn). */
+    public synchronized List<Long> pendingOf(String fullSym) {
+        TreeSet<Long> t = pending.get(fullSym);
+        return t == null ? new ArrayList<>() : new ArrayList<>(t);
+    }
+
     /** Số symbol còn ô phút {@code minute} chưa kiểm. */
     public synchronized int pendingAt(long minute) {
         int n = 0;

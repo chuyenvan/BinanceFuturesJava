@@ -401,8 +401,9 @@ public class TickerIngestor2AerospikeNew {
                     if (ws && m <= lastEarly && !BinanceRestGuard.isBanned()) {
                         KlinePassController.SettleOut c = passes.maybeCatchUp(curMin, inMin, new ArrayList<>(globalSubscribedSymbols));
                         if (c != null && c.sus != null) {
-                            LOG.info("[KLINE-INGEST] kiem lai bu: suspects={} goi={} limit={} fetched={} failed={} con_lai={}",
-                                    c.suspects, c.suspectsRequested, c.suspectLimit, c.sus.fetched, c.sus.failed, planner.suspectCount());
+                            LOG.info("[KLINE-INGEST] kiem lai bu: suspects={} goi={} limit={} fetched={} failed={} con_lai={} lanh_ngoai_3p={}",
+                                    c.suspects, c.suspectsRequested, c.suspectLimit, c.sus.fetched, c.sus.failed, planner.suspectCount(), c.lateHeal);
+                            warnLateHeal(c);
                         }
                     }
                     if (STATS_MIN > 0 && (curMin / Utils.TIME_MINUTE) % STATS_MIN == 0 && curMin > lastStats && inMin >= 45_000L) {
@@ -446,10 +447,20 @@ public class TickerIngestor2AerospikeNew {
             LOG.warn("[KLINE-RECON] doi soat mau phut {}: {} o WS lech REST (da ghi de) + {} o thieu (da ghi) / {} symbol, diff_by_minute={}",
                     Utils.normalizeDateYYYYMMDDHHmm(m), o.smp.rewrittenDiff, o.smp.filledMissing, o.smp.fetched, o.smp.diffByMinute.values());
         }
-        LOG.info("[KLINE-COVER] phut={} chua_chot={} chua_chot_truoc={} bo_kiem={} ws_muon_go={} suspects={} goi={} mau={} khoi_dong={}",
+        LOG.info("[KLINE-COVER] phut={} chua_chot={} chua_chot_truoc={} bo_kiem={} ws_muon_go={} suspects={} goi={} mau={} khoi_dong={} lanh_ngoai_3p={} lanh_ngoai_3p_tong={}",
                 Utils.normalizeDateYYYYMMDDHHmm(m), o.pendingM, o.pendingPrev, o.dropped, o.wsCovered, o.suspects,
-                o.suspectsRequested, o.sampleRequested, curMin - startMinute < 5 * Utils.TIME_MINUTE ? 1 : 0);
+                o.suspectsRequested, o.sampleRequested, curMin - startMinute < 5 * Utils.TIME_MINUTE ? 1 : 0, o.lateHeal,
+                passes.cLateHeal.get());
+        warnLateHeal(o);
         return o.calls;
+    }
+
+    /** [QF3, A1_QF2 MIN-A] Ô lành sau cửa sổ đọc lại 3′ của live ⇒ live giữ bản nặn cho phút đó — báo rõ ô nào. */
+    private void warnLateHeal(KlinePassController.SettleOut o) {
+        if (o.lateHeal > 0) {
+            LOG.warn("[KLINE-LATE-HEAL] {} o lanh SAU cua so doc lai 3' cua live (live co the giu ban nan cho phut do), vd(symbol@openTime)={}",
+                    o.lateHeal, o.lateEx);
+        }
     }
 
     /** [INGEST-QF2] Khoi dong: o thieu trong SETTLE_LIMIT_STARTUP phut gan nhat (doc store) => suspects (thay settle limit 30 MOI symbol). */
@@ -631,6 +642,8 @@ public class TickerIngestor2AerospikeNew {
                         }
                     }
 
+                    // [INGEST-QF3, A1_QF2 MIN-D] dong tien do: kiem sau deploy phan biet "dang repair, con tien" voi "ket"
+                    LOG.info("[KLINE-INGEST] repair tien do: offset={}/{} phut thieu={} symbol", totalMinutes - offset, totalMinutes, missing.size());
                     if (!missing.isEmpty()) {
                         repairBatchOptimized(missing, batchStart, step);
                         Thread.sleep(5000);
@@ -646,7 +659,9 @@ public class TickerIngestor2AerospikeNew {
     }
 
     private void repairBatchOptimized(List<String> symbols, long batchStartTime, int limit) {
+        int idx = 0;
         for (String s : symbols) {
+            if (++idx % 10 == 0) LOG.info("[KLINE-INGEST] repair tien do: symbol {}/{}", idx, symbols.size());   // [QF3] MIN-D
             try {
                 // 🔒 GUARD ban: repair cũng gọi REST → đang ban thì dừng batch (không gia hạn ban).
                 if (BinanceRestGuard.isBanned()) return;

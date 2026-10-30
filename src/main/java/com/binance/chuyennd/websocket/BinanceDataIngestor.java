@@ -25,6 +25,10 @@ public class BinanceDataIngestor {
     public static void main(String[] args) {
         Configs.assertLiveRuntime();   // #12 (TASK-030/112): fail-fast nếu AEROSPIKE_READ_CLUSTER thiếu/khác 242 → tránh đọc/ghi nhầm 226 trên live
         Utils.writePid2File();
+        // [INGEST-QF3] nạp mốc ban của JVM trước (nếu còn) TRƯỚC mọi call fapi + lưu mốc ban mới ra file (ADD2/Q11)
+        com.binance.chuyennd.utils.BinanceRestGuard.enablePersistence(runDir().resolve("rest_ban_until.ms"));
+        // [INGEST-QF3] supervisor: loop chết > 10 lần/giờ ⇒ Telegram KHẨN (≤1 tin/30′/loop)
+        LoopSupervisor.setAlertSink(BinanceDataIngestor::sendTelegramAsync);
         // [INGEST-QF] ngân sách REST CỨNG cho MỌI call fapi của JVM này — bật TRƯỚC khi start các ingester.
         RestBudget.enable((int) TickerIngestor2AerospikeNew.cfgLong("INGEST_REST_WEIGHT_CAP", RestBudget.MAX_CAP),
                 (int) TickerIngestor2AerospikeNew.cfgLong("INGEST_HDR_SOFT", 1600),
@@ -43,17 +47,28 @@ public class BinanceDataIngestor {
         startPriceAgeWatchdog();
     }
 
-    /** Quyết định của watchdog tuổi giá — thuần, test được. 0 ổn, 1 cảnh báo, 2 restart, 3 cần restart nhưng đã restart trong 1h. */
+    /**
+     * Quyết định của watchdog tuổi giá — 0 ổn, 1 cảnh báo, 2 restart, 3 cần restart nhưng đã restart trong 1h, 4 đang BAN (chỉ cảnh báo).
+     * [INGEST-QF3, ADD2] Đang ban ⇒ KHÔNG restart (JVM mới gọi fapi giữa ban ⇒ ban leo thang); tuổi so với Y = min(tuổi giá,
+     * thời gian từ lúc hết ban gần nhất) ⇒ 90 s đếm từ lúc hết ban.
+     */
     static int decidePriceAge(long ageMs, long sinceStartMs, long lastRestartMs, long now) {
+        long banUntil = com.binance.chuyennd.utils.BinanceRestGuard.BANNED_UNTIL_MS.get();
+        if (now < banUntil) return ageMs > PRICE_WARN_MS && sinceStartMs >= PRICE_GRACE_MS ? 4 : 0;
+        if (banUntil > 0) ageMs = Math.min(ageMs, now - banUntil);
         if (sinceStartMs < PRICE_GRACE_MS) return 0;
         if (ageMs <= PRICE_WARN_MS) return 0;
         if (ageMs <= PRICE_RESTART_MS) return 1;
         return now - lastRestartMs >= RESTART_MIN_GAP_MS ? 2 : 3;
     }
 
-    static Path restartMarker() {
+    static Path runDir() {
         String dir = System.getenv("APP_PID_DIR");
-        return Paths.get(dir == null || dir.isEmpty() ? "./run" : dir, "price_age_restart.ts");
+        return Paths.get(dir == null || dir.isEmpty() ? "./run" : dir);
+    }
+
+    static Path restartMarker() {
+        return runDir().resolve("price_age_restart.ts");
     }
 
     static long readLastRestart() {
@@ -98,9 +113,13 @@ public class BinanceDataIngestor {
                 if (now - lastTg >= 600_000L) {
                     lastTg = now;
                     sendTelegramAsync("collectData 242: price_realtime dung " + age / 1000 + " s (nguong canh bao 15 s)"
-                            + (d == 2 ? " — RESTART JVM co kiem soat" : d == 3 ? " — da restart trong 1h, KHONG restart lai, can nguoi xem" : ""));
+                            + (d == 2 ? " — RESTART JVM co kiem soat" : d == 3 ? " — da restart trong 1h, KHONG restart lai, can nguoi xem"
+                            : d == 4 ? " — IP DANG BI BAN Binance, KHONG restart (cho het ban)" : ""));
                 }
-                if (d == 1) {
+                if (d == 4) {
+                    LOG.warn("[PRICE-AGE] price_realtime dung {} ms nhung IP dang bi ban toi {} — KHONG restart, cho het ban", age,
+                            com.binance.chuyennd.utils.BinanceRestGuard.BANNED_UNTIL_MS.get());
+                } else if (d == 1) {
                     LOG.warn("[PRICE-AGE] price_realtime dung {} ms (> {} ms)", age, PRICE_WARN_MS);
                 } else if (d == 3) {
                     if (now - lastSuppressLog >= 300_000L) {
@@ -108,6 +127,7 @@ public class BinanceDataIngestor {
                         LOG.error("[PRICE-AGE] price_realtime dung {} ms > {} ms nhung da restart luc {} (<1h) — KHONG restart lai", age, PRICE_RESTART_MS, lastRestart);
                     }
                 } else {
+                    if (com.binance.chuyennd.utils.BinanceRestGuard.isBanned()) continue;   // [QF3] ban vua bat dau => khong restart
                     LOG.error("[PRICE-AGE] price_realtime dung {} ms > {} ms lien tuc — RESTART JVM co kiem soat (bien phap cuoi)", age, PRICE_RESTART_MS);
                     try {
                         Files.write(restartMarker(), Long.toString(now).getBytes(StandardCharsets.US_ASCII));
@@ -157,10 +177,11 @@ public class BinanceDataIngestor {
                 }
                 try {
                     RestBudget b = RestBudget.get();
-                    LOG.info("[REST-BUDGET] {} | price_gap_max_ms={} price_age_ms={} price_diff={} loop_restarts={} repair_xong={}",
+                    LOG.info("[REST-BUDGET] {} | price_gap_max_ms={} price_age_ms={} price_diff={} loop_restarts={} loop_escalations={} repair_xong={} banned={}",
                             b == null ? "off" : b.statsLine(), TickerIngestor2AerospikeNew.takePriceGapMaxMs(),
                             TickerIngestor2AerospikeNew.priceAgeMs(), priceDiff, LoopSupervisor.RESTARTS.get(),
-                            TickerIngestor2AerospikeNew.startupRepairDone ? 1 : 0);
+                            LoopSupervisor.ESCALATIONS.get(), TickerIngestor2AerospikeNew.startupRepairDone ? 1 : 0,
+                            com.binance.chuyennd.utils.BinanceRestGuard.isBanned() ? 1 : 0);
                 } catch (Exception e) {
                     LOG.warn("[REST-BUDGET] loi ghi thong ke: {}", e.toString(), e);
                 }
