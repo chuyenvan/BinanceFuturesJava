@@ -28,6 +28,9 @@ Script deploy dry **vẫn pin r4f**. Chưa push.
   Giới hạn: replay kiểm quy ước + lõi quantile + quyết định `GatePreFilter`; vòng lặp `DetectEntrySignal2TradeNormal` (cần
   Aerospike/ONNX) không chạy trong test — kiểm ở dry bằng dòng `[GATE-PRE]`.
 
+- **QUYẾT ĐỊNH MASTER (10-30, sau 4h):** LEGACY vẫn đếm hạng + nạp r nhưng KHÔNG vào lệnh, **giữ chỗ trong top-24, KHÔNG lấy
+  hạng 25 thế vào** — để tập lệnh live là TẬP CON của sim; chỉ áp tới lúc cắt LEGACY (go-live owner cắt cứng 44 LEGACY).
+
 ## 2. Seed buffer (`GATE_BUFFER_SEED`, mặc định TẮT)
 - `LiveGateRollingRatio.java:108` (init), `checkSeed:162`, `applySeedFile:198`. Env: `GATE_BUFFER_SEED=<file định dạng
   gate_ratio_live.bin>`, `GATE_BUFFER_SEED_MD5=<md5 hex>` (BẮT BUỘC), `GATE_BUFFER_SEED_MAX_LAG_H` (mặc định 24).

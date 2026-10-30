@@ -2446,6 +2446,28 @@ public final class CanaryEngine {
      * </ul>
      * CHI la ham quyet dinh (khong goi san) de test duoc ca duong chap nhan lan cac duong tu choi.
      */
+    /** [V12 R4i] lenh dong c3x- (CALL_W newMarketOrder:SELL:RO) cuoi cung cua symbol trong journal; null = khong co. */
+    Map<String, Object> lastCloseCall(String sym) {
+        Map<String, Object> close = null;
+        for (Map<String, Object> e : journal.entries()) {
+            Object c = e.get("cid");
+            if ("newMarketOrder:SELL:RO".equals(e.get("api")) && c != null && c.toString().startsWith(C3LiveCids.CLOSE_PREFIX)
+                    && sym.equals(e.get("symbol"))) close = e;
+        }
+        return close;
+    }
+
+    /** [V12 R4i] c3x- FILLED va executedQty &gt;= qty cum (bang chung phang duong khi positionRisk loi). */
+    static boolean k7bCloseFull(Map<String, Object> close, BigDecimal qty) {
+        if (close == null || !"FILLED".equals(close.get("status")) || qty == null || qty.signum() <= 0) return false;
+        Object ex = close.get("executedQty");
+        try {
+            return ex != null && new BigDecimal(ex.toString()).compareTo(qty) >= 0;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
     static long k5Since(Map<String, Object> close, long firstSentMs) {
         // [V12 R4g] moc "sau lenh dong" = luc GUI that lan dau (firstSentMs, <= luc khop): 10-29 ALGO_UPDATE EXPIRED toi TRUOC
         // ACK c3x- (+4 ms sau khop) => moc ts ACK lam K5 TRUOT gia (fail-closed). Khong co firstSentMs => ts ACK (cu, chat hon).
@@ -2645,6 +2667,11 @@ public final class CanaryEngine {
         ensurePosition(s1, st);
         ensureProtected(s1);   // [3c] stop bao ve (da dat luc mo)
         waitNewMinuteForClose(s1);
+        // [V12 R4i] chup stop + qty TRUOC khi dong (de chung minh "san tu ket thuc stop closePosition" neu (B) khong can)
+        Optional<LiveBookC3.ClusterView> preK7b = book.cluster(s1);
+        String sid1 = preK7b.isPresent() ? preK7b.get().stopClientAlgoId : null;
+        boolean closePos1 = preK7b.isPresent() && !preK7b.get().stopQtyMode;
+        BigDecimal qty1 = preK7b.isPresent() ? preK7b.get().confirmedQty : BigDecimal.ZERO;
         gw.failPositions = true;
         long tInj = clock.getAsLong();
         journal.ev("K7B_INJECT_ON", "what", "positionRisk loi phia client");
@@ -2657,7 +2684,28 @@ public final class CanaryEngine {
         boolean b2 = rec.allowsEntry(s2);
         st.put("afterClose.blocks", rec.blocks().toString());
         st.put("afterClose.symBlocks", rec.symbolBlocks().toString());
-        st.check(b1, s1 + " KHONG bi chan (phai B) ngay sau khi chot");
+        // [V12 R4i] (B) chi ton tai khi guard phai GIU stop c3s- (stop con mo, doc positionRisk loi). 10-30 23:30 (that): san TU
+        //   EXPIRE stop closePosition +4 ms sau khop c3x- (T 801806 -> 801810), TRUOC luc guard doc openStops => GONE, khong co gi
+        //   de giu, khong can (B); c3x- FILLED du qty = bang chung phang duong. Ket qua phu thuoc thu tu REST/san (nhu K5) =>
+        //   chap nhan CA 2 duong; duong 2 phai co bang chung (stopEndExchangeReject, moc firstSentMs) + c3x- FILLED du qty.
+        String k7bEnd = b1 ? "KEPT_B" : "NONE";
+        String k7bWhy = null;
+        if (!b1) {
+            Map<String, Object> close1 = lastCloseCall(s1);
+            boolean closeFull = k7bCloseFull(close1, qty1);
+            long since1 = k5Since(close1, close1 == null || close1.get("cid") == null ? -1L : gw.firstSentMs(close1.get("cid").toString()));
+            String[] why = {"chua kiem"};
+            long w = waitFor(() -> (why[0] = stopEndExchangeReject(journal.entries(), sid1, s1, since1, closeFull, closePos1)) == null,
+                    cfg.fillEventWaitMs);
+            k7bWhy = why[0];
+            if (w >= 0) k7bEnd = "EXCHANGE_TERMINAL";
+            st.put("s1.closeFull", closeFull);
+            st.put("s1.closeSince", since1);
+        }
+        st.put("s1.stopEnd", k7bEnd);
+        st.put("s1.stopEndWhy", k7bWhy);
+        st.check(b1 || "EXCHANGE_TERMINAL".equals(k7bEnd), s1 + " KHONG bi chan (phai B) ngay sau khi chot"
+                + (b1 ? "" : " va KHONG chung minh duoc san tu ket thuc stop closePosition + c3x- FILLED du qty [" + k7bWhy + "]"));
         st.check(b2, s2 + " bi chan trong luc " + s1 + " o lop B (loi alpha)");
         st.check(!rec.blocks().containsKey(Reconciler.BLOCK_UNKNOWN), "chan TOAN HE (A) ngay khi chot");
         Leg l2 = null;
