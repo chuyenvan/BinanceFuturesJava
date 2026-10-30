@@ -74,3 +74,10 @@ RSS > **3,2 GB**, hoặc có `OutOfMemoryError` trong log, hoặc MemAvailable 2
 **Kiểm sau deploy (đổi, MAJ-3):** bỏ so `Total ≥ PRE_TOTAL`. Chờ dòng `repair khoi dong xong` rồi kiểm: 2 dòng `[KLINE-COVER]`
 liên tiếp có `chua_chot_truoc=0`; `price_gap_max_ms` ≤ 5 000 trên các dòng sau repair; 0 dòng 418/429/ban; LEGACY PID + log tươi;
 PAUSE watchdog đã gỡ.
+
+**ADD-1b (2026-10-31, cùng vòng, TRƯỚC code — tính lại số học, chưa có số đo nào):** KLINE tối đa 240 weight/60 s ⇒ lỗ lớn
+(WS chết, N symbol thiếu) cần ≥ N/240 phút để kiểm lại. (a) REST sớm +4 s chỉ chạy khi số symbol thiếu ≤ `KLINE_EARLY_REST_MAX`
+(=60); lớn hơn ⇒ chỉ đánh dấu, để pass +30 s (nến đã settle, mỗi call limit đủ phủ mọi phút thiếu của symbol đó, weight 1) xử lý —
+tránh tốn 2 call/symbol (REST sớm chưa settle rồi kiểm lại). Live đọc lại 3 phút gần nhất mỗi tick (KFIX-B) nên nhận bản sửa.
+(b) Q2 thay câu "phải về 0 trước +3′": lỗ ≤ 200 symbol ⇒ `chua_chot` về 0 trước +3′; lỗ N > 200 ⇒ trước +(⌈N/200⌉ + 1)′
+(N = 752 ⇒ ≤ 5′). Phút bình thường: `chua_chot_truoc` (+90 s) = 0. Ô bị bỏ kiểm sau 30 pass lỗi (`bo_kiem`) tính là TRƯỢT Q2.
