@@ -1,11 +1,16 @@
 {
+  "timezone": "UTC",
+  "serverTime": 1793072475507,
+  "futuresType": "U_MARGINED",
   "symbols": [
-    {"symbol": "BTCUSDT", "contractType": "PERPETUAL", "underlyingType": "COIN", "underlyingSubType": []},
-    {"symbol": "AAPLUSDT", "contractType": "TRADIFI_PERPETUAL", "underlyingType": "EQUITY", "underlyingSubType": ["TRADFI"]},
-    {"symbol": "GLDUSDT", "contractType": "PERPETUAL", "underlyingType": "COMMODITY", "underlyingSubType": ["COMMODITY"]},
-    {"symbol": "SPXUSDT", "contractType": "PERPETUAL", "underlyingType": "INDEX", "underlyingSubType": []},
-    {"symbol": "PREDICTUSDT", "contractType": "PERPETUAL", "underlyingType": "PREMARKET", "underlyingSubType": ["PREMARKET"]},
-    {"symbol": "WEIRDUSDT", "contractType": "PERPETUAL", "underlyingSubType": []},
-    {"symbol": "DEFIUSDT", "contractType": "PERPETUAL", "underlyingType": "COIN", "underlyingSubType": []}
+    {"symbol": "BTCUSDT", "contractType": "PERPETUAL", "underlyingType": "COIN", "underlyingSubType": ["PoW", "Crypto"], "onboardDate": 1567965300000, "status": "TRADING"},
+    {"symbol": "AAPLUSDT", "contractType": "TRADIFI_PERPETUAL", "underlyingType": "EQUITY", "underlyingSubType": ["TradFi"], "onboardDate": 1775483400000, "status": "TRADING"},
+    {"symbol": "MDTUSDT", "contractType": "TRADIFI_PERPETUAL", "underlyingType": "EQUITY", "underlyingSubType": ["TradFi"], "onboardDate": 1792574400000, "status": "TRADING"},
+    {"symbol": "SPXUSDT", "contractType": "PERPETUAL", "underlyingType": "COIN", "underlyingSubType": ["Meme", "Crypto"], "onboardDate": 1733834700000, "status": "TRADING"},
+    {"symbol": "ALLUSDT", "contractType": "PERPETUAL", "underlyingType": "INDEX", "underlyingSubType": ["Index", "Crypto"], "onboardDate": 1754472600000, "status": "TRADING"},
+    {"symbol": "BTCDOMUSDT", "contractType": "PERPETUAL", "underlyingType": "INDEX", "underlyingSubType": ["Index", "Crypto"], "onboardDate": 1623913200000, "status": "TRADING"},
+    {"symbol": "DEFIUSDT", "contractType": "PERPETUAL", "underlyingType": "INDEX", "underlyingSubType": ["Index"], "onboardDate": 1598598000000, "status": "SETTLING"},
+    {"symbol": "PREDICTUSDT", "contractType": "PERPETUAL", "underlyingType": "PREMARKET", "underlyingSubType": ["Pre-Market"], "onboardDate": 1792916100000, "status": "TRADING"},
+    {"symbol": "NOFIELDUSDT", "contractType": "PERPETUAL", "underlyingSubType": [], "onboardDate": 1600000000000, "status": "TRADING"}
   ]
 }

@@ -52,6 +52,11 @@ public final class LiveFeaturePipeline {
     /** Bo sinh MarketDataObject tuan tu theo phut — prod: {@link MarketDataInlineGenerator#update}. */
     public interface MdGen {
         MarketDataObject update(Map<String, KlineObjectSimple> snap);
+
+        /** [UNIVERSE-A1 fixA] ban point-in-time; mac dinh bo qua ts (fake/test cu khong doi). */
+        default MarketDataObject update(Map<String, KlineObjectSimple> snap, long tsMs) {
+            return update(snap);
+        }
     }
 
     /** Nguon phut — prod: LiveTickerWindow (snapshot tu cache + cho du symbol). */
@@ -171,7 +176,18 @@ public final class LiveFeaturePipeline {
     public static LiveFeaturePipeline forProd(ComprehensiveMarketFeatureExtractor ex) {
         java.util.Set<String> died = parseDied(Cfg.getOr(K_MD_DIED, MD_DIED_DEFAULT));
         final MarketDataInlineGenerator g = new MarketDataInlineGenerator(died);
-        LiveFeaturePipeline p = new LiveFeaturePipeline(extractorSink(ex), g::update, featMdInlineCfg(),
+        MdGen gen = new MdGen() {
+            @Override
+            public MarketDataObject update(Map<String, KlineObjectSimple> snap) {
+                return g.update(snap);
+            }
+
+            @Override
+            public MarketDataObject update(Map<String, KlineObjectSimple> snap, long tsMs) {
+                return g.update(snap, tsMs);
+            }
+        };
+        LiveFeaturePipeline p = new LiveFeaturePipeline(extractorSink(ex), gen, featMdInlineCfg(),
                 (int) cfgLong(K_TOL, TOL_DEFAULT));
         LOG.warn("*** [FEAT-PIPE] LIVE_FEAT_INPUT=snapshot: feature gate tinh tren snapshot DAY DU phut M (= replayToCsv); "
                         + "feat_md={} decision_md={} settle tol={} timeout={}ms poll={}ms md_died={}",
@@ -209,12 +225,12 @@ public final class LiveFeaturePipeline {
                 long m = align(e.getKey());
                 Map<String, KlineObjectSimple> snap = e.getValue();
                 if (m <= lastFed || snap == null || snap.isEmpty()) continue;
-                snap = UniverseA1Filter.filter(snap);   // [UNIVERSE-A1] live + NEW2 cung mot tap symbol
+                snap = UniverseA1Filter.filter(snap, m);   // [UNIVERSE-A1] live + NEW2 cung mot tap symbol (point-in-time)
                 if (snap.isEmpty()) continue;
                 for (KlineObjectSimple k : snap.values()) {
                     if (k != null && k.startTime != null) k.startTime = align(k.startTime);
                 }
-                md.update(snap);
+                md.update(snap, m);
                 sink.feed(m, snap);
                 lastFed = m;
                 prevCount = snap.size();
@@ -250,12 +266,12 @@ public final class LiveFeaturePipeline {
                 nGapMinutes++;
                 continue;
             }
-            snap = UniverseA1Filter.filter(snap);   // [UNIVERSE-A1]
+            snap = UniverseA1Filter.filter(snap, m);   // [UNIVERSE-A1] catch-up (point-in-time)
             if (snap.isEmpty()) {
                 nGapMinutes++;
                 continue;
             }
-            md.update(snap);
+            md.update(snap, m);
             sink.feed(m, snap);
             lastFed = m;
             nCatchup++;
@@ -266,13 +282,13 @@ public final class LiveFeaturePipeline {
             LOG.error("[FEAT-PIPE] khong co snapshot phut {} trong cache -> bo tick", minute);
             return new Result(minute, null, legacyRate, null, 0, true, null);
         }
-        snap = UniverseA1Filter.filter(snap);   // [UNIVERSE-A1] gate input = universe A1
+        snap = UniverseA1Filter.filter(snap, minute);   // [UNIVERSE-A1] gate input = universe A1 (point-in-time)
         if (snap.isEmpty()) {
             nNoSnap++;
             LOG.error("[FEAT-PIPE] snapshot rong sau loc UNIVERSE-A1 phut {}", minute);
             return new Result(minute, null, legacyRate, null, 0, true, null);
         }
-        MarketDataObject inl = md.update(snap);
+        MarketDataObject inl = md.update(snap, minute);
         MarketDataObject fr = legacyRate;
         if (featMdInline) {
             if (inl != null) {

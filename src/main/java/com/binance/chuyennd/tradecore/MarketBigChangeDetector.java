@@ -57,8 +57,14 @@ public class MarketBigChangeDetector {
      */
     public static MarketDataObject calMarketData(Map<String, KlineObjectSimple> symbol2Ticker, Map<String, Float> symbol2PriceMax,
                                                  Map<String, Float> symbol2MinPrice, java.util.Set<String> died) {
+        return calMarketData(symbol2Ticker, symbol2PriceMax, symbol2MinPrice, died, System.currentTimeMillis());
+    }
+
+    /** [UNIVERSE-A1 fixA] Point-in-time: loc snapshot theo nghia vu tai dung thoi diem {@code tsMs}. */
+    public static MarketDataObject calMarketData(Map<String, KlineObjectSimple> symbol2Ticker, Map<String, Float> symbol2PriceMax,
+                                                 Map<String, Float> symbol2MinPrice, java.util.Set<String> died, long tsMs) {
         // [UNIVERSE-A1] market features (rateDown/Up/15M, breadth) chi tinh tren universe A1 khi co bat.
-        symbol2Ticker = UniverseA1Filter.filter(symbol2Ticker);
+        symbol2Ticker = UniverseA1Filter.filter(symbol2Ticker, tsMs);
         TreeMap<Float, String> rateDown2Symbols = new TreeMap<>();
         TreeMap<Float, String> rateMin2Symbols = new TreeMap<>();
         TreeMap<Float, String> rateMax2Symbols = new TreeMap<>();

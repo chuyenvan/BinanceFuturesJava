@@ -2,11 +2,13 @@ package com.binance.chuyennd.ai_ml.features.export.gate;
 
 import com.binance.chuyennd.aerospike.DataManagerAerospikeFloatSim;
 import com.binance.chuyennd.ai_ml.features.export.HistoryManager;
+import com.binance.chuyennd.ai_ml.features.export.MarketDataInlineGenerator;
 import com.binance.chuyennd.ai_ml.features.export.entry.ComprehensiveMarketFeatureExtractor;
 import com.binance.chuyennd.ai_ml.features.export.entry.MarketFeatures;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.tradecore.CoinRankManager;
+import com.binance.chuyennd.tradecore.selector.UniverseA1Filter;
 import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,8 +25,6 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import com.binance.chuyennd.tradecore.selector.UniverseA1Filter;
-
 import java.util.Locale;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -141,11 +141,17 @@ public class ExportGateDataset {
      * @param sink nhận từng dòng để caller giữ RAM store; null = chỉ ghi file (nhẹ RAM).
      */
     public static long replayToCsv(long fairStart, long evalEnd, String outFile, RowSink sink) throws Exception {
+        // [UNIVERSE-A1 fixA] fail-fast TRUOC khi doc store (co bat ma file thieu/hong/<200 TF => nem ngay).
+        UniverseA1Filter.initEager();
         long warmupStart = fairStart - WARMUP_HOURS * Utils.TIME_HOUR;
         TreeMap<Long, MarketDataObject> time2Rate = DataManagerAerospikeFloatSim.getAllMarketDataFromAerospike();
         HistoryManager.getInstance().resetCache();
         CoinRankManager.getInstance().resetCache();
         ComprehensiveMarketFeatureExtractor extractor = new ComprehensiveMarketFeatureExtractor();
+        // [UNIVERSE-A1 fixA] khi BAT: tinh lai market rate tren universe A1 tu chinh snapshot da loc
+        // (store time2Rate la A0 — dung nguyen thi feature breadth/basket se con TF, vo parity live).
+        // Cung cong thuc voi ExportMarketData2File (MarketDataInlineGenerator, died = Constants.diedSymbol).
+        final MarketDataInlineGenerator mdA1 = UniverseA1Filter.isActive() ? new MarketDataInlineGenerator() : null;
         double featChecksum = 0;
         long nRows = 0;
         long nSkippedNullFeature = 0;
@@ -186,12 +192,14 @@ public class ExportGateDataset {
                         Map<String, KlineObjectSimple> snap = e.getValue();
                         HistoryManager.getInstance().updateHistory(snap);
                         CoinRankManager.getInstance().getTopCoin(ts);
+                        MarketDataObject mdA1Now = (mdA1 != null) ? mdA1.update(snap, ts) : null;
                         if (ts < fairStart || ts > evalEnd) {
                             continue;
                         }
 
                         // MỌI PHÚT (không de-overlap — downstream cần đủ độ phủ để backtest per-minute)
-                        MarketFeatures f = extractor.extractAllFeatures(ts, snap, time2Rate.get(ts));
+                        MarketDataObject rate = (mdA1Now != null) ? mdA1Now : time2Rate.get(ts);
+                        MarketFeatures f = extractor.extractAllFeatures(ts, snap, rate);
                         if (f == null) {
                             nSkippedNullFeature++;
                             continue;

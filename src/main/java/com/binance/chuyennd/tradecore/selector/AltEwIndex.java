@@ -79,6 +79,7 @@ public final class AltEwIndex {
 
     // ---------------- bo tich luy phut ----------------
     private final Map<String, Integer> ids = new HashMap<>();
+    private String[] syms = new String[0];
     private long[] prevTs = new long[0];
     private double[] prevLc = new double[0];
     private double[] prevQv = new double[0];
@@ -104,9 +105,11 @@ public final class AltEwIndex {
             prevLc = Arrays.copyOf(prevLc, cap);
             prevQv = Arrays.copyOf(prevQv, cap);
             excluded = Arrays.copyOf(excluded, cap);
+            syms = Arrays.copyOf(syms, cap);
         }
-        // [UNIVERSE-A1] loai TradFi+INDEX khoi ALT_EW khi co bat (mac dinh tat => nguyen ven).
-        excluded[i] = "BTCUSDT".equals(sym) || "ETHUSDT".equals(sym) || UniverseA1Filter.isExcluded(sym);
+        syms[i] = sym;
+        // [UNIVERSE-A1 fixA] chi BTC/ETH co dinh; TradFi+INDEX duoc kiem tra POINT-IN-TIME trong feed(ts).
+        excluded[i] = "BTCUSDT".equals(sym) || "ETHUSDT".equals(sym);
         prevTs[i] = Long.MIN_VALUE;
         return i;
     }
@@ -137,7 +140,9 @@ public final class AltEwIndex {
             int id = symIds[i];
             double lc = Math.log(close[i]);
             double q = qv[i];
-            if (prevTs[id] == ts - MIN && !excluded[id]) {
+            // [UNIVERSE-A1 fixA] point-in-time: symbol TF/INDEX chi bi loai tu onboardDate cua no.
+            boolean a1Skip = excluded[id] || UniverseA1Filter.isExcluded(syms[id], ts);
+            if (prevTs[id] == ts - MIN && !a1Skip) {
                 double r = lc - prevLc[id];
                 if (q > 0d && prevQv[id] > 0d && Double.isFinite(r)) {
                     double c = r > CLIP ? CLIP : (r < -CLIP ? -CLIP : r);
