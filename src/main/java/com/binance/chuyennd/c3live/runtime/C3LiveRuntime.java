@@ -345,6 +345,7 @@ public final class C3LiveRuntime {
             t.setDaemon(true);
             return t;
         });
+        merged.setActExecutor(protectExec);   // [V12 R4] co MERGED dat dong bo; thay/huy stop tren C3LIVE-PROTECT (khong chan websocket)
         this.ghostFile = new File(Cfg.getOr(KEY_GHOST_FILE, DEFAULT_GHOST_FILE));
         final C3StreamScope ss = streamScope;
         if (dry && rawGw instanceof DryGateway) {

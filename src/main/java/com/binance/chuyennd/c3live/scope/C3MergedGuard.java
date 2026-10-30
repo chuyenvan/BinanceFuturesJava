@@ -43,6 +43,9 @@ public final class C3MergedGuard {
     private final OrderAuditLog audit;
     private final LongSupplier clock;
     private volatile TrailingStopManager trailing;
+    /** noi chay HANH DONG MERGED (thay/huy stop, co the cho guard toi 61 s). Mac dinh: ngay tren luong goi. Runtime: thread
+     *  C3LIVE-PROTECT (khong chan luong websocket); co MERGED + chan mo moi luon dat DONG BO truoc. */
+    private volatile java.util.concurrent.Executor actExec = Runnable::run;
     private final Map<String, Long> suspectSince = new TreeMap<>();
     private final Map<String, Long> releaseSince = new TreeMap<>();
     private final Map<String, Long> lastRemind = new TreeMap<>();
@@ -59,6 +62,10 @@ public final class C3MergedGuard {
 
     public void setTrailing(TrailingStopManager t) {
         this.trailing = t;
+    }
+
+    public void setActExecutor(java.util.concurrent.Executor e) {
+        this.actExec = e == null ? Runnable::run : e;
     }
 
     /** (a) stream: lenh khong-c3 khop tren symbol c3 dang giu => MERGED ngay. */
@@ -174,7 +181,12 @@ public final class C3MergedGuard {
             journal(sym, "MERGED", why, now);
             lastRemind.put(sym, now);
         }
-        act(sym, now);
+        try {
+            actExec.execute(() -> act(sym, clock.getAsLong()));
+        } catch (RuntimeException e) {
+            LOG.error("[C3-LIVE-MERGED] {} khong xep duoc hanh dong ({}) => chay ngay", sym, e.toString());
+            act(sym, now);
+        }
     }
 
     private void release(String sym, String why) {

@@ -1,6 +1,6 @@
 # ROUND4 — c3_live PRODUCTION trên TÀI KHOẢN CHÍNH (spec `docs/plan/ROUND4_MAIN_ACCOUNT.md`, MASTER 2026-10-30)
 
-Branch `v1.2/c3-live`, trên `b4aa33c6` (3k). Spec commit riêng TRƯỚC code: `8398d1d6`. Code `bd34845f`, test `f956e28e`.
+Branch `v1.2/c3-live`, trên `b4aa33c6` (3k). Spec commit riêng TRƯỚC code: `8398d1d6`. Code `bd34845f`, test `f956e28e`, docs `a1bb70e0`, fix MERGED bat dong bo (commit nay).
 Chỉ code + test + doc; **không** gọi Binance, **không** ssh 242, **không** chạy script canary/deploy, **không** đụng
 `~/claude_master/canary_*`, **không** push, **không** `git config`, **không** in/sửa `PrivateConfig`.
 
@@ -9,7 +9,7 @@ Chỉ code + test + doc; **không** gọi Binance, **không** ssh 242, **không*
 | # | yêu cầu | sửa | test |
 |---|---|---|---|
 | R1 | phạm vi cid/sổ c3; đọc toàn tài khoản qua view lọc; không bao giờ cancel/close/modify ngoài phạm vi; dualSide/multiAssets chỉ ĐỌC, hedge ⇒ từ chối; leverage/marginType chỉ symbol sạch | `scope/C3ScopedGateway` bọc gateway thô (live + dry): `positions()/account()` = `C3Scope.view` (ẩn symbol LEGACY; MERGED ⇒ phần c3), `openOrders/openStops` = chỉ cid c3; ghi: cid bắt buộc `c3-`/`c3x-`/`c3s-`, `setDualSidePosition` luôn từ chối, `setLeverage/setMarginType` chỉ khi sàn = qty c3 và 0 lệnh/algo không-c3. Đọc thô chỉ `positionsAll/openOrdersAll/openStopsAll/accountRaw` (CHỈ ĐỌC). `AccountModeGuard.globalPolicy(false,false)` | `scopedGatewayRefusesOutOfScopeWrites`, `h_…` (view rỗng với 44 LEGACY) |
-| R2 | LEGACY-busy (mỗi chu kỳ + trước MỌI lệnh mở, trong supplier); MERGED: không đóng, stop closePosition ⇒ qty reduceOnly = qty c3 (giá cũ), chặn mở, Telegram KHẨN, journal; gỡ khi sàn = ledger | `C3LegacyRefresher` (60 s, ~85 weight) → `C3Scope.refreshLegacy`; entry `legacy = LegacySymbols ∨ scope.entryBlocked` (ảnh chụp > 180 s ⇒ chặn hết, fail-closed); `C3ScopedGateway.preOpen` chạy lại trong vòng thử (đọc positionRisk thô + openOrders/openAlgo của symbol). `C3MergedGuard`: stream (lệnh không-c3 KHỚP trên symbol c3) ⇒ ngay; REST (sàn > cận trên c3 / âm) 2 lần cách ≥ 3 s; xử lý: `TrailingStopManager.replaceStopAsQty` (đặt qty trước, huỷ closePosition sau — không khoảng trống), không được ⇒ huỷ closePosition trong lane khẩn cấp; `qtyModeFor(scope::isMerged)` giữ mọi lần dời stop ở qty = phần c3; journal `OrderAuditLog status=MERGED/MERGED_STOP_QTY/MERGED_STOP_CANCEL/MERGED_RELEASED`; persist `run/c3live_merged.txt`; khởi động: sàn > sổ c3 ⇒ MERGED NGAY trước "sàn thắng" của Reconciler | `b_…`, `b2_…`, `c_…`, `c4_…` |
+| R2 | LEGACY-busy (mỗi chu kỳ + trước MỌI lệnh mở, trong supplier); MERGED: không đóng, stop closePosition ⇒ qty reduceOnly = qty c3 (giá cũ), chặn mở, Telegram KHẨN, journal; gỡ khi sàn = ledger | `C3LegacyRefresher` (60 s, ~85 weight) → `C3Scope.refreshLegacy`; entry `legacy = LegacySymbols ∨ scope.entryBlocked` (ảnh chụp > 180 s ⇒ chặn hết, fail-closed); `C3ScopedGateway.preOpen` chạy lại trong vòng thử (đọc positionRisk thô + openOrders/openAlgo của symbol). `C3MergedGuard`: stream (lệnh không-c3 KHỚP trên symbol c3) ⇒ ngay; REST (sàn > cận trên c3 / âm) 2 lần cách ≥ 3 s; xử lý: `TrailingStopManager.replaceStopAsQty` (đặt qty trước, huỷ closePosition sau — không khoảng trống), không được ⇒ huỷ closePosition trong lane khẩn cấp; `qtyModeFor(scope::isMerged)` giữ mọi lần dời stop ở qty = phần c3; journal `OrderAuditLog status=MERGED/MERGED_STOP_QTY/MERGED_STOP_CANCEL/MERGED_RELEASED`; persist `run/c3live_merged.txt`; khởi động: sàn > sổ c3 ⇒ MERGED NGAY trước "sàn thắng" của Reconciler | `b_…`, `b2_…`, `b3_…` (co MERGED dong bo, hanh dong tren thread rieng), `c_…`, `c4_…` |
 | R3 | LEGACY không còn là chặn (A) | Lớp c3 không thấy LEGACY: view + `C3StreamScope` (bỏ ORDER/ALGO/TRADE_LITE không-c3, mảng `P` chỉ symbol c3 giữ, bỏ mảng `B`). (A) chỉ còn: lỗi đọc/đối soát của c3, startup chưa xong, (B) > 10′, kill-switch. Symbol vừa chốt có hoạt động LEGACY sau đó ⇒ không theo dõi (B) nữa | `a_…` (bot LEGACY ≥ 50 lệnh, 0 chặn (A)), `b2_…` (LEGACY còn lại sau khi c3 đóng ⇒ không (A) sau 15′) |
 | R4 | vốn/equity c3 riêng; size từ equity c3; C6/A40 + đỉnh riêng; đối chiếu giờ = qty; tmb chỉ cảnh báo ký quỹ | `risk/C3MainEquity`: equity = C3_CAPITAL + (rp − phí) ledger c3 từ mốc + cụm mở + funding c3 (income FUNDING_FEE theo symbol × khoảng giữ; MERGED ⇒ theo tỉ lệ qty) + UPL c3; `capital() = min(C3_CAPITAL, equity c3, availableBalance + margin c3)`; cảnh báo `availableBalance < 2 × margin c3`. Runtime: `attachEquitySource(c3)`, `onBook(..., equity c3)`, nhãn đỉnh `<adapter>_c3eq`. `Reconciler.setQtyReconcile(true)` ⇒ `hourlyQty` | `d_…`, `e_…`, `fundingCountsOnlyC3SymbolsWhileHeld`, `a_…` (hourly qty) |
 | R5 | rate canary 3i cho runtime | `rate/ProductionRatePolicy` = `RateGuard.CanaryPolicy` từ hằng `CanaryLimits` (IP 1800 env `LIVE_C3_IP_WEIGHT_CAP` kẹp ≤ 1920, riêng 600, burst [27,40]→41, đọc chờ ≤ 2×61 s); `GatewayFactory` live dùng nó; `C3ScopedGateway.write` ngủ burst trước kiểm, guard từ chối ⇒ chờ ≤ 61 s, KIỂM LẠI, thử 1 lần; Urgent không chờ quá hạn; lane khẩn cấp không bị lớp này chặn | `C3ProdRateTest` (5) |
@@ -56,8 +56,8 @@ Không có `cancelAll` nào trong `c3live/` (grep 0).
 
 ## 3. Test
 
-- `mvn -o package -DskipTests=false` (nice, MemAvailable ≥ 15 GB): **Tests run: 813, Failures: 0, Errors: 0, Skipped: 1 — BUILD SUCCESS**
-  (3k: 793; +20: `C3MainAccountE2ETest` 9, `C3MainEquityKillSwitchTest` 3, `C3ProdRateTest` 5, `C3UniverseStrictTest` 2,
+- `mvn -o package -DskipTests=false` (nice, MemAvailable ≥ 15 GB): **Tests run: 814, Failures: 0, Errors: 0, Skipped: 1 — BUILD SUCCESS**
+  (3k: 793; +21: `C3MainAccountE2ETest` 10, `C3MainEquityKillSwitchTest` 3, `C3ProdRateTest` 5, `C3UniverseStrictTest` 2,
   `C3DryMainAccountTest` 1). Không sửa/nới test cũ nào; A1 byte-identical.
 - Gian thử `MainAccountRig`: mock tài khoản chính với 44 vị thế LEGACY (C30..C73) + 1 lệnh LIMIT + 1 algo LEGACY, bot LEGACY
   mở/đóng ngẫu nhiên (seed 42) trên symbol LEGACY + 6 symbol tự do, thành phần c3 THẬT (scope, stream, merged, protector,
@@ -69,12 +69,12 @@ Không có `cancelAll` nào trong `c3live/` (grep 0).
 
 ## 4. Jar / pin
 
-- Production: `~/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4`, 100 466 158 bytes, md5 **`a42581866db2236fecbcb6be6ab085be`**
+- Production: `~/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4`, 100 466 544 bytes, md5 **`345613dc964cefe3fb6b5e47342b199c`** (build tu HEAD sau fix MERGED bat dong bo)
   (3k: 8 922 entry → r4: 8 935; +13 = `scope/*` 7 class + thư mục, `C3MainEquity`, `C3StopProtector`, `ProductionRatePolicy`,
   `IncomeRecord`, `C3LiveRuntime$2`; không bỏ entry nào).
 - Canary: code canary KHÔNG đổi ⇒ **không bump** `CANARY_JAR`/`CANARY_JAR_MD5` (vẫn `…_3k` / `fea29aea…`, kiểm md5sum thật = `fea29aea127886a63f60d23b3b9846dc`).
 - `ops/c3live/deploy_v12_dry.sh`: KHÔNG đổi. Để chạy dry R4 từ 11-18 cần cập nhật (owner/MASTER duyệt): pin jar → `…_v12_r4` + md5
-  `a4258186…`; env `C3_CAPITAL` (mặc định = `LIVE_C3_PILOT_CAPITAL` = 10 000), tuỳ chọn `LIVE_C3_IP_WEIGHT_CAP`,
+  `345613dc…`; env `C3_CAPITAL` (mặc định = `LIVE_C3_PILOT_CAPITAL` = 10 000), tuỳ chọn `LIVE_C3_IP_WEIGHT_CAP`,
   `LIVE_C3_MERGED_FILE`, `LIVE_C3_EQUITY_FILE`; file `LIVE_C3_EXCHANGEINFO_FILE` phải là dump exchangeInfo THÔ đầy đủ (≥ 200
   TRADIFI) — nếu không, universe chặt từ chối ⇒ dry không mua gì.
 
@@ -114,3 +114,7 @@ Không có `cancelAll` nào trong `c3live/` (grep 0).
 2. `C3LiveRuntime` (static, Cfg, Aerospike) không có test end-to-end; các thành phần được nối giống hệt trong `MainAccountRig`.
 3. `income` mới chỉ FUNDING_FEE; chưa đối chiếu COMMISSION/REALIZED_PNL theo symbol với ledger c3.
 4. Weight thực tế production trên IP 242 (LEGACY-busy 85/phút + phần cũ) cần đo trong dry 11-18 (`HOURLY ... scope[...]`).
+
+## 7. Fix sau tu kiem (commit cuoi)
+
+`C3MergedGuard.setActExecutor`: co MERGED + chan mo moi dat DONG BO tren luong phat hien (stream/REST); hanh dong thay/huy stop (co the cho guard toi 61 s trong Urgent) chay tren thread `C3LIVE-PROTECT` (runtime) — khong chan luong websocket. Test `b3_mergedFlagIsSynchronousActionsRunOnActExecutor`. fake242 khong chay lai: `ops/` va code canary khong doi (fake242 dung jar canary pin 3k).

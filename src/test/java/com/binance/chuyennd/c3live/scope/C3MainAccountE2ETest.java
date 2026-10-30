@@ -236,6 +236,24 @@ public class C3MainAccountE2ETest {
         return n;
     }
 
+    @Test
+    public void b3_mergedFlagIsSynchronousActionsRunOnActExecutor() throws Exception {
+        MainAccountRig r = armed(tmp.getRoot());
+        BigDecimal c3Qty = r.scope.c3OpenQty(S);
+        java.util.List<Runnable> q = new java.util.ArrayList<>();
+        r.merged.setActExecutor(q::add);   // nhu runtime: hanh dong tren thread rieng (khong chan websocket)
+        r.legacyTrade(S, Side.BUY, new BigDecimal("200"));
+        assertTrue("co MERGED dat dong bo", r.scope.isMerged(S));
+        assertTrue("chan mo moi ngay", r.scope.entryBlocked(S, r.now.get()));
+        assertTrue("stop closePosition chua xu ly tren luong stream", onlyStop(r).isClosePosition());
+        assertFalse(q.isEmpty());
+        for (Runnable x : new java.util.ArrayList<>(q)) x.run();
+        OrderInfo st = onlyStop(r);
+        assertFalse(st.isClosePosition());
+        assertEquals(0, c3Qty.compareTo(st.getOrigQty()));
+        assertEquals(0, countC3Sells(r));
+    }
+
     // ------------------------------------------------------------------ (c) LEGACY-busy
     @Test
     public void c_legacyBusySymbolNeverEnteredIncludingRaceAfterCycleRefresh() throws Exception {
