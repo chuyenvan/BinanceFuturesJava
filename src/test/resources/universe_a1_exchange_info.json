@@ -1,0 +1,11 @@
+{
+  "symbols": [
+    {"symbol": "BTCUSDT", "contractType": "PERPETUAL", "underlyingType": "COIN", "underlyingSubType": []},
+    {"symbol": "AAPLUSDT", "contractType": "TRADIFI_PERPETUAL", "underlyingType": "EQUITY", "underlyingSubType": ["TRADFI"]},
+    {"symbol": "GLDUSDT", "contractType": "PERPETUAL", "underlyingType": "COMMODITY", "underlyingSubType": ["COMMODITY"]},
+    {"symbol": "SPXUSDT", "contractType": "PERPETUAL", "underlyingType": "INDEX", "underlyingSubType": []},
+    {"symbol": "PREDICTUSDT", "contractType": "PERPETUAL", "underlyingType": "PREMARKET", "underlyingSubType": ["PREMARKET"]},
+    {"symbol": "WEIRDUSDT", "contractType": "PERPETUAL", "underlyingSubType": []},
+    {"symbol": "DEFIUSDT", "contractType": "PERPETUAL", "underlyingType": "COIN", "underlyingSubType": []}
+  ]
+}

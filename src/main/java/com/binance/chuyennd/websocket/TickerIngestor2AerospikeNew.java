@@ -14,6 +14,7 @@ import com.binance.chuyennd.utils.Utils;
 import com.binance.client.constant.Constants;
 import org.apache.commons.lang.StringUtils;
 import org.json.JSONArray;
+import com.binance.chuyennd.tradecore.selector.UniverseA1Filter;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -131,7 +132,8 @@ public class TickerIngestor2AerospikeNew {
                             JSONObject obj = tickers.getJSONObject(i);
                             String symbol = obj.getString("symbol").toUpperCase();
 
-                            if (symbol.endsWith("USDT") && symbol.matches("^[A-Z0-9]+$") && !Constants.diedSymbol.contains(symbol)) {
+                            if (symbol.endsWith("USDT") && symbol.matches("^[A-Z0-9]+$") && !Constants.diedSymbol.contains(symbol)
+                                    && !UniverseA1Filter.isExcluded(symbol)) {   // [UNIVERSE-A1] universe giao dich live
                                 float price = obj.getFloat("price");
                                 priceBuffer.put(symbol, price);
 
@@ -514,7 +516,8 @@ public class TickerIngestor2AerospikeNew {
 
         for (String s : redisData) {
             String upperS = s.toUpperCase();
-            if (!Constants.diedSymbol.contains(upperS) && StringUtils.endsWithIgnoreCase(upperS, "USDT") && upperS.matches(regex)) {
+            if (!Constants.diedSymbol.contains(upperS) && StringUtils.endsWithIgnoreCase(upperS, "USDT") && upperS.matches(regex)
+                    && !UniverseA1Filter.isExcluded(upperS)) {   // [UNIVERSE-A1]
                 symbols.add(upperS);
             }
         }

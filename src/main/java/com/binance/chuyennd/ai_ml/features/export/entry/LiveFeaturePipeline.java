@@ -5,6 +5,7 @@ import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.tradecore.Cfg;
 import com.binance.chuyennd.tradecore.CoinRankManager;
+import com.binance.chuyennd.tradecore.selector.UniverseA1Filter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -208,6 +209,8 @@ public final class LiveFeaturePipeline {
                 long m = align(e.getKey());
                 Map<String, KlineObjectSimple> snap = e.getValue();
                 if (m <= lastFed || snap == null || snap.isEmpty()) continue;
+                snap = UniverseA1Filter.filter(snap);   // [UNIVERSE-A1] live + NEW2 cung mot tap symbol
+                if (snap.isEmpty()) continue;
                 for (KlineObjectSimple k : snap.values()) {
                     if (k != null && k.startTime != null) k.startTime = align(k.startTime);
                 }
@@ -247,6 +250,11 @@ public final class LiveFeaturePipeline {
                 nGapMinutes++;
                 continue;
             }
+            snap = UniverseA1Filter.filter(snap);   // [UNIVERSE-A1]
+            if (snap.isEmpty()) {
+                nGapMinutes++;
+                continue;
+            }
             md.update(snap);
             sink.feed(m, snap);
             lastFed = m;
@@ -256,6 +264,12 @@ public final class LiveFeaturePipeline {
         if (snap == null || snap.isEmpty()) {
             nNoSnap++;
             LOG.error("[FEAT-PIPE] khong co snapshot phut {} trong cache -> bo tick", minute);
+            return new Result(minute, null, legacyRate, null, 0, true, null);
+        }
+        snap = UniverseA1Filter.filter(snap);   // [UNIVERSE-A1] gate input = universe A1
+        if (snap.isEmpty()) {
+            nNoSnap++;
+            LOG.error("[FEAT-PIPE] snapshot rong sau loc UNIVERSE-A1 phut {}", minute);
             return new Result(minute, null, legacyRate, null, 0, true, null);
         }
         MarketDataObject inl = md.update(snap);

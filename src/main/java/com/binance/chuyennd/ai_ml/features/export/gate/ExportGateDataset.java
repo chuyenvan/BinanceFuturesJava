@@ -23,6 +23,8 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import com.binance.chuyennd.tradecore.selector.UniverseA1Filter;
+
 import java.util.Locale;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -163,6 +165,10 @@ public class ExportGateDataset {
                             DataManagerAerospikeFloatSim.readDataFromAerospike1M(day);
                     TreeMap<Long, Map<String, KlineObjectSimple>> tomorrow =
                             DataManagerAerospikeFloatSim.readDataFromAerospike1M(day + Utils.TIME_DAY);
+                    // [UNIVERSE-A1] replay dung CUNG universe voi live: loai TradFi+INDEX khoi
+                    // snapshot (=> history/selector, market features, gate input va label all-market).
+                    today = UniverseA1Filter.filterMinutes(today);
+                    tomorrow = UniverseA1Filter.filterMinutes(tomorrow);
                     TreeMap<Long, Map<String, KlineObjectSimple>> lookup = new TreeMap<>();
                     if (today != null) {
                         lookup.putAll(today);

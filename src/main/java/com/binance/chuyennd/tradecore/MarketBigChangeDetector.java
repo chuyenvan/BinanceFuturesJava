@@ -4,6 +4,7 @@ import com.binance.chuyennd.helper.TickerFuturesHelper;
 import com.binance.chuyennd.object.MarketDataObject;
 import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
+import com.binance.chuyennd.tradecore.selector.UniverseA1Filter;
 import com.binance.chuyennd.research.OrderTargetInfoTest;
 import com.binance.chuyennd.trading.OrderTargetInfo;
 import com.binance.chuyennd.trading.OrderTargetStatus;
@@ -56,6 +57,8 @@ public class MarketBigChangeDetector {
      */
     public static MarketDataObject calMarketData(Map<String, KlineObjectSimple> symbol2Ticker, Map<String, Float> symbol2PriceMax,
                                                  Map<String, Float> symbol2MinPrice, java.util.Set<String> died) {
+        // [UNIVERSE-A1] market features (rateDown/Up/15M, breadth) chi tinh tren universe A1 khi co bat.
+        symbol2Ticker = UniverseA1Filter.filter(symbol2Ticker);
         TreeMap<Float, String> rateDown2Symbols = new TreeMap<>();
         TreeMap<Float, String> rateMin2Symbols = new TreeMap<>();
         TreeMap<Float, String> rateMax2Symbols = new TreeMap<>();

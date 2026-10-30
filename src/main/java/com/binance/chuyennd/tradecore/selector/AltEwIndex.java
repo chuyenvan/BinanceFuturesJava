@@ -105,7 +105,8 @@ public final class AltEwIndex {
             prevQv = Arrays.copyOf(prevQv, cap);
             excluded = Arrays.copyOf(excluded, cap);
         }
-        excluded[i] = "BTCUSDT".equals(sym) || "ETHUSDT".equals(sym);
+        // [UNIVERSE-A1] loai TradFi+INDEX khoi ALT_EW khi co bat (mac dinh tat => nguyen ven).
+        excluded[i] = "BTCUSDT".equals(sym) || "ETHUSDT".equals(sym) || UniverseA1Filter.isExcluded(sym);
         prevTs[i] = Long.MIN_VALUE;
         return i;
     }

@@ -55,7 +55,9 @@ public final class Cfg {
             "KLINE_INGEST_MODE", "KLINE_WS_FLUSH_MS", "KLINE_EARLY_REST_SEC", "KLINE_SETTLE_SEC", "KLINE_SETTLE_MIN_AGE_SEC",
             "KLINE_SETTLE_LIMIT", "KLINE_SETTLE_LIMIT_STARTUP", "KLINE_REST_RETRY", "KLINE_WS_STREAMS_PER_CONN", "KLINE_STATS_MIN", "KLINE_WS_BASE", "KLINE_LIVE_REREAD_MIN",
             // [MAPAUD 2026-10-11] symbol_mapper: chinh sach id trung khi nap + xac nhan tool sua (ha tang)
-            "SYMBOL_MAPPER_DUP_POLICY", "MAPPER_REPAIR_CONFIRM");
+            "SYMBOL_MAPPER_DUP_POLICY", "MAPPER_REPAIR_CONFIRM",
+            // [UNIVERSE-A1 2026-10-30] duong dan/ danh sach INDEX = ha tang; co UNIVERSE_A1 = tham so giao dich
+            "UNIVERSE_A1_EXCHANGE_INFO", "UNIVERSE_A1_INDEX_LIST");
 
     /** Tien to cua bien env DUOC COI LA THAM SO GIAO DICH — cam dat khi da co profile. */
     private static final List<String> TRADING_PREFIXES = Arrays.asList(
@@ -74,7 +76,9 @@ public final class Cfg {
             // cung thang exit C2b), khong phai duong dan ha tang. Truoc day no o INFRA_KEYS nen
             // dat tuy y qua env, khong duoc pin trong profile, va CONFIG_HASH/PROFILE_HASH khong
             // he doi khi doi selector => khong truy nguyen duoc. Xem docs/audit/AUDIT_APPLIED.md 3.3(a).
-            "WFO_FUNDING_PRED_DIR");
+            "WFO_FUNDING_PRED_DIR",
+            // [UNIVERSE-A1 2026-10-30] loai TradFi+INDEX khoi universe + market features (mac dinh 0)
+            "UNIVERSE_A1");
 
     private static final Map<String, String> PROFILE;   // null neu khong dung profile
     private static final String PROFILE_PATH;
