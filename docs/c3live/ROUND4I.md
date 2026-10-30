@@ -31,7 +31,7 @@ CÓ: kết quả phụ thuộc đua giữa REST openStops của guard và lúc s
 - **Prereg G-CANARY**: tiêu chí K7b đổi (chấp nhận đường (ii)) ⇒ MASTER cần ADDENDUM trước khi chạy canary_3l.
 
 ## 4. Kiểm, jar, gói
-- `mvn -o -T 1 package` (lock): **887 test, 0 fail, 1 skip**. fake242: xem báo cáo.
+- `mvn -o -T 1 package` (lock): **887 test, 0 fail, 1 skip**. fake242: lần 1 **218/219** — FAIL §16a "gio dong sau K1" do JVM giả K6B_RESTART thoát rc=0 không in dòng RESULT (lỗi harness giả, không liên quan code 4i — §16a PASS ở 4g/4h); chạy lại toàn bộ: **TEST PASS 217/217** (log `~/claude_master/v12/r4i_fake_run1.log`, `r4i_fake.log`).
 - Jar `~/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4i` md5 **2487acdb3a7fe770db27f949a6983156**; pin trong `ops/c3live/canary/canary_lib.sh`
   (`CANARY_JAR`, `CANARY_JAR_MD5`) như cách gói 3k.
 - Gói `~/claude_master/canary_3l/ops/c3live/canary` = bản sao y repo (diff rỗng). KHÔNG chạy canary.
