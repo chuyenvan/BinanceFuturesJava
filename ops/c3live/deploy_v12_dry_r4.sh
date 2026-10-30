@@ -16,7 +16,7 @@
 # Ma thoat: 0 XONG | 1 DUNG (chua doi gi / env khoi phuc / da rollback xong) | 2 ROLLBACK LOI | 3 XONG nhung PAUSE con.
 # Rollback tay: FORCE_TIME=1 bash .../rollback_v12.sh <TS>
 # Script MOI (giu nguyen deploy_v12_dry.sh + pin cu cua no). Bien cho test (242 GIA): SSH_242, SCP_242, RHOST, APP_DIR,
-#   LOGDIR, WD_PAUSE, NJ, NJ_MD5, OLD_MD5, KILLSW_SH, KILLSW_MD5, RB_SH, RB_MD5, LATCH_WAIT_S, EXINFO_CMD, POST_WAIT_S,
+#   LOGDIR, WD_PAUSE, NJ, NJ_MD5, OLD_MD5, KILLSW_SH, KILLSW_MD5, RB_SH, RB_MD5, LATCH_WAIT_S, EXINFO_CMD, PY242, POST_WAIT_S,
 #   POST_ROUNDS, PROC_PAT, WINDOW_WAIT_MAX_S, MIN_TRADFI, DEPLOY_TG_ENV, DEPLOY_TG_SINK (test: ghi Telegram ra file, KHONG gui).
 # =============================================================================
 set -uo pipefail
@@ -37,9 +37,12 @@ RB_SH=${RB_SH:-$(cd "$(dirname "$0")" && pwd)/rollback_v12.sh}
 RB_MD5=${RB_MD5:-57ee2baf384a22dfeb2f293c12108577}   # [R4c D2] md5 rollback_v12.sh (kiem truoc khi dung, ca trong autorb)
 DEPLOY_TG_ENV=${DEPLOY_TG_ENV:-/home/ubuntu/.config/health242/tg.env}
 EXR_SH=${EXR_SH:-$(cd "$(dirname "$0")" && pwd)/exinfo_refresh_242.sh}
-EXR_MD5=${EXR_MD5:-48f32c40a5f53215e397f08fa2503370}   # [R4e MAJOR-1] md5 exinfo_refresh_242.sh (cron lam moi exchangeInfo tren 242)
+EXR_MD5=${EXR_MD5:-dc7e40d7fa5a0fe1c5ca8ac61540fc84}   # [R4e MAJOR-1 + R4k C3PY] md5 exinfo_refresh_242.sh (cron lam moi exchangeInfo tren 242)
 EXV_PY=${EXV_PY:-$(cd "$(dirname "$0")" && pwd)/exinfo_validate.py}
 EXV_MD5=${EXV_MD5:-94d2f39d9eb4fe177d92b683f22f7bbd}   # [R4f MINOR-2] md5 bo kiem exchangeInfo CHUNG (PRE + chuan bi + cron lam moi)
+# [R4k] python3 RIENG tren 242, duong dan tuyet doi (242 CentOS 7 chi co python2.7; KHONG dung python theo PATH / he thong).
+# Cai bang ops/c3live/c3py_install_242.sh (python-build-standalone pin sha256). Dung cho PRE + chuan bi + cron lam moi.
+PY242=${PY242:-/opt/c3py/python/bin/python3}
 CRONTAB_CMD=${CRONTAB_CMD:-crontab}
 CRON_MIN=${CRON_MIN:-3,18,41,48}   # moi ~15', ngoai cua so burst [27,40]
 SSH_RETRY_S=${SSH_RETRY_S:-10}
@@ -166,7 +169,7 @@ ok "killsw_reset.sh + rollback san sang"
 
 # ---------------------------------------------------------------- 2. kiem 242 (chi doc)
 pre242() {
-s242in "PP='$PROC_PAT' EXC='$EXINFO_CMD' CT='$CRONTAB_CMD' EXV='$EXV_B64' bash -s -- $A $OLD_MD5 $MIN_TRADFI" <<'EOF'
+s242in "PP='$PROC_PAT' EXC='$EXINFO_CMD' CT='$CRONTAB_CMD' EXV='$EXV_B64' PY='$PY242' bash -s -- $A $OLD_MD5 $MIN_TRADFI" <<'EOF'
 A=$1; OLD=$2; MINTF=$3; cd "$A" || { echo "FAIL cd"; exit 0; }
 J=$(md5sum < target/binance-java-sdk-1.2.4.jar | cut -c1-32)
 [ "$J" = "$OLD" ] && echo "OK jar_dang_chay=$J" || echo "FAIL jar_dang_chay=$J (mong doi $OLD) — khong xac dinh duoc ban dang chay => TU CHOI"
@@ -189,14 +192,15 @@ for f in run/c3live_book.json run/c3live_merged.txt run/c3live_equity_c3.json ru
 done
 command -v curl >/dev/null && echo "OK curl" || echo "FAIL thieu_curl"
 # [R4e MAJOR-1] cron lam moi exchangeInfo: can python3 + crontab; CHUA duoc cai (marker)
-command -v python3 >/dev/null && echo "OK python3" || echo "FAIL thieu_python3 (cron lam moi exchangeInfo)"
+# [R4k] python3 RIENG (duong dan tuyet doi $PY), KHONG theo PATH: 242 CentOS 7 chi co python2.7
+PYV=$("$PY" -I -c 'import sys; print("%d.%d.%d" % sys.version_info[:3]); sys.exit(0 if sys.version_info[:2] >= (3, 8) else 1)' 2>/dev/null) && echo "OK python3_rieng $PY $PYV" || echo "FAIL thieu_python3_rieng $PY (owner chay ops/c3live/c3py_install_242.sh)"
 command -v ${CT%% *} >/dev/null && echo "OK crontab" || echo "FAIL thieu_crontab"
 NCR=$($CT -l 2>/dev/null | grep -cF '# C3LIVE_EXINFO_REFRESH')
 [ "${NCR:-0}" = 0 ] && echo "OK cron_lam_moi_chua_cai" || echo "FAIL cron_lam_moi_DA_CO ($NCR dong marker C3LIVE_EXINFO_REFRESH — deploy truoc chua go?)"
 # [R4d] nguon raw exchangeInfo (UNIVERSE_A1 + R7): doc thu ra stdout TREN 242 (khong ghi file) — du truong + serverTime + onboardDate
 XS=$(eval "$EXC" 2>/dev/null)
 # [R4f MINOR-2] CUNG bo kiem voi buoc chuan bi + cron lam moi (chay tu noi dung, khong ghi file tren 242)
-XV=$(printf '%s' "$XS" | python3 -I -c "$(printf '%s' "$EXV" | base64 -d)" - "" "$MINTF" 0.10 2>&1); XR=$?
+XV=$(printf '%s' "$XS" | "$PY" -I -c "$(printf '%s' "$EXV" | base64 -d)" - "" "$MINTF" 0.10 2>&1); XR=$?
 [ "$XR" = 0 ] && echo "OK exchangeInfo_nguon $XV" || echo "FAIL exchangeInfo_nguon $XV (UNIVERSE_A1 can raw /fapi/v1/exchangeInfo day du)"
 FREE=$(df -Pk . | awk 'NR==2{print $4}')
 [ "${FREE:-0}" -gt 1048576 ] && echo "OK dia_trong=${FREE}k" || echo "FAIL dia_trong=${FREE}k < 1G"
@@ -300,7 +304,7 @@ $EXINFO_CMD > run/c3live_exchangeInfo.json.tmp 2>/dev/null
 X=run/c3live_exchangeInfo.json.tmp
 # [R4f MINOR-2] CUNG bo kiem voi PRE + cron lam moi (ops/exinfo_validate.py, md5 pin)
 [ "\$(md5sum < ops/exinfo_validate.py 2>/dev/null | cut -c1-32)" = "\$EXVM" ] || { rm -f \$X; echo "FAIL md5_exinfo_validate_tren_242"; exit 0; }
-V=\$(python3 -I ops/exinfo_validate.py \$X run/c3live_exchangeInfo.json \$MINTF 0.10 2>&1); VR=\$?
+V=\$($PY242 -I ops/exinfo_validate.py \$X run/c3live_exchangeInfo.json \$MINTF 0.10 2>&1); VR=\$?
 if [ "\$VR" = 0 ]; then
   mv -f \$X run/c3live_exchangeInfo.json; echo "OK exchangeInfo \$V"
 else
@@ -365,7 +369,7 @@ EOF
   die "cai cron lam moi exchangeInfo FAIL ($1) — env.sh khoi phuc, cron go theo marker. Jar cu van chay, bot cu khong bi dung."
 }
 c242 "$EXR_SH" "${RHOST}$A/ops/exinfo_refresh_242.sh" || crfail "scp exinfo_refresh_242.sh"
-CRI=$(s242in "CT='$CRONTAB_CMD' bash -s -- $A $EXR_MD5 $CRON_MIN $TS" <<'EOF'
+CRI=$(s242in "CT='$CRONTAB_CMD' PY='$PY242' bash -s -- $A $EXR_MD5 $CRON_MIN $TS" <<'EOF'
 A=$1; M=$2; MIN=$3; TS=$4; cd "$A" || { echo "FAIL cd"; echo END_CRON; exit 0; }
 MK='# C3LIVE_EXINFO_REFRESH'
 [ "$(md5sum < ops/exinfo_refresh_242.sh | cut -c1-32)" = "$M" ] || { echo "FAIL md5_exinfo_refresh_242"; echo END_CRON; exit 0; }
@@ -377,7 +381,7 @@ if CUR=$($CT -l 2>/dev/null); then :; else
 fi
 printf '%s\n' "$CUR" > conf/crontab.bak_v12pre_$TS
 if echo "$CUR" | grep -qF "$MK"; then echo "FAIL cron_da_co"; echo END_CRON; exit 0; fi
-LINE="$MIN * * * * cd $A && /bin/bash $A/ops/exinfo_refresh_242.sh >> $A/logs/exinfo_refresh.log 2>&1 $MK"
+LINE="$MIN * * * * cd $A && C3PY=$PY /bin/bash $A/ops/exinfo_refresh_242.sh >> $A/logs/exinfo_refresh.log 2>&1 $MK"
 { if [ -n "$CUR" ]; then printf '%s\n' "$CUR"; fi; printf '%s\n' "$LINE"; } | $CT -
 N=$($CT -l 2>/dev/null | grep -cF "$MK")
 O=$($CT -l 2>/dev/null | grep -vF "$MK" | grep -c .)
@@ -392,9 +396,9 @@ if echo "$CRI" | grep -q '^FAIL' || ! echo "$CRI" | grep -qx 'END_CRON'; then cr
 ok "cron lam moi exchangeInfo da cai"
 # [R4f MINOR-2] chay lam moi 1 lan NGAY: phai rc 0 + fails=0 (chung minh cron chay duoc: python3/curl/bo kiem/quyen ghi)
 say "--- [R4f] lam moi exchangeInfo lan dau (bat buoc rc 0 + fails=0)"
-RF1=$(s242in "EXC='$EXINFO_CMD' bash -s -- $A" <<'EOF'
+RF1=$(s242in "EXC='$EXINFO_CMD' PY='$PY242' bash -s -- $A" <<'EOF'
 A=$1; cd "$A" || { echo "FAIL cd"; echo END_RF1; exit 0; }
-EXINFO_CMD="$EXC" bash ops/exinfo_refresh_242.sh >> logs/exinfo_refresh.log 2>&1; R=$?
+EXINFO_CMD="$EXC" C3PY="$PY" bash ops/exinfo_refresh_242.sh >> logs/exinfo_refresh.log 2>&1; R=$?
 tail -1 logs/exinfo_refresh.log | cut -c1-200 | sed 's/^/INFO /'
 if [ "$R" = 0 ] && grep -qx 'fails=0' run/c3live_exinfo_refresh.state; then echo "OK lam_moi_lan_dau rc=0 fails=0"
 else echo "FAIL lam_moi_lan_dau rc=$R $(tr '\n' ' ' < run/c3live_exinfo_refresh.state 2>/dev/null)"; fi

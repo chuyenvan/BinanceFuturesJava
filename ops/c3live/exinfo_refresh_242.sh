@@ -8,11 +8,14 @@
 #   Hop le => .lastgood + mv -f (nguyen tu; JVM nap lai theo mtime ca A1 lan R7). Khong => GIU file cu, dem loi lien tiep;
 #   lan loi thu 3 (roi moi 4 lan) => Telegram (tg.env cua watchdog 242; khong doc duoc => ALERT_PENDING trong run/).
 # [R4f] kiem bang exinfo_validate.py (CUNG file voi buoc PRE/chuan bi cua deploy). Phan loai TF/INDEX KHONG o day (chi Java UniverseA1Classifier); day chi kiem nguon tho (cung nguong R4b).
-# Bien (test): APP_DIR, EXINFO_CMD, EXR_TG_ENV, EXR_TG_SINK, MIN_TRADFI, MAX_SYMBOL_DROP.
+# [R4k] python3 RIENG duong dan tuyet doi C3PY (mac dinh /opt/c3py/python/bin/python3, cai bang c3py_install_242.sh; cron dat C3PY):
+#   242 CentOS 7 chi co python2.7 — KHONG dung python theo PATH / he thong. Thieu python => tinh la 1 lan loi (giu file cu, Telegram lan 3).
+# Bien (test): APP_DIR, EXINFO_CMD, EXR_TG_ENV, EXR_TG_SINK, MIN_TRADFI, MAX_SYMBOL_DROP, C3PY.
 # =============================================================================
 set -uo pipefail
 A=${APP_DIR:-$(cd "$(dirname "$0")/.." && pwd)}
 VAL=${EXV_PY:-$(cd "$(dirname "$0")" && pwd)/exinfo_validate.py}   # [R4f MINOR-2] bo kiem CHUNG voi deploy
+PY=${C3PY:-/opt/c3py/python/bin/python3}   # [R4k] trinh thong dich RIENG, duong dan tuyet doi (xem tren)
 cd "$A" || { echo "FAIL cd $A"; exit 1; }
 F=run/c3live_exchangeInfo.json
 NEW=$F.new
@@ -45,7 +48,7 @@ rm -f "$NEW"
 eval "$EXC" > "$NEW" 2>/dev/null
 RC=$?
 [ -f "$VAL" ] || { echo "$(ts) FAIL thieu bo kiem $VAL"; exit 1; }
-MSG=$(python3 -I "$VAL" "$NEW" "$F" "$MINTF" "$DROP" 2>&1)
+MSG=$("$PY" -I "$VAL" "$NEW" "$F" "$MINTF" "$DROP" 2>&1)
 VRC=$?
 if [ "$RC" = 0 ] && [ "$VRC" = 0 ]; then
   if cp -f "$NEW" "$F.lastgood.tmp" && mv -f "$F.lastgood.tmp" "$F.lastgood" && mv -f "$NEW" "$F"; then

@@ -706,7 +706,13 @@ d = json.load(open(sys.argv[1]))
 d["serverTime"] = int(time.time() * 1000)
 sys.stdout.write(json.dumps(d, separators=(",", ":")))
 EOF
-r4() { env APP_DIR=$F4 NJ=$W/new_r4.jar NJ_MD5=$NEW4 EXINFO_CMD="python3 $W/exgen.py $W/exinfo_r4.json" DEPLOY_TG_SINK=$W/tg_r4.txt "$@"; }
+# [R4k] 242 that KHONG co python3 (CentOS 7, chi python2.7): moi lenh "tren 242" cua deploy/cron chay voi PATH co python3/python GIA
+# (in "command not found", rc 127); python3 RIENG = $W/c3py_t/python/bin/python3 (nhu /opt/c3py do c3py_install_242.sh cai).
+REALPY=$(command -v python3); ln -sf "$REALPY" "$W/realpy"
+mkdir -p "$W/nopy" "$W/c3py_t/python/bin"
+printf '#!/bin/sh\necho "bash: $(basename "$0"): command not found" >&2\nexit 127\n' > "$W/nopy/python3"; cp "$W/nopy/python3" "$W/nopy/python"; chmod +x "$W/nopy/python3" "$W/nopy/python"
+printf '#!/bin/sh\nexec %s "$@"\n' "$REALPY" > "$W/c3py_t/python/bin/python3"; chmod +x "$W/c3py_t/python/bin/python3"
+r4() { env PATH="$W/nopy:$PATH" PY242=$W/c3py_t/python/bin/python3 APP_DIR=$F4 NJ=$W/new_r4.jar NJ_MD5=$NEW4 EXINFO_CMD="$W/realpy $W/exgen.py $W/exinfo_r4.json" DEPLOY_TG_SINK=$W/tg_r4.txt "$@"; }
 p4env() { tr '\0' '\n' < /proc/$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)/environ; }
 OUT=$(r4 DRY=1 bash "$D4" 2>&1); echo "$OUT" | tail -2
 chk "r4 DRY PASS, in C3_CAPITAL=10000, khong doi env" "echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q 'export C3_CAPITAL=10000' && ! grep -q LIVE_ADAPTER $F4/conf/env.sh"
@@ -792,7 +798,7 @@ rm -f "$F4/FAKE_SSHDROP" "$W/SSH_DOWN"
 OUT=$(echo YES | APP_DIR=$F4 SSH_242="bash $W/fakessh.sh" FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TS4" 2>&1)
 chk "r4c chay dung lenh rollback tay sau khi ssh lai => xong, PAUSE xoa, c3_shadow" "echo \"\$OUT\" | grep -q 'Rollback xong' && [ ! -f $W/PAUSE ] && grep -qx 'export LIVE_PROFILE=c3_shadow' $F4/conf/env.sh"
 rm -f "$TG4" "$W/fg.out"
-setsid bash -c "echo YES | env APP_DIR=$F4 NJ=$W/new_r4.jar NJ_MD5=$NEW4 EXINFO_CMD='python3 $W/exgen.py $W/exinfo_r4.json' DEPLOY_TG_SINK=$TG4 FORCE=1 FORCE_TIME=1 LATCH_WAIT_S=6 bash $D4" > "$W/fg.out" 2>&1 < /dev/null &
+setsid bash -c "echo YES | env APP_DIR=$F4 NJ=$W/new_r4.jar NJ_MD5=$NEW4 PATH=$W/nopy:$PATH PY242=$W/c3py_t/python/bin/python3 EXINFO_CMD='$W/realpy $W/exgen.py $W/exinfo_r4.json' DEPLOY_TG_SINK=$TG4 FORCE=1 FORCE_TIME=1 LATCH_WAIT_S=6 bash $D4" > "$W/fg.out" 2>&1 < /dev/null &
 FGP=$!
 for i in $(seq 1 60); do grep -q 'job NEN pid=' "$W/fg.out" 2>/dev/null && break; sleep 0.5; done
 JP=$(grep -o 'job NEN pid=[0-9]*' "$W/fg.out" | head -1 | cut -d= -f2)
@@ -817,7 +823,7 @@ chk "r4d PRE: nguon thieu serverTime => TU CHOI truoc YES" "echo \"\$OUT\" | gre
 cat > "$W/exflaky.sh" <<'EOF'
 # nguon gia: 2 lan doc dau (PRE foreground + PRE job) tot, lan 3 (buoc chuan bi) thieu serverTime
 n=$(cat "$1/exflaky.n" 2>/dev/null || echo 0); n=$((n + 1)); echo $n > "$1/exflaky.n"
-if [ $n -le 2 ]; then python3 "$1/exgen.py" "$1/exinfo_r4.json"; else cat "$1/exinfo_r4.json.nost"; fi
+if [ $n -le 2 ]; then "$1/realpy" "$1/exgen.py" "$1/exinfo_r4.json"; else cat "$1/exinfo_r4.json.nost"; fi
 EOF
 rm -f "$W/exflaky.n"
 OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 EXINFO_CMD="bash $W/exflaky.sh $W" bash "$D4" 2>&1); RC=$?
@@ -862,7 +868,7 @@ dump('ex_drop.json', st + 2700000, s[:130] + [x for x in s if 'TRADIFI' in x['co
 dump('ex_new2.json', st + 3600000, s + [nw])
 EOF
 cp "$W/exinfo_r4.json" "$F4/run/c3live_exchangeInfo.json"; rm -f "$F4/run/c3live_exinfo_refresh.state" "$W/tg_exr.txt"
-rf() { env APP_DIR=$F4 EXR_TG_SINK=$W/tg_exr.txt EXINFO_CMD="cat $1" bash "$EXR" 2>&1; }
+rf() { env PATH="$W/nopy:$PATH" C3PY=$W/c3py_t/python/bin/python3 APP_DIR=$F4 EXR_TG_SINK=$W/tg_exr.txt EXINFO_CMD="cat $1" bash "$EXR" 2>&1; }
 XF=$F4/run/c3live_exchangeInfo.json
 OUT=$(rf "$W/ex_new.json"); RC=$?
 chk "r4e lam moi hop le (serverTime moi hon, listing moi NEW1USDT) => thay file nguyen tu + .lastgood, fails=0" "[ $RC = 0 ] && grep -q NEW1USDT $XF && cmp -s $XF $XF.lastgood && grep -qx 'fails=0' $F4/run/c3live_exinfo_refresh.state && [ ! -f $XF.new ]"
@@ -881,7 +887,7 @@ cp "$W/exinfo_r4.json" "$F4/run/c3live_exchangeInfo.json"
 touch "$F4/FAKE_R4"; rm -f "$TG4"
 OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?; echo "$OUT" | grep -a 'cron\|exchangeInfo_tuoi' | head -4
 TS4=$(echo "$OUT" | grep -o 'TS=[0-9_]*' | head -1 | cut -d= -f2)
-chk "r4e deploy XONG: cai cron (marker, phut 3,18,41,48, giu dong cron cu), script tren 242 dung md5; CHK file moi < 30' + cron" "[ $RC = 0 ] && grep -q '^3,18,41,48 \* \* \* \* cd $F4 && /bin/bash $F4/ops/exinfo_refresh_242.sh >> $F4/logs/exinfo_refresh.log 2>&1 # C3LIVE_EXINFO_REFRESH\$' $W/crontab.txt && grep -q '# WATCHDOG' $W/crontab.txt && cmp -s $EXR $F4/ops/exinfo_refresh_242.sh && echo \"\$OUT\" | grep -q 'OK exchangeInfo_tuoi=' && echo \"\$OUT\" | grep -q 'OK cron_lam_moi'"
+chk "r4e deploy XONG: cai cron (marker, phut 3,18,41,48, giu dong cron cu), script tren 242 dung md5; CHK file moi < 30' + cron" "[ $RC = 0 ] && grep -q '^3,18,41,48 \* \* \* \* cd $F4 && C3PY=$W/c3py_t/python/bin/python3 /bin/bash $F4/ops/exinfo_refresh_242.sh >> $F4/logs/exinfo_refresh.log 2>&1 # C3LIVE_EXINFO_REFRESH\$' $W/crontab.txt && grep -q '# WATCHDOG' $W/crontab.txt && cmp -s $EXR $F4/ops/exinfo_refresh_242.sh && echo \"\$OUT\" | grep -q 'OK exchangeInfo_tuoi=' && echo \"\$OUT\" | grep -q 'OK cron_lam_moi'"
 OUT=$(APP_DIR=$F4 bash "$HERE/c3live_status.sh" 2>&1)
 chk "r4e status: tuoi exchangeInfo + trang thai lam moi + cron + [OI-GUARD-2] STALE (INFO)" "echo \"\$OUT\" | grep -q '== exchangeInfo: tuoi=' && echo \"\$OUT\" | grep -q '== cron lam moi: 1 dong' && echo \"\$OUT\" | grep -q 'OI-GUARD-2'"
 OUT=$(r4 DRY=1 bash "$D4" 2>&1)
@@ -919,11 +925,11 @@ OUT=$(r4 DRY=1 EXINFO_CMD="cat $W/ex_1nout.json" bash "$D4" 2>&1)
 chk "r4f PRE dung bo kiem chung: 1 symbol thieu underlyingType (truoc: NU>0 cho qua) => TU CHOI" "echo \"\$OUT\" | grep -q 'FAIL exchangeInfo_nguon 1 symbol thieu onboardDate/underlyingType' && echo \"\$OUT\" | grep -q 'kiem 242 co muc FAIL'"
 OUT=$(r4 DRY=1 EXV_MD5=00000000000000000000000000000000 bash "$D4" 2>&1)
 chk "r4f md5 exinfo_validate.py sai => DUNG" "echo \"\$OUT\" | grep -q 'md5 exinfo_validate.py sai'"
-chk "r4f exinfo_refresh_242.sh + deploy dung CHUNG exinfo_validate.py (khong con python rieng)" "grep -q 'exinfo_validate.py' $HERE/exinfo_refresh_242.sh && ! grep -q \"<<'PY'\" $HERE/exinfo_refresh_242.sh && grep -q 'python3 -I ops/exinfo_validate.py' $D4"
+chk "r4f exinfo_refresh_242.sh + deploy dung CHUNG exinfo_validate.py (khong con python rieng)" "grep -q 'exinfo_validate.py' $HERE/exinfo_refresh_242.sh && ! grep -q \"<<'PY'\" $HERE/exinfo_refresh_242.sh && grep -qF '\$PY242 -I ops/exinfo_validate.py' $D4"
 cat > "$W/exflaky4.sh" <<'EOF'
 # nguon gia: 3 lan dau (PRE fg, PRE job, chuan bi) tot; lan 4 (lam moi lan dau trong 4c) thieu serverTime
 n=$(cat "$1/exflaky4.n" 2>/dev/null || echo 0); n=$((n + 1)); echo $n > "$1/exflaky4.n"
-if [ $n -le 3 ]; then python3 "$1/exgen.py" "$1/exinfo_r4.json"; else cat "$1/exinfo_r4.json.nost"; fi
+if [ $n -le 3 ]; then "$1/realpy" "$1/exgen.py" "$1/exinfo_r4.json"; else cat "$1/exinfo_r4.json.nost"; fi
 EOF
 rm -f "$W/exflaky4.n"; P0=$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)
 OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 EXINFO_CMD="bash $W/exflaky4.sh $W" bash "$D4" 2>&1); RC=$?
@@ -935,6 +941,48 @@ chk "r4f XONG: lam moi lan dau rc 0 + fails=0, CHK file moi + cron" "[ $RC = 0 ]
 echo YES | APP_DIR=$F4 FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TS4" >/dev/null 2>&1
 chk "r4f rollback: cron go, c3_shadow" "! grep -q C3LIVE_EXINFO_REFRESH $W/crontab.txt && grep -qx 'export LIVE_PROFILE=c3_shadow' $F4/conf/env.sh"
 rm -f "$F4/FAKE_R4"
+echo "== 27. [V12 R4k] 242 KHONG co python3 he thong (CentOS 7): python RIENG /opt/c3py (c3py_install_242.sh) + deploy/cron chi dung duong dan tuyet doi"
+CI=$HERE/c3py_install_242.sh
+rm -rf "$W/pbs" "$W/opt" "$W/pbscache" "$W/pbscache_x"; mkdir -p "$W/pbs/python/bin" "$W/opt"
+printf '#!/bin/sh\nexec %s "$@"\n' "$REALPY" > "$W/pbs/python/bin/python3"; chmod +x "$W/pbs/python/bin/python3"
+tar -czf "$W/pbs.tgz" -C "$W/pbs" python
+PSHA=$(sha256sum < "$W/pbs.tgz" | cut -c1-64); PVER=$("$REALPY" -c 'import sys; print("%d.%d.%d" % sys.version_info[:3])')
+cp "$W/crontab.txt" "$W/crontab.bak27" 2>/dev/null || : > "$W/crontab.bak27"
+ci() { env PATH="$W/nopy:$PATH" C3PY_DIR=$W/opt/c3py PBS_URL="file://$W/pbs.tgz" PBS_SHA256=$PSHA PBS_VER=$PVER PBS_CACHE=$W/pbscache EXPECT_ARCH=$(uname -m) "$@"; }
+OUT=$(ci DRY=1 bash "$CI" 2>&1); RC=$?
+chk "r4k c3py DRY: chua cai => ke hoach, KHONG ghi gi len 242" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'STATE chua_cai' && echo \"\$OUT\" | grep -q 'KET QUA: DRY PASS' && [ -z \"\$(ls -A $W/opt)\" ]"
+OUT=$(echo YES | ci PBS_SHA256=1111111111111111111111111111111111111111111111111111111111111111 PBS_CACHE=$W/pbscache_x bash "$CI" 2>&1); RC=$?
+chk "r4k c3py sha256 tarball sai => TU CHOI, khong ghi gi len 242" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'sha256 tarball sai' && [ -z \"\$(ls -A $W/opt)\" ] && [ ! -e $W/pbscache_x/pbs.tgz ]"
+OUT=$(echo NO | ci bash "$CI" 2>&1); RC=$?
+chk "r4k c3py khong go YES => huy, khong ghi gi len 242" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'Huy. Khong doi gi.' && [ -z \"\$(ls -A $W/opt)\" ]"
+OUT=$(echo YES | ci bash "$CI" 2>&1); RC=$?; echo "$OUT" | tail -2
+chk "r4k c3py cai: sha256 kiem tren 242, python moi chay, marker, doi ten nguyen tu, khong con file tam" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'OK sha256_tren_242' && echo \"\$OUT\" | grep -q \"OK da_cai $W/opt/c3py ver=$PVER\" && grep -qx \"sha256=$PSHA\" $W/opt/c3py/C3PY_INSTALLED && [ \"\$(ls -A $W/opt)\" = c3py ]"
+OUT=$(echo YES | ci bash "$CI" 2>&1); RC=$?
+chk "r4k c3py chay lai => DA CAI, khong doi gi" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'STATE da_cai' && echo \"\$OUT\" | grep -q 'DA CAI dung ban pin'"
+OUT=$(r4 DRY=1 PY242=$W/khong_co/python3 bash "$D4" 2>&1)
+chk "r4k PRE: 242 chua co python rieng (PATH khong co python3) => FAIL thieu_python3_rieng, TU CHOI" "echo \"\$OUT\" | grep -q 'FAIL thieu_python3_rieng' && echo \"\$OUT\" | grep -q 'kiem 242 co muc FAIL' && ! echo \"\$OUT\" | grep -q 'DRY PASS'"
+OUT=$(r4 DRY=1 PY242=$W/opt/c3py/python/bin/python3 bash "$D4" 2>&1)
+chk "r4k PRE: python rieng do c3py_install_242.sh cai, PATH khong co python3 => qua buoc kiem, DRY PASS" "echo \"\$OUT\" | grep -q \"OK python3_rieng $W/opt/c3py/python/bin/python3 $PVER\" && echo \"\$OUT\" | grep -q 'OK exchangeInfo_nguon' && echo \"\$OUT\" | grep -q 'DRY PASS'"
+echo "$OUT" | grep -q 'DRY PASS' || echo "$OUT" | grep -a 'FAIL\|DUNG' | head -5
+XF=$F4/run/c3live_exchangeInfo.json; cp "$W/exinfo_r4.json" "$XF"; rm -f "$F4/run/c3live_exinfo_refresh.state"; M0=$(md5sum < $XF)
+OUT=$(env PATH="$W/nopy:$PATH" C3PY=$W/khong_co/python3 APP_DIR=$F4 EXR_TG_SINK=$W/tg_exr2.txt EXINFO_CMD="cat $W/ex_new.json" bash "$EXR" 2>&1); RC=$?
+chk "r4k cron lam moi: python rieng mat => GIU file cu, tinh 1 lan loi (fails=1), khong goi python3 he thong" "[ $RC = 1 ] && [ \"\$(md5sum < $XF)\" = \"$M0\" ] && grep -qx 'fails=1' $F4/run/c3live_exinfo_refresh.state && ! echo \"\$OUT\" | grep -q 'command not found'"
+OUT=$(env PATH="$W/nopy:$PATH" C3PY=$W/opt/c3py/python/bin/python3 APP_DIR=$F4 EXR_TG_SINK=$W/tg_exr2.txt EXINFO_CMD="cat $W/ex_new.json" bash "$EXR" 2>&1); RC=$?
+chk "r4k cron lam moi: python rieng co => lam moi hop le, fails=0" "[ $RC = 0 ] && grep -q NEW1USDT $XF && grep -qx 'fails=0' $F4/run/c3live_exinfo_refresh.state"
+NPC=$(cat "$D4" "$EXR" | grep -v '^[[:space:]]*#' | grep -nE '(^|[^A-Za-z0-9_/.-])python3?([^A-Za-z0-9_.]|$)')
+chk "r4k deploy + cron lam moi KHONG goi python theo PATH (chi PY242 / C3PY tuyet doi)" "[ -z \"\$NPC\" ]"
+[ -n "$NPC" ] && echo "$NPC" | head -3
+printf '3 * * * * x # C3LIVE_EXINFO_REFRESH\n' >> "$W/crontab.txt"
+OUT=$(echo YES | ci MODE=remove bash "$CI" 2>&1); RC=$?
+chk "r4k c3py go: cron lam moi con cai => TU CHOI, giu nguyen" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'cron lam moi exchangeInfo con cai' && [ -x $W/opt/c3py/python/bin/python3 ]"
+cp "$W/crontab.bak27" "$W/crontab.txt"
+OUT=$(echo YES | ci MODE=remove bash "$CI" 2>&1); RC=$?
+OUT2=$(ci MODE=status bash "$CI" 2>&1)
+chk "r4k c3py go (marker cua script) => xoa sach, MODE=status chua_cai" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'OK da_go' && [ -z \"\$(ls -A $W/opt)\" ] && echo \"\$OUT2\" | grep -q 'STATE chua_cai'"
+mkdir -p "$W/opt/c3py"
+OUT=$(echo YES | ci MODE=remove bash "$CI" 2>&1); RC=$?
+chk "r4k c3py go: thu muc KHONG co marker => KHONG xoa" "[ $RC = 1 ] && [ -d $W/opt/c3py ] && echo \"\$OUT\" | grep -q 'KHONG xoa'"
+rm -rf "$W/opt/c3py"
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]
