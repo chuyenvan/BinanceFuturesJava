@@ -60,7 +60,8 @@ public final class UserStream {
     private final ExchangeGateway gw;
     private final Connector connector;
     private final List<String> urls;
-    private final FillAccounting acct;
+    /** [V12 R4h] dich su kien (prod: FillAccounting::dispatch; soak: chi dem). */
+    private final java.util.function.Consumer<UserStreamEvents.Event> sink;
     private final Runnable fallback;
     private final Consumer<String> alert;
     private final C3LiveOrderExecutor.ApiObserver api;
@@ -102,7 +103,7 @@ public final class UserStream {
         this.gw = gw;
         this.connector = connector;
         this.urls = urlTemplates == null || urlTemplates.isEmpty() ? parseUrls(DEFAULT_URLS) : new ArrayList<>(urlTemplates);
-        this.acct = acct;
+        this.sink = acct == null ? e -> { } : acct::dispatch;
         this.fallback = fallback == null ? () -> { } : fallback;
         this.alert = alert == null ? m -> { } : alert;
         this.api = api == null ? (a, ok) -> { } : api;
@@ -112,6 +113,19 @@ public final class UserStream {
         this.maxBackoffMs = Math.max(1_000L, maxBackoffMs);
         this.alertDownMs = Math.max(0L, alertDownMs);
     }
+
+    /** [V12 R4h] cho cong cu soak CHI DOC: su kien vao {@code sink} (khong FillAccounting). */
+    public static UserStream forSink(ExchangeGateway gw, Connector connector, List<String> urlTemplates,
+                                     java.util.function.Consumer<UserStreamEvents.Event> sink, Consumer<String> alert,
+                                     C3LiveOrderExecutor.ApiObserver api, LongSupplier clock, long connectTimeoutMs,
+                                     long maxBackoffMs) {
+        UserStream u = new UserStream(gw, connector, urlTemplates, null, () -> { }, alert, api, clock, connectTimeoutMs,
+                3_600_000L, maxBackoffMs, Long.MAX_VALUE / 4);
+        u.sinkOverride = sink;
+        return u;
+    }
+
+    private volatile java.util.function.Consumer<UserStreamEvents.Event> sinkOverride;
 
     public static List<String> parseUrls(String raw) {
         List<String> out = new ArrayList<>();
@@ -306,7 +320,8 @@ public final class UserStream {
             }
             return;
         }
-        acct.dispatch(e);
+        java.util.function.Consumer<UserStreamEvents.Event> so = sinkOverride;
+        (so != null ? so : sink).accept(e);
     }
 
     private synchronized void closed(int g, String why) {

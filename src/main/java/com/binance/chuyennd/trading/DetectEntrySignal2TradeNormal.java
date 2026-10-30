@@ -536,15 +536,24 @@ public class DetectEntrySignal2TradeNormal {
             final int gateSkipFull0 = AIRejectFilter.skipFullCount.get();
             final int gateNonFinite0 = AIRejectFilter.nonFiniteRejectCount.get();   // [FAIL-CLOSED audD]
             lastLiveU = Float.NaN;
+            // [V12 R4h] loc TRUOC gate theo quy uoc sim (GatePreFilter): coin dang giu (nguon theo adapter) KHONG qua gate,
+            //   KHONG nap r, van dem hang; LEGACY dem hang + qua gate (nap r) nhung KHONG vao; A1 loai => bo han.
+            //   Profile TAT: nguon = symbol2Pos, LEGACY luon false, A1 tat => y nguyen HEAD.
+            final GatePreFilter.HeldSource heldSrc = GatePreFilter.source(
+                    com.binance.chuyennd.tradecore.selector.LiveProfileC3.on(),
+                    com.binance.chuyennd.c3live.runtime.C3LiveHook.enabled(),
+                    com.binance.chuyennd.c3live.runtime.C3LiveHook.liveAdapter());
+            final java.util.function.Predicate<String> heldPre = GatePreFilter.heldPredicate(heldSrc,
+                    BudgetManager.getInstance().symbol2Pos.keySet());
+            final boolean a1On = com.binance.chuyennd.tradecore.selector.UniverseA1Filter.isActive();
+            int preHeld = 0, preLegacy = 0, preA1 = 0;
             for (Map.Entry<Float, String> entry : selPool.entrySet()) {
                 String symbol = entry.getValue();
-                // [L3 LEGACY] symbol co vi the THAT cu: so giay KHONG mo entry giay va KHONG dem
-                // rank cho no => legacy KHONG chiem slot top-K cua so giay. Profile TAT thi
-                // isLegacySymbol luon false => vong lap nay byte-identical HEAD.
-                if (com.binance.chuyennd.tradecore.selector.LegacySymbols.isLegacySymbol(symbol)) {
-                    LOG.info("[SHADOW] skip-LEGACY {}", symbol);
+                if (a1On && com.binance.chuyennd.tradecore.selector.UniverseA1Filter.isExcluded(symbol, time)) {
+                    preA1++;   // [V12 R4h] sim A1 khong co symbol nay: khong dem hang, khong gate
                     continue;
                 }
+                boolean legacy = com.binance.chuyennd.tradecore.selector.LegacySymbols.isLegacySymbol(symbol);
                 Float symbolPred = s1Order ? selMapPred.get(symbol) : entry.getKey();
                 if (s1Order) LATEST_SEL_RANK.put(symbol, rank + 1);
                 if (Configs.SELECTOR_RANK_TOPK > 0 && rank >= Configs.SELECTOR_RANK_TOPK) break;
@@ -557,7 +566,13 @@ public class DetectEntrySignal2TradeNormal {
                         symbolPred == null ? 0f : symbolPred,
                         predictData != null ? predictData.return15M : 0f);
                 KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
-                if (ticker == null || BudgetManager.getInstance().symbol2Pos.containsKey(symbol)) continue;
+                boolean held = heldPre.test(symbol);
+                GatePreFilter.Action preAct = GatePreFilter.decide(false, held, ticker == null, legacy);
+                if (preAct == GatePreFilter.Action.SKIP_AFTER_RANK) {
+                    if (held) preHeld++;
+                    continue;
+                }
+                if (preAct == GatePreFilter.Action.GATE_NO_ENTRY) preLegacy++;
                 gateCand++;
                 if (predictData != null && symbolPred != null) {
                     float thr = com.binance.chuyennd.tradecore.EntryGate.threshold(symbolPred);
@@ -571,6 +586,11 @@ public class DetectEntrySignal2TradeNormal {
                 if (predictData != null && symbolPred != null && predictRejects.size() == kfixRej0) {
                     tickerWindow.audit().markPass(symbol);
                 }
+            }
+            if (preHeld + preLegacy + preA1 > 0) {
+                LOG.info("[GATE-PRE] {} nguon={} bo_dang_giu={} legacy_qua_gate_khong_vao={} a1_bo={}",
+                        Utils.normalizeDateYYYYMMDDHHmm(time), heldSrc, preHeld, preLegacy, preA1);
+                if (preA1 > 0) LOG.warn("[GATE-PRE] {} symbol A1 loai van co trong pool selector (da bo truoc hang)", preA1);
             }
             // [GATE 2026-09-11, L7] MOT dong/tick chung minh cong entry tang 2 dang chay that tren
             //   live va chay DUNG cong thuc cua backtest (com.binance.chuyennd.tradecore.EntryGate).
@@ -1188,6 +1208,13 @@ public class DetectEntrySignal2TradeNormal {
         } else {
             // PASS (vào lệnh) → LUÔN giữ, ít và quan trọng.
             LOG.info("✅ AI PASS [{}] Reason: {} symbolPred: {}", symbol, filterResult.reason, symbolPred);
+        }
+        // [V12 R4h] LEGACY qua gate CHI de nap r nhu sim (sim khong co LEGACY) — KHONG vao lenh o so nao (that/giay).
+        if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE
+                && com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()
+                && com.binance.chuyennd.tradecore.selector.LegacySymbols.isLegacySymbol(symbol)) {
+            LOG.info("[SHADOW] skip-LEGACY {} (sau gate: da nap r nhu sim, khong vao)", symbol);
+            return;
         }
 
         // KILL-SWITCH AN TOAN - KHONG XOA: cau dao MAT DO mo lenh cho bot LIVE (chong bao lenh

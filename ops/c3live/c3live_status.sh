@@ -40,6 +40,8 @@ echo "== HOURLY:"
 grep -a '\[C3-LIVE\] HOURLY' $L | tail -1 | cut -c1-600 | sed 's/^/   /'
 echo "== user stream:"
 grep -a '\[C3-LIVE-STREAM\]' $L | tail -3 | cut -c1-300 | sed 's/^/   /'
+echo "== bo nho process (R4h, ro native): $( [ -n "$P" ] && grep -E '^(VmRSS|VmHWM|Threads):' /proc/$P/status 2>/dev/null | tr -s ' \t' ' ' | tr '\n' ' ')"
+grep -a '\[OPS-PROC\]' $L | tail -3 | cut -c1-250 | sed 's/^/   /'
 echo "== trailing:"
 grep -a '\[C3-LIVE-TRAIL\]' $L | tail -5 | cut -c1-300 | sed 's/^/   /'
 echo "== dem dong: [LIVE-DRY]=$(grep -a -c '\[LIVE-DRY\]' $L) [C3-LIVE-ORDER]=$(grep -a -c '\[C3-LIVE-ORDER\]' $L) SUBMIT=$(grep -a -c '\[C3-LIVE\] SUBMIT' $L)"

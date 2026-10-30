@@ -62,6 +62,14 @@ public final class C3LiveHook {
         return ENABLED;
     }
 
+    /** [V12 R4h] hook bat VA LIVE_ADAPTER=live (lenh that) — chon nguon "dang giu" truoc gate. */
+    private static final boolean LIVE_ADAPTER = ENABLED
+            && GatewayFactory.Mode.parse(Cfg.get(GatewayFactory.KEY_ADAPTER)) == GatewayFactory.Mode.LIVE;
+
+    public static boolean liveAdapter() {
+        return LIVE_ADAPTER;
+    }
+
     /** [2b] loai TradFi khoi feature cat ngang/thi truong (chi c3_live). */
     public static boolean excludeTradFiFeatures() {
         return EXCL_TRADFI_FEAT;

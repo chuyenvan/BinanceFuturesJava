@@ -104,8 +104,176 @@ public final class LiveGateRollingRatio {
         LOG.warn("*** [GATE-RATIO] LIVE BAT: mode=ratio pct={} window={}d file={} | warm-up 7d | "
                         + "quantile tren TY SO r (CAUSAL) ***",
                 String.format("%.8f", pct), days, persistFile);
-        loadPersistedAndSeed(System.currentTimeMillis());
+        long now0 = System.currentTimeMillis();
+        String seedPath = Cfg.get(KEY_SEED);
+        if (seedPath != null && !seedPath.trim().isEmpty()) {
+            String problem = applySeedFile(seedPath.trim(), Cfg.get(KEY_SEED_MD5), parseLagHours(Cfg.get(KEY_SEED_MAX_LAG_H)), now0);
+            if (problem != null) {
+                LOG.error("⛔ [GATE-SEED] FAIL-FAST: {} — {}={} — DUNG JVM (khong chay gate voi buffer sai)", problem, KEY_SEED,
+                        seedPath.trim());
+                System.exit(2);
+            }
+        } else {
+            loadPersistedAndSeed(now0);
+        }
         installShutdownHook();
+    }
+
+    // ============================================================ [V12 R4h] seed buffer 90 ngay dung san
+    /** Duong dan file seed (cung dinh dang {@link GateRatioPersist}, vd gate_ratio_live.bin). Vang = TAT (mac dinh). */
+    public static final String KEY_SEED = "GATE_BUFFER_SEED";
+    /** md5 hex BAT BUOC cua file seed (khong khai / khac => fail-fast). */
+    public static final String KEY_SEED_MD5 = "GATE_BUFFER_SEED_MD5";
+    /** Ban ghi cuoi cua seed phai >= now - N gio (mac dinh 24). */
+    public static final String KEY_SEED_MAX_LAG_H = "GATE_BUFFER_SEED_MAX_LAG_H";
+    static final int DEFAULT_SEED_MAX_LAG_H = 24;
+
+    static int parseLagHours(String raw) {
+        if (raw == null || raw.trim().isEmpty()) return DEFAULT_SEED_MAX_LAG_H;
+        try {
+            int v = Integer.parseInt(raw.trim());
+            return v > 0 && v <= 24 * 30 ? v : DEFAULT_SEED_MAX_LAG_H;
+        } catch (NumberFormatException e) {
+            return DEFAULT_SEED_MAX_LAG_H;
+        }
+    }
+
+    static String md5Hex(File f) throws java.io.IOException {
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");
+            try (java.io.InputStream in = new java.io.FileInputStream(f)) {
+                byte[] b = new byte[1 << 16];
+                int n;
+                while ((n = in.read(b)) > 0) md.update(b, 0, n);
+            }
+            StringBuilder sb = new StringBuilder();
+            for (byte x : md.digest()) sb.append(String.format("%02x", x));
+            return sb.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new java.io.IOException(e);
+        }
+    }
+
+    /**
+     * Kiem file seed (THUAN, khong dung buffer): ton tai, md5 khop, dinh dang doc sach (0 chunk hong), ts tang dan, r huu han,
+     * phu cua so (ban ghi dau &lt;= now - (days-1) ngay), khong o tuong lai (&lt;= now + 60 s), khong qua cu (cuoi &gt;= now - lag).
+     * Tra null = dat; nguoc lai = ly do (log ro).
+     */
+    static String checkSeed(File f, String expectedMd5, GateRatioPersist.Records rec, long now, int daysWin, int maxLagH) {
+        if (expectedMd5 == null || !expectedMd5.trim().matches("[0-9a-fA-F]{32}")) {
+            return KEY_SEED_MD5 + " thieu/khong phai md5 hex 32 ky tu";
+        }
+        if (f == null || !f.isFile()) return "khong thay file seed";
+        String got;
+        try {
+            got = md5Hex(f);
+        } catch (java.io.IOException e) {
+            return "doc file seed loi " + e.getMessage();
+        }
+        if (!got.equalsIgnoreCase(expectedMd5.trim())) return "md5 seed " + got + " != " + expectedMd5.trim();
+        if (rec == null) return "khong doc duoc dinh dang seed (GateRatioPersist)";
+        if (rec.droppedChunks > 0) return "seed co " + rec.droppedChunks + " chunk hong (" + rec.droppedBytes + " byte)";
+        int n = rec.ts.length;
+        if (n == 0) return "seed rong";
+        for (int i = 0; i < n; i++) {
+            if (i > 0 && rec.ts[i] < rec.ts[i - 1]) return "seed khong tang dan theo ts tai ban ghi " + i;
+            if (!Float.isFinite(rec.r[i])) return "seed co r khong huu han tai ban ghi " + i;
+        }
+        long first = rec.ts[0], last = rec.ts[n - 1];
+        if (first > now - (long) (daysWin - 1) * DAY) {
+            return "seed khong phu cua so " + daysWin + "d: ban ghi dau " + Utils.normalizeDateYYYYMMDDHHmm(first);
+        }
+        if (last > now + 60_000L) return "seed co ban ghi o tuong lai " + Utils.normalizeDateYYYYMMDDHHmm(last);
+        if (last < now - (long) maxLagH * HOUR) {
+            return "seed qua cu: ban ghi cuoi " + Utils.normalizeDateYYYYMMDDHHmm(last) + " < now - " + maxLagH + "h";
+        }
+        return null;
+    }
+
+    /**
+     * Nap seed: buffer = seed (ts &gt;= now - days) + persist co ts &gt; ban ghi cuoi cua seed (r live tich luy SAU seed).
+     * Bo qua seed tu Aerospike. Persist khac (seed+sau) => sao luu {@code <file>.preseed_<ts>} roi viet lai file gon (lan restart
+     * sau idempotent: phan &lt;= cuoi seed trung seed => khong viet lai). Tra null = OK; khac = ly do fail-fast.
+     */
+    static String applySeedFile(String path, String expectedMd5, int maxLagH, long now) {
+        File f = new File(path);
+        GateRatioPersist.Records rec = null;
+        if (f.isFile()) {
+            try {
+                rec = GateRatioPersist.load(path, Long.MIN_VALUE);
+            } catch (Exception e) {
+                return "doc seed loi " + e.getMessage();
+            }
+        }
+        String problem = checkSeed(f, expectedMd5, rec, now, days, maxLagH);
+        if (problem != null) return problem;
+        long minTs = now - (long) days * DAY;
+        long seedLast = rec.ts[rec.ts.length - 1];
+        GateRatioPersist.Records persisted = new GateRatioPersist.Records(new long[0], new float[0]);
+        try {
+            persisted = GateRatioPersist.load(persistFile, minTs);
+        } catch (Exception e) {
+            LOG.warn("[GATE-SEED] khong nap duoc persist {}: {} — chi dung seed", persistFile, e.getMessage());
+        }
+        int nSeed = 0;
+        for (long t : rec.ts) if (t >= minTs) nSeed++;
+        long[] mts = new long[nSeed];
+        float[] mr = new float[nSeed];
+        int k = 0;
+        for (int i = 0; i < rec.ts.length; i++) {
+            if (rec.ts[i] >= minTs) {
+                mts[k] = rec.ts[i];
+                mr[k] = rec.r[i];
+                k++;
+            }
+        }
+        int nPre = 0, nAfter = 0;
+        for (long t : persisted.ts) {
+            if (t > seedLast) nAfter++;
+            else nPre++;
+        }
+        long[] ats = new long[nAfter];
+        float[] ar = new float[nAfter];
+        int j = 0;
+        boolean persistSameAsSeed = persisted.droppedChunks == 0 && nPre == nSeed;
+        int pi = 0;
+        for (int i = 0; i < persisted.ts.length; i++) {
+            if (persisted.ts[i] > seedLast) {
+                ats[j] = persisted.ts[i];
+                ar[j] = persisted.r[i];
+                j++;
+            } else if (persistSameAsSeed) {
+                if (pi >= nSeed || persisted.ts[i] != mts[pi]
+                        || Float.floatToIntBits(persisted.r[i]) != Float.floatToIntBits(mr[pi])) {
+                    persistSameAsSeed = false;
+                }
+                pi++;
+            }
+        }
+        buffer.reset();
+        buffer.bulkAdd(mts, mr);
+        buffer.bulkAdd(ats, ar);
+        LOG.warn("*** [GATE-SEED] nap seed {} md5={} n={} [{} .. {}] + persist sau seed {} (bo {} ban ghi persist <= cuoi seed)"
+                        + " => buffer {} ***", path, expectedMd5.trim(), nSeed, Utils.normalizeDateYYYYMMDDHHmm(mts.length > 0 ? mts[0] : seedLast),
+                Utils.normalizeDateYYYYMMDDHHmm(seedLast), nAfter, nPre, buffer.size());
+        if (!persistSameAsSeed) {
+            File pf = new File(persistFile);
+            if (pf.exists()) {
+                File bak = new File(persistFile + ".preseed_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date(now)));
+                try {
+                    Files.copy(pf.toPath(), bak.toPath(), StandardCopyOption.COPY_ATTRIBUTES);
+                    LOG.warn("[GATE-SEED] sao luu persist cu -> {}", bak.getPath());
+                } catch (Exception e) {
+                    return "khong sao luu duoc persist cu " + persistFile + " -> " + bak.getPath() + ": " + e.getMessage();
+                }
+            }
+            try {
+                GateRatioPersist.writeFresh(persistFile, buffer.tsSnapshot(), buffer.rSnapshot());
+            } catch (Exception e) {
+                return "khong viet duoc persist moi " + persistFile + ": " + e.getMessage();
+            }
+        }
+        return null;
     }
 
     public static boolean isOn() {
