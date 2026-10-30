@@ -74,7 +74,12 @@ public final class RestBudget {
         RestBudget b = INSTANCE;
         if (b == null || !isFapi(url)) return true;
         Lane lane = laneOf(url);
-        return b.acquire(weightOf(url), lane, maxWaitMs(lane));
+        boolean ok = b.acquire(weightOf(url), lane, maxWaitMs(lane));
+        if (ok && BinanceRestGuard.isBanned()) {   // [QF3/Q11] do: call fapi lot qua trong luc ban (phai = 0)
+            b.sentBanned.incrementAndGet();
+            LOG.error("[REST-BAN] Q11 VI PHAM: call fapi trong luc ban: {}", path(url));
+        }
+        return ok;
     }
 
     /** Hook sau khi có status code. */
@@ -163,6 +168,8 @@ public final class RestBudget {
 
     final AtomicLong calls = new AtomicLong(), weight = new AtomicLong(), denied = new AtomicLong(), fcalls = new AtomicLong();
     final AtomicLong http429 = new AtomicLong(), http418 = new AtomicLong(), http4xx = new AtomicLong();
+    /** [QF3/Q11] Số call fapi được cho qua khi đang ban (luỹ kế từ lúc JVM chạy; tiêu chí = 0). */
+    final AtomicLong sentBanned = new AtomicLong();
     private int peakUsed = 0, hdrMax = 0, fpeak = 0;
     private long lastCalls = 0, lastWeight = 0, lastDenied = 0, last429 = 0, last418 = 0, last4xx = 0, lastF = 0;
 
@@ -314,9 +321,9 @@ public final class RestBudget {
     public synchronized String statsLine() {
         evict(clock.getAsLong());
         long c = calls.get(), w = weight.get(), d = denied.get(), a = http429.get(), b = http418.get(), x = http4xx.get(), f = fcalls.get();
-        String s = String.format("calls=%d weight=%d peak60s=%d now60s=%d fdata=%d fdata_peak60s=%d denied=%d http429=%d http418=%d http4xx=%d hdr_max=%d skew_ms=%d cap=%d",
+        String s = String.format("calls=%d weight=%d peak60s=%d now60s=%d fdata=%d fdata_peak60s=%d denied=%d http429=%d http418=%d http4xx=%d hdr_max=%d skew_ms=%d cap=%d sent_banned_total=%d",
                 c - lastCalls, w - lastWeight, peakUsed, used, f - lastF, fpeak, d - lastDenied, a - last429, b - last418, x - last4xx,
-                hdrMax, skewMs, cap);
+                hdrMax, skewMs, cap, sentBanned.get());
         lastCalls = c;
         lastWeight = w;
         lastDenied = d;

@@ -51,6 +51,24 @@ public class Qf3UtilsTest {
     }
 
     @Test
+    public void q11HookDeniesFapiDuringBanAndCountsZeroSent() {
+        RestBudget prev = RestBudget.get();
+        RestBudget b = RestBudget.create(300, 1600, 2000, 150, System::currentTimeMillis);
+        RestBudget.reset(b);
+        try {
+            BinanceRestGuard.cooldownUntil(System.currentTimeMillis() + 60_000L, "HTTP 418 Retry-After=60");
+            assertFalse("klines bi chan", RestBudget.beforeRequest(RestBudget.FAPI + "fapi/v1/klines?symbol=BTCUSDT&interval=1m&limit=3"));
+            assertEquals(0, b.sentBanned.get());
+            assertTrue(b.statsLine().contains("sent_banned_total=0"));
+            BinanceRestGuard.BANNED_UNTIL_MS.set(0);
+            assertTrue("het ban => cho qua", RestBudget.beforeRequest(RestBudget.FAPI + "fapi/v1/klines?symbol=BTCUSDT&interval=1m&limit=3"));
+            assertEquals(0, b.sentBanned.get());
+        } finally {
+            RestBudget.reset(prev);
+        }
+    }
+
+    @Test
     public void reportBanBodyAlsoPersisted() throws Exception {
         Path f = dir.resolve("b2.ms");
         BinanceRestGuard.enablePersistence(f);
