@@ -1,0 +1,57 @@
+{
+ "n_hours_expected": 24,
+ "n_hours_measured": 17,
+ "hours_missing_utc": [
+  "10-27 01:00",
+  "10-27 02:00",
+  "10-27 03:00",
+  "10-27 04:00",
+  "10-27 05:00",
+  "10-27 06:00",
+  "10-27 07:00"
+ ],
+ "n_rel_gt_1e-6": 0,
+ "max_rel": 6.501714865604857e-10,
+ "med_rel": 6.501714865604857e-10,
+ "n_m_eq_buf_minus_eval": 17,
+ "restart_hours_utc": [],
+ "buffer": {
+  "n": 962488,
+  "bad_chunks": 0,
+  "sorted_in_file": true,
+  "first": "10-01 13:00",
+  "last": "10-30 05:53"
+ },
+ "pre_window_lines": [
+  {
+   "h_utc": "10-26 22:00",
+   "log_at_p07": "10-27 06:01",
+   "q_log": 0.007346306,
+   "q_rep": 0.007346305996179581,
+   "m": 868056,
+   "buffer_log": 869496,
+   "eval_log": 1440,
+   "m_eq_buf_minus_eval": true,
+   "mode": "normal",
+   "restart_p07": "",
+   "in_window": false,
+   "rel": 5.200463575907386e-10
+  },
+  {
+   "h_utc": "10-26 23:00",
+   "log_at_p07": "10-27 07:01",
+   "q_log": 0.007346306,
+   "q_rep": 0.007346305996179581,
+   "m": 869496,
+   "buffer_log": 870936,
+   "eval_log": 1440,
+   "m_eq_buf_minus_eval": true,
+   "mode": "normal",
+   "restart_p07": "",
+   "in_window": false,
+   "rel": 5.200463575907386e-10
+  }
+ ],
+ "mismatch": [],
+ "PASS": false
+}

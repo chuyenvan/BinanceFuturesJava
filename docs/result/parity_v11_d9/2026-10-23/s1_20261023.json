@@ -1,0 +1,14 @@
+{
+ "S1_m": {
+  "rows": 983748,
+  "frac_le_1e-6": 1.0,
+  "max_abs": 0.0
+ },
+ "S1_I_selectorScore_vs_score": 6.000000007944095e-08,
+ "S1_I": {
+  "minutes": 1440,
+  "exact_order": 1440,
+  "frac": 1.0,
+  "bad": []
+ }
+}

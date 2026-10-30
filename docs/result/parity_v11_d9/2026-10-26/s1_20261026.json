@@ -1,0 +1,15 @@
+{
+ "S1_m": {
+  "rows": 975703,
+  "frac_le_1e-6": 1.0,
+  "max_abs": 0.0
+ },
+ "S1_I_selectorScore_vs_score": null,
+ "S1_I": {
+  "minutes": 0,
+  "exact_order": 0,
+  "frac": null,
+  "bad": [],
+  "note": "sel_dump 0 phut trong ngay -> KHONG DO DUOC S1-I"
+ }
+}

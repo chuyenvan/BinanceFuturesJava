@@ -14,8 +14,9 @@ import pandas as pd
 
 ROOT = os.path.expanduser("~/claude_master/parity_v11w")
 REPO = os.path.expanduser("~/claude_master/vz_e1_wt")
-rnd, days = sys.argv[1], sys.argv[2:]
-OUT = REPO + "/docs/result/parity_v11_%s" % rnd
+rnd = sys.argv[1] if len(sys.argv) > 1 else None      # import duoc khi chay unit test
+_days_argv = sys.argv[2:]
+OUT = REPO + "/docs/result/parity_v11_%s" % rnd if rnd else None
 SMALL = ["coverage", "universe", "gate", "fund", "net", "s1", "gv_p2", "p3", "s1v", "tsx", "labels", "kprime", "kpp", "live_only"]
 
 
@@ -42,6 +43,7 @@ def rq08_off(work):
 def day_status(work, run, tag):
     J = lambda n: L("%s/%s_%s.json" % (work, n, tag))
     g, s1, gv, p3, tsx, kp, lo = J("gate"), J("s1"), J("gv_p2"), J("p3"), J("tsx"), J("kprime"), J("live_only")
+    cov = J("coverage")          # PREREG §7: thieu du lieu cua ngay => KHONG DO DUOC, khong coi la DAT
     cg, cf = L(run + "/cmp_ctl_gate.json"), L(run + "/cmp_ctl_fund.json")
     KD = "KHONG DO DUOC"
     st = {}
@@ -82,48 +84,59 @@ def day_status(work, run, tag):
         tot = "XAM"
     else:
         tot = "DAT"
+    # Guard du lieu thieu (prereg §7): pull242 INCOMPLETE => ngay toi da XAM, khong bao gio DAT.
+    inc = bool(cov is not None and cov.get("pull_incomplete"))
+    st["pull_incomplete"] = inc
+    if inc and tot.startswith(("DAT", "XAM")):   # XAM do K5/NET cung khong duoc coi la do du
+        st["giam_do_truoc_guard"] = tot
+        tot = "KHONG DO DUOC (mot phan) + XAM"
     st["ket_luan"] = tot + " (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)"
     return st
 
 
-res = {"round": rnd, "prereg": "481701b2 + ADDENDUM1 fea9fb97", "days": {}, "cumulative": {}}
-os.makedirs(OUT, exist_ok=True)
-for d in days:
-    tag = d.replace("-", "")
-    work, run = ROOT + "/d/%s/work" % d, ROOT + "/d/%s/runs" % d
-    st = day_status(work, run, tag)
-    res["days"][d] = {"status": st, "rq": rq08_off(work)}
-    od = OUT + "/" + d
+def main():
+    days = _days_argv
+    res = {"round": rnd, "prereg": "481701b2 + ADDENDUM1 fea9fb97", "days": {}, "cumulative": {}}
+    os.makedirs(OUT, exist_ok=True)
+    for d in days:
+        tag = d.replace("-", "")
+        work, run = ROOT + "/d/%s/work" % d, ROOT + "/d/%s/runs" % d
+        st = day_status(work, run, tag)
+        res["days"][d] = {"status": st, "rq": rq08_off(work)}
+        od = OUT + "/" + d
+        os.makedirs(od, exist_ok=True)
+        for n in SMALL:
+            p = "%s/%s_%s.json" % (work, n, tag)
+            if os.path.exists(p):
+                shutil.copy(p, od)
+        for p in [work + "/restarts.json", work + "/segs.json", work + "/kprime_groups.json", work + "/p3_q.csv",
+                  run + "/cmp_ctl_gate.json", run + "/cmp_ctl_fund.json", run + "/r0.json", run + "/harness_%s.json" % tag,
+                  run + "_drop/drop_runs.json"]:
+            if os.path.exists(p):
+                shutil.copy(p, od + "/" + os.path.basename(p))
+    # D1 (ADDENDUM1, chinh thuc) + nhan K' ap lai (chi nhan)
+    d1 = L(REPO + "/docs/result/parity_v11_d1/parity_v11_d1_add1.json")
+    kp1 = L(ROOT + "/regr_d1/work/kprime_d1.json")
+    rq1 = rq08_off(ROOT + "/regr_d1/work")
+    res["D1"] = {"status_official_add1": d1["status_sua"]["ket_luan_luot_D"] if d1 else None,
+                 "K5_Kprime_relabel_only": len(kp1["K5_minutes"]) if kp1 else None, "rq": rq1}
+    od = OUT + "/2026-10-21_relabel"
     os.makedirs(od, exist_ok=True)
-    for n in SMALL:
-        p = "%s/%s_%s.json" % (work, n, tag)
-        if os.path.exists(p):
-            shutil.copy(p, od)
-    for p in [work + "/restarts.json", work + "/segs.json", work + "/kprime_groups.json", work + "/p3_q.csv",
-              run + "/cmp_ctl_gate.json", run + "/cmp_ctl_fund.json", run + "/r0.json", run + "/harness_%s.json" % tag,
-              run + "_drop/drop_runs.json"]:
+    for p in (ROOT + "/regr_d1/work/kprime_d1.json", ROOT + "/regr_d1/work/kprime_groups.json",
+              ROOT + "/regr_d1/work/regress_d1.json", ROOT + "/runs/d21_drop/drop_runs.json"):
         if os.path.exists(p):
             shutil.copy(p, od + "/" + os.path.basename(p))
-# D1 (ADDENDUM1, chinh thuc) + nhan K' ap lai (chi nhan)
-d1 = L(REPO + "/docs/result/parity_v11_d1/parity_v11_d1_add1.json")
-kp1 = L(ROOT + "/regr_d1/work/kprime_d1.json")
-rq1 = rq08_off(ROOT + "/regr_d1/work")
-res["D1"] = {"status_official_add1": d1["status_sua"]["ket_luan_luot_D"] if d1 else None,
-             "K5_Kprime_relabel_only": len(kp1["K5_minutes"]) if kp1 else None, "rq": rq1}
-od = OUT + "/2026-10-21_relabel"
-os.makedirs(od, exist_ok=True)
-for p in (ROOT + "/regr_d1/work/kprime_d1.json", ROOT + "/regr_d1/work/kprime_groups.json",
-          ROOT + "/regr_d1/work/regress_d1.json", ROOT + "/runs/d21_drop/drop_runs.json"):
-    if os.path.exists(p):
-        shutil.copy(p, od + "/" + os.path.basename(p))
-# tich luy
-allrq = [x for x in [rq1] + [res["days"][d]["rq"] for d in days] if x]
-full = [x for x in allrq if x.get("ge09_off") is not None]
-res["cumulative"]["P2_pairs_both_sides_measured"] = {k: int(sum(x[k] for x in full)) for k in
-                                                     ("n_pairs", "ge09_live", "ge09_off", "ge08_live", "ge08_off")}
-res["cumulative"]["P2_pairs_live_side_all_days"] = {k: int(sum(x[k] for x in allrq)) for k in ("n_pairs", "ge09_live", "ge08_live")}
-res["cumulative"]["P2_max_rq"] = {"live": max(x["max_live"] for x in allrq), "off": max(x["max_off"] for x in full)}
-res["cumulative"]["days_measured"] = ["2026-10-21"] + days
-res["cumulative"]["verdicts"] = {"2026-10-21": res["D1"]["status_official_add1"], **{d: res["days"][d]["status"]["ket_luan"] for d in days}}
-json.dump(res, open(OUT + "/parity_v11_%s.json" % rnd, "w"), indent=1, default=str)
-print(json.dumps(res, indent=1, default=str))
+    # tich luy
+    allrq = [x for x in [rq1] + [res["days"][d]["rq"] for d in days] if x]
+    full = [x for x in allrq if x.get("ge09_off") is not None]
+    res["cumulative"]["P2_pairs_both_sides_measured"] = {k: int(sum(x[k] for x in full)) for k in
+                                                         ("n_pairs", "ge09_live", "ge09_off", "ge08_live", "ge08_off")}
+    res["cumulative"]["P2_pairs_live_side_all_days"] = {k: int(sum(x[k] for x in allrq)) for k in ("n_pairs", "ge09_live", "ge08_live")}
+    res["cumulative"]["P2_max_rq"] = {"live": max(x["max_live"] for x in allrq), "off": max(x["max_off"] for x in full)}
+    res["cumulative"]["days_measured"] = ["2026-10-21"] + days
+    res["cumulative"]["verdicts"] = {"2026-10-21": res["D1"]["status_official_add1"], **{d: res["days"][d]["status"]["ket_luan"] for d in days}}
+    json.dump(res, open(OUT + "/parity_v11_%s.json" % rnd, "w"), indent=1, default=str)
+    print(json.dumps(res, indent=1, default=str))
+
+if __name__ == "__main__":
+    main()

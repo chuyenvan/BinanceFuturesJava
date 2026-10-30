@@ -1,0 +1,58 @@
+{
+ "sel_minutes": 1440,
+ "skipped_minutes_no_net_live": [],
+ "GV_I": {
+  "n": 34560,
+  "n_minutes": 1440,
+  "frac_le1e-6": 1.0,
+  "n_diff": 0,
+  "bad_minutes": []
+ },
+ "GV_O": {
+  "n": 34560,
+  "n_minutes": 1440,
+  "frac_le1e-6": 0.9995081018518519,
+  "n_diff": 17,
+  "bad_minutes": [
+   "10-22 08:10",
+   "10-23 05:14"
+  ]
+ },
+ "P2": {
+  "n_pairs": 34560,
+  "n_minutes": 1440,
+  "minutes_dropped": {},
+  "q_src_minutes": {
+   "log": 1333,
+   "replay_pre_restart": 107
+  },
+  "q_live_eq_q_off_frac": 0.07430555555555556,
+  "n_pass_live": 0,
+  "n_pass_off": 0,
+  "n_flip": 0,
+  "n_flip_minutes": 0,
+  "n_flip_heavy": 0,
+  "flip_detail": [],
+  "max_rq_live": 0.6946800947189331,
+  "max_rq_off": 0.6946800351142883,
+  "n_rq_ge_09_live": 0,
+  "n_rq_ge_09_off": 0,
+  "n_rq_ge_08_live": 0,
+  "PASS": true
+ },
+ "GATE_LOG": {
+  "n_lines": 1510,
+  "n_minutes_join": 1440,
+  "map_tick_check": {
+   "n_lines_with_MAP": 1510,
+   "n_tick_eq": 1510
+  },
+  "n_match": 1440,
+  "sum_log": 0,
+  "sum_calc": 0,
+  "thr_range_match_base0008": 1440,
+  "thr_range_mismatch": [],
+  "mismatch": [],
+  "gate_lines_not_joined": []
+ }
+}
