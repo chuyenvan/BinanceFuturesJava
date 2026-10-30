@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """ing_qf_check.py — cham PREREG_INGEST_QUICKFIX (+ADD1/1b/1c). CHAY TREN ORACLE, CHI DOC 242, KHONG goi REST fapi tu Oracle.
-  python3 ing_qf_check.py                 # moi gio: Q1,Q2,Q4-Q7,Q10,O1 tu log collectData 242 + record kline_1m_opt ton tai
+  python3 ing_qf_check.py                 # moi gio: Q1,Q2,Q4-Q7,Q10,Q11,O1 (+ bao cao lanh_ngoai_3p, loop_escalations) tu log collectData 242 + record kline_1m_opt ton tai
   python3 ing_qf_check.py --vision DAY    # Q3: 30 symbol x 1440 phut ngay UTC DAY (YYYY-MM-DD) so Vision daily (data.binance.vision)
 Ghi 1 dong JSON vao ~/claude_master/ing1030/qf_check.jsonl. Goi y cron: 23 * * * * (gio) va 40 9 * * * --vision hom-truoc."""
 import sys, io, json, time, random, struct, zipfile, subprocess, urllib.request, datetime, re
@@ -29,7 +29,7 @@ def grab(lines, k):
 def hourly():
     now = int(time.time() * 1000)
     since = datetime.datetime.fromtimestamp((now - 3600000) / 1000).strftime("%Y-%m-%d %H:%M")
-    pat = r"\[REST-BUDGET\] calls=\|\[KLINE-COVER\]\|Restart: Reset\|REST banned\|REST cooldown\|KLINE-RECON\|\[PRICE-AGE\]\|OutOfMemoryError\|\[SUPERVISOR\]\|OI/LS/taker forward: ghi"
+    pat = r"\[REST-BUDGET\] calls=\|\[KLINE-COVER\]\|Restart: Reset\|REST banned\|REST cooldown\|KLINE-RECON\|\[PRICE-AGE\]\|OutOfMemoryError\|\[SUPERVISOR\]\|OI/LS/taker forward: ghi\|\[REST-BAN\]"
     lines = ssh("awk -v t='%s' 'substr($0,1,16)>=t' %s | grep -a '%s'" % (since, LOGF, pat))
     bud = [l for l in lines if "[REST-BUDGET] calls=" in l]
     cov = [l for l in lines if "[KLINE-COVER]" in l]
@@ -52,10 +52,14 @@ def hourly():
                Q7_price_gap_max=max(pg) if pg else None, Q7_gt5s=sum(1 for x in pg if x > 5000), Q7_price_age_max=max(pa) if pa else None,
                Q7_price_age_warn=sum(1 for l in lines if "[PRICE-AGE]" in l),
                Q8_recon_warn=sum(1 for l in lines if "KLINE-RECON" in l), Q10_supervisor_lines=sum(1 for l in lines if "[SUPERVISOR]" in l),
-               O1_sweep_min=[round(x / 60000, 1) for x in sw])
+               O1_sweep_min=[round(x / 60000, 1) for x in sw],
+               Q11_sent_banned=max(grab(bud, "sent_banned_total") or [0]),
+               Q11_vi_pham_lines=sum(1 for l in lines if "Q11 VI PHAM" in l),
+               R_lanh_ngoai_3p=sum(grab(cov, "lanh_ngoai_3p")), R_loop_escalations=max(grab(bud, "loop_escalations") or [0]))
     hard = (res["Q1_restart_lines"] or res["Q1_oom"] or res["Q2_bad"] or (res["Q2_bo_kiem_max"] or 0) > 0 or no_rec
             or (res["Q4_peak_max"] or 0) > 300 or (res["Q4_fdata_peak_max"] or 0) > 150 or res["Q6_429_418"] or res["Q6_ban_lines"]
-            or (res["Q7_price_gap_max"] or 0) > 15000 or any(x > 35 for x in res["O1_sweep_min"]))
+            or (res["Q7_price_gap_max"] or 0) > 15000 or any(x > 35 for x in res["O1_sweep_min"])
+            or res["Q11_sent_banned"] or res["Q11_vi_pham_lines"])
     res["verdict_gio"] = "VI_PHAM" if hard else ("THIEU_SO_DO" if not bud or not cov_ss else "OK")
     return res
 

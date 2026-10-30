@@ -10,11 +10,13 @@
 # Rollback sau nay: bash ~/claude_master/deploy/rollback_ingest_qf.sh <TS>
 # =============================================================================
 set -uo pipefail
-JAR_SRC=/home/ubuntu/claude_master/ing1030/jar/binance-java-sdk-1.2.4.jar_ingqf2_69e36d03
-JAR_MD5=2e0a3676bd8eafdbef2a374a69ba9bee
+JAR_SRC=/home/ubuntu/claude_master/ing1030/jar/binance-java-sdk-1.2.4.jar_ingqf3_3dd53a91
+JAR_MD5=a31fdd6caf12ce35c12b839a3cced929
 OLD_MD5=cb02d85e4f045c6cbdc8d94c18e188f1
-S="ssh -p 2222 -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=10 -o ServerAliveCountMax=6 -i /home/ubuntu/.ssh/id_rsa_chuyennd root@103.157.218.242"
-SCP="scp -P 2222 -o BatchMode=yes -o ConnectTimeout=20 -i /home/ubuntu/.ssh/id_rsa_chuyennd"
+# INGQF_SSH / INGQF_SCP chi de TEST (test_pause_trap.sh); prod de mac dinh
+S=${INGQF_SSH:-"ssh -p 2222 -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=10 -o ServerAliveCountMax=6 -i /home/ubuntu/.ssh/id_rsa_chuyennd root@103.157.218.242"}
+SCP=${INGQF_SCP:-"scp -P 2222 -o BatchMode=yes -o ConnectTimeout=20 -i /home/ubuntu/.ssh/id_rsa_chuyennd"}
+PF=/var/lib/h242_watchdog/PAUSE
 C=/home/chuyennd/java/collectData
 A=/home/chuyennd/java/v_t_m
 TS=$(TZ=Asia/Ho_Chi_Minh date +%Y%m%d_%H%M)
@@ -26,12 +28,18 @@ LOG=$D/deploy_ingest_qf_${TS}$([ "$DRY" = 1 ] && echo _dry).log
 exec > >(tee -a "$LOG") 2>&1
 say() { echo "[$(TZ=Asia/Ho_Chi_Minh date '+%F %T')] $*"; }
 die() { say "DUNG (khong doi gi): $*"; say "Log: $LOG"; exit 1; }
-# MIN-4: du script chet o dau, PAUSE watchdog LEGACY tren 242 LUON duoc go
-trap '$S "rm -f /var/lib/h242_watchdog/PAUSE" < /dev/null > /dev/null 2>&1' EXIT
-say "=== deploy_ingest_qf (QF2) TS=$TS DRY=$DRY jar=$JAR_MD5 ==="
+# [QF3, A1_QF2 MAJ-B] PAUSE watchdog mang TOKEN cua lan chay nay; trap CHI dat khi chinh script bat dau restart (OWN_PAUSE=1)
+# va CHI go PAUSE neu noi dung = TOKEN. DRY=1 khong bao gio dat trap, khong ghi gi len 242.
+TOKEN="ingqf_${TS}_$$"
+OWN_PAUSE=0
+own_pause_cleanup() {
+  [ "$OWN_PAUSE" = 1 ] || return 0
+  $S "f=$PF; c=\$(cat \$f 2>/dev/null); { [ \"\$c\" = '$TOKEN' ] || [ \"\$c\" = '${TOKEN}_rb' ]; } && rm -f \$f && echo PAUSE_cua_minh_da_go || true" < /dev/null 2>/dev/null
+}
+say "=== deploy_ingest_qf (QF3) TS=$TS DRY=$DRY jar=$JAR_MD5 token=$TOKEN ==="
 [ -f "$RESTART_R" ] && [ -f "$CHECK_R" ] || die "thieu $RESTART_R / $CHECK_R"
-[ "$(md5sum < "$RESTART_R" | cut -c1-32)" = "6c50666d2072827343f7022434f22239" ] || die "md5 $RESTART_R sai"
-[ "$(md5sum < "$CHECK_R" | cut -c1-32)" = "b6ab182d8b44381120726aa32327d7ca" ] || die "md5 $CHECK_R sai"
+[ "$(md5sum < "$RESTART_R" | cut -c1-32)" = "35f60aff9b319346a28e3c10c91f9df8" ] || die "md5 $RESTART_R sai"
+[ "$(md5sum < "$CHECK_R" | cut -c1-32)" = "d25169442002c87278daf59e187d93a8" ] || die "md5 $CHECK_R sai"
 
 # ---- khung gio: phut :10-:44, tranh gio 07/19, tranh 00:50-01:20 va 12:50-13:20 (+07); cho toi da 90'
 if [ "${FORCE_TIME:-0}" != 1 ] && [ "$DRY" != 1 ]; then
@@ -109,9 +117,14 @@ echo "OK da_chep_lai_backup"
 EOF
 )
   echo "$RB"
-  R2=$($S "bash -s -- $C" < "$RESTART_R"); echo "$R2"
+  if [ "${1:-}" = no_restart ]; then   # process CHUA restart (van chay jar cu tu inode cu) => chi tra file, khong restart
+    echo "$RB" | grep -q '^FAIL' && { say "KHOI PHUC FILE LOI — bao MASTER NGAY. Log: $LOG"; exit 2; }
+    say "Da tra jar/env ve ban cu, collectData KHONG bi restart (van chay ban cu). Log: $LOG"; exit 1
+  fi
+  OWN_PAUSE=1
+  R2=$($S "bash -s -- $C ${TOKEN}_rb" < "$RESTART_R"); echo "$R2"
   sleep 60
-  K2=$($S "bash -s -- $C $A $OLD_MD5 ${PRE_LEG:-0} old" < "$CHECK_R"); echo "$K2"
+  K2=$($S "bash -s -- $C $A $OLD_MD5 ${PRE_LEG:-0} old ${TOKEN}_rb" < "$CHECK_R"); echo "$K2"
   if echo "$RB$R2" | grep -q '^FAIL' || ! echo "$K2" | grep -q '^OK jar_md5'; then
     say "KHOI PHUC LOI — bao MASTER NGAY. Log: $LOG"; exit 2
   fi
@@ -135,21 +148,36 @@ EOF
 ) || { say "ssh env/jar loi"; rollback; }
 echo "$EN"; echo "$EN" | grep -q '^FAIL' && rollback
 
-say "--- 4. restart collectData (giay 08-20; PAUSE watchdog; chay tach khoi ssh)"
-RS=$($S "bash -s -- $C" < "$RESTART_R") || { say "ssh restart loi"; rollback; }
-echo "$RS"; echo "$RS" | grep -q '^FAIL' && rollback
+say "--- 4. restart collectData (giay 08-20; PAUSE watchdog co TOKEN; chay tach khoi ssh)"
+OWN_PAUSE=1
+trap own_pause_cleanup EXIT   # [QF3] chi tu day: chi go PAUSE mang TOKEN cua chinh lan chay nay
+RS=$($S "bash -s -- $C $TOKEN" < "$RESTART_R") || { say "ssh restart loi"; rollback; }
+echo "$RS"
+if echo "$RS" | grep -q 'PAUSE_cua_nguoi_khac'; then
+  say "Co nguoi khac dang PAUSE watchdog (dang thao tac 242) — KHONG restart, tra file ve cu"; rollback no_restart
+fi
+echo "$RS" | grep -q '^FAIL' && rollback
 
-say "--- 5. kiem on dinh (moi 30 s, toi da 14'): repair khoi dong xong -> tuoi gia; 2 dong KLINE-COVER; 0 ban/429/418; LEGACY"
-K=""
-for i in $(seq 1 28); do
+say "--- 5. kiem on dinh (moi 30 s): repair khoi dong (con tien thi cho, toi da 60'; dung tien 5' = ket); sau repair toi da 14'"
+K=""; LASTP=-1; STALL=0; AFTER=0
+for i in $(seq 1 150); do
   sleep 30
-  K=$($S "bash -s -- $C $A $JAR_MD5 ${PRE_LEG:-0} new" < "$CHECK_R") || { say "ssh kiem loi (lan $i)"; continue; }
+  K=$($S "bash -s -- $C $A $JAR_MD5 ${PRE_LEG:-0} new $TOKEN" < "$CHECK_R") || { say "ssh kiem loi (lan $i)"; continue; }
   if echo "$K" | grep -q '^FAIL'; then echo "$K"; say "Co FAIL sau deploy"; rollback; fi
   echo "$K" | grep -q '^WAIT' || break
+  RP=$(echo "$K" | grep -o 'REPAIR_PROGRESS=[0-9]*' | tr -dc 0-9)
+  if [ -n "$RP" ]; then   # [QF3, MIN-D] dang repair: tien do con tang => cho; dung 10 lan kiem (5') => ket
+    [ "$RP" -gt "$LASTP" ] && { STALL=0; LASTP=$RP; } || STALL=$((STALL + 1))
+    [ $STALL -ge 10 ] && { echo "$K"; say "Repair khoi dong KET (tien do $RP khong tang 5')"; rollback; }
+    [ $i -ge 120 ] && { echo "$K"; say "Repair khoi dong qua 60'"; rollback; }
+  else
+    AFTER=$((AFTER + 1))
+    [ $AFTER -ge 28 ] && break
+  fi
   say "cho: $(echo "$K" | grep '^WAIT' | tr '\n' ' ')"
 done
 echo "$K"
-echo "$K" | grep -q '^WAIT' && { say "Het 14' van chua du dieu kien on dinh"; rollback; }
+echo "$K" | grep -q '^WAIT' && { say "Het thoi gian van chua du dieu kien on dinh"; rollback; }
 echo "$K" | grep -q '^OK kline_phu_phut_da_chot' || { say "khong doc duoc ket qua kiem"; rollback; }
 
 say "XONG. collectData chay jar $JAR_MD5. Backup TS=$TS (jar .bak_ingqf_$TS, env .bak_ingqf_$TS)."

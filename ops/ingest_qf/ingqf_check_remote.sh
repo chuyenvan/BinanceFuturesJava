@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-# ingqf_check_remote.sh — CHAY TREN 242 (chi doc). In OK/WAIT/FAIL. args: C A EXPECT_MD5 LEGACY_PID MODE(new|old)
+# ingqf_check_remote.sh — CHAY TREN 242 (chi doc). In OK/WAIT/FAIL. args: C A EXPECT_MD5 LEGACY_PID MODE(new|old) [TOKEN]
 # MAJ-3: KHONG so Total; chi tieu chi on dinh: phu phut da chot (KLINE-COVER), tuoi gia SAU repair khoi dong, 0 ban/429/418,
 # 0 restart JVM, LEGACY song, PAUSE da go, -Xmx2g co hieu luc.
-C=$1; A=$2; EXP=$3; LEG=$4; MODE=$5
+C=$1; A=$2; EXP=$3; LEG=$4; MODE=$5; TOKEN=${6:-none}
+PF=${INGQF_PAUSE_FILE:-/var/lib/h242_watchdog/PAUSE}
 cd "$C" || { echo "FAIL cd"; exit 0; }
 N=$(pgrep -fc 'websocket.BinanceDataIngestor'); P=$(pgrep -f 'websocket.BinanceDataIngestor' | head -1)
 [ "$N" = 1 ] && echo "OK 1_process pid=$P" || echo "FAIL so_process=$N"
 FD=$(find /proc/$P/fd -lname '*binance-java-sdk*.jar*' 2>/dev/null | head -1)
 JM=$(md5sum < "$FD" 2>/dev/null | cut -c1-32)
 [ "$JM" = "$EXP" ] && echo "OK jar_md5=$JM" || echo "FAIL jar_md5=$JM (can $EXP)"
-[ -f /var/lib/h242_watchdog/PAUSE ] && echo "FAIL PAUSE_watchdog_con" || echo "OK PAUSE_da_go"
+if [ "$(cat "$PF" 2>/dev/null)" = "$TOKEN" ]; then echo "FAIL PAUSE_cua_minh_con"; elif [ -f "$PF" ]; then echo "INFO PAUSE_nguoi_khac_dang_co (khong dung toi)"; else echo "OK PAUSE_da_go"; fi
 TP=$(pgrep -f 'trading.BinanceOrderTradingManager' | head -1)
 [ "$TP" = "$LEG" ] && echo "OK legacy_pid_khong_doi=$TP" || echo "FAIL legacy_pid=$TP (truoc $LEG)"
 AG=$(( $(date +%s) - $(stat -c %Y $A/logs/full.log) ))
@@ -20,6 +21,7 @@ X=$(tail -n +$(grep -a -n "PID $P written" $L | tail -1 | cut -d: -f1) $L)
 grep -a -q 'Too many symbol price errors\|Restart: Reset' <<<"$X" && echo "FAIL co_restart_JVM" || echo "OK 0_restart"
 grep -a -q 'REST banned\|REST cooldown\|"code":-1003' <<<"$X" && echo "FAIL co_ban_hoac_cooldown" || echo "OK 0_ban"
 grep -a -q 'OutOfMemoryError' <<<"$X" && echo "FAIL OutOfMemoryError" || echo "OK 0_OOM"
+grep -a -q 'Q11 VI PHAM' <<<"$X" && echo "FAIL Q11_call_fapi_trong_luc_ban" || echo "OK Q11_0_call_khi_ban"
 grep -a -q 'Ch.t n.n ph.t' <<<"$X" && echo "OK co_chot_nen_sau_start" || echo "WAIT chua_co_dong_chot_nen"
 [ "$MODE" = new ] || exit 0
 tr '\0' '\n' < /proc/$P/environ | grep -qx 'INGEST_SCHEDULED_RESTART_HOURS=0' && echo "OK env_restart_lich_TAT" || echo "FAIL env_INGEST_SCHEDULED_RESTART_HOURS"
@@ -29,7 +31,10 @@ B=$(grep -a '\[REST-BUDGET\] calls=' <<<"$X")
 H4=$(grep -o 'http4[12][89]=[1-9][0-9]*' <<<"$B" | head -1); [ -z "$H4" ] && echo "OK 0_http429_418" || echo "FAIL $H4"
 PK=$(grep -o 'peak60s=[0-9]*' <<<"$B" | sed 's/.*=//' | sort -n | tail -1); [ -z "$PK" ] || [ "$PK" -le 300 ] && echo "OK weight_peak=${PK:-na}" || echo "FAIL weight_peak=$PK"
 echo "INFO hdr_max_IP=$(grep -o 'hdr_max=[0-9]*' <<<"$B" | sed 's/.*=//' | sort -n | tail -1) loop_restarts=$(grep -o 'loop_restarts=[0-9]*' <<<"$B" | tail -1)"
-if ! grep -a -q 'repair khoi dong xong' <<<"$X"; then echo "WAIT repair_khoi_dong_chua_xong"; exit 0; fi
+if ! grep -a -q 'repair khoi dong xong' <<<"$X"; then
+  # [QF3, MIN-D] tien do repair = so dong 'repair tien do' (deploy so sanh giua 2 lan kiem: con tang = dang chay, dung 5' = ket)
+  echo "WAIT repair_khoi_dong_chua_xong REPAIR_PROGRESS=$(grep -a -c 'repair tien do' <<<"$X")"; exit 0
+fi
 BR=$(grep -a 'repair_xong=1' <<<"$B")
 NR=$(grep -c . <<<"$BR"); [ -z "$BR" ] && NR=0
 if [ "$NR" -lt 2 ]; then echo "WAIT budget_sau_repair=$NR (<2)"; else
