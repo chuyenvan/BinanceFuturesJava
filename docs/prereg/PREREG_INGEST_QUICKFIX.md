@@ -81,3 +81,8 @@ PAUSE watchdog đã gỡ.
 tránh tốn 2 call/symbol (REST sớm chưa settle rồi kiểm lại). Live đọc lại 3 phút gần nhất mỗi tick (KFIX-B) nên nhận bản sửa.
 (b) Q2 thay câu "phải về 0 trước +3′": lỗ ≤ 200 symbol ⇒ `chua_chot` về 0 trước +3′; lỗ N > 200 ⇒ trước +(⌈N/200⌉ + 1)′
 (N = 752 ⇒ ≤ 5′). Phút bình thường: `chua_chot_truoc` (+90 s) = 0. Ô bị bỏ kiểm sau 30 pass lỗi (`bo_kiem`) tính là TRƯỢT Q2.
+
+**ADD-1c (2026-10-31, cùng vòng, TRƯỚC khi chạy bất kỳ test/số đo QF2 nào):** khi viết kịch bản test phát hiện hạn mức LỒNG NHAU ở ADD1
+(KLINE ≤240 tính cả weight của LOW/PRICE) cho phép LOW đầy (repair khởi động) bỏ đói KLINE (còn ~40/phút ⇒ lỗ 752 mất ~19′).
+Đổi sang hạn mức RIÊNG, tổng = 300: **PRICE 60** (giá ~40/phút + watchdog 2), **KLINE 200** (không chờ), **LOW 40** (premiumIndex 20,
+roller, exchangeInfo, repair). Pass kiểm lại xếp **ô cũ nhất trước**. Ngưỡng Q2/ADD-1b (⌈N/200⌉+1 phút) khớp KLINE 200. Mọi tiêu chí khác giữ.
