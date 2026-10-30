@@ -2394,8 +2394,11 @@ public final class CanaryEngine {
         String s = state.symMain;
         ensurePosition(s, st);
         ensureProtected(s);   // [3c] stop bao ve (da dat luc mo)
-        String sid = book.cluster(s).get().stopClientAlgoId;
+        Optional<LiveBookC3.ClusterView> pre = book.cluster(s);
+        String sid = pre.isPresent() ? pre.get().stopClientAlgoId : null;
+        boolean stopClosePosition = pre.isPresent() && !pre.get().stopQtyMode;   // [3k R1] chi stop closePosition moi duoc coi la "san tu ket thuc"
         st.put("stop", sid);
+        st.put("stopClosePosition", stopClosePosition);
         st.check(sid != null, "khong co stop truoc khi dong");
         long w = closeCluster(s, TrailingStopManager.REASON_TIME_STOP);
         st.put("closeMs", w);
@@ -2412,11 +2415,53 @@ public final class CanaryEngine {
         st.check(ws >= 0, "stop chua huy");
         Map<String, Object> cancel = lastCall("cancelStop", sid);
         st.put("guardCancel", cancel);
-        st.check(cancel != null && Boolean.TRUE.equals(cancel.get("ok")), "guard khong huy stop " + sid + " (CANCELLED)");
-        st.check(posAmt(s).signum() == 0, "vi the con");
+        boolean guardOk = cancel != null && Boolean.TRUE.equals(cancel.get("ok"));
+        // [3k R1] San TU ket thuc stop closePosition khi vi the ve 0 (ALGO_UPDATE X=EXPIRED/CANCELED; 10-29: +4 ms sau fill
+        // c3x-). Chi chap nhan khi: caid dung stop cua cum canary, stop do la closePosition, VA vi the san da xac nhan 0.
+        BigDecimal p = posAmt(s);
         BigDecimal a = acctAmt(s);
+        boolean flat = p.signum() == 0 && a != null && a.signum() == 0;
+        long since = close == null || !(close.get("ts") instanceof Number) ? 0L : ((Number) close.get("ts")).longValue();
+        String exchWhy = stopEndExchangeReject(journal.entries(), sid, s, since, flat, stopClosePosition);
+        boolean exch = exchWhy == null;
+        st.put("exchangeTerminal", exch);
+        st.put("exchangeTerminalWhy", exchWhy);
+        st.put("stopEnd", guardOk ? "GUARD_CANCELED" : (exch ? "EXCHANGE_TERMINAL" : "NONE"));
+        st.check(guardOk || exch, "guard khong huy stop " + sid + " (CANCELLED/EXPIRED)"
+                + (guardOk || exchWhy == null ? "" : " [" + exchWhy + "]"));
+        st.check(p.signum() == 0, "vi the con");
         st.check(a != null && a.signum() == 0, "account().positions chua phang");
         st.check(gw.openStops(s).isEmpty(), "con algo mo");
+    }
+
+    /**
+     * [3k R1] Kiem duong "san tu ket thuc stop closePosition". Tra {@code null} = CHAP NHAN (ket thuc hop le);
+     * khac null = ly do TU CHOI:
+     * <ul>
+     *   <li>caid khong thuoc canary (khong phai {@code c3s-} cua cum) — khong bao gio lay su kien la;</li>
+     *   <li>stop khong phai closePosition (stop qty reduce-only: mat stop khi con vi the la loi, khong phai ket thuc);</li>
+     *   <li>vi the san CHUA xac nhan 0 (positionRisk hoac account con vi the) — EXPIRED/CANCELED luc nay la MAT STOP;</li>
+     *   <li>khong co ALGO_UPDATE terminal dung caid, xay ra SAU lenh dong.</li>
+     * </ul>
+     * CHI la ham quyet dinh (khong goi san) de test duoc ca duong chap nhan lan cac duong tu choi.
+     */
+    static String stopEndExchangeReject(List<Map<String, Object>> entries, String sid, String sym, long sinceMs,
+                                        boolean positionFlat, boolean closePositionStop) {
+        if (sid == null || !sid.startsWith(C3LiveCids.STOP_PREFIX)) return "caid khong thuoc canary";
+        if (!closePositionStop) return "stop khong phai closePosition";
+        if (!positionFlat) return "vi the != 0";
+        if (entries == null) return "khong co ALGO_UPDATE terminal dung caid sau khi dong";
+        for (Map<String, Object> e : entries) {
+            if (!"WS_EVENT".equals(e.get("type")) || !"ALGO_UPDATE".equals(e.get("e"))) continue;
+            if (!sid.equals(String.valueOf(e.get("caid")))) continue;
+            if (sym != null && e.get("s") != null && !sym.equals(String.valueOf(e.get("s")))) continue;
+            Object x = e.get("X");
+            if (!"CANCELED".equals(x) && !"EXPIRED".equals(x)) continue;
+            Object ts = e.get("ts");
+            if (ts instanceof Number && ((Number) ts).longValue() < sinceMs) continue;
+            return null;
+        }
+        return "khong co ALGO_UPDATE terminal dung caid sau khi dong";
     }
 
     /** 12 truong cum so voi anh chup (K6). */

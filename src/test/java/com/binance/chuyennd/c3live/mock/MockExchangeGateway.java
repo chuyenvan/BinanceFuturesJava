@@ -155,6 +155,20 @@ public class MockExchangeGateway implements ExchangeGateway {
         return o;
     }
 
+    /** [3k R1] Gia lap SU CO: SELL khong giam vi the (san/lenh dong khong an vi the). Chi test. */
+    public volatile boolean keepPositionOnSell = false;
+    /** [3k R1] Gia lap san TU ket thuc stop closePosition (ALGO_UPDATE X=EXPIRED) ngay sau fill SELL. Chi test. */
+    public volatile boolean expireStopsOnSellFill = false;
+
+    /** [3k R1] San TU ket thuc stop (mark EXPIRED + phat ALGO_UPDATE dung caid, KHONG qua API cua bot). */
+    public synchronized void exchangeEndStop(String cid, String status) {
+        OrderInfo o = stops.get(cid);
+        if (o == null) return;
+        stops.put(cid, o.toBuilder().status("CANCELED".equals(status) ? OrderStatus.CANCELED : OrderStatus.EXPIRED)
+                .rawStatus(status).build());
+        emitRaw(algoEvent(o, status, ""));
+    }
+
     private OrderInfo fill(String symbol, Side side, BigDecimal qty, String cid, boolean reduceOnly, BigDecimal px,
                            String origType, List<String> ev) {
         OrderInfo o = OrderInfo.builder().kind(OrderKind.REGULAR).symbol(symbol).orderId(ids.incrementAndGet())
@@ -167,7 +181,7 @@ public class MockExchangeGateway implements ExchangeGateway {
         if (side == Side.BUY) {
             positionAmt.put(symbol, cur.add(qty));
             positionCost.put(symbol, cost.add(qty.multiply(px)));
-        } else {
+        } else if (!keepPositionOnSell) {
             BigDecimal avg = cur.signum() > 0 ? cost.divide(cur, MathContext.DECIMAL64) : px;
             BigDecimal q = qty.min(cur.max(BigDecimal.ZERO));
             rp = px.subtract(avg).multiply(q);
@@ -186,6 +200,13 @@ public class MockExchangeGateway implements ExchangeGateway {
         tr.add(new TradeFill(symbol, o.getOrderId(), qty, px, now));
         ev.add(orderEvent(symbol, cid, side, origType, o.getOrderId(), qty, px, fee, rp, reduceOnly));
         ev.add(accountEvent(symbol));
+        if (side == Side.SELL && expireStopsOnSellFill) {
+            for (OrderInfo st : new ArrayList<>(stops.values())) {
+                if (st.getStatus().isFinal() || !symbol.equals(st.getSymbol()) || !st.isClosePosition()) continue;
+                stops.put(st.getClientOrderId(), st.toBuilder().status(OrderStatus.EXPIRED).rawStatus("EXPIRED").build());
+                ev.add(algoEvent(st, "EXPIRED", ""));
+            }
+        }
         return o;
     }
 

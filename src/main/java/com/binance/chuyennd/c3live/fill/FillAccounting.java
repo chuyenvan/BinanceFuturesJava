@@ -275,9 +275,57 @@ public final class FillAccounting {
     public synchronized void onAlgoUpdate(UserStreamEvents.AlgoUpdate a) {
         if (a.clientAlgoId == null) return;
         LOG.info("[C3-LIVE-FILL] ALGO_UPDATE {} caid={} X={} ai={}", a.symbol, a.clientAlgoId, a.status, a.actualOrderId);
+        boolean terminal = "CANCELED".equals(a.status) || "EXPIRED".equals(a.status);
+        Optional<LiveBookC3.ClusterView> c = a.symbol == null ? Optional.<LiveBookC3.ClusterView>empty() : book.cluster(a.symbol);
+        if (terminal && c.isPresent()) {
+            // [3k R1] San tu ket thuc stop (CANCELED/EXPIRED). Vi the ve 0 => binh thuong (closedOnExchange lo). CON vi the
+            // (uoc luong tu so: confirmedQty - exitQty, hoac con leg chua ro) => MAT STOP: bo stop active NGAY de
+            // TrailingStopManager dat lai o nhip exit ke tiep (<= 10 s), khong cho Reconciler hang gio.
+            onStopTerminal(a, c.get(), terminalPosOpen(c.get()), clock.getAsLong());
+        } else if (terminal && a.symbol != null) {
+            LOG.info("[C3-LIVE-FILL] {} stop {} ket thuc {} nhung so khong giu cum (da dong) => bo qua", a.symbol,
+                    a.clientAlgoId, a.status);
+        }
         if (a.symbol != null && ("TRIGGERED".equals(a.status) || "FINISHED".equals(a.status) || "TRIGGERING".equals(a.status))) {
-            Optional<LiveBookC3.ClusterView> c = book.cluster(a.symbol);
             if (c.isPresent() && a.clientAlgoId.equals(c.get().stopClientAlgoId)) lastExitReason.put(a.symbol, REASON_TRAILING);
+        }
+    }
+
+    /** [3k R1] Vi the (theo so) con mo? confirmedQty - exitQty > 0, hoac con leg chua ro (khong du tin hieu phang). */
+    private static boolean terminalPosOpen(LiveBookC3.ClusterView c) {
+        BigDecimal pos = c.confirmedQty.subtract(c.exitQty == null ? BigDecimal.ZERO : c.exitQty);
+        return pos.signum() > 0 || c.hasUnresolved;
+    }
+
+    /**
+     * [3k R1] Stop cua cum bi san ket thuc khi vi the con: (a) stop ACTIVE => go khoi so NGAY (khong dua vao orphanStops vi
+     * tren san stop da chet) de trailing dat lai; (b) stop PENDING (chua kip promote) => bo pending de dat lai. Ghi log +
+     * Telegram (mat bao ve la su co, phai thay). Vi the da phang => khong lam gi (closedOnExchange huy stop con lai).
+     */
+    private void onStopTerminal(UserStreamEvents.AlgoUpdate a, LiveBookC3.ClusterView c, boolean posOpen, long now) {
+        if (!posOpen) {
+            LOG.info("[C3-LIVE-FILL] {} stop {} {} khi vi the da phang => binh thuong", a.symbol, a.clientAlgoId, a.status);
+            return;
+        }
+        String m;
+        if (a.clientAlgoId.equals(c.stopClientAlgoId)) {
+            String old = book.retireActiveStop(a.symbol, now);
+            if (old != null) book.removeOrphanStop(a.symbol, old, now);   // da chet tren san: guard khong huy lai
+            m = "[C3-LIVE] " + a.symbol + " STOP MAT: san ket thuc " + a.clientAlgoId + " X=" + a.status
+                    + " khi vi the con mo (qty so=" + c.confirmedQty.toPlainString() + " da dong=" + c.exitQty.toPlainString()
+                    + ") => bo stop khoi so, trailing DAT LAI nhip ke tiep; kiem ngay neu vi the lon";
+        } else if (a.clientAlgoId.equals(c.pendingStopCid)) {
+            book.clearPendingStop(a.symbol, now);
+            m = "[C3-LIVE] " + a.symbol + " stop PENDING " + a.clientAlgoId + " bi san ket thuc X=" + a.status
+                    + " khi vi the con mo => bo pending, trailing dat lai nhip ke tiep";
+        } else {
+            return;
+        }
+        LOG.warn("{}", m);
+        try {
+            alert.accept(m);
+        } catch (Throwable ignore) {
+            // alert khong duoc lam hong ke toan fill
         }
     }
 
