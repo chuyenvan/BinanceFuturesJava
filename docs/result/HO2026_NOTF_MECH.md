@@ -72,6 +72,42 @@ x14 W9 theo seed: Δ = +1 300,4 / +9 604,6 / −382,9 / +5 304,0 / +913,3 / +7 5
 ⇒ Cùng symbol + cùng giờ vào: leg **giữ nguyên qty** thì PnL gần như **không đổi** (−0,17 USDT/187 leg); toàn bộ +5 770
 đến từ leg **qty lớn hơn** (+7,4 % trung bình). Vậy biến đổi ở (ii) là **size/margin** (không phải đổi cách thoát/DCA).
 
+### 3.1 ĐÍNH CHÍNH (2026-10-30) — đọc lại §2(b)/§3/§4/§9 sau audit độc lập
+
+Mục này **không sửa** số cũ; nó ghi lại ba chỗ đọc sai nghĩa (audit độc lập `~/claude_master/audit_1030/mech.py`, `mech2.py`).
+
+**(a) "+7,4 % size" là trung bình |Δqty| trên các cặp CÓ đổi qty, không phải mức tăng size.**
+Đo lại (k24-s, W9, 8 seed, ghép 1-1 theo `(symbol, start)`):
+
+| đại lượng | giá trị |
+|---|---|
+| cặp chung | 2 203 (qty y hệt 187, qty khác **2 016**) |
+| mean \|Δqty\| — **trên 2 016 cặp đổi** | **7,40 %** ← con số đã in ở §3 |
+| mean \|Δqty\| — trên **cả 2 203 cặp** | **6,77 %** |
+| mean **có dấu** Δqty | **+4,99 %** |
+| median Δqty | **+3,75 %** |
+| cặp tăng / giảm | 1 577 (71,6 %) / 439 (19,9 %) |
+| equity A1/A0 **tại giờ vào** (MTM) | **+1,74 %** (x14 +1,48 %) |
+| corr(log q, log equity) | 0,158 (x14 0,112) |
+| mean(log q − log equity) | +2,83 % (sd 7,74 %) |
+
+⇒ Câu "leg chung to hơn ~7,4 %" ở §3/§9 phải đọc là **"nửa phân bố tăng, trung bình tuyệt đối 7,4 % trên nhóm đổi"**,
+không phải "mọi leg được scale lên 7,4 %". Lãi kép (equity lớn hơn 1,74 %) giải thích **~1/3** mức tăng có dấu
+(1,74/4,99 = 35 %); **phần còn lại (~+3,2 pp mỗi cặp, hoặc +2,83 pp sau khi trừ equity) CHƯA GIẢI THÍCH** — không có log
+sizing per-leg để truy nguyên. Vì vậy "+5 770 từ size" vẫn đúng về kế toán nhưng **cơ chế chưa xác định**.
+
+**(b) Bỏ câu "87 % leg mới trên symbol A0 vẫn trade" (hoặc phải so tỉ lệ nền 94,7 %).**
+1 279/1 473 = 86,8 % leg mới nằm trên symbol mà A0 **có** trade. Nhưng tỉ lệ nền của **toàn bộ** leg A1 W9 trên
+symbol A0 đã trade là **3 482/3 676 = 94,7 %**. Tức leg **mới** còn **ít** tập trung vào universe cũ hơn mức trung bình,
+**ngược** với hàm ý "slot cũ được tái dùng" trong §4/§9. Kết luận đúng: phần lớn leg mới là **cùng universe crypto,
+khác giờ vào**; không có bằng chứng chúng thay thế trực tiếp leg TF.
+
+**(c) V1 = 0,00 cent là ĐẲNG THỨC KẾ TOÁN, không phải bằng chứng độc lập.**
+Trong định nghĩa §1, (ii) "leg chung" được lấy bằng **phần dư** `Δ − [−(i)+(iii)−(iv)]`, nên V1 ≡ 0 theo cấu trúc.
+Giá trị thật của V1 chỉ là: (1) không có sai số dấu trong cài đặt; (2) các kiểm tra kèm theo đều sạch —
+`qdiff=0` (margin/entry khớp qty), `sell=0` (không có leg SELL), số leg khớp printDone. **Không** được trích V1 như
+"kiểm tra độc lập xác nhận phân rã"; muốn vậy phải tính (ii) từ dữ liệu (qty từng leg) rồi so, hiện chưa làm.
+
 ## 4. (iii) Leg crypto MỚI: phần lớn không phải "slot TF cùng phút"
 
 | Cấu hình | cửa sổ | mới (n / PnL) | symbol A0 **đã có** (n / PnL) | symbol **chưa từng** (n / PnL) | mở đúng phút có leg TF ở A0 (n / PnL) |

@@ -117,3 +117,15 @@ Cột "leg chung ΔPnL" là phần dư (leg cùng khoá nhưng khác entry/qty d
 - Ảnh chụp số: `~/claude_master/ho_tradfi_wk/notf_score.json`, `notf_mtm.json`, `verify_nt.json`, `v5_dev.json`, `res/*.json`, `score_out.log`.
 - Script: `research/ho2026_notf/notf_score.py`, `research/ho2026_notf/verify_nt.py` (commit cùng tài liệu này).
 - Tải về trong task: 3 dataset jar 286 MB (kiểm sec) + JSON nhỏ; có 408 MB tải nhầm `nt-x26-q1` đã xoá ngay. Đã xoá toàn bộ bản tải tạm (`sec_verify/`, `v1out/`, `/tmp/nt_kmd`, `/tmp/nt_fetch.py`) sau khi lấy số; dữ liệu lớn vẫn trên Kaggle.
+
+## ĐÍNH CHÍNH (2026-10-30)
+
+1. **V3 — định nghĩa đã đổi sau khi kernel fail.** Dòng V3 ở §3 ("PASS, diễn giải cửa sổ 2026") chỉ đúng theo định
+   nghĩa **đã sửa ngày 10-28 11:13** (`x_legs_2026 == 0`). Theo **nguyên văn prereg §4** (`x_legs == 0` trên toàn bộ
+   printDone) thì **V3 = FAIL** (24/24 kernel có 2–5 leg X ở đoạn DEV). Toàn bộ bằng chứng, mốc thời gian và đánh giá
+   trung thực ở `docs/prereg/PREREG_HO2026_NOTF_ADDENDUM_TECH-4.md` §T6. **Cần MASTER phê chuẩn cách đọc 2026.**
+2. **Cổng A0'(c) PASS** — chain hạ nguồn với X = ∅ tái lập đúng pred md5 gốc 8/8 seed và 17/17 file MANIFEST:
+   `docs/result/HO2026_NOTF_A0PC.md`.
+3. **Đọc lại cơ chế +3,3 pp**: `HO2026_NOTF_MECH.md` §3.1 (ĐÍNH CHÍNH: 7,4 % là mean |Δqty| trên nhóm đổi; equity
+   tại giờ vào +1,7 % ⇒ lãi kép ~1/3; bỏ "87 %"; V1 là đẳng thức kế toán) và `HO2026_NOTF_EPISODE.md`
+   (ΔROI theo tháng, độ nhạy bỏ tháng 6 / 06-02..06, bootstrap khối ngày).
