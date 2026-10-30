@@ -264,6 +264,84 @@ public final class C3MergedGuard {
     }
 
     /**
+     * [V12 R4e MINOR-1] San = 0: tim bang chung thoat c3 tren MOI lenh c3 (lenh dong c3x- + stop c3s- active/pending/MO COI);
+     * co => nap khop THAT (userTrades theo orderId) con thieu vao so (realized c3 khong bi thieu khi mat stream) va tra ly do
+     * (TRAILING_STOP neu tu stop, nguoc lai ly do dong). Khong co bang chung => null (Reconciler moi gan LOST_FOREIGN).
+     */
+    public String recoverC3Exit(LiveBookC3.ClusterView c) {
+        String sym = c.symbol;
+        long now = clock.getAsLong();
+        java.util.Map<Long, String> orders = new java.util.LinkedHashMap<>();
+        java.util.Set<String> cids = new java.util.LinkedHashSet<>();
+        if (c.stopClientAlgoId != null) cids.add(c.stopClientAlgoId);
+        if (c.pendingStopCid != null) cids.add(c.pendingStopCid);
+        cids.addAll(c.orphanStops);
+        for (String cid : cids) {
+            try {
+                Optional<OrderInfo> st = gw.queryStop(sym, cid);
+                if (!st.isPresent()) continue;
+                OrderStatus x = st.get().getStatus();
+                String ai = st.get().getActualOrderId();
+                if (!(x == OrderStatus.FINISHED || x == OrderStatus.TRIGGERED) || ai == null || ai.trim().isEmpty()) continue;
+                long id = Long.parseLong(ai.trim());
+                Optional<OrderInfo> o = gw.queryOrderById(sym, id);
+                if (o.isPresent() && o.get().getExecutedQty() != null && o.get().getExecutedQty().signum() > 0) {
+                    orders.put(id, com.binance.chuyennd.c3live.fill.FillAccounting.REASON_TRAILING);
+                }
+            } catch (RuntimeException ex) {
+                LOG.warn("[C3-LIVE-MERGED] {} doc stop {} loi {} => khong tinh bang chung", sym, cid, ex.toString());
+            }
+        }
+        if (c.closeCid != null) {
+            try {
+                Optional<OrderInfo> q = gw.queryOrder(sym, c.closeCid);
+                if (q.isPresent() && q.get().getExecutedQty() != null && q.get().getExecutedQty().signum() > 0) {
+                    orders.putIfAbsent(q.get().getOrderId(), c.closeReason != null ? c.closeReason
+                            : com.binance.chuyennd.c3live.fill.FillAccounting.REASON_BOT_CLOSE);
+                }
+            } catch (RuntimeException ex) {
+                LOG.warn("[C3-LIVE-MERGED] {} doc lenh dong {} loi {} => khong tinh bang chung", sym, c.closeCid, ex.toString());
+            }
+        }
+        if (orders.isEmpty()) return null;
+        BigDecimal q = BigDecimal.ZERO;
+        double notional = 0d;
+        boolean tradesOk = true;
+        for (Long id : orders.keySet()) {
+            try {
+                for (com.binance.chuyennd.c3live.api.TradeFill f : gw.userTrades(sym, id)) {
+                    if (f.getQty() == null || f.getPrice() == null) continue;
+                    q = q.add(f.getQty());
+                    notional += f.getQty().doubleValue() * f.getPrice().doubleValue();
+                }
+            } catch (RuntimeException ex) {
+                tradesOk = false;
+                LOG.warn("[C3-LIVE-MERGED] {} doc userTrades orderId {} loi {}", sym, id, ex.toString());
+            }
+        }
+        BigDecimal booked = c.exitQty == null ? BigDecimal.ZERO : c.exitQty;
+        BigDecimal miss = q.subtract(booked);
+        if (q.signum() > 0 && miss.compareTo(C3Scope.EPS) > 0) {
+            double vwap = notional / q.doubleValue();
+            double rp = (vwap - c.avgPrice) * miss.doubleValue();   // long: realized gop theo gia vao c3 (phi khong co trong userTrades)
+            book.addExitFill(sym, miss, vwap, now);
+            book.addFillCosts(sym, 0d, rp, now);
+            LOG.warn("[C3-LIVE-MERGED] {} khop thoat c3 KHONG qua stream: nap {} @ {} tu userTrades (orderId {}), realized +{}"
+                    + " (chua tru phi) => equity c3 khong bi thieu", sym, miss.toPlainString(), vwap, orders.keySet(), rp);
+        } else if (!tradesOk || q.signum() == 0) {
+            String m = "[C3-LIVE] " + sym + " co bang chung thoat c3 (orderId " + orders.keySet() + ") nhung KHONG doc duoc khop"
+                    + " (userTrades) => realized c3 co the THIEU, owner KIEM";
+            LOG.error("{}", m);
+            alert.accept(m);
+        }
+        String reason = orders.containsValue(com.binance.chuyennd.c3live.fill.FillAccounting.REASON_TRAILING)
+                ? com.binance.chuyennd.c3live.fill.FillAccounting.REASON_TRAILING : orders.values().iterator().next();
+        LOG.info("[C3-LIVE-MERGED] {} san=0: bang chung thoat c3 orderId {} => ly do {} (KHONG phai LOST_FOREIGN)", sym, orders.keySet(),
+                reason);
+        return reason;
+    }
+
+    /**
      * [V12 R4b §4] MERGED ma san &gt;= qty c3 (LEGACY cung long): dong DUNG qty c3 (c3x- reduceOnly) la trung tinh voi LEGACY.
      * Doc vi the THO trong lan khan cap (khong bi guard rieng chan). Doc loi => false (khong dong).
      */

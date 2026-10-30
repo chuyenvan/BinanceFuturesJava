@@ -254,8 +254,13 @@ public final class C3LiveRuntime {
                 // [V12 R4d] UNIVERSE_A1=1: R7 dung CUNG bo phan loai voi phia tin hieu + (dry) CUNG file exchangeInfo
                 checkA1SameSource(mode);
                 ucfg = ucfg.withClassifier(TradFiClassifier.universeA1());
+                // [V12 R4e MAJOR-1] R7 doc CUNG file voi bo loc tin hieu (dry VA live; khong API) + kiem tuoi serverTime
+                a1Source = com.binance.chuyennd.tradecore.selector.UniverseA1Filter.source();
+                uni = new SymbolUniverseLive(ucfg, GatewayFactory.freshFileSource(new File(a1Source), System::currentTimeMillis,
+                        A1_MAX_AGE_MS), alerts::send);
+            } else {
+                uni = new SymbolUniverseLive(ucfg, gw::exchangeInfo, alerts::send);
             }
-            uni = new SymbolUniverseLive(ucfg, gw::exchangeInfo, alerts::send);
             // [V12 R4 R1] cap tai khoan CHI DOC: hedge => tu choi; khong bao gio goi doi dualSide / multiAssets
             mg = new AccountModeGuard(gw, alerts::send).globalPolicy(false, false);
         } catch (Throwable t) {
@@ -340,6 +345,7 @@ public final class C3LiveRuntime {
                 System::currentTimeMillis);
         protector.setMergedCloseCheck(merged::exchangeCoversC3);   // [V12 R4b §4]
         reconciler.setLostForeignSink(merged::onLostForeign);       // [V12 R4c A]
+        reconciler.setExitRecovery(merged::recoverC3Exit);         // [V12 R4e MINOR-1]
         this.streamScope = new C3StreamScope(scope, book, System::currentTimeMillis);
         streamScope.setGateway(sgw);   // [V12 R4b MINOR-1] xac nhan khop stop c3 bang queryStop
         streamScope.setForeignFillSink(merged::onForeignFill);
@@ -572,6 +578,7 @@ public final class C3LiveRuntime {
     private void refreshRefData(long now) {
         try {
             if (universe != null) universe.refreshIfDue(now);
+            a1SourceTick(now);   // [V12 R4e MAJOR-1]
         } catch (Throwable e) {
             LOG.warn("[C3-LIVE] refresh universe loi: {}", e.toString());
         }
@@ -676,6 +683,34 @@ public final class C3LiveRuntime {
                     + " — phai CUNG 1 file (" + GatewayFactory.KEY_EXCHANGEINFO_FILE + " = " + com.binance.chuyennd.tradecore.selector.UniverseA1Filter.K_FILE + ")");
         }
         LOG.warn("[C3-LIVE] UNIVERSE_A1=1: R7 + bo loc tin hieu cung exchangeInfo {}", ca);
+    }
+
+    /** [V12 R4e MAJOR-1] tuoi toi da cua exchangeInfo (cron 242 lam moi moi <= 23'; chiu 1 lan loi). */
+    public static final long A1_MAX_AGE_MS = 45L * 60_000L;
+    private volatile String a1Source;
+    private volatile long a1SeenMtime = Long.MIN_VALUE;
+    private volatile long a1LastStaleAlertMs = Long.MIN_VALUE / 2;
+
+    /**
+     * [V12 R4e MAJOR-1] UNIVERSE_A1: file exchangeInfo doi (cron lam moi tren 242) => R7 nap lai NGAY (cung nhip voi bo loc tin
+     * hieu reload theo mtime, khong cho 15'); file cu &gt; 45' => KHAN (thua 30').
+     */
+    void a1SourceTick(long now) {
+        String src = a1Source;
+        if (src == null) return;
+        File f = new File(src);
+        long m = f.lastModified();
+        if (m != a1SeenMtime) {
+            a1SeenMtime = m;
+            if (universe != null) universe.refresh(now);
+        }
+        if (m > 0L && now - m > A1_MAX_AGE_MS && now - a1LastStaleAlertMs >= 1_800_000L) {
+            a1LastStaleAlertMs = now;
+            String msg = "[C3-LIVE] KHAN: exchangeInfo " + src + " cu " + (now - m) / 60_000L + "' (> " + A1_MAX_AGE_MS / 60_000L
+                    + "') — cron lam moi tren 242 hong? R7 se STALE (khong mua); listing moi bi loai ca 2 phia";
+            LOG.error("{}", msg);
+            alerts.send(msg);
+        }
     }
 
     /** Thanh vien chi so thi truong (da loai TradFi) — null neu chua co snapshot. */

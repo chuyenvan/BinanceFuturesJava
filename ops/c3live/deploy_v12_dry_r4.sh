@@ -3,6 +3,8 @@
 # deploy_v12_dry_r4.sh — [V12 R4d] DRY-RUN 11-18 c3_live tren TAI KHOAN CHINH (jar R4d, LIVE_ADAPTER=dry, KHONG lenh that)
 # [R4d] UNIVERSE_A1=1: phia tin hieu (S1/ung vien, breadth, ALT_EW, gate, funding/OI) loai TradFi + INDEX nhu backtest A1;
 #   nguon = CUNG file raw exchangeInfo R7 (run/c3live_exchangeInfo.json, curl TREN 242 o buoc chuan bi; Oracle KHONG goi Binance).
+# [R4e] file do duoc CRON tren 242 lam moi (exinfo_refresh_242.sh, marker C3LIVE_EXINFO_REFRESH; rollback go); khoa job nguyen tu
+#   (mkdir); ssh/scp thu lai 3 lan; dry: "[C3-LIVE-SCOPE] TU CHOI" = FAIL.
 # OWNER chay 1 LENH tren ORACLE (go YES 1 lan):
 #     bash ~/claude_master/v12/c3live/ops/c3live/deploy_v12_dry_r4.sh
 # Chay thu (chi doc, khong doi gi):   DRY=1 bash .../deploy_v12_dry_r4.sh
@@ -24,16 +26,21 @@ SCP_242=${SCP_242:-"scp -P 2222 -o BatchMode=yes -i /home/ubuntu/.ssh/id_rsa_chu
 RHOST=${RHOST-"root@103.157.218.242:"}
 A=${APP_DIR:-/home/chuyennd/java/v_t_m}
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}
-NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4d}
-NJ_MD5=${NJ_MD5:-48260625c1f96627922d89aff3b9ef58}   # [V12 R4d] jar R4d (docs/c3live/ROUND4D.md)
+NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4e}
+NJ_MD5=${NJ_MD5:-2f69f693da550b233f979bf707659194}   # [V12 R4e] jar R4e (docs/c3live/ROUND4E.md)
 # jar v_t_m dang chay (shadow v1.1 dcae2e2b): deploy_v12_dry.sh / rollback_v12.sh / fix_featdump_242 10-27 ("OK jar_dcae2e2b").
 # Kiem lai tren 242 o buoc 2 — khac => TU CHOI.
 OLD_MD5=${OLD_MD5:-dcae2e2bbb1a357bc15703b416d4dccb}
 KILLSW_SH=${KILLSW_SH:-/home/ubuntu/claude_master/v12/c3live/ops/killsw_reset.sh}
 KILLSW_MD5=${KILLSW_MD5:-6f8d83481904f91b3f92601b31720ace}
 RB_SH=${RB_SH:-$(cd "$(dirname "$0")" && pwd)/rollback_v12.sh}
-RB_MD5=${RB_MD5:-ae7a5a5f3704688677d5c0d28a358b80}   # [R4c D2] md5 rollback_v12.sh (kiem truoc khi dung, ca trong autorb)
+RB_MD5=${RB_MD5:-57ee2baf384a22dfeb2f293c12108577}   # [R4c D2] md5 rollback_v12.sh (kiem truoc khi dung, ca trong autorb)
 DEPLOY_TG_ENV=${DEPLOY_TG_ENV:-/home/ubuntu/.config/health242/tg.env}
+EXR_SH=${EXR_SH:-$(cd "$(dirname "$0")" && pwd)/exinfo_refresh_242.sh}
+EXR_MD5=${EXR_MD5:-db6aa6512797fddf4efe305112988d80}   # [R4e MAJOR-1] md5 exinfo_refresh_242.sh (cron lam moi exchangeInfo tren 242)
+CRONTAB_CMD=${CRONTAB_CMD:-crontab}
+CRON_MIN=${CRON_MIN:-3,18,41,48}   # moi ~15', ngoai cua so burst [27,40]
+SSH_RETRY_S=${SSH_RETRY_S:-10}
 R4_JOB=${R4_JOB:-0}   # 1 = job nen (CHI foreground khoi dong, kem R4_YES_FILE)
 SELF=$(cd "$(dirname "$0")" && pwd)/$(basename "$0")
 LATCH_WAIT_S=${LATCH_WAIT_S:-120}
@@ -74,16 +81,54 @@ tg() {
   if [ "$code" = 200 ]; then say "Telegram: da gui (HTTP 200)"; return 0; fi
   say "!! Telegram KHONG gui duoc (HTTP ${code:-loi})"; return 1
 }
-die()  { say "DUNG: $*"; say "Log: $LOG"; [ "$R4_JOB" = 1 ] && tg "[deploy dry R4d] DUNG TS=$TS: $* | log $LOG"; exit 1; }
+die()  { say "DUNG: $*"; say "Log: $LOG"; [ "$R4_JOB" = 1 ] && tg "[deploy dry R4e] DUNG TS=$TS: $* | log $LOG"; exit 1; }
 ok()   { say "OK: $*"; }
-# [R4c] khoa 1 job: file PID (KHONG dung flock: fd khoa se bi process con song lau ke thua)
-LOCKF=$LOGDIR/.deploy_v12dry_r4.pid
-lock_busy() {
-  local p; p=$(cat "$LOCKF" 2>/dev/null)
-  [ -n "$p" ] && [ "$p" != "$$" ] && kill -0 "$p" 2>/dev/null && tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null | grep -q deploy_v12_dry_r4
+# [R4e MINOR-2] khoa 1 job NGUYEN TU: mkdir $LOCKD (foreground lay TRUOC khi hoi YES, giao cho job: job ghi pid cua no).
+LOCKD=$LOGDIR/.deploy_v12dry_r4.lock.d
+lock_take() {
+  if mkdir "$LOCKD" 2>/dev/null; then echo $$ > "$LOCKD/pid"; return 0; fi
+  local p q; p=$(cat "$LOCKD/pid" 2>/dev/null)
+  if [ -n "$p" ] && kill -0 "$p" 2>/dev/null && tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null | grep -q deploy_v12_dry_r4; then return 1; fi
+  # khoa mo coi (process da chet): chuyen di NGUYEN TU, chi xoa neu dung khoa da thay (pid khop), roi lay lai bang mkdir
+  mv "$LOCKD" "$LOCKD.orphan.$$" 2>/dev/null || return 1
+  q=$(cat "$LOCKD.orphan.$$/pid" 2>/dev/null)
+  if [ "$q" != "$p" ]; then mv "$LOCKD.orphan.$$" "$LOCKD" 2>/dev/null; return 1; fi
+  rm -rf "$LOCKD.orphan.$$"
+  say "khoa mo coi (pid ${p:-?} da chet) => lay lai"
+  mkdir "$LOCKD" 2>/dev/null || return 1
+  echo $$ > "$LOCKD/pid"
+}
+# [R4e MINOR-4] ssh/scp toi 242: thu lai 3 lan cach SSH_RETRY_S (10 s) KHI loi ket noi (rc 255); lenh tu xa da chay xong
+# (rc khac 255) KHONG chay lai. s242in: noi dung stdin (heredoc) duoc giu lai cho moi lan thu.
+s242() {
+  local i rc=255
+  for i in 1 2 3; do
+    $SSH_242 "$@" < /dev/null; rc=$?
+    [ "$rc" != 255 ] && return "$rc"
+    [ "$i" -lt 3 ] && { echo "[ssh 242 loi ket noi (rc 255) — thu lai $i/2 sau ${SSH_RETRY_S}s]" >&2; sleep "$SSH_RETRY_S"; }
+  done
+  return "$rc"
+}
+s242in() {
+  local in i rc=255
+  in=$(cat)
+  for i in 1 2 3; do
+    printf '%s\n' "$in" | $SSH_242 "$@"; rc=$?
+    [ "$rc" != 255 ] && return "$rc"
+    [ "$i" -lt 3 ] && { echo "[ssh 242 loi ket noi (rc 255) — thu lai $i/2 sau ${SSH_RETRY_S}s]" >&2; sleep "$SSH_RETRY_S"; }
+  done
+  return "$rc"
+}
+c242() {
+  local i
+  for i in 1 2 3; do
+    $SCP_242 "$@" && return 0
+    [ "$i" -lt 3 ] && { echo "[scp 242 loi — thu lai $i/2 sau ${SSH_RETRY_S}s]" >&2; sleep "$SSH_RETRY_S"; }
+  done
+  return 1
 }
 
-say "=== deploy v1.2 R4d c3_live DRY (tai khoan chinh)  TS=$TS  DRY=$DRY  $([ "$R4_JOB" = 1 ] && echo "JOB_NEN pid=$$" || echo foreground) ==="
+say "=== deploy v1.2 R4e c3_live DRY (tai khoan chinh)  TS=$TS  DRY=$DRY  $([ "$R4_JOB" = 1 ] && echo "JOB_NEN pid=$$" || echo foreground) ==="
 
 # ---------------------------------------------------------------- 0. chot ngay
 NOT_BEFORE=$(date -d '2026-11-18 07:54 +07' +%s)
@@ -111,11 +156,13 @@ bash -n "$KILLSW_SH" || die "cu phap killsw_reset.sh loi"
 [ -f "$RB_SH" ] && bash -n "$RB_SH" || die "khong thay/cu phap loi rollback $RB_SH (can cho rollback tu dong)"
 [[ "$RB_MD5" =~ ^[0-9a-f]{32}$ ]] || die "RB_MD5 chua pin"
 [ "$(md5sum < "$RB_SH" | cut -c1-32)" = "$RB_MD5" ] || die "md5 rollback_v12.sh sai (mong $RB_MD5) — KHONG deploy khi khong chac rollback dung ban"
+[ -f "$EXR_SH" ] && bash -n "$EXR_SH" || die "khong thay/cu phap loi $EXR_SH (cron lam moi exchangeInfo)"
+[ "$(md5sum < "$EXR_SH" | cut -c1-32)" = "$EXR_MD5" ] || die "md5 exinfo_refresh_242.sh sai (mong $EXR_MD5)"
 ok "killsw_reset.sh + rollback san sang"
 
 # ---------------------------------------------------------------- 2. kiem 242 (chi doc)
 pre242() {
-$SSH_242 "PP='$PROC_PAT' EXC='$EXINFO_CMD' bash -s -- $A $OLD_MD5 $MIN_TRADFI" <<'EOF'
+s242in "PP='$PROC_PAT' EXC='$EXINFO_CMD' CT='$CRONTAB_CMD' bash -s -- $A $OLD_MD5 $MIN_TRADFI" <<'EOF'
 A=$1; OLD=$2; MINTF=$3; cd "$A" || { echo "FAIL cd"; exit 0; }
 J=$(md5sum < target/binance-java-sdk-1.2.4.jar | cut -c1-32)
 [ "$J" = "$OLD" ] && echo "OK jar_dang_chay=$J" || echo "FAIL jar_dang_chay=$J (mong doi $OLD) — khong xac dinh duoc ban dang chay => TU CHOI"
@@ -137,6 +184,11 @@ for f in run/c3live_book.json run/c3live_merged.txt run/c3live_equity_c3.json ru
   [ -e "$f" ] && echo "FAIL da_co_$f (trang thai cu — MASTER xem; rollback_v12.sh doi ten .rb_TS)" || echo "OK chua_co_$f"
 done
 command -v curl >/dev/null && echo "OK curl" || echo "FAIL thieu_curl"
+# [R4e MAJOR-1] cron lam moi exchangeInfo: can python3 + crontab; CHUA duoc cai (marker)
+command -v python3 >/dev/null && echo "OK python3" || echo "FAIL thieu_python3 (cron lam moi exchangeInfo)"
+command -v ${CT%% *} >/dev/null && echo "OK crontab" || echo "FAIL thieu_crontab"
+NCR=$($CT -l 2>/dev/null | grep -cF '# C3LIVE_EXINFO_REFRESH')
+[ "${NCR:-0}" = 0 ] && echo "OK cron_lam_moi_chua_cai" || echo "FAIL cron_lam_moi_DA_CO ($NCR dong marker C3LIVE_EXINFO_REFRESH — deploy truoc chua go?)"
 # [R4d] nguon raw exchangeInfo (UNIVERSE_A1 + R7): doc thu ra stdout TREN 242 (khong ghi file) — du truong + serverTime + onboardDate
 XS=$(eval "$EXC" 2>/dev/null)
 XN=$(printf '%s' "$XS" | grep -o '"symbol":"' | wc -l)
@@ -163,7 +215,7 @@ run_pre() {   # [R4c D1] goi o foreground VA lai trong job ngay truoc khi doi gi
 }
 
 ENV_ADD=$(cat <<EOV
-# [v1.2 R4d c3_live DRY $TS] (deploy_v12_dry_r4.sh) — tai khoan chinh, KHONG lenh that: adapter dry, push tat (SHADOW_NO_PUSH=true giu nguyen)
+# [v1.2 R4e c3_live DRY $TS] (deploy_v12_dry_r4.sh) — tai khoan chinh, KHONG lenh that: adapter dry, push tat (SHADOW_NO_PUSH=true giu nguyen)
 export LIVE_PROFILE=c3_live
 export LIVE_ADAPTER=dry
 export LIVE_KILLSW_MODE=act
@@ -187,35 +239,38 @@ if [ "$R4_JOB" != 1 ]; then
   if [ "$DRY" = 1 ]; then say "DRY=1: dung o day, khong doi gi. (DRY PASS)"; exit 0; fi
 
   # -------------------------------------------------------------- 3. YES 1 lan -> JOB NEN (setsid nohup) + tail log
-  lock_busy && die "dang co 1 job deploy_v12_dry_r4 khac chay (pid $(cat "$LOCKF"), $LOCKF). Khong doi gi."
+  lock_take || die "dang co 1 job deploy_v12_dry_r4 khac chay (pid $(cat "$LOCKD/pid" 2>/dev/null), $LOCKD). Khong doi gi."
+  trap 'rm -rf "$LOCKD"' EXIT
   echo
-  say ">>> Se deploy jar R4d (c3_live DRY tai khoan chinh) len 242 trong khung gio hop le ke tiep (JOB NEN: dong terminal khong sao). Go YES (in hoa) de tiep tuc:"
+  say ">>> Se deploy jar R4e (c3_live DRY tai khoan chinh) len 242 trong khung gio hop le ke tiep (JOB NEN: dong terminal khong sao). Go YES (in hoa) de tiep tuc:"
   read -r ANS
   [ "$ANS" = "YES" ] || { say "Huy. Khong doi gi."; exit 0; }
   JOBLOG=$LOGDIR/deploy_v12dry_r4_${TS}_job_$$.log
-  YESF=$LOGDIR/.deploy_v12dry_r4_${TS}_$$.yes
+  YESF=$LOCKD/yes   # [R4e MINOR-2] xac nhan YES nam TRONG khoa
   ( umask 077; echo "$TS" > "$YESF" ) || die "khong ghi duoc $YESF"
   : > "$JOBLOG"
   R4_JOB=1 R4_TS=$TS R4_JOBLOG=$JOBLOG R4_YES_FILE=$YESF setsid nohup bash "$SELF" >> "$JOBLOG" 2>&1 < /dev/null &
   BG=$!
+  trap - EXIT   # [R4e MINOR-2] khoa giao cho job (job ghi pid cua no + tu xoa khi thoat)
   say "job NEN pid=$BG job_log=$JOBLOG"
   say "Dong terminal / mat ket noi KHONG dung job. Xem lai: tail -f $JOBLOG   (ket qua gui Telegram)"
   tail --pid="$BG" -n +1 -f "$JOBLOG" &
   TP=$!
   wait "$BG"; RC=$?
   wait "$TP" 2>/dev/null
+  [ "$(cat "$LOCKD/pid" 2>/dev/null)" = "$$" ] && rm -rf "$LOCKD"   # job chet truoc khi nhan khoa
   say "job ket thuc rc=$RC (0 XONG | 1 DUNG/da rollback | 2 ROLLBACK LOI: PAUSE con | 3 XONG nhung PAUSE con). Log job: $JOBLOG"
   exit "$RC"
 fi
 
 # ================================================================ JOB NEN (R4_JOB=1)
-[ -n "${R4_YES_FILE:-}" ] && [ -f "$R4_YES_FILE" ] && [ "$(cat "$R4_YES_FILE" 2>/dev/null)" = "$TS" ] \
+[ "${R4_YES_FILE:-}" = "$LOCKD/yes" ] && [ -f "$R4_YES_FILE" ] && [ "$(cat "$R4_YES_FILE" 2>/dev/null)" = "$TS" ] \
   || die "job nen KHONG co xac nhan YES tu foreground (R4_YES_FILE) => TU CHOI, khong doi gi"
+echo $$ > "$LOCKD/pid"   # [R4e MINOR-2] nhan khoa tu foreground
 rm -f "$R4_YES_FILE"
-lock_busy && die "dang co job deploy_v12_dry_r4 khac chay (pid $(cat "$LOCKF")). Khong doi gi."
-echo $$ > "$LOCKF"
-trap 'rm -f "$LOCKF"' EXIT
-tg "[deploy dry R4d] job NEN bat dau TS=$TS: cho khung gio -> kiem 242 lai -> deploy. Log: $LOG"
+trap 'rm -rf "$LOCKD"' EXIT
+trap 'exit 130' INT TERM HUP
+tg "[deploy dry R4e] job NEN bat dau TS=$TS: cho khung gio -> kiem 242 lai -> deploy. Log: $LOG"
 if [ "$FORCE_TIME" != 1 ]; then
   W=0
   until time_ok; do
@@ -229,9 +284,9 @@ run_pre " (lan 2: ngay truoc khi doi gi)"
 
 # ---------------------------------------------------------------- 4. chep jar + backup + exchangeInfo (kiem truong) + env
 say "--- chep jar + killsw_reset.sh sang 242 (canh jar cu, chua ghi de)"
-$SCP_242 "$NJ" "${RHOST}$A/target/binance-java-sdk-1.2.4.jar.v12dry" || die "scp jar loi"
-$SSH_242 "mkdir -p $A/ops" || die "mkdir ops loi"
-$SCP_242 "$KILLSW_SH" "${RHOST}$A/ops/killsw_reset.sh" || die "scp killsw_reset.sh loi"
+c242 "$NJ" "${RHOST}$A/target/binance-java-sdk-1.2.4.jar.v12dry" || die "scp jar loi"
+s242 "mkdir -p $A/ops" || die "mkdir ops loi"
+c242 "$KILLSW_SH" "${RHOST}$A/ops/killsw_reset.sh" || die "scp killsw_reset.sh loi"
 say "--- backup + exchangeInfo + sua env.sh"
 ENV_B64=$(echo "$ENV_ADD" | base64 -w0)
 PREP=$($SSH_242 "PP='$PROC_PAT' bash -s -- $A $TS $NJ_MD5 $ENV_B64 $NADD $MIN_TRADFI" <<EOF
@@ -267,17 +322,17 @@ EOF
 FAIL ssh_buoc_chuan_bi_loi"
 echo "$PREP"
 if echo "$PREP" | grep -q '^FAIL' || ! echo "$PREP" | grep -q '^OK start.sh_khong_doi'; then
-  if $SSH_242 "cd $A && { [ ! -f conf/env.sh.bak_v12pre_$TS ] || \cp -f conf/env.sh.bak_v12pre_$TS conf/env.sh; } && ! grep -q '^export LIVE_ADAPTER' conf/env.sh && echo env_sach"; then
+  if s242 "cd $A && { [ ! -f conf/env.sh.bak_v12pre_$TS ] || \cp -f conf/env.sh.bak_v12pre_$TS conf/env.sh; } && ! grep -q '^export LIVE_ADAPTER' conf/env.sh && echo env_sach"; then
     die "buoc chuan bi co FAIL / khong tron ven (env.sh sach). Jar cu van chay, khong co gi bi doi."
   fi
   die "buoc chuan bi FAIL VA khong xac nhan duoc env.sh (ssh?). KIEM TAY tren 242: cd $A && grep -n LIVE_ADAPTER conf/env.sh ; neu co: cp -f conf/env.sh.bak_v12pre_$TS conf/env.sh"
 fi
 ok "chuan bi xong (jar cu van dang chay)"
-time_ok || [ "$FORCE_TIME" = 1 ] || { $SSH_242 "cd $A && \cp -f conf/env.sh.bak_v12pre_$TS conf/env.sh"; die "het khung gio trong luc chuan bi (env da khoi phuc). Chay lai."; }
+time_ok || [ "$FORCE_TIME" = 1 ] || { s242 "cd $A && \cp -f conf/env.sh.bak_v12pre_$TS conf/env.sh"; die "het khung gio trong luc chuan bi (env da khoi phuc). Chay lai."; }
 
 # ---------------------------------------------------------------- 4b. [R4d] kiem file exchangeInfo A1 NGAY truoc restart (bot cu van chay)
 say "--- [R4d] kiem file exchangeInfo (UNIVERSE_A1 + R7 cung file) ngay truoc restart"
-A1C=$($SSH_242 "bash -s -- $A $MIN_TRADFI PRE_RESTART_A1" <<'EOF'
+A1C=$(s242in "bash -s -- $A $MIN_TRADFI PRE_RESTART_A1" <<'EOF'
 A=$1; MINTF=$2; cd "$A" || { echo "FAIL cd"; exit 0; }
 X=run/c3live_exchangeInfo.json
 [ -s "$X" ] || { echo "FAIL a1_file_thieu $X"; echo "END_A1"; exit 0; }
@@ -298,12 +353,48 @@ EOF
 FAIL ssh_kiem_a1_loi"
 echo "$A1C"
 if echo "$A1C" | grep -q '^FAIL' || ! echo "$A1C" | grep -qx 'END_A1'; then
-  if $SSH_242 "cd $A && \cp -f conf/env.sh.bak_v12pre_$TS conf/env.sh && ! grep -q '^export LIVE_ADAPTER' conf/env.sh && echo env_sach"; then
+  if s242 "cd $A && \cp -f conf/env.sh.bak_v12pre_$TS conf/env.sh && ! grep -q '^export LIVE_ADAPTER' conf/env.sh && echo env_sach"; then
     die "kiem file A1 truoc restart FAIL (env.sh da khoi phuc). Jar cu van chay, khong co gi bi doi."
   fi
   die "kiem file A1 truoc restart FAIL VA khong xac nhan duoc env.sh. KIEM TAY tren 242: cd $A && cp -f conf/env.sh.bak_v12pre_$TS conf/env.sh"
 fi
 ok "file exchangeInfo A1 hop le (cung file R7)"
+
+# ---------------------------------------------------------------- 4c. [R4e MAJOR-1] cron lam moi exchangeInfo tren 242 (bot cu van chay)
+say "--- [R4e] cai cron lam moi exchangeInfo tren 242 (phut $CRON_MIN, marker C3LIVE_EXINFO_REFRESH)"
+crfail() {
+  s242 "cd $A && \cp -f conf/env.sh.bak_v12pre_$TS conf/env.sh" || true
+  s242in "CT='$CRONTAB_CMD' bash -s" <<'EOF' || true
+C=$($CT -l 2>/dev/null) && echo "$C" | grep -qF '# C3LIVE_EXINFO_REFRESH' && echo "$C" | grep -vF '# C3LIVE_EXINFO_REFRESH' | $CT -
+EOF
+  die "cai cron lam moi exchangeInfo FAIL ($1) — env.sh khoi phuc, cron go theo marker. Jar cu van chay, bot cu khong bi dung."
+}
+c242 "$EXR_SH" "${RHOST}$A/ops/exinfo_refresh_242.sh" || crfail "scp exinfo_refresh_242.sh"
+CRI=$(s242in "CT='$CRONTAB_CMD' bash -s -- $A $EXR_MD5 $CRON_MIN $TS" <<'EOF'
+A=$1; M=$2; MIN=$3; TS=$4; cd "$A" || { echo "FAIL cd"; echo END_CRON; exit 0; }
+MK='# C3LIVE_EXINFO_REFRESH'
+[ "$(md5sum < ops/exinfo_refresh_242.sh | cut -c1-32)" = "$M" ] || { echo "FAIL md5_exinfo_refresh_242"; echo END_CRON; exit 0; }
+bash -n ops/exinfo_refresh_242.sh || { echo "FAIL cu_phap_exinfo_refresh_242"; echo END_CRON; exit 0; }
+if CUR=$($CT -l 2>/dev/null); then :; else
+  E=$($CT -l 2>&1 >/dev/null)
+  echo "$E" | grep -qi 'no crontab' || { echo "FAIL crontab_-l_loi: $E"; echo END_CRON; exit 0; }
+  CUR=""
+fi
+printf '%s\n' "$CUR" > conf/crontab.bak_v12pre_$TS
+if echo "$CUR" | grep -qF "$MK"; then echo "FAIL cron_da_co"; echo END_CRON; exit 0; fi
+LINE="$MIN * * * * cd $A && /bin/bash $A/ops/exinfo_refresh_242.sh >> $A/logs/exinfo_refresh.log 2>&1 $MK"
+{ if [ -n "$CUR" ]; then printf '%s\n' "$CUR"; fi; printf '%s\n' "$LINE"; } | $CT -
+N=$($CT -l 2>/dev/null | grep -cF "$MK")
+O=$($CT -l 2>/dev/null | grep -vF "$MK" | grep -c .)
+B=$(grep -c . conf/crontab.bak_v12pre_$TS)
+[ "$N" = 1 ] && [ "$O" = "$B" ] && echo "OK cron_cai phut=$MIN (giu $O dong cron cu)" || echo "FAIL cron_sau_cai marker=$N cu=$O/$B"
+echo END_CRON
+EOF
+) || CRI="$CRI
+FAIL ssh_cai_cron"
+echo "$CRI"
+if echo "$CRI" | grep -q '^FAIL' || ! echo "$CRI" | grep -qx 'END_CRON'; then crfail "$(echo "$CRI" | grep '^FAIL' | head -1)"; fi
+ok "cron lam moi exchangeInfo da cai"
 
 # ---------------------------------------------------------------- 5. restart (watchdog PAUSE)
 say "--- restart (PAUSE watchdog truoc, xoa sau kiem)"
@@ -335,15 +426,15 @@ autorb() {
     YES_AUTO=1 FORCE_TIME=1 bash "$RB_SH" "$TS"; RRC=$?
   fi
   if [ "$RRC" = 0 ]; then
-    $SSH_242 "rm -f $WD_PAUSE" || say "CANH BAO: khong xoa duoc PAUSE lan nua (rollback da tu xoa khi xong)"
+    s242 "rm -f $WD_PAUSE" || say "CANH BAO: khong xoa duoc PAUSE lan nua (rollback da tu xoa khi xong)"
     say "DEPLOY FAIL ($1). Da ROLLBACK xong (242 ve c3_shadow). Gui log cho MASTER: $LOG"
-    tg "[deploy dry R4d] FAIL TS=$TS: $1 => ROLLBACK TU DONG XONG (242 ve c3_shadow). Log: $LOG"
+    tg "[deploy dry R4e] FAIL TS=$TS: $1 => ROLLBACK TU DONG XONG (242 ve c3_shadow). Log: $LOG"
     exit 1
   fi
   M="PAUSE còn — chạy rollback tay: $RBCMD"
   say "DEPLOY FAIL ($1). ROLLBACK TU DONG LOI (rc=$RRC)."
   say "$M"
-  tg "[deploy dry R4d] KHAN TS=$TS: deploy FAIL ($1) VA ROLLBACK TU DONG LOI (rc=$RRC). $M | log $LOG"
+  tg "[deploy dry R4e] KHAN TS=$TS: deploy FAIL ($1) VA ROLLBACK TU DONG LOI (rc=$RRC). $M | log $LOG"
   exit 2
 }
 echo "$RS" | grep -q '^FAIL' && autorb "restart co FAIL"
@@ -353,7 +444,7 @@ ok "$START_LINE"
 # ---------------------------------------------------------------- 6. 0 dong [KILLSW] LATCH trong LATCH_WAIT_S dau
 say "--- cho ${LATCH_WAIT_S}s roi kiem 0 dong '[KILLSW] LATCH' ke tu start"
 sleep "$LATCH_WAIT_S"
-LT=$($SSH_242 "bash -s -- $A" <<'EOF'
+LT=$(s242in "bash -s -- $A" <<'EOF'
 A=$1; cd "$A" || { echo "LATCH_COUNT=no_cd"; exit 0; }
 ST=$(cat run/.v12_start_epoch 2>/dev/null)
 case "$ST" in ''|*[!0-9]*) echo "LATCH_COUNT=no_start_mark"; exit 0;; esac
@@ -383,7 +474,7 @@ LC=$(echo "$LT" | grep -o 'LATCH_COUNT=[0-9a-z_]*' | cut -d= -f2)
 ok "0 dong [KILLSW] LATCH trong ${LATCH_WAIT_S}s dau"
 
 # ---------------------------------------------------------------- 7. kiem sau start (toi da POST_ROUNDS x POST_WAIT_S)
-CHK() { $SSH_242 "PP='$PROC_PAT' bash -s -- $A $NJ_MD5 $MIN_TRADFI" <<'EOF'
+CHK() { s242in "PP='$PROC_PAT' CT='$CRONTAB_CMD' bash -s -- $A $NJ_MD5 $MIN_TRADFI" <<'EOF'
 A=$1; NJM=$2; MINTF=$3; cd "$A"
 L=logs/full.log
 N=$(grep -a -n 'MainClass: com.binance.chuyennd.trading.BinanceOrderTradingManager' $L | tail -1 | cut -d: -f1)
@@ -410,6 +501,13 @@ if [ -z "$A1L" ]; then echo "WAIT UNIVERSE_A1_chua_co_dong_init"
 elif [ "${A1TF:-0}" -ge "$MINTF" ]; then echo "OK UNIVERSE_A1 TradFi=$A1TF $(echo "$A1L" | grep -o 'INDEX=[0-9]*' | head -1)"
 else echo "FAIL UNIVERSE_A1 TradFi=${A1TF:-?} < $MINTF"; fi
 [ "$(T '\[UNIVERSE-A1\] reload')" = 0 ]                 && echo "OK UNIVERSE_A1_khong_reload_loi" || echo "FAIL UNIVERSE_A1_reload_loi"
+# [R4e MINOR-3] dry: DryGateway KHONG co LEGACY => moi "[C3-LIVE-SCOPE] TU CHOI" la loi c3
+[ "$(T '\[C3-LIVE-SCOPE\] TU CHOI')" = 0 ]               && echo "OK khong_SCOPE_TU_CHOI_dry" || echo "FAIL SCOPE_TU_CHOI_trong_dry=$(T '\[C3-LIVE-SCOPE\] TU CHOI') (DryGateway khong co LEGACY => loi c3)"
+# [R4e MAJOR-1] file exchangeInfo (A1 + R7) phai moi < 30' + cron lam moi dang cai
+XA=$(( $(date +%s) - $(stat -c %Y run/c3live_exchangeInfo.json 2>/dev/null || echo 0) ))
+[ "$XA" -le 1800 ] && echo "OK exchangeInfo_tuoi=${XA}s" || echo "FAIL exchangeInfo_cu=${XA}s (> 30', cron lam moi?)"
+NCR=$($CT -l 2>/dev/null | grep -cF '# C3LIVE_EXINFO_REFRESH')
+[ "${NCR:-0}" = 1 ] && echo "OK cron_lam_moi" || echo "FAIL cron_lam_moi_so_dong=${NCR:-0}"
 [ "$(T 'STALE snapshot=')" = 0 ]                        && echo "OK khong_universe_STALE" || echo "FAIL universe_STALE=$(T 'STALE snapshot=')"
 U=$(tail -n +$N $L | grep -a -o '\[UNIVERSE\] listed=[0-9]* alive=[0-9]* tradable=[0-9]*' | tail -1)
 UT=$(echo "$U" | grep -o 'tradable=[0-9]*' | cut -d= -f2)
@@ -446,14 +544,14 @@ if echo "$RESULT" | grep -q '^FAIL\|^WAIT'; then
   autorb "kiem sau start KHONG DAT ($(echo "$RESULT" | grep '^FAIL\|^WAIT' | tr '\n' ' ' | cut -c1-200))"
 fi
 ok "kiem sau start DAT"
-if ! $SSH_242 "rm -f $WD_PAUSE"; then
+if ! s242 "rm -f $WD_PAUSE"; then
   M="PAUSE còn — xoa tay: $SSH_242 \"rm -f $WD_PAUSE\""
   say "deploy DAT nhung KHONG xoa duoc watchdog PAUSE (ssh?). $M"
-  tg "[deploy dry R4d] TS=$TS deploy DAT nhung $M (watchdog dang tam dung). Log: $LOG"
+  tg "[deploy dry R4e] TS=$TS deploy DAT nhung $M (watchdog dang tam dung). Log: $LOG"
   exit 3
 fi
 say "xoa watchdog PAUSE"
 say "=== XONG. $START_LINE"
 say "Theo doi: bash $(cd "$(dirname "$0")" && pwd)/c3live_status.sh   |   Rollback: FORCE_TIME=1 bash $RB_SH $TS"
 say "Gui cho MASTER dong tren + file log: $LOG"
-tg "[deploy dry R4d] XONG TS=$TS: c3_live DRY tai khoan chinh chay, kiem sau start DAT. $START_LINE | Rollback: FORCE_TIME=1 bash $RB_SH $TS"
+tg "[deploy dry R4e] XONG TS=$TS: c3_live DRY tai khoan chinh chay, kiem sau start DAT. $START_LINE | Rollback: FORCE_TIME=1 bash $RB_SH $TS"

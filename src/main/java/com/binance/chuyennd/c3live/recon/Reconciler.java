@@ -175,6 +175,13 @@ public final class Reconciler {
         this.qtyReconcile = on;
     }
 
+    /** [V12 R4e MINOR-1] bang chung thoat c3 tren MOI c3s-/c3x- + nap khop that; null = khong co bang chung. */
+    private volatile java.util.function.Function<LiveBookC3.ClusterView, String> exitRecovery;
+
+    public void setExitRecovery(java.util.function.Function<LiveBookC3.ClusterView, String> f) {
+        this.exitRecovery = f;
+    }
+
     /** [V12 R4c A] noi xu ly "san = 0 khong bang chung c3" (journal + Telegram KHAN + chan symbol 24 h). */
     public void setLostForeignSink(java.util.function.BiConsumer<String, LiveBookC3.ClusterView> s) {
         this.lostForeign = s;
@@ -418,8 +425,19 @@ public final class Reconciler {
                     flat.clear(sym);
                     String reason = stopFired ? FillAccounting.REASON_TRAILING
                             : (c.closeReason != null ? c.closeReason : FillAccounting.REASON_EXTERNAL);
+                    // [V12 R4e MINOR-1] bang chung tren MOI lenh c3 (ke ca stop pending/mo coi da kich) + nap khop that (mat stream)
+                    String recovered = null;
+                    java.util.function.Function<LiveBookC3.ClusterView, String> xr = exitRecovery;
+                    if (xr != null) {
+                        try {
+                            recovered = xr.apply(c);
+                        } catch (RuntimeException e) {
+                            LOG.error("[C3-LIVE-RECON] {} tim bang chung thoat c3 loi {}", sym, e.toString());
+                        }
+                    }
+                    if (recovered != null && !stopFired && !positive && c.closeReason == null) reason = recovered;
                     java.util.function.BiConsumer<String, LiveBookC3.ClusterView> lf = lostForeign;
-                    if (lf != null && !stopFired && !positive && c.closeReason == null) {
+                    if (lf != null && recovered == null && !stopFired && !positive && c.closeReason == null) {
                         // [V12 R4c A] khong bang chung c3 (tai khoan chinh: LEGACY ban dung qty c3 / tay / thanh ly mat stream)
                         // => KHONG ghi nhu c3 tu dong; realized c3 chi tu khop c3 (khong PnL ao); chan symbol + KHAN
                         reason = REASON_LOST_FOREIGN;

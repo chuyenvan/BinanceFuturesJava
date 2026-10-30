@@ -22,6 +22,37 @@ mkdir -p "$LOGDIR"
 LOG=$LOGDIR/rollback_v12_$(TZ=Asia/Ho_Chi_Minh date +%Y%m%d_%H%M).log
 exec > >(tee -a "$LOG") 2>&1
 say() { echo "[$(TZ=Asia/Ho_Chi_Minh date '+%F %T')] $*"; }
+CRONTAB_CMD=${CRONTAB_CMD:-crontab}
+SSH_RETRY_S=${SSH_RETRY_S:-10}
+# [R4e MINOR-4] ssh/scp toi 242: thu lai 3 lan cach SSH_RETRY_S (10 s) KHI loi ket noi (rc 255); lenh tu xa da chay xong
+# (rc khac 255) KHONG chay lai. s242in: noi dung stdin (heredoc) duoc giu lai cho moi lan thu.
+s242() {
+  local i rc=255
+  for i in 1 2 3; do
+    $SSH_242 "$@" < /dev/null; rc=$?
+    [ "$rc" != 255 ] && return "$rc"
+    [ "$i" -lt 3 ] && { echo "[ssh 242 loi ket noi (rc 255) — thu lai $i/2 sau ${SSH_RETRY_S}s]" >&2; sleep "$SSH_RETRY_S"; }
+  done
+  return "$rc"
+}
+s242in() {
+  local in i rc=255
+  in=$(cat)
+  for i in 1 2 3; do
+    printf '%s\n' "$in" | $SSH_242 "$@"; rc=$?
+    [ "$rc" != 255 ] && return "$rc"
+    [ "$i" -lt 3 ] && { echo "[ssh 242 loi ket noi (rc 255) — thu lai $i/2 sau ${SSH_RETRY_S}s]" >&2; sleep "$SSH_RETRY_S"; }
+  done
+  return "$rc"
+}
+c242() {
+  local i
+  for i in 1 2 3; do
+    $SCP_242 "$@" && return 0
+    [ "$i" -lt 3 ] && { echo "[scp 242 loi — thu lai $i/2 sau ${SSH_RETRY_S}s]" >&2; sleep "$SSH_RETRY_S"; }
+  done
+  return 1
+}
 
 say "=== rollback v1.2 -> dcae2e2b (c3_shadow) TS=$TS DRY=$DRY ==="
 # [2c MIN-12] chot gio nhu deploy (phut :10-:44, tranh 07:xx/19:xx, 00:50-01:20, 12:50-13:20); khan cap: FORCE_TIME=1
@@ -37,7 +68,7 @@ if [ "$DRY" != 1 ] && [ "$FORCE_TIME" != 1 ] && ! time_ok; then
   say "      00:50-01:20, 12:50-13:20). KHAN CAP (bot hong, MASTER bao): FORCE_TIME=1 bash $0 $TS"
   exit 1
 fi
-PRE=$($SSH_242 "PP='$PROC_PAT' bash -s -- $A $TS $OLD_MD5" <<'EOF'
+PRE=$(s242in "PP='$PROC_PAT' bash -s -- $A $TS $OLD_MD5" <<'EOF'
 A=$1; TS=$2; OLD=$3; cd "$A" || { echo "FAIL cd"; exit 0; }
 for f in target/binance-java-sdk-1.2.4.jar.bak_v12pre_$TS conf/env.sh.bak_v12pre_$TS bin/start.sh.bak_v12pre_$TS; do
   [ -f "$f" ] && echo "OK co $f" || echo "FAIL thieu backup $f"
@@ -58,7 +89,7 @@ else
   say "Rollback ve dcae2e2b (c3_shadow) voi backup TS=$TS. Go YES de tiep tuc:"
   read -r ANS; [ "$ANS" = YES ] || { say "huy"; exit 0; }
 fi
-RS=$($SSH_242 "PP='$PROC_PAT' bash -s -- $A $TS $OLD_MD5 $WD_PAUSE" <<'EOF'
+RS=$(s242in "PP='$PROC_PAT' CT='$CRONTAB_CMD' bash -s -- $A $TS $OLD_MD5 $WD_PAUSE" <<'EOF'
 A=$1; TS=$2; OLD=$3; PAUSE=$4; cd "$A" || { echo "FAIL cd"; exit 0; }
 touch "$PAUSE" 2>/dev/null
 bin/daemon.sh stop
@@ -78,6 +109,16 @@ P=$(pgrep -f "$PP" | head -1)
 E=$(tr '\0' '\n' < /proc/$P/environ 2>/dev/null)
 echo "$E" | grep -qx 'LIVE_PROFILE=c3_shadow' && echo "OK env LIVE_PROFILE=c3_shadow" || echo "FAIL env LIVE_PROFILE"
 echo "$E" | grep -q '^LIVE_ADAPTER=' && echo "FAIL env van co LIVE_ADAPTER" || echo "OK env khong LIVE_ADAPTER"
+# [R4e MAJOR-1] go cron lam moi exchangeInfo theo marker (khong dung toi dong cron khac; crontab -l loi la => FAIL, khong ghi de)
+MK='# C3LIVE_EXINFO_REFRESH'
+if C=$($CT -l 2>/dev/null); then
+  if echo "$C" | grep -qF "$MK"; then echo "$C" | grep -vF "$MK" | $CT -; fi
+  [ "$($CT -l 2>/dev/null | grep -cF "$MK")" = 0 ] && echo "OK cron_lam_moi_da_go" || echo "FAIL cron_lam_moi_van_con"
+elif $CT -l 2>&1 | grep -qi 'no crontab'; then
+  echo "OK cron_khong_co"
+else
+  echo "FAIL crontab_-l_loi (KHONG go duoc cron lam moi: crontab -l | grep -v C3LIVE_EXINFO_REFRESH | crontab -)"
+fi
 rm -f "$PAUSE"
 EOF
 ) || { say "DUNG: ssh buoc rollback loi — goi MASTER NGAY"; exit 1; }

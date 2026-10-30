@@ -9,15 +9,19 @@ set -uo pipefail
 SSH_242=${SSH_242:-"ssh -p 2222 -o BatchMode=yes -o ConnectTimeout=20 -i /home/ubuntu/.ssh/id_rsa_chuyennd root@103.157.218.242"}
 A=${APP_DIR:-/home/chuyennd/java/v_t_m}
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}   # mau nhan dien process app (test: process gia)
-$SSH_242 "PP='$PROC_PAT' bash -s -- $A" <<'EOF'
+$SSH_242 "PP='$PROC_PAT' CT='${CRONTAB_CMD:-crontab}' bash -s -- $A" <<'EOF'
 A=$1; cd "$A" || { echo "FAIL cd $A"; exit 1; }
 L=logs/full.log
 P=$(pgrep -f "$PP" | head -1)
 echo "== process pid=${P:-KHONG_CO} so=$(pgrep -fc "$PP") jar=$(md5sum < target/binance-java-sdk-1.2.4.jar | cut -c1-32)"
 if [ -n "$P" ]; then
-  tr '\0' '\n' < /proc/$P/environ 2>/dev/null | grep -E '^(LIVE_PROFILE|LIVE_ADAPTER|LIVE_KILLSW_MODE|SHADOW_NO_PUSH|LIVE_ENTRY_ENABLED|LIVE_TS_MKT_EXT|LIVE_C3_[A-Z_]*)=' | sed 's/^/   env /'
+  tr '\0' '\n' < /proc/$P/environ 2>/dev/null | grep -E '^(LIVE_PROFILE|LIVE_ADAPTER|LIVE_KILLSW_MODE|SHADOW_NO_PUSH|LIVE_ENTRY_ENABLED|LIVE_TS_MKT_EXT|LIVE_C3_[A-Z_]*|UNIVERSE_A1[A-Z_]*)=' | sed 's/^/   env /'
 fi
 [ -f run/heartbeat ] && echo "== heartbeat tuoi=$(( $(date +%s) - $(stat -c %Y run/heartbeat) ))s" || echo "== heartbeat: chua co"
+X=run/c3live_exchangeInfo.json   # [R4e] nguon A1 + R7 (cron lam moi tren 242)
+[ -f "$X" ] && echo "== exchangeInfo: tuoi=$(( $(date +%s) - $(stat -c %Y "$X") ))s lam_moi: $(tr '\n' ' ' < run/c3live_exinfo_refresh.state 2>/dev/null)" || echo "== exchangeInfo: chua co $X"
+echo "== cron lam moi: $($CT -l 2>/dev/null | grep -cF '# C3LIVE_EXINFO_REFRESH') dong; [UNIVERSE-A1]: $(grep -a '\[UNIVERSE-A1\] BAT' $L | tail -1 | grep -o 'TradFi=[0-9]*, INDEX=[0-9]*')"
+echo "== [OI-GUARD-2] oi_feat STALE (INFO): $(grep -a -c '\[OI-GUARD-2\].*STALE' $L) dong; gan nhat: $(grep -a '\[OI-GUARD-2\].*STALE' $L | tail -1 | cut -c1-160)"
 echo "== kill-switch latch: $( [ -f run/killsw_latch.json ] && cat run/killsw_latch.json || echo '(chua co file = chua latch)')"
 grep -a '\[KILLSW\]' $L | grep -a 'LATCH\|AUTO_RELEASE\|C4_CAPACITY\|RESET' | tail -5 | sed 's/^/   /'
 B=run/c3live_book.json

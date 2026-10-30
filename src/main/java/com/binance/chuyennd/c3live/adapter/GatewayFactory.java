@@ -108,8 +108,27 @@ public final class GatewayFactory {
         }
     }
 
+    /**
+     * [V12 R4e MAJOR-1] R7 khi UNIVERSE_A1=1 (dry VA live): doc CUNG file raw exchangeInfo voi bo loc tin hieu (cron lam moi tren
+     * 242), kem kiem tuoi: serverTime cu hon {@code maxAgeMs} / file thieu / hong => nem (R7 giu snapshot cu; qua han => STALE,
+     * khong mua). Khong bao gio doc API => R7 va A1 khong the lech nguon.
+     */
+    public static Supplier<ExchangeInfo> freshFileSource(File file, java.util.function.LongSupplier clock, long maxAgeMs) {
+        final Supplier<ExchangeInfo> base = fileSource(file);
+        return () -> {
+            ExchangeInfo ei = base.get();
+            if (ei == null) throw new IllegalStateException("khong doc duoc exchangeInfo " + file.getPath());
+            long age = clock.getAsLong() - ei.getServerTime();
+            if (ei.getServerTime() <= 0L || age > maxAgeMs) {
+                throw new IllegalStateException("exchangeInfo " + file.getPath() + " CU: serverTime=" + ei.getServerTime() + " tuoi "
+                        + age / 60_000L + "' > " + maxAgeMs / 60_000L + "' (cron lam moi tren 242?)");
+            }
+            return ei;
+        };
+    }
+
     /** Doc exchangeInfo tu file (cache theo mtime). File thieu/hong => null. */
-    static Supplier<ExchangeInfo> fileSource(File file) {
+    public static Supplier<ExchangeInfo> fileSource(File file) {
         return new Supplier<ExchangeInfo>() {
             private long mtime = Long.MIN_VALUE;
             private ExchangeInfo cached;

@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# =============================================================================
+# exinfo_refresh_242.sh — [V12 R4e MAJOR-1] lam moi raw exchangeInfo cho UNIVERSE_A1 + R7 (CHAY TREN 242, cron root)
+# deploy_v12_dry_r4.sh cai vao crontab root (marker "# C3LIVE_EXINFO_REFRESH"), phut 03,18,41,48 (ngoai cua so [27,40]);
+# rollback_v12.sh go theo marker. Moi lan:
+#   curl -> run/c3live_exchangeInfo.json.new -> python3 -I kiem: JSON hop le; serverTime > 0 va MOI HON file hien tai;
+#   > 100 symbol; MOI symbol co onboardDate + underlyingType; >= 50 hop dong TradFi; so symbol giam <= 10 %.
+#   Hop le => .lastgood + mv -f (nguyen tu; JVM nap lai theo mtime ca A1 lan R7). Khong => GIU file cu, dem loi lien tiep;
+#   lan loi thu 3 (roi moi 4 lan) => Telegram (tg.env cua watchdog 242; khong doc duoc => ALERT_PENDING trong run/).
+# Phan loai TF/INDEX KHONG o day (chi Java UniverseA1Classifier); day chi kiem nguon tho (cung nguong R4b).
+# Bien (test): APP_DIR, EXINFO_CMD, EXR_TG_ENV, EXR_TG_SINK, MIN_TRADFI, MAX_SYMBOL_DROP.
+# =============================================================================
+set -uo pipefail
+A=${APP_DIR:-$(cd "$(dirname "$0")/.." && pwd)}
+cd "$A" || { echo "FAIL cd $A"; exit 1; }
+F=run/c3live_exchangeInfo.json
+NEW=$F.new
+STATE=run/c3live_exinfo_refresh.state
+EXC=${EXINFO_CMD:-"curl -s --max-time 30 https://fapi.binance.com/fapi/v1/exchangeInfo"}
+MINTF=${MIN_TRADFI:-50}
+DROP=${MAX_SYMBOL_DROP:-0.10}
+TG_ENV=${EXR_TG_ENV:-/root/.config/h242_watchdog/tg.env}
+ts() { date '+%F %T%z'; }
+
+exec 9> run/.exinfo_refresh.lock
+flock -n 9 || { echo "$(ts) SKIP: dang co lan lam moi khac"; exit 0; }
+
+tg() {
+  local msg="$1" tok chat code
+  if [ -n "${EXR_TG_SINK:-}" ]; then { printf '%s\n' "$msg"; echo "----"; } >> "$EXR_TG_SINK"; return 0; fi
+  if [ ! -r "$TG_ENV" ]; then echo "$(ts) $msg" >> run/ALERT_PENDING_exinfo.txt; echo "$(ts) NO_CHANNEL $msg"; return 0; fi
+  tok=$(sed -nE 's/^[[:space:]]*(export[[:space:]]+)?(TG_TOKEN=|tele-token:[[:space:]]*)//p' "$TG_ENV" | head -1 | tr -d '\r"')
+  chat=$(sed -nE 's/^[[:space:]]*(export[[:space:]]+)?(TG_CHAT=|tele-chat-id:[[:space:]]*)//p' "$TG_ENV" | head -1 | tr -d '\r"')
+  code=$(printf 'url = "https://api.telegram.org/bot%s/sendMessage"\n' "$tok" | curl -s -m 15 -o /dev/null -w '%{http_code}' -K - \
+    --data-urlencode "chat_id=$chat" --data-urlencode "text=$msg" 2>/dev/null)
+  tok=""
+  [ "$code" = 200 ] || { echo "$(ts) $msg" >> run/ALERT_PENDING_exinfo.txt; echo "$(ts) Telegram loi HTTP ${code:-?}"; }
+}
+
+FAILS=$(sed -n 's/^fails=//p' "$STATE" 2>/dev/null | head -1)
+case "$FAILS" in ''|*[!0-9]*) FAILS=0;; esac
+LASTOK=$(grep '^last_ok=' "$STATE" 2>/dev/null | head -1)
+rm -f "$NEW"
+eval "$EXC" > "$NEW" 2>/dev/null
+RC=$?
+MSG=$(python3 -I - "$NEW" "$F" "$MINTF" "$DROP" 2>&1 <<'PY'
+import json, sys
+new, cur, mintf, drop = sys.argv[1], sys.argv[2], int(sys.argv[3]), float(sys.argv[4])
+try:
+    with open(new, encoding='utf-8') as fh:
+        d = json.load(fh)
+except Exception as e:
+    print('JSON hong: %s' % str(e)[:120]); sys.exit(2)
+st = d.get('serverTime') if isinstance(d, dict) else None
+sy = d.get('symbols') if isinstance(d, dict) else None
+if not isinstance(st, int) or isinstance(st, bool) or st <= 0:
+    print('thieu serverTime'); sys.exit(2)
+if not isinstance(sy, list) or len(sy) <= 100:
+    print('chi %d symbol (can > 100)' % (len(sy) if isinstance(sy, list) else 0)); sys.exit(2)
+bad = [s.get('symbol') if isinstance(s, dict) else '?' for s in sy
+       if not isinstance(s, dict) or not s.get('onboardDate') or not s.get('underlyingType')]
+if bad:
+    print('%d symbol thieu onboardDate/underlyingType (vd %s)' % (len(bad), bad[:3])); sys.exit(2)
+tf = sum(1 for s in sy if 'TRADIFI' in str(s.get('contractType', '')).upper() or 'TRADFI' in str(s.get('contractType', '')).upper())
+if tf < mintf:
+    print('chi %d hop dong TradFi (< %d)' % (tf, mintf)); sys.exit(2)
+try:
+    with open(cur, encoding='utf-8') as fh:
+        c = json.load(fh)
+except Exception:
+    c = None
+if isinstance(c, dict):
+    cst = c.get('serverTime') or 0
+    if st <= cst:
+        print('serverTime %d KHONG moi hon file hien tai %d' % (st, cst)); sys.exit(2)
+    n0 = len(c.get('symbols') or [])
+    if n0 and len(sy) < n0 * (1 - drop):
+        print('so symbol giam %d -> %d (> %d %%)' % (n0, len(sy), int(round(drop * 100)))); sys.exit(2)
+print('symbols=%d tf=%d serverTime=%d' % (len(sy), tf, st))
+PY
+)
+VRC=$?
+if [ "$RC" = 0 ] && [ "$VRC" = 0 ]; then
+  if cp -f "$NEW" "$F.lastgood.tmp" && mv -f "$F.lastgood.tmp" "$F.lastgood" && mv -f "$NEW" "$F"; then
+    { echo "fails=0"; echo "last_ok=$(date +%s) $MSG"; } > "$STATE.tmp" && mv -f "$STATE.tmp" "$STATE"
+    echo "$(ts) OK $MSG"
+    [ "$FAILS" -ge 3 ] && tg "[C3-LIVE 242] lam moi exchangeInfo DA HOI PHUC sau $FAILS lan loi ($MSG)"
+    exit 0
+  fi
+  MSG="mv loi"
+fi
+rm -f "$NEW" "$F.lastgood.tmp"
+FAILS=$((FAILS + 1))
+{ echo "fails=$FAILS"; echo "last_err=$(date +%s) curl_rc=$RC $MSG"; if [ -n "$LASTOK" ]; then echo "$LASTOK"; fi; } > "$STATE.tmp"
+mv -f "$STATE.tmp" "$STATE"
+echo "$(ts) FAIL lan $FAILS lien tiep (curl rc=$RC): $MSG — GIU file cu"
+if [ "$FAILS" -ge 3 ] && [ $(( (FAILS - 3) % 4 )) = 0 ]; then
+  tg "[C3-LIVE 242] KHAN: lam moi exchangeInfo LOI $FAILS lan lien tiep ($MSG) — giu file cu; qua 45' JVM: R7 STALE (khong mua), listing moi bi loai"
+fi
+exit 1

@@ -54,7 +54,7 @@ case "$1" in
         [ -f FAKE_LATCH ] && echo "$D WARN [main] x: [KILLSW] LATCH action=FLATTEN (truoc NONE) code=C6 codes=[C6] detail=dd=-0.7144"
         # [V12 R4c D3] dong VO HAI (khong duoc gay FAIL) / CO HAI (phai FAIL + rollback)
         [ -f FAKE_HARMLESS ] && echo "$D WARN [pool-1] x: [OI-GUARD-2] oi_feat pipeline STALE age=130m > 120m (Oracle/compute down?)"
-        [ -f FAKE_HARMLESS ] && echo "$D WARN [C3LIVE-OPS] x: [C3-LIVE-SCOPE] TU CHOI newMarketOrder C30USDT: LEGACY-busy vi the 100"
+        [ -f FAKE_SCOPE ] && echo "$D WARN [C3LIVE-OPS] x: [C3-LIVE-SCOPE] TU CHOI newMarketOrder C30USDT: LEGACY-busy vi the 100"
         [ -f FAKE_HARMLESS ] && echo "$D WARN [C3LIVE-OPS] x: [C3-LIVE-RECON] TU CHOI yeu cau reanchor: c3_live doi chieu theo QTY c3"
         [ -f FAKE_STALE ] && echo "$D INFO [C3LIVE-OPS] x: [C3-LIVE] S001USDT NOT_BUYABLE STALE snapshot=1792900020000"
         [ -f FAKE_NORUNTIME ] && echo "$D ERROR [main] x: [C3-LIVE] KHONG tao duoc runtime (gia lap) => TU CHOI push c3_live; vi the cu (neu co) CHI con stop"
@@ -77,6 +77,7 @@ case "$1" in
     [ -f FAKE_NOLOG ] && rm -f logs/full.log logs/full.log.*
     # [V12 R4c C] mat ket noi 242 ngay sau start (ssh GIA doc file nay)
     [ -f FAKE_SSHDROP ] && touch "$(cat FAKE_SSHDROP)"
+    [ -f FAKE_EXOLD ] && touch -d '-40 min' run/c3live_exchangeInfo.json
     touch run/heartbeat ;;
 esac
 EOF
@@ -91,6 +92,16 @@ json.dump({"symbols": [{"symbol": "S%03dUSDT" % i} for i in range(150)]}, open(s
 EOF
 (cd "$F" && bin/daemon.sh start)
 
+# [R4e] crontab GIA (file $W/crontab.txt; KHONG dung crontab that cua Oracle); dong cron khac phai duoc giu nguyen
+cat > "$W/fakecrontab.sh" <<EOF
+case "\$1" in
+  -l) if [ -f "$W/crontab.txt" ]; then cat "$W/crontab.txt"; else echo "no crontab for root" >&2; exit 1; fi ;;
+  -) cat > "$W/crontab.txt" ;;
+  *) exit 2 ;;
+esac
+EOF
+echo "*/5 * * * * /bin/bash /root/h242_watchdog.sh # WATCHDOG" > "$W/crontab.txt"
+export CRONTAB_CMD="bash $W/fakecrontab.sh" SSH_RETRY_S=0
 export PROC_PAT="BinanceOrderTradingManager fake242" SSH_242="bash -c" SCP_242=cp RHOST="" APP_DIR=$F LOGDIR=$W/deploylog WD_PAUSE=$W/PAUSE OLD_MD5=$OLD NJ=$W/new.jar \
   NJ_MD5=$NEW KILLSW_SH=$REPO/ops/killsw_reset.sh EXINFO_CMD="cat $W/exinfo.json" POST_WAIT_S=2 POST_ROUNDS=2 WAIT_S=3 \
   REANCHOR_WAIT=2 LATCH_WAIT_S=2
@@ -736,21 +747,24 @@ chk "r4c md5 rollback_v12.sh khac pin => DUNG truoc khi doi gi" "echo \"\$OUT\" 
 chk "r4c RB_MD5 mac dinh = md5 rollback_v12.sh cua repo" "grep -q \"RB_MD5:-\$(md5sum < $HERE/rollback_v12.sh | cut -c1-32)}\" $D4"
 OUT=$(r4 FORCE=1 FORCE_TIME=1 R4_JOB=1 R4_JOBLOG=$W/fakejob.log bash "$D4" 2>&1); RC=$?
 chk "r4c R4_JOB=1 khong co file YES cua foreground => TU CHOI, khong doi gi" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'KHONG co xac nhan YES' && ! grep -q LIVE_ADAPTER $F4/conf/env.sh"
-TSX=20990101_0000; echo $TSX > $W/yes_x; echo x > $F4/run/c3live_lost.txt; rm -f "$TG4"
-OUT=$(r4 FORCE=1 FORCE_TIME=1 R4_JOB=1 R4_TS=$TSX R4_JOBLOG=$W/fakejob.log R4_YES_FILE=$W/yes_x bash "$D4" 2>&1); RC=$?
-chk "r4c job KIEM 242 LAI ngay truoc khi doi gi (D1): trang thai moi => DUNG + Telegram, khong doi gi" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'lan 2: ngay truoc khi doi gi' && echo \"\$OUT\" | grep -q 'FAIL da_co_run/c3live_lost.txt' && ! grep -q LIVE_ADAPTER $F4/conf/env.sh && [ ! -f $W/yes_x ] && grep -q 'DUNG TS=$TSX' $TG4"
+TSX=20990101_0000; LKD=$W/deploylog/.deploy_v12dry_r4.lock.d; mkdir -p $LKD; echo $TSX > $LKD/yes; echo x > $F4/run/c3live_lost.txt; rm -f "$TG4"
+OUT=$(r4 FORCE=1 FORCE_TIME=1 R4_JOB=1 R4_TS=$TSX R4_JOBLOG=$W/fakejob.log R4_YES_FILE=$LKD/yes bash "$D4" 2>&1); RC=$?
+chk "r4c job KIEM 242 LAI ngay truoc khi doi gi (D1): trang thai moi => DUNG + Telegram, khong doi gi" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'lan 2: ngay truoc khi doi gi' && echo \"\$OUT\" | grep -q 'FAIL da_co_run/c3live_lost.txt' && ! grep -q LIVE_ADAPTER $F4/conf/env.sh && [ ! -e $LKD ] && grep -q 'DUNG TS=$TSX' $TG4"
 rm -f $F4/run/c3live_lost.txt
 touch "$F4/FAKE_R4" "$F4/FAKE_HARMLESS"; rm -f "$TG4"
 OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?; echo "$OUT" | tail -3
 TS4=$(echo "$OUT" | grep -o 'TS=[0-9_]*' | head -1 | cut -d= -f2)
-chk "r4c dong vo hai ('[C3-LIVE-SCOPE] TU CHOI', reanchor TU CHOI, '[OI-GUARD-2] ... STALE') KHONG gay FAIL => XONG" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q '=== XONG' && echo \"\$OUT\" | grep -q 'INFO TU_CHOI_vo_hai=2 OI_STALE=1' && grep -qx 'export LIVE_ADAPTER=dry' $F4/conf/env.sh"
+chk "r4c dong vo hai (reanchor TU CHOI, '[OI-GUARD-2] ... STALE') KHONG gay FAIL => XONG" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q '=== XONG' && echo \"\$OUT\" | grep -q 'INFO TU_CHOI_vo_hai=1 OI_STALE=1' && grep -qx 'export LIVE_ADAPTER=dry' $F4/conf/env.sh"
 chk "r4c foreground: YES -> job NEN (pid, job_log) -> tail -> rc cua job" "echo \"\$OUT\" | grep -q 'job NEN pid=[0-9]* job_log=' && echo \"\$OUT\" | grep -q 'job ket thuc rc=0'"
 chk "r4c Telegram: job bat dau + XONG" "grep -q 'job NEN bat dau TS=$TS4' $TG4 && grep -q 'XONG TS=$TS4' $TG4"
 echo YES | APP_DIR=$F4 FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TS4" >/dev/null 2>&1
 rm -f "$F4/FAKE_HARMLESS"; touch "$F4/FAKE_STALE"; rm -f "$TG4"
 OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?
 chk "r4c dong co hai 'STALE snapshot=' => FAIL + ROLLBACK TU DONG + Telegram" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL universe_STALE=1' && echo \"\$OUT\" | grep -q 'Rollback xong' && grep -qx 'export LIVE_PROFILE=c3_shadow' $F4/conf/env.sh && [ ! -f $W/PAUSE ] && grep -q 'ROLLBACK TU DONG XONG' $TG4"
-rm -f "$F4/FAKE_STALE"; touch "$F4/FAKE_NORUNTIME"
+rm -f "$F4/FAKE_STALE"; touch "$F4/FAKE_SCOPE"
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?
+chk "r4e dry: '[C3-LIVE-SCOPE] TU CHOI' (DryGateway khong co LEGACY => loi c3) => FAIL + ROLLBACK TU DONG" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL SCOPE_TU_CHOI_trong_dry=1' && echo \"\$OUT\" | grep -q 'Rollback xong'"
+rm -f "$F4/FAKE_SCOPE"; touch "$F4/FAKE_NORUNTIME"
 OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?
 chk "r4c 'KHONG tao duoc runtime' => FAIL + ROLLBACK TU DONG" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q \"FAIL co 'KHONG tao duoc runtime'\" && echo \"\$OUT\" | grep -q 'Rollback xong' && grep -qx 'export LIVE_PROFILE=c3_shadow' $F4/conf/env.sh"
 rm -f "$F4/FAKE_NORUNTIME"
@@ -824,6 +838,68 @@ rm -f "$F4/FAKE_NOA1"; touch "$F4/FAKE_A1LOW"
 OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?
 chk "r4d dong init UNIVERSE_A1 TradFi < 50 => FAIL + ROLLBACK TU DONG" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL UNIVERSE_A1 TradFi=10 < 50' && echo \"\$OUT\" | grep -q 'Rollback xong'"
 rm -f "$F4/FAKE_A1LOW" "$F4/FAKE_R4"
+echo "== 25. [V12 R4e] cron lam moi exchangeInfo (cai / lam moi / hong giu cu / Telegram / CHK file cu / rollback go) + khoa nguyen tu + ssh thu lai"
+EXR=$HERE/exinfo_refresh_242.sh
+python3 - "$W" <<'EOF'
+import json, sys
+w = sys.argv[1]
+b = json.load(open(w + '/exinfo_r4.json'))
+s, st = b['symbols'], b['serverTime']
+def dump(n, t, sy):
+    json.dump({'serverTime': t, 'symbols': sy}, open(w + '/' + n, 'w'), separators=(',', ':'))
+nw = {'symbol': 'NEW1USDT', 'contractType': 'PERPETUAL', 'underlyingType': 'COIN', 'onboardDate': st}
+dump('ex_new.json', st + 900000, s + [nw])
+dump('ex_noob.json', st + 1800000, [{k: v for k, v in x.items() if k != 'onboardDate'} for x in s])
+dump('ex_notnewer.json', st + 900000, s + [nw])
+dump('ex_drop.json', st + 2700000, s[:130] + [x for x in s if 'TRADIFI' in x['contractType']])
+dump('ex_new2.json', st + 3600000, s + [nw])
+EOF
+cp "$W/exinfo_r4.json" "$F4/run/c3live_exchangeInfo.json"; rm -f "$F4/run/c3live_exinfo_refresh.state" "$W/tg_exr.txt"
+rf() { env APP_DIR=$F4 EXR_TG_SINK=$W/tg_exr.txt EXINFO_CMD="cat $1" bash "$EXR" 2>&1; }
+XF=$F4/run/c3live_exchangeInfo.json
+OUT=$(rf "$W/ex_new.json"); RC=$?
+chk "r4e lam moi hop le (serverTime moi hon, listing moi NEW1USDT) => thay file nguyen tu + .lastgood, fails=0" "[ $RC = 0 ] && grep -q NEW1USDT $XF && cmp -s $XF $XF.lastgood && grep -qx 'fails=0' $F4/run/c3live_exinfo_refresh.state && [ ! -f $XF.new ]"
+M0=$(md5sum < $XF)
+OUT=$(rf "$W/ex_noob.json"); RC=$?
+chk "r4e lam moi thieu onboardDate => GIU file cu, fails=1" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'thieu onboardDate/underlyingType' && [ \"\$(md5sum < $XF)\" = \"$M0\" ] && grep -qx 'fails=1' $F4/run/c3live_exinfo_refresh.state"
+OUT=$(rf "$W/ex_notnewer.json"); RC=$?
+chk "r4e lam moi serverTime KHONG moi hon => GIU file cu" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'KHONG moi hon' && [ \"\$(md5sum < $XF)\" = \"$M0\" ] && [ ! -f $W/tg_exr.txt ]"
+OUT=$(rf "$W/ex_drop.json"); RC=$?
+chk "r4e so symbol giam > 10 % => GIU file cu; loi thu 3 lien tiep => Telegram KHAN" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'so symbol giam 224 -> 190' && [ \"\$(md5sum < $XF)\" = \"$M0\" ] && grep -qx 'fails=3' $F4/run/c3live_exinfo_refresh.state && [ \$(grep -c 'KHAN: lam moi exchangeInfo LOI 3 lan' $W/tg_exr.txt) = 1 ]"
+OUT=$(rf "$W/khong_co.json"); RC=$?
+chk "r4e curl loi / JSON hong lan 4 => giu file cu, KHONG spam Telegram (lan 3, 7, ...)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'JSON hong' && [ \$(grep -c KHAN $W/tg_exr.txt) = 1 ] && [ \"\$(md5sum < $XF)\" = \"$M0\" ]"
+OUT=$(rf "$W/ex_new2.json"); RC=$?
+chk "r4e hoi phuc => thay file, fails=0, Telegram DA HOI PHUC" "[ $RC = 0 ] && grep -qx 'fails=0' $F4/run/c3live_exinfo_refresh.state && grep -q 'DA HOI PHUC sau 4 lan' $W/tg_exr.txt"
+cp "$W/exinfo_r4.json" "$F4/run/c3live_exchangeInfo.json"
+touch "$F4/FAKE_R4"; rm -f "$TG4"
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?; echo "$OUT" | grep -a 'cron\|exchangeInfo_tuoi' | head -4
+TS4=$(echo "$OUT" | grep -o 'TS=[0-9_]*' | head -1 | cut -d= -f2)
+chk "r4e deploy XONG: cai cron (marker, phut 3,18,41,48, giu dong cron cu), script tren 242 dung md5; CHK file moi < 30' + cron" "[ $RC = 0 ] && grep -q '^3,18,41,48 \* \* \* \* cd $F4 && /bin/bash $F4/ops/exinfo_refresh_242.sh >> $F4/logs/exinfo_refresh.log 2>&1 # C3LIVE_EXINFO_REFRESH\$' $W/crontab.txt && grep -q '# WATCHDOG' $W/crontab.txt && cmp -s $EXR $F4/ops/exinfo_refresh_242.sh && echo \"\$OUT\" | grep -q 'OK exchangeInfo_tuoi=' && echo \"\$OUT\" | grep -q 'OK cron_lam_moi'"
+OUT=$(APP_DIR=$F4 bash "$HERE/c3live_status.sh" 2>&1)
+chk "r4e status: tuoi exchangeInfo + trang thai lam moi + cron + [OI-GUARD-2] STALE (INFO)" "echo \"\$OUT\" | grep -q '== exchangeInfo: tuoi=' && echo \"\$OUT\" | grep -q '== cron lam moi: 1 dong' && echo \"\$OUT\" | grep -q 'OI-GUARD-2'"
+OUT=$(r4 DRY=1 bash "$D4" 2>&1)
+chk "r4e PRE: cron lam moi DA cai => TU CHOI deploy lan 2" "echo \"\$OUT\" | grep -q 'FAIL cron_lam_moi_DA_CO'"
+cat > "$W/fakessh_drop.sh" <<EOF
+# ssh GIA: N lan dau (file DROPN) loi ket noi rc 255, sau do binh thuong
+n=\$(cat "$W/DROPN" 2>/dev/null || echo 0)
+if [ "\$n" -gt 0 ]; then echo \$((n - 1)) > "$W/DROPN"; echo "ssh: Connection reset" >&2; exit 255; fi
+exec bash -c "\$1"
+EOF
+echo 2 > "$W/DROPN"
+OUT=$(echo YES | APP_DIR=$F4 FORCE_TIME=1 SSH_242="bash $W/fakessh_drop.sh" bash "$HERE/rollback_v12.sh" "$TS4" 2>&1)
+chk "r4e rollback: ssh rot 2 lan => thu lai (3 lan) => xong; cron lam moi GO theo marker, dong cron khac GIU" "echo \"\$OUT\" | grep -q 'thu lai' && echo \"\$OUT\" | grep -q 'Rollback xong' && echo \"\$OUT\" | grep -q 'OK cron_lam_moi_da_go' && ! grep -q C3LIVE_EXINFO_REFRESH $W/crontab.txt && grep -q '# WATCHDOG' $W/crontab.txt && grep -qx 'export LIVE_PROFILE=c3_shadow' $F4/conf/env.sh"
+touch "$F4/FAKE_EXOLD"
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?
+chk "r4e CHK: file exchangeInfo cu > 30' => FAIL + ROLLBACK TU DONG, cron go" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL exchangeInfo_cu=' && echo \"\$OUT\" | grep -q 'Rollback xong' && ! grep -q C3LIVE_EXINFO_REFRESH $W/crontab.txt"
+rm -f "$F4/FAKE_EXOLD" "$F4/FAKE_R4"
+LKD=$W/deploylog/.deploy_v12dry_r4.lock.d
+bash -c 'exec -a deploy_v12_dry_r4_gia sleep 60' & LP=$!
+mkdir -p "$LKD"; echo $LP > "$LKD/pid"
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?
+chk "r4e khoa nguyen tu: job khac dang giu (pid song) => TU CHOI truoc YES, khong doi gi" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'dang co 1 job deploy_v12_dry_r4 khac chay' && ! grep -q LIVE_ADAPTER $F4/conf/env.sh && [ \"\$(cat $LKD/pid)\" = $LP ]"
+kill $LP 2>/dev/null; wait $LP 2>/dev/null
+OUT=$(echo NO | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?
+chk "r4e khoa mo coi (pid chet) => lay lai; tra loi khac YES => huy, khoa duoc xoa" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'khoa mo coi' && echo \"\$OUT\" | grep -q 'Huy. Khong doi gi.' && [ ! -e $LKD ]"
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]
