@@ -333,6 +333,7 @@ public final class C3LiveRuntime {
         this.protector = new C3StopProtector(book, trailing, flattener::closeCluster, scope::isMerged, alerts::send,
                 System::currentTimeMillis);
         protector.setMergedCloseCheck(merged::exchangeCoversC3);   // [V12 R4b §4]
+        reconciler.setLostForeignSink(merged::onLostForeign);       // [V12 R4c A]
         this.streamScope = new C3StreamScope(scope, book, System::currentTimeMillis);
         streamScope.setGateway(sgw);   // [V12 R4b MINOR-1] xac nhan khop stop c3 bang queryStop
         streamScope.setForeignFillSink(merged::onForeignFill);

@@ -266,6 +266,10 @@ public final class C3StreamScope {
                     suspect.accept(s);
                     continue;
                 }
+                // [V12 R4c A] symbol c3 dang giu ve 0 qua ACCOUNT_UPDATE: KHONG de FillAccounting dong cum "EXTERNAL" (tai khoan chinh:
+                // co the la LEGACY ban dung qty c3; ACCOUNT_UPDATE co the toi TRUOC ORDER_TRADE_UPDATE). Dong cum chi qua bang chung c3:
+                // lenh c3x-/stop c3s- FILLED (onSell) hoac Reconciler (FlatConfirm + bang chung; khong co => LOST_FOREIGN).
+                if (pa.signum() == 0) continue;
                 if (pa.compareTo(scope.c3UpperQty(s).add(C3Scope.EPS)) > 0) suspect.accept(s);
                 keep.add(p);
             }

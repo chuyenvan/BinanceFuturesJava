@@ -66,6 +66,10 @@ public final class C3LegacyRefresher {
             return false;
         }
         scope.refreshLegacy(ps, os, as, now);
+        for (String m : scope.drainForeignAfterClose()) {   // [V12 R4c B] KHAN dung 1 lan / lan chot
+            LOG.error("{}", m);
+            alert.accept(m);
+        }
         boolean startup = first;
         first = false;
         if (merged != null) merged.observe(ps, startup);

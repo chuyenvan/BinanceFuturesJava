@@ -60,12 +60,20 @@ public final class C3Scope {
     private volatile Map<String, String> legacyBusy = Collections.emptyMap();
     private volatile long legacyAtMs = Long.MIN_VALUE;
     private volatile int legacyPositionCount = -1;
+    /** [V12 R4c A] symbol LOST_FOREIGN: chan mo lai toi moc (ms) — persist canh file MERGED. */
+    private final Map<String, Long> lostUntil = new ConcurrentHashMap<>();
+    private final Map<String, String> lostWhy = new ConcurrentHashMap<>();
+    /** [V12 R4c B] da canh bao vi the khong-c3 tren symbol vua chot (sym -> moc chot da canh bao). */
+    private final Map<String, Long> foreignAfterCloseAlerted = new ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentLinkedQueue<String> foreignAfterCloseQ = new java.util.concurrent.ConcurrentLinkedQueue<>();
+    public static final long LOST_BLOCK_MS = 24L * 3_600_000L;
 
     public C3Scope(LiveBookC3 book, LongSupplier clock, File mergedFile) {
         this.book = book;
         this.clock = clock == null ? System::currentTimeMillis : clock;
         this.mergedFile = mergedFile;
         loadMerged();
+        loadLost();
     }
 
     // ------------------------------------------------------------------ cid
@@ -204,6 +212,15 @@ public final class C3Scope {
                 busy.put(s, "vi the " + amt.toPlainString());
                 long rm = book.lastRemovedMs(s);
                 if (rm == Long.MIN_VALUE || now - rm >= TOUCH_AFTER_CLOSE_MS) touchLegacy(s, now);   // [R4b MINOR-5]
+                if (rm != Long.MIN_VALUE && now - rm >= TOUCH_AFTER_CLOSE_MS && now - rm < RELATED_AFTER_CLOSE_MS) {
+                    Long done = foreignAfterCloseAlerted.get(s);
+                    if (done == null || done != rm) {   // [V12 R4c B] KHAN dung 1 lan / lan chot
+                        foreignAfterCloseAlerted.put(s, rm);
+                        foreignAfterCloseQ.add("[C3-LIVE] KHAN: " + s + " co vi the KHONG-c3 qty=" + amt.toPlainString()
+                                + " tren symbol c3 vua chot " + (now - rm) / 1000 + " s truoc => coi la LEGACY (an khoi lop c3, LEGACY-busy);"
+                                + " neu KHONG phai LEGACY (phan du c3 / so sai) owner KIEM NGAY");
+                    }
+                }
             } else if (amt.signum() < 0 || amt.compareTo(c3UpperQty(s).add(EPS)) > 0) {
                 busy.put(s, "vi the san " + amt.toPlainString() + " > c3 " + c3UpperQty(s).toPlainString());
             }
@@ -231,6 +248,66 @@ public final class C3Scope {
         if (sym != null) legacyTouched.put(sym, now);
     }
 
+    /** [V12 R4c B] canh bao cho gui (moi lan chot 1 lan). */
+    public java.util.List<String> drainForeignAfterClose() {
+        java.util.List<String> out = new ArrayList<>();
+        String m;
+        while ((m = foreignAfterCloseQ.poll()) != null) out.add(m);
+        return out;
+    }
+
+    /** [V12 R4c A] chan mo lai symbol toi {@code untilMs} (LOST_FOREIGN); persist. */
+    public void blockLost(String sym, long untilMs, String why) {
+        if (sym == null) return;
+        lostUntil.put(sym, untilMs);
+        lostWhy.put(sym, why == null ? "-" : why);
+        persistLost();
+    }
+
+    public boolean isLostBlocked(String sym, long now) {
+        Long u = sym == null ? null : lostUntil.get(sym);
+        return u != null && now < u;
+    }
+
+    private File lostFile() {
+        return mergedFile == null ? null : new File(mergedFile.getAbsoluteFile().getParentFile(), "c3live_lost.txt");
+    }
+
+    private void loadLost() {
+        File f = lostFile();
+        if (f == null || !f.exists()) return;
+        try {
+            for (String line : Files.readAllLines(f.toPath(), StandardCharsets.UTF_8)) {
+                String[] t = line.trim().split(" ", 3);
+                if (t.length < 2 || !t[0].matches("[A-Z0-9]{2,40}")) continue;
+                lostUntil.put(t[0], Long.parseLong(t[1]));
+                lostWhy.put(t[0], t.length > 2 ? t[2] : "persist");
+            }
+            if (!lostUntil.isEmpty()) LOG.warn("[C3-LIVE-SCOPE] nap LOST_FOREIGN tu {}: {}", f.getPath(), lostUntil);
+        } catch (Exception e) {
+            LOG.error("[C3-LIVE-SCOPE] khong doc duoc {}: {}", f.getPath(), e.toString());
+        }
+    }
+
+    private synchronized void persistLost() {
+        File f = lostFile();
+        if (f == null) return;
+        try {
+            File abs = f.getAbsoluteFile();
+            if (abs.getParentFile() != null) abs.getParentFile().mkdirs();
+            File tmp = new File(abs.getParentFile(), abs.getName() + ".tmp");
+            StringBuilder sb = new StringBuilder();
+            for (Map.Entry<String, Long> e : new TreeMap<>(lostUntil).entrySet()) {
+                sb.append(e.getKey()).append(' ').append(e.getValue()).append(' ')
+                        .append(lostWhy.getOrDefault(e.getKey(), "-").replace('\n', ' ')).append('\n');
+            }
+            Files.write(tmp.toPath(), sb.toString().getBytes(StandardCharsets.UTF_8));
+            Files.move(tmp.toPath(), abs.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (Exception e) {
+            LOG.error("[C3-LIVE-SCOPE] khong ghi duoc {}: {}", f.getPath(), e.toString());
+        }
+    }
+
     public boolean legacyFresh(long now) {
         return legacyAtMs != Long.MIN_VALUE && now - legacyAtMs <= LEGACY_MAX_AGE_MS;
     }
@@ -238,6 +315,7 @@ public final class C3Scope {
     /** Ly do CHAN mo lenh (entry lan DCA) tren symbol; null = khong chan. */
     public String entryBlockReason(String sym, long now) {
         if (!legacyFresh(now)) return "anh chup LEGACY cu/chua co (fail-closed)";
+        if (isLostBlocked(sym, now)) return "LOST_FOREIGN (chan toi " + lostUntil.get(sym) + ") " + lostWhy.get(sym);
         String m = sym == null ? null : merged.get(sym);
         if (m != null) return "MERGED " + m;
         String b = sym == null ? null : legacyBusy.get(sym);

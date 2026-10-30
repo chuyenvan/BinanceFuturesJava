@@ -64,6 +64,8 @@ public final class Reconciler {
     public static final String BLOCK_UNKNOWN = "UNKNOWN_POSITION";
     public static final String BLOCK_EQUITY = "EQUITY_MISMATCH";
     public static final String BLOCK_STARTUP = "STARTUP_RECON";
+    /** [V12 R4c A] san = 0 ma KHONG co bang chung thoat c3 (stop c3 kich / lenh dong c3 khop / dang dong): vi the c3 bi dong NGOAI. */
+    public static final String REASON_LOST_FOREIGN = "LOST_FOREIGN";
     public static final String DEFAULT_REANCHOR_FILE = "run/c3live_reanchor.req";
     static final BigDecimal REL_QTY_TOL = new BigDecimal("1e-9");
 
@@ -123,6 +125,8 @@ public final class Reconciler {
     private volatile boolean qtyReconcile;
     /** [V12 R4b MAJOR-1] symbol MERGED (pham vi c3): khoi dong KHONG "san thang" ha so c3; hang gio KHONG chan (A). */
     private volatile java.util.function.Predicate<String> mergedSym = s -> false;
+    /** [V12 R4c A] noi xu ly LOST_FOREIGN (null = hanh vi cu: EXTERNAL). */
+    private volatile java.util.function.BiConsumer<String, LiveBookC3.ClusterView> lostForeign;
     /** [V12 R4] anh chup (doc khong khoa) symbol dang theo doi (A)(B)/cho phang — cho view pham vi c3. */
     private volatile Set<String> watched = Collections.emptySet();
     private double lastDiff = Double.NaN;
@@ -169,6 +173,11 @@ public final class Reconciler {
     /** [V12 R4 R4] bat doi chieu hang gio theo qty c3 (tai khoan chinh). */
     public void setQtyReconcile(boolean on) {
         this.qtyReconcile = on;
+    }
+
+    /** [V12 R4c A] noi xu ly "san = 0 khong bang chung c3" (journal + Telegram KHAN + chan symbol 24 h). */
+    public void setLostForeignSink(java.util.function.BiConsumer<String, LiveBookC3.ClusterView> s) {
+        this.lostForeign = s;
     }
 
     /** [V12 R4b MAJOR-1] noi predicate MERGED cua pham vi c3 (null = khong symbol nao). */
@@ -409,6 +418,17 @@ public final class Reconciler {
                     flat.clear(sym);
                     String reason = stopFired ? FillAccounting.REASON_TRAILING
                             : (c.closeReason != null ? c.closeReason : FillAccounting.REASON_EXTERNAL);
+                    java.util.function.BiConsumer<String, LiveBookC3.ClusterView> lf = lostForeign;
+                    if (lf != null && !stopFired && !positive && c.closeReason == null) {
+                        // [V12 R4c A] khong bang chung c3 (tai khoan chinh: LEGACY ban dung qty c3 / tay / thanh ly mat stream)
+                        // => KHONG ghi nhu c3 tu dong; realized c3 chi tu khop c3 (khong PnL ao); chan symbol + KHAN
+                        reason = REASON_LOST_FOREIGN;
+                        try {
+                            lf.accept(sym, c);
+                        } catch (RuntimeException e) {
+                            LOG.error("[C3-LIVE-RECON] {} xu ly LOST_FOREIGN loi {}", sym, e.toString());
+                        }
+                    }
                     acct.closedOnExchange(sym, reason, now);
                     r.closedWhileDown.add(sym + ":" + reason);
                 }

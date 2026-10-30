@@ -281,6 +281,30 @@ public final class C3MergedGuard {
         }
     }
 
+    /**
+     * [V12 R4c A] san = 0 ma so c3 con qty, KHONG co bang chung thoat c3: journal LOST_FOREIGN + Telegram KHAN + chan mo lai symbol
+     * 24 h. Cum duoc Reconciler dong voi ly do LOST_FOREIGN; realized c3 CHI tu khop c3 (khong PnL ao).
+     */
+    public void onLostForeign(String sym, LiveBookC3.ClusterView c) {
+        long now = clock.getAsLong();
+        BigDecimal open = c.confirmedQty.subtract(c.exitQty == null ? BigDecimal.ZERO : c.exitQty);
+        String why = "san=0, so c3 qty=" + open.toPlainString() + " khong bang chung thoat c3";
+        scope.blockLost(sym, now + C3Scope.LOST_BLOCK_MS, why);
+        String m = "[C3-LIVE] KHAN: " + sym + " LOST_FOREIGN: vi the san = 0 nhung so c3 con qty=" + open.toPlainString()
+                + " KHONG co bang chung thoat c3 (stop c3s- / lenh c3x-) => vi the bi dong NGOAI (LEGACY ban dung qty c3 khi mat stream /"
+                + " tay / thanh ly?). Ghi so: realized c3 = PnL khop c3 (khong PnL ao); CHAN mo lai " + sym + " 24 h; LEGACY co the dang tuong"
+                + " minh short — owner KIEM NGAY";
+        LOG.error("{}", m);
+        alert.accept(m);
+        if (audit != null) {
+            try {
+                audit.record(OrderAuditLog.Entry.of(now).symbol(sym).status("LOST_FOREIGN").reason(why).qty(open).errCode(""));
+            } catch (RuntimeException e) {
+                LOG.warn("[C3-LIVE-MERGED] journal loi: {}", e.toString());
+            }
+        }
+    }
+
     /** Dam bao KHONG con stop closePosition cua c3 tren symbol MERGED (idempotent). */
     private void act(String sym, long now) {
         Optional<LiveBookC3.ClusterView> c = book.cluster(sym);
