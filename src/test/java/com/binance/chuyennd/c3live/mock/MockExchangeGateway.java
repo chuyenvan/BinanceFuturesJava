@@ -287,6 +287,25 @@ public class MockExchangeGateway implements ExchangeGateway {
         emit(ev);
     }
 
+    /** [V12 R4] lich su income (FUNDING_FEE) gia lap cho equity c3. */
+    public final List<com.binance.chuyennd.c3live.api.IncomeRecord> incomes =
+            Collections.synchronizedList(new ArrayList<com.binance.chuyennd.c3live.api.IncomeRecord>());
+
+    @Override
+    public List<com.binance.chuyennd.c3live.api.IncomeRecord> income(String incomeType, long startTimeMs, int limit) {
+        enter("income");
+        List<com.binance.chuyennd.c3live.api.IncomeRecord> out = new ArrayList<>();
+        synchronized (incomes) {
+            for (com.binance.chuyennd.c3live.api.IncomeRecord r : incomes) {
+                if (incomeType != null && !incomeType.equals(r.getIncomeType())) continue;
+                if (r.getTimeMs() < startTimeMs) continue;
+                out.add(r);
+                if (out.size() >= limit) break;
+            }
+        }
+        return out;
+    }
+
     /** [2b] Phat su kien thu cong (vd FUNDING_FEE). */
     public void emitRaw(String json) {
         Consumer<String> s = wsSink;
