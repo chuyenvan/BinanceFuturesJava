@@ -71,6 +71,7 @@ public class BinanceOrderTradingManager {
         startThreadListenQueueOrder2ManagerNew();
         startThreadManagerOrder();
         com.binance.chuyennd.ops.OpsHooks.start();   // [V11D OPS] 1 dong log cau hinh + thread kill-switch (co tat => chi log)
+        com.binance.chuyennd.ops.InPlaceRefresh.start();   // [V12 R4g] lam moi TAI CHO thay cho restart 12h (mapper)
         startThreadAutoRestartProgram();
     }
 
@@ -109,8 +110,9 @@ public class BinanceOrderTradingManager {
             //   dinh ky. Duong reset cua Reporter (market check tre >15') KHONG doi.
             final long resetPeriodMs = com.binance.chuyennd.ops.OpsConfig.periodicResetMs();
             if (resetPeriodMs <= 0) {
-                LOG.warn("[OPS-RESET] {}=0 => TAT reset dinh ky (Reporter reset khi market check tre >15' van giu)",
-                        com.binance.chuyennd.ops.OpsConfig.KEY_RESET_HOURS);
+                LOG.warn("[OPS-RESET] {}=0 (nguon={}) => TAT reset dinh ky (Reporter reset khi market check tre >15' van giu)",
+                        com.binance.chuyennd.ops.OpsConfig.KEY_RESET_HOURS,
+                        com.binance.chuyennd.ops.OpsConfig.periodicResetSource());
                 return;
             }
             while (true) {

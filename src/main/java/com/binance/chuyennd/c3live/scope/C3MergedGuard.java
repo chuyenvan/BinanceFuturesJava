@@ -279,9 +279,37 @@ public final class C3MergedGuard {
         this.booker = b;
     }
 
+    /** [V12 R4g MINOR-A] so lan doc userTrades toi da (moi lan cach {@link #TRADES_RETRY_MS}) truoc khi chot cum. */
+    public static final int TRADES_MAX_TRY = 5;
+    public static final long TRADES_RETRY_MS = 30_000L;
+    /** Trang thai thu lai cu: qua lau (cum moi cung symbol) => bo. */
+    static final long TRADES_RETRY_STALE_MS = 10L * 60_000L;
+
+    private static final class TradesRetry {
+        int attempts;
+        long firstMs;
+        long nextMs;
+    }
+
+    private final java.util.Map<String, TradesRetry> tradesRetry = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** [V12 R4g MINOR-A] so lan userTrades da loi cua symbol (0 = khong dang thu lai) — test/log. */
+    public int tradesRetryAttempts(String sym) {
+        TradesRetry t = tradesRetry.get(sym);
+        return t == null ? 0 : t.attempts;
+    }
+
     public String recoverC3Exit(LiveBookC3.ClusterView c) {
         String sym = c.symbol;
         long now = clock.getAsLong();
+        TradesRetry tr0 = tradesRetry.get(sym);
+        if (tr0 != null && now - tr0.firstMs > TRADES_RETRY_STALE_MS) {
+            tradesRetry.remove(sym);
+            tr0 = null;
+        }
+        if (tr0 != null && now < tr0.nextMs) {
+            return com.binance.chuyennd.c3live.recon.Reconciler.RECOVER_RETRY;   // [V12 R4g MINOR-A] chua toi luot thu lai
+        }
         java.util.Map<Long, String> orders = new java.util.LinkedHashMap<>();
         java.util.Set<String> cids = new java.util.LinkedHashSet<>();
         if (c.stopClientAlgoId != null) cids.add(c.stopClientAlgoId);
@@ -332,11 +360,31 @@ public final class C3MergedGuard {
                 LOG.warn("[C3-LIVE-MERGED] {} doc userTrades orderId {} loi {}", sym, id, ex.toString());
             }
         }
+        // [V12 R4g MINOR-A] userTrades loi (mot phan / het): KHONG chot cum ngay (chot => khop con thieu mat vinh vien) —
+        // GIU flatPending, thu lai toi TRADES_MAX_TRY lan cach TRADES_RETRY_MS; stream toi trong luc cho van dong cum binh thuong.
+        if (!tradesOk) {
+            TradesRetry tr = tradesRetry.computeIfAbsent(sym, k -> {
+                TradesRetry t = new TradesRetry();
+                t.firstMs = now;
+                return t;
+            });
+            tr.attempts++;
+            if (tr.attempts < TRADES_MAX_TRY) {
+                tr.nextMs = now + TRADES_RETRY_MS;
+                LOG.warn("[C3-LIVE-MERGED] {} userTrades loi lan {}/{} (orderId {}) => GIU cum (flatPending), thu lai sau {} s", sym,
+                        tr.attempts, TRADES_MAX_TRY, orders.keySet(), TRADES_RETRY_MS / 1000L);
+                return com.binance.chuyennd.c3live.recon.Reconciler.RECOVER_RETRY;
+            }
+            tradesRetry.remove(sym);
+            LOG.error("[C3-LIVE-MERGED] {} userTrades loi {} lan lien tiep => chot cum (KHAN ben duoi)", sym, TRADES_MAX_TRY);
+        } else {
+            tradesRetry.remove(sym);
+        }
         // [V12 R4f MAJOR-L1] KHONG tinh "thieu" tu anh chup c (cu): ghi DUOI khoa FillAccounting, doc lai cum song, chong trung tradeId
         ExitBooker bk = booker;
         if (!tradesOk && q.signum() > 0) {
-            String m = "[C3-LIVE] KHAN: " + sym + " doc userTrades LOI mot phan (orderId " + orders.keySet() + ") => KHONG ghi ket qua mot"
-                    + " phan; realized/phi c3 co the THIEU — owner KIEM";
+            String m = "[C3-LIVE] KHAN: " + sym + " doc userTrades LOI mot phan (orderId " + orders.keySet() + ") SAU " + TRADES_MAX_TRY
+                    + " lan thu => KHONG ghi ket qua mot phan; realized/phi c3 co the THIEU — owner KIEM";
             LOG.error("{}", m);
             alert.accept(m);
         } else if (q.signum() > 0 && bk != null) {

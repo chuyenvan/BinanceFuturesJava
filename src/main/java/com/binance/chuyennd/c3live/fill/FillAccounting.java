@@ -108,7 +108,7 @@ public final class FillAccounting {
     public void dispatch(UserStreamEvents.Event e) {
         try {
             if (e instanceof UserStreamEvents.OrderUpdate) {
-                onOrderUpdate((UserStreamEvents.OrderUpdate) e);
+                onOrderUpdate((UserStreamEvents.OrderUpdate) e);   // [V12 R4g MINOR-B] prefetch gia phi NGOAI khoa
             } else if (e instanceof UserStreamEvents.AccountUpdate) {
                 onAccountUpdate((UserStreamEvents.AccountUpdate) e);
             } else if (e instanceof UserStreamEvents.AlgoUpdate) {
@@ -119,7 +119,13 @@ public final class FillAccounting {
         }
     }
 
-    public synchronized void onOrderUpdate(UserStreamEvents.OrderUpdate u) {
+    /** [V12 R4g MINOR-B] lay gia asset phi (vd BNB, Aerospike) NGOAI khoa FillAccounting roi moi vao phan dong bo. */
+    public void onOrderUpdate(UserStreamEvents.OrderUpdate u) {
+        if (u != null && u.isTrade()) prefetchAssetPx(u.commissionAsset);
+        onOrderUpdateLocked(u);
+    }
+
+    private synchronized void onOrderUpdateLocked(UserStreamEvents.OrderUpdate u) {
         long now = clock.getAsLong();
         nOrder.incrementAndGet();
         String sym = u.symbol;
@@ -294,6 +300,17 @@ public final class FillAccounting {
         }
     }
 
+    /**
+     * [V12 R4g] Cum DANG DONG bang lenh c3x- (closeCid, closeSentMs = moc GUI) va stop bi ket thuc la stop closePosition
+     * (khong phai stop qty) va su kien san xay ra tu moc gui tro di (eventTime 0 => dung dong ho). San chi tu ket thuc stop
+     * closePosition khi vi the ve 0 => day la ket qua cua lenh dong, khong phai mat bao ve.
+     */
+    public static boolean closingAfterSend(LiveBookC3.ClusterView c, UserStreamEvents.AlgoUpdate a) {
+        if (c == null || a == null || c.closeCid == null || c.closeSentMs <= 0L || c.stopQtyMode) return false;
+        long ev = a.eventTimeMs > 0L ? a.eventTimeMs : Long.MAX_VALUE;
+        return ev >= c.closeSentMs;
+    }
+
     /** [3k R1] Vi the (theo so) con mo? confirmedQty - exitQty > 0, hoac con leg chua ro (khong du tin hieu phang). */
     private static boolean terminalPosOpen(LiveBookC3.ClusterView c) {
         BigDecimal pos = c.confirmedQty.subtract(c.exitQty == null ? BigDecimal.ZERO : c.exitQty);
@@ -308,6 +325,23 @@ public final class FillAccounting {
     private void onStopTerminal(UserStreamEvents.AlgoUpdate a, LiveBookC3.ClusterView c, boolean posOpen, long now) {
         if (!posOpen) {
             LOG.info("[C3-LIVE-FILL] {} stop {} {} khi vi the da phang => binh thuong", a.symbol, a.clientAlgoId, a.status);
+            return;
+        }
+        if (closingAfterSend(c, a)) {
+            // [V12 R4g] K5 10-29: san EXPIRE stop closePosition +4 ms sau khi lenh dong c3x- khop, ALGO_UPDATE toi TRUOC su kien
+            // khop c3x- (so chua giam qty). Moc = luc GUI lenh dong (closeSentMs, ghi TRUOC khi gui) chu khong phai ACK.
+            // Van bo stop khoi so (dung nhu cu) nhung KHONG Telegram "STOP MAT"; neu vi the con that, Reconciler/Flattener lo.
+            if (a.clientAlgoId.equals(c.stopClientAlgoId)) {
+                String old = book.retireActiveStop(a.symbol, now);
+                if (old != null) book.removeOrphanStop(a.symbol, old, now);
+            } else if (a.clientAlgoId.equals(c.pendingStopCid)) {
+                book.clearPendingStop(a.symbol, now);
+            } else {
+                return;
+            }
+            LOG.info("[C3-LIVE-FILL] {} stop closePosition {} {} sau khi da gui lenh dong {} (closeSent {} <= su kien {}) => binh"
+                    + " thuong (cho khop c3x-), khong bao STOP MAT", a.symbol, a.clientAlgoId, a.status, c.closeCid, c.closeSentMs,
+                    a.eventTimeMs);
             return;
         }
         String m;
@@ -425,19 +459,53 @@ public final class FillAccounting {
     static final double FEE_FALLBACK_RATE = 0.0005d;
 
     public void setAssetUsdPrice(java.util.function.ToDoubleFunction<String> f) {
-        if (f != null) this.assetUsdPx = f;
+        if (f != null) {
+            this.assetUsdPx = f;
+            pxCache.clear();
+        }
     }
 
-    double commissionUsd(BigDecimal n, String asset, double notionalUsd) {
-        if (n == null || n.signum() == 0) return 0d;
-        if (asset == null || STABLE.contains(asset.toUpperCase(Locale.ROOT))) return n.doubleValue();
+    /**
+     * [V12 R4g MINOR-B] Cache gia &lt;ASSET&gt;USDT: doc nguon (Aerospike) CHI ngoai khoa ({@link #prefetchAssetPx}), toi da
+     * 1 lan / {@link #ASSET_PX_TTL_MS}; trong khoa chi doc cache (gia cu toi {@link #ASSET_PX_MAX_AGE_MS} van dung — phi
+     * nho, gia BNB it doi; qua tuoi/khong co => than trong 0,05 % + canh bao nhu cu).
+     */
+    static final long ASSET_PX_TTL_MS = 60_000L;
+    static final long ASSET_PX_MAX_AGE_MS = 6L * 3_600_000L;
+    private final Map<String, double[]> pxCache = new ConcurrentHashMap<>();   // asset -> {px, tsMs}
+
+    void prefetchAssetPx(String asset) {
+        if (asset == null || STABLE.contains(asset.toUpperCase(Locale.ROOT))) return;
         String a = asset.toUpperCase(Locale.ROOT);
+        long now = clock.getAsLong();
+        double[] c = pxCache.get(a);
+        if (c != null && now - (long) c[1] < ASSET_PX_TTL_MS) return;
         double px;
         try {
             px = assetUsdPx.applyAsDouble(a);
         } catch (RuntimeException e) {
             px = Double.NaN;
         }
+        if (Double.isFinite(px) && px > 0d) {
+            pxCache.put(a, new double[]{px, now});
+        } else if (c == null) {
+            LOG.warn("[C3-LIVE-FILL] khong lay duoc gia {}USDT (ngoai khoa) => phi se ghi than trong neu khong co gia cu", a);
+        }
+    }
+
+    /** Gia trong cache con dung duoc (&lt;= 6 h); NaN = khong co. KHONG goi nguon (an toan duoi khoa). */
+    double cachedAssetPx(String a) {
+        double[] c = pxCache.get(a);
+        if (c == null) return Double.NaN;
+        if (clock.getAsLong() - (long) c[1] > ASSET_PX_MAX_AGE_MS) return Double.NaN;
+        return c[0];
+    }
+
+    double commissionUsd(BigDecimal n, String asset, double notionalUsd) {
+        if (n == null || n.signum() == 0) return 0d;
+        if (asset == null || STABLE.contains(asset.toUpperCase(Locale.ROOT))) return n.doubleValue();
+        String a = asset.toUpperCase(Locale.ROOT);
+        double px = cachedAssetPx(a);   // [V12 R4g MINOR-B] KHONG doc Aerospike duoi khoa — gia da prefetch ngoai khoa
         if (Double.isFinite(px) && px > 0d) return n.doubleValue() * px;   // [3g MIN-4] quy theo gia <ASSET>USDT
         double fb = Math.abs(notionalUsd) * FEE_FALLBACK_RATE;
         if (warnedAssets.add("fee|" + a)) {
@@ -454,7 +522,15 @@ public final class FillAccounting {
      * cum da dong (stream toi truoc) => KHONG ghi; moi khop theo tradeId (da ghi => bo). realized = (gia - gia vao c3) x qty (KHONG
      * dung rp san: sai khi MERGED; khong MERGED chi doi chieu); phi tru (USDT) / quy theo gia (khac). Tra so khop da ghi.
      */
-    public synchronized int bookRecoveredExit(String sym, java.util.List<com.binance.chuyennd.c3live.api.TradeFill> fills, boolean merged) {
+    public int bookRecoveredExit(String sym, java.util.List<com.binance.chuyennd.c3live.api.TradeFill> fills, boolean merged) {
+        if (fills != null) {   // [V12 R4g MINOR-B] gia phi lay NGOAI khoa
+            for (com.binance.chuyennd.c3live.api.TradeFill f : fills) if (f != null) prefetchAssetPx(f.getCommissionAsset());
+        }
+        return bookRecoveredExitLocked(sym, fills, merged);
+    }
+
+    private synchronized int bookRecoveredExitLocked(String sym, java.util.List<com.binance.chuyennd.c3live.api.TradeFill> fills,
+                                                     boolean merged) {
         long now = clock.getAsLong();
         Optional<LiveBookC3.ClusterView> c = book.cluster(sym);
         if (!c.isPresent()) {

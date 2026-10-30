@@ -210,8 +210,66 @@ public class SimpleSymbolMapper {
 
     public String getSymbol(short id) {
         if (!isInitialized) init();
-        return idToStr.getOrDefault(id, "UNKNOWN-" + id);
+        String s = idToStr.get(id);
+        if (s == null && refreshClock.getAsLong() - lastRefreshMs >= MISS_REFRESH_MIN_MS && refreshIfStale(MISS_REFRESH_MIN_MS) > 0) {
+            s = idToStr.get(id);
+        }   // [V12 R4g] id do process khac cap
+        return s != null ? s : "UNKNOWN-" + id;
     }
+
+    /** [V12 R4g] khoang toi thieu giua 2 lan doc lai store khi getSymbol gap id la (chong goi day trong vong nong). */
+    static final long MISS_REFRESH_MIN_MS = 60_000L;
+    private volatile long lastRefreshMs = Long.MIN_VALUE / 2;
+    /** Dong ho (test thay duoc). */
+    volatile java.util.function.LongSupplier refreshClock = System::currentTimeMillis;
+
+    /** [V12 R4g] doc lai store neu lan doc truoc da qua {@code minGapMs}; tra so symbol them (0 = khong doc / khong moi). */
+    synchronized int refreshIfStale(long minGapMs) {
+        if (refreshClock.getAsLong() - lastRefreshMs < minGapMs) return 0;
+        return refreshFromStore();
+    }
+
+    /**
+     * [V12 R4g] Lam moi TAI CHO (thay cho restart JVM 12h): doc lai map tu store va THEM symbol/id moi (process khac — vd
+     * collectData — cap sau khi JVM nay init). KHONG BAO GIO doi id da co trong JVM (bat bien trong 1 JVM: mang theo id dang
+     * dung); store lech JVM => ERROR (1 lan/symbol). Loi doc => WARN, giu nguyen. Tra so symbol them.
+     */
+    public synchronized int refreshFromStore() {
+        if (!isInitialized) {
+            init();
+            lastRefreshMs = refreshClock.getAsLong();
+            return 0;
+        }
+        lastRefreshMs = refreshClock.getAsLong();
+        Map<String, Short> dbMap;
+        try {
+            dbMap = store().loadForInit();
+        } catch (RuntimeException e) {
+            LOG.warn("[MAPPER-REFRESH] doc store loi {} => giu map hien tai ({} symbol)", e.toString(), strToId.size());
+            return 0;
+        }
+        if (dbMap == null || dbMap.isEmpty()) return 0;
+        int added = 0;
+        for (Map.Entry<String, Short> e : new TreeMap<>(dbMap).entrySet()) {
+            String sym = e.getKey();
+            Short sid = e.getValue();
+            if (sym == null || sid == null) continue;
+            Short local = strToId.get(sym);
+            if (local == null) {
+                register(sym, sid);   // id trung voi symbol khac trong JVM => register log ERROR, giu chu cu (tat dinh)
+                added++;
+            } else if (!local.equals(sid) && refreshMismatchLogged.add(sym)) {
+                LOG.error("⛔ [MAPPER-REFRESH] {}: JVM dung id {}{} nhung store ghi {} => GIU id JVM (khong doi giua chung)", sym,
+                        local, localOnly.containsKey(sym) ? " (CUC BO)" : "", sid);
+            }
+        }
+        if (added > 0) {
+            LOG.info("🗺️ [MAPPER-REFRESH] them {} symbol tu store (tong {}, max id {})", added, strToId.size(), counter);
+        }
+        return added;
+    }
+
+    private final java.util.Set<String> refreshMismatchLogged = ConcurrentHashMap.newKeySet();
 
     public Map<String, Short> getAllMappings() {
         if (!isInitialized) init();

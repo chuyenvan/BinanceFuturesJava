@@ -41,14 +41,43 @@ public final class OpsConfig {
 
     private static final int RESET_HOURS;
 
+    /** [V12 R4g] nguon gia tri reset (log): "env" = khai tuong minh; "profile" = mac dinh theo LIVE_PROFILE. */
+    private static final String RESET_SOURCE;
+
     static {
         String raw = Cfg.get(KEY_RESET_HOURS);
-        int h = parseResetHours(raw);
+        String prof = Cfg.get("LIVE_PROFILE");
+        int h = resolveResetHours(raw, prof);
         if (raw != null && !raw.trim().isEmpty() && !isValidResetHours(raw)) {
-            LOG.warn("[OPS-RESET] {}='{}' khong hop le (can so nguyen 0..{}) => dung mac dinh {}h",
-                    KEY_RESET_HOURS, raw, MAX_RESET_HOURS, DEFAULT_RESET_HOURS);
+            LOG.warn("[OPS-RESET] {}='{}' khong hop le (can so nguyen 0..{}) => dung mac dinh {}h (LIVE_PROFILE={})",
+                    KEY_RESET_HOURS, raw, MAX_RESET_HOURS, h, prof);
         }
         RESET_HOURS = h;
+        RESET_SOURCE = isValidResetHours(raw) ? "env" : "profile";
+    }
+
+    /**
+     * [V12 R4g] Profile c3_live / c3_shadow: mac dinh TAT reset dinh ky (0). Ly do (owner 10-30): restart 12h co tu thoi
+     * ingestor + strategy chung 1 process (lam moi WS); nay ingestor la process rieng (collectData, KHONG doc key nay) nen
+     * process strategy/trade khong can. Nhung gi restart tung "vo tinh" lam moi da thay bang lam moi TAI CHO
+     * (docs/c3live/ROUND4G.md §1). Khai tuong minh hop le => dung gia tri khai (vd 12 de bat lai). Khai sai => mac dinh
+     * theo profile. Profile khac (HEAD) => 12 nhu cu.
+     */
+    static int resolveResetHours(String raw, String profile) {
+        if (isValidResetHours(raw)) return Integer.parseInt(raw.trim());
+        return isC3Profile(profile) ? 0 : DEFAULT_RESET_HOURS;
+    }
+
+    /** [V12 R4g] c3_live hoac c3_shadow (khong phan biet hoa thuong, bo khoang trang). */
+    static boolean isC3Profile(String profile) {
+        if (profile == null) return false;
+        String p = profile.trim().toLowerCase(Locale.ROOT);
+        return "c3_live".equals(p) || "c3_shadow".equals(p);
+    }
+
+    /** [V12 R4g] "env" | "profile" — de log cau hinh. */
+    public static String periodicResetSource() {
+        return RESET_SOURCE;
     }
 
     private OpsConfig() {

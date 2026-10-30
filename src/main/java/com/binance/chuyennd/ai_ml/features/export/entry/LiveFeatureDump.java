@@ -71,6 +71,15 @@ public final class LiveFeatureDump {
     private static boolean disabled = false;
     private static long rowsWritten = 0;
     private static boolean hookInstalled = false;
+    /**
+     * [V12 R4g] Ngan sach {@code LIVE_FEAT_DUMP} tinh THEO NGAY UTC khi reset dinh ky TAT (truoc: tong tu luc JVM khoi
+     * dong, restart 12h "vo tinh" nap lai — 10-25 env 3000 => dump tu tat 50 h sau restart 10-23). {@code LIVE_FEAT_DUMP_DAILY}
+     * = 1/0 ghi de; mac dinh = 1 khi {@code OpsConfig.periodicResetHours()==0}. Ngay moi: mo lai sau DU TICK / CHAM TRAN / loi
+     * IO (giong restart cu); KHONG mo lai sau khi JVM dang tat.
+     */
+    private static final boolean DAILY;
+    private static long budgetDay = Long.MIN_VALUE;
+    private static boolean jvmShutdown = false;
 
     private static final GzSink mainSink = new GzSink("feat_dump");
     private static final GzSink selSink = new GzSink("sel_dump");
@@ -90,15 +99,28 @@ public final class LiveFeatureDump {
             rot = 0;
         }
         ROTATE_MS = rot < 0 ? 0 : rot;
+        DAILY = parseDaily(Cfg.get("LIVE_FEAT_DUMP_DAILY"), com.binance.chuyennd.ops.OpsConfig.periodicResetHours() == 0);
         if (REMAINING > 0) {
             installShutdownHook();
             LOG.warn("🟠 [LIVE_FEAT_DUMP] BAT — se ghi toi da {} tick vao {}/*.csv.gz (tran {} MB, xoay={} phut). "
-                    + "Chi ghi, khong doi logic.", REMAINING, DIR, MAX_BYTES / (1024 * 1024),
-                    ROTATE_MS / 60_000L);
+                    + "Chi ghi, khong doi logic. Ngan sach theo ngay UTC={}", REMAINING, DIR, MAX_BYTES / (1024 * 1024),
+                    ROTATE_MS / 60_000L, DAILY);
         }
     }
 
     private LiveFeatureDump() {
+    }
+
+    /** [V12 R4g] null/rong => mac dinh; "1"/"true" => bat; con lai => tat. */
+    static boolean parseDaily(String raw, boolean def) {
+        if (raw == null || raw.trim().isEmpty()) return def;
+        String v = raw.trim();
+        return "1".equals(v) || "true".equalsIgnoreCase(v);
+    }
+
+    /** [V12 R4g] dump dang tat: mo lai CHI khi che do theo ngay, sang ngay UTC moi, va KHONG phai do JVM dang tat. */
+    static boolean reopenOnNewDay(boolean daily, long budgetDay, long day, boolean jvmShutdown) {
+        return daily && !jvmShutdown && budgetDay != Long.MIN_VALUE && day > budgetDay;
     }
 
     /** [EXPORT-FIX] dang ky 1 lan: dong + finalize writer khi JVM dung (tranh file thieu gz trailer). */
@@ -109,6 +131,9 @@ public final class LiveFeatureDump {
             Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
                 @Override
                 public void run() {
+                    synchronized (LiveFeatureDump.class) {
+                        jvmShutdown = true;
+                    }
                     finalizeOnShutdown();
                 }
             }, "LiveFeatureDumpFinalize"));
@@ -141,7 +166,17 @@ public final class LiveFeatureDump {
     /** [EXPORT-FIX] them 4 cot market (rateDownAvg/rateUpAvg/rateDown15MAvg/rateUp15MAvg). */
     public static synchronized void maybeDump(long timestamp, String symbol,
                                               MarketFeatures f, float p15Out, MarketDataObject marketRate) {
-        if (REMAINING <= 0 || disabled || f == null) return;
+        if (REMAINING <= 0 || f == null) return;
+        long day = Math.floorDiv(timestamp, 86_400_000L);
+        if (disabled) {
+            if (!reopenOnNewDay(DAILY, budgetDay, day, jvmShutdown)) return;
+            disabled = false;
+            rowsWritten = 0;
+            LOG.warn("🟠 [LIVE_FEAT_DUMP] NGAY UTC MOI (epoch_day {}) -> MO LAI dump, ngan sach {} tick/ngay", day, REMAINING);
+        } else if (DAILY && day != budgetDay && budgetDay != Long.MIN_VALUE) {
+            rowsWritten = 0;   // ngay moi khi chua het ngan sach: dem lai tu 0
+        }
+        budgetDay = day;
         try {
             if (mainSink.writer == null) openMain(timestamp);
             if (mainSink.writer == null) return;

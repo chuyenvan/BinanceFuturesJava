@@ -67,6 +67,14 @@ public final class Reconciler {
     /** [V12 R4c A] san = 0 ma KHONG co bang chung thoat c3 (stop c3 kich / lenh dong c3 khop / dang dong): vi the c3 bi dong NGOAI. */
     public static final String REASON_LOST_FOREIGN = "LOST_FOREIGN";
     public static final String DEFAULT_REANCHOR_FILE = "run/c3live_reanchor.req";
+    /**
+     * [V12 R4g MINOR-A] exitRecovery tra gia tri nay = bang chung thoat c3 CO nhung doc khop (userTrades) loi => GIU cum
+     * (flatPending, khong chot) va doi chieu lai sau {@link #RECOVER_RETRY_MS}.
+     */
+    public static final String RECOVER_RETRY = "RECOVER_RETRY";
+    public static final long RECOVER_RETRY_MS = 30_000L;
+    /** symbol -> moc doi chieu lai (exitRecovery xin thu lai). */
+    private final Map<String, Long> recoverRetryAt = new java.util.concurrent.ConcurrentHashMap<>();
     static final BigDecimal REL_QTY_TOL = new BigDecimal("1e-9");
 
     /** Ket qua 1 luot (cho log/test). */
@@ -418,11 +426,12 @@ public final class Reconciler {
                             || st == OrderStatus.TRIGGERING;
                     boolean positive = st == OrderStatus.FINISHED || st == OrderStatus.FILLED || closeOrderFilled(c);
                     String who = startup ? "reconcile khoi dong" : "reconcile";
-                    if (!positive && !flat.observeFlat(sym, now, who)) {
+                    // [V12 R4g MINOR-A] da XAC NHAN phang o luot truoc, chi dang cho doc lai khop => khong dem lai 3 lan doc
+                    boolean confirmedBefore = recoverRetryAt.containsKey(sym);
+                    if (!positive && !confirmedBefore && !flat.observeFlat(sym, now, who)) {
                         r.flatPending.add(sym);
                         continue;
                     }
-                    flat.clear(sym);
                     String reason = stopFired ? FillAccounting.REASON_TRAILING
                             : (c.closeReason != null ? c.closeReason : FillAccounting.REASON_EXTERNAL);
                     // [V12 R4e MINOR-1] bang chung tren MOI lenh c3 (ke ca stop pending/mo coi da kich) + nap khop that (mat stream)
@@ -435,6 +444,14 @@ public final class Reconciler {
                             LOG.error("[C3-LIVE-RECON] {} tim bang chung thoat c3 loi {}", sym, e.toString());
                         }
                     }
+                    if (RECOVER_RETRY.equals(recovered)) {
+                        // [V12 R4g MINOR-A] khop chua doc du => GIU cum + stop (nhu flatPending), doi chieu lai sau 30 s
+                        recoverRetryAt.put(sym, now + RECOVER_RETRY_MS);
+                        r.flatPending.add(sym);
+                        continue;
+                    }
+                    recoverRetryAt.remove(sym);
+                    flat.clear(sym);
                     if (recovered != null && !stopFired && !positive && c.closeReason == null) reason = recovered;
                     java.util.function.BiConsumer<String, LiveBookC3.ClusterView> lf = lostForeign;
                     if (lf != null && recovered == null && !stopFired && !positive && c.closeReason == null) {
@@ -453,6 +470,7 @@ public final class Reconciler {
                 continue;
             }
             flat.clear(sym);
+            recoverRetryAt.remove(sym);   // [V12 R4g MINOR-A] vi the con => khong con cho doc lai khop
             if (!startup) continue;
             // san thang qty/gia
             double ep = p.getEntryPrice() == null ? 0d : p.getEntryPrice().doubleValue();
@@ -536,15 +554,18 @@ public final class Reconciler {
         remindUnknown(t);
         boolean unknownDue = false;
         for (long g : unknownGoneSince.values()) if (t - g >= flat.minGapMs()) unknownDue = true;
+        for (long at : recoverRetryAt.values()) if (t >= at) unknownDue = true;   // [V12 R4g MINOR-A]
         // [2e] dang chan UNKNOWN (vd guard GIU stop vi positionRisk tre sau khi dong) => doc lai moi 30 s de tu go som
         if ((!unknownSyms.isEmpty() || !knownSyms.isEmpty()) && t - lastPosCheckMs >= flat.minGapMs()) unknownDue = true;
         if (!flat.anyDue(t) && !unknownDue) return null;
         return checkPositions();
     }
 
-    /** Symbol dang cho xac nhan phang (giu cum + stop). */
+    /** Symbol dang cho xac nhan phang (giu cum + stop) — ke ca dang cho doc lai khop (MINOR-A). */
     public Set<String> flatPending() {
-        return flat.pending();
+        Set<String> s = new TreeSet<>(flat.pending());
+        s.addAll(recoverRetryAt.keySet());
+        return Collections.unmodifiableSet(s);
     }
 
     private void unknownCheck(Map<String, PositionInfo> pos, Report r) {
@@ -673,6 +694,7 @@ public final class Reconciler {
             retryKeptStops(r, now);
             unknownCheck(pos, r);
             flat.retainOnly(book.ownedSymbols());
+            recoverRetryAt.keySet().retainAll(book.ownedSymbols());
         } catch (RuntimeException e) {
             r.ok = false;
             r.error = e.toString();

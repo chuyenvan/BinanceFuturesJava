@@ -582,7 +582,7 @@ public class Utils {
             // Thoát chương trình hiện tại
             System.exit(0);
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error("Restart loi: {}", e.toString(), e);
         }
     }
 

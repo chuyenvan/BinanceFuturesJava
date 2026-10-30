@@ -142,7 +142,7 @@ public class C3MainAccountR4fTest {
         r.book.retireActiveStop(S, r.now.get());
         r.mock.triggerStops(S, new BigDecimal("1.08"));
         assertEquals(0, r.mock.position(S).signum());
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 9; i++) {   // [V12 R4g MINOR-A] 3 lan doc phang + 5 lan thu userTrades (cach 30 s)
             r.now.addAndGet(35_000L);
             r.sync();
             r.rec.checkPositions();

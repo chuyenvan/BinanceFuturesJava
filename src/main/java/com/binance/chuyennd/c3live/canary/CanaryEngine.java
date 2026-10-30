@@ -2421,7 +2421,8 @@ public final class CanaryEngine {
         BigDecimal p = posAmt(s);
         BigDecimal a = acctAmt(s);
         boolean flat = p.signum() == 0 && a != null && a.signum() == 0;
-        long since = close == null || !(close.get("ts") instanceof Number) ? 0L : ((Number) close.get("ts")).longValue();
+        long since = k5Since(close, close == null || close.get("cid") == null ? -1L : gw.firstSentMs(close.get("cid").toString()));
+        st.put("closeSince", since);
         String exchWhy = stopEndExchangeReject(journal.entries(), sid, s, since, flat, stopClosePosition);
         boolean exch = exchWhy == null;
         st.put("exchangeTerminal", exch);
@@ -2445,6 +2446,13 @@ public final class CanaryEngine {
      * </ul>
      * CHI la ham quyet dinh (khong goi san) de test duoc ca duong chap nhan lan cac duong tu choi.
      */
+    static long k5Since(Map<String, Object> close, long firstSentMs) {
+        // [V12 R4g] moc "sau lenh dong" = luc GUI that lan dau (firstSentMs, <= luc khop): 10-29 ALGO_UPDATE EXPIRED toi TRUOC
+        // ACK c3x- (+4 ms sau khop) => moc ts ACK lam K5 TRUOT gia (fail-closed). Khong co firstSentMs => ts ACK (cu, chat hon).
+        if (firstSentMs >= 0L) return firstSentMs;
+        return close == null || !(close.get("ts") instanceof Number) ? 0L : ((Number) close.get("ts")).longValue();
+    }
+
     static String stopEndExchangeReject(List<Map<String, Object>> entries, String sid, String sym, long sinceMs,
                                         boolean positionFlat, boolean closePositionStop) {
         if (sid == null || !sid.startsWith(C3LiveCids.STOP_PREFIX)) return "caid khong thuoc canary";
