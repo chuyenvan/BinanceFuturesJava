@@ -284,6 +284,7 @@ public final class C3LiveRuntime {
                 reanchorFile, flat);
         acct.setUnknownPositionSink(reconciler::onUnknownPosition);
         reconciler.setQtyReconcile(true);   // [V12 R4 R4] doi chieu hang gio = qty c3 so vs san (khong so tmb)
+        reconciler.setMergedPredicate(scope::isMerged);   // [V12 R4b MAJOR-1] MERGED: khong ha so c3, khong chan (A)
         final boolean dry = mode == GatewayFactory.Mode.DRY;
         final Reconciler rec = reconciler;
         C3LiveEntry en = null;
@@ -331,7 +332,9 @@ public final class C3LiveRuntime {
         sgw.setSuspectSink(merged::suspect);
         this.protector = new C3StopProtector(book, trailing, flattener::closeCluster, scope::isMerged, alerts::send,
                 System::currentTimeMillis);
+        protector.setMergedCloseCheck(merged::exchangeCoversC3);   // [V12 R4b §4]
         this.streamScope = new C3StreamScope(scope, book, System::currentTimeMillis);
+        streamScope.setGateway(sgw);   // [V12 R4b MINOR-1] xac nhan khop stop c3 bang queryStop
         streamScope.setForeignFillSink(merged::onForeignFill);
         streamScope.setSuspectSink(merged::suspect);
         final C3StopProtector pr = protector;
@@ -401,6 +404,12 @@ public final class C3LiveRuntime {
                 + " stream=" + (userStream == null ? "dry-events" : "ws") + (manageOnly ? " MANAGE_ONLY" : "");
         LOG.warn("{}", m);
         alerts.send(m);
+        if (mode == GatewayFactory.Mode.DRY) {   // [V12 R4b MINOR-7]
+            String d = "[C3-LIVE] DRY tren tai khoan chinh: DryGateway KHONG doc tai khoan that => 0 vi the LEGACY, khong LEGACY-busy /"
+                    + " MERGED, ky quy khong bi LEGACY chiem => KPI dry LAC QUAN so voi live (xem docs/c3live/ROUND4B.md)";
+            LOG.warn("{}", d);
+            alerts.send(d);
+        }
         if (manageOnly) {
             String mo = "[C3-LIVE] MANAGE-ONLY: phan vao lenh tao loi (" + manageOnlyReason + ") => KHONG mo moi; van quan ly"
                     + " vi the cu (trailing/time-stop/X14/reconcile/FLATTEN). Sua cau hinh roi restart.";
@@ -463,7 +472,7 @@ public final class C3LiveRuntime {
                 flattener.step();
                 legacyRefresher.tick();      // [V12 R4 R2] LEGACY-busy moi chu ky (60 s)
                 merged.poll();               // [V12 R4 R2] xac nhan / go MERGED
-                protector.check();           // [V12 R4 R6] stop bao ve <= 61 s
+                kickProtect();               // [V12 R4 R6 / R4b MINOR-4] stop bao ve <= 61 s — BAT DONG BO, khong chan vong ops
                 equity.pollFunding(now);     // [V12 R4 R4] funding c3 theo symbol (income, 10')
                 reconciler.confirmPendingFlat();   // [2c MAJ-2] doc xac nhan symbol "nghi phang" (>= 5 s sau lan dau)
                 if (now - lastExit >= EXIT_EVERY_MS) {

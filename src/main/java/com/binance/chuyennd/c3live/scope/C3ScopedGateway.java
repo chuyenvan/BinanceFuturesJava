@@ -51,7 +51,7 @@ public final class C3ScopedGateway implements ExchangeGateway {
     public static final long GUARD_RETRY_MAX_WAIT_MS = 61_000L;
 
     /** Lop pham vi c3 tu choi (CHAC CHAN khong gui len san). */
-    public static final class ScopeRefusal extends GatewayException {
+    public static final class ScopeRefusal extends GatewayException implements com.binance.chuyennd.c3live.api.ClientSideRefusal {
         private static final long serialVersionUID = 1L;
 
         ScopeRefusal(String msg) {

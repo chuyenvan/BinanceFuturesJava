@@ -1,6 +1,7 @@
 package com.binance.chuyennd.c3live.scope;
 
 import com.binance.chuyennd.c3live.api.OrderInfo;
+import com.binance.chuyennd.c3live.api.OrderStatus;
 import com.binance.chuyennd.c3live.api.PositionInfo;
 import com.binance.chuyennd.c3live.book.LiveBookC3;
 import com.binance.chuyennd.c3live.exit.TrailingStopManager;
@@ -111,27 +112,49 @@ public final class C3MergedGuard {
             if (p.getSymbol() == null || p.getPositionAmt() == null) continue;
             amt.merge(p.getSymbol(), p.getPositionAmt(), BigDecimal::add);
         }
+        // [V12 R4b MAJOR-1] san != ledger c3 (ca 2 chieu). Ngoai khoa: thieu hut can doc BANG CHUNG thoat c3 tren san (REST).
+        Map<String, String> reasons = new TreeMap<>();
+        for (LiveBookC3.ClusterView c : book.clusters()) {
+            String s = c.symbol;
+            BigDecimal a = amt.getOrDefault(s, BigDecimal.ZERO);
+            scope.noteRawAmt(s, a);
+            if (scope.isMerged(s)) continue;
+            BigDecimal upper = scope.c3UpperQty(s);
+            if (a.signum() < 0 || a.compareTo(upper.add(C3Scope.EPS)) > 0) {
+                reasons.put(s, "san " + a.toPlainString() + " > so c3 " + upper.toPlainString());
+                continue;
+            }
+            BigDecimal open = scope.c3OpenQty(s);
+            // san = 0: duong "phang" cua Reconciler/FlatConfirm (stop/thanh ly/ADL...) — khong phai MERGED
+            if (c.hasUnresolved || a.signum() == 0 || a.add(C3Scope.EPS).compareTo(open) >= 0) continue;
+            BigDecimal ev = evidencedExit(c);
+            BigDecimal must = c.confirmedQty.subtract(ev);
+            if (a.add(C3Scope.EPS).compareTo(must) >= 0) {
+                LOG.info("[C3-LIVE-MERGED] {} san {} < so c3 {} nhung DUOC GIAI THICH boi bang chung thoat c3 tren san ({})", s,
+                        a.toPlainString(), open.toPlainString(), ev.toPlainString());
+                continue;
+            }
+            reasons.put(s, "san " + a.toPlainString() + " < so c3 " + open.toPlainString()
+                    + " KHONG co bang chung thoat c3 (c3x-/c3s- da chung minh " + ev.toPlainString() + ")");
+        }
         List<String> toMerge = new ArrayList<>();
         List<String> toAct = new ArrayList<>();
         synchronized (this) {
             for (LiveBookC3.ClusterView c : book.clusters()) {
                 String s = c.symbol;
-                BigDecimal a = amt.getOrDefault(s, BigDecimal.ZERO);
-                scope.noteRawAmt(s, a);
                 if (scope.isMerged(s)) continue;
-                BigDecimal upper = scope.c3UpperQty(s);
-                boolean excess = a.signum() < 0 || a.compareTo(upper.add(C3Scope.EPS)) > 0;
-                if (!excess) {
-                    if (suspectSince.remove(s) != null) LOG.info("[C3-LIVE-MERGED] {} het nghi van (san {} <= c3 {})", s, a, upper);
+                String why = reasons.get(s);
+                if (why == null) {
+                    if (suspectSince.remove(s) != null) LOG.info("[C3-LIVE-MERGED] {} het nghi van (san = so c3 / co bang chung)", s);
                     continue;
                 }
                 Long since = suspectSince.get(s);
                 if (startup) {
-                    toMerge.add(s + "|khoi dong: san " + a.toPlainString() + " > so c3 " + upper.toPlainString());
+                    toMerge.add(s + "|khoi dong: " + why);
                 } else if (since == null || since == Long.MIN_VALUE) {
                     suspectSince.put(s, now);
                 } else if (now - since >= CONFIRM_GAP_MS) {
-                    toMerge.add(s + "|REST 2 lan: san " + a.toPlainString() + " > so c3 " + upper.toPlainString());
+                    toMerge.add(s + "|REST 2 lan: " + why);
                 }
             }
             suspectSince.keySet().removeIf(s -> !scope.held(s));
@@ -196,6 +219,65 @@ public final class C3MergedGuard {
             alert.accept(m);
             journal(sym, "MERGED_RELEASED", why, clock.getAsLong());
             lastRemind.remove(sym);
+        }
+    }
+
+    /**
+     * [V12 R4b MAJOR-1] Qty thoat c3 CHUNG MINH tren san (dinh luong nhu canary 3h): lenh dong c3x- (executedQty) + stop c3s- da
+     * kich (FINISHED/TRIGGERED => executedQty cua actualOrderId). Lay max voi exitQty cua so. Doc loi => khong tinh (fail-closed:
+     * thieu hut khong giai thich => MERGED, khong dong, khong ghi de so).
+     */
+    BigDecimal evidencedExit(LiveBookC3.ClusterView c) {
+        String sym = c.symbol;
+        BigDecimal e = BigDecimal.ZERO;
+        if (c.closeCid != null) {
+            try {
+                Optional<OrderInfo> q = gw.queryOrder(sym, c.closeCid);
+                if (q.isPresent() && q.get().getExecutedQty() != null && q.get().getExecutedQty().signum() > 0) {
+                    e = e.add(q.get().getExecutedQty());
+                }
+            } catch (RuntimeException ex) {
+                LOG.warn("[C3-LIVE-MERGED] {} doc lenh dong {} loi {} => khong tinh bang chung", sym, c.closeCid, ex.toString());
+            }
+        }
+        java.util.Set<String> cids = new java.util.LinkedHashSet<>();
+        if (c.stopClientAlgoId != null) cids.add(c.stopClientAlgoId);
+        if (c.pendingStopCid != null) cids.add(c.pendingStopCid);
+        cids.addAll(c.orphanStops);
+        for (String cid : cids) {
+            try {
+                Optional<OrderInfo> st = gw.queryStop(sym, cid);
+                if (!st.isPresent()) continue;
+                OrderStatus x = st.get().getStatus();
+                String ai = st.get().getActualOrderId();
+                if (!(x == OrderStatus.FINISHED || x == OrderStatus.TRIGGERED) || ai == null || ai.trim().isEmpty()) continue;
+                Optional<OrderInfo> o = gw.queryOrderById(sym, Long.parseLong(ai.trim()));
+                if (o.isPresent() && o.get().getExecutedQty() != null && o.get().getExecutedQty().signum() > 0) {
+                    e = e.add(o.get().getExecutedQty());
+                }
+            } catch (RuntimeException ex) {
+                LOG.warn("[C3-LIVE-MERGED] {} doc stop {} loi {} => khong tinh bang chung", sym, cid, ex.toString());
+            }
+        }
+        BigDecimal bookExit = c.exitQty == null ? BigDecimal.ZERO : c.exitQty;
+        return e.max(bookExit);
+    }
+
+    /**
+     * [V12 R4b §4] MERGED ma san &gt;= qty c3 (LEGACY cung long): dong DUNG qty c3 (c3x- reduceOnly) la trung tinh voi LEGACY.
+     * Doc vi the THO trong lan khan cap (khong bi guard rieng chan). Doc loi => false (khong dong).
+     */
+    public boolean exchangeCoversC3(String sym) {
+        try (RateGuard.Lane lane = RateGuard.emergencyLane()) {
+            BigDecimal a = BigDecimal.ZERO;
+            for (PositionInfo p : gw.positionsAll()) {
+                if (sym.equals(p.getSymbol()) && p.getPositionAmt() != null) a = a.add(p.getPositionAmt());
+            }
+            BigDecimal open = scope.c3OpenQty(sym);
+            return open.signum() > 0 && a.signum() > 0 && a.add(C3Scope.EPS).compareTo(open) >= 0;
+        } catch (RuntimeException e) {
+            LOG.warn("[C3-LIVE-MERGED] {} doc vi the de quyet dinh dong loi {} => KHONG dong", sym, e.toString());
+            return false;
         }
     }
 

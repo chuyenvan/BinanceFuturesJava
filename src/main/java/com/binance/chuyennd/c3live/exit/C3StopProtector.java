@@ -44,6 +44,12 @@ public final class C3StopProtector {
     private final Map<String, Long> since = new TreeMap<>();
     private final Set<String> terminal = new HashSet<>();
     private final Set<String> alerted = new HashSet<>();
+    /** [V12 R4b §4] MERGED: true = san &gt;= qty c3 (LEGACY cung long) => dong DUNG qty c3 la trung tinh. Mac dinh: khong dong. */
+    private volatile Predicate<String> mergedMayClose = s -> false;
+
+    public void setMergedCloseCheck(Predicate<String> p) {
+        this.mergedMayClose = p == null ? s -> false : p;
+    }
 
     public C3StopProtector(LiveBookC3 book, TrailingStopManager trailing, TrailingStopManager.Closer closer,
                            Predicate<String> merged, Consumer<String> alert, LongSupplier clock) {
@@ -114,9 +120,27 @@ public final class C3StopProtector {
                 continue;
             }
             if (merged.test(sym)) {
+                boolean canClose;
+                try {
+                    canClose = mergedMayClose.test(sym);
+                } catch (RuntimeException e) {
+                    canClose = false;
+                }
+                if (canClose) {
+                    String m = "[C3-LIVE] KHAN: " + sym + " MERGED, san >= qty c3 (LEGACY cung long), stop bi san ket thuc > "
+                            + DEADLINE_MS / 1000 + " s => DONG DUNG qty c3 (c3x- reduceOnly, lan khan cap) — trung tinh voi LEGACY";
+                    LOG.error("{}", m);
+                    alert.accept(m);
+                    try {
+                        closer.closeCluster(sym, REASON_STOP_LOST);
+                    } catch (RuntimeException e) {
+                        LOG.error("[C3-LIVE-PROTECT] {} dong khan cap loi: {}", sym, e.toString());
+                    }
+                    continue;
+                }
                 if (alerted.add(sym)) {
-                    String m = "[C3-LIVE] KHAN: " + sym + " MERGED mat stop > " + DEADLINE_MS / 1000 + " s — KHONG dong (R2: vi the"
-                            + " lan LEGACY); trailing tiep tuc dat stop qty; owner KIEM NGAY";
+                    String m = "[C3-LIVE] KHAN: " + sym + " MERGED mat stop > " + DEADLINE_MS / 1000 + " s — KHONG dong (san < qty c3 / am:"
+                            + " LEGACY ban vao long c3); trailing tiep tuc dat stop qty; owner KIEM NGAY";
                     LOG.error("{}", m);
                     alert.accept(m);
                 }

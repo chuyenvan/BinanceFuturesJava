@@ -46,6 +46,8 @@ public final class C3Scope {
     /** symbol vua chot van "lien quan c3" trong cua so nay (> OwnStopGuard.KNOWN_CLOSE_WINDOW_MS 10'). */
     public static final long RELATED_AFTER_CLOSE_MS = 15L * 60_000L;
     public static final BigDecimal EPS = new BigDecimal("1e-9");
+    /** [V12 R4b MINOR-5] vi the khong-c3 tren symbol c3 vua chot chi bi coi la LEGACY sau khoang nay (REST tre sau khi dong). */
+    public static final long TOUCH_AFTER_CLOSE_MS = 60_000L;
 
     private final LiveBookC3 book;
     private final LongSupplier clock;
@@ -200,6 +202,8 @@ public final class C3Scope {
             if (!held(s)) {
                 legacyPos++;
                 busy.put(s, "vi the " + amt.toPlainString());
+                long rm = book.lastRemovedMs(s);
+                if (rm == Long.MIN_VALUE || now - rm >= TOUCH_AFTER_CLOSE_MS) touchLegacy(s, now);   // [R4b MINOR-5]
             } else if (amt.signum() < 0 || amt.compareTo(c3UpperQty(s).add(EPS)) > 0) {
                 busy.put(s, "vi the san " + amt.toPlainString() + " > c3 " + c3UpperQty(s).toPlainString());
             }

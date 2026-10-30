@@ -121,6 +121,8 @@ public final class Reconciler {
     private int matchStreak;
     /** [V12 R4 R4] tai khoan chinh: doi chieu hang gio = qty c3 (so) vs san tren symbol c3 — KHONG so tmb. */
     private volatile boolean qtyReconcile;
+    /** [V12 R4b MAJOR-1] symbol MERGED (pham vi c3): khoi dong KHONG "san thang" ha so c3; hang gio KHONG chan (A). */
+    private volatile java.util.function.Predicate<String> mergedSym = s -> false;
     /** [V12 R4] anh chup (doc khong khoa) symbol dang theo doi (A)(B)/cho phang — cho view pham vi c3. */
     private volatile Set<String> watched = Collections.emptySet();
     private double lastDiff = Double.NaN;
@@ -167,6 +169,11 @@ public final class Reconciler {
     /** [V12 R4 R4] bat doi chieu hang gio theo qty c3 (tai khoan chinh). */
     public void setQtyReconcile(boolean on) {
         this.qtyReconcile = on;
+    }
+
+    /** [V12 R4b MAJOR-1] noi predicate MERGED cua pham vi c3 (null = khong symbol nao). */
+    public void setMergedPredicate(java.util.function.Predicate<String> p) {
+        this.mergedSym = p == null ? s -> false : p;
     }
 
     /** [V12 R4] symbol dang theo doi (UNKNOWN (A), lop (B), cho xac nhan phang) — doc KHONG khoa. */
@@ -413,7 +420,11 @@ public final class Reconciler {
             double ep = p.getEntryPrice() == null ? 0d : p.getEntryPrice().doubleValue();
             boolean qtyDiff = ex.subtract(c.confirmedQty).abs().compareTo(ex.abs().multiply(REL_QTY_TOL)) > 0;
             boolean pxDiff = ep > 0d && Math.abs(ep / c.avgPrice - 1d) > 1e-6;
-            if (qtyDiff || pxDiff) {
+            if ((qtyDiff || pxDiff) && mergedSym.test(sym)) {
+                // [V12 R4b MAJOR-1] vi the san lan LEGACY: KHONG BAO GIO ghi de so c3 tu san (khong bang chung c3)
+                LOG.warn("[C3-LIVE-RECON] {} MERGED: san {} != so c3 {} => GIU so c3 (khong san thang)", sym, ex.toPlainString(),
+                        c.confirmedQty.toPlainString());
+            } else if (qtyDiff || pxDiff) {
                 book.overrideFromExchange(sym, ex, ep > 0d ? ep : c.avgPrice, now);
                 r.overridden.add(sym + " qty " + c.confirmedQty.toPlainString() + "->" + ex.toPlainString() + " avg "
                         + c.avgPrice + "->" + ep);
@@ -642,7 +653,14 @@ public final class Reconciler {
             return r;
         }
         sweepOrphanStops(r);
-        if (qtyReconcile) return hourlyQty(r);
+        if (qtyReconcile) {
+            if (reanchorRequested(now)) {   // [V12 R4b §13] qty mode KHONG co moc equity/tmb
+                String m = "[C3-LIVE-RECON] TU CHOI yeu cau reanchor: c3_live doi chieu theo QTY c3 (khong co moc equity/tmb)";
+                LOG.warn("{}", m);
+                alert.accept(m);
+            }
+            return hourlyQty(r);
+        }
         try {
             AccountSnapshot a = gw.account();
             api.onApiResult("account", true);
@@ -734,6 +752,7 @@ public final class Reconciler {
         int n = 0;
         for (LiveBookC3.ClusterView c : book.clusters()) {
             if (c.hasUnresolved || c.closeReason != null || flat.isPending(c.symbol)) continue;
+            if (mergedSym.test(c.symbol)) continue;   // [V12 R4b MAJOR-1] MERGED: LEGACY lan => khong chan (A); MergedGuard lo
             BigDecimal mine = c.confirmedQty.subtract(c.exitQty == null ? BigDecimal.ZERO : c.exitQty);
             if (mine.signum() <= 0) continue;
             PositionInfo p = pos.get(c.symbol);

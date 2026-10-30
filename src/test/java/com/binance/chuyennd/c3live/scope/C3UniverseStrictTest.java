@@ -86,7 +86,7 @@ public class C3UniverseStrictTest {
         assertTrue(u.lastSourceError(), u.lastSourceError().contains("underlyingType"));
         assertFalse(u.isBuyable(C3LiveFixtures.sym(1), NOW));
         assertTrue(alerts.toString(), alerts.toString().contains("fail-fast"));
-        assertNull("< 200 TradFi => khong phai exchangeInfo tho day du", u.apply(source(150, false), NOW));
+        assertNull("< 50 TradFi => khong phai exchangeInfo tho day du", u.apply(source(40, false), NOW));
         assertFalse(u.hasSnapshot());
         // nguon tot => nhan; sau do nguon xau => giu snapshot cu (het han maxStale => khong mua)
         assertNotNull(u.apply(source(200, false), NOW));
@@ -94,6 +94,12 @@ public class C3UniverseStrictTest {
         assertNull(u.apply(source(10, false), NOW + 60_000L));
         assertTrue(u.isBuyable(C3LiveFixtures.sym(1), NOW + 60_000L));
         assertFalse("snapshot cu > 60' => STALE", u.isBuyable(C3LiveFixtures.sym(1), NOW + 61L * 60_000L));
+        // [R4b MINOR-6] TradFi giam > 30 % (201 -> 121, gom NVDAUSDT) nhung van >= 50 => NHAN snapshot + CHI canh bao
+        int nAlerts = alerts.size();
+        assertNotNull(u.apply(source(120, false), NOW + 62L * 60_000L));
+        assertTrue(u.isBuyable(C3LiveFixtures.sym(1), NOW + 62L * 60_000L));
+        assertTrue(alerts.subList(nAlerts, alerts.size()).toString(), alerts.subList(nAlerts, alerts.size()).toString().contains("giam 201 -> 121"));
+        assertEquals(50, SymbolUniverseLive.MIN_TRADFI_IN_SOURCE);
         assertEquals(15L * 60_000L, SymbolUniverseLive.REFRESH_MS);
     }
 }

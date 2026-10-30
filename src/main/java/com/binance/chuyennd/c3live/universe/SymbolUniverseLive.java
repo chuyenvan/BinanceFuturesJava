@@ -41,8 +41,9 @@ public final class SymbolUniverseLive {
     public static final long DELIVERY_GUARD_MS = 7L * 86_400_000L;
     public static final long DEFAULT_MAX_STALE_MS = 60L * 60_000L;
     public static final String DEFAULT_EXCLUDE = "BTCDOMUSDT:intentional,USDCUSDT:intentional";
-    /** [V12 R4 R7] nguon exchangeInfo tho phai co >= so hop dong TradFi nay (dump 10-25: 225). */
-    public static final int MIN_TRADFI_IN_SOURCE = 200;
+    /** [V12 R4b MINOR-6] nguon exchangeInfo tho phai co >= so hop dong TradFi nay (dump 10-25: 225); giam > 30 % => chi canh bao. */
+    public static final int MIN_TRADFI_IN_SOURCE = 50;
+    public static final double TRADFI_DROP_WARN = 0.30d;
 
     /** Ly do khong tradable / khong buyable. */
     public enum Reason { NOT_LISTED, NOT_TRADING, NOT_USDT, TRADFI, NOT_PERPETUAL, EXCLUDED, NON_ASCII, DELIVERY_UNKNOWN, DELIVERY_SOON, STALE, NO_SNAPSHOT,
@@ -203,6 +204,14 @@ public final class SymbolUniverseLive {
                 alerter.accept(m);
                 return null;
             }
+            int tf = tradfiCount(ei);
+            if (lastTfCount > 0 && tf < lastTfCount * (1d - TRADFI_DROP_WARN)) {
+                String m = "[C3-LIVE UNIVERSE] CANH BAO: so hop dong TradFi trong exchangeInfo giam " + lastTfCount + " -> " + tf
+                        + " (> " + (int) (TRADFI_DROP_WARN * 100) + " %) — van nhan snapshot, kiem nguon";
+                LOG.warn("{}", m);
+                alerter.accept(m);
+            }
+            lastTfCount = tf;
         }
         lastAttemptMs = Math.max(lastAttemptMs, nowMs);
         Map<String, SymbolMeta> metas = new HashMap<>(ei.getSymbols());
@@ -286,6 +295,17 @@ public final class SymbolUniverseLive {
     }
 
     private volatile String lastSourceError;
+    private volatile int lastTfCount = -1;
+
+    /** [V12 R4b] so hop dong TradFi (contractType chua TRADIFI/TRADFI) trong nguon. */
+    public static int tradfiCount(ExchangeInfo ei) {
+        int tf = 0;
+        for (SymbolMeta m : ei.getSymbols().values()) {
+            String cu = trimOrEmpty(m.getContractType()).toUpperCase(Locale.ROOT);
+            if (cu.contains("TRADIFI") || cu.contains("TRADFI")) tf++;
+        }
+        return tf;
+    }
 
     /** [V12 R4 R7] loi nguon exchangeInfo lan nap gan nhat (null = hop le / khong kiem). */
     public String lastSourceError() { return lastSourceError; }

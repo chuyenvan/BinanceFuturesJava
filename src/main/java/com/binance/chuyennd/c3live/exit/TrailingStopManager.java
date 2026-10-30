@@ -336,7 +336,7 @@ public final class TrailingStopManager {
         } catch (GatewayException e) {
             int code = e.getExchangeCode();
             boolean business = code == CODE_CLOSE_POSITION_EXISTS || code == CODE_WOULD_TRIGGER;
-            api.onApiResult("newStopMarket", business);
+            if (!(e instanceof com.binance.chuyennd.c3live.api.ClientSideRefusal)) api.onApiResult("newStopMarket", business);   // [R4b MINOR-2]
             if (code == CODE_CLOSE_POSITION_EXISTS && !qtyMode && allowFallback) {
                 closePositionConflictSeen = true;
                 nFallbackQty.incrementAndGet();

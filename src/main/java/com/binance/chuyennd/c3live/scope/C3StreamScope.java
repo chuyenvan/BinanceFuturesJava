@@ -1,6 +1,9 @@
 package com.binance.chuyennd.c3live.scope;
 
+import com.binance.chuyennd.c3live.api.ExchangeGateway;
+import com.binance.chuyennd.c3live.api.OrderInfo;
 import com.binance.chuyennd.c3live.book.LiveBookC3;
+import com.binance.chuyennd.c3live.rate.RateGuard;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -58,6 +61,25 @@ public final class C3StreamScope {
     private final Map<String, Long> lastLog = new ConcurrentHashMap<>();
     private final AtomicLong passed = new AtomicLong();
     private final AtomicLong dropped = new AtomicLong();
+    /** [V12 R4b MINOR-1] gateway (pham vi c3) de xac nhan khop stop c3 bang queryStop c3s- (actualOrderId). */
+    private volatile ExchangeGateway gw;
+    private volatile java.util.function.LongConsumer sleeper = ms -> {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+        }
+    };
+    static final int STOP_CONFIRM_TRIES = 3;
+    static final long STOP_CONFIRM_GAP_MS = 300L;
+
+    public void setGateway(ExchangeGateway g) {
+        this.gw = g;
+    }
+
+    public void setSleeper(java.util.function.LongConsumer s) {
+        if (s != null) this.sleeper = s;
+    }
 
     public C3StreamScope(C3Scope scope, LiveBookC3 book, LongSupplier clock) {
         this.scope = scope;
@@ -104,7 +126,7 @@ public final class C3StreamScope {
         try {
             switch (e) {
                 case "ORDER_TRADE_UPDATE":
-                    return order(text, obj(o, "o"), now);
+                    return order(text, o, obj(o, "o"), now);
                 case "ALGO_UPDATE":
                     return algo(text, obj(o, "o"), now);
                 case "TRADE_LITE": {
@@ -130,14 +152,14 @@ public final class C3StreamScope {
         }
     }
 
-    private String order(String text, JsonObject x, long now) {
+    private String order(String text, JsonObject root, JsonObject x, long now) {
         if (x == null) return pass(text);
         String s = str(x, "s");
         String c = str(x, "c");
-        if (C3Scope.isC3Cid(c)) return pass(text);
+        if (C3Scope.isC3Cid(c)) return pass(c3Rp(text, root, x, s));
         boolean held = scope.held(s);
-        if (held && C3Scope.isExchangeCloseCid(c)) return pass(text);
-        if (held && isC3StopFill(s, str(x, "i"), str(x, "ot"))) return pass(text);
+        if (held && C3Scope.isExchangeCloseCid(c)) return pass(c3Rp(text, root, x, s));
+        if (held && isC3StopFill(s, str(x, "i"), str(x, "ot"))) return pass(c3Rp(text, root, x, s));
         scope.touchLegacy(s, now);
         if (held) {
             String xt = str(x, "x");
@@ -153,12 +175,57 @@ public final class C3StreamScope {
         return drop();
     }
 
+    /**
+     * [V12 R4b MINOR-1] Khop cid khong-c3 la khop cua stop c3 da kich CHI KHI: orderId = ai cua ALGO_UPDATE c3s-, hoac queryStop
+     * c3s- (stop active/pending/cu cua cum) tra actualOrderId = orderId (lan khan cap, thu toi da 3 lan cach 300 ms). Con lai =
+     * khop LEGACY (=> MERGED).
+     */
     private boolean isC3StopFill(String s, String orderId, String ot) {
         if (orderId != null && c3AlgoOrderIds.containsKey(orderId)) return true;
-        if (ot == null || !(ot.equalsIgnoreCase("STOP_MARKET") || ot.equalsIgnoreCase("STOP"))) return false;
-        if (foreignAlgoSyms.contains(s)) return false;
+        if (orderId == null || ot == null || !(ot.equalsIgnoreCase("STOP_MARKET") || ot.equalsIgnoreCase("STOP"))) return false;
+        ExchangeGateway g = gw;
         Optional<LiveBookC3.ClusterView> c = book.cluster(s);
-        return c.isPresent() && (c.get().stopClientAlgoId != null || c.get().pendingStopCid != null || !c.get().orphanStops.isEmpty());
+        if (g == null || !c.isPresent()) return false;
+        java.util.Set<String> cids = new java.util.LinkedHashSet<>();
+        if (c.get().stopClientAlgoId != null) cids.add(c.get().stopClientAlgoId);
+        if (c.get().pendingStopCid != null) cids.add(c.get().pendingStopCid);
+        cids.addAll(c.get().orphanStops);
+        if (cids.isEmpty()) return false;
+        for (int t = 0; t < STOP_CONFIRM_TRIES; t++) {
+            if (t > 0) sleeper.accept(STOP_CONFIRM_GAP_MS);
+            for (String cid : cids) {
+                try (RateGuard.Lane lane = RateGuard.emergencyLane()) {
+                    Optional<OrderInfo> q = g.queryStop(s, cid);
+                    String ai = q.isPresent() ? q.get().getActualOrderId() : null;
+                    if (ai != null && orderId.equals(ai.trim())) {
+                        c3AlgoOrderIds.put(orderId, Boolean.TRUE);
+                        LOG.info("[C3-LIVE-SCOPE] {} khop {} = stop c3 {} (xac nhan queryStop)", s, orderId, cid);
+                        return true;
+                    }
+                } catch (RuntimeException e) {
+                    LOG.warn("[C3-LIVE-SCOPE] {} queryStop {} loi {}", s, cid, e.toString());
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * [V12 R4b MINOR-3] Symbol MERGED: rp cua san tinh tren gia vao LAN LEGACY => thay bang PnL c3 = (gia khop - gia vao so c3) x
+     * qty (BAN), 0 (MUA). Khong MERGED => giu nguyen rp san.
+     */
+    private String c3Rp(String text, JsonObject root, JsonObject x, String s) {
+        if (s == null || !scope.isMerged(s) || !"TRADE".equals(str(x, "x"))) return text;
+        Optional<LiveBookC3.ClusterView> c = book.cluster(s);
+        BigDecimal l = dec(x, "l");
+        BigDecimal px = dec(x, "L");
+        BigDecimal rp = BigDecimal.ZERO;
+        if ("SELL".equals(str(x, "S")) && c.isPresent() && c.get().avgPrice > 0d && l != null && px != null) {
+            rp = px.subtract(BigDecimal.valueOf(c.get().avgPrice)).multiply(l);
+        }
+        LOG.info("[C3-LIVE-SCOPE] {} MERGED: rp san {} => rp c3 {} (gia vao so c3)", s, str(x, "rp"), rp.toPlainString());
+        x.addProperty("rp", rp.toPlainString());
+        return root.toString();
     }
 
     private String algo(String text, JsonObject x, long now) {

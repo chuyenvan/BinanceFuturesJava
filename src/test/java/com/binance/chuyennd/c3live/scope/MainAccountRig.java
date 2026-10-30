@@ -172,7 +172,11 @@ final class MainAccountRig {
         merged.setTrailing(mgr);
         sgw.setSuspectSink(merged::suspect);
         protector = new C3StopProtector(book, mgr, flat::closeCluster, scope::isMerged, alerts::add, now::get);
+        protector.setMergedCloseCheck(merged::exchangeCoversC3);   // [R4b §4] nhu runtime
+        rec.setMergedPredicate(scope::isMerged);                   // [R4b MAJOR-1] nhu runtime
         stream = new C3StreamScope(scope, book, now::get);
+        stream.setGateway(sgw);                                    // [R4b MINOR-1] nhu runtime
+        stream.setSleeper(ms -> { });
         stream.setForeignFillSink(merged::onForeignFill);
         stream.setSuspectSink(merged::suspect);
         stream.setStopTerminalSink(protector::onStopTerminal);

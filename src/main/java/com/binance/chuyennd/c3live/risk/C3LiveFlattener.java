@@ -172,7 +172,7 @@ public final class C3LiveFlattener {
             api.onApiResult("newMarketOrder", true);
             onCloseResult(sym, o, qty, reason, now);
         } catch (GatewayException e) {
-            api.onApiResult("newMarketOrder", false);
+            if (!(e instanceof com.binance.chuyennd.c3live.api.ClientSideRefusal)) api.onApiResult("newMarketOrder", false);   // [R4b MINOR-2]
             if (e.isDefinitelyNotExecuted()) {
                 book.clearCloseCid(sym, now);
                 LOG.warn("[C3-LIVE-CLOSE] {} {} khong khop ({} {}) => thu lai luot sau", sym, cid, e.getKind(),

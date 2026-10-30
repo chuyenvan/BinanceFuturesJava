@@ -165,7 +165,8 @@ public final class C3LiveOrderExecutor {
                 apply(cid, o, true, true);
                 return;
             } catch (GatewayException e) {
-                api.onApiResult("newMarketOrder", false);
+                // [V12 R4b MINOR-2] lop pham vi c3 tu choi (chua gui) KHONG phai loi API san => khong dem C3
+                if (!(e instanceof com.binance.chuyennd.c3live.api.ClientSideRefusal)) api.onApiResult("newMarketOrder", false);
                 if (e.isDefinitelyNotExecuted()) {
                     book.cancel(cid, "not_executed:" + e.getKind() + ":" + e.getExchangeCode(), clock.getAsLong());
                     nCancelled.incrementAndGet();

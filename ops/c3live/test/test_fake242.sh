@@ -47,6 +47,10 @@ case "$1" in
         echo "$D INFO [main] x: [C5] GLOBAL OK"
         echo "$D INFO [main] x: [UNIVERSE] listed=640 alive=600 tradable=480 buyable=470 +0 -0 tradfi_excl=110"
         echo "$D INFO [main] x: [C3-LIVE-RECON] khoi dong: ok=true closedWhileDown=[]"
+        # [V12 R4b] dong cua jar R4b (chi khi co FAKE_R4) / exchangeInfo xau (FAKE_EXBAD)
+        [ -f FAKE_R4 ] && echo "$D WARN [main] x: [C3-LIVE] khoi dong adapter=DRY gateway=c3scope(dry) cum=0 c3_capital=10000.0 tai_khoan=CHINH(pham vi c3) killSwitchArmed=true"
+        [ -f FAKE_R4 ] && echo "$D WARN [C3LIVE-OPS] x: [C3-LIVE-SCOPE] LEGACY tren tai khoan chinh: 0 vi the (foreign DA BIET, khong phai cum ma, khong chan (A)); LEGACY-busy=0 symbol"
+        [ -f FAKE_EXBAD ] && echo "$D ERROR [C3LIVE-OPS] x: [C3-LIVE UNIVERSE] exchangeInfo KHONG hop le (R7 fail-fast): gia lap"
         [ -f FAKE_LATCH ] && echo "$D WARN [main] x: [KILLSW] LATCH action=FLATTEN (truoc NONE) code=C6 codes=[C6] detail=dd=-0.7144"
       else
         echo "$D INFO [main] x: 🟡 [LIVE_PROFILE=c3_shadow] BAT"
@@ -638,6 +642,71 @@ chk "prior: SAU reset tinh lai = 0.0396 cho preflight/status/step (khong con 0.0
 chk "prior: JVM nhan dung CANARY_PRIOR_LOSS_USDT=0.0396 sau reset (fake_prior.log cua phien)" "D=\$(ls -td $C3/run/canary_done_* $C3/run/canary 2>/dev/null | head -1); grep -q 'PRIOR=0.0396' \"\$D/fake_prior.log\" && ! grep -qE '^(preflight|status|step).*PRIOR=0.0195' \"\$D/fake_prior.log\""
 chk "prior: file ket qua ghi prior dung cho phien + luc tinh" "RES=\$(lastres); grep -q 'prior dung cho phien (CANARY_PRIOR_LOSS_USDT): 0.0396 USDT' \"\$RES\""
 rm -rf $C3/run/canary_prev_29990101_000000
+echo "== 22. [V12 R4b] deploy_v12_dry_r4.sh (dry tai khoan chinh, jar R4b) tren 242 gia RIENG"
+(cd "$F" && bin/daemon.sh stop); sleep 1
+F4=$W/v_t_m_r4; rm -rf "$F4"; mkdir -p "$F4/conf" "$F4/bin" "$F4/logs" "$F4/run" "$F4/target"
+cat > "$F4/conf/env.sh" <<'EOF'
+export LIVE_PROFILE=c3_shadow
+export SHADOW_NO_PUSH=true
+export LIVE_TS_MKT_EXT=1
+export LIVE_HEARTBEAT=1
+export LIVE_KILLSW_MODE=log
+export LIVE_PERIODIC_RESET_HOURS=0
+export LIVE_EXEC_PROBE=1
+EOF
+cp "$F/bin/start.sh" "$F/bin/daemon.sh" "$F4/bin/"
+printf 'fake-old-jar-dcae' > "$F4/target/binance-java-sdk-1.2.4.jar"
+printf 'fake-new-jar-v12r4b' > "$W/new_r4.jar"
+NEW4=$(md5sum < "$W/new_r4.jar" | cut -c1-32)
+python3 - "$W/exinfo_r4.json" <<'EOF'
+import json, sys
+s = [{"symbol": "S%03dUSDT" % i, "contractType": "PERPETUAL", "underlyingType": "COIN"} for i in range(160)]
+s += [{"symbol": "T%03dUSDT" % i, "contractType": "TRADIFI_PERPETUAL", "underlyingType": "EQUITY"} for i in range(60)]
+json.dump({"symbols": s}, open(sys.argv[1], "w"), separators=(",", ":"))
+EOF
+(cd "$F4" && bin/daemon.sh start)
+D4=$HERE/deploy_v12_dry_r4.sh
+r4() { env APP_DIR=$F4 NJ=$W/new_r4.jar NJ_MD5=$NEW4 EXINFO_CMD="cat $W/exinfo_r4.json" "$@"; }
+p4env() { tr '\0' '\n' < /proc/$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)/environ; }
+OUT=$(r4 DRY=1 bash "$D4" 2>&1); echo "$OUT" | tail -2
+chk "r4 DRY PASS, in C3_CAPITAL=10000, khong doi env" "echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q 'export C3_CAPITAL=10000' && ! grep -q LIVE_ADAPTER $F4/conf/env.sh"
+OUT=$(r4 NJ_MD5=__R4B_MD5__ DRY=1 bash "$D4" 2>&1)
+chk "r4 NJ_MD5 chua pin => DUNG" "echo \"\$OUT\" | grep -q 'NJ_MD5 chua pin'"
+if [ "$(date +%s)" -lt "$(date -d '2026-11-18 07:54 +07' +%s)" ]; then
+  OUT=$(echo YES | r4 FORCE_TIME=1 bash "$D4" 2>&1)
+  chk "r4 tu choi truoc 2026-11-18 07:54 (khong FORCE)" "echo \"\$OUT\" | grep -q 'truoc 2026-11-18 07:54' && ! grep -q LIVE_ADAPTER $F4/conf/env.sh"
+fi
+OUT=$(r4 OLD_MD5=00000000000000000000000000000000 DRY=1 bash "$D4" 2>&1)
+chk "r4 jar dang chay khac OLD_MD5 => TU CHOI" "echo \"\$OUT\" | grep -q 'kiem 242 co muc FAIL' && echo \"\$OUT\" | grep -q 'FAIL jar_dang_chay'"
+for f in run/c3live_merged.txt run/c3live_equity_c3.json run/killsw_latch.json run/c3live_killsw_peak; do
+  echo x > "$F4/$f"
+  OUT=$(r4 DRY=1 bash "$D4" 2>&1)
+  chk "r4 PRE: co $f cu => TU CHOI" "echo \"\$OUT\" | grep -q \"FAIL da_co_$f\""
+  rm -f "$F4/$f"
+done
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 EXINFO_CMD="cat $W/exinfo.json" bash "$D4" 2>&1); RC=$?; echo "$OUT" | grep -a 'exchangeInfo\|DUNG' | head -3
+chk "r4 exchangeInfo thieu contractType/underlyingType/TradFi => DUNG, env khoi phuc, jar cu" "[ $RC != 0 ] && echo \"\$OUT\" | grep -q 'FAIL exchangeInfo' && ! grep -q LIVE_ADAPTER $F4/conf/env.sh && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $OLD ]"
+chk "r4 exchangeInfo xau: process van c3_shadow" "p4env | grep -qx 'LIVE_PROFILE=c3_shadow'"
+touch "$F4/FAKE_R4"
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?; echo "$OUT" | tail -4
+TS4=$(echo "$OUT" | grep -o 'TS=[0-9_]*' | head -1 | cut -d= -f2)
+chk "r4 deploy XONG (YES 1 lan)" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q '=== XONG' && echo \"\$OUT\" | grep -q 'OK R4_LEGACY_scope' && echo \"\$OUT\" | grep -q 'OK exchangeInfo_hop_le'"
+chk "r4 env: C3_CAPITAL=10000 + LIVE_ADAPTER=dry + SHADOW_NO_PUSH=true" "grep -qx 'export C3_CAPITAL=10000' $F4/conf/env.sh && grep -qx 'export LIVE_ADAPTER=dry' $F4/conf/env.sh && grep -qx 'export SHADOW_NO_PUSH=true' $F4/conf/env.sh"
+chk "r4 process moi: C3_CAPITAL=10000, dry, jar R4b" "p4env | grep -qx 'C3_CAPITAL=10000' && p4env | grep -qx 'LIVE_ADAPTER=dry' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEW4 ]"
+chk "r4 exchangeInfo tho dat vao run/ (du TradFi)" "[ \$(grep -o 'TRADIFI_PERPETUAL' $F4/run/c3live_exchangeInfo.json | wc -l) = 60 ]"
+chk "r4 PAUSE watchdog da xoa" "[ ! -f $W/PAUSE ]"
+OUT=$(echo YES | APP_DIR=$F4 DRY=0 bash "$HERE/c3live_reanchor.sh" 2>&1); RC=$?
+chk "reanchor TU CHOI o qty mode (R4+), khong ghi yeu cau" "[ $RC = 4 ] && echo \"\$OUT\" | grep -q 'TU CHOI' && [ ! -f $F4/run/c3live_reanchor.req ]"
+echo x > "$F4/run/c3live_merged.txt"; echo x > "$F4/run/c3live_equity_c3.json"
+OUT=$(echo YES | APP_DIR=$F4 FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TS4" 2>&1); echo "$OUT" | tail -2
+chk "r4 rollback: env c3_shadow, jar cu, file R4 doi ten .rb_TS" "echo \"\$OUT\" | grep -q 'Rollback xong' && grep -qx 'export LIVE_PROFILE=c3_shadow' $F4/conf/env.sh && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $OLD ] && [ -f $F4/run/c3live_merged.txt.rb_$TS4 ] && [ -f $F4/run/c3live_equity_c3.json.rb_$TS4 ]"
+touch "$F4/FAKE_EXBAD"
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?; echo "$OUT" | grep -a 'KHONG hop le\|DEPLOY FAIL' | head -2
+chk "r4 sau start log 'exchangeInfo KHONG hop le' => ROLLBACK TU DONG" "[ $RC != 0 ] && echo \"\$OUT\" | grep -q 'FAIL exchangeInfo_KHONG_hop_le' && echo \"\$OUT\" | grep -q 'Rollback xong' && grep -qx 'export LIVE_PROFILE=c3_shadow' $F4/conf/env.sh && [ ! -f $W/PAUSE ]"
+rm -f "$F4/FAKE_EXBAD" "$F4/FAKE_R4"
+rm -f "$F4/run/c3live_book.json"
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?
+chk "r4 jar khong in dong R4 (LEGACY tren tai khoan chinh) => WAIT qua han => ROLLBACK TU DONG" "[ $RC != 0 ] && echo \"\$OUT\" | grep -q 'WAIT R4_LEGACY_scope' && echo \"\$OUT\" | grep -q 'Rollback xong'"
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]
