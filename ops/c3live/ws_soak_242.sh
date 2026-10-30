@@ -14,8 +14,8 @@ set -uo pipefail
 SSH_242=${SSH_242:-"ssh -p 2222 -o BatchMode=yes -o ConnectTimeout=20 -i /home/ubuntu/.ssh/id_rsa_chuyennd root@103.157.218.242"}
 SCP_242=${SCP_242:-"scp -P 2222 -o BatchMode=yes -o ConnectTimeout=20 -i /home/ubuntu/.ssh/id_rsa_chuyennd"}
 RHOST=${RHOST-"root@103.157.218.242:"}
-SJ=${SJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4h}
-SJ_MD5=${SJ_MD5:-08112d73429e7b9c2917d4f254f6d144}
+SJ=${SJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4j}
+SJ_MD5=${SJ_MD5:-ba71eab2da6aac7bd296d7d5812e2d83}   # [V12 R4j] jar r4j (A1 R4J PASS-WITH-MINOR)
 RD=${RD:-/home/chuyennd/java/ws_soak}
 VTM=${VTM:-/home/chuyennd/java/v_t_m}
 HOURS=${SOAK_HOURS:-26}
