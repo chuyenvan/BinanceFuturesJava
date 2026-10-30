@@ -41,3 +41,27 @@ Ghi data: `s1.stopEnd` (`KEPT_B`|`EXCHANGE_TERMINAL`), `s1.stopEndWhy`, `s1.clos
 Code: `CanaryEngine.k7b` + `lastCloseCall`, `k7bCloseFull` (v1.2/c3-live `82145028`); test `CanaryK7bExchangeExpiryR4iTest`
 (tái hiện chuỗi 10-30 bằng mock `expireStopsOnSellFill`; đường cũ KEPT_B; thiếu bằng chứng bị từ chối). Jar r4i md5
 `2487acdb3a7fe770db27f949a6983156`, gói `~/claude_master/canary_3l`. Áp từ phiên canary kế tiếp; phiên 10-30 giữ verdict TRƯỢT trong sổ.
+
+## ĐÍNH CHÍNH 1 (2026-10-31, theo A1 R4GHI MAJ-3; commit TRƯỚC khi sửa code; chưa phiên canary nào dùng tiêu chí §2 ở trên)
+
+**Lý do:** A1 (`~/claude_master/v12/A1_R4GHI_REPORT.md` MAJ-3, test đối kháng `A1R4iAdvK7bTest`) chỉ ra đường EXCHANGE_TERMINAL
+như viết ở §2 che được lỗi production thật: nếu guard (lỗi) TỰ HUỶ stop khi positionRisk lỗi thay vì GIỮ (B), sàn phát
+`ALGO_UPDATE X=CANCELED` và c3x- vẫn khớp đủ ⇒ K7b ĐẠT giả. Sự kiện thiếu `ts` cũng được chấp nhận. Chuỗi thật 10-30 (EXPIRED,
+không có cancelStop) vẫn hợp lệ.
+
+**Đường EXCHANGE_TERMINAL — thay mục 3 và 4 của §2, thêm mục 6:**
+3. Journal có sự kiện WS `ALGO_UPDATE` đúng `caid`, đúng symbol, **CHỈ `X = EXPIRED`** (`CANCELED` KHÔNG được nhận — sàn chỉ tự
+   EXPIRE stop closePosition khi vị thế về 0; CANCELED có thể do chính bot huỷ);
+4. Sự kiện đó có `ts` **là số** (thiếu / không phải số ⇒ không nhận) và `ts ≥` mốc GỬI lệnh đóng (`firstSentMs` của c3x-; không
+   có ⇒ ts ACK), chờ tối đa `fillEventWaitMs` (5 s);
+6. Journal có **0** dòng `CALL_W` `api=cancelStop` cho đúng stop đó (`cid = sid`) với `ts ≥` mốc bật tiêm lỗi
+   (`K7B_INJECT_ON`) — có ⇒ stop do bot huỷ, không phải sàn tự kết thúc ⇒ không nhận.
+Các mục 1, 2, 5 và đường KEPT_B giữ nguyên. **Thiếu BẤT KỲ mục nào ⇒ TRƯỢT** (fail-closed), không đổi.
+
+**Hàm dùng chung với K5 (`stopEndExchangeReject`)**: phần dùng chung chỉ được SIẾT (bắt buộc `ts` là số; loại khi có
+`CALL_W cancelStop` của chính stop sau mốc gửi lệnh đóng). K5 vẫn nhận `CANCELED` như §3k R1 (đường đó K5 còn kiểm thêm guard
+huỷ). Không nới bước K nào.
+
+**Ghi chú:** RTT REST thực ~90 ms ≫ 4 ms sàn EXPIRE stop ⇒ trên sàn thật đường KEPT_B (guard GIỮ stop) **gần như không xảy ra**;
+nhánh guard-GIỮ ⇒ (B) chỉ được chứng minh bằng test (mock không tự EXPIRE stop: `CanaryEngineTest` K7b,
+`CanaryK7bExchangeExpiryR4iTest.stopStillOpen_guardKeeps_BRequired_unchanged`), không bằng canary thật.
