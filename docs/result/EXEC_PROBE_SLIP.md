@@ -31,6 +31,8 @@ V1–V4 đạt (V5 không có `legs.csv` để đối chiếu). Không dùng p50
 
 ## 3. Ước ngày đủ 100 leg vào
 
+> **ĐÍNH CHÍNH 2026-10-30:** con số "7 leg/ngày" trong mục này **bị bỏ** (xem §6.4). Số liệu còn lại của mục (49 leg, 2 batch) đúng.
+
 - 49 leg hợp lệ trong 7 ngày (10-24..10-30) ⇒ **7 leg/ngày**; cần thêm 51 leg.
 - Nhịp thực tế là **theo batch**: 25 leg (10-24), 26 leg (10-30 03:xx), 2 leg (10-30 07:19). Nếu mỗi 3–6 ngày
   có 1 batch ~25 leg ⇒ cần **2 batch** ⇒ khoảng **2026-11-05 .. 2026-11-11**.
@@ -54,3 +56,52 @@ V1–V4 đạt (V5 không có `legs.csv` để đối chiếu). Không dùng p50
 - Log pull theo ngày chứa archive chồng lấn ⇒ mọi script chấm PHẢI khử trùng theo toàn bộ dòng CSV trước khi đếm.
   Số 325/180 (đếm thô không khử) là **sai** và sẽ cho verdict giả (RED_SIZE).
 - Không chấm L24/giờ trong báo cáo này vì |E| < 100 (đúng luật task); script đã sẵn cho lần sau.
+
+## 6. ĐÍNH CHÍNH (2026-10-30) — nguồn trùng, 4 leg no_book, công cụ, nhịp leg
+
+### 6.1 Nguồn trùng là **full.log không rotate**, không phải "archive chồng lấn"
+
+§5 câu 2 viết "Log pull theo ngày chứa archive chồng lấn" — **sai cơ chế**. Kiểm lại 15 file
+`~/claude_master/pull242/2026-10-2*/logs/full.log@<ts>_<hash>.gz`: **mỗi lần pull là MỘT bản đầy đủ** của cùng
+một file log trên 242, bắt đầu từ dòng đầu tiên `18/10/2026 07:44:06.239` và tăng dần theo thời gian:
+
+| file pull | kích thước | dòng `[EXEC-PROBE] 1,` |
+|---|---|---|
+| 2026-10-21 | 4,5 MB | 31 |
+| 2026-10-28 | 8,2 MB | — |
+| 2026-10-29 (mới nhất) | 9,0 MB | 76 |
+
+⇒ 581 dòng thô = **cùng 76 event được chép lại qua 15 bản pull**, không phải các đoạn log nối tiếp nhau.
+Hệ quả thực hành **không đổi**: mọi script chấm phải khử trùng theo toàn bộ 38 cột CSV trước khi đếm.
+(Nếu log 242 được rotate theo ngày trong tương lai, cách đọc phải xem lại.)
+
+### 6.2 Bốn leg `no_book` đều là TF — log nói gì
+
+4/53 leg vào có `status=no_book` (không phải `ok/short`), **tất cả là TradFi**: ABBVUSDT, STMUSDT, MELIUSDT, EWZSUSDT,
+cùng batch 10-30 03:47 (+07). Bằng chứng trong log (không có dòng WARN/ERROR nào cho 4 symbol này):
+
+- `[SHADOW] open ABBVUSDT entry=291.96 qty=0.41 ...` @03:47:08.012 (STM 08.377, MELI 09.139, EWZS 14.348):
+  shadow book **vẫn mở lệnh** bình thường;
+- dòng probe tương ứng có `lat_snap_ms` = 8 012 / 8 377 / 9 139 / 14 348 ms và **toàn bộ cột book rỗng**
+  (bid/ask/mid/spread_bps/l1_*/n_lvl/side_ntl/walk_vwap/fill_frac/slip_bps/... đều trống) ⇒ snapshot order book
+  **không trả về gì** cho các TF perp này tại thời điểm đó (chậm 8–14 s rồi rỗng).
+- **CHƯA GIẢI THÍCH nguyên nhân gốc** (feed depth của TF chưa warm / mapper cấp id mới cùng lúc — log có
+  `cap id moi ABBVUSDT …` nhưng không có thông báo lỗi book). Không suy đoán thêm.
+
+Vì vậy V1 = 49/53 = 92,5 % tính trên leg **đo được** là đúng, nhưng phải ghi rõ 4 leg mất đo **không ngẫu nhiên**:
+chúng tập trung đúng vào nhóm TF — nhóm đang là chủ đề của HO2026_NOTF. Không dùng 49 leg để suy rộng cho TF.
+
+### 6.3 `xp_slip_extra.py` nay khử trùng nội bộ
+
+Trước 10-30, `rows()` chỉ đọc và **không** khử trùng: truyền 15 file pull thô sẽ ra 657 dòng (E=~400), sai hoàn toàn.
+Đã sửa: `rows()` giữ `seen` theo **nguyên dòng 38 cột** và chỉ nhận lần xuất hiện đầu. Kiểm lại trên 15 file
+(giải nén tạm): **76 event / 53 ENTRY / 4 no_book**, khớp bảng §1. Docstring ghi rõ full.log không rotate.
+
+### 6.4 Bỏ "7 leg/ngày" — nhịp thực tế là **2 đợt**
+
+49 leg hợp lệ không rải đều 7 ngày: **25 leg @ 10-24 02:25** và **28 leg @ 10-30 (26 @ 03:47, 2 @ 07:19)** (+07).
+Không có leg nào trong 10-25..10-29. Vì vậy:
+
+- **Bỏ** câu "7 leg/ngày" và ước "~7 ngày ⇒ 2026-11-06" — đó là chia trung bình trên khoảng có 2 đợt, không phải nhịp.
+- Ước còn lại (2 batch nữa ⇒ 11-05..11-11) vẫn là **suy đoán từ 2 quan sát**, không phải dự báo; mốc đúng để chấm
+  là **|E| ≥ 100**, kiểm sau mỗi batch.

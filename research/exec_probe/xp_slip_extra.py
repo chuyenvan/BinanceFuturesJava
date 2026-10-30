@@ -27,15 +27,23 @@ PAPER_EQUITY = 35000.0
 
 
 def rows(paths):
-    out = []
+    """Doc dong [EXEC-PROBE] va KHU TRUNG NGAY TRONG HAM NAY.
+
+    full.log tren 242 KHONG rotate: moi lan pull la MOT ban day du tu 10-18, nen cung mot event xuat hien
+    trong nhieu file pull. Khoa khu trung = toan bo 38 cot CSV (event), khong phai timestamp log.
+    """
+    out, seen = [], set()
     for p in paths:
         for line in open(p, encoding="utf-8", errors="replace"):
             i = line.find("[EXEC-PROBE] ")
             s = line[i + 13:].rstrip("\n") if i >= 0 else line.rstrip("\n")
             if s.startswith("#hdr") or not s.startswith("1,"):
                 continue
+            if s in seen:
+                continue
             v = s.split(",")
             if len(v) == len(HEADER):
+                seen.add(s)
                 out.append(dict(zip(HEADER, v)))
     return out
 
