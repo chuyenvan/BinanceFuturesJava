@@ -1,0 +1,16 @@
+SPEC gate seed buffer (= GateRatioPersist, jar 16de49a6 / v1.2)
+File = chuoi chunk, moi chunk:
+  [0..3]  MAGIC int32 big-endian = 0x47525231 ("GRR1")
+  [4..7]  LEN   int32 big-endian = so byte payload nen
+  [8..11] CRC   int32 big-endian = java.util.zip.CRC32 cua payload NEN (python: zlib.crc32(comp) & 0xffffffff)
+  [12..]  payload = Snappy.compress(raw) (snappy raw block, xerial Snappy.compress / python-snappy snappy.compress)
+raw = N ban ghi 12 byte big-endian: ts int64 (ms epoch UTC = prediction.timestamp, moc phut) + r float32
+  r = p15 / (max(0.26787f, (sp/0.15f)*1.2876f) * 1.55f), float32.
+Ban ghi sort ts tang; file do Python ghi 1 chunk. Loader Java hien co: GateRatioPersist.load(path, minTs) doc duoc nguyen trang.
+Kiem: reload bang research grr_lib.load => bad=0, ts/r bitwise bang mang goc (da assert khi ghi).
+
+Files:
+  B_live_clean_20261001_20261030.bin  md5 be94a41198bd787812eab96940e94f59  n=782859  [2026-10-01 13:00, 2026-10-30 20:06] +07
+    = gate_ratio_live.bin 242 (md5 4e29c20c) bo record TRADFI/INDEX (exchangeInfo 2026-10-27) va coin dang giu so giay ShadowBookC3.
+    TRANG THAI: KHONG DAT cong ADD2 (ghep sel_dump 76,4 % < 99 %) => KHONG nap cho dry. Chi de chan doan.
+  Seed A (sim-path 90 ngay) : CHUA DUNG DUOC tren Oracle (dau vao HO 2026 tren Oracle chi toi 2026-06-30; Q3 nam tren Kaggle).
