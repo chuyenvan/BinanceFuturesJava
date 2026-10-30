@@ -6,6 +6,7 @@ import com.binance.chuyennd.c3live.api.ExchangeInfoParser;
 import com.binance.chuyennd.c3live.client.C3LiveClient;
 import com.binance.chuyennd.c3live.client.C3LiveClientConfig;
 import com.binance.chuyennd.c3live.log.OrderAuditLog;
+import com.binance.chuyennd.c3live.rate.ProductionRatePolicy;
 import com.binance.chuyennd.c3live.rate.RateGuard;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -87,7 +88,7 @@ public final class GatewayFactory {
             return new Result(Mode.DRY, g, null, "dry exchangeInfo=" + file.getPath());
         }
         try {
-            RateGuard rg = RateGuard.defaults();
+            RateGuard rg = ProductionRatePolicy.guard(env, RateGuard.SYSTEM);   // [V12 R4 R5] chinh sach 3i (IP chung LEGACY)
             C3LiveClient c = C3LiveClient.create(C3LiveClientConfig.fromEnv(env), rg);
             return new Result(Mode.LIVE, c, rg, "live");
         } catch (Exception e) {

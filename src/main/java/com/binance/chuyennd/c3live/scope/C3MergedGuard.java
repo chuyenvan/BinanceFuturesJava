@@ -1,0 +1,257 @@
+package com.binance.chuyennd.c3live.scope;
+
+import com.binance.chuyennd.c3live.api.OrderInfo;
+import com.binance.chuyennd.c3live.api.PositionInfo;
+import com.binance.chuyennd.c3live.book.LiveBookC3;
+import com.binance.chuyennd.c3live.exit.TrailingStopManager;
+import com.binance.chuyennd.c3live.log.OrderAuditLog;
+import com.binance.chuyennd.c3live.rate.RateGuard;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.TreeMap;
+import java.util.function.Consumer;
+import java.util.function.LongSupplier;
+
+/**
+ * [V12 R4 R2] MERGED: one-way da cong don vi the LEGACY vao symbol c3 dang giu.
+ * <ul>
+ *   <li>Phat hien: (a) stream — lenh khong-c3 KHOP tren symbol c3 dang giu => NGAY; (b) REST — vi the san &gt; can tren so c3
+ *       (hoac am) o 2 lan doc cach &gt;= 3 s.</li>
+ *   <li>Xu ly: KHONG dong; stop c3 closePosition => thay bang stop qty reduceOnly = qty c3 (CUNG gia) roi huy stop cu (khong
+ *       khoang trong); thay khong duoc => van HUY stop closePosition (no se dong ca phan LEGACY), trailing dat lai kieu qty;
+ *       chan mo moi symbol (entry + DCA); Telegram KHAN; journal (OrderAuditLog status=MERGED).</li>
+ *   <li>Go: san = qty c3 (+-eps) o 2 lan doc cach &gt;= 3 s va so khong con leg treo, hoac c3 da het vi the (cum da dong).</li>
+ * </ul>
+ */
+public final class C3MergedGuard {
+
+    private static final Logger LOG = LoggerFactory.getLogger(C3MergedGuard.class);
+    public static final long CONFIRM_GAP_MS = 3_000L;
+    public static final long ACT_DEADLINE_MS = 61_000L;
+    static final long REMIND_MS = 3_600_000L;
+
+    private final C3Scope scope;
+    private final C3ScopedGateway gw;
+    private final LiveBookC3 book;
+    private final Consumer<String> alert;
+    private final OrderAuditLog audit;
+    private final LongSupplier clock;
+    private volatile TrailingStopManager trailing;
+    private final Map<String, Long> suspectSince = new TreeMap<>();
+    private final Map<String, Long> releaseSince = new TreeMap<>();
+    private final Map<String, Long> lastRemind = new TreeMap<>();
+
+    public C3MergedGuard(C3Scope scope, C3ScopedGateway gw, LiveBookC3 book, Consumer<String> alert, OrderAuditLog audit,
+                         LongSupplier clock) {
+        this.scope = scope;
+        this.gw = gw;
+        this.book = book;
+        this.alert = alert == null ? m -> { } : alert;
+        this.audit = audit;
+        this.clock = clock == null ? System::currentTimeMillis : clock;
+    }
+
+    public void setTrailing(TrailingStopManager t) {
+        this.trailing = t;
+    }
+
+    /** (a) stream: lenh khong-c3 khop tren symbol c3 dang giu => MERGED ngay. */
+    public void onForeignFill(String sym, String detail) {
+        if (sym == null || !scope.held(sym)) return;
+        merge(sym, "stream: " + detail);
+    }
+
+    /** nghi van (kiem truoc ghi / stream vi the): doc xac nhan o lan poll ke tiep. */
+    public synchronized void suspect(String sym) {
+        if (sym == null || scope.isMerged(sym) || !scope.held(sym)) return;
+        if (!suspectSince.containsKey(sym)) {
+            suspectSince.put(sym, Long.MIN_VALUE);   // chua co lan doc tinh
+            LOG.warn("[C3-LIVE-MERGED] {} nghi lan LEGACY => doc xac nhan (2 lan cach >= {} ms)", sym, CONFIRM_GAP_MS);
+        }
+    }
+
+    /** Ops loop (5 s): co nghi van / dang MERGED => doc vi the THO toan tai khoan (1 call) va danh gia. */
+    public void poll() {
+        boolean need;
+        synchronized (this) {
+            need = !suspectSince.isEmpty() || !scope.merged().isEmpty();
+        }
+        if (!need) return;
+        List<PositionInfo> raw;
+        try {
+            raw = gw.positionsAll();
+        } catch (RuntimeException e) {
+            LOG.warn("[C3-LIVE-MERGED] doc vi the loi ({}) => thu lai nhip sau", e.toString());
+            return;
+        }
+        observe(raw, false);
+    }
+
+    /**
+     * Danh gia tu 1 lan doc vi the THO. {@code startup}=true (khoi dong, sau khi executor giai quyet leg treo): san &gt; so c3
+     * => MERGED NGAY (khong cho lan doc thu 2) — truoc khi Reconciler "san thang" ghi de so bang vi the da lan LEGACY.
+     */
+    public void observe(List<PositionInfo> raw, boolean startup) {
+        long now = clock.getAsLong();
+        Map<String, BigDecimal> amt = new TreeMap<>();
+        for (PositionInfo p : raw) {
+            if (p.getSymbol() == null || p.getPositionAmt() == null) continue;
+            amt.merge(p.getSymbol(), p.getPositionAmt(), BigDecimal::add);
+        }
+        List<String> toMerge = new ArrayList<>();
+        List<String> toAct = new ArrayList<>();
+        synchronized (this) {
+            for (LiveBookC3.ClusterView c : book.clusters()) {
+                String s = c.symbol;
+                BigDecimal a = amt.getOrDefault(s, BigDecimal.ZERO);
+                scope.noteRawAmt(s, a);
+                if (scope.isMerged(s)) continue;
+                BigDecimal upper = scope.c3UpperQty(s);
+                boolean excess = a.signum() < 0 || a.compareTo(upper.add(C3Scope.EPS)) > 0;
+                if (!excess) {
+                    if (suspectSince.remove(s) != null) LOG.info("[C3-LIVE-MERGED] {} het nghi van (san {} <= c3 {})", s, a, upper);
+                    continue;
+                }
+                Long since = suspectSince.get(s);
+                if (startup) {
+                    toMerge.add(s + "|khoi dong: san " + a.toPlainString() + " > so c3 " + upper.toPlainString());
+                } else if (since == null || since == Long.MIN_VALUE) {
+                    suspectSince.put(s, now);
+                } else if (now - since >= CONFIRM_GAP_MS) {
+                    toMerge.add(s + "|REST 2 lan: san " + a.toPlainString() + " > so c3 " + upper.toPlainString());
+                }
+            }
+            suspectSince.keySet().removeIf(s -> !scope.held(s));
+            for (String s : scope.merged().keySet()) {
+                if (!scope.held(s)) {
+                    releaseSince.remove(s);
+                    scope.touchLegacy(s, now);   // phan con lai tren san = LEGACY (khong theo doi lop B / chan (A))
+                    release(s, "c3 khong con vi the (cum da dong) — phan con lai la cua LEGACY");
+                    continue;
+                }
+                BigDecimal a = amt.getOrDefault(s, BigDecimal.ZERO);
+                boolean clean = !book.hasUnresolved(s) && a.subtract(scope.c3OpenQty(s)).abs().compareTo(C3Scope.EPS) <= 0;
+                if (!clean) {
+                    releaseSince.remove(s);
+                    toAct.add(s);
+                    continue;
+                }
+                Long rs = releaseSince.get(s);
+                if (rs == null) {
+                    releaseSince.put(s, now);
+                } else if (now - rs >= CONFIRM_GAP_MS) {
+                    releaseSince.remove(s);
+                    release(s, "san = qty c3 " + a.toPlainString() + " (2 lan doc)");
+                }
+            }
+        }
+        for (String m : toMerge) {
+            int i = m.indexOf('|');
+            merge(m.substring(0, i), m.substring(i + 1));
+        }
+        for (String s : toAct) act(s, now);
+    }
+
+    private void merge(String sym, String why) {
+        long now = clock.getAsLong();
+        synchronized (this) {
+            suspectSince.remove(sym);
+            releaseSince.remove(sym);
+        }
+        if (scope.setMerged(sym, why)) {
+            scope.markBusy(sym, "MERGED");
+            String m = "[C3-LIVE] KHAN: " + sym + " MERGED (vi the LEGACY cong don vao vi the c3, one-way) — " + why + ". qty c3="
+                    + scope.c3OpenQty(sym).toPlainString() + ". KHONG dong; stop closePosition => stop qty reduceOnly = qty c3;"
+                    + " chan mo moi " + sym + "; owner KIEM NGAY (go tu dong khi san = qty c3)";
+            LOG.error("{}", m);
+            alert.accept(m);
+            journal(sym, "MERGED", why, now);
+            lastRemind.put(sym, now);
+        }
+        act(sym, now);
+    }
+
+    private void release(String sym, String why) {
+        if (scope.clearMerged(sym)) {
+            String m = "[C3-LIVE] " + sym + " het MERGED: " + why + " => go chan mo moi (symbol van theo LEGACY-busy)";
+            LOG.warn("{}", m);
+            alert.accept(m);
+            journal(sym, "MERGED_RELEASED", why, clock.getAsLong());
+            lastRemind.remove(sym);
+        }
+    }
+
+    /** Dam bao KHONG con stop closePosition cua c3 tren symbol MERGED (idempotent). */
+    private void act(String sym, long now) {
+        Optional<LiveBookC3.ClusterView> c = book.cluster(sym);
+        if (!c.isPresent()) return;
+        Long lr = lastRemind.get(sym);
+        if (lr != null && now - lr >= REMIND_MS) {
+            lastRemind.put(sym, now);
+            alert.accept("[C3-LIVE] NHAC: " + sym + " VAN MERGED (qty c3=" + scope.c3OpenQty(sym).toPlainString() + ")");
+        }
+        if (c.get().stopClientAlgoId == null || c.get().stopQtyMode) return;
+        String oldCid = c.get().stopClientAlgoId;
+        TrailingStopManager t = trailing;
+        if (t != null) {
+            try (RateGuard.Urgent u = RateGuard.urgent(now + ACT_DEADLINE_MS)) {
+                t.replaceStopAsQty(sym);
+            } catch (RuntimeException e) {
+                LOG.warn("[C3-LIVE-MERGED] {} thay stop qty loi: {}", sym, e.toString());
+            }
+        }
+        Optional<LiveBookC3.ClusterView> c2 = book.cluster(sym);
+        boolean stillCp = c2.isPresent() && oldCid.equals(c2.get().stopClientAlgoId) && !c2.get().stopQtyMode;
+        boolean cpOpen = stillCp || stopOpen(sym, oldCid);
+        if (!cpOpen) {
+            journal(sym, "MERGED_STOP_QTY", "stop closePosition " + oldCid + " da thay bang stop qty", now);
+            return;
+        }
+        // khong thay duoc (hoac stop cu chua huy duoc): HUY stop closePosition (no se dong ca phan LEGACY khi kich)
+        try (RateGuard.Lane lane = RateGuard.emergencyLane()) {
+            gw.cancelStop(sym, oldCid);
+            if (stillCp) {
+                String old = book.retireActiveStop(sym, now);
+                if (old != null) book.removeOrphanStop(sym, old, now);
+            } else {
+                book.removeOrphanStop(sym, oldCid, now);
+            }
+            journal(sym, "MERGED_STOP_CANCEL", "huy stop closePosition " + oldCid + (stillCp ? " (chua dat duoc stop qty: trailing dat lai)" : ""), now);
+            if (stillCp) {
+                alert.accept("[C3-LIVE] KHAN: " + sym + " MERGED: huy stop closePosition " + oldCid
+                        + " nhung CHUA dat duoc stop qty => vi the c3 TAM KHONG co stop; trailing dat lai kieu qty nhip sau");
+            }
+        } catch (RuntimeException e) {
+            LOG.error("[C3-LIVE-MERGED] {} KHONG huy duoc stop closePosition {}: {} => thu lai nhip sau", sym, oldCid, e.toString());
+        }
+    }
+
+    private boolean stopOpen(String sym, String cid) {
+        try {
+            for (OrderInfo o : gw.openStops(sym)) if (cid.equals(o.getClientOrderId()) && (o.getStatus() == null || !o.getStatus().isFinal())) return true;
+            return false;
+        } catch (RuntimeException e) {
+            return true;   // khong biet => coi nhu con (huy lai: idempotent, UNKNOWN_ORDER vo hai)
+        }
+    }
+
+    private void journal(String sym, String status, String why, long now) {
+        if (audit == null) return;
+        try {
+            audit.record(OrderAuditLog.Entry.of(now).symbol(sym).status(status).reason(why)
+                    .qty(scope.c3OpenQty(sym)).errCode(""));
+        } catch (RuntimeException e) {
+            LOG.warn("[C3-LIVE-MERGED] journal loi: {}", e.toString());
+        }
+    }
+
+    public synchronized String status() {
+        return "merged=" + scope.merged().keySet() + " suspect=" + suspectSince.keySet();
+    }
+}

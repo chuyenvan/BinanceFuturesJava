@@ -41,11 +41,17 @@ public final class SymbolUniverseLive {
     public static final long DELIVERY_GUARD_MS = 7L * 86_400_000L;
     public static final long DEFAULT_MAX_STALE_MS = 60L * 60_000L;
     public static final String DEFAULT_EXCLUDE = "BTCDOMUSDT:intentional,USDCUSDT:intentional";
+    /** [V12 R4 R7] nguon exchangeInfo tho phai co >= so hop dong TradFi nay (dump 10-25: 225). */
+    public static final int MIN_TRADFI_IN_SOURCE = 200;
 
     /** Ly do khong tradable / khong buyable. */
     public enum Reason { NOT_LISTED, NOT_TRADING, NOT_USDT, TRADFI, NOT_PERPETUAL, EXCLUDED, NON_ASCII, DELIVERY_UNKNOWN, DELIVERY_SOON, STALE, NO_SNAPSHOT,
         /** [2c MASTER] underlyingType=INDEX (ALLUSDT, BTCDOMUSDT...): backtest crash-buy khong xac thuc cho chi so tong hop. */
-        INDEX }
+        INDEX,
+        /** [V12 R4 R7] universe chat: underlyingType thieu => chua phan loai => LOAI (fail-closed). */
+        UNCLASSIFIED,
+        /** [V12 R4 R7] universe chat: underlyingType != COIN (vd PREMARKET) => LOAI. */
+        NOT_COIN }
 
     /** Cau hinh bat bien. */
     public static final class Config {
@@ -53,8 +59,16 @@ public final class SymbolUniverseLive {
         final boolean allowNonAscii;
         final TradFiClassifier classifier;
         final long maxStaleMs;
+        /** [V12 R4 R7] universe chat: CHI underlyingType=COIN + kiem nguon exchangeInfo tho (fail-fast). Mac dinh tat. */
+        final boolean strictCoin;
 
         public Config(Map<String, Boolean> exclude, boolean allowNonAscii, TradFiClassifier classifier, long maxStaleMs) {
+            this(exclude, allowNonAscii, classifier, maxStaleMs, false);
+        }
+
+        public Config(Map<String, Boolean> exclude, boolean allowNonAscii, TradFiClassifier classifier, long maxStaleMs,
+                      boolean strictCoin) {
+            this.strictCoin = strictCoin;
             this.exclude = exclude == null ? Collections.emptyMap() : Collections.unmodifiableMap(new LinkedHashMap<>(exclude));
             this.allowNonAscii = allowNonAscii;
             this.classifier = classifier == null ? TradFiClassifier.defaults() : classifier;
@@ -81,6 +95,13 @@ public final class SymbolUniverseLive {
         }
 
         public static Config defaults() { return fromEnv(k -> null); }
+
+        /** [V12 R4 R7] ban sao BAT universe chat (production c3_live tai khoan chinh). */
+        public Config strictCoin() {
+            return new Config(exclude, allowNonAscii, classifier, maxStaleMs, true);
+        }
+
+        public boolean isStrictCoin() { return strictCoin; }
 
         public Map<String, Boolean> getExclude() { return exclude; }
         public boolean isAllowNonAscii() { return allowNonAscii; }
@@ -172,6 +193,17 @@ public final class SymbolUniverseLive {
             LOG.warn("[UNIVERSE] exchangeInfo rong - bo qua, giu snapshot cu");
             return null;
         }
+        if (cfg.strictCoin) {   // [V12 R4 R7] nguon tho phai du truong phan loai (fail-fast)
+            String bad = sourceProblem(ei);
+            lastSourceError = bad;
+            if (bad != null) {
+                String m = "[C3-LIVE UNIVERSE] exchangeInfo KHONG hop le (R7 fail-fast): " + bad + " => TU CHOI snapshot moi (giu cu; qua "
+                        + cfg.maxStaleMs / 60_000L + "' => STALE, khong mua)";
+                LOG.error("{}", m);
+                alerter.accept(m);
+                return null;
+            }
+        }
         lastAttemptMs = Math.max(lastAttemptMs, nowMs);
         Map<String, SymbolMeta> metas = new HashMap<>(ei.getSymbols());
         Map<String, Reason> notTradable = new HashMap<>();
@@ -194,6 +226,8 @@ public final class SymbolUniverseLive {
             else if (v.isTradFi()) r = Reason.TRADFI;
             else if (!"PERPETUAL".equals(m.getContractType())) r = Reason.NOT_PERPETUAL;
             else if ("INDEX".equalsIgnoreCase(trimOrEmpty(m.getUnderlyingType()))) r = Reason.INDEX;
+            else if (cfg.strictCoin && trimOrEmpty(m.getUnderlyingType()).isEmpty()) r = Reason.UNCLASSIFIED;
+            else if (cfg.strictCoin && !"COIN".equalsIgnoreCase(trimOrEmpty(m.getUnderlyingType()))) r = Reason.NOT_COIN;
             else if (cfg.exclude.containsKey(sym)) r = Reason.EXCLUDED;
             if (r == null) {
                 tradable.add(sym);
@@ -249,6 +283,37 @@ public final class SymbolUniverseLive {
             lastAlertedExclude = Collections.emptySet();
         }
         return d;
+    }
+
+    private volatile String lastSourceError;
+
+    /** [V12 R4 R7] loi nguon exchangeInfo lan nap gan nhat (null = hop le / khong kiem). */
+    public String lastSourceError() { return lastSourceError; }
+
+    /**
+     * [V12 R4 R7] Nguon exchangeInfo THO phai du truong phan loai: co truong contractType, co truong underlyingType va
+     * &gt;= {@link #MIN_TRADFI_IN_SOURCE} hop dong TradFi (contractType chua TRADIFI) — chung minh la exchangeInfo day du cua san
+     * (khong phai ban da loc / parser mat truong). null = hop le.
+     */
+    public static String sourceProblem(ExchangeInfo ei) {
+        int ct = 0;
+        int ut = 0;
+        int tf = 0;
+        int n = 0;
+        for (SymbolMeta m : ei.getSymbols().values()) {
+            n++;
+            String c = trimOrEmpty(m.getContractType());
+            if (!c.isEmpty()) ct++;
+            if (!trimOrEmpty(m.getUnderlyingType()).isEmpty()) ut++;
+            String cu = c.toUpperCase(Locale.ROOT);
+            if (cu.contains("TRADIFI") || cu.contains("TRADFI")) tf++;
+        }
+        if (ct == 0) return "khong symbol nao co truong contractType (" + n + " symbol)";
+        if (ut == 0) return "khong symbol nao co truong underlyingType (" + n + " symbol)";
+        if (tf < MIN_TRADFI_IN_SOURCE) {
+            return "chi " + tf + " hop dong TradFi (< " + MIN_TRADFI_IN_SOURCE + ") — khong phai exchangeInfo tho day du";
+        }
+        return null;
     }
 
     /** UTF-16 code unit ngoai [0x21, 0x7E] -> non-ASCII. Khong regex. */

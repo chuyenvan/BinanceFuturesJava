@@ -6,6 +6,7 @@ import com.binance.chuyennd.c3live.api.ErrorKind;
 import com.binance.chuyennd.c3live.api.ExchangeGateway;
 import com.binance.chuyennd.c3live.api.ExchangeInfo;
 import com.binance.chuyennd.c3live.api.GatewayException;
+import com.binance.chuyennd.c3live.api.IncomeRecord;
 import com.binance.chuyennd.c3live.api.OrderInfo;
 import com.binance.chuyennd.c3live.api.OrderKind;
 import com.binance.chuyennd.c3live.api.OrderStatus;
@@ -286,6 +287,12 @@ public final class DryGateway implements ExchangeGateway {
             out.add(new TradeFill(o.getSymbol(), orderId, o.getExecutedQty(), o.getAvgPrice(), o.getUpdateTimeMs()));
             return out;
         }
+        return new ArrayList<>();
+    }
+
+    /** [V12 R4] dry: khong gia lap funding => income rong (equity c3 dry = von ao + PnL dry). */
+    @Override
+    public List<IncomeRecord> income(String incomeType, long startTimeMs, int limit) {
         return new ArrayList<>();
     }
 

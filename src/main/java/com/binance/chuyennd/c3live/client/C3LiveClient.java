@@ -8,6 +8,7 @@ import com.binance.chuyennd.c3live.api.ExchangeGateway;
 import com.binance.chuyennd.c3live.api.ExchangeInfo;
 import com.binance.chuyennd.c3live.api.ExchangeInfoParser;
 import com.binance.chuyennd.c3live.api.GatewayException;
+import com.binance.chuyennd.c3live.api.IncomeRecord;
 import com.binance.chuyennd.c3live.api.OrderInfo;
 import com.binance.chuyennd.c3live.api.OrderKind;
 import com.binance.chuyennd.c3live.api.OrderStatus;
@@ -64,7 +65,7 @@ public final class C3LiveClient implements ExchangeGateway {
 
     static final int W_TIME = 1, W_EXINFO = 1, W_ORDER = 1, W_QUERY = 1, W_OPEN_SYM = 1, W_OPEN_ALL = 40,
             W_POSITION = 5, W_ACCOUNT = 5, W_MULTI = 30, W_DUAL = 30, W_SYMCFG = 5, W_SET = 1, W_LISTEN = 1,
-            W_TICKER_SYM = 1, W_TICKER_ALL = 40, W_TRADES = 5;
+            W_TICKER_SYM = 1, W_TICKER_ALL = 40, W_TRADES = 5, W_INCOME = 30;
     /** [3i] dang trong 1 call GHI cua luong nay: GET long ben trong (dong bo gio) KHONG ngu burst / cho => kiem truoc ghi -> gui lien nhau. */
     private static final ThreadLocal<int[]> IN_WRITE = ThreadLocal.withInitial(() -> new int[1]);
 
@@ -280,6 +281,24 @@ public final class C3LiveClient implements ExchangeGateway {
             if (qty == null || px == null || qty.signum() <= 0 || px.signum() <= 0) continue;
             String sym = str(o, "symbol");
             out.add(new TradeFill(sym == null ? symbol : sym, lng(o, "orderId"), qty, px, lng(o, "time")));
+        }
+        return out;
+    }
+
+    /** [V12 R4 R4] GET /fapi/v1/income (CHI DOC, weight 30) — funding c3 theo symbol. */
+    @Override
+    public List<IncomeRecord> income(String incomeType, long startTimeMs, int limit) {
+        Map<String, String> p = new LinkedHashMap<>();
+        if (incomeType != null) p.put("incomeType", incomeType);
+        if (startTimeMs > 0L) p.put("startTime", Long.toString(startTimeMs));
+        p.put("limit", Integer.toString(Math.max(1, Math.min(1000, limit))));
+        JsonElement j = call("GET", "/fapi/v1/income", p, Sec.SIGNED, W_INCOME, 0);
+        List<IncomeRecord> out = new ArrayList<>();
+        for (JsonElement e : asArray(j)) {
+            if (!e.isJsonObject()) continue;
+            JsonObject o = e.getAsJsonObject();
+            out.add(new IncomeRecord(str(o, "symbol"), str(o, "incomeType"), dec(o, "income"), str(o, "asset"), lng(o, "time"),
+                    str(o, "tranId")));
         }
         return out;
     }

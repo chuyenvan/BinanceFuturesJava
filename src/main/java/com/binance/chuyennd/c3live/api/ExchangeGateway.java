@@ -137,4 +137,12 @@ public interface ExchangeGateway {
 
     /** DELETE /fapi/v1/listenKey. */
     void closeUserStream(String listenKey);
+
+    /**
+     * [V12 R4 R4] GET /fapi/v1/income (CHI DOC, weight 30): lich su thu nhap theo symbol (vd FUNDING_FEE) tu startTime, toi da
+     * limit dong. Dung tinh funding c3 theo symbol tren tai khoan chinh. Mac dinh: khong ho tro.
+     */
+    default List<IncomeRecord> income(String incomeType, long startTimeMs, int limit) {
+        throw new UnsupportedOperationException("income khong ho tro boi " + name());
+    }
 }

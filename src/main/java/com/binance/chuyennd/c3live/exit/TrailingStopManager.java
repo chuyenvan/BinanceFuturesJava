@@ -115,6 +115,8 @@ public final class TrailingStopManager {
     private final AtomicLong nUnconfirmed = new AtomicLong();
     /** [2g MIN-20] cho giua 2 lan kiem stop moi (test thay bang ham ghi nhan). */
     private final java.util.function.LongConsumer sleeper;
+    /** [V12 R4 R2] symbol bat buoc stop qty reduceOnly = qty c3 con mo (MERGED). Mac dinh: khong symbol nao. */
+    private final java.util.function.Predicate<String> forceQty;
 
     private TrailingStopManager(Builder b) {
         this.gw = b.gw;
@@ -135,6 +137,7 @@ public final class TrailingStopManager {
         this.stopMode = b.stopMode == null ? StopMode.CLOSE_POSITION : b.stopMode;
         this.events = b.events == null ? (t, s, n, v, d) -> { } : b.events;
         this.sleeper = b.sleeper == null ? TrailingStopManager::sleepQuiet : b.sleeper;
+        this.forceQty = b.forceQty == null ? s -> false : b.forceQty;
         this.guard = new OwnStopGuard(gw, book, this.api, this.alert, null, this.clock);
     }
 
@@ -279,7 +282,7 @@ public final class TrailingStopManager {
     }
 
     private int place(LiveBookC3.ClusterView c, BigDecimal price, long now, String why) {
-        boolean qty = stopMode == StopMode.REDUCE_ONLY_QTY
+        boolean qty = stopMode == StopMode.REDUCE_ONLY_QTY || forceQty.test(c.symbol)
                 || (c.stopClientAlgoId != null && !c.stopQtyMode && closePositionConflictSeen);
         return send(c, price, qty, now, why, true);
     }
@@ -287,6 +290,11 @@ public final class TrailingStopManager {
     private int send(LiveBookC3.ClusterView c, BigDecimal price, boolean qtyMode, long now, String why,
                      boolean allowFallback) {
         String sym = c.symbol;
+        BigDecimal stopQty = c.confirmedQty;
+        if (qtyMode && forceQty.test(sym)) {   // [V12 R4 R2] MERGED: qty = PHAN c3 con mo (khong bao gio dong phan LEGACY)
+            stopQty = c.confirmedQty.subtract(c.exitQty == null ? BigDecimal.ZERO : c.exitQty);
+            if (stopQty.signum() <= 0) return 0;
+        }
         int seq = book.nextStopSeq(sym, now);
         if (seq < 0) return 0;
         String cid = C3LiveCids.stop(sym, Math.floorDiv(now, 60_000L), seq);
@@ -311,7 +319,7 @@ public final class TrailingStopManager {
         try {
             OrderInfo resp;
             if (qtyMode) {
-                resp = gw.newStopMarket(sym, Side.SELL, c.confirmedQty, price, cid, true);
+                resp = gw.newStopMarket(sym, Side.SELL, stopQty, price, cid, true);
             } else {
                 resp = gw.newStopMarket(sym, Side.SELL, price, cid, true);
             }
@@ -467,6 +475,46 @@ public final class TrailingStopManager {
         return 1;
     }
 
+    /**
+     * [V12 R4 R6] 1 nhip CHI cho 1 symbol (stop bi san ket thuc => dat lai trong pham vi RateGuard.Urgent cua nguoi goi).
+     * prices null => dat lai theo priceSL da persist (gia nhu cu). @return so thao tac san.
+     */
+    public synchronized int ensureStop(String symbol, Map<String, Float> prices) {
+        if (symbol == null || action.get() == KillSwitchEngine.Action.FLATTEN) return 0;
+        Optional<LiveBookC3.ClusterView> c = book.cluster(symbol);
+        if (!c.isPresent()) return 0;
+        try {
+            return stepOne(c.get(), prices, clock.getAsLong());
+        } catch (Throwable t) {
+            LOG.error("[C3-LIVE-TRAIL] loi ensureStop {}: {}", symbol, t.toString());
+            return 0;
+        }
+    }
+
+    /**
+     * [V12 R4 R2] MERGED: thay stop closePosition dang co bang stop qty reduceOnly = qty c3 con mo, CUNG gia (dat moi truoc, huy
+     * cu sau khi moi xac nhan — khong khoang trong). Khong co stop / da la qty / dang pending => 0.
+     */
+    public synchronized int replaceStopAsQty(String symbol) {
+        Optional<LiveBookC3.ClusterView> co = symbol == null ? Optional.<LiveBookC3.ClusterView>empty() : book.cluster(symbol);
+        if (!co.isPresent()) return 0;
+        LiveBookC3.ClusterView c = co.get();
+        if (c.stopClientAlgoId == null || c.stopQtyMode || c.pendingStopCid != null || !(c.stopPrice > 0d)) return 0;
+        BigDecimal px = BigDecimal.valueOf(c.stopPrice);
+        SymbolRules r = rules == null ? null : rules.get();
+        if (r != null) {
+            try {
+                BigDecimal rr = r.roundStopPriceForLong(symbol, px);
+                if (rr != null && rr.signum() > 0) px = rr;
+            } catch (RuntimeException ignore) {
+                // giu gia so
+            }
+        }
+        LOG.warn("[C3-LIVE-TRAIL] {} MERGED: thay stop closePosition {} bang stop qty reduceOnly (gia {})", symbol,
+                c.stopClientAlgoId, px.toPlainString());
+        return send(c, px, true, clock.getAsLong(), "MERGED", false);
+    }
+
     /** [2e MAJ-3] guard huy stop c3s- dung chung (runtime). */
     public synchronized void setStopGuard(OwnStopGuard g) {
         if (g != null) this.guard = g;
@@ -507,6 +555,7 @@ public final class TrailingStopManager {
         private StopMode stopMode = StopMode.CLOSE_POSITION;
         private EventSink events;
         private java.util.function.LongConsumer sleeper;
+        private java.util.function.Predicate<String> forceQty;
 
         public Builder sleeper(java.util.function.LongConsumer v) { sleeper = v; return this; }
         public Builder gateway(ExchangeGateway v) { gw = v; return this; }
@@ -526,6 +575,8 @@ public final class TrailingStopManager {
         public Builder safeRetryMs(long v) { safeRetryMs = v; return this; }
         public Builder stopMode(StopMode v) { stopMode = v; return this; }
         public Builder events(EventSink v) { events = v; return this; }
+        /** [V12 R4 R2] symbol bat buoc stop qty reduceOnly = qty c3 (MERGED). */
+        public Builder qtyModeFor(java.util.function.Predicate<String> v) { forceQty = v; return this; }
 
         public TrailingStopManager build() {
             if (gw == null || book == null || closer == null) throw new IllegalStateException("TrailingStopManager thieu thanh phan");

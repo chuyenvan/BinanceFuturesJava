@@ -119,6 +119,10 @@ public final class Reconciler {
     /** [2h] moc Telegram gan nhat cua moi symbol UNKNOWN (nhac lai 6 h). */
     private final Map<String, Long> unknownAlertMs = new TreeMap<>();
     private int matchStreak;
+    /** [V12 R4 R4] tai khoan chinh: doi chieu hang gio = qty c3 (so) vs san tren symbol c3 — KHONG so tmb. */
+    private volatile boolean qtyReconcile;
+    /** [V12 R4] anh chup (doc khong khoa) symbol dang theo doi (A)(B)/cho phang — cho view pham vi c3. */
+    private volatile Set<String> watched = Collections.emptySet();
     private double lastDiff = Double.NaN;
     private double lastBookEq = Double.NaN;
     private double lastTmb = Double.NaN;
@@ -160,6 +164,23 @@ public final class Reconciler {
     }
 
     // ------------------------------------------------------------------ cong vao lenh
+    /** [V12 R4 R4] bat doi chieu hang gio theo qty c3 (tai khoan chinh). */
+    public void setQtyReconcile(boolean on) {
+        this.qtyReconcile = on;
+    }
+
+    /** [V12 R4] symbol dang theo doi (UNKNOWN (A), lop (B), cho xac nhan phang) — doc KHONG khoa. */
+    public Set<String> watchedSymbols() {
+        return watched;
+    }
+
+    private void refreshWatched() {
+        Set<String> w = new TreeSet<>(unknownSyms);
+        w.addAll(knownSyms.keySet());
+        w.addAll(flat.pending());
+        watched = Collections.unmodifiableSet(w);
+    }
+
     /** Khong co ly do chan (vi the la / lech equity / reconcile khoi dong chua xong). */
     public synchronized boolean allowsEntry(String symbol) {
         drainUnknown();
@@ -205,6 +226,7 @@ public final class Reconciler {
         while ((s = unknownQ.poll()) != null) markUnknown(s);
         syncKnownKept();
         escalateStaleKnown();
+        refreshWatched();
     }
 
     /**
@@ -585,6 +607,7 @@ public final class Reconciler {
             LOG.warn("{}", m);
             alert.accept(m);
         }
+        refreshWatched();
     }
 
     // ------------------------------------------------------------------ fallback (mat stream)
@@ -619,6 +642,7 @@ public final class Reconciler {
             return r;
         }
         sweepOrphanStops(r);
+        if (qtyReconcile) return hourlyQty(r);
         try {
             AccountSnapshot a = gw.account();
             api.onApiResult("account", true);
@@ -686,6 +710,65 @@ public final class Reconciler {
             r.ok = false;
             r.error = e.toString();
             LOG.warn("[C3-LIVE-RECON] hang gio loi {}", e.toString());
+        }
+        return r;
+    }
+
+    /**
+     * [V12 R4 R4] Tai khoan chinh: doi chieu hang gio = qty c3 theo so (confirmed - da dong) vs vi the san (view pham vi c3) tren
+     * moi symbol c3; lech &gt; equityTol (1 %) => chan mo moi (EQUITY_MISMATCH), tu go khi khop matchToRelease lan lien tiep.
+     * KHONG so tmb (tmb tai khoan chinh gom 44 vi the LEGACY).
+     */
+    private Report hourlyQty(Report r) {
+        Map<String, PositionInfo> pos;
+        try {
+            pos = positionsBySymbol();
+        } catch (RuntimeException e) {
+            r.ok = false;
+            r.error = e.toString();
+            LOG.warn("[C3-LIVE-RECON] hang gio (qty c3) loi {}", e.toString());
+            return r;
+        }
+        List<String> bad = new ArrayList<>();
+        double worst = 0d;
+        int n = 0;
+        for (LiveBookC3.ClusterView c : book.clusters()) {
+            if (c.hasUnresolved || c.closeReason != null || flat.isPending(c.symbol)) continue;
+            BigDecimal mine = c.confirmedQty.subtract(c.exitQty == null ? BigDecimal.ZERO : c.exitQty);
+            if (mine.signum() <= 0) continue;
+            PositionInfo p = pos.get(c.symbol);
+            BigDecimal ex = p == null || p.getPositionAmt() == null ? BigDecimal.ZERO : p.getPositionAmt();
+            double d = ex.subtract(mine).abs().doubleValue() / mine.doubleValue();
+            n++;
+            if (d > worst) worst = d;
+            if (d > equityTol) bad.add(c.symbol + " so=" + mine.toPlainString() + " san=" + ex.toPlainString());
+        }
+        lastDiff = worst;
+        lastBookEq = Double.NaN;
+        lastTmb = Double.NaN;
+        String line = "doi chieu qty c3 (" + n + " cum) lech max=" + String.format(Locale.ROOT, "%.4f%%", worst * 100)
+                + (bad.isEmpty() ? "" : " LECH " + bad);
+        if (!bad.isEmpty()) {
+            matchStreak = 0;
+            if (!blocks.containsKey(BLOCK_EQUITY)) {
+                blocks.put(BLOCK_EQUITY, line);
+                String m = "[C3-LIVE-RECON] LECH QTY c3 so vs san > " + String.format(Locale.ROOT, "%.1f%%", equityTol * 100)
+                        + " => CHAN mo moi (tu go khi khop " + matchToRelease + " lan lien tiep): " + line;
+                LOG.error("{}", m);
+                alert.accept(m);
+            } else {
+                blocks.put(BLOCK_EQUITY, line);
+                LOG.warn("[C3-LIVE-RECON] van lech qty c3: {}", line);
+            }
+        } else {
+            matchStreak++;
+            LOG.info("[C3-LIVE-RECON] HOURLY khop: {} streak={}", line, matchStreak);
+            if (blocks.containsKey(BLOCK_EQUITY) && matchStreak >= matchToRelease) {
+                blocks.remove(BLOCK_EQUITY);
+                String m = "[C3-LIVE-RECON] qty c3 khop lai " + matchStreak + " lan lien tiep => GO chan mo moi: " + line;
+                LOG.warn("{}", m);
+                alert.accept(m);
+            }
         }
         return r;
     }

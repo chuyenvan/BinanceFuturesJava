@@ -87,11 +87,15 @@ public final class OpsHooks {
         if (c3live) {
             KillSwitchEngine.Params p = prm == null ? new KillSwitchEngine.Params() : prm;
             p.c6OwnPeak = true;
-            if (p.peakTag == null) p.peakTag = adapterTag(Cfg.get("LIVE_ADAPTER"));   // [2d MIN-19] dinh dry != dinh live
+            // [2d MIN-19] dinh dry != dinh live; [V12 R4 R4] C6/A40 do tren EQUITY C3 => dinh rieng (dinh tmb cu bi bo qua)
+            if (p.peakTag == null) p.peakTag = adapterTag(Cfg.get("LIVE_ADAPTER")) + C3EQ_TAG_SUFFIX;
             return new KillSwitchEngine(mode, label, sink, c3livePeakFile, null, uMax, nowMs, p);
         }
         return new KillSwitchEngine(mode, label, sink, shadowPeakFile, paperEquity, uMax, nowMs, prm);
     }
+
+    /** [V12 R4 R4] hau to nhan dinh kill-switch c3_live: dinh do tren equity c3 (khong phai tmb tai khoan chinh). */
+    static final String C3EQ_TAG_SUFFIX = "_c3eq";
 
     /** [2d MIN-19] nhan adapter cho dinh kill-switch c3_live: dry|live|... (thuong, khong khoang trang); rong => off. */
     static String adapterTag(String raw) {
