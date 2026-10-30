@@ -86,3 +86,17 @@ tránh tốn 2 call/symbol (REST sớm chưa settle rồi kiểm lại). Live đ
 (KLINE ≤240 tính cả weight của LOW/PRICE) cho phép LOW đầy (repair khởi động) bỏ đói KLINE (còn ~40/phút ⇒ lỗ 752 mất ~19′).
 Đổi sang hạn mức RIÊNG, tổng = 300: **PRICE 60** (giá ~40/phút + watchdog 2), **KLINE 200** (không chờ), **LOW 40** (premiumIndex 20,
 roller, exchangeInfo, repair). Pass kiểm lại xếp **ô cũ nhất trước**. Ngưỡng Q2/ADD-1b (⌈N/200⌉+1 phút) khớp KLINE 200. Mọi tiêu chí khác giữ.
+
+## ADDENDUM 2 (2026-10-31, vòng QF3 — TRƯỚC code QF3; lý do: A1_QF2_REPORT FAIL 2 MAJ + 6 MIN)
+- **Watchdog tuổi giá (đổi):** đang ban (`BinanceRestGuard.isBanned()`) ⇒ chỉ cảnh báo, KHÔNG restart. Tuổi dùng để so Y=90 s =
+  min(tuổi giá, thời gian kể từ lúc hết ban gần nhất) ⇒ 90 s đếm từ lúc hết ban. X/Y/1-lần-mỗi-giờ giữ nguyên.
+- **Ban bền qua restart (mới):** mốc hết ban (Retry-After / -1003 / banned until) ghi file `run/rest_ban_until.ms`; JVM collectData nạp file
+  lúc khởi động TRƯỚC mọi call; mọi REST fapi qua ngân sách bị chặn tới mốc đó. Tiêu chí mới **Q11:** 0 call fapi trong lúc ban (log).
+- **Supervisor leo thang (mới):** một loop chết > **10 lần/giờ** ⇒ ERROR + Telegram KHẨN, tối đa 1 tin/30′/loop; vẫn dựng lại.
+  Số "~2 880 lần/ngày" là trần lý thuyết 86 400 s / backoff 30 s cho một loop hỏng vĩnh viễn — không phải lỗi quan sát được (QF2 chưa deploy).
+- **WS (đổi):** chia symbol ĐỀU cho các kết nối (752 ⇒ 6 × 125–126, không còn kết nối 2 symbol); kết nối < 20 symbol (symbol mới niêm yết)
+  dùng ngưỡng im lặng 90 s + ping 20 s của OkHttp. Q10 (phát hiện ≤ 15 s) áp cho kết nối ≥ 20 symbol.
+- **Lỗ lành ngoài cửa sổ đọc lại 3′ của live (báo cáo, không gate):** đếm `lanh_ngoai_3p` trong dòng `[KLINE-COVER]` + WARN có ví dụ.
+  ADD-1b nói "live nhận bản sửa" chỉ đúng với ô lành trong 3′; ô lành muộn hơn ⇒ live giữ bản nặn cho phút đó (ghi nhận).
+- **Kiểm sau deploy (đổi):** repair khởi động có dòng tiến độ; còn tiến ⇒ chờ tiếp (tối đa 60′); không tiến 5′ ⇒ coi là kẹt ⇒ rollback.
+- **Script:** PAUSE watchdog mang token của chính lần chạy; chỉ gỡ đúng token đó; PAUSE người khác có sẵn ⇒ dừng, không gỡ; DRY=1 không ghi gì.
