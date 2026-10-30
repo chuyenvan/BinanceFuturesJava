@@ -38,3 +38,39 @@ Rollback = khôi phục jar + env backup rồi restart collectData (như mọi `
 - Bỏ restart 12h ⇒ lần đầu collectData chạy >12h: Binance ngắt WS ở mốc 24h, `KlineWsClient` tự mở lại (backoff 5 s); phút đó symbol thiếu được REST +4 s lấp (trong ngân sách). RSS theo dõi Q-rollback.
 - WS chết toàn bộ: lấp ≤ ~250 symbol/phút do trần 300 ⇒ phủ ở +6 s giảm trong lúc WS chết, phủ ở +3′ vẫn đủ (Q2 đo ở +3′).
 - Ô REST-sớm của process cũ chưa kịp kiểm lại khi đổi jar: chỉ áp cho symbol thiếu WS (hiếm); pass khởi động kiểm phút thiếu 30′ gần nhất.
+
+
+## ADDENDUM 1 (2026-10-31, vòng QF2 — viết TRƯỚC code QF2; lý do: A1_QF_REPORT FAIL 1 CRIT/3 MAJ/7 MIN, md5 e93febb6)
+Thay thế các dòng tương ứng ở trên; dòng không nhắc tới giữ nguyên. Jar e75c4a65 KHÔNG deploy.
+
+**Thiết kế ngân sách (đổi):** weight IP tự đếm (cửa sổ trượt 60 s, trần 300) chia lane: PRICE (`ticker/price`) dùng tới 300 —
+dành riêng 60 weight mà KLINE/LOW không được chạm; KLINE (`klines` limit<100: REST sớm, kiểm lại, đối soát) tới 240, KHÔNG chờ
+(hết chỗ ⇒ để phút sau, không xếp hàng chặn); LOW (premiumIndex, exchangeInfo, klines limit≥100 = repair/roller, watchdog 24hr cũ) tới 160.
+`/futures/data/*` (OI/LS/taker) KHÔNG vào weight IP: bucket riêng ≤150 request/60 s (hạn mức sàn 1 000/5′).
+
+**Chứng minh vòng OI:** 752 symbol × 5 endpoint = 3 760 request/vòng. Ở trần 150/phút ⇒ ≥25,1′; throttle 250 ms + độ trễ HTTP
+quan sát ~100–200 ms ⇒ tốc độ tự nhiên 130–170/phút ⇒ vòng 25–29′. Mỗi symbol được gọi mỗi ~30′ (cùng thứ tự); limit=8 × 5′ phủ 40′
+⇒ biên ≥10′ (≥2 điểm 5m). Nếu vòng >30′ thì vòng sau bắt đầu ngay ⇒ khoảng cách = thời lượng vòng; ngưỡng an toàn ≤35′ (biên 5′).
+Tiêu chí mới **O1**: thời lượng vòng OI (log `sweep_ms`) ≤ 35′ ở 100 % vòng; ≥1 vòng/30′.
+
+**Q2 (đổi, đo được thật):** mỗi phút M, sau pass +30 s, dòng `[KLINE-COVER] phut=M chua_chot=K` đếm symbol mà ô M chưa là
+WS-final và chưa được REST kiểm lại; cùng dòng báo `chua_chot_truoc=K'` cho phút M−2 (≥+90 s). ĐẠT: K' = 0 ở 100 % phút
+(trừ phút trong cửa sổ khởi động 5′); K>0 được phép nhưng phải về 0 trước +3′. Thêm: mọi phút có record `kline_1m_opt`.
+**Q3 (đổi nguồn):** so 242 với **Vision daily** (data.binance.vision) cho 30 symbol × 1 440 phút mỗi ngày UTC đủ (không gọi REST
+fapi từ Oracle). 0 ô lệch.
+**Q4 (tính lại có OI):** weight IP tự đếm (KHÔNG gồm futures/data): TB ≤ 150, max ≤ 300; kỳ vọng TB 80–130
+(giá 40, premiumIndex 20, watchdog 2, đối soát 25, REST sớm/kiểm lại ~0–40). futures/data: max ≤ 150 req/60 s.
+**Q5:** header `X-MBX-USED-WEIGHT-1M` theo phút GIỜ SÀN (header `Date`): p99 ≤ 800.
+**Q7 (đổi):** tuổi giá theo nhịp ghi: `price_gap_max_ms` ≤ 5 000 ở ≥ 99,9 % phút sau khi repair khởi động xong; không phút nào > 15 000.
+**Tự cứu (mới, cố định):** watchdog tuổi giá trong JVM kiểm mỗi 5 s: tuổi > **X = 15 s** ⇒ WARN + Telegram (≤1/10′);
+tuổi > **Y = 90 s liên tục** ⇒ restart JVM có kiểm soát (giây 08–20), tối đa **1 lần/giờ** (mốc lưu file run/), ân hạn 180 s sau khởi động.
+Supervisor: các loop chính chết vì Throwable ⇒ dựng lại (backoff 1→30 s), đếm `loop_restarts`.
+**Q1 (làm rõ):** 0 restart JVM do lệch giá/lịch; restart do watchdog tuổi giá = vi phạm Q1 (TRƯỢT) nhưng là hành vi an toàn đúng.
+**Q10 (mới):** `loop_restarts` ≤ 3/72h; WS: mỗi kết nối xoay chủ động ở mốc lệch nhau (20h + i×25′), phát hiện im lặng ≤ 15 s.
+
+**Bộ nhớ:** collectData chạy `-Xmx2g` tường minh (JAVA_TOOL_OPTIONS; bằng trần ergonomic hiện tại, RSS 2,2 GB). Rollback khi:
+RSS > **3,2 GB**, hoặc có `OutOfMemoryError` trong log, hoặc MemAvailable 242 < **600 MB** (242 RAM 7,8 GB, avail ~2,1 GB).
+
+**Kiểm sau deploy (đổi, MAJ-3):** bỏ so `Total ≥ PRE_TOTAL`. Chờ dòng `repair khoi dong xong` rồi kiểm: 2 dòng `[KLINE-COVER]`
+liên tiếp có `chua_chot_truoc=0`; `price_gap_max_ms` ≤ 5 000 trên các dòng sau repair; 0 dòng 418/429/ban; LEGACY PID + log tươi;
+PAUSE watchdog đã gỡ.
