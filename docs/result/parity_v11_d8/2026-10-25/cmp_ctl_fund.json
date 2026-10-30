@@ -1,0 +1,345 @@
+{
+ "ref": "/home/ubuntu/claude_master/parity_v11w/d/2026-10-25/runs/fund_BT.csv.gz",
+ "new": "/home/ubuntu/claude_master/parity_v11w/d/2026-10-25/runs/fund_NEW2.csv.gz",
+ "kind": "fund",
+ "rows_ref": 38766,
+ "rows_new": 38766,
+ "rows_both": 38766,
+ "only_ref": 0,
+ "only_new": 0,
+ "cols": {
+  "cand": {
+   "bit": 0.9972398493525254,
+   "tol": 0.9972398493525254,
+   "n_bit_diff": 107,
+   "funding_dep": false
+  },
+  "f0": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f1": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f2": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f3": {
+   "bit": 0.9718051901150493,
+   "tol": 1.0,
+   "n_bit_diff": 1093,
+   "funding_dep": false
+  },
+  "f4": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f5": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f6": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f7": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f8": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f9": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f10": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f11": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f12": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f13": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f14": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f15": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f16": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f17": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f18": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f19": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f20": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f21": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f22": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f23": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f24": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f25": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f26": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f27": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f28": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f29": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f30": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f31": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f32": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f33": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f34": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f35": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f36": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f37": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f38": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f39": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": false
+  },
+  "f40": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f41": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f42": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f43": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  },
+  "f44": {
+   "bit": 1.0,
+   "tol": 1.0,
+   "n_bit_diff": 0,
+   "funding_dep": true
+  }
+ },
+ "cand_flag_diff": {
+  "n_rows": 107,
+  "symbols": [
+   "POWRUSDT"
+  ],
+  "n_minutes": 107
+ },
+ "rows_bit_nonfund": 0.9718051901150493,
+ "rows_tol_nonfund": 1.0,
+ "minutes": 1440,
+ "minutes_bit_nonfund_all": 1401,
+ "bad_minutes_nonfund": [
+  "1792886580000",
+  "1792887000000",
+  "1792892100000",
+  "1792896300000",
+  "1792898880000",
+  "1792899900000",
+  "1792901940000",
+  "1792905660000",
+  "1792907640000",
+  "1792907760000",
+  "1792911300000",
+  "1792912920000",
+  "1792913340000",
+  "1792915320000",
+  "1792917180000",
+  "1792918440000",
+  "1792919040000",
+  "1792921980000",
+  "1792923360000",
+  "1792924380000",
+  "1792929600000",
+  "1792929720000",
+  "1792929840000",
+  "1792930020000",
+  "1792939980000",
+  "1792940820000",
+  "1792941300000",
+  "1792942920000",
+  "1792950900000",
+  "1792951620000",
+  "1792954620000",
+  "1792955820000",
+  "1792956060000",
+  "1792964220000",
+  "1792965480000",
+  "1792966920000",
+  "1792970400000",
+  "1792971960000",
+  "1792972080000"
+ ],
+ "n_bad_minutes_nonfund": 39,
+ "cols_diff_nonfund": {
+  "f3": 1093
+ },
+ "cols_diff_fund": {}
+}

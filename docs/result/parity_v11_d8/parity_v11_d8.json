@@ -1,0 +1,271 @@
+{
+ "round": "d8",
+ "prereg": "481701b2 + ADDENDUM1 fea9fb97",
+ "days": {
+  "2026-10-22": {
+   "status": {
+    "P1": "DAT",
+    "P1m": "DAT",
+    "S1_I": "DAT",
+    "S1_m": "DAT",
+    "GV_I": "DAT",
+    "P2": "DAT (yeu: 0 cap r/q>=0,9)",
+    "GATE_LOG_n_pass": "1440/1440",
+    "P3": "DAT",
+    "TSX": "DAT",
+    "CTL": "DAT",
+    "K5_Kprime": 416,
+    "K5_official": 164,
+    "K5_rule": "ADDENDUM2 4eef2788 dung chu (chinh thuc); ADD3 chi mo ta",
+    "ket_luan": "XAM (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)"
+   },
+   "rq": {
+    "ge09_live": 0,
+    "ge09_off": 0,
+    "ge08_live": 0,
+    "ge08_off": 0,
+    "max_live": 0.6946801,
+    "max_off": 0.69468004,
+    "n_pairs": 34560
+   }
+  },
+  "2026-10-23": {
+   "status": {
+    "P1": "DAT",
+    "P1m": "DAT",
+    "S1_I": "DAT",
+    "S1_m": "DAT",
+    "GV_I": "DAT",
+    "P2": "DAT",
+    "GATE_LOG_n_pass": "1440/1440",
+    "P3": "DAT",
+    "TSX": "DAT",
+    "CTL": "DAT",
+    "K5_Kprime": 244,
+    "K5_official": 3,
+    "K5_rule": "ADDENDUM2 4eef2788 dung chu (chinh thuc); ADD3 chi mo ta",
+    "ket_luan": "XAM (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)"
+   },
+   "rq": {
+    "ge09_live": 28,
+    "ge09_off": 28,
+    "ge08_live": 41,
+    "ge08_off": 41,
+    "max_live": 1.6572306,
+    "max_off": 1.6572309,
+    "n_pairs": 34560
+   }
+  },
+  "2026-10-24": {
+   "status": {
+    "P1": "DAT",
+    "P1m": "DAT",
+    "S1_I": "DAT",
+    "S1_m": "DAT",
+    "GV_I": "DAT",
+    "P2": "DAT (yeu: 0 cap r/q>=0,9)",
+    "GATE_LOG_n_pass": "1440/1440",
+    "P3": "DAT",
+    "TSX": "DAT",
+    "CTL": "DAT",
+    "K5_Kprime": 181,
+    "K5_official": 1,
+    "K5_rule": "ADDENDUM2 4eef2788 + ADDENDUM3 67ce404a (chinh thuc)",
+    "ket_luan": "XAM (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)"
+   },
+   "rq": {
+    "ge09_live": 0,
+    "ge09_off": 0,
+    "ge08_live": 5,
+    "ge08_off": 5,
+    "max_live": 0.84214485,
+    "max_off": 0.84214497,
+    "n_pairs": 34560
+   }
+  },
+  "2026-10-25": {
+   "status": {
+    "P1": "DAT",
+    "P1m": "DAT",
+    "S1_I": "DAT",
+    "S1_m": "DAT",
+    "GV_I": "DAT",
+    "P2": "DAT (yeu: 0 cap r/q>=0,9)",
+    "GATE_LOG_n_pass": "276/276",
+    "P3": "DAT",
+    "TSX": "DAT",
+    "CTL": "DAT",
+    "K5_Kprime": 420,
+    "K5_official": 1,
+    "K5_rule": "ADDENDUM2 4eef2788 + ADDENDUM3 67ce404a (chinh thuc)",
+    "ket_luan": "XAM (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)"
+   },
+   "rq": {
+    "ge09_live": 0,
+    "ge09_off": 0,
+    "ge08_live": 0,
+    "ge08_off": 0,
+    "max_live": 0.5963863,
+    "max_off": 0.59638625,
+    "n_pairs": 6624
+   }
+  },
+  "2026-10-26": {
+   "status": {
+    "P1": "KHONG DO DUOC",
+    "P1m": "KHONG DO DUOC",
+    "S1_I": "KHONG DO DUOC",
+    "S1_m": "DAT",
+    "GV_I": "KHONG DO DUOC",
+    "P2": "KHONG DO DUOC",
+    "GATE_LOG_n_pass": null,
+    "P3": "DAT",
+    "TSX": "DAT",
+    "CTL": "DAT",
+    "K5_Kprime": null,
+    "K5_official": null,
+    "K5_rule": "ADDENDUM1",
+    "ket_luan": "KHONG DO DUOC (mot phan) (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)"
+   },
+   "rq": null
+  },
+  "2026-10-27": {
+   "status": {
+    "P1": "TRUOT",
+    "P1m": "DAT",
+    "S1_I": "DAT",
+    "S1_m": "DAT",
+    "GV_I": "DAT",
+    "P2": "DAT (yeu: 0 cap r/q>=0,9)",
+    "GATE_LOG_n_pass": "941/941",
+    "P3": "KHONG DO DUOC (thieu gio ['10-27 01:00', '10-27 02:00', '10-27 03:00', '10-27 04:00', '10-27 05:00', '10-27 06:00', '10-27 07:00'])",
+    "TSX": "DAT",
+    "CTL": "DAT",
+    "K5_Kprime": 0,
+    "K5_official": 0,
+    "K5_rule": "ADDENDUM2 4eef2788 + ADDENDUM3 67ce404a (chinh thuc)",
+    "ket_luan": "TRUOT (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)"
+   },
+   "rq": {
+    "ge09_live": 0,
+    "ge09_off": 0,
+    "ge08_live": 0,
+    "ge08_off": 0,
+    "max_live": 0.6227512,
+    "max_off": 0.622751,
+    "n_pairs": 22584
+   }
+  },
+  "2026-10-28": {
+   "status": {
+    "P1": "KHONG DO DUOC",
+    "P1m": "DAT",
+    "S1_I": "DAT",
+    "S1_m": "DAT",
+    "GV_I": "DAT",
+    "P2": "KHONG DO DUOC",
+    "GATE_LOG_n_pass": "1440/1440",
+    "P3": "DAT",
+    "TSX": "DAT",
+    "CTL": "KHONG DO DUOC",
+    "K5_Kprime": null,
+    "K5_official": null,
+    "K5_rule": "ADDENDUM1",
+    "ket_luan": "KHONG DO DUOC (mot phan) (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)"
+   },
+   "rq": {
+    "ge09_live": 0,
+    "ge09_off": null,
+    "ge08_live": 0,
+    "ge08_off": null,
+    "max_live": 0.6794499754905701,
+    "max_off": null,
+    "n_pairs": 34560,
+    "n_pass_live": 0,
+    "note": "chi phia live (Vision ngay D chua co)"
+   }
+  },
+  "2026-10-29": {
+   "status": {
+    "P1": "KHONG DO DUOC",
+    "P1m": "DAT",
+    "S1_I": "DAT",
+    "S1_m": "DAT",
+    "GV_I": "DAT",
+    "P2": "KHONG DO DUOC",
+    "GATE_LOG_n_pass": "1440/1440",
+    "P3": "DAT",
+    "TSX": "KHONG DO DUOC (vision=nan, live=['OFF'])",
+    "CTL": "KHONG DO DUOC",
+    "K5_Kprime": null,
+    "K5_official": null,
+    "K5_rule": "ADDENDUM1",
+    "ket_luan": "KHONG DO DUOC (mot phan) (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)"
+   },
+   "rq": {
+    "ge09_live": 107,
+    "ge09_off": null,
+    "ge08_live": 138,
+    "ge08_off": null,
+    "max_live": 2.18625545501709,
+    "max_off": null,
+    "n_pairs": 34560,
+    "n_pass_live": 93,
+    "note": "chi phia live (Vision ngay D chua co)"
+   }
+  }
+ },
+ "cumulative": {
+  "P2_pairs_both_sides_measured": {
+   "n_pairs": 166152,
+   "ge09_live": 28,
+   "ge09_off": 28,
+   "ge08_live": 52,
+   "ge08_off": 52
+  },
+  "P2_pairs_live_side_all_days": {
+   "n_pairs": 235272,
+   "ge09_live": 135,
+   "ge08_live": 190
+  },
+  "P2_max_rq": {
+   "live": 2.18625545501709,
+   "off": 1.6572309
+  },
+  "days_measured": [
+   "2026-10-21",
+   "2026-10-22",
+   "2026-10-23",
+   "2026-10-24",
+   "2026-10-25",
+   "2026-10-26",
+   "2026-10-27",
+   "2026-10-28",
+   "2026-10-29"
+  ],
+  "verdicts": {
+   "2026-10-21": "DAT (so bo cho phan funding: phan quyet chinh thuc P1/P2-funding o luot M)",
+   "2026-10-22": "XAM (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)",
+   "2026-10-23": "XAM (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)",
+   "2026-10-24": "XAM (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)",
+   "2026-10-25": "XAM (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)",
+   "2026-10-26": "KHONG DO DUOC (mot phan) (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)",
+   "2026-10-27": "TRUOT (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)",
+   "2026-10-28": "KHONG DO DUOC (mot phan) (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)",
+   "2026-10-29": "KHONG DO DUOC (mot phan) (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)"
+  }
+ },
+ "D1": {
+  "status_official_add1": "DAT (so bo cho phan funding: phan quyet chinh thuc P1/P2-funding o luot M)",
+  "K5_Kprime_relabel_only": 375,
+  "rq": {
+   "ge09_live": 0,
+   "ge09_off": 0,
+   "ge08_live": 6,
+   "ge08_off": 6,
+   "max_live": 0.8913219,
+   "max_off": 0.8913218,
+   "n_pairs": 33264
+  }
+ }
+}

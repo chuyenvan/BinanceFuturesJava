@@ -1,0 +1,109 @@
+{
+ "day": "2026-10-27",
+ "T0": 1793059200000,
+ "T1": 1793145540000,
+ "pull_dirs": {
+  "/home/ubuntu/claude_master/pull242/2026-10-27": {
+   "exists": true,
+   "COMPLETE": false
+  },
+  "/home/ubuntu/claude_master/pull242/2026-10-28": {
+   "exists": true,
+   "COMPLETE": true
+  }
+ },
+ "pull_incomplete": true,
+ "log": {
+  "files": [
+   {
+    "file": "/home/ubuntu/claude_master/pull242/2026-10-27/logs/full.log@1793150590_70218962.gz",
+    "lines": 391251,
+    "how": "first"
+   },
+   {
+    "file": "/home/ubuntu/claude_master/pull242/2026-10-27/logs/full.log@1793236991_77215469.gz",
+    "lines": 430124,
+    "how": "prefix-extend"
+   },
+   {
+    "file": "/home/ubuntu/claude_master/pull242/2026-10-28/logs/full.log@1793236991_77215469.gz",
+    "lines": 430125,
+    "how": "prefix-extend"
+   },
+   {
+    "file": "/home/ubuntu/claude_master/pull242/2026-10-27/logs/full.log@1793323380_84906260.gz",
+    "lines": 473613,
+    "how": "prefix-extend"
+   }
+  ],
+  "merged_lines": 473613,
+  "window_lines": 38204,
+  "first": "2026-10-27T06:00:00+07:00",
+  "last": "2026-10-28T07:10:00+07:00",
+  "covers_from": true,
+  "covers_to": true,
+  "minutes_with_lines_in_window": 1440,
+  "markers": {
+   "[GATE] ": 1071,
+   "[GATE-RATIO] q_t=": 19,
+   "[MAP] tick=": 1071,
+   "[LIVE-KLINE]": 171,
+   "[FEAT-PIPE] ticks=": 23,
+   "[TS-EXT] day ": 2,
+   "[TS-EXT] flag day=": 4,
+   "MainClass:": 2,
+   "[LEGACY] managed": 1510
+  },
+  "gate_ticks_in_window": 1001,
+  "gate_ratio_hours_in_window": 17
+ },
+ "restarts": {
+  "last_before_T0": 1792723051000,
+  "in_day": [
+   1793076233000,
+   1793082395000
+  ],
+  "p07": [
+   "2026-10-23T09:37:31+07:00",
+   "2026-10-27T11:43:53+07:00",
+   "2026-10-27T13:26:35+07:00"
+  ]
+ },
+ "buffer": {
+  "src": "/home/ubuntu/claude_master/pull242/2026-10-27/run/gate_ratio_live.bin.gz",
+  "bytes": 7008865
+ },
+ "psym": {
+  "files_in_window": 1037,
+  "expected": 1440,
+  "decode_stdout": "files=1037 rows=677503",
+  "decode_stderr_tail": "",
+  "rc": 0,
+  "rows": 677503,
+  "minutes_decoded": 1001,
+  "rows_per_min_min": 40
+ },
+ "dumps": {
+  "feat_minutes": 1054,
+  "feat_bad_files": 0,
+  "sel_minutes": 941,
+  "sel_bad_files": 0,
+  "s1_minutes": 1001,
+  "s1_bad_files": 0
+ },
+ "ucand": {
+  "n": 746,
+  "u_cache1017": 738,
+  "live_syms": 742,
+  "live_not_in_cache": [
+   "ABBVUSDT",
+   "BACUSDT",
+   "CEGUSDT",
+   "EIDOUSDT",
+   "EQTUSDT",
+   "IBKRUSDT",
+   "PREDICTUSDT",
+   "STMUSDT"
+  ]
+ }
+}

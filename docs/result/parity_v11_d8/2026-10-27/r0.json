@@ -1,0 +1,17 @@
+{
+ "driver_rc": 0,
+ "lines": [
+  "2026-10-30 08:37:38.342 INFO  [main] c.b.c.a.OfflineGuardSelfTest: [R0] case=ok cp=stub+jar cfg=off exit=0 ky_vong=0 => DAT",
+  "2026-10-30 08:37:38.867 INFO  [main] c.b.c.a.OfflineGuardSelfTest: [R0] case=client242 cp=stub+jar cfg=off exit=97 ky_vong=97 => DAT",
+  "2026-10-30 08:37:39.355 INFO  [main] c.b.c.a.OfflineGuardSelfTest: [R0] case=clientOracle cp=stub+jar cfg=off exit=97 ky_vong=97 => DAT",
+  "2026-10-30 08:37:39.839 INFO  [main] c.b.c.a.OfflineGuardSelfTest: [R0] case=readClient cp=stub+jar cfg=off exit=97 ky_vong=97 => DAT",
+  "2026-10-30 08:37:40.350 INFO  [main] c.b.c.a.OfflineGuardSelfTest: [R0] case=mapperLoad cp=stub+jar cfg=off exit=97 ky_vong=97 => DAT",
+  "2026-10-30 08:37:40.860 INFO  [main] c.b.c.a.OfflineGuardSelfTest: [R0] case=fundingScan cp=stub+jar cfg=off exit=97 ky_vong=97 => DAT",
+  "2026-10-30 08:37:41.438 INFO  [main] c.b.c.a.OfflineGuardSelfTest: [R0] case=tickerRead cp=stub+jar cfg=off exit=97 ky_vong=97 => DAT",
+  "2026-10-30 08:37:41.914 INFO  [main] c.b.c.a.OfflineGuardSelfTest: [R0] case=socket242 cp=stub+jar cfg=off exit=98 ky_vong=98 => DAT",
+  "2026-10-30 08:37:42.406 INFO  [main] c.b.c.a.OfflineGuardSelfTest: [R0] case=dnsVision cp=stub+jar cfg=off exit=98 ky_vong=98 => DAT",
+  "2026-10-30 08:37:42.787 INFO  [main] c.b.c.a.OfflineGuardSelfTest: [R0] case=ok cp=jar cfg=off exit=96 ky_vong=96 => DAT",
+  "2026-10-30 08:37:43.245 INFO  [main] c.b.c.a.OfflineGuardSelfTest: [R0] case=ok cp=stub+jar cfg=real exit=96 ky_vong=96 => DAT",
+  "2026-10-30 08:37:43.246 INFO  [main] c.b.c.a.OfflineGuardSelfTest: [R0] tong: 11 ca, 0 truot"
+ ]
+}

@@ -101,9 +101,14 @@ def prep():
     for k in ("PULLD", "PULLN"):
         d = C[k]
         cov["pull_dirs"][d] = {"exists": os.path.isdir(d), "COMPLETE": os.path.exists(d + "/COMPLETE")}
-    if not cov["pull_dirs"][C["PULLD"]]["COMPLETE"]:
+    cov["pull_incomplete"] = not cov["pull_dirs"][C["PULLD"]]["COMPLETE"]
+    if cov["pull_incomplete"] and os.environ.get("PV_ALLOW_INCOMPLETE") != "1":
         print("pull242/%s chua COMPLETE" % C["day"])
         sys.exit(2)
+    if cov["pull_incomplete"]:
+        # Chi dung khi MASTER yeu cau cham ngay thieu du lieu (vd 10-25..10-27 mat feature dump):
+        # cham tren cac phut CO du lieu; ngay do KHONG duoc coi la DAT (docs/result/PARITY_V11_WINDOW_D8.md).
+        print("CANH BAO: pull242/%s INCOMPLETE - chi cham cac phut co du lieu (PV_ALLOW_INCOMPLETE=1)" % C["day"])
     # ---- log
     files = glob.glob(C["PULLD"] + "/logs/full.log@*") + glob.glob(C["PULLN"] + "/logs/full.log@*")
     allines, info = merge_logs(files)

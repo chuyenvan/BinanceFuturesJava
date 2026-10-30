@@ -175,9 +175,12 @@ def main():
     sstates = res["flag_" + D]["live_status_flagToday"]
     if sstates and lstates and sstates != lstates:
         lstates = sorted(set(lstates) | set(sstates))   # mau thuan dong flag vs status => khong khop
-    if vf is None or vf["state"] == "NA" or not lstates:
+    st = vf["state"] if vf else None
+    # Vision thieu ngay (flag_for tra State.NA -> JSON ghi NaN, khong phai chuoi "NA") => KHONG DO DUOC, khong phai TRUOT.
+    st_na = st is None or st == "NA" or (isinstance(st, float) and np.isnan(st))
+    if vf is None or st_na or not lstates:
         res["flag_match"] = None
-        res["flag_status"] = "KHONG DO DUOC (vision=%s, live=%s)" % (vf["state"] if vf else None, lstates)
+        res["flag_status"] = "KHONG DO DUOC (vision=%s, live=%s)" % (st, lstates)
     else:
         res["flag_match"] = bool(lstates == [vf["state"]])
         res["flag_status"] = "DAT" if res["flag_match"] else "TRUOT"

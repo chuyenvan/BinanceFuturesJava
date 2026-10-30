@@ -1,0 +1,6635 @@
+{
+ "n_bad_minutes": 587,
+ "bad_minutes": [
+  {
+   "min": "10-25 09:00",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:01",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:02",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:03",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:04",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:05",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:06",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:07",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:08",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:09",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:10",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:11",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:12",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:13",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:14",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:15",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:16",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:17",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:18",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:19",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:20",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:21",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:22",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:23",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:24",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:25",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:26",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:27",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:28",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:29",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:30",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:31",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:32",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:33",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:34",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:35",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:36",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:37",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:38",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:39",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:40",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:41",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:42",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:43",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:44",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:45",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:46",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:47",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:48",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:49",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:50",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:51",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:52",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:53",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:54",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:56",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:57",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 09:58",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:00",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:01",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:02",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:03",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:04",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:06",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:08",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:11",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:12",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:13",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:14",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:15",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:16",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:17",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:18",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:19",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:20",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:21",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:23",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:24",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:25",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:26",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:27",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:28",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:29",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:30",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:31",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:32",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:33",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:34",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:37",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:38",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:39",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:40",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:42",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:43",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:45",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:48",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:49",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:50",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:52",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:53",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:54",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:55",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:57",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:58",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 10:59",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 11:31",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "FUND",
+    "GV_O",
+    "MD",
+    "NET",
+    "P1",
+    "P1F"
+   ],
+   "s1v_rows_bad": 0
+  },
+  {
+   "min": "10-25 12:00",
+   "labels": [
+    "K1",
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:01",
+   "labels": [
+    "K1",
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:02",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:03",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:04",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:05",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:06",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:07",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:08",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:09",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:10",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:11",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:12",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:13",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:14",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:15",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:16",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:17",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:19",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:20",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:21",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:22",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:23",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:24",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:25",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:26",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:27",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:28",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:29",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:30",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:31",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:32",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:33",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:34",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:35",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:36",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:37",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:38",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:39",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:40",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:41",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:42",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:43",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:44",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:45",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:46",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:47",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:48",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:49",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:50",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:51",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:52",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:53",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:54",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:55",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:56",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:57",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:58",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 12:59",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 741,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 1
+  },
+  {
+   "min": "10-25 16:00",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:01",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:02",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:03",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:04",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:05",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:06",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:07",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:08",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:09",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:10",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:11",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:12",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:13",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:14",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:15",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:16",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:17",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:18",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:19",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:20",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:21",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:22",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:23",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:24",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:25",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:26",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:27",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:28",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:29",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:30",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:31",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:32",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:33",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:34",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:35",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:36",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:37",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:38",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:39",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:40",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:41",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:42",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:43",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:44",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:45",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:46",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:47",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:48",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:49",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:50",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:51",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:52",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:53",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:54",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:55",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:56",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:57",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:58",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 16:59",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 18:00",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:01",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:02",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:03",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:04",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:05",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:06",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:07",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:08",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:09",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:10",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:11",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:12",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:13",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:14",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:15",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:16",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:17",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:18",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:19",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:20",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:21",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:22",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:23",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:24",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:25",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:26",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:27",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:28",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:29",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:30",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:31",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:32",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:33",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:34",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:35",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:36",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:37",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:38",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:39",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:40",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:41",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:42",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:43",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:44",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:45",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:46",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:47",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:48",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:49",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:50",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:51",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:52",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:53",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:54",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:55",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:56",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:57",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 18:58",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 18:59",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 19:00",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:01",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:02",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:03",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:04",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:05",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:06",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:07",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:08",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:09",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:10",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:11",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:12",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:13",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:14",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:15",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:16",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:17",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:18",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:19",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:20",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:21",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:22",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:23",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:24",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:25",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:26",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:27",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:28",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:29",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:30",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:31",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:32",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:33",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:34",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:35",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:36",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:37",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:38",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:39",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:40",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 4
+  },
+  {
+   "min": "10-25 19:41",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:42",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:43",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:44",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:45",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:46",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:47",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:48",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:49",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:50",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:51",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:52",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:53",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:54",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:55",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:56",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:57",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:58",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 19:59",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 6
+  },
+  {
+   "min": "10-25 22:00",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:01",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:02",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:03",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:04",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:05",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:06",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:07",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:08",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:09",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:10",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:11",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:12",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:13",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:14",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:15",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:16",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:17",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:18",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:19",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:20",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:21",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:22",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:23",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:24",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:25",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:26",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:27",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:28",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:29",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:30",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:31",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:32",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:33",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:34",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:35",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:36",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:37",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:38",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:39",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:40",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:41",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:42",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:43",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:44",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:45",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:46",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:47",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:48",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:49",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:50",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:51",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:52",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:53",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:54",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:55",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:56",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:57",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:58",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 22:59",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:00",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:01",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:02",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:03",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:04",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:05",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:06",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:07",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:08",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:09",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:10",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:11",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:12",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:13",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:14",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:15",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:16",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:17",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:18",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:19",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:20",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:21",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:22",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:23",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:24",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:25",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:26",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:27",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:28",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:29",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:30",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:31",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:32",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:33",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:34",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:35",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:36",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:37",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:38",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:39",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:40",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:41",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:42",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:43",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:44",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:45",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:46",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:47",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:48",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:49",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:50",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:51",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:52",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:53",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:54",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:55",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:56",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:57",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:58",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-25 23:59",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:00",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:01",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:02",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:03",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:04",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:05",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:06",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:07",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:08",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:09",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:10",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:11",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:12",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:13",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:14",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:15",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:16",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:17",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:18",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:19",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:20",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:21",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:22",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:23",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:24",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:25",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:26",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:27",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:28",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:29",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:30",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:31",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:32",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:33",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:34",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:35",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:36",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:37",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:38",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:39",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:40",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:41",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:42",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:43",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:44",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:45",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:46",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:47",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:48",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:49",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:50",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:51",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:52",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:53",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:54",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:55",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:56",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:57",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:58",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 01:59",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:00",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:01",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:02",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:03",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:04",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:05",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:06",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:07",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:08",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:09",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:10",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:11",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:12",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:13",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:14",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:15",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:16",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:17",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:18",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:19",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:20",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:21",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:22",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:23",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:24",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:25",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:26",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:27",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:28",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:29",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:30",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:31",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:32",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:33",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:34",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:35",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:36",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:37",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:38",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:39",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:40",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:41",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:42",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:43",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:44",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:45",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:46",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:47",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:48",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:49",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:50",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:51",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:52",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:53",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:54",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:55",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:56",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:57",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:58",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 03:59",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 04:09",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  },
+  {
+   "min": "10-26 04:11",
+   "labels": [
+    "K3"
+   ],
+   "nsym_log": 742,
+   "sources": [
+    "S1V"
+   ],
+   "s1v_rows_bad": 2
+  }
+ ],
+ "K5": [],
+ "counts": {
+  "K1": 2,
+  "K2a": 0,
+  "K2b": 0,
+  "K2c": 0,
+  "K3": 587,
+  "K5": 0
+ },
+ "bad_by_source": {
+  "P1F": 1,
+  "FUND": 1,
+  "NET": 1,
+  "GV_O": 1,
+  "P1": 1,
+  "MD": 1,
+  "S1V": 586
+ },
+ "U_D": 742,
+ "universe_change_marks": [
+  {
+   "symbol": "PREDICTUSDT",
+   "day": "2026-10-25",
+   "first_candle": 1792916100000,
+   "first_candle_p07": "10-25 15:15"
+  }
+ ],
+ "vision_holes_U_D_prev_and_D": {
+  "n": 0,
+  "first": []
+ },
+ "ts_ext_day_n_min": {
+  "2026-10-24": [
+   1440
+  ],
+  "2026-10-25": [
+   1440
+  ]
+ },
+ "feat_pipe_blocks_flagged": [],
+ "nsym_marks": [
+  [
+   "10-25 06:37",
+   741
+  ],
+  [
+   "10-25 07:37",
+   741
+  ],
+  [
+   "10-25 08:37",
+   741
+  ],
+  [
+   "10-25 09:37",
+   741
+  ],
+  [
+   "10-25 10:37",
+   741
+  ],
+  [
+   "10-25 11:37",
+   741
+  ],
+  [
+   "10-25 12:37",
+   741
+  ],
+  [
+   "10-25 13:37",
+   741
+  ],
+  [
+   "10-25 14:37",
+   741
+  ],
+  [
+   "10-25 15:37",
+   742
+  ],
+  [
+   "10-25 16:37",
+   742
+  ],
+  [
+   "10-25 17:37",
+   742
+  ],
+  [
+   "10-25 18:37",
+   742
+  ],
+  [
+   "10-25 19:37",
+   742
+  ],
+  [
+   "10-25 20:37",
+   742
+  ],
+  [
+   "10-25 21:37",
+   742
+  ],
+  [
+   "10-25 22:37",
+   742
+  ],
+  [
+   "10-25 23:37",
+   742
+  ],
+  [
+   "10-26 00:37",
+   742
+  ],
+  [
+   "10-26 01:37",
+   742
+  ],
+  [
+   "10-26 02:37",
+   742
+  ],
+  [
+   "10-26 03:37",
+   742
+  ],
+  [
+   "10-26 04:37",
+   742
+  ],
+  [
+   "10-26 05:37",
+   742
+  ],
+  [
+   "10-26 06:37",
+   742
+  ]
+ ],
+ "K3_cover_window": {
+  "minutes": 1440,
+  "K3": 1440
+ },
+ "live_kline_windows_with_issues": [
+  {
+   "end": "10-25 06:01",
+   "reread_overwritten": 204,
+   "decided_on_unsettled": 0,
+   "s1_close_rewritten": 0
+  },
+  {
+   "end": "10-25 06:11",
+   "reread_overwritten": 0,
+   "decided_on_unsettled": 201,
+   "s1_close_rewritten": 0
+  },
+  {
+   "end": "10-25 11:41",
+   "reread_overwritten": 74,
+   "decided_on_unsettled": 74,
+   "s1_close_rewritten": 0
+  }
+ ]
+}

@@ -402,24 +402,30 @@ def stage_s1():
     tol = 1e-6 * (1 + np.abs(S.score.values))
     res = {"S1_m": {"rows": int(len(S)), "frac_le_1e-6": float((d <= tol).mean()), "max_abs": float(d.max())}}
     m = sel.merge(S, on=["ts", "symbol"], suffixes=("_sel", "_s1"))
-    res["S1_I_selectorScore_vs_score"] = float(np.nanmax(np.abs(np.abs(m.selectorScore) - np.abs(m.score))))
-    ok = 0
-    tot = 0
-    bad = []
-    for ts, g in sel.groupby("ts"):
-        sg = S[S.ts == ts]
-        if len(sg) == 0:
-            continue
-        cand = sg[~sg.symbol.isin(legacy_at(int(ts)))].sort_values(["score", "symbol"])
-        top = list(cand.symbol.head(24))
-        want = list(g.sort_values("rank").symbol)
-        tot += 1
-        if top == want:
-            ok += 1
-        else:
-            bad.append({"ts": f7(int(ts)), "jaccard": len(set(top) & set(want)) / 24.0,
-                        "n": len(want), "rank0": int(g["rank"].min())})
-    res["S1_I"] = {"minutes": tot, "exact_order": ok, "frac": ok / max(1, tot), "bad": bad[:20]}
+    if len(m) == 0:
+        # Ngay thieu sel_dump (vd 10-26): S1_m van do duoc tu s1_dump; S1-I = KHONG DO DUOC, khong suy dien.
+        res["S1_I_selectorScore_vs_score"] = None
+        res["S1_I"] = {"minutes": 0, "exact_order": 0, "frac": None, "bad": [],
+                       "note": "sel_dump 0 phut trong ngay -> KHONG DO DUOC S1-I"}
+    else:
+        res["S1_I_selectorScore_vs_score"] = float(np.nanmax(np.abs(np.abs(m.selectorScore) - np.abs(m.score))))
+        ok = 0
+        tot = 0
+        bad = []
+        for ts, g in sel.groupby("ts"):
+            sg = S[S.ts == ts]
+            if len(sg) == 0:
+                continue
+            cand = sg[~sg.symbol.isin(legacy_at(int(ts)))].sort_values(["score", "symbol"])
+            top = list(cand.symbol.head(24))
+            want = list(g.sort_values("rank").symbol)
+            tot += 1
+            if top == want:
+                ok += 1
+            else:
+                bad.append({"ts": f7(int(ts)), "jaccard": len(set(top) & set(want)) / 24.0,
+                            "n": len(want), "rank0": int(g["rank"].min())})
+        res["S1_I"] = {"minutes": tot, "exact_order": ok, "frac": ok / max(1, tot), "bad": bad[:20]}
     json.dump(res, open(out("s1_%s.json" % TAG), "w"), indent=1, default=str)
     print(json.dumps(res, indent=1, default=str)[:2500])
 

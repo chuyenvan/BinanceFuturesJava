@@ -48,7 +48,7 @@ def day_status(work, run, tag):
     st["P1"] = (KD if g is None else ("DAT" if g["P1"]["PASS"] else "TRUOT"))
     p1m = g["P1m"] if g else (lo["P1m"] if lo else None)
     st["P1m"] = KD if p1m is None else ("DAT" if p1m["frac_le_1e-6"] == 1.0 else "XAM")
-    st["S1_I"] = KD if s1 is None else ("DAT" if s1["S1_I"]["frac"] == 1.0 else "XAM")
+    st["S1_I"] = KD if (s1 is None or s1["S1_I"].get("frac") is None) else ("DAT" if s1["S1_I"]["frac"] == 1.0 else "XAM")
     st["S1_m"] = KD if s1 is None else ("DAT" if s1["S1_m"]["frac_le_1e-6"] == 1.0 else "XAM")
     gvi = gv["GV_I"] if gv else (lo["GV_I"] if lo else None)
     st["GV_I"] = KD if gvi is None else ("DAT" if gvi["frac_le1e-6"] == 1.0 else "XAM")
