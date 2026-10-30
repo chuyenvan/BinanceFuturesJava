@@ -7,6 +7,9 @@ import com.binance.chuyennd.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Date;
 import java.util.Map;
 import java.util.TreeMap;
@@ -52,6 +55,17 @@ public final class GateRollingRatio {
     // [GATE_QUOTA_SKIPFULL 2026-10-04] docs/prereg/PREREG_GATE_QUOTA_SKIPFULL.md: so ung vien PREDICT bi bo qua vi so day (chi in khi key bat)
     private static long predictSkipFull = 0;
 
+    // [GATE_SEED_DUMP 2026-10-31] docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM3.md: ghi buffer (GRR1) tai moc + trace (ts,sp,p15,r).
+    //   Key tat (mac dinh) => khong doc/ghi gi them => byte-identical.
+    private static String dumpFile = null;
+    private static long dumpAt = Long.MAX_VALUE;
+    private static boolean dumped = false;
+    private static String traceFile = null;
+    private static long traceFrom = Long.MAX_VALUE;
+    private static long traceTo = Long.MIN_VALUE;
+    private static BufferedWriter traceW = null;
+    private static long traceN = 0;
+
     private GateRollingRatio() {
     }
 
@@ -81,6 +95,7 @@ public final class GateRollingRatio {
         String d = Cfg.get("SIM_GATE_ROLLING_DAYS");
         if (d != null && !d.trim().isEmpty()) days = Integer.parseInt(d.trim());
         on = true;
+        initSeedDump();
         LOG.warn("*** [GATE-RATIO] BAT: mode=ratio pct={} window={}d | warm-up 7d | quantile tren TY SO r ***",
                 String.format("%.8f", pct), days);
     }
@@ -116,6 +131,7 @@ public final class GateRollingRatio {
         float factor = Math.max(EntryGate.DYN_MIN, (sp / EntryGate.SCORE_BASE) * EntryGate.DYN_MULT);
         float gs = EntryGate.GATE_REGIME_ADAPTIVE ? EntryGate.CURRENT_REGIME_SCALE : EntryGate.GATE_DYN_SCALE;
         float r = p15 / (factor * gs);
+        if (dumpFile != null || traceFile != null) seedHook(ts, sp, p15, r);
         float q = buffer.addAndQuery(ts, r, pct, days, Configs.MIN_MOMENTUM_15M);
         if (!warnedBeforeFirst && buffer.nBeforeFirst() > 0) {
             warnedBeforeFirst = true;
@@ -123,6 +139,83 @@ public final class GateRollingRatio {
                     buffer.size(), Configs.MIN_MOMENTUM_15M);
         }
         return q;
+    }
+
+    /** [GATE_SEED_DUMP] doc key SIM_GATE_DUMP_FILE/AT (ms UTC) va SIM_GATE_TRACE_FILE/FROM/TO (ms UTC, [from,to)). */
+    private static void initSeedDump() {
+        String f = Cfg.get("SIM_GATE_DUMP_FILE");
+        String a = Cfg.get("SIM_GATE_DUMP_AT");
+        if (f != null && !f.trim().isEmpty() && a != null && !a.trim().isEmpty()) {
+            dumpFile = f.trim();
+            dumpAt = Long.parseLong(a.trim());
+            LOG.warn("*** [GATE-SEED] dump buffer -> {} tai truy van dau tien ts >= {} ***", dumpFile, dumpAt);
+        }
+        String t = Cfg.get("SIM_GATE_TRACE_FILE");
+        String tf = Cfg.get("SIM_GATE_TRACE_FROM");
+        String tt = Cfg.get("SIM_GATE_TRACE_TO");
+        if (t != null && !t.trim().isEmpty() && tf != null && tt != null) {
+            traceFile = t.trim();
+            traceFrom = Long.parseLong(tf.trim());
+            traceTo = Long.parseLong(tt.trim());
+            LOG.warn("*** [GATE-SEED] trace (ts,sp,p15,r) -> {} cho ts in [{}, {}) ***", traceFile, traceFrom, traceTo);
+            try {
+                Runtime.getRuntime().addShutdownHook(new Thread(GateRollingRatio::closeTrace, "GateSeedTraceFlush"));
+            } catch (Exception ignore) {
+            }
+        }
+    }
+
+    /** [GATE_SEED_DUMP] goi TRUOC khi nap (ts, r): dump = moi record ts &lt; dumpAt va ts &gt;= dumpAt - days. */
+    static synchronized void seedHook(long ts, float sp, float p15, float r) {
+        if (dumpFile != null && !dumped && ts >= dumpAt) {
+            dumped = true;
+            long[] a = buffer.tsSnapshot();
+            float[] b = buffer.rSnapshot();
+            long cut = dumpAt - (long) days * 86_400_000L;
+            int lo = 0;
+            while (lo < a.length && a[lo] < cut) lo++;
+            long[] a2 = java.util.Arrays.copyOfRange(a, lo, a.length);
+            float[] b2 = java.util.Arrays.copyOfRange(b, lo, b.length);
+            try {
+                GateRatioPersist.writeFresh(dumpFile, a2, b2);
+                LOG.warn("[GATE-SEED] DA GHI {} record ({}..{}) -> {}", a2.length,
+                        a2.length > 0 ? a2[0] : -1, a2.length > 0 ? a2[a2.length - 1] : -1, dumpFile);
+            } catch (IOException e) {
+                LOG.error("[GATE-SEED] LOI ghi {}: {}", dumpFile, e.getMessage());
+            }
+        }
+        if (traceFile != null && ts >= traceFrom && ts < traceTo) {
+            try {
+                if (traceW == null) {
+                    traceW = new BufferedWriter(new FileWriter(traceFile, false));
+                    traceW.write("ts,sp,p15,r\n");
+                }
+                traceW.write(ts + "," + Float.toString(sp) + "," + Float.toString(p15) + "," + Float.toString(r) + "\n");
+                if (++traceN % 4096 == 0) traceW.flush();
+            } catch (IOException e) {
+                LOG.error("[GATE-SEED] LOI trace {}: {}", traceFile, e.getMessage());
+            }
+        }
+    }
+
+    /** [GATE_SEED_DUMP] dong trace (shutdown hook / cuoi run / test). */
+    static synchronized void closeTrace() {
+        if (traceW != null) {
+            try {
+                traceW.flush();
+                traceW.close();
+                LOG.warn("[GATE-SEED] trace dong: {} dong -> {}", traceN, traceFile);
+            } catch (IOException ignore) {
+            }
+            traceW = null;
+        }
+    }
+
+    /** [GATE_SEED_DUMP] chi cho unit test. */
+    static synchronized void configureSeedForTest(String dFile, long dAt, String tFile, long tFrom, long tTo) {
+        closeTrace();
+        dumpFile = dFile; dumpAt = dAt; dumped = false;
+        traceFile = tFile; traceFrom = tFrom; traceTo = tTo; traceN = 0;
     }
 
     /** Lõi: tính (nếu qua giờ mới) q cho giờ của ts, trả q, rồi nạp (ts, r) — package-private cho unit test. */
