@@ -1,0 +1,79 @@
+[
+ {
+  "arm": "S7",
+  "recall_entry_dev": 0.9349,
+  "cat_dev": {
+   "pass": 2515,
+   "nopass": 175
+  },
+  "pass_off_dev": 2630,
+  "pass_sim_dev": 2690,
+  "dev_pct": -2.23
+ },
+ {
+  "arm": "S13",
+  "recall_entry_dev": 0.9403,
+  "cat_dev": {
+   "pass": 2521,
+   "nopass": 160
+  },
+  "pass_off_dev": 2659,
+  "pass_sim_dev": 2681,
+  "dev_pct": -0.821
+ },
+ {
+  "arm": "S21",
+  "recall_entry_dev": 0.9209,
+  "cat_dev": {
+   "pass": 2481,
+   "nopass": 213
+  },
+  "pass_off_dev": 2737,
+  "pass_sim_dev": 2694,
+  "dev_pct": 1.596
+ },
+ {
+  "arm": "S99",
+  "recall_entry_dev": 0.99,
+  "cat_dev": {
+   "pass": 2759,
+   "nopass": 28
+  },
+  "pass_off_dev": 2776,
+  "pass_sim_dev": 2787,
+  "dev_pct": -0.395
+ },
+ {
+  "arm": "S123",
+  "recall_entry_dev": 0.9322,
+  "cat_dev": {
+   "pass": 2530,
+   "nopass": 184
+  },
+  "pass_off_dev": 2661,
+  "pass_sim_dev": 2714,
+  "dev_pct": -1.953
+ },
+ {
+  "arm": "S777",
+  "recall_entry_dev": 0.9936,
+  "cat_dev": {
+   "pass": 2633,
+   "nopass": 17
+  },
+  "pass_off_dev": 2637,
+  "pass_sim_dev": 2650,
+  "dev_pct": -0.491
+ },
+ {
+  "arm": "S2024",
+  "recall_entry_dev": 0.9483,
+  "cat_dev": {
+   "pass": 2533,
+   "nopass": 138
+  },
+  "pass_off_dev": 2671,
+  "pass_sim_dev": 2671,
+  "dev_pct": 0.0
+ }
+]

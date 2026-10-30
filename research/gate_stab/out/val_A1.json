@@ -1,0 +1,13 @@
+[
+ {
+  "arm": "A1",
+  "recall_entry_dev": 0.9865,
+  "cat_dev": {
+   "pass": 2631,
+   "nopass": 36
+  },
+  "pass_off_dev": 2646,
+  "pass_sim_dev": 2667,
+  "dev_pct": -0.787
+ }
+]
