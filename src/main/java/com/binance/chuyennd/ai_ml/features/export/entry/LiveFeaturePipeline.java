@@ -166,6 +166,7 @@ public final class LiveFeaturePipeline {
     private Map<String, KlineObjectSimple> filt(Map<String, KlineObjectSimple> snap, long minute) {
         // [V12 R4d UNIVERSE-A1] universe A1 tai dung phut (co tat => cung map), roi bo loc c3_live (neu co)
         snap = com.binance.chuyennd.tradecore.selector.UniverseA1Filter.filter(snap, minute);
+        snap = com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper.getInstance().dropQuarantined(snap);   // [V12 R4j] id trung
         java.util.function.UnaryOperator<Map<String, KlineObjectSimple>> f = snapFilter;
         return f == null || snap == null ? snap : f.apply(snap);
     }

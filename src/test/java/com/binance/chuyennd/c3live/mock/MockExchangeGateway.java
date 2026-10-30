@@ -346,9 +346,14 @@ public class MockExchangeGateway implements ExchangeGateway {
         return Optional.empty();
     }
 
+    /** [R4j] queryStop / queryOrder NEM (doc bang chung loi) khi bat. Chi test. */
+    public volatile boolean failQueryStop = false;
+    public volatile boolean failQueryOrder = false;
+
     @Override
     public synchronized Optional<OrderInfo> queryOrder(String symbol, String cid) {
         enter("queryOrder");
+        if (failQueryOrder) throw new IllegalStateException("queryOrder loi (gia lap)");
         OrderInfo o = orders.get(cid);
         if (o != null && queryOrderWithoutAvgPrice) o = o.toBuilder().avgPrice(null).build();
         return Optional.ofNullable(o);
@@ -374,6 +379,7 @@ public class MockExchangeGateway implements ExchangeGateway {
     @Override
     public synchronized Optional<OrderInfo> queryStop(String symbol, String cid) {
         enter("queryStop");
+        if (failQueryStop) throw new IllegalStateException("queryStop loi (gia lap)");
         OrderInfo o = stops.get(cid);
         if (o != null && queryStopLagCalls > 0) {
             int n = queryStopMiss.merge(cid, 1, Integer::sum);

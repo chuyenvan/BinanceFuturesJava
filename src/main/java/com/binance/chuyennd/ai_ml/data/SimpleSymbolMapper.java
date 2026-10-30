@@ -131,13 +131,20 @@ public class SimpleSymbolMapper {
                     SymbolIdRules.assertUniqueIds(dbMap, "init");   // nem IllegalStateException
                 }
             }
-            strToId.putAll(dbMap);
             // Rebuild map ngược (ID -> String) TAT DINH: id trung -> symbol nho nhat theo ten.
             for (Map.Entry<String, Short> entry : new TreeMap<>(dbMap).entrySet()) {
                 idToStr.putIfAbsent(entry.getValue(), entry.getKey());
             }
             // Cập nhật counter để ID tiếp theo không bị trùng
             counter = SymbolIdRules.maxId(dbMap);
+            // [V12 R4j A1 MAJ-1] KHONG BAO GIO 2 symbol 1 id: symbol KHONG so huu id trung (WARN) => cach ly (id rieng, khong giao dich)
+            for (Map.Entry<String, Short> entry : new TreeMap<>(dbMap).entrySet()) {
+                if (entry.getKey().equals(idToStr.get(entry.getValue()))) {
+                    strToId.put(entry.getKey(), entry.getValue());
+                } else {
+                    quarantine(entry.getKey(), "init: id " + entry.getValue() + " da thuoc " + idToStr.get(entry.getValue()));
+                }
+            }
         }
 
         isInitialized = true;
@@ -169,14 +176,14 @@ public class SimpleSymbolMapper {
                     if (persisted != null) {        // process khac da cap — dung lai, KHONG ghi de
                         register(symbol, persisted);
                         LOG.info("🗺️ [MAPPER] {} -> {} (da co tren store, process khac cap).", symbol, persisted);
-                        return persisted;
+                        return strToId.get(symbol);   // [R4j] id trung => id cach ly (khac persisted)
                     }
                     short newId = SymbolIdRules.nextId(SymbolIdRules.maxId(snap.map), counter);
                     if (st.putIfGenerationMatches(symbol, newId, snap.generation)) {
                         register(symbol, newId);
                         LOG.info("🗺️ [MAPPER] cap id moi {} -> {} (CAS gen={}, lan {}).", symbol, newId,
                                 snap.generation, attempt);
-                        return newId;
+                        return strToId.get(symbol);
                     }
                     LOG.warn("[MAPPER] xung dot CAS khi cap {} (gen={}, lan {}/{}) — doc lai.", symbol,
                             snap.generation, attempt, MAX_CAS_RETRY);
@@ -196,16 +203,86 @@ public class SimpleSymbolMapper {
     }
 
     private void register(String symbol, short id) {
-        strToId.put(symbol, id);
-        String prev = idToStr.putIfAbsent(id, symbol);
+        String prev = idToStr.get(id);
         if (prev != null && !prev.equals(symbol)) {
-            LOG.error("⛔ [MAPPER] id {} da thuoc {} trong JVM nay, nay store gan cho {} (id cuc bo cu?).", id, prev, symbol);
+            // [V12 R4j A1 MAJ-1] KHONG gan id dang thuoc symbol khac (HistoryManager mang theo id => tron nen 2 coin)
+            quarantine(symbol, "id " + id + " da thuoc " + prev + " trong JVM nay");
+            return;
         }
+        strToId.put(symbol, id);
+        idToStr.putIfAbsent(id, symbol);
         if (id > counter) counter = id;
         if (id >= ID_SOFT_CAP) {
             LOG.error("⛔ [MAPPER-CAP] {} -> id {} >= {}: SymbolIdLimits.CAPACITY: HistoryManager bo symbol (live, [ID-CAP]) "
                     + "hoac sim nem IllegalStateException — nang tran truoc (docs/audit/MAPPER_AUDIT_20261011.md).", symbol, id, ID_SOFT_CAP);
         }
+    }
+
+    // ------------------------------------------------------------------ [V12 R4j A1 MAJ-1] cach ly symbol id trung
+    private final java.util.Set<String> quarantined = ConcurrentHashMap.newKeySet();
+    private short nextQuarantine = (short) (ID_SOFT_CAP - 1);
+    /** Telegram KHAN (prod: Utils.sendSms2Telegram tren thread rieng); test thay. */
+    private static volatile boolean TELEGRAM_ON = false;
+
+    /** Goi 1 lan o main process trading (BinanceOrderTradingManager) — test/tool/ingestor: chi LOG. */
+    public static void enableTelegramAlerts() {
+        TELEGRAM_ON = true;
+    }
+
+    volatile java.util.function.Consumer<String> alertSink = m -> {
+        if (!TELEGRAM_ON) return;
+        Thread t = new Thread(() -> {
+            try {
+                com.binance.chuyennd.utils.Utils.sendSms2Telegram(m);
+            } catch (Throwable e) {
+                LOG.warn("[MAPPER] gui Telegram loi: {}", e.toString());
+            }
+        }, "MAPPER-ALERT");
+        t.setDaemon(true);
+        t.start();
+    };
+
+    /**
+     * Symbol bi tu choi id (id dang thuoc symbol khac): cap id RIENG tu dinh mang xuong (khong bao gio trung), danh dau KHONG giao
+     * dich duoc (chan mo, khong nap history), Telegram KHAN. Symbol so huu id tiep tuc binh thuong.
+     */
+    private void quarantine(String symbol, String why) {
+        if (quarantined.contains(symbol) && strToId.containsKey(symbol)) return;
+        short q = nextQuarantine;
+        while (q > 0 && idToStr.containsKey(q)) q--;
+        nextQuarantine = (short) (q - 1);
+        strToId.put(symbol, q);
+        idToStr.put(q, symbol);
+        localOnly.put(symbol, q);
+        quarantined.add(symbol);
+        String m = "[MAPPER] KHAN: " + symbol + " bi CACH LY (" + why + ") => id rieng " + q
+                + ", KHONG giao dich / KHONG nap history cho toi khi sua symbol_mapper (SymbolMapperRepairTool) + restart";
+        LOG.error("⛔ {}", m);
+        try {
+            alertSink.accept(m);
+        } catch (Throwable t) {
+            LOG.warn("[MAPPER] alert loi: {}", t.toString());
+        }
+    }
+
+    /** [V12 R4j] symbol bi cach ly (id trung) — chan mo lenh, khong nap history. */
+    public boolean isQuarantined(String symbol) {
+        return symbol != null && !quarantined.isEmpty() && quarantined.contains(symbol);
+    }
+
+    public java.util.Set<String> quarantinedSymbols() {
+        return java.util.Collections.unmodifiableSet(new java.util.TreeSet<>(quarantined));
+    }
+
+    /** [V12 R4j] bo symbol cach ly khoi map (khong co => tra CUNG map). */
+    public <V> Map<String, V> dropQuarantined(Map<String, V> m) {
+        if (m == null || quarantined.isEmpty()) return m;
+        boolean any = false;
+        for (String s : quarantined) if (m.containsKey(s)) any = true;
+        if (!any) return m;
+        Map<String, V> out = new java.util.HashMap<>(m);
+        out.keySet().removeAll(quarantined);
+        return out;
     }
 
     public String getSymbol(short id) {

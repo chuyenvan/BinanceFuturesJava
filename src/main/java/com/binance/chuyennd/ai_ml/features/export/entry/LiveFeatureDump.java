@@ -78,6 +78,30 @@ public final class LiveFeatureDump {
      * IO (giong restart cu); KHONG mo lai sau khi JVM dang tat.
      */
     private static final boolean DAILY;
+    /** [V12 R4j A1 MIN-5] tran TONG dung luong thu muc dump (MB, {@code LIVE_FEAT_DUMP_MAX_TOTAL_MB}, mac dinh 2048; 0 = khong tran). */
+    static final long MAX_TOTAL_BYTES = parseTotalMb(Cfg.getOr("LIVE_FEAT_DUMP_MAX_TOTAL_MB", "2048")) * 1024L * 1024L;
+    private static boolean totalCapLogged = false;
+
+    static long parseTotalMb(String raw) {
+        try {
+            long v = Long.parseLong(raw.trim());
+            return v < 0 ? 2048L : v;
+        } catch (Exception e) {
+            return 2048L;
+        }
+    }
+
+    /** [R4j] tong byte da dung >= tran (tran 0 = khong tran). */
+    static boolean overTotalCap(long usedBytes, long capBytes) {
+        return capBytes > 0 && usedBytes >= capBytes;
+    }
+
+    static long dirBytes(File dir) {
+        File[] fs = dir == null ? null : dir.listFiles();
+        long n = 0;
+        if (fs != null) for (File f : fs) if (f.isFile()) n += f.length();
+        return n;
+    }
     private static long budgetDay = Long.MIN_VALUE;
     private static boolean jvmShutdown = false;
 
@@ -255,6 +279,17 @@ public final class LiveFeatureDump {
 
     /** Mo file feat_dump moi + ghi header (1 lan). */
     private static void openMain(long timestamp) throws Exception {
+        long used = dirBytes(new File(DIR));
+        if (overTotalCap(used, MAX_TOTAL_BYTES)) {   // [V12 R4j A1 MIN-5] khong xoa file; dung toi ngay UTC moi (neu che do ngay)
+            if (!totalCapLogged) {
+                totalCapLogged = true;
+                LOG.error("🟠 [LIVE_FEAT_DUMP] thu muc {} {} MB >= TRAN TONG {} MB (LIVE_FEAT_DUMP_MAX_TOTAL_MB) => DUNG dump, KHONG xoa file",
+                        DIR, used >> 20, MAX_TOTAL_BYTES >> 20);
+            }
+            disabled = true;
+            return;
+        }
+        totalCapLogged = false;
         StringBuilder h = new StringBuilder("ts,symbol");
         for (String n : FEATURE_NAMES) h.append(',').append(n);
         h.append(",p15_out,rateDownAvg,rateUpAvg,rateDown15MAvg,rateUp15MAvg");

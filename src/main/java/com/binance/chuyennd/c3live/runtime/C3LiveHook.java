@@ -41,6 +41,7 @@ public final class C3LiveHook {
     private static final boolean ENABLED = decide(LiveProfileC3.isLive(), Cfg.get(GatewayFactory.KEY_ADAPTER));
     private static final boolean EXCL_TRADFI_FEAT = decideExcludeTradFi(ENABLED, Cfg.get(KEY_EXCLUDE_TRADFI_FEATURES));
     private static volatile long lastIdxWarnMs = Long.MIN_VALUE / 2;
+    private static volatile long lastOwnedWarnMs = Long.MIN_VALUE / 2;
     private static volatile long lastFeatWarnMs = Long.MIN_VALUE / 2;
 
     private C3LiveHook() {
@@ -218,6 +219,11 @@ public final class C3LiveHook {
             C3LiveRuntime rt = C3LiveRuntime.get();
             return rt == null ? Collections.<String>emptySet() : rt.book().ownedSymbols();
         } catch (Throwable t) {
+            long now = System.currentTimeMillis();   // [V12 R4j A1 MIN-4] khong nuot im (cong vao lenh C3LiveEntry van chan)
+            if (now - lastOwnedWarnMs >= 300_000L) {
+                lastOwnedWarnMs = now;
+                LOG.warn("[C3-LIVE] ownedSymbols loi {} => rong (GatePreFilter coi nhu khong giu)", t.toString());
+            }
             return Collections.emptySet();
         }
     }

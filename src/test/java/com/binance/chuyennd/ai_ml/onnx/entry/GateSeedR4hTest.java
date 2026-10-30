@@ -84,8 +84,8 @@ public class GateSeedR4hTest {
         assertEquals(nSeedInWin + 2, LiveGateRollingRatio.bufferSizeForTest());
         assertEquals(1, tmp.getRoot().listFiles((d, n) -> n.startsWith("gate_ratio_live.bin.preseed_")).length);
         assertEquals("idempotent: khong viet lai", mtime, persist.lastModified());
-        // md5 sai => fail (khong dung buffer)
-        assertNotNull(LiveGateRollingRatio.applySeedFile(f.getPath(), "ffffffffffffffffffffffffffffffff", 24, NOW));
+        // [R4j MAJ-2] da nap seed (file danh dau) => persist THANG, seed (ke ca md5 sai) bi bo qua, KHONG fail
+        assertNull(LiveGateRollingRatio.applySeedFile(f.getPath(), "ffffffffffffffffffffffffffffffff", 24, NOW));
     }
 
     @Test

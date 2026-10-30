@@ -90,6 +90,9 @@ public class AIRejectFilter {
      */
     public FilterResult entryGate(AiPredictionData prediction, Float symbolPred, boolean predictSymbolTrade,
                                   boolean bookFull, Integer selRank) {
+        if (LiveGateRollingRatio.isSeedBlocked()) {   // [V12 R4j A1 MAJ-2] seed hong lan dau: khong vao lenh moi
+            return new FilterResult(FilterDecision.REJECT, "GATE-SEED HONG: chan vao lenh moi (van quan ly vi the/stop)");
+        }
         Float sp = predictSymbolTrade ? symbolPred : null;
         // [GDV2-EVEN 2026-09-29] bộ đếm ρ (PREDICT) LUÔN chạy cho sim (đo ρ ở G0 parity), không đổi hành vi gate.
         //   Live gate ratio chỉ đếm khi LIVE bật (no-op khi OFF) => sim (không có LIVE_*) không đổi hành vi.

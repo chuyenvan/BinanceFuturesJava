@@ -105,18 +105,61 @@ public final class LiveGateRollingRatio {
                         + "quantile tren TY SO r (CAUSAL) ***",
                 String.format("%.8f", pct), days, persistFile);
         long now0 = System.currentTimeMillis();
-        String seedPath = Cfg.get(KEY_SEED);
-        if (seedPath != null && !seedPath.trim().isEmpty()) {
-            String problem = applySeedFile(seedPath.trim(), Cfg.get(KEY_SEED_MD5), parseLagHours(Cfg.get(KEY_SEED_MAX_LAG_H)), now0);
-            if (problem != null) {
-                LOG.error("⛔ [GATE-SEED] FAIL-FAST: {} — {}={} — DUNG JVM (khong chay gate voi buffer sai)", problem, KEY_SEED,
-                        seedPath.trim());
-                System.exit(2);
-            }
-        } else {
-            loadPersistedAndSeed(now0);
-        }
+        initSeedBranch(Cfg.get(KEY_SEED), Cfg.get(KEY_SEED_MD5), parseLagHours(Cfg.get(KEY_SEED_MAX_LAG_H)), now0);
         installShutdownHook();
+    }
+
+    /**
+     * [V12 R4j A1 MAJ-2] KHONG BAO GIO System.exit vi seed (JVM nay quan ly lenh/stop that). Seed vang => nhu cu. Seed co:
+     * {@link #applySeedFile} (lan dau ap seed; lan sau persist THANG, bo qua seed + WARN). Seed hong o lan dau (chua co buffer
+     * seed) => CHAN VAO LENH MOI ({@link #isSeedBlocked}: AIRejectFilter.entryGate REJECT moi leg), Telegram KHAN, van nap persist
+     * va VAN quan ly vi the/stop. Tra true = dang chan.
+     */
+    static boolean initSeedBranch(String seedPath, String md5, int lagH, long now) {
+        seedBlocked = false;
+        if (seedPath == null || seedPath.trim().isEmpty()) {
+            loadPersistedAndSeed(now);
+            return false;
+        }
+        String problem = applySeedFile(seedPath.trim(), md5, lagH, now);
+        if (problem != null) {
+            seedBlocked = true;
+            String m = "[GATE-SEED] KHAN: seed " + seedPath.trim() + " HONG (" + problem + ") — CHAN VAO LENH MOI, VAN quan ly vi the/stop;"
+                    + " sua seed (md5/dinh dang/khoang) hoac go " + KEY_SEED + " roi restart";
+            LOG.error("⛔ {}", m);
+            try {
+                seedAlert.accept(m);
+            } catch (Throwable t) {
+                LOG.warn("[GATE-SEED] alert loi: {}", t.toString());
+            }
+            loadPersistedAndSeed(now);
+        }
+        return seedBlocked;
+    }
+
+    private static volatile boolean seedBlocked = false;
+
+    /** [V12 R4j] seed hong o lan dau => chan vao lenh moi (moi leg qua AIRejectFilter.entryGate bi REJECT). */
+    public static boolean isSeedBlocked() {
+        return seedBlocked;
+    }
+
+    /** Telegram KHAN (prod tren thread rieng); test thay. */
+    static volatile java.util.function.Consumer<String> seedAlert = m -> {
+        Thread t = new Thread(() -> {
+            try {
+                com.binance.chuyennd.utils.Utils.sendSms2Telegram(m);
+            } catch (Throwable e) {
+                LOG.warn("[GATE-SEED] gui Telegram loi: {}", e.toString());
+            }
+        }, "GATE-SEED-ALERT");
+        t.setDaemon(true);
+        t.start();
+    };
+
+    /** File danh dau "persist da nap seed" (canh persist). Co => persist THANG o moi lan khoi dong sau. */
+    static File seedMarker() {
+        return new File(persistFile + ".seeded");
     }
 
     // ============================================================ [V12 R4h] seed buffer 90 ngay dung san
@@ -196,6 +239,19 @@ public final class LiveGateRollingRatio {
      * sau idempotent: phan &lt;= cuoi seed trung seed => khong viet lai). Tra null = OK; khac = ly do fail-fast.
      */
     static String applySeedFile(String path, String expectedMd5, int maxLagH, long now) {
+        File marker = seedMarker();
+        if (marker.isFile()) {
+            // [V12 R4j A1 MAJ-2] restart/reboot/watchdog (env van con seed): persist THANG, KHONG kiem lag, KHONG fail
+            String prev = "?";
+            try {
+                prev = new String(Files.readAllBytes(marker.toPath()), java.nio.charset.StandardCharsets.UTF_8).trim();
+            } catch (Exception ignore) {
+                prev = "?";
+            }
+            LOG.warn("[GATE-SEED] persist da nap seed truoc do ({}) => BO QUA seed {} (persist thang), chay tiep", prev, path);
+            loadPersistedAndSeed(now);
+            return null;
+        }
         File f = new File(path);
         GateRatioPersist.Records rec = null;
         if (f.isFile()) {
@@ -272,6 +328,12 @@ public final class LiveGateRollingRatio {
             } catch (Exception e) {
                 return "khong viet duoc persist moi " + persistFile + ": " + e.getMessage();
             }
+        }
+        try {   // [V12 R4j] danh dau: lan khoi dong sau persist thang
+            Files.write(marker.toPath(), ("md5=" + expectedMd5.trim() + " seedLast=" + seedLast + " appliedAt=" + now + "\n")
+                    .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            LOG.warn("[GATE-SEED] khong ghi duoc file danh dau {}: {} — restart sau se ap lai seed", marker.getPath(), e.getMessage());
         }
         return null;
     }
@@ -369,6 +431,7 @@ public final class LiveGateRollingRatio {
         pct = 0f;
         days = 90;
         persistFile = DEFAULT_FILE;
+        seedBlocked = false;
         buffer.reset();
         warnedBeforeFirst = false;
         curHour = Long.MIN_VALUE;

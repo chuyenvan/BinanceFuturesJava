@@ -239,6 +239,9 @@ public class DetectEntrySignal2TradeNormal {
                     if (!Utils.isTickerAvailable(ticker)) {
                         continue;
                     }
+                    if (com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper.getInstance().isQuarantined(symbol)) {
+                        continue;   // [V12 R4j A1 MAJ-1] id trung => khong giao dich
+                    }
 
                     symbol2FinalTicker.put(symbol, ticker);
                     Float rateChange = Utils.rateOf2Double(ticker.priceClose, ticker.priceOpen).floatValue();
@@ -546,47 +549,55 @@ public class DetectEntrySignal2TradeNormal {
             final java.util.function.Predicate<String> heldPre = GatePreFilter.heldPredicate(heldSrc,
                     BudgetManager.getInstance().symbol2Pos.keySet());
             final boolean a1On = com.binance.chuyennd.tradecore.selector.UniverseA1Filter.isActive();
-            int preHeld = 0, preLegacy = 0, preA1 = 0;
-            for (Map.Entry<Float, String> entry : selPool.entrySet()) {
-                String symbol = entry.getValue();
-                if (a1On && com.binance.chuyennd.tradecore.selector.UniverseA1Filter.isExcluded(symbol, time)) {
-                    preA1++;   // [V12 R4h] sim A1 khong co symbol nay: khong dem hang, khong gate
-                    continue;
-                }
-                boolean legacy = com.binance.chuyennd.tradecore.selector.LegacySymbols.isLegacySymbol(symbol);
-                Float symbolPred = s1Order ? selMapPred.get(symbol) : entry.getKey();
-                if (s1Order) LATEST_SEL_RANK.put(symbol, rank + 1);
-                if (Configs.SELECTOR_RANK_TOPK > 0 && rank >= Configs.SELECTOR_RANK_TOPK) break;
-                rank++;
-                tickerWindow.audit().markTopK(symbol);   // [KFIX-B] thuoc do dung nen luc quyet dinh (chi dem)
-                // [EXPORT-FIX 2026-10-01] ghi selector CUNG tick (score/rank/gateValue/p15) — mac dinh TAT
-                // (key LIVE_FEAT_DUMP<=0 => no-op), chi ghi, khong doi quyet dinh.
-                com.binance.chuyennd.ai_ml.features.export.entry.LiveFeatureDump.maybeDumpSelector(
-                        time, symbol, entry.getKey() == null ? 0f : entry.getKey(), rank,
-                        symbolPred == null ? 0f : symbolPred,
-                        predictData != null ? predictData.return15M : 0f);
-                KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
-                boolean held = heldPre.test(symbol);
-                GatePreFilter.Action preAct = GatePreFilter.decide(false, held, ticker == null, legacy);
-                if (preAct == GatePreFilter.Action.SKIP_AFTER_RANK) {
-                    if (held) preHeld++;
-                    continue;
-                }
-                if (preAct == GatePreFilter.Action.GATE_NO_ENTRY) preLegacy++;
-                gateCand++;
-                if (predictData != null && symbolPred != null) {
-                    float thr = com.binance.chuyennd.tradecore.EntryGate.threshold(symbolPred);
-                    gateThrMin = (gateThrMin == null || thr < gateThrMin) ? thr : gateThrMin;
-                    gateThrMax = (gateThrMax == null || thr > gateThrMax) ? thr : gateThrMax;
-                }
-                int kfixRej0 = predictRejects.size();
-                createOrderBuyRequest(symbol, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE,
-                        symbol2Max15m.get(symbol), marketRate, predictData, symbolPred, symbol2LastTickers, predictRejects);
-                // [KFIX-B] PASS gate = khong bi gate REJECT o tick nay (chi dem, khong doi quyet dinh)
-                if (predictData != null && symbolPred != null && predictRejects.size() == kfixRej0) {
-                    tickerWindow.audit().markPass(symbol);
-                }
-            }
+            // [V12 R4j A1 MIN-4] vong selector = GatePreFilter.runSelector (CUNG code duoc test voi so that/stub gate)
+            final long tSel = time;
+            final boolean s1OrderF = s1Order;
+            final OnnxInferenceManager.PredictionResult predF = predictData;
+            final MarketDataObject marketRateF = marketRate;
+            final Map<String, KlineObjectSimple> tickersF = symbol2FinalTicker;
+            final List<String> rejectsF = predictRejects;
+            final Map<String, List<KlineObjectSimple>> lastTickersF = symbol2LastTickers;
+            final Float[] thrMM = new Float[2];
+            GatePreFilter.Result selRes = GatePreFilter.runSelector(selPool.entrySet(), Configs.SELECTOR_RANK_TOPK,
+                    s -> a1On && com.binance.chuyennd.tradecore.selector.UniverseA1Filter.isExcluded(s, tSel),
+                    com.binance.chuyennd.tradecore.selector.LegacySymbols::isLegacySymbol, heldPre, tickersF::get,
+                    (s, k) -> s1OrderF ? selMapPred.get(s) : k,
+                    new GatePreFilter.SelectorSink<KlineObjectSimple>() {
+                        @Override
+                        public void beforeCap(String symbol, int nextRank) {
+                            if (s1OrderF) LATEST_SEL_RANK.put(symbol, nextRank);
+                        }
+
+                        @Override
+                        public void counted(String symbol, Float key, Float symbolPred, int rank) {
+                            tickerWindow.audit().markTopK(symbol);   // [KFIX-B] thuoc do dung nen luc quyet dinh (chi dem)
+                            // [EXPORT-FIX 2026-10-01] ghi selector CUNG tick (score/rank/gateValue/p15) — mac dinh TAT
+                            com.binance.chuyennd.ai_ml.features.export.entry.LiveFeatureDump.maybeDumpSelector(
+                                    tSel, symbol, key == null ? 0f : key, rank, symbolPred == null ? 0f : symbolPred,
+                                    predF != null ? predF.return15M : 0f);
+                        }
+
+                        @Override
+                        public void gate(String symbol, KlineObjectSimple ticker, Float symbolPred) {
+                            if (predF != null && symbolPred != null) {
+                                float thr = com.binance.chuyennd.tradecore.EntryGate.threshold(symbolPred);
+                                thrMM[0] = (thrMM[0] == null || thr < thrMM[0]) ? thr : thrMM[0];
+                                thrMM[1] = (thrMM[1] == null || thr > thrMM[1]) ? thr : thrMM[1];
+                            }
+                            int kfixRej0 = rejectsF.size();
+                            createOrderBuyRequest(symbol, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE,
+                                    symbol2Max15m.get(symbol), marketRateF, predF, symbolPred, lastTickersF, rejectsF);
+                            // [KFIX-B] PASS gate = khong bi gate REJECT o tick nay (chi dem, khong doi quyet dinh)
+                            if (predF != null && symbolPred != null && rejectsF.size() == kfixRej0) {
+                                tickerWindow.audit().markPass(symbol);
+                            }
+                        }
+                    });
+            rank = selRes.rank;
+            gateCand = selRes.gateCand;
+            gateThrMin = thrMM[0];
+            gateThrMax = thrMM[1];
+            int preHeld = selRes.held, preLegacy = selRes.legacy, preA1 = selRes.a1;
             if (preHeld + preLegacy + preA1 > 0) {
                 LOG.info("[GATE-PRE] {} nguon={} bo_dang_giu={} legacy_qua_gate_khong_vao={} a1_bo={}",
                         Utils.normalizeDateYYYYMMDDHHmm(time), heldSrc, preHeld, preLegacy, preA1);

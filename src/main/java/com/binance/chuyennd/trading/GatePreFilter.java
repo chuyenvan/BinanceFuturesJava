@@ -3,9 +3,15 @@ package com.binance.chuyennd.trading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /**
  * [V12 R4h] Loc ung vien selector TRUOC cong gate (truoc khi nap r vao buffer GDV2) — y quy uoc sim
@@ -13,16 +19,15 @@ import java.util.function.Predicate;
  * trong {@code activeRunningIds} (them luc tao lenh, bo luc dong cum; sim khop/dong tuc thi nen khong co trang thai
  * cho/dang dong) ⇒ coin dang giu KHONG di qua gate, KHONG nap r; van DEM hang (cap-then-skip, :445-463)).
  *
- * <p>Truoc R4h: live/shadow chi loai {@code BudgetManager.symbol2Pos} (vi the THAT) ⇒ coin dang giu trong so giay van qua gate
- * va nap r (10-30: 93 pass, 67 la coin da giu ⇒ q gio 04 = 0,009502 thay vi 0,007564 theo quy uoc sim).
- *
  * <p>Nguon "dang giu" theo adapter (MASTER 10-30): {@code c3_live + LIVE_ADAPTER=live} ⇒ so c3 THAT
- * ({@code C3LiveHook.ownedSymbols}: cum co qty / leg cho / dang dong — xap xi "cum dang mo" cua sim); {@code c3_live + dry} va
- * {@code c3_shadow} ⇒ so giay twin ({@code ShadowBookC3.isHolding}); profile TAT (HEAD) ⇒ {@code symbol2Pos} nhu cu.
+ * ({@code C3LiveHook.ownedSymbols}); {@code c3_live + dry} va {@code c3_shadow} ⇒ so giay twin ({@code ShadowBookC3.isHolding});
+ * profile TAT (HEAD) ⇒ {@code symbol2Pos} nhu cu.
  *
- * <p>LEGACY (vi the that cu, chi khi profile bat): sim KHONG co LEGACY ⇒ symbol do la ung vien binh thuong trong sim ⇒ live
- * DEM hang + qua gate (nap r) nhung KHONG vao lenh ({@link Action#GATE_NO_ENTRY}). TradFi/INDEX khi UNIVERSE_A1=1: sim A1
- * khong co symbol do trong du lieu (PREREG_HO2026_NOTF V1) ⇒ BO han (khong dem hang, khong gate).
+ * <p>LEGACY: dem hang + qua gate (nap r) nhung KHONG vao lenh, GIU cho trong top-24 (khong lay hang 25 the) — quyet dinh MASTER
+ * 10-30 (tap lenh live la tap con cua sim; ap toi luc cat LEGACY). TradFi/INDEX khi UNIVERSE_A1=1 ⇒ bo han.
+ *
+ * <p>[V12 R4j A1 MIN-4] vong selector production ({@code DetectEntrySignal2TradeNormal}) goi {@link #runSelector} ⇒ test chay
+ * CUNG code vong lap (khong chi ham tach roi).
  */
 public final class GatePreFilter {
 
@@ -59,6 +64,13 @@ public final class GatePreFilter {
     }
 
     private static volatile HeldSource lastLogged;
+    /** Nguon so c3 THAT (prod: C3LiveHook.ownedSymbols); test tro vao LiveBookC3 that. */
+    private static volatile Supplier<Set<String>> c3Owned = com.binance.chuyennd.c3live.runtime.C3LiveHook::ownedSymbols;
+
+    /** CHI test: nguon so c3 that (null = mac dinh C3LiveHook). */
+    public static void setC3OwnedSourceForTest(Supplier<Set<String>> s) {
+        c3Owned = s != null ? s : com.binance.chuyennd.c3live.runtime.C3LiveHook::ownedSymbols;
+    }
 
     /** Predicate "dang giu" cua tick (chup 1 lan/tick). Loi doc so => rong + WARN (khong chan vong lap). */
     public static Predicate<String> heldPredicate(HeldSource src, Set<String> realPositions) {
@@ -69,7 +81,7 @@ public final class GatePreFilter {
         try {
             switch (src) {
                 case C3_LIVE_BOOK: {
-                    Set<String> own = com.binance.chuyennd.c3live.runtime.C3LiveHook.ownedSymbols();
+                    Set<String> own = c3Owned.get();
                     final Set<String> s = own == null ? Collections.<String>emptySet() : own;
                     return s::contains;
                 }
@@ -87,5 +99,62 @@ public final class GatePreFilter {
             LOG.warn("[GATE-PRE] doc so '{}' loi {} => coi nhu khong giu gi o tick nay", src, e.toString());
             return s -> false;
         }
+    }
+
+    /** Diem goi cua vong selector (production: dump/markTopK/createOrderBuyRequest). */
+    public interface SelectorSink<T> {
+        /** truoc khi kiem tran top-K (production: LATEST_SEL_RANK = nextRank). */
+        void beforeCap(String symbol, int nextRank);
+
+        /** symbol da DEM hang (rank 1-based). */
+        void counted(String symbol, Float key, Float symbolPred, int rank);
+
+        /** symbol qua cong gate (nap r); LEGACY van vao day (khong vao lenh do createOrderBuyRequest0 chan). */
+        void gate(String symbol, T ticker, Float symbolPred);
+    }
+
+    public static final class Result {
+        public int rank;
+        public int gateCand;
+        public int held;
+        public int legacy;
+        public int a1;
+        public final List<String> gated = new ArrayList<>();
+        public final List<String> skippedHeld = new ArrayList<>();
+    }
+
+    /** Vong selector top-K (cap-then-skip nhu sim). */
+    public static <T> Result runSelector(Iterable<Map.Entry<Float, String>> pool, int topK, Predicate<String> a1Excluded,
+                                         Predicate<String> legacy, Predicate<String> held, Function<String, T> tickerOf,
+                                         BiFunction<String, Float, Float> predOf, SelectorSink<T> sink) {
+        Result r = new Result();
+        for (Map.Entry<Float, String> e : pool) {
+            String s = e.getValue();
+            if (a1Excluded.test(s)) {
+                r.a1++;   // sim A1 khong co symbol nay: khong dem hang, khong gate
+                continue;
+            }
+            boolean lg = legacy.test(s);
+            Float sp = predOf.apply(s, e.getKey());
+            sink.beforeCap(s, r.rank + 1);
+            if (topK > 0 && r.rank >= topK) break;
+            r.rank++;
+            sink.counted(s, e.getKey(), sp, r.rank);
+            T t = tickerOf.apply(s);
+            boolean h = held.test(s);
+            Action a = decide(false, h, t == null, lg);
+            if (a == Action.SKIP_AFTER_RANK) {
+                if (h) {
+                    r.held++;
+                    r.skippedHeld.add(s);
+                }
+                continue;
+            }
+            if (a == Action.GATE_NO_ENTRY) r.legacy++;
+            r.gateCand++;
+            r.gated.add(s);
+            sink.gate(s, t, sp);
+        }
+        return r;
     }
 }

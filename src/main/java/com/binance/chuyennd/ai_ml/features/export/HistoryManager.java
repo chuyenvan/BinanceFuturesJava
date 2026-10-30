@@ -62,6 +62,7 @@ public class HistoryManager {
         for (Map.Entry<String, KlineObjectSimple> entry : snapshot.entrySet()) {
             String symbol = entry.getKey();
             short symbolId = SimpleSymbolMapper.getInstance().getId(symbol);
+            if (SimpleSymbolMapper.getInstance().isQuarantined(symbol)) continue;   // [V12 R4j] id trung: khong nap history
             acceptKline(symbol, symbolId, entry.getValue());
         }
     }

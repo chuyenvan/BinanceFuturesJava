@@ -58,6 +58,7 @@ public class BinanceOrderTradingManager {
     public static void main(String[] args) throws InterruptedException, ParseException {
         Configs.assertLiveRuntime();   // #12 (TASK-030/112): fail-fast nếu AEROSPIKE_READ_CLUSTER thiếu/khác 242 → tránh đọc 226 (backtest) trên live
         Utils.writePid2File();
+        com.binance.chuyennd.ai_ml.data.SimpleSymbolMapper.enableTelegramAlerts();   // [V12 R4j] KHAN id trung (chi process trading)
         // [LIVE-SIZING] nap lop som => log cau hinh MOT lan luc khoi dong (co TAT: khong log, khong doi hanh vi).
         com.binance.chuyennd.tradecore.selector.LiveGridSizing.on();
         // [LIVE-DCA-GRID] idem cho co DCA grid so giay.

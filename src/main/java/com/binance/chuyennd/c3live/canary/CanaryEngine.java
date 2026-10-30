@@ -2477,18 +2477,37 @@ public final class CanaryEngine {
 
     static String stopEndExchangeReject(List<Map<String, Object>> entries, String sid, String sym, long sinceMs,
                                         boolean positionFlat, boolean closePositionStop) {
+        return stopEndExchangeReject(entries, sid, sym, sinceMs, positionFlat, closePositionStop, false, sinceMs);
+    }
+
+    /**
+     * [V12 R4j A1 MAJ-3] ban SIET: {@code expiredOnly} (K7b) chi nhan X=EXPIRED; MOI duong deu bat buoc {@code ts} la so va LOAI khi
+     * journal co {@code CALL_W cancelStop} cho chinh {@code sid} voi ts &gt;= {@code ownCancelSinceMs} (bot tu huy, khong phai san).
+     */
+    static String stopEndExchangeReject(List<Map<String, Object>> entries, String sid, String sym, long sinceMs,
+                                        boolean positionFlat, boolean closePositionStop, boolean expiredOnly,
+                                        long ownCancelSinceMs) {
         if (sid == null || !sid.startsWith(C3LiveCids.STOP_PREFIX)) return "caid khong thuoc canary";
         if (!closePositionStop) return "stop khong phai closePosition";
         if (!positionFlat) return "vi the != 0";
         if (entries == null) return "khong co ALGO_UPDATE terminal dung caid sau khi dong";
+        for (Map<String, Object> e : entries) {   // [R4j] bot TU HUY stop => khong phai san tu ket thuc
+            if (!"CALL_W".equals(e.get("type")) || !"cancelStop".equals(e.get("api"))) continue;
+            if (!sid.equals(String.valueOf(e.get("cid")))) continue;
+            Object ts = e.get("ts");
+            if (!(ts instanceof Number) || ((Number) ts).longValue() >= ownCancelSinceMs) {
+                return "bot tu huy stop " + sid + " (CALL_W cancelStop) — khong phai san tu ket thuc";
+            }
+        }
         for (Map<String, Object> e : entries) {
             if (!"WS_EVENT".equals(e.get("type")) || !"ALGO_UPDATE".equals(e.get("e"))) continue;
             if (!sid.equals(String.valueOf(e.get("caid")))) continue;
             if (sym != null && e.get("s") != null && !sym.equals(String.valueOf(e.get("s")))) continue;
             Object x = e.get("X");
-            if (!"CANCELED".equals(x) && !"EXPIRED".equals(x)) continue;
+            if (expiredOnly ? !"EXPIRED".equals(x) : (!"CANCELED".equals(x) && !"EXPIRED".equals(x))) continue;
             Object ts = e.get("ts");
-            if (ts instanceof Number && ((Number) ts).longValue() < sinceMs) continue;
+            if (!(ts instanceof Number)) continue;   // [R4j] ts bat buoc la so
+            if (((Number) ts).longValue() < sinceMs) continue;
             return null;
         }
         return "khong co ALGO_UPDATE terminal dung caid sau khi dong";
@@ -2695,8 +2714,9 @@ public final class CanaryEngine {
             boolean closeFull = k7bCloseFull(close1, qty1);
             long since1 = k5Since(close1, close1 == null || close1.get("cid") == null ? -1L : gw.firstSentMs(close1.get("cid").toString()));
             String[] why = {"chua kiem"};
-            long w = waitFor(() -> (why[0] = stopEndExchangeReject(journal.entries(), sid1, s1, since1, closeFull, closePos1)) == null,
-                    cfg.fillEventWaitMs);
+            // [V12 R4j A1 MAJ-3 / DINH CHINH 1 ADD K7B] CHI EXPIRED, ts la so, 0 CALL_W cancelStop sid tu luc tiem loi
+            long w = waitFor(() -> (why[0] = stopEndExchangeReject(journal.entries(), sid1, s1, since1, closeFull, closePos1, true,
+                    tInj)) == null, cfg.fillEventWaitMs);
             k7bWhy = why[0];
             if (w >= 0) k7bEnd = "EXCHANGE_TERMINAL";
             st.put("s1.closeFull", closeFull);
