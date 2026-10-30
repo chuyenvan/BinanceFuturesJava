@@ -300,8 +300,16 @@ public class HttpRequest {
         boolean useGZip = false;
         for (int i = 0; i < NUM_RETRY_CONNECTION; i++) {
             try {
+                if (!RestBudget.beforeRequest(url)) {   // [INGEST-QF] het han cho ngan sach => KHONG goi san
+                    LOG.debug("HttpRequest bo qua (REST-BUDGET het han cho) url={}", url);
+                    return "";
+                }
                 HttpURLConnection hc = connect(new URL(url), extendedHeader);
                 int content_length = hc.getContentLength();
+                if (RestBudget.isFapi(url)) {
+                    RestBudget.afterResponse(url, hc.getResponseCode(), hc.getHeaderField("X-MBX-USED-WEIGHT-1M"),
+                            hc.getHeaderField("Retry-After"));
+                }
                 if ((content_length > max_content_length) || (content_length == -1)) {
                     content_length = max_content_length;
                 }
@@ -368,8 +376,16 @@ public class HttpRequest {
         boolean useGZip = false;
         for (int i = 0; i < NUM_RETRY_CONNECTION; i++) {
             try {
+                if (!RestBudget.beforeRequest(url)) {   // [INGEST-QF] het han cho ngan sach => KHONG goi san
+                    LOG.debug("HttpRequest bo qua (REST-BUDGET het han cho) url={}", url);
+                    return "";
+                }
                 HttpURLConnection hc = connect(new URL(url), extendedHeader);
                 int content_length = hc.getContentLength();
+                if (RestBudget.isFapi(url)) {
+                    RestBudget.afterResponse(url, hc.getResponseCode(), hc.getHeaderField("X-MBX-USED-WEIGHT-1M"),
+                            hc.getHeaderField("Retry-After"));
+                }
                 if ((content_length > max_content_length) || (content_length == -1)) {
                     content_length = max_content_length;
                 }

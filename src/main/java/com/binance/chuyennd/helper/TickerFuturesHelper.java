@@ -120,6 +120,20 @@ public class TickerFuturesHelper {
         }
         return results;
     }
+    /** [INGEST-QF 2026-10-30] Gia cuoi symbol USDT qua ticker/price (weight 2) — cho watchdog lech gia. Loi => map rong. */
+    public static TreeMap<String, Float> getSymbolLastPrice() {
+        TreeMap<String, Float> results = new TreeMap<>();
+        String body = HttpRequest.getContentFromUrl("https://fapi.binance.com/fapi/v1/ticker/price");
+        if (body == null || !body.trim().startsWith("[")) return results;
+        org.json.JSONArray arr = new org.json.JSONArray(body);
+        for (int i = 0; i < arr.length(); i++) {
+            org.json.JSONObject o = arr.getJSONObject(i);
+            String s = o.getString("symbol");
+            if (StringUtils.endsWithIgnoreCase(s, "usdt")) results.put(s, Float.parseFloat(o.getString("price")));
+        }
+        return results;
+    }
+
     public static TreeMap<String, Float> getSymbolPrice() {
         TreeMap<String, Float>  results = new TreeMap<>();
         String allFuturePrices = HttpRequest.getContentFromUrl("https://fapi.binance.com/fapi/v1/ticker/24hr");

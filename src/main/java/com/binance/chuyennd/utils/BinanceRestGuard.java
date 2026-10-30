@@ -76,6 +76,15 @@ public class BinanceRestGuard {
      *
      * @param body body trả về từ REST call.
      */
+    public static void cooldownUntil(long untilMs, String why) {
+        // [INGEST-QF 2026-10-30] HTTP 429/418 doc tu status + Retry-After (RestBudget) — atomic-max nhu reportBan.
+        long target = untilMs + SAFETY_BUFFER_MS;
+        long prev = BANNED_UNTIL_MS.getAndUpdate(p -> Math.max(p, target));
+        if (target > prev) {
+            LOG.warn("🔒 REST cooldown ({}) đến {}", why, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(target)));
+        }
+    }
+
     public static void reportBan(String body) {
         long banUntil = parseBanUntilMs(body);
         if (banUntil <= 0) return;

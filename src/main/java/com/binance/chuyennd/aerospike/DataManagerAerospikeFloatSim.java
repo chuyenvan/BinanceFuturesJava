@@ -1791,7 +1791,8 @@ public class DataManagerAerospikeFloatSim {
         // BƯỚC 1: Lấy giá từ Binance API trước (Để lấy danh sách Symbol chuẩn)
         long t1 = System.currentTimeMillis();
         // Map này lấy từ TickerFuturesHelper của bạn
-        Map<String, Float> binPrices = com.binance.chuyennd.helper.TickerFuturesHelper.getSymbolPrice();
+        // [INGEST-QF] ticker/price (weight 2) thay ticker/24hr (weight 40): cung lastPrice, it weight hon 20x.
+        Map<String, Float> binPrices = com.binance.chuyennd.helper.TickerFuturesHelper.getSymbolLastPrice();
         long t2 = System.currentTimeMillis();
 //        LOG.info("✅ Binance API: Loaded {} symbols in {}ms", binPrices.size(), (t2 - t1));
 

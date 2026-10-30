@@ -55,7 +55,10 @@ public final class Cfg {
             "KLINE_INGEST_MODE", "KLINE_WS_FLUSH_MS", "KLINE_EARLY_REST_SEC", "KLINE_SETTLE_SEC", "KLINE_SETTLE_MIN_AGE_SEC",
             "KLINE_SETTLE_LIMIT", "KLINE_SETTLE_LIMIT_STARTUP", "KLINE_REST_RETRY", "KLINE_WS_STREAMS_PER_CONN", "KLINE_STATS_MIN", "KLINE_WS_BASE", "KLINE_LIVE_REREAD_MIN",
             // [MAPAUD 2026-10-11] symbol_mapper: chinh sach id trung khi nap + xac nhan tool sua (ha tang)
-            "SYMBOL_MAPPER_DUP_POLICY", "MAPPER_REPAIR_CONFIRM");
+            "SYMBOL_MAPPER_DUP_POLICY", "MAPPER_REPAIR_CONFIRM",
+            // [INGEST-QF 2026-10-30] ngan sach REST + watchdog collectData (ha tang)
+            "INGEST_REST_WEIGHT_CAP", "INGEST_HDR_SOFT", "INGEST_HDR_HARD", "INGEST_SCHEDULED_RESTART_HOURS",
+            "INGEST_PRICE_DIFF_TG_MIN", "KLINE_RECON_SAMPLE", "KLINE_EARLY_DEGRADED_RULE");
 
     /** Tien to cua bien env DUOC COI LA THAM SO GIAO DICH — cam dat khi da co profile. */
     private static final List<String> TRADING_PREFIXES = Arrays.asList(
