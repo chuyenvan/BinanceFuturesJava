@@ -249,7 +249,13 @@ public final class C3LiveRuntime {
         AccountModeGuard mg = null;
         try {
             // [V12 R4 R7] universe chat: TRADING+PERPETUAL+USDT+COIN; nguon exchangeInfo tho du truong (fail-fast)
-            uni = new SymbolUniverseLive(SymbolUniverseLive.Config.fromEnv(Cfg::get).strictCoin(), gw::exchangeInfo, alerts::send);
+            SymbolUniverseLive.Config ucfg = SymbolUniverseLive.Config.fromEnv(Cfg::get).strictCoin();
+            if (com.binance.chuyennd.tradecore.selector.UniverseA1Filter.isActive()) {
+                // [V12 R4d] UNIVERSE_A1=1: R7 dung CUNG bo phan loai voi phia tin hieu + (dry) CUNG file exchangeInfo
+                checkA1SameSource(mode);
+                ucfg = ucfg.withClassifier(TradFiClassifier.universeA1());
+            }
+            uni = new SymbolUniverseLive(ucfg, gw::exchangeInfo, alerts::send);
             // [V12 R4 R1] cap tai khoan CHI DOC: hedge => tu choi; khong bao gio goi doi dualSide / multiAssets
             mg = new AccountModeGuard(gw, alerts::send).globalPolicy(false, false);
         } catch (Throwable t) {
@@ -365,10 +371,16 @@ public final class C3LiveRuntime {
                     alerts::send, api, System::currentTimeMillis, 15_000L, 10_000L, 60_000L, 300_000L);
         }
         // ALT_EW (X14) cua c3_live tinh tren marketIndexMembers
-        MarketIndexFilter.set(s -> {
-            Set<String> m = marketIndexOrNull();
-            return m == null || m.contains(s);
-        });
+        if (com.binance.chuyennd.tradecore.selector.UniverseA1Filter.isActive()) {
+            // [V12 R4d] UNIVERSE_A1=1: ALT_EW loai TF/INDEX point-in-time trong AltEwIndex (= backtest A1), khong hep them
+            MarketIndexFilter.set(null);
+            LOG.warn("[C3-LIVE] UNIVERSE_A1=1: ALT_EW/market level tren universe A1 (khong loc them theo marketIndexMembers)");
+        } else {
+            MarketIndexFilter.set(s -> {
+                Set<String> m = marketIndexOrNull();
+                return m == null || m.contains(s);
+            });
+        }
     }
 
     private C3LiveEntry buildEntry(boolean dry, Reconciler rec) {
@@ -633,6 +645,37 @@ public final class C3LiveRuntime {
 
     public LiveBookC3 book() {
         return book;
+    }
+
+    /**
+     * [V12 R4d] UNIVERSE_A1=1 + dry: R7 (DryGateway doc LIVE_C3_EXCHANGEINFO_FILE) va bo loc tin hieu
+     * (UNIVERSE_A1_EXCHANGE_INFO) PHAI la CUNG file — khac => nem (=> manage-only, khong mua). live: R7 doc exchangeInfo
+     * qua API (cung 242) — chi WARN.
+     */
+    static void checkA1SameSource(GatewayFactory.Mode mode) {
+        checkA1SameSource(mode, com.binance.chuyennd.tradecore.selector.UniverseA1Filter.source(),
+                Cfg.get(GatewayFactory.KEY_EXCHANGEINFO_FILE));
+    }
+
+    static void checkA1SameSource(GatewayFactory.Mode mode, String a1, String f) {
+        if (mode != GatewayFactory.Mode.DRY) {
+            LOG.warn("[C3-LIVE] UNIVERSE_A1=1, adapter={}: R7 doc exchangeInfo qua API, bo loc tin hieu doc {}", mode, a1);
+            return;
+        }
+        File r7 = new File(f == null || f.trim().isEmpty() ? GatewayFactory.DEFAULT_EXCHANGEINFO_FILE : f.trim());
+        String c7;
+        String ca;
+        try {
+            c7 = r7.getCanonicalPath();
+            ca = new File(a1).getCanonicalPath();
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("[UNIVERSE-A1] khong so duoc duong dan exchangeInfo: " + e);
+        }
+        if (!c7.equals(ca)) {
+            throw new IllegalStateException("[UNIVERSE-A1] R7 (dry) doc " + c7 + " nhung bo loc tin hieu doc " + ca
+                    + " — phai CUNG 1 file (" + GatewayFactory.KEY_EXCHANGEINFO_FILE + " = " + com.binance.chuyennd.tradecore.selector.UniverseA1Filter.K_FILE + ")");
+        }
+        LOG.warn("[C3-LIVE] UNIVERSE_A1=1: R7 + bo loc tin hieu cung exchangeInfo {}", ca);
     }
 
     /** Thanh vien chi so thi truong (da loai TradFi) — null neu chua co snapshot. */

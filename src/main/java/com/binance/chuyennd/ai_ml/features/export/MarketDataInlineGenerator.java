@@ -59,6 +59,11 @@ public class MarketDataInlineGenerator {
      *         gap data, thiếu BTC, hoặc giá trị degenerate/NaN/Inf)
      */
     public MarketDataObject update(Map<String, KlineObjectSimple> snapshot) {
+        return update(snapshot, System.currentTimeMillis());
+    }
+
+    /** [UNIVERSE-A1 fixA] point-in-time: loc snapshot tai dung {@code tsMs} (live truyen phut, replay truyen ts). */
+    public MarketDataObject update(Map<String, KlineObjectSimple> snapshot, long tsMs) {
         if (snapshot == null || snapshot.isEmpty()) {
             droppedGap++;
             return null;
@@ -112,7 +117,7 @@ public class MarketDataInlineGenerator {
             return null;
         }
 
-        MarketDataObject md = MarketBigChangeDetector.calMarketData(snapshot, symbol2MaxPrice, symbol2MinPrice, died);
+        MarketDataObject md = MarketBigChangeDetector.calMarketData(snapshot, symbol2MaxPrice, symbol2MinPrice, died, tsMs);
 
         // GUARD 4: degenerate / NaN / Inf.
         if (md == null

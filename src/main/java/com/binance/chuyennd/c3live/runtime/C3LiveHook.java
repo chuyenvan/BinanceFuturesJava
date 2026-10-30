@@ -67,6 +67,15 @@ public final class C3LiveHook {
         return EXCL_TRADFI_FEAT;
     }
 
+    /** [V12 R4d] UNIVERSE_A1 dang bat (loi init => false: start() da nem truoc do; hook khong bao gio nem). */
+    static boolean a1Active() {
+        try {
+            return com.binance.chuyennd.tradecore.selector.UniverseA1Filter.isActive();
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
     /**
      * 1 leg da qua cong quyet dinh (gate PASS, cau dao mat do) => duong that. ref = close nen 1m quyet dinh (C2);
      * gia size = price_realtime tuoi (nhu so giay TASK-027 #7) else close. [2b] symbolPred/rank cua leg (nhu so giay) =>
@@ -124,6 +133,7 @@ public final class C3LiveHook {
      */
     public static Set<String> marketIndexOrNull() {
         if (!ENABLED) return null;
+        if (a1Active()) return null;   // [V12 R4d] UNIVERSE_A1=1: market level tren universe A1 (= backtest), khong hep them
         try {
             C3LiveRuntime rt = C3LiveRuntime.get();
             Set<String> m = rt == null ? null : rt.marketIndexOrNull();
@@ -145,6 +155,7 @@ public final class C3LiveHook {
      */
     public static Predicate<String> tradFiFeatureFilterOrNull() {
         if (!EXCL_TRADFI_FEAT) return null;
+        if (a1Active()) return null;   // [V12 R4d] UNIVERSE_A1=1: TF/INDEX da loai point-in-time o diem loc A1
         try {
             C3LiveRuntime rt = C3LiveRuntime.get();
             Predicate<String> p = rt == null ? null : rt.tradFiOrNull();

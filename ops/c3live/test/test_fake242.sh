@@ -58,6 +58,16 @@ case "$1" in
         [ -f FAKE_HARMLESS ] && echo "$D WARN [C3LIVE-OPS] x: [C3-LIVE-RECON] TU CHOI yeu cau reanchor: c3_live doi chieu theo QTY c3"
         [ -f FAKE_STALE ] && echo "$D INFO [C3LIVE-OPS] x: [C3-LIVE] S001USDT NOT_BUYABLE STALE snapshot=1792900020000"
         [ -f FAKE_NORUNTIME ] && echo "$D ERROR [main] x: [C3-LIVE] KHONG tao duoc runtime (gia lap) => TU CHOI push c3_live; vi the cu (neu co) CHI con stop"
+        # [V12 R4d] JVM gia DOC file A1 nhu that: UNIVERSE_A1=1 => dong init (TradFi dem tu file) / thieu file => exception
+        if [ "${UNIVERSE_A1:-0}" = 1 ] && [ ! -f FAKE_NOA1 ]; then
+          if [ -s run/c3live_exchangeInfo.json ]; then
+            TFN=$(grep -o TRADIFI_PERPETUAL run/c3live_exchangeInfo.json | wc -l); [ -f FAKE_A1LOW ] && TFN=10
+            IXN=$(grep -o '"underlyingType":"INDEX"' run/c3live_exchangeInfo.json | wc -l)
+            echo "$D WARN [main] x: [UNIVERSE-A1] BAT — loai $((TFN + IXN)) symbol (TradFi=$TFN, INDEX=$IXN) / 0 symbol tu run/c3live_exchangeInfo.json sha256=fake serverTime=1 unclassified=0"
+          else
+            echo "$D ERROR [main] x: java.lang.IllegalStateException: [UNIVERSE-A1] BAT nhung KHONG thay exchangeInfo: run/c3live_exchangeInfo.json"
+          fi
+        fi
       else
         echo "$D INFO [main] x: 🟡 [LIVE_PROFILE=c3_shadow] BAT"
       fi
@@ -668,9 +678,12 @@ printf 'fake-new-jar-v12r4b' > "$W/new_r4.jar"
 NEW4=$(md5sum < "$W/new_r4.jar" | cut -c1-32)
 python3 - "$W/exinfo_r4.json" <<'EOF'
 import json, sys
-s = [{"symbol": "S%03dUSDT" % i, "contractType": "PERPETUAL", "underlyingType": "COIN"} for i in range(160)]
-s += [{"symbol": "T%03dUSDT" % i, "contractType": "TRADIFI_PERPETUAL", "underlyingType": "EQUITY"} for i in range(60)]
-json.dump({"symbols": s}, open(sys.argv[1], "w"), separators=(",", ":"))
+s = [{"symbol": "S%03dUSDT" % i, "contractType": "PERPETUAL", "underlyingType": "COIN", "onboardDate": 1600000000000} for i in range(160)]
+s += [{"symbol": "T%03dUSDT" % i, "contractType": "TRADIFI_PERPETUAL", "underlyingType": "EQUITY", "onboardDate": 1780000000000} for i in range(60)]
+s += [{"symbol": x, "contractType": "PERPETUAL", "underlyingType": "INDEX", "onboardDate": 1600000000000} for x in ("ALLUSDT", "BTCDOMUSDT", "DEFIUSDT")]
+json.dump({"serverTime": 1793072475507, "symbols": s}, open(sys.argv[1], "w"), separators=(",", ":"))   # [R4d] raw: serverTime + onboardDate
+json.dump({"symbols": s}, open(sys.argv[1] + ".nost", "w"), separators=(",", ":"))
+json.dump({"serverTime": 1793072475507, "symbols": [{k: v for k, v in x.items() if k != "onboardDate"} for x in s]}, open(sys.argv[1] + ".noob", "w"), separators=(",", ":"))
 EOF
 (cd "$F4" && bin/daemon.sh start)
 D4=$HERE/deploy_v12_dry_r4.sh
@@ -687,7 +700,7 @@ if [ "$(date +%s)" -lt "$(date -d '2026-11-18 07:54 +07' +%s)" ]; then
 fi
 OUT=$(r4 OLD_MD5=00000000000000000000000000000000 DRY=1 bash "$D4" 2>&1)
 chk "r4 jar dang chay khac OLD_MD5 => TU CHOI" "echo \"\$OUT\" | grep -q 'kiem 242 co muc FAIL' && echo \"\$OUT\" | grep -q 'FAIL jar_dang_chay'"
-for f in run/c3live_merged.txt run/c3live_equity_c3.json run/c3live_lost.txt run/killsw_latch.json run/c3live_killsw_peak; do
+for f in run/c3live_merged.txt run/c3live_equity_c3.json run/c3live_lost.txt run/ts_ext_daily.csv.a1 run/killsw_latch.json run/c3live_killsw_peak; do
   echo x > "$F4/$f"
   OUT=$(r4 DRY=1 bash "$D4" 2>&1)
   chk "r4 PRE: co $f cu => TU CHOI" "echo \"\$OUT\" | grep -q \"FAIL da_co_$f\""
@@ -771,6 +784,46 @@ chk "r4c dong terminal: job NEN van chay toi '=== XONG' + Telegram XONG" "grep -
 echo YES | APP_DIR=$F4 FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TS4" >/dev/null 2>&1
 chk "r4c don: 242 gia ve c3_shadow" "grep -qx 'export LIVE_PROFILE=c3_shadow' $F4/conf/env.sh"
 rm -f "$F4/FAKE_R4"
+echo "== 24. [V12 R4d] UNIVERSE_A1: env + PRE nguon + PREP + kiem file truoc restart + dong init A1 / so TF trong CHK"
+TG4=$W/tg_r4.txt
+touch "$F4/FAKE_R4"
+OUT=$(r4 DRY=1 bash "$D4" 2>&1)
+chk "r4d DRY: ENV_ADD UNIVERSE_A1=1 + UNIVERSE_A1_EXCHANGE_INFO = LIVE_C3_EXCHANGEINFO_FILE; PRE doc nguon du truong" "echo \"\$OUT\" | grep -q 'export UNIVERSE_A1=1' && echo \"\$OUT\" | grep -q 'export UNIVERSE_A1_EXCHANGE_INFO=run/c3live_exchangeInfo.json' && echo \"\$OUT\" | grep -q 'export LIVE_C3_EXCHANGEINFO_FILE=run/c3live_exchangeInfo.json' && echo \"\$OUT\" | grep -q 'OK exchangeInfo_nguon symbols=223 TradFi=60 onboardDate=223'"
+OUT=$(r4 DRY=1 EXINFO_CMD="cat $W/exinfo_r4.json.noob" bash "$D4" 2>&1)
+chk "r4d PRE: nguon thieu onboardDate => TU CHOI truoc YES" "echo \"\$OUT\" | grep -q 'FAIL exchangeInfo_nguon' && echo \"\$OUT\" | grep -q 'kiem 242 co muc FAIL' && ! echo \"\$OUT\" | grep -q 'DRY PASS'"
+OUT=$(r4 DRY=1 EXINFO_CMD="cat $W/exinfo_r4.json.nost" bash "$D4" 2>&1)
+chk "r4d PRE: nguon thieu serverTime => TU CHOI truoc YES" "echo \"\$OUT\" | grep -q 'FAIL exchangeInfo_nguon.*serverTime=0'"
+cat > "$W/exflaky.sh" <<'EOF'
+# nguon gia: 2 lan doc dau (PRE foreground + PRE job) tot, lan 3 (buoc chuan bi) thieu serverTime
+n=$(cat "$1/exflaky.n" 2>/dev/null || echo 0); n=$((n + 1)); echo $n > "$1/exflaky.n"
+if [ $n -le 2 ]; then cat "$1/exinfo_r4.json"; else cat "$1/exinfo_r4.json.nost"; fi
+EOF
+rm -f "$W/exflaky.n"
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 EXINFO_CMD="bash $W/exflaky.sh $W" bash "$D4" 2>&1); RC=$?
+chk "r4d PREP: exchangeInfo tai ve thieu serverTime => DUNG, env khoi phuc, jar cu, process c3_shadow" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL exchangeInfo so_symbol=223 .*serverTime=0' && ! grep -q UNIVERSE_A1 $F4/conf/env.sh && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $OLD ] && p4env | grep -qx 'LIVE_PROFILE=c3_shadow'"
+cat > "$W/fakessh_a1.sh" <<EOF
+# ssh GIA: xoa file A1 ngay o buoc kiem truoc restart (gia lap file mat/hong giua chung)
+case "\$1" in *PRE_RESTART_A1*) [ -f "$W/A1_GONE" ] && rm -f "$F4/run/c3live_exchangeInfo.json";; esac
+exec bash -c "\$1"
+EOF
+touch "$W/A1_GONE"; P0=$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 SSH_242="bash $W/fakessh_a1.sh" bash "$D4" 2>&1); RC=$?
+chk "r4d file A1 mat ngay truoc restart => DUNG TRUOC khi dung bot cu (cung pid), env khoi phuc, khong PAUSE" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL a1_file_thieu' && echo \"\$OUT\" | grep -q 'kiem file A1 truoc restart FAIL (env.sh da khoi phuc)' && ! grep -q UNIVERSE_A1 $F4/conf/env.sh && [ \"\$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)\" = \"$P0\" ] && [ ! -f $W/PAUSE ]"
+rm -f "$W/A1_GONE"
+rm -f "$TG4"
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?; echo "$OUT" | grep -a 'UNIVERSE_A1\|a1_' | head -4
+TS4=$(echo "$OUT" | grep -o 'TS=[0-9_]*' | head -1 | cut -d= -f2)
+chk "r4d XONG: kiem truoc restart OK (cung file R7) + CHK thay dong init UNIVERSE_A1 TradFi=60 INDEX=3; process co UNIVERSE_A1=1" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'OK a1_file symbols=223 TradFi=60' && echo \"\$OUT\" | grep -q 'OK a1_env_cung_file_R7' && echo \"\$OUT\" | grep -q 'OK UNIVERSE_A1 TradFi=60 INDEX=3' && p4env | grep -qx 'UNIVERSE_A1=1' && p4env | grep -qx 'UNIVERSE_A1_EXCHANGE_INFO=run/c3live_exchangeInfo.json'"
+echo x > "$F4/run/ts_ext_daily.csv.a1"
+OUT=$(echo YES | APP_DIR=$F4 FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TS4" 2>&1)
+chk "r4d rollback: env khong con UNIVERSE_A1, file ALT_EW A1 (.a1) doi ten .rb_TS" "echo \"\$OUT\" | grep -q 'Rollback xong' && ! grep -q UNIVERSE_A1 $F4/conf/env.sh && [ -f $F4/run/ts_ext_daily.csv.a1.rb_$TS4 ] && [ ! -f $F4/run/ts_ext_daily.csv.a1 ]"
+touch "$F4/FAKE_NOA1"
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?
+chk "r4d JVM khong in dong init UNIVERSE_A1 => WAIT qua han => ROLLBACK TU DONG" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'WAIT UNIVERSE_A1_chua_co_dong_init' && echo \"\$OUT\" | grep -q 'Rollback xong' && ! grep -q UNIVERSE_A1 $F4/conf/env.sh"
+rm -f "$F4/FAKE_NOA1"; touch "$F4/FAKE_A1LOW"
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?
+chk "r4d dong init UNIVERSE_A1 TradFi < 50 => FAIL + ROLLBACK TU DONG" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL UNIVERSE_A1 TradFi=10 < 50' && echo \"\$OUT\" | grep -q 'Rollback xong'"
+rm -f "$F4/FAKE_A1LOW" "$F4/FAKE_R4"
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]

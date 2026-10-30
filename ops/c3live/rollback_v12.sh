@@ -67,7 +67,7 @@ pgrep -f "$PP" >/dev/null && { echo "FAIL van con process"; rm -f "$PAUSE"; exit
 \cp -f target/binance-java-sdk-1.2.4.jar.bak_v12pre_$TS target/binance-java-sdk-1.2.4.jar
 \cp -f conf/env.sh.bak_v12pre_$TS conf/env.sh
 \cp -f bin/start.sh.bak_v12pre_$TS bin/start.sh
-for f in run/c3live_book.json run/c3live_dry_state.json run/c3live_ledger.csv run/killsw_latch.json run/c3live_killsw_peak run/c3live_merged.txt run/c3live_equity_c3.json run/c3live_lost.txt; do
+for f in run/c3live_book.json run/c3live_dry_state.json run/c3live_ledger.csv run/killsw_latch.json run/c3live_killsw_peak run/c3live_merged.txt run/c3live_equity_c3.json run/c3live_lost.txt run/ts_ext_daily.csv.a1; do
   [ -f "$f" ] && mv -f "$f" "$f.rb_$TS"
 done
 J=$(md5sum < target/binance-java-sdk-1.2.4.jar | cut -c1-32)

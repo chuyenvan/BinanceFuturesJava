@@ -58,6 +58,11 @@ public final class LiveFeaturePipeline {
     /** Bo sinh MarketDataObject tuan tu theo phut — prod: {@link MarketDataInlineGenerator#update}. */
     public interface MdGen {
         MarketDataObject update(Map<String, KlineObjectSimple> snap);
+
+        /** [V12 R4d UNIVERSE-A1] ban point-in-time (prod: loc tai dung phut); mac dinh bo qua ts (fake/test cu khong doi). */
+        default MarketDataObject update(Map<String, KlineObjectSimple> snap, long tsMs) {
+            return update(snap);
+        }
     }
 
     /** Nguon phut — prod: LiveTickerWindow (snapshot tu cache + cho du symbol). */
@@ -158,7 +163,9 @@ public final class LiveFeaturePipeline {
         this.snapFilter = f;
     }
 
-    private Map<String, KlineObjectSimple> filt(Map<String, KlineObjectSimple> snap) {
+    private Map<String, KlineObjectSimple> filt(Map<String, KlineObjectSimple> snap, long minute) {
+        // [V12 R4d UNIVERSE-A1] universe A1 tai dung phut (co tat => cung map), roi bo loc c3_live (neu co)
+        snap = com.binance.chuyennd.tradecore.selector.UniverseA1Filter.filter(snap, minute);
         java.util.function.UnaryOperator<Map<String, KlineObjectSimple>> f = snapFilter;
         return f == null || snap == null ? snap : f.apply(snap);
     }
@@ -208,7 +215,18 @@ public final class LiveFeaturePipeline {
     public static LiveFeaturePipeline forProd(ComprehensiveMarketFeatureExtractor ex) {
         java.util.Set<String> died = parseDied(Cfg.getOr(K_MD_DIED, MD_DIED_DEFAULT));
         final MarketDataInlineGenerator g = new MarketDataInlineGenerator(died);
-        LiveFeaturePipeline p = new LiveFeaturePipeline(extractorSink(ex), g::update, featMdInlineCfg(),
+        MdGen gen = new MdGen() {   // [V12 R4d] co tat: update(snap, ts) == update(snap)
+            @Override
+            public MarketDataObject update(Map<String, KlineObjectSimple> snap) {
+                return g.update(snap);
+            }
+
+            @Override
+            public MarketDataObject update(Map<String, KlineObjectSimple> snap, long tsMs) {
+                return g.update(snap, tsMs);
+            }
+        };
+        LiveFeaturePipeline p = new LiveFeaturePipeline(extractorSink(ex), gen, featMdInlineCfg(),
                 (int) cfgLong(K_TOL, TOL_DEFAULT));
         LOG.warn("*** [FEAT-PIPE] LIVE_FEAT_INPUT=snapshot: feature gate tinh tren snapshot DAY DU phut M (= replayToCsv); "
                         + "feat_md={} decision_md={} settle tol={} timeout={}ms poll={}ms md_died={}",
@@ -255,12 +273,12 @@ public final class LiveFeaturePipeline {
         if (minutes != null) {
             for (Map.Entry<Long, Map<String, KlineObjectSimple>> e : minutes.entrySet()) {
                 long m = align(e.getKey());
-                Map<String, KlineObjectSimple> snap = filt(e.getValue());
+                Map<String, KlineObjectSimple> snap = filt(e.getValue(), m);
                 if (m <= lastFed || snap == null || snap.isEmpty()) continue;
                 for (KlineObjectSimple k : snap.values()) {
                     if (k != null && k.startTime != null) k.startTime = align(k.startTime);
                 }
-                md.update(snap);
+                md.update(snap, m);
                 sink.feed(m, snap);
                 lastFed = m;
                 prevCount = snap.size();
@@ -278,13 +296,13 @@ public final class LiveFeaturePipeline {
         if (minutes != null) {
             for (Map.Entry<Long, Map<String, KlineObjectSimple>> e : minutes.entrySet()) {
                 long m = align(e.getKey());
-                Map<String, KlineObjectSimple> snap = filt(e.getValue());
+                Map<String, KlineObjectSimple> snap = filt(e.getValue(), m);
                 if (m <= lastFed || m <= heldMin || snap == null || snap.isEmpty()) continue;
                 for (KlineObjectSimple k : snap.values()) {
                     if (k != null && k.startTime != null) k.startTime = align(k.startTime);
                 }
                 if (held != null) {
-                    md.update(held);
+                    md.update(held, heldMin);
                     sink.feed(heldMin, held);
                     lastFed = heldMin;
                     prevCount = held.size();
@@ -308,7 +326,7 @@ public final class LiveFeaturePipeline {
         if (minute == lastMinute && last != null) return last;
         if (pendingSnap != null) {   // [V12 SAFE C11] chi khi co LIVE_SEED_EXCLUDE_DECISION_MIN=1
             if (pendingMinute < minute) {
-                md.update(pendingSnap);
+                md.update(pendingSnap, pendingMinute);
                 sink.feed(pendingMinute, pendingSnap);
                 lastFed = pendingMinute;
                 prevCount = pendingSnap.size();
@@ -337,23 +355,23 @@ public final class LiveFeaturePipeline {
         long from = lastFed == Long.MIN_VALUE ? minute : lastFed + MIN;
         from = Math.max(from, minute - (long) MAX_CATCHUP_MIN * MIN);
         for (long m = from; m < minute; m += MIN) {
-            Map<String, KlineObjectSimple> snap = filt(src.snapshot(m));
+            Map<String, KlineObjectSimple> snap = filt(src.snapshot(m), m);
             if (snap == null || snap.isEmpty()) {
                 nGapMinutes++;
                 continue;
             }
-            md.update(snap);
+            md.update(snap, m);
             sink.feed(m, snap);
             lastFed = m;
             nCatchup++;
         }
-        Map<String, KlineObjectSimple> snap = filt(src.snapshot(minute));
+        Map<String, KlineObjectSimple> snap = filt(src.snapshot(minute), minute);
         if (snap == null || snap.isEmpty()) {
             nNoSnap++;
             LOG.error("[FEAT-PIPE] khong co snapshot phut {} trong cache -> bo tick", minute);
             return new Result(minute, null, legacyRate, null, 0, true, null);
         }
-        MarketDataObject inl = md.update(snap);
+        MarketDataObject inl = md.update(snap, minute);
         MarketDataObject fr = legacyRate;
         if (featMdInline) {
             if (inl != null) {

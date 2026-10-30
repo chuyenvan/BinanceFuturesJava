@@ -1,5 +1,6 @@
 package com.binance.chuyennd.c3live.universe;
 
+import com.binance.chuyennd.tradecore.selector.UniverseA1Classifier;
 import com.binance.chuyennd.c3live.api.ExchangeInfo;
 import com.binance.chuyennd.c3live.api.SymbolMeta;
 import org.slf4j.Logger;
@@ -42,8 +43,8 @@ public final class SymbolUniverseLive {
     public static final long DEFAULT_MAX_STALE_MS = 60L * 60_000L;
     public static final String DEFAULT_EXCLUDE = "BTCDOMUSDT:intentional,USDCUSDT:intentional";
     /** [V12 R4b MINOR-6] nguon exchangeInfo tho phai co >= so hop dong TradFi nay (dump 10-25: 225); giam > 30 % => chi canh bao. */
-    public static final int MIN_TRADFI_IN_SOURCE = 50;
-    public static final double TRADFI_DROP_WARN = 0.30d;
+    public static final int MIN_TRADFI_IN_SOURCE = UniverseA1Classifier.MIN_TRADFI;   // [V12 R4d] nguong CHUNG voi bo loc A1
+    public static final double TRADFI_DROP_WARN = UniverseA1Classifier.TRADFI_DROP_WARN;
 
     /** Ly do khong tradable / khong buyable. */
     public enum Reason { NOT_LISTED, NOT_TRADING, NOT_USDT, TRADFI, NOT_PERPETUAL, EXCLUDED, NON_ASCII, DELIVERY_UNKNOWN, DELIVERY_SOON, STALE, NO_SNAPSHOT,
@@ -103,6 +104,13 @@ public final class SymbolUniverseLive {
         }
 
         public boolean isStrictCoin() { return strictCoin; }
+
+        /** [V12 R4d] ban sao voi bo phan loai khac (UNIVERSE_A1=1: {@link TradFiClassifier#universeA1()}). */
+        public Config withClassifier(TradFiClassifier c) {
+            return new Config(exclude, allowNonAscii, c, maxStaleMs, strictCoin);
+        }
+
+        public TradFiClassifier getClassifier() { return classifier; }
 
         public Map<String, Boolean> getExclude() { return exclude; }
         public boolean isAllowNonAscii() { return allowNonAscii; }
@@ -301,8 +309,7 @@ public final class SymbolUniverseLive {
     public static int tradfiCount(ExchangeInfo ei) {
         int tf = 0;
         for (SymbolMeta m : ei.getSymbols().values()) {
-            String cu = trimOrEmpty(m.getContractType()).toUpperCase(Locale.ROOT);
-            if (cu.contains("TRADIFI") || cu.contains("TRADFI")) tf++;
+            if (UniverseA1Classifier.isTradFiContract(m.getContractType())) tf++;
         }
         return tf;
     }
@@ -325,15 +332,9 @@ public final class SymbolUniverseLive {
             String c = trimOrEmpty(m.getContractType());
             if (!c.isEmpty()) ct++;
             if (!trimOrEmpty(m.getUnderlyingType()).isEmpty()) ut++;
-            String cu = c.toUpperCase(Locale.ROOT);
-            if (cu.contains("TRADIFI") || cu.contains("TRADFI")) tf++;
+            if (UniverseA1Classifier.isTradFiContract(c)) tf++;
         }
-        if (ct == 0) return "khong symbol nao co truong contractType (" + n + " symbol)";
-        if (ut == 0) return "khong symbol nao co truong underlyingType (" + n + " symbol)";
-        if (tf < MIN_TRADFI_IN_SOURCE) {
-            return "chi " + tf + " hop dong TradFi (< " + MIN_TRADFI_IN_SOURCE + ") — khong phai exchangeInfo tho day du";
-        }
-        return null;
+        return UniverseA1Classifier.sourceProblem(n, ct, ut, tf);   // [V12 R4d] kiem nguon CHUNG voi bo loc A1
     }
 
     /** UTF-16 code unit ngoai [0x21, 0x7E] -> non-ASCII. Khong regex. */

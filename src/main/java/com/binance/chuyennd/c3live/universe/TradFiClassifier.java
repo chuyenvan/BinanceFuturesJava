@@ -1,5 +1,6 @@
 package com.binance.chuyennd.c3live.universe;
 
+import com.binance.chuyennd.tradecore.selector.UniverseA1Classifier;
 import com.binance.chuyennd.c3live.api.SymbolMeta;
 
 import java.util.Collections;
@@ -55,7 +56,15 @@ public final class TradFiClassifier {
     private final Set<String> tradfiTags;
     private final Set<String> explicitList;
 
+    /** [V12 R4d] true = phan loai bang {@link UniverseA1Classifier} (UNIVERSE_A1=1); false = luat cu y nguyen. */
+    private final boolean a1;
+
     public TradFiClassifier(Set<String> cryptoUnderlying, Set<String> tradfiTags, Set<String> explicitList) {
+        this(cryptoUnderlying, tradfiTags, explicitList, false);
+    }
+
+    private TradFiClassifier(Set<String> cryptoUnderlying, Set<String> tradfiTags, Set<String> explicitList, boolean a1) {
+        this.a1 = a1;
         this.cryptoUnderlying = upper(cryptoUnderlying == null || cryptoUnderlying.isEmpty() ? DEFAULT_CRYPTO_UNDERLYING : cryptoUnderlying);
         this.tradfiTags = upper(tradfiTags == null || tradfiTags.isEmpty() ? DEFAULT_TRADFI_TAGS : tradfiTags);
         this.explicitList = explicitList == null ? Collections.emptySet() : Collections.unmodifiableSet(new HashSet<>(explicitList));
@@ -63,7 +72,21 @@ public final class TradFiClassifier {
 
     public static TradFiClassifier defaults() { return new TradFiClassifier(null, null, null); }
 
+    /** [V12 R4d] R7 c3_live khi UNIVERSE_A1=1: CUNG bo phan loai voi bo loc tin hieu ({@link UniverseA1Classifier}). */
+    public static TradFiClassifier universeA1() { return new TradFiClassifier(null, null, null, true); }
+
+    public boolean isUniverseA1() { return a1; }
+
     public Verdict classify(SymbolMeta m) {
+        if (a1) {
+            UniverseA1Classifier.Kind k = UniverseA1Classifier.classify(m.getContractType(), m.getUnderlyingType());
+            String ut = m.getUnderlyingType();
+            if (k == UniverseA1Classifier.Kind.TRADFI) {
+                return new Verdict(true, true, "A1:" + (UniverseA1Classifier.isTradFiContract(m.getContractType())
+                        ? "contractType=" + m.getContractType() : "underlyingType=" + ut));
+            }
+            return new Verdict(false, ut != null && !ut.trim().isEmpty(), "A1:underlyingType=" + ut);
+        }
         if (explicitList.contains(m.getSymbol())) return new Verdict(true, true, "LIST");
         String ct = m.getContractType() == null ? "" : m.getContractType().toUpperCase(Locale.ROOT);
         if (ct.contains("TRADIFI") || ct.contains("TRADFI")) return new Verdict(true, true, "contractType=" + m.getContractType());

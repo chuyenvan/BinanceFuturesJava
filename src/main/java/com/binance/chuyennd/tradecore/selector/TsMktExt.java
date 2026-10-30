@@ -148,7 +148,7 @@ public final class TsMktExt {
         if (INSTANCE == null) {
             synchronized (TsMktExt.class) {
                 if (INSTANCE == null) {
-                    TsMktExt x = new TsMktExt(TsMktExt::aeroRead, new File(Cfg.getOr(KEY_FILE, DEFAULT_FILE)),
+                    TsMktExt x = new TsMktExt(TsMktExt::aeroRead, dayFile(),
                             System.currentTimeMillis(), SEED_PAUSE_MS);
                     LOG.info("[TS-EXT] BAT {}=1 profile=c3_shadow|c3_live baseH={} extH={} thr={} minN={} file={} days_loaded={}",
                             KEY_ENABLE, BASE_HOURS, EXT_HOURS, AltEwIndex.DD_THRESHOLD,
@@ -159,6 +159,15 @@ public final class TsMktExt {
             }
         }
         return INSTANCE;
+    }
+
+    /**
+     * [V12 R4d] file tong ngay ALT_EW. UNIVERSE_A1=1 => {@code <file>.a1}: cua so 31 ngay tinh lai tu store tren universe A1
+     * (khong dung tong ngay A0 cua c3_shadow). Co tat => y nguyen.
+     */
+    static File dayFile() {
+        File f = new File(Cfg.getOr(KEY_FILE, DEFAULT_FILE));
+        return UniverseA1Filter.isActive() ? new File(f.getPath() + ".a1") : f;
     }
 
     /** CHI cho unit test. */

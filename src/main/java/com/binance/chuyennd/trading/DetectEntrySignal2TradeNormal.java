@@ -126,6 +126,8 @@ public class DetectEntrySignal2TradeNormal {
 
 
     public void start() throws InterruptedException, ParseException {
+        // [V12 R4d UNIVERSE-A1] fail-fast SOM, NGOAI try/catch cua initData: co tat => no-op; co bat ma nguon hong => nem.
+        com.binance.chuyennd.tradecore.selector.UniverseA1Filter.initEager();
         initData();
         startThreadDetectMarketLevel2Trader();
     }
@@ -204,6 +206,9 @@ public class DetectEntrySignal2TradeNormal {
             // [B6-SPEED] ticker cache trượt: chỉ đọc phút MỚI mỗi tick, full reload khi lệch/khởi động.
             //   Parity BIT-IDENTICAL full-read (nội dung nến cùng record; offset sub-phút startTime vô hại).
             Map<String, List<KlineObjectSimple>> symbol2LastTickers = tickerWindow.read(System.currentTimeMillis(), 1000);
+            // [V12 R4d UNIVERSE-A1] diem loc phia live: ngay sau tickerWindow.read => symbol2FinalTicker, market level/breadth,
+            //   cascadeUniverse, predictAllCandidates (funding/OI), getTopSymbol (S1), DCA deu tu MOT tap. Co tat => cung map.
+            symbol2LastTickers = com.binance.chuyennd.tradecore.selector.UniverseA1Filter.filter(symbol2LastTickers, System.currentTimeMillis());
             long tTickerMs = (System.nanoTime() - tTop0) / 1_000_000L;
             List<KlineObjectSimple> btcTickers = symbol2LastTickers.get(Constants.SYMBOL_PAIR_BTC);
             // TASK-027: thiếu data BTC → trước đây NPE rơi vào catch in stacktrace (im lặng).
@@ -413,6 +418,10 @@ public class DetectEntrySignal2TradeNormal {
                             BudgetManager.getInstance().symbol2Pos);
                     for (String symbol : symbolDcaLevel) {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
+                        if (ticker == null && com.binance.chuyennd.tradecore.selector.UniverseA1Filter.isActive()) {   // [V12 R4d] co tat: y nguyen
+                            LOG.warn("[UNIVERSE-A1] DCA bo qua {} (khong co ticker trong universe A1)", symbol);
+                            continue;
+                        }
                         PositionRisk position = BudgetManager.getInstance().symbol2Pos.get(symbol);
                         if (position != null) {
                             createOrderBuyRequest(symbol, ticker, MarketLevelChange.DCA_LEVEL1,
@@ -1564,6 +1573,8 @@ public class DetectEntrySignal2TradeNormal {
             TreeMap<Long, Map<String, KlineObjectSimple>> time2Tickers =
                     DataManagerAerospikeFloatSim.readDataFromAerospikeCustom(
                             System.currentTimeMillis() - minutesWranup * Utils.TIME_MINUTE, minutesWranup);
+            // [V12 R4d UNIVERSE-A1] seed history/basket/funding cung universe A1, point-in-time tung phut (co tat => cung map)
+            time2Tickers = com.binance.chuyennd.tradecore.selector.UniverseA1Filter.filterMinutes(time2Tickers);
             if (com.binance.chuyennd.ai_ml.features.export.entry.LiveFeaturePipeline.snapshotMode()) {
                 // [V11 F-input] seed = replay TUNG phut (updateHistory + getTopCoin) 1 luot, khong nap 2 luot.
                 this.featPipeline = com.binance.chuyennd.ai_ml.features.export.entry.LiveFeaturePipeline
