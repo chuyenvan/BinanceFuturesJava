@@ -74,16 +74,46 @@ public final class KlineWsClient {
         }
     }
 
+    /**
+     * [INGEST-QF2] Mốc xoay CHỦ ĐỘNG của kết nối thứ {@code idx} (tính từ lúc mở): 20h + (idx mod 8)×25′ ⇒ 6 kết nối mở cùng lúc
+     * xoay ở 20h00, 20h25, …, 22h05 — lệch nhau 25′, đều trước mốc 24h sàn tự cắt; không bao giờ rơi cùng lúc vì mốc 24h.
+     */
+    static long rotateAfterMs(int idx) {
+        return ROTATE_BASE_MS + (long) Math.floorMod(idx, 8) * ROTATE_STEP_MS;
+    }
+
+    static final long ROTATE_BASE_MS = 20L * 3_600_000L;
+    static final long ROTATE_STEP_MS = 25L * 60_000L;
+
     private final class Conn extends WebSocketListener {
         final List<String> symbols;
+        final int idx;
         volatile WebSocket ws;
+        /** [INGEST-QF2] kết nối thay thế đang mở trong lúc xoay (cũ vẫn chạy tới khi bản mới có message đầu tiên). */
+        volatile WebSocket pending;
         volatile long lastMsgMs;
         volatile boolean alive;
         volatile long nextRetryMs;
         volatile long backoffMs = 5_000L;
+        volatile long rotateAtMs;
 
-        Conn(List<String> symbols) {
+        Conn(List<String> symbols, int idx) {
             this.symbols = symbols;
+            this.idx = idx;
+        }
+
+        /** Xoay chủ động: mở bản thay thế; swap khi bản mới nhận message đầu tiên (không hở dữ liệu). */
+        void rotate() {
+            WebSocket p = pending;
+            if (p != null) {   // ban thay the qua 2' chua co message => huy, mo ban khac
+                pending = null;
+                p.cancel();
+                LOG.warn("[KLINE-WS] ban thay the #{} khong co du lieu sau 2', huy va thu lai", idx);
+            }
+            LOG.info("[KLINE-WS] xoay chu dong ket noi #{} ({} symbol) truoc moc 24h", idx, symbols.size());
+            rotateAtMs = System.currentTimeMillis() + 120_000L;   // neu ban moi khong len trong 2' => thu lai
+            pending = http.newWebSocket(new Request.Builder().url(url()).build(), this);
+            rotations++;
         }
 
         String url() {
@@ -98,6 +128,7 @@ public final class KlineWsClient {
         void open() {
             lastMsgMs = System.currentTimeMillis();
             alive = true;
+            rotateAtMs = lastMsgMs + rotateAfterMs(idx);   // [INGEST-QF2] moc xoay lech nhau theo idx
             ws = http.newWebSocket(new Request.Builder().url(url()).build(), this);
             reconnects++;
         }
@@ -106,19 +137,32 @@ public final class KlineWsClient {
             alive = false;
             WebSocket w = ws;
             if (w != null) w.cancel();
+            WebSocket p = pending;
+            pending = null;
+            if (p != null) p.cancel();
             nextRetryMs = System.currentTimeMillis() + backoffMs;
             backoffMs = Math.min(60_000L, backoffMs * 2);
-            LOG.warn("[KLINE-WS] dong ket noi {} symbol ({}), mo lai sau {} ms", symbols.size(), why, nextRetryMs - System.currentTimeMillis());
+            LOG.warn("[KLINE-WS] dong ket noi #{} {} symbol ({}), mo lai sau {} ms", idx, symbols.size(), why, nextRetryMs - System.currentTimeMillis());
         }
 
         @Override
         public void onOpen(WebSocket webSocket, Response response) {
-            backoffMs = 5_000L;
-            LOG.info("[KLINE-WS] mo ket noi {} stream", symbols.size());
+            if (webSocket == ws) backoffMs = 5_000L;
+            LOG.info("[KLINE-WS] mo ket noi {} stream{}", symbols.size(), webSocket == pending ? " (ban thay the khi xoay)" : "");
         }
 
         @Override
         public void onMessage(WebSocket webSocket, String text) {
+            if (webSocket == pending) {   // [INGEST-QF2] ban thay the da co du lieu => swap, dong ban cu (trung su kien vo hai)
+                WebSocket old = ws;
+                ws = webSocket;
+                pending = null;
+                rotateAtMs = System.currentTimeMillis() + rotateAfterMs(idx);
+                if (old != null) old.close(1000, "rotate");
+                LOG.info("[KLINE-WS] xoay xong ket noi #{}; moc xoay ke tiep sau {} phut", idx, rotateAfterMs(idx) / 60_000L);
+            } else if (webSocket != ws) {
+                return;   // ban cu da thay
+            }
             lastMsgMs = System.currentTimeMillis();
             KlineEvent ev = parse(text);
             if (ev == null) return;
@@ -126,19 +170,30 @@ public final class KlineWsClient {
             else if (openSink != null) openSink.onOpenUpdate(ev.symbol, ev.openTime, ev.k);
         }
 
+        private void pendingFailed(WebSocket webSocket, String why) {
+            if (webSocket == pending) {
+                pending = null;
+                rotateAtMs = System.currentTimeMillis() + 120_000L;
+                LOG.warn("[KLINE-WS] ban thay the #{} loi ({}), giu ban cu, thu xoay lai sau 2'", idx, why);
+            }
+        }
+
         @Override
         public void onClosing(WebSocket webSocket, int code, String reason) {
             webSocket.close(1000, null);
+            pendingFailed(webSocket, "closing " + code);
             if (webSocket == ws && alive) kill("closing " + code + " " + reason);
         }
 
         @Override
         public void onFailure(WebSocket webSocket, Throwable t, Response response) {
+            pendingFailed(webSocket, "failure " + t);
             if (webSocket == ws && alive) kill("failure " + t);
         }
 
         @Override
         public void onClosed(WebSocket webSocket, int code, String reason) {
+            pendingFailed(webSocket, "closed " + code);
             if (webSocket == ws && alive) kill("closed " + code + " " + reason);
         }
     }
@@ -147,17 +202,26 @@ public final class KlineWsClient {
     private final OpenUpdateSink openSink;
     private final int streamsPerConn;
     private final long staleMs;
+    private final long watchdogMs;
     private final OkHttpClient http;
     private final List<Conn> conns = new CopyOnWriteArrayList<>();
     private volatile long reconnects = 0;
+    private volatile long rotations = 0;
 
-    public KlineWsClient(KlineIngestCore core, OpenUpdateSink openSink, int streamsPerConn, long staleMs) {
+    /** [INGEST-QF2] staleMs + watchdogMs = thời gian tối đa phát hiện kết nối im lặng (prereg Q10: ≤ 15 s). */
+    public KlineWsClient(KlineIngestCore core, OpenUpdateSink openSink, int streamsPerConn, long staleMs, long watchdogMs) {
         this.core = core;
         this.openSink = openSink;
         this.streamsPerConn = Math.max(1, Math.min(200, streamsPerConn));
         this.staleMs = staleMs;
+        this.watchdogMs = Math.max(1_000L, watchdogMs);
         this.http = new OkHttpClient.Builder().pingInterval(20, TimeUnit.SECONDS)
                 .readTimeout(0, TimeUnit.MILLISECONDS).connectTimeout(10, TimeUnit.SECONDS).build();
+    }
+
+    /** Thời gian phát hiện im lặng tối đa (ms). */
+    long maxDetectMs() {
+        return staleMs + watchdogMs;
     }
 
     /** Chia symbol thành nhóm ≤ streamsPerConn (thứ tự sort cố định) — thuần, test được. */
@@ -169,17 +233,17 @@ public final class KlineWsClient {
         return out;
     }
 
-    /** Mở kết nối cho symbol hiện có + luồng watchdog (10 s) mở lại kết nối chết và thêm symbol mới. */
+    /** Mở kết nối cho symbol hiện có + luồng watchdog (mỗi watchdogMs) mở lại kết nối chết, xoay chủ động, thêm symbol mới. */
     public void start(Supplier<Collection<String>> symbols) {
         for (List<String> c : chunk(symbols.get(), streamsPerConn)) {
-            Conn cn = new Conn(c);
+            Conn cn = new Conn(c, conns.size());
             conns.add(cn);
             cn.open();
         }
-        Thread t = new Thread(() -> {
+        Thread t = new Thread(com.binance.chuyennd.utils.LoopSupervisor.wrap("Kline-WS-Watchdog", () -> {
             while (true) {
                 try {
-                    Thread.sleep(10_000L);
+                    Thread.sleep(watchdogMs);
                     watchdog(symbols.get());
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
@@ -188,7 +252,7 @@ public final class KlineWsClient {
                     LOG.warn("[KLINE-WS] watchdog loi: {}", e.toString());
                 }
             }
-        }, "Kline-WS-Watchdog");
+        }), "Kline-WS-Watchdog");
         t.setDaemon(true);
         t.start();
     }
@@ -200,12 +264,13 @@ public final class KlineWsClient {
             covered.addAll(c.symbols);
             if (c.alive && now - c.lastMsgMs > staleMs) c.kill("im lang " + (now - c.lastMsgMs) + " ms");
             if (!c.alive && now >= c.nextRetryMs) c.open();
+            if (c.alive && now >= c.rotateAtMs) c.rotate();
         }
         List<String> added = new ArrayList<>();
         for (String s : desired) if (!covered.contains(s)) added.add(s);
         if (!added.isEmpty()) {
             for (List<String> c : chunk(added, streamsPerConn)) {
-                Conn cn = new Conn(c);
+                Conn cn = new Conn(c, conns.size());
                 conns.add(cn);
                 cn.open();
             }
@@ -225,5 +290,9 @@ public final class KlineWsClient {
 
     public long reconnects() {
         return reconnects;
+    }
+
+    public long rotations() {
+        return rotations;
     }
 }

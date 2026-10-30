@@ -196,6 +196,12 @@ public final class KlineIngestCore {
         return out;
     }
 
+    /** [INGEST-QF2] Symbol (đầy đủ) đã có WS final cho phút {@code minute} (state giữ ~10′; cũ hơn ⇒ false, bảo thủ). */
+    public boolean hasWsFinal(long minute, String fullSym) {
+        Set<String> seen = wsSeen.get(minute);
+        return seen != null && seen.contains(shortSym(fullSym));
+    }
+
     /** Dọn state WS cũ hơn {@code keepFromMinute}. */
     public void gc(long keepFromMinute) {
         wsSeen.keySet().removeIf(m -> m < keepFromMinute);

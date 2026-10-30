@@ -88,7 +88,7 @@ public class OpenInterestIngestor2AerospikeNew {
         // Cadence 60' (đo dry-run: ~29'/881 coin đọc 226-full). 60' << tol 2h của LiveOiFeatProvider → luôn tươi,
         // giảm nửa tải mạng 242→226 so với 30'. Tune qua env OI_FEAT_INTERVAL_MS nếu cần.
         final long intervalMs = envLong("OI_FEAT_INTERVAL_MS", 60 * 60_000L);
-        new Thread(() -> {
+        new Thread(com.binance.chuyennd.utils.LoopSupervisor.wrap("OI-Feat-Compute-Loop", () -> {   // [INGEST-QF2] supervisor
             Thread.currentThread().setName("OI-Feat-Compute-Loop");
             LOG.info("===== [OI-FEAT] compute oi_feat_* tren 242 | chu ky {}' | rolling {}d | delay dau {}s =====",
                     intervalMs / 60000, rollDays, initDelay / 1000);
@@ -105,7 +105,7 @@ public class OpenInterestIngestor2AerospikeNew {
                 if (sleep < 60_000L) sleep = 60_000L;
                 try { Thread.sleep(sleep); } catch (InterruptedException ignored) { }
             }
-        }).start();
+        }), "OI-Feat-Compute-Loop").start();
     }
 
     private static int envInt(String k, int d) {
@@ -131,7 +131,7 @@ public class OpenInterestIngestor2AerospikeNew {
     }
 
     private void startForwardLoop() {
-        new Thread(() -> {
+        new Thread(com.binance.chuyennd.utils.LoopSupervisor.wrap("OI-Metrics-Forward-Loop", () -> {   // [INGEST-QF2] supervisor
             Thread.currentThread().setName("OI-Metrics-Forward-Loop");
             int idle = 0;
             while (true) {
@@ -162,7 +162,7 @@ public class OpenInterestIngestor2AerospikeNew {
                         }
                     }
                     int written = flush(buffer);
-                    if (written > 0) { idle = 0; LOG.info("OI/LS/taker forward: ghi {} (symbol x metric) / {} symbol.", written, symbols.size()); }
+                    if (written > 0) { idle = 0; LOG.info("OI/LS/taker forward: ghi {} (symbol x metric) / {} symbol. sweep_ms={}", written, symbols.size(), System.currentTimeMillis() - sweepStart); }
                     else if (++idle % 4 == 0) LOG.info("OI/LS/taker forward song (chua ghi gi, idle={}).", idle);
                 } catch (Exception e) {
                     LOG.error("OI/LS/taker sweep loi: {}", e.getMessage(), e);
@@ -171,7 +171,7 @@ public class OpenInterestIngestor2AerospikeNew {
                 if (sleep < 1000) sleep = 1000;
                 try { Thread.sleep(sleep); } catch (InterruptedException ignored) { }
             }
-        }).start();
+        }), "OI-Metrics-Forward-Loop").start();
     }
 
     /** Flush buffer ra 242, CANH GIAY tranh khung entry/DCA. */

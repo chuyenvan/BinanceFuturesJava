@@ -58,7 +58,9 @@ public final class Cfg {
             "SYMBOL_MAPPER_DUP_POLICY", "MAPPER_REPAIR_CONFIRM",
             // [INGEST-QF 2026-10-30] ngan sach REST + watchdog collectData (ha tang)
             "INGEST_REST_WEIGHT_CAP", "INGEST_HDR_SOFT", "INGEST_HDR_HARD", "INGEST_SCHEDULED_RESTART_HOURS",
-            "INGEST_PRICE_DIFF_TG_MIN", "KLINE_RECON_SAMPLE", "KLINE_EARLY_DEGRADED_RULE");
+            "INGEST_PRICE_DIFF_TG_MIN", "KLINE_RECON_SAMPLE", "KLINE_EARLY_DEGRADED_RULE",
+            // [INGEST-QF2 2026-10-31]
+            "INGEST_FDATA_REQ_CAP", "KLINE_EARLY_REST_MAX", "KLINE_WS_STALE_MS", "KLINE_WS_WATCHDOG_MS");
 
     /** Tien to cua bien env DUOC COI LA THAM SO GIAO DICH — cam dat khi da co profile. */
     private static final List<String> TRADING_PREFIXES = Arrays.asList(

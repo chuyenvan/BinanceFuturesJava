@@ -61,16 +61,26 @@ public class TickerIngestor2AerospikeNew {
     private volatile KlineWsClient wsClient;
     private volatile int lastRestCalls = 0;
 
-    // ===== [INGEST-QF 2026-10-30] bo settle MOI symbol (docs/prereg/PREREG_INGEST_QUICKFIX.md) =====
+    // ===== [INGEST-QF 2026-10-30 / QF2 10-31] bo settle MOI symbol (docs/prereg/PREREG_INGEST_QUICKFIX.md +ADD1 +ADD-1b) =====
     /** So symbol doi soat mau moi phut (xoay vong, ~752 symbol / 30'). */
     static final int RECON_SAMPLE = (int) cfgLong("KLINE_RECON_SAMPLE", 25);
-    /** 1 = giu luat cu "WS suy giam >50% thieu o giay 2 => REST moi symbol" (10-30: burst ~400 call/phut vo ich). */
-    static final boolean EARLY_DEGRADED_RULE = cfgLong("KLINE_EARLY_DEGRADED_RULE", 0) == 1;
+    /** REST som +4 s chi khi so symbol thieu WS final <= nguong nay; lon hon => de pass +30 s (nen da settle). */
+    static final int EARLY_REST_MAX = (int) cfgLong("KLINE_EARLY_REST_MAX", 60);
+    /** WS: ket noi im lang > stale ms => kill + mo lai; watchdog moi WATCHDOG ms => phat hien <= stale + watchdog (<= 15 s). */
+    static final long WS_STALE_MS = cfgLong("KLINE_WS_STALE_MS", 10_000);
+    static final long WS_WATCHDOG_MS = cfgLong("KLINE_WS_WATCHDOG_MS", 5_000);
     private final SettlePlanner planner = new SettlePlanner(RECON_SAMPLE, 30);
-    private final java.util.concurrent.atomic.AtomicLong cReconFetched = new java.util.concurrent.atomic.AtomicLong();
-    private final java.util.concurrent.atomic.AtomicLong cReconDiffWs = new java.util.concurrent.atomic.AtomicLong();
-    private final java.util.concurrent.atomic.AtomicLong cReconFilled = new java.util.concurrent.atomic.AtomicLong();
-    private final java.util.concurrent.atomic.AtomicLong cSuspectFetched = new java.util.concurrent.atomic.AtomicLong();
+    private final long startMinute = Utils.getMinute(System.currentTimeMillis());
+    private final KlinePassController passes = new KlinePassController(core, planner, TickerIngestor2AerospikeNew::klineRoom,
+            System::currentTimeMillis, EARLY_REST_MAX, SETTLE_LIMIT, startMinute, SETTLE_MIN_AGE_SEC * 1000L);
+    /** Repair lich su luc khoi dong (startDataRepair) da xong — kiem sau deploy chi tinh tuoi gia sau moc nay. */
+    static volatile boolean startupRepairDone = false;
+
+    /** Weight lane KLINE con lay duoc NGAY (ngan sach tat => khong gioi han). */
+    static int klineRoom() {
+        com.binance.chuyennd.utils.RestBudget b = com.binance.chuyennd.utils.RestBudget.get();
+        return b == null ? Integer.MAX_VALUE : b.available(com.binance.chuyennd.utils.RestBudget.Lane.KLINE);
+    }
     /** Do "price_realtime dung": khoang lon nhat giua 2 lan ghi gia lien tiep (Q7). */
     static volatile long lastPriceWriteMs = 0;
     static final java.util.concurrent.atomic.AtomicLong maxPriceGapMs = new java.util.concurrent.atomic.AtomicLong();
@@ -79,6 +89,12 @@ public class TickerIngestor2AerospikeNew {
         long prev = lastPriceWriteMs;
         if (prev > 0) maxPriceGapMs.accumulateAndGet(now - prev, Math::max);
         lastPriceWriteMs = now;
+    }
+
+    /** Tuoi gia hien tai (ms tu lan ghi price_realtime gan nhat); -1 neu chua ghi lan nao. */
+    static long priceAgeMs() {
+        long prev = lastPriceWriteMs;
+        return prev == 0 ? -1 : System.currentTimeMillis() - prev;
     }
 
     /** Max khoang giua 2 lan ghi gia (gom ca do tre hien tai) tu lan goi truoc; reset. -1 neu chua ghi lan nao. */
@@ -119,7 +135,7 @@ public class TickerIngestor2AerospikeNew {
             startIngestorLoops(false);         // chi Rest-Price-Loop (nan nen phut dang mo)
             startFinalizerLoop();
             if (MODE_WS.equals(MODE)) {
-                wsClient = new KlineWsClient(core, this::onOpenUpdate, WS_STREAMS_PER_CONN, 75_000L);
+                wsClient = new KlineWsClient(core, this::onOpenUpdate, WS_STREAMS_PER_CONN, WS_STALE_MS, WS_WATCHDOG_MS);
                 wsClient.start(() -> new ArrayList<>(globalSubscribedSymbols));
             }
         }
@@ -127,7 +143,7 @@ public class TickerIngestor2AerospikeNew {
 
     private void startIngestorLoops(boolean legacyKlineLoop) {
         // --- LUỒNG 1: LẤY GIÁ & "HOẠT HÌNH" NẾN HIỆN TẠI (3s/lần) ---
-        new Thread(() -> {
+        new Thread(com.binance.chuyennd.utils.LoopSupervisor.wrap("Rest-Price-Loop", () -> {   // [INGEST-QF2] supervisor
             Thread.currentThread().setName("Rest-Price-Loop");
             String endpoint = "https://fapi.binance.com/fapi/v1/ticker/price"; // Chỉ tốn 2 weight
             boolean wasBanned = false;
@@ -221,7 +237,7 @@ public class TickerIngestor2AerospikeNew {
                     Utils.sleep(3000L);
                 }
             }
-        }).start();
+        }), "Rest-Price-Loop").start();
 
         // --- LUỒNG 2: CHỐT NẾN CHUẨN (ĐÚNG 1 LẦN KHI SANG PHÚT MỚI) --- [KFIX] chi mode legacy
         if (legacyKlineLoop) new Thread(() -> {
@@ -332,7 +348,7 @@ public class TickerIngestor2AerospikeNew {
      *     >= SETTLE_MIN_AGE_SEC neu khac store (M va M-1); (4) [KLINE-INGEST] counter moi STATS_MIN phut.
      */
     private void startFinalizerLoop() {
-        Thread t = new Thread(() -> {
+        Thread t = new Thread(com.binance.chuyennd.utils.LoopSupervisor.wrap("Kline-Finalizer", () -> {   // [INGEST-QF2] supervisor
             long lastWsFlush = 0, lastEarly = 0, lastSettle = 0, lastStats = 0;
             boolean firstSettle = true;
             int wsCount = 0, earlyCalls = 0;
@@ -350,14 +366,11 @@ public class TickerIngestor2AerospikeNew {
                         }
                         core.flushLateFinals();
                     }
+                    // [INGEST-QF2] bo luat "WS suy giam >50% o giay 2 => REST moi symbol" (10-30: 973 phut kich hoat, burst ~400 call)
                     boolean earlyDue = inMin >= EARLY_REST_SEC * 1000L;
-                    if (EARLY_DEGRADED_RULE && ws && !earlyDue && m > lastEarly && m <= lastWsFlush && inMin >= 2000L) {
-                        int nSym = globalSubscribedSymbols.size();     // WS suy giam: > 50% symbol chua co final o giay 2
-                        earlyDue = nSym > 0 && core.missingFinals(m, new ArrayList<>(globalSubscribedSymbols)).size() * 2 > nSym;
-                    }
                     if (m > lastEarly && earlyDue && (!ws || m <= lastWsFlush)) {
                         lastEarly = m;
-                        if (inMin <= 50_000L) earlyCalls = earlyPass(m, curMin, ws, wsCount);
+                        earlyCalls = earlyPass(m, curMin, ws, wsCount, inMin <= 50_000L);   // tre >50 s: chi danh dau suspect
                     }
                     if (m > lastSettle && inMin >= SETTLE_SEC * 1000L) {
                         lastSettle = m;
@@ -384,12 +397,20 @@ public class TickerIngestor2AerospikeNew {
                             }
                         }
                     }
+                    // [INGEST-QF2] pass bu lien tuc (chi suspects, sau REST som cua phut): lo lon lanh ~KLINE_QUOTA/phut (ADD-1b)
+                    if (ws && m <= lastEarly && !BinanceRestGuard.isBanned()) {
+                        KlinePassController.SettleOut c = passes.maybeCatchUp(curMin, inMin, new ArrayList<>(globalSubscribedSymbols));
+                        if (c != null && c.sus != null) {
+                            LOG.info("[KLINE-INGEST] kiem lai bu: suspects={} goi={} limit={} fetched={} failed={} con_lai={}",
+                                    c.suspects, c.suspectsRequested, c.suspectLimit, c.sus.fetched, c.sus.failed, planner.suspectCount());
+                        }
+                    }
                     if (STATS_MIN > 0 && (curMin / Utils.TIME_MINUTE) % STATS_MIN == 0 && curMin > lastStats && inMin >= 45_000L) {
                         lastStats = curMin;
                         KlineWsClient w = wsClient;
                         LOG.info("[KLINE-INGEST] mode={} {} | recon_fetched={} recon_diff_ws={} recon_filled={} suspect_fetched={} suspects_now={} | ws_conn={}/{} ws_reconnects={} symbols={} rest_klines_calls_last_min={}",
-                                MODE, core.statsLine(), cReconFetched.get(), cReconDiffWs.get(), cReconFilled.get(), cSuspectFetched.get(),
-                                planner.suspectCount(), w == null ? 0 : w.aliveConnections(), w == null ? 0 : w.connections(),
+                                MODE, core.statsLine(), passes.cReconFetched.get(), passes.cReconDiffWs.get(), passes.cReconFilled.get(),
+                                passes.cSuspectFetched.get(), planner.suspectCount(), w == null ? 0 : w.aliveConnections(), w == null ? 0 : w.connections(),
                                 w == null ? 0 : w.reconnects(), globalSubscribedSymbols.size(), lastRestCalls);
                     }
                     core.gc(curMin - 10 * Utils.TIME_MINUTE);
@@ -405,87 +426,62 @@ public class TickerIngestor2AerospikeNew {
                     Utils.sleep(1000L);
                 }
             }
-        }, "Kline-Finalizer");
+        }), "Kline-Finalizer");
         t.start();
     }
 
     /**
-     * [INGEST-QF] Pass +30 s (mode ws_settle): (1) suspects (o tu REST-som/loi/thieu luc khoi dong) — limit du phu o cu nhat;
-     * (2) doi soat mau RECON_SAMPLE symbol xoay vong (o WS final) — lech => settle ghi de + dem recon_diff_ws + WARN.
-     * Thay pass cu goi REST cho MOI symbol moi phut. Tra so call REST klines.
+     * [INGEST-QF2] Pass +30 s (mode ws_settle) qua {@link KlinePassController#settle}: go o da co WS final, kiem lai suspects
+     * (vua room KLINE, khong xep hang), doi soat mau; log [KLINE-COVER] (Q2: chua_chot phut M, chua_chot_truoc phut M-2, bo_kiem).
      */
     private int settleSuspectsAndSample(long m, long curMin) {
         long t0 = System.currentTimeMillis();
-        SettlePlanner.Plan plan = planner.plan(curMin, new ArrayList<>(globalSubscribedSymbols));
-        int calls = 0;
-        if (!plan.suspects.isEmpty()) {
-            KlineIngestCore.SettleResult r = core.settle(System.currentTimeMillis(), plan.suspects, plan.suspectLimit);
-            planner.onSuspectsSettled(plan.suspects, r.failedSymbols, curMin, plan.suspectLimit);
-            cSuspectFetched.addAndGet(r.fetched);
-            calls += r.fetched + r.failed;
-            LOG.info("[KLINE-INGEST] kiem lai phut {}: suspects={} limit={} fetched={} failed={} rewritten_diff={} filled_missing={} same={} con_lai={} ({} ms)",
-                    Utils.normalizeDateYYYYMMDDHHmm(m), plan.suspects.size(), plan.suspectLimit, r.fetched, r.failed, r.rewrittenDiff,
-                    r.filledMissing, r.same, planner.suspectCount(), System.currentTimeMillis() - t0);
+        KlinePassController.SettleOut o = passes.settle(curMin, new ArrayList<>(globalSubscribedSymbols));
+        if (o.sus != null) {
+            LOG.info("[KLINE-INGEST] kiem lai phut {}: suspects={} goi={} limit={} fetched={} failed={} rewritten_diff={} filled_missing={} same={} con_lai={} ({} ms)",
+                    Utils.normalizeDateYYYYMMDDHHmm(m), o.suspects, o.suspectsRequested, o.suspectLimit, o.sus.fetched, o.sus.failed,
+                    o.sus.rewrittenDiff, o.sus.filledMissing, o.sus.same, planner.suspectCount(), System.currentTimeMillis() - t0);
         }
-        if (!plan.sample.isEmpty()) {
-            KlineIngestCore.SettleResult s = core.settle(System.currentTimeMillis(), plan.sample, SETTLE_LIMIT);
-            cReconFetched.addAndGet(s.fetched);
-            cReconDiffWs.addAndGet(s.rewrittenDiff);
-            cReconFilled.addAndGet(s.filledMissing);
-            calls += s.fetched + s.failed;
-            if (s.rewrittenDiff > 0 || s.filledMissing > 0) {
-                LOG.warn("[KLINE-RECON] doi soat mau phut {}: {} o WS lech REST (da ghi de) + {} o thieu (da ghi) / {} symbol, diff_by_minute={}",
-                        Utils.normalizeDateYYYYMMDDHHmm(m), s.rewrittenDiff, s.filledMissing, s.fetched, s.diffByMinute.values());
-            }
+        if (o.smp != null && (o.smp.rewrittenDiff > 0 || o.smp.filledMissing > 0)) {
+            LOG.warn("[KLINE-RECON] doi soat mau phut {}: {} o WS lech REST (da ghi de) + {} o thieu (da ghi) / {} symbol, diff_by_minute={}",
+                    Utils.normalizeDateYYYYMMDDHHmm(m), o.smp.rewrittenDiff, o.smp.filledMissing, o.smp.fetched, o.smp.diffByMinute.values());
         }
-        return calls;
+        LOG.info("[KLINE-COVER] phut={} chua_chot={} chua_chot_truoc={} bo_kiem={} ws_muon_go={} suspects={} goi={} mau={} khoi_dong={}",
+                Utils.normalizeDateYYYYMMDDHHmm(m), o.pendingM, o.pendingPrev, o.dropped, o.wsCovered, o.suspects,
+                o.suspectsRequested, o.sampleRequested, curMin - startMinute < 5 * Utils.TIME_MINUTE ? 1 : 0);
+        return o.calls;
     }
 
-    /** [INGEST-QF] Khoi dong: o thieu trong SETTLE_LIMIT_STARTUP phut gan nhat (doc store) => suspects (thay settle limit 30 MOI symbol). */
+    /** [INGEST-QF2] Khoi dong: o thieu trong SETTLE_LIMIT_STARTUP phut gan nhat (doc store) => suspects (thay settle limit 30 MOI symbol). */
     private void seedStartupSuspects(long curMin) {
-        List<String> uni = new ArrayList<>(globalSubscribedSymbols);
-        AerospikeMinuteStore st = new AerospikeMinuteStore();
-        int cells = 0, unreadable = 0;
-        for (int i = Math.max(SETTLE_LIMIT, SETTLE_LIMIT_STARTUP); i >= 1; i--) {
-            long mm = curMin - i * Utils.TIME_MINUTE;
-            Map<String, KlineObjectOptimized> rec = null;
-            try {
-                rec = st.read(mm);
-            } catch (Exception e) {
-                unreadable++;
-                LOG.warn("[KLINE-INGEST] startup: doc phut {} loi: {}", mm, e.toString());
-            }
-            for (String s : uni) {
-                if (rec == null || !rec.containsKey(KlineIngestCore.shortSym(s))) {
-                    planner.markSuspect(s, mm);
-                    cells++;
-                }
-            }
-        }
-        LOG.info("[KLINE-INGEST] startup: {} o thieu trong {} phut gan nhat (phut doc loi {}) -> {} symbol se kiem lai qua ngan sach REST",
-                cells, Math.max(SETTLE_LIMIT, SETTLE_LIMIT_STARTUP), unreadable, planner.suspectCount());
+        int minutes = Math.max(SETTLE_LIMIT, SETTLE_LIMIT_STARTUP);
+        int cells = passes.seedFromStore(curMin, minutes, new ArrayList<>(globalSubscribedSymbols), new AerospikeMinuteStore());
+        LOG.info("[KLINE-INGEST] startup: {} o thieu trong {} phut gan nhat -> {} symbol se kiem lai qua ngan sach REST",
+                cells, minutes, planner.suspectCount());
     }
 
-    /** REST som cho phut M; log 1 dong/phut (giu cum 'Chốt nến phút' cho health_242.sh). Tra so call REST. */
-    private int earlyPass(long m, long curMin, boolean ws, int wsCount) {
+    /** REST som cho phut M qua {@link KlinePassController#early}; log 1 dong/phut (giu cum 'Chốt nến phút' cho health_242.sh). */
+    private int earlyPass(long m, long curMin, boolean ws, int wsCount, boolean restInTime) {
         List<String> syms = new ArrayList<>(globalSubscribedSymbols);
-        List<String> need = ws ? core.missingFinals(m, syms) : syms;
-        if (ws) planner.markSuspects(need, m);   // [INGEST-QF] o REST-som/thieu => pass +30 s kiem lai dung symbol nay
-        int nClosed = 0, nFail = 0;
-        if (!need.isEmpty() && !BinanceRestGuard.isBanned()) {
-            KlineIngestCore.EarlyResult r = core.earlyRest(m, need);
-            nClosed = r.closed.size();
-            nFail = r.failed.size();
-            if (!r.open.isEmpty()) {
-                ConcurrentHashMap<String, KlineObjectOptimized> cur = timeBuffer.computeIfAbsent(curMin, k -> new ConcurrentHashMap<>());
-                cur.putAll(r.open);
+        if (!ws) {   // rest_settle: hanh vi cu (REST moi symbol)
+            int nClosed = 0, nFail = 0;
+            if (restInTime && !BinanceRestGuard.isBanned()) {
+                KlineIngestCore.EarlyResult r = core.earlyRest(m, syms);
+                nClosed = r.closed.size();
+                nFail = r.failed.size();
+                if (!r.open.isEmpty()) timeBuffer.computeIfAbsent(curMin, k -> new ConcurrentHashMap<>()).putAll(r.open);
             }
+            LOG.info("✅ [KLINE V9 {}] Chốt nến phút {} thành công. Total: {} symbols (rest_som={} rest_loi={})",
+                    MODE, Utils.normalizeDateYYYYMMDDHHmm(m), nClosed, nClosed, nFail);
+            return syms.size();
         }
-        int wsHave = ws ? syms.size() - need.size() : 0;   // WS final da co (ghi o giay 1,5 + toi muon)
-        LOG.info("✅ [KLINE V9 {}] Chốt nến phút {} thành công. Total: {} symbols (ws_final={} ws_flush_1s5={} rest_som={} rest_loi={} thieu_ws={} vd_thieu_ws={})",
-                MODE, Utils.normalizeDateYYYYMMDDHHmm(m), wsHave + nClosed, wsHave, wsCount, nClosed, nFail, ws ? need.size() : 0,
-                ws ? need.subList(0, Math.min(10, need.size())) : "[]");
-        return need.size();
+        KlinePassController.EarlyOut o = passes.early(m, syms, restInTime && !BinanceRestGuard.isBanned());
+        if (!o.open.isEmpty()) timeBuffer.computeIfAbsent(curMin, k -> new ConcurrentHashMap<>()).putAll(o.open);
+        int wsHave = syms.size() - o.need;   // WS final da co (ghi o giay 1,5 + toi muon)
+        LOG.info("✅ [KLINE V9 {}] Chốt nến phút {} thành công. Total: {} symbols (ws_final={} ws_flush_1s5={} rest_som={} rest_loi={} thieu_ws={} rest_goi={} rest_bo_qua_lo_lon={} vd_thieu_ws={})",
+                MODE, Utils.normalizeDateYYYYMMDDHHmm(m), wsHave + o.closed, wsHave, wsCount, o.closed, o.failed, o.need,
+                o.requested, o.restSkipped ? 1 : 0, o.needSample);
+        return o.requested;
     }
 
     //    private void fetchKlinesForBatch(List<String> symbols) {
@@ -642,6 +638,9 @@ public class TickerIngestor2AerospikeNew {
                 }
             } catch (Exception e) {
                 LOG.error("Repair Task Error", e);
+            } finally {
+                startupRepairDone = true;   // [INGEST-QF2] moc cho kiem sau deploy (tuoi gia tinh tu day)
+                LOG.info("[KLINE-INGEST] repair khoi dong xong");
             }
         });
     }

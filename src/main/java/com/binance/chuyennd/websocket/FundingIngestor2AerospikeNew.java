@@ -40,7 +40,7 @@ public class FundingIngestor2AerospikeNew {
     }
 
     private void startPollingLoop() {
-        new Thread(() -> {
+        new Thread(com.binance.chuyennd.utils.LoopSupervisor.wrap("Funding-Polling-Thread", () -> {   // [INGEST-QF2] supervisor
             Thread.currentThread().setName("Funding-Polling-Thread");
             // Endpoint lấy Funding Rate toàn sàn (Tốn đúng 1 Weight)
             String endpoint = "https://fapi.binance.com/fapi/v1/premiumIndex";
@@ -103,11 +103,11 @@ public class FundingIngestor2AerospikeNew {
                     try { Thread.sleep(5000); } catch (InterruptedException ignored) {}
                 }
             }
-        }).start();
+        }), "Funding-Polling-Thread").start();
     }
 
     private void startFlushLoop() {
-        new Thread(() -> {
+        new Thread(com.binance.chuyennd.utils.LoopSupervisor.wrap("Funding-Sync-Thread", () -> {   // [INGEST-QF2] supervisor
             Thread.currentThread().setName("Funding-Sync-Thread");
             // TASK-019 B: loop CHẠY đúng 60s; trước đây buffer rỗng → continue (KHÔNG log) nên nhìn
             // log tưởng "treo ~1h". Thực ra funding chỉ settle theo kỳ (1h/4h/8h) nên đa số phút
@@ -144,6 +144,6 @@ public class FundingIngestor2AerospikeNew {
                     LOG.error("❌ Lỗi luồng Flush Funding: {}", e.getMessage());
                 }
             }
-        }).start();
+        }), "Funding-Sync-Thread").start();
     }
 }

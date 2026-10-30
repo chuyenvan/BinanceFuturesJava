@@ -308,7 +308,7 @@ public class HttpRequest {
                 int content_length = hc.getContentLength();
                 if (RestBudget.isFapi(url)) {
                     RestBudget.afterResponse(url, hc.getResponseCode(), hc.getHeaderField("X-MBX-USED-WEIGHT-1M"),
-                            hc.getHeaderField("Retry-After"));
+                            hc.getHeaderField("Retry-After"), hc.getHeaderField("Date"));
                 }
                 if ((content_length > max_content_length) || (content_length == -1)) {
                     content_length = max_content_length;
@@ -384,7 +384,7 @@ public class HttpRequest {
                 int content_length = hc.getContentLength();
                 if (RestBudget.isFapi(url)) {
                     RestBudget.afterResponse(url, hc.getResponseCode(), hc.getHeaderField("X-MBX-USED-WEIGHT-1M"),
-                            hc.getHeaderField("Retry-After"));
+                            hc.getHeaderField("Retry-After"), hc.getHeaderField("Date"));
                 }
                 if ((content_length > max_content_length) || (content_length == -1)) {
                     content_length = max_content_length;

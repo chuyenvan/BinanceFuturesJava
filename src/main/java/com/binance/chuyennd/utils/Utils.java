@@ -541,12 +541,17 @@ public class Utils {
 
 
     public static void reset(String resetBySchedule) {
+        resetInWindow(resetBySchedule, 31, 44);
+    }
+
+    /** [INGEST-QF2] Nhu reset nhung chi re-exec khi giay hien tai trong [fromSec, toSec] (watchdog tuoi gia dung 08-20, tranh :27-:40). */
+    public static void resetInWindow(String resetBySchedule, int fromSec, int toSec) {
         try {
             while (true) {
-                if (Utils.getCurrentSecond() > 30 && Utils.getCurrentSecond() < 45) {
+                if (Utils.getCurrentSecond() >= fromSec && Utils.getCurrentSecond() <= toSec) {
                     break;
                 }
-                Thread.sleep(1000);
+                Thread.sleep(500);
             }
             LOG.info("Restart: {} {} ...", resetBySchedule, Utils.normalizeDateYYYYMMDDHHmm(System.currentTimeMillis()));
 

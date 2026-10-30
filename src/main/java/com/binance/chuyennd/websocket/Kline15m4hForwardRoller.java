@@ -74,7 +74,7 @@ public class Kline15m4hForwardRoller {
 
     /** Khởi thread forward (gọi trong BinanceDataIngestor.main). */
     public void start() {
-        new Thread(() -> {
+        new Thread(com.binance.chuyennd.utils.LoopSupervisor.wrap("Kline-Forward-Roller", () -> {   // [INGEST-QF2] supervisor
             Thread.currentThread().setName("Kline-Forward-Roller");
             LOG.info("🚀 Khởi động Kline15m4hForwardRoller (15m/4h BTC/ETH → 242, kiểm mỗi phút, grace {}s).",
                     GRACE_MS / 1000);
@@ -88,7 +88,7 @@ public class Kline15m4hForwardRoller {
                     LOG.error("❌ Kline-Forward-Roller lỗi vòng roll (bỏ qua nhịp này): {}", e.getMessage(), e);
                 }
             }
-        }).start();
+        }), "Kline-Forward-Roller").start();
     }
 
     /** Một vòng: xử mọi khung đã đóng-và-quá-grace cho cả 15m lẫn 4h, mọi symbol. */
