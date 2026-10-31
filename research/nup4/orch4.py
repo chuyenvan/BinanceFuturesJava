@@ -270,17 +270,33 @@ def gate_ok(st):
         return ("PENDING" if e.get("state") != "FAILED" else "FAIL"), {}
     p = OUT % tag_of("b0union", 42) + "storage/printDone.csv"
     lines = open(p, "rb").read().splitlines(keepends=True)
-    dev = [ln for ln in lines if ln.decode(errors="ignore").split(",")[6:7] and
+    hdr, body = lines[0], lines[1:]
+    dev = [ln for ln in body if ln.decode(errors="ignore").split(",")[6:7] and
            ln.decode(errors="ignore").split(",")[6] < "20260101"]
-    y26 = [ln for ln in lines if ln.decode(errors="ignore").split(",")[6:7] and
+    y26 = [ln for ln in body if ln.decode(errors="ignore").split(",")[6:7] and
            ln.decode(errors="ignore").split(",")[6] >= "20260101"]
     t = open(OUT % "tsx-x14-a1" + "storage/printDone.csv", "rb").read().splitlines(keepends=True)
-    mdev = hashlib.md5(b"".join(dev)).hexdigest()
-    rdev = hashlib.md5(b"".join(t)).hexdigest()
+    # md5 dc62609b (PREREG §2) la md5 CUA CA FILE tsx (header + dong DEV). Phai so cung pham vi:
+    # header cua ta + dong DEV cua ta. Ban cu bo header => luon lech (bug ky thuat, khong phai du lieu).
+    mdev = hashlib.md5(hdr + b"".join(dev)).hexdigest()
+    rdev = hashlib.md5(t[0] + b"".join(ln for ln in t[1:]
+                                          if ln.decode(errors="ignore").split(",")[6:7] and
+                                          ln.decode(errors="ignore").split(",")[6] < "20260101")).hexdigest()
     e26 = os.path.exists(OUT % tag_of("b0union", 42) + "storage/equity_summary.json")
     ok = mdev == rdev and len(y26) >= 800 and e26
+    # chan doan (ADDENDUM_TECH-1: nt-x14 chi de doi chieu, khong lam cong)
+    nref = None
+    try:
+        r26 = [ln for ln in open(OUT % "nt-x14-s42" + "storage/printDone.csv", "rb").read().splitlines()[1:]
+               if ln.decode(errors="ignore").split(",")[6:7] and
+               ln.decode(errors="ignore").split(",")[6] >= "20260101"]
+        nref = len(r26)
+    except Exception:  # noqa: BLE001
+        pass
     return ("PASS" if ok else "FAIL"), {"dev_md5": mdev, "dev_ref": rdev,
-                                        "n_dev": len(dev) - 1, "n_2026": len(y26), "eq26": e26}
+                                        "n_dev": len(dev), "n_2026": len(y26), "eq26": e26,
+                                        "n26_days": len({ln.decode(errors='ignore').split(",")[6][:8] for ln in y26}),
+                                        "n26_ref_ntx14": nref}
 
 
 def gates(st=None):
