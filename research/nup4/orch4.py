@@ -42,9 +42,9 @@ OUT = GA.OUT
 KS = Q.GA.ks_mod()
 USER = KS.USER
 
-JAR_DS = "sim-jar-nup4"
+JAR_DS = "sim-jar-nup4b"
 JAR_SRC = "/home/ubuntu/src_nup3/target/binance-java-sdk-1.2.4.jar"
-JAR_SHA = "e7f69618adef9f3f9bca2f4a0be98b8da9d9ec90c154f529e5e4998b1ad9a92d"
+JAR_SHA = "9f6f028b76261659579ee1eaf82f287173ccd6c5cb891cf08ebac5606fe2e347"
 PROF = "/home/ubuntu/kaggle_sim/push_jar_nsel/prof_r4_kg0_k16_f015_g155.properties"
 SEC = "/home/ubuntu/claude_master/vz_e1_wt/research/nup3/jar_sec_check.py"
 CODE_SHA = "nup4-phase0"
@@ -81,7 +81,7 @@ ARMS_P1 = ["b0union", "s1b", "m1a", "m1b", "m2a", "m2b", "m3a", "m3b"]
 
 
 def tag_of(arm, seed):
-    return "n4-%s-%s" % (arm, SEED_NAME[seed])
+    return "n4b-%s-%s" % (arm, SEED_NAME[seed])
 
 
 def finalists():
@@ -215,18 +215,18 @@ def check_run(tag, e):
         return {"ok": False, "why": "no result.json"}
     pr = GA.prof_run(tag)
     b0 = GA.prof_run("nt-x14-s%d" % e["seed"])
-    diff = sorted(k for k in set(pr) | set(b0) if pr.get(k) != b0.get(k))
+    X14K = "SIM_LOSER_TS_EXT_DAYS"      # khac nt-x14 (2026-only) la CHU DINH: ta dung hop 47 khoang
+    diff = sorted(k for k in set(pr) | set(b0) if pr.get(k) != b0.get(k) and k != X14K)
     want = sorted(k for k in arm_ov(e["arm"]) if k.startswith("SLEEVE") or k == "MERGE_MODE")
-    b0diff = sorted(k for k in set(pr) | set(b0) if pr.get(k) != b0.get(k) and not k.startswith("SLEEVE"))
     c = {"ok": rj.get("ok") is True, "jar": rj.get("jar_sha256") == JAR_SHA,
-         "keys": diff == want, "pdone": os.path.exists(o + "storage/printDone.csv")}
+         "keys": diff == want, "pdone": os.path.exists(o + "storage/printDone.csv"),
+         "eq": os.path.exists(o + "storage/equity_summary.json"),
+         "x14": len(pr.get(X14K, "").split(",")) == 47}
     if e["arm"] != "b0union":
         c["owners"] = os.path.exists(o + "storage/leg_owner.csv")
         c["mergelog"] = os.path.exists(o + "storage/merge_log.csv")
-    if e["arm"] == "b0union":
-        c["x14keys"] = b0diff == ["MERGE_MODE", "SLEEVE_ENABLED"] or b0diff == ["SLEEVE_ENABLED"]
-    out = {"ok": all(c.values()), "checks": c, "diff_keys": diff, "n_trades": rj.get("n_trades"),
-           "secs": rj.get("secs")}
+    out = {"ok": all(c.values()), "checks": c, "diff_keys": diff, "x14_n": len(pr.get(X14K, "").split(",")),
+           "n_trades": rj.get("n_trades"), "secs": rj.get("secs")}
     return out
 
 
