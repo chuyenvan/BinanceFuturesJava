@@ -78,7 +78,7 @@ def load(t):
         for d in (B, S):
             d["owner"] = [own.get((r.sym, int(r.ts.value // 10 ** 6)), r.owner) for r in d.itertuples()]
     d = pd.concat([B, S], ignore_index=True)
-    d["cl"] = d["sym"] + "|" + d["start"].astype(str)
+    d["cl"] = d["book"] + "|" + d["sym"] + "|" + d["start"].astype(str)
     return d
 
 
@@ -106,9 +106,18 @@ def equity_day(t):
 
 
 def dd_window(t, a, b):
-    """maxDD (%) tu chuoi NGAY (eq_low) trong [a,b); kem maxDD toan ky tu sim."""
+    """maxDD (%) trong [a,b). Uu tien maxDD CHINH XAC cua sim neu moc nam trong cua so; khong thi chuoi NGAY."""
     e = equity_day(t)
-    s = json.load(open(KS % t + "storage/equity_summary.json"))
+    p = KS % t + "storage/equity_summary.json"
+    if not os.path.exists(p):
+        return dict(dd=np.nan, dd_t=None, src="missing")
+    s = json.load(open(p))
+    try:
+        ts = pd.Timestamp(s["maxdd_t"])          # 'yyyyMMddHHmm' (UTC)
+        if a <= ts < b:
+            return dict(dd=float(s["maxdd_mtm_low_pct"]) * 100, dd_t=s["maxdd_t"], src="sim-exact")
+    except Exception:  # noqa: BLE001
+        pass
     if e is None:
         return dict(dd=float(s["maxdd_mtm_low_pct"]) * 100, dd_t=s["maxdd_t"], src="sim-full")
     e = e[(e["t"] >= a) & (e["t"] < b)].reset_index(drop=True)
@@ -157,18 +166,28 @@ def stats(t):
     # sleeve rieng
     sl = dv[dv["book"] == "S"]
     cS = clusters(sl)
+    syp = {}
+    for y in YEARS:
+        a, b = pd.Timestamp("%d-01-01" % y), pd.Timestamp("%d-01-01" % (y + 1))
+        sy = win(sl, a, b)
+        syp[str(y)] = dict(n_cl=int(len(clusters(sy))), stress=stress(sy), pnl=float(sy["pnl"].sum()))
     out["sl"] = dict(n_cl=int(len(cS)), pnl=float(sl["pnl"].sum()), stress=stress(sl),
                      roi=100 * float(sl["pnl"].sum()) / float(sl["notional"].sum()) if len(sl) else np.nan,
                      roi_stress=100 * stress(sl) / float(sl["notional"].sum()) if len(sl) else np.nan,
-                     yr={str(y): dict(n_cl=int(len(clusters(win(sl, pd.Timestamp("%d-01-01" % y),
-                                                              pd.Timestamp("%d-01-01" % (y + 1))))),
-                                      stress=stress(win(sl, pd.Timestamp("%d-01-01" % y),
-                                                        pd.Timestamp("%d-01-01" % (y + 1)))))
-                         for y in YEARS})
-    # phan NEN theo owner (M*)
-    bs = dv[dv["owner"] == "B"]
-    out["base_owner_pnl"] = float(bs["pnl"].sum())
-    out["sleeve_owner_pnl"] = float(dv[dv["owner"] == "S"]["pnl"].sum())
+                     yr=syp)
+    # phan NEN theo owner (M*). Funding cua cum duoc chia pro-rata notional (PREREG_NUP4 §3):
+    #   pnl_ex_fund = pnl + funding_leg; owner -= share funding cua cum theo notional.
+    fo = dv.copy()
+    fo["pnl_ex"] = fo["pnl"] + fo["funding"].fillna(0.0)
+    g = fo.groupby("cl", sort=False)
+    fo["fund_cl"] = g["funding"].transform("sum")
+    fo["ns"] = g["notional"].transform("sum")
+    fo["pnl_own"] = fo["pnl_ex"] - fo["fund_cl"] * fo["notional"] / fo["ns"].replace(0, np.nan).fillna(1.0)
+    bs = fo[fo["owner"] == "B"]
+    out["base_owner_pnl"] = float(bs["pnl_own"].sum())
+    out["sleeve_owner_pnl"] = float(fo[fo["owner"] == "S"]["pnl_own"].sum())
+    out["n_owner_B"] = int(len(bs))
+    out["n_owner_S"] = int(len(fo[fo["owner"] == "S"]))
     out["n_owner_B"] = int(len(bs))
     out["n_owner_S"] = int(len(dv[dv["owner"] == "S"]))
     # 2026 sleeve

@@ -117,3 +117,21 @@ symbol = tổng qty hai sổ.
 - Sim không mô hình từ chối lệnh khi margin@entry > equity; báo số leg bị ảnh hưởng.
 - A40 chỉ kiểm ở tầng đo equity gộp (§3).
 - HO 2026 đã dùng ở NUP/S0/NUP3b/GOLIVE ⇒ đây là lần thứ 4; trial ledger họ NUP +7 (7 arm Pha 1a) + ≤2 (Pha 1b).
+
+## ADDENDUM_TECH-1 (2026-10-31, viết TRƯỚC khi có bất kỳ kết quả biến thể nào)
+
+**Sửa một kiểm kỹ thuật, không sửa luật/cổng.** §2 đặt G-2026 = "phần 2026 trùng `nt-x14-s42`". Kiểm này **không thể
+đúng về mặt cấu trúc**, không phải vì biến thể:
+- `nt-x14-s42` dùng X14 chỉ với 5 khoảng 2026 ⇒ đoạn DEV **không hoãn** time-stop ngày nào, nên equity bước vào 2026 khác.
+- Run NUP4 dùng hợp 47 khoảng ⇒ đoạn DEV hoãn đúng như B0 go-live (`tsx-x14-*`), nên equity vào 2026 khác `nt-x14`.
+- Vì sizing là compounding trên equity, hai đường không thể trùng nhau ở 2026 dù cùng "luật".
+
+**Thay bằng:**
+- **G-DEV (giữ nguyên, chặt):** mọi dòng `start < 20260101` của `n4b-b0union-a1` phải trùng từng byte `tsx-x14-a1`
+  (`dc62609b…`). Đây là kiểm đường dữ liệu + X14 DEV + universe.
+- **B0 cho HO 2026 = chính `n4b-b0union-a1`** (cùng lịch sử, cùng equity vào 2026). Mọi so sánh 2026 của biến thể là so với
+  run này. `nt-x14-s42` chỉ dùng để **chẩn đoán** (báo Δ do khác danh sách X14 DEV), không dùng làm cổng.
+- **G-2026:** run phải có ≥ 800 cụm 2026 và `equity_summary.json` hợp lệ; không so md5 với `nt-x14`.
+
+Lý do ghi bổ sung này: nó được viết **trước** khi gate chạy xong và trước mọi số của biến thể; nó không nới bất kỳ ngưỡng
+G1–G5 nào, chỉ thay một tham chiếu không hợp lệ bằng tham chiếu đúng (cùng đường).

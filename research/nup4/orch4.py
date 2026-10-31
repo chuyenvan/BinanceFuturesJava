@@ -48,9 +48,10 @@ JAR_SHA = "9f6f028b76261659579ee1eaf82f287173ccd6c5cb891cf08ebac5606fe2e347"
 PROF = "/home/ubuntu/kaggle_sim/push_jar_nsel/prof_r4_kg0_k16_f015_g155.properties"
 SEC = "/home/ubuntu/claude_master/vz_e1_wt/research/nup3/jar_sec_check.py"
 CODE_SHA = "nup4-phase0"
-CHAIN, TKK = Q.CHAIN, Q.TKK
 ARTS = json.load(open("/home/ubuntu/claude_master/ho_tradfi_wk/arts_nt.json"))
+CHAIN, TKK = ARTS["chain_slug"], ARTS["tk_slug"]
 PRED_BASE = Q.PRED_BASE
+FUND = dict(Q.FUND, bins_md5=ARTS["bins_md5"])
 MAXPAR, POLL_S = 2, 240
 END = "20261001"
 
@@ -181,7 +182,7 @@ def push(e):
            "market_align": False, "extra_env": {"HOLDOUT_UNSEAL": Q.UNSEAL}, "ticker_min_days": 2099,
            "pred_ds": "pred_s%d" % seed, "want_pred_md5": ARTS["preds"][str(seed)],
            "want_pred_base": PRED_BASE, "tk_ho4p1": {"src": TKK, "md5": ARTS["tk_md5"]},
-           "fund_rebuild_ho4p1": Q.FUND}
+           "fund_rebuild_ho4p1": FUND}
     with open(os.path.join(folder, "run.py"), "w") as f:
         f.write(template().replace("__CFG_JSON__", repr(json.dumps(cfg))))
     md = {"id": ref, "title": ref.split("/")[1], "code_file": "run.py", "language": "python",
@@ -262,7 +263,8 @@ def poll():
 
 
 def gate_ok(st):
-    """G-DEV/G-2026/G-OFF: b0union seed 42 phai trung DEV tsx-x14-a1 va 2026 nt-x14-s42."""
+    """G-DEV: DEV cua b0union phai trung tsx-x14-a1. 2026: chi kiem co du lieu (B0 2026 = chinh run nay;
+    ADDENDUM_TECH-1: nt-x14 khong dung lam tham chieu duoc vi khac danh sach X14 DEV => khac equity vao 2026)."""
     e = st.get(tag_of("b0union", 42), {})
     if e.get("state") != "DONE":
         return ("PENDING" if e.get("state") != "FAILED" else "FAIL"), {}
@@ -272,25 +274,20 @@ def gate_ok(st):
            ln.decode(errors="ignore").split(",")[6] < "20260101"]
     y26 = [ln for ln in lines if ln.decode(errors="ignore").split(",")[6:7] and
            ln.decode(errors="ignore").split(",")[6] >= "20260101"]
-    # bo header khoi phan 2026 khi so (header nam trong dev)
     t = open(OUT % "tsx-x14-a1" + "storage/printDone.csv", "rb").read().splitlines(keepends=True)
-    n = open(OUT % "nt-x14-s42" + "storage/printDone.csv", "rb").read().splitlines(keepends=True)
-    n26 = [ln for ln in n if ln.decode(errors="ignore").split(",")[6:7] and
-           ln.decode(errors="ignore").split(",")[6] >= "20260101"]
     mdev = hashlib.md5(b"".join(dev)).hexdigest()
-    m26 = hashlib.md5(b"".join(y26)).hexdigest()
     rdev = hashlib.md5(b"".join(t)).hexdigest()
-    r26 = hashlib.md5(b"".join(n26)).hexdigest()
-    ok = mdev == rdev and m26 == r26
-    return ("PASS" if ok else "FAIL"), {"dev_md5": mdev, "dev_ref": rdev, "y26_md5": m26, "y26_ref": r26,
-                                        "n_dev": len(dev) - 1, "n_2026": len(y26)}
+    e26 = os.path.exists(OUT % tag_of("b0union", 42) + "storage/equity_summary.json")
+    ok = mdev == rdev and len(y26) >= 800 and e26
+    return ("PASS" if ok else "FAIL"), {"dev_md5": mdev, "dev_ref": rdev,
+                                        "n_dev": len(dev) - 1, "n_2026": len(y26), "eq26": e26}
 
 
 def gates(st=None):
     st = st or load_state()
     g = {}
     s, d = gate_ok(st)
-    g["G-B0UNION-DEV/2026/OFF"] = dict(status=s, **d)
+    g["G-B0UNION-DEV"] = dict(status=s, **d)
     json.dump(g, open(W + "/gates.json", "w"), indent=1)
     return g
 
@@ -302,12 +299,12 @@ def run():
         try:
             st = poll()
             g = gates(st)
-            log.info("GATE %s %s", g["G-B0UNION-DEV/2026/OFF"]["status"],
-                     json.dumps({k: v for k, v in g["G-B0UNION-DEV/2026/OFF"].items() if k != "status"}))
-            if g["G-B0UNION-DEV/2026/OFF"]["status"] == "FAIL":
+            log.info("GATE %s %s", g["G-B0UNION-DEV"]["status"],
+                     json.dumps({k: v for k, v in g["G-B0UNION-DEV"].items() if k != "status"}))
+            if g["G-B0UNION-DEV"]["status"] == "FAIL":
                 log.error("G-DEV/G-2026 FAIL -> DUNG, bao MASTER")
                 return
-            p1a_ok = g["G-B0UNION-DEV/2026/OFF"]["status"] == "PASS"
+            p1a_ok = g["G-B0UNION-DEV"]["status"] == "PASS"
             st = load_state()
             todo = [e for e in plan() if st.get(e["tag"], {}).get("state") not in ("PUSHED", "DONE", "FAILED")
                     and (e["phase"] == "gate" or (e["phase"] == "p1a" and p1a_ok) or e["phase"] == "p1b")]
