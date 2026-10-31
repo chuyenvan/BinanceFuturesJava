@@ -135,3 +135,58 @@ symbol = tổng qty hai sổ.
 
 Lý do ghi bổ sung này: nó được viết **trước** khi gate chạy xong và trước mọi số của biến thể; nó không nới bất kỳ ngưỡng
 G1–G5 nào, chỉ thay một tham chiếu không hợp lệ bằng tham chiếu đúng (cùng đường).
+
+
+## ADDENDUM-2 (2026-10-31, audit Opus theo lệnh MASTER — viết TRƯỚC mọi run biến thể; chưa có số biến thể nào)
+
+**Căn cứ.** `~/claude_master/oc1031/AUDIT_NUP4.md`. Code sửa trên nhánh `fix/nup4-audit` (worktree
+`~/claude_master/nup4_fix/wt`, gốc 45f6ce90): `c4481bd5` đưa patch đo equity (dirty trong `~/src_nup3`, đã vào jar 9f6f028b)
+thành commit; `7213a5d6` STUB config (không còn host 242/226); `eaa614d6` sửa lỗi. Jar mới build từ `eaa614d6` (sạch), khi build
+thay hằng token Telegram bằng "" (không commit): sha256 `e7fe5257554f8d75c30b44c419cebe0142309365777bcce48a41e3604cb7cc10`,
+md5 `40702ab178ff5148be001121616668e9`. Jar 9f6f028b / e7f69618 của claw **không dùng nữa**.
+ADDENDUM-2 **thay** ADDENDUM_TECH-1 ở các điểm dưới; mọi điểm không nhắc giữ nguyên §1–§10.
+
+### A. Bỏ G-2026 do claw tự đặt; G4 về đúng task
+- Bỏ "G-2026: ≥ 800 cụm 2026" (ADDENDUM_TECH-1). Ngưỡng không có căn cứ (B0-A1 s42 chỉ có 396 cụm 2026).
+- Kiểm kỹ thuật cho mọi run B0-A1: **G-DEV** = header + mọi dòng `start < 20260101` trùng từng byte `tsx-x14-<seed>`.
+  Phần 2026 KHÔNG so md5 với `nt-x14` (đã chứng minh lệch qty 404/404 do equity vào 2026 khác — hợp lệ).
+- **G4 (giữ đúng task/§5):** HO 2026 A1, phần sleeve: ΣPnL_stress sleeve > 0 ở ≥ 6/8 seed, ROI_stress sleeve ≥ +0,5 %/lệnh,
+  maxDD toàn danh mục HO ≥ −15 %.
+
+### B. Bỏ M3
+- Code 45f6ce90: nhánh SPLIT chỉ đếm/log ⇒ M3 ≡ S1b-SEP (2 vị thế, 2 stop trên cùng symbol — trái one-way).
+  M3 thật cần mô phỏng đóng reduceOnly từng phần + MỘT stop closePosition dời theo phần còn lại ⇒ để vòng sau.
+- `MERGE_MODE=M3` nay ném lỗi. Bỏ 8 run M3 (Pha 1a: 4 seed × 2 size). Trial ledger họ NUP: Pha 1a còn 5 arm (S1b-SEP, M1×2, M2×2).
+
+### C. M1 và funding (sửa lỗi, không phải tham số mới)
+- M1: leg NỀN gộp vào cụm sleeve dùng **đồng hồ time-stop/cond-exit/DCA-signal và neo hard-SL/TP (firstEntryPrice) của chính
+  leg nền đầu tiên**, giữ qua DCA sau gộp. Cửa sổ funding vẫn từ leg đầu của cụm (clusterFirstLegTime).
+- Funding cụm có hai chủ sở hữu (M1/M2): chia tổng funding theo **qty** B/S, ghi vào leg đầu của mỗi phần; tổng bảo toàn.
+  Cụm một chủ: như cũ. §3 "chia khi chấm" được thay bằng chia trong sim.
+- Bất biến one-way: `merge_overlap_ticks` (số tick có symbol mà cả 2 sổ cùng giữ) **phải = 0** ở mọi run M1/M2, khác 0 ⇒ run hỏng.
+
+### D. Kill-switch A40 (mô phỏng tối thiểu)
+- `KILLSW_A40_DD=0.40` cho **MỌI** run NUP4 (B0 và biến thể). Equity GỘP (nền + sleeve, mark close) đo cuối mỗi tick;
+  DD từ đỉnh ≥ 40 % ⇒ tick sau chặn MỞ CỤM MỚI (nền, sleeve, cả gộp); DCA vào cụm đang mở vẫn chạy; DD < 40 % ⇒ mở lại.
+- Báo `killsw_triggers`, `killsw_blocked` trong `equity_summary.json`. B0 (DD ~22 %) không kích ⇒ vẫn trùng byte.
+
+### E. Cách đo DD (G3)
+- Hiệu chỉnh trên B0-A1 s42: DD trong sim (đỉnh eq_low, jar 9f6f028b) = **−21,40 %** (đáy 2025-10-11); MTM legacy phút-close
+  (`golive_quarterly`, Vision, missing = 0) cho `tsx-x14-a1` — phần DEV trùng byte — = **−22,203 %** (đáy 2022Q2).
+  Lệch **0,80 pp > 0,2 pp** và khác ngày đáy ⇒ **G3 chấm bằng MTM legacy phút-close (gvz_mtm / golive_quarterly mtm_dev),
+  missing = 0, trên printDone gộp hai sổ.** Giá kline1m không còn trên Oracle và cấm tải > 1 GB ⇒ MTM chạy trong Kaggle kernel
+  (đếm vào ngân sách kernel, không phải run sim).
+- `maxdd_close_pct` (mới, kiểu close/close trong sim) và `maxdd_mtm_low_pct` chỉ để báo cáo, không dùng để chấm G3.
+- G4 "maxDD toàn danh mục HO" cũng chấm bằng MTM legacy.
+
+### F. Ngân sách run sim mới (trần 40)
+| bước | run |
+|---|---|
+| Gate hồi quy: B0-A1 s42 jar mới, printDone **trùng từng byte** `n4b-b0union-a1` + G-DEV | 1 |
+| B0-A1 7 seed còn lại (s7, s13, s21, s99, s123, s777, s2024) ⇒ baseline B0-A1 8 seed | 7 |
+| Pha 1a: S1b-SEP + M1×{0,574; 0,45} + M2×{0,574; 0,45} × 4 seed (a1, s7, s21, s99); B0 lấy từ dòng trên | 20 |
+| Pha 1b: ≤ 2 biến thể × 4 seed (s13, s123, s777, s2024) | ≤ 8 |
+| Stress trượt +0,1 %/chiều cho biến thể thắng | 1 |
+| **Tổng** | **≤ 37** |
+- Gate s42 FAIL ⇒ dừng, báo MASTER. Mọi run phải được Opus pre-review (G-PRE) và MASTER duyệt trước khi push Kaggle.
+- G1, G2, G5, luật chọn Calmar, §6: giữ nguyên. Không thêm biến thể, không đổi size.
