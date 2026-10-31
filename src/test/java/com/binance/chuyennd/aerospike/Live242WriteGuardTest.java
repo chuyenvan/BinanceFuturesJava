@@ -93,8 +93,10 @@ public class Live242WriteGuardTest {
 
     @Test
     public void mode242_envMissing_writesReachClient() {
-        assertNull("test phai chay KHONG co env shadow", System.getenv(Live242WriteGuard.KEY_SHADOW_HOST));
-        assertNull(System.getenv(Live242WriteGuard.KEY_ENABLED));
+        // [NUP4-FIX] tien dieu kien moi truong: tren Oracle moi mvn BAT BUOC LIVE_IS_SHADOW_HOST=true (guard 10-31)
+        //   => test nay (can env THIEU) duoc BO QUA thay vi fail; chay o may khong co guard van kiem day du.
+        org.junit.Assume.assumeTrue("can env shadow THIEU", System.getenv(Live242WriteGuard.KEY_SHADOW_HOST) == null);
+        org.junit.Assume.assumeTrue("can env enabled THIEU", System.getenv(Live242WriteGuard.KEY_ENABLED) == null);
         Live242WriteGuard.resetForTest(null);                     // doc env that (thieu) nhu tren 242
         assertTrue(Live242WriteGuard.writesEnabled());
         DataManagerAerospikeFloatSim.saveAiPrediction1M(new AiPredictionData(0L, 0.01f, 0.02f));
