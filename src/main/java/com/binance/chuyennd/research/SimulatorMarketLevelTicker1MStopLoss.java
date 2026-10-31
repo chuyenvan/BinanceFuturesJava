@@ -345,6 +345,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
                                     // Chép ID đang chạy vào Set để khóa
                                     for (int i = 0; i < activeRunningCount; i++) symbolLocked.add(activeRunningIds[i]);
+                                    // [NUP4] M2: symbol NEN da gop vao so sleeve van la 'dang giu' phia so NEN
+                                    if (!m2BaseHeld.isEmpty()) symbolLocked.addAll(m2BaseHeld);
                                     // [NUP3B] BASE_SKIP_SLEEVE_SYMBOLS: symbol sleeve dang giu = dang giu (TAT => khong lam gi)
                                     if (Configs.BASE_SKIP_SLEEVE_SYMBOLS && sleeveBook != null) addSleeveLocked(symbolLocked, time);
 
@@ -443,7 +445,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                         }
                                         if (baseSkipSleeveSym(targetId, time, MarketLevelChange.PREDICT_SYMBOL_TRADE)) {
                                             // [NUP3B] BASE_SKIP_SLEEVE_SYMBOLS: sleeve dang giu => bo qua nhu 'dang giu' (khong vao gate)
-                                        } else if (!isSymbolRunning(targetId)) {
+                                        } else if (!isSymbolRunning(targetId) && !m2BaseHeld.contains(targetId)) {
                                             KlineObjectSimple ticker = symbol2Ticker[targetId];
                                             if (Utils.isTickerAvailable(ticker)) {
                                                 createOrderBUY(targetId, ticker, MarketLevelChange.PREDICT_SYMBOL_TRADE, marketData, symbolPred, selRank);
@@ -1169,6 +1171,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         removeActiveRunningId(symbolId);
 
         BudgetManagerSimple.getInstance().marginRunning -= orderMulti.calMargin();
+        // [NUP4] M2: vi the da dong => so NEN khong con 'dang giu' symbol nay nua
+        if (inSleeve && !m2BaseHeld.isEmpty()) m2BaseHeld.remove(symbolId);
     }
 
     /**
@@ -1402,6 +1406,14 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     private final StringBuilder sleeveCandLog = new StringBuilder();
     long slCand, slCandBookFull, slOpened, slOpenedBookFull, slSkipHeldBase, slSkipHeldSleeve, slSkipBurst,
             slSkipNoFlag, slNotOpened, slOverlap, slClustersSleeve, slClustersBase, slUTotFail, slUTotMaxT, slCombMaxDDT;
+    // [NUP4 2026-10-31] docs/prereg/PREREG_NUP4.md §3 — trung symbol tren 1 tai khoan one-way.
+    //   mergeMode NONE/M1/M2/M3; legOwner = "sym|tOpenMs" -> B/S; m2BaseHeld = symbol NEN da gop vao so sleeve
+    //   (de so NEN van coi la 'dang giu' sau khi vi the chuyen sang so sleeve).
+    String mergeMode = "NONE";
+    final StringBuilder mergeLog = new StringBuilder();
+    final java.util.LinkedHashMap<String, String> legOwner = new java.util.LinkedHashMap<>();
+    final java.util.Set<Short> m2BaseHeld = new java.util.HashSet<>();
+    long mrgCount, mrgM3Ticks;
     float slUTotMax = 0f, slUTotMarginMax = 0f, slCombPeak = Float.NaN, slCombMaxDD = 0f, slCombMaxDDPct = 0f;
     int slMaxPosTotal = 0;
 
@@ -1429,6 +1441,20 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             throw new IllegalStateException("[NUP3-SLEEVE] tham so sleeve khong hop le");
         }
         sleeveArm = arm;
+        String mm = Configs.MERGE_MODE == null ? "NONE" : Configs.MERGE_MODE.trim().toUpperCase();
+        if (!("NONE".equals(mm) || "M1".equals(mm) || "M2".equals(mm) || "M3".equals(mm))) {
+            throw new IllegalStateException("[NUP4] MERGE_MODE phai la NONE/M1/M2/M3, nhan: " + mm);
+        }
+        if (!"NONE".equals(mm) && Configs.BASE_SKIP_SLEEVE_SYMBOLS) {
+            throw new IllegalStateException("[NUP4] MERGE_MODE chi dung khi BASE_SKIP_SLEEVE_SYMBOLS=false");
+        }
+        mergeMode = mm;
+        mergeLog.setLength(0);
+        legOwner.clear();
+        m2BaseHeld.clear();
+        mrgCount = 0L;
+        mrgM3Ticks = 0L;
+        if (!"NONE".equals(mergeMode)) LOG.warn("*** [NUP4] MERGE_MODE={} (gop vi the cung symbol) ***", mergeMode);
         if ("V2".equals(arm)) {
             java.io.File f = resolveSleeveFile(Configs.SLEEVE_MKT_FLAG_FILE);
             long[][] iv;
@@ -1458,6 +1484,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         sleeveBook = Book.fresh();
         sleeveArm = arm;
         inSleeve = false;
+        mergeMode = Configs.MERGE_MODE == null ? "NONE" : Configs.MERGE_MODE.trim().toUpperCase();
+        mergeLog.setLength(0);
+        legOwner.clear();
+        m2BaseHeld.clear();
+        mrgCount = 0L;
+        mrgM3Ticks = 0L;
     }
 
     /** Duong dan file co: dung nguyen neu ton tai, khong thi tim theo ten file trong /kaggle/input (mount Kaggle). */
@@ -1869,9 +1901,56 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 ("ts_ms,sid,rank,sp,p15,book_full,burst60,mkt_flag,decision\n" + sleeveCandLog)
                         .getBytes(java.nio.charset.StandardCharsets.UTF_8));
         String js = sleeveSummaryJson(n);
+        js = js.substring(0, js.length() - 1) + String.format(java.util.Locale.ROOT,
+                ",\"merge_mode\":\"%s\",\"merge_count\":%d,\"merge_m3_ticks\":%d}", mergeMode, mrgCount, mrgM3Ticks);
         java.nio.file.Files.write(java.nio.file.Paths.get("storage/sleeve_summary.json"),
                 js.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        writeLegOwnerAndMerge();
         LOG.info("[NUP3-SLEEVE] SUMMARY {}", js);
+    }
+
+    /** [NUP4] storage/leg_owner.csv (sym,tOpen,owner) + storage/merge_log.csv — chi de cham, khong doi printDone. */
+    private void writeLegOwnerAndMerge() throws IOException {
+        StringBuilder sb = new StringBuilder("sym,tOpen,owner\n");
+        java.util.LinkedHashMap<String, OrderTargetInfoTest> seen = new java.util.LinkedHashMap<>();
+        for (OrderTargetInfoTest o : allOrderDone.values()) seen.put(o.symbol + "|" + o.timeStart, o);
+        for (OrderTargetInfoTest o : sleeveBook.allOrderDone.values()) seen.put(o.symbol + "|" + o.timeStart, o);
+        for (java.util.Map.Entry<String, OrderTargetInfoTest> e : seen.entrySet()) {
+            String own = legOwner.get(e.getKey());
+            sb.append(e.getValue().symbol).append(',').append(e.getValue().timeStart).append(',')
+                    .append(own != null ? own : "B").append('\n');
+        }
+        java.nio.file.Files.write(java.nio.file.Paths.get("storage/leg_owner.csv"),
+                sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        java.nio.file.Files.write(java.nio.file.Paths.get("storage/merge_log.csv"),
+                ("tMs,sym,mode,n_from,n_to\n" + mergeLog).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    /** [NUP4] Quyet dinh khi mot leg moi duoc tao: gop ve dau / tach / khong xu ly. Thuan, test duoc. */
+    static String mergeDecision(String mode, boolean inSleeve, boolean baseHeld, boolean sleeveHeld) {
+        String m = mode == null ? "NONE" : mode.trim().toUpperCase();
+        if (!("M1".equals(m) || "M2".equals(m) || "M3".equals(m))) return "NONE";
+        if (inSleeve || baseHeld || !sleeveHeld) return "NONE";     // sleeve khong bao gio mo khi ben kia giu
+        return "M1".equals(m) ? "MERGE_BASE" : ("M2".equals(m) ? "MERGE_SLEEVE" : "SPLIT");
+    }
+
+    /** [NUP4] Tong PnL theo chu so huu tu danh sach leg (moi leg tu mang entry/qty/funding cua no). */
+    static java.util.Map<String, Double> pnlByOwner(java.util.List<OrderTargetInfoTest> legs,
+                                                    java.util.Map<String, String> owner) {
+        java.util.Map<String, Double> out = new java.util.TreeMap<>();
+        out.put("B", 0.0);
+        out.put("S", 0.0);
+        for (OrderTargetInfoTest o : legs) {
+            String k = owner.get(o.symbol + "|" + o.timeStart);
+            if (k == null) k = "B";
+            out.put(k, out.get(k) + (o.calTp() == null ? 0.0 : o.calTp().doubleValue()));
+        }
+        return out;
+    }
+
+    /** [NUP4] 1 stop: sau khi gop, cum chi con MOT muc stop (priceSL) va MOT gia entry binh quan qty. */
+    static boolean singleStopAfterMerge(OrderTargetInfoTest merged) {
+        return merged != null && merged.priceSL == null;
     }
 
     private String sleeveSummaryJson(int nRows) {
@@ -2290,6 +2369,59 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         } else if (selRank != null) {
             LOG.info("SELRANK sym={} tOpen={} tMs={} rank={} pred={}", symbolStr,
                     Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime), ticker.startTime, selRank, symbolPred);
+        }
+
+        // ===== [NUP4 2026-10-31] docs/prereg/PREREG_NUP4.md §3 — TRUNG SYMBOL tren MOT tai khoan one-way =====
+        //  Chi nhanh NEN moi co the gap symbol SLEEVE dang giu (sleeve da tu chan chieu nguoc o sleeveSymbolFree).
+        //  M1: gop ve so NEN (tail append leg nen vao cung list, prevRunning = cum sleeve => luat nen quan).
+        //  M2: gop ve so SLEEVE (append leg nen vao so sleeve, luat sleeve quan; so nen chi giu 'shadow' de khong mo lai).
+        //  M3: khong gop so; hai so cung giu symbol, moi phan dong theo luat cua no (reduceOnly) — chi do luong.
+        if (sleeveBook != null) legOwner.put(order.symbol + "|" + order.timeStart, inSleeve ? "S" : "B");
+        String mdec = sleeveBook == null ? "NONE" : mergeDecision(mergeMode, inSleeve,
+                symbol2OrdersEntry[symbolId] != null || m2BaseHeld.contains(symbolId),
+                sleeveBook.symbol2OrderRunning[symbolId] != null);
+        if (!"NONE".equals(mdec)) {
+            if ("MERGE_BASE".equals(mdec) || "MERGE_SLEEVE".equals(mdec)) {
+                OrderTargetInfoTest slvRun = sleeveBook.symbol2OrderRunning[symbolId];
+                List<OrderTargetInfoTest> slvOrders = sleeveBook.symbol2OrdersEntry[symbolId];
+                int nFrom = slvOrders.size();
+                // go vi the khoi so sleeve (mang active O(1) + margin)
+                short[] slvIds = sleeveBook.activeRunningIds;
+                for (int i2 = 0; i2 < sleeveBook.activeRunningCount; i2++) {
+                    if (slvIds[i2] == symbolId) {
+                        slvIds[i2] = slvIds[sleeveBook.activeRunningCount - 1];
+                        sleeveBook.activeRunningCount--;
+                        break;
+                    }
+                }
+                sleeveBook.symbol2OrdersEntry[symbolId] = null;
+                sleeveBook.symbol2OrderRunning[symbolId] = null;
+                sleeveBook.bm.marginRunning -= slvRun.calMargin();
+                if ("MERGE_BASE".equals(mdec)) {
+                    symbol2OrdersEntry[symbolId] = slvOrders;
+                    symbol2OrderRunning[symbolId] = slvRun;
+                    BudgetManagerSimple.getInstance().marginRunning += slvRun.calMargin();
+                } else {
+                    slvOrders.add(order);
+                    OrderTargetInfoTest m = mergeOrder(slvOrders, ticker, slvRun);
+                    sleeveBook.symbol2OrdersEntry[symbolId] = slvOrders;
+                    sleeveBook.symbol2OrderRunning[symbolId] = m;
+                    sleeveBook.bm.marginRunning += m.calMargin();
+                    m2BaseHeld.add(symbolId);
+                }
+                mrgCount++;
+                mergeLog.append(ticker.startTime).append(',').append(order.symbol).append(',').append(mergeMode)
+                        .append(',').append(nFrom).append(',').append("M1".equals(mergeMode) ? 0 : 1).append('\n');
+                LOG.info("NUP4-MERGE mode={} sym={} t={} nSleeveLegs={} to={}", mergeMode, order.symbol,
+                        Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime), nFrom, "MERGE_BASE".equals(mdec) ? "BASE" : "SLEEVE");
+                if ("MERGE_SLEEVE".equals(mdec)) {
+                    sleeveBook.bm.counterOrderCreated.incrementAndGet();
+                    return;                                  // leg nay KHONG vao so NEN
+                }
+            } else if ("SPLIT".equals(mdec)) {
+                mrgM3Ticks++;
+                mergeLog.append(ticker.startTime).append(',').append(order.symbol).append(",M3,,").append('\n');
+            }
         }
 
         List<OrderTargetInfoTest> orders = symbol2OrdersEntry[symbolId];

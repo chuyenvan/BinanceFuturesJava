@@ -192,6 +192,10 @@ public class Configs {
     // [NUP3B 2026-10-27] docs/prereg/PREREG_NUP3B.md §2 (S1x): so NEN KHONG mo cum moi tren symbol SLEEVE dang giu
     //   (coi nhu 'dang giu' o buoc chon ung vien — giong one-way live). Mac dinh false => byte-identical.
     public static boolean BASE_SKIP_SLEEVE_SYMBOLS = false;
+    // [NUP4 2026-10-31] docs/prereg/PREREG_NUP4.md §3: xu ly TRUNG SYMBOL khi bat buoc chung 1 tai khoan one-way.
+    //   NONE = hanh vi NUP3b (so tach, khong xu ly). M1 = gop ve so NEN (luat nen). M2 = gop ve so SLEEVE (luat sleeve).
+    //   M3 = khong gop so, dong tach tung phan (reduceOnly). Mac dinh NONE => byte-identical.
+    public static String MERGE_MODE = "NONE";
 
 
 
@@ -954,6 +958,7 @@ public class Configs {
             if ((v = Cfg.get("SLEEVE_BURST_MIN")) != null) SLEEVE_BURST_MIN = Integer.parseInt(v.trim());
             if ((v = Cfg.get("SLEEVE_MKT_FLAG_FILE")) != null) SLEEVE_MKT_FLAG_FILE = v.trim();
             if ((v = Cfg.get("BASE_SKIP_SLEEVE_SYMBOLS")) != null) BASE_SKIP_SLEEVE_SYMBOLS = Boolean.parseBoolean(v.trim());
+            if ((v = Cfg.get("MERGE_MODE")) != null) MERGE_MODE = v.trim().toUpperCase();
             // [GATE_QUOTA_SKIPFULL 2026-10-04] docs/prereg/PREREG_GATE_QUOTA_SKIPFULL.md (sim + live cung key; khong khai => false)
             if ((v = Cfg.get("GATE_QUOTA_SKIP_WHEN_FULL")) != null) GATE_QUOTA_SKIP_WHEN_FULL = Boolean.parseBoolean(v.trim());
             // [BURST-COOLDOWN 2026-10-16] docs/prereg/PREREG_BURST_COOLDOWN.md (khong khai => 0 => tat)
