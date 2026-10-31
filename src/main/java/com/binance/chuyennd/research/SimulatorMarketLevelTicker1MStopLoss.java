@@ -302,7 +302,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                                     if (cl == null || tk == null || cl.firstEntryPrice == null
                                             || cl.firstEntryPrice <= 0f) continue;
                                     if (tk.priceClose / cl.firstEntryPrice - 1f > Configs.DCA_SIGNAL_LOSS) continue;
-                                    long t0 = cl.clusterFirstLegTime > 0L ? cl.clusterFirstLegTime : cl.timeStart;
+                                    long t0 = clockOf(cl);
                                     if (dsTouchX[id] != t0) {
                                         dsTouchX[id] = t0;
                                         dsT1++;
@@ -791,7 +791,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             if (lg != null && lg.dcaSignalLeg) return false;
         }
         // (d) cooldown ke tu leg DAU cua cum (tranh nhieu intra-bar).
-        long t0 = cluster.clusterFirstLegTime > 0L ? cluster.clusterFirstLegTime : cluster.timeStart;
+        long t0 = clockOf(cluster);
         if (time - t0 < (long) Configs.DCA_SIGNAL_COOLDOWN_MIN * Utils.TIME_MINUTE) return false;
         // (b) muc lo do tren firstEntryPrice (BAT BIEN qua DCA) — cung convention DcaUtils.shouldDcaGrid.
         float drop = ticker.priceClose / cluster.firstEntryPrice - 1f;
@@ -1032,7 +1032,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 if (com.binance.chuyennd.tradecore.PreArmSlUtils.enabledVal(preArmSlEff) && orderMulti.priceSL == null
                         && com.binance.chuyennd.tradecore.PreArmSlUtils.hitVal(orderMulti.firstEntryPrice, ticker.minPrice, preArmSlEff)) {
                     float fep = orderMulti.firstEntryPrice;
-                    long anchorSl = orderMulti.clusterFirstLegTime > 0L ? orderMulti.clusterFirstLegTime : orderMulti.timeStart;
+                    long anchorSl = clockOf(orderMulti);
                     orderMulti.status = OrderTargetStatus.STOP_LOSS_DONE;
                     orderMulti.priceTP = com.binance.chuyennd.tradecore.PreArmSlUtils.exitPriceVal(
                             fep, ticker.priceOpen, ticker.priceClose, preArmSlEff);
@@ -1056,7 +1056,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             ? Configs.SL_ADAPT_TSTOP_STRONG_H : Configs.SL_ADAPT_TSTOP_WEAK_H;
                 }
                 if (loserTsHours > 0 && orderMulti.priceSL == null) {
-                    long anchor = orderMulti.clusterFirstLegTime > 0L ? orderMulti.clusterFirstLegTime : orderMulti.timeStart;
+                    long anchor = clockOf(orderMulti);
                     if (time - anchor > loserTsHours * 3600000L
                             && Configs.LOSER_TS_EXT_HOURS > 0
                             && time - anchor <= (loserTsHours + (long) Configs.LOSER_TS_EXT_HOURS) * 3600000L
@@ -1080,7 +1080,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 //     cond-exit bat. Default HOURS=0 => nhanh khong chay => byte-identical.
                 if (Configs.COND_EXIT_HOURS > 0 && orderMulti.priceSL == null
                         && orderMulti.maePeak != null && orderMulti.priceEntry != null) {
-                    long anchorCe = orderMulti.clusterFirstLegTime > 0L ? orderMulti.clusterFirstLegTime : orderMulti.timeStart;
+                    long anchorCe = clockOf(orderMulti);
                     if (time - anchorCe > Configs.COND_EXIT_HOURS * 3600000L
                             && (orderMulti.maePeak - orderMulti.priceEntry) / orderMulti.priceEntry < Configs.COND_EXIT_MIN_FAV) {
                         orderMulti.status = OrderTargetStatus.STOP_LOSS_DONE;
@@ -1150,6 +1150,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             if (TickDecisionLog.ON) TickDecisionLog.posClose(orderMulti.timeUpdate, symbolId, orderMulti);
             orderMulti.computeFundingOnClose();
             boolean fundingAssigned = false;
+            // [NUP4-FIX] cum TRON chu so huu (gop M1/M2): funding cum chia theo qty B/S (null => hanh vi cu).
+            float[] fSplit = (sleeveBook != null && !"NONE".equals(mergeMode))
+                    ? splitFundingByOwner(orders, legOwner, orderMulti.calFundingFee()) : null;
+            int li = 0;
             for (OrderTargetInfoTest order : orders) {
                 order.timeUpdate = orderMulti.timeUpdate;
                 order.status = orderMulti.status;
@@ -1158,10 +1162,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 order.maeLow = orderMulti.maeLow;   // 🔎 chép đáy THẬT cụm sang từng leg (đo MAE)
                 order.maePeak = orderMulti.maePeak;   // 🔎 2026-08-02: chép ĐỈNH THẬT (fix maePeak null tren done-order)
                 order.lastPrice = orderMulti.lastPrice;
-                if (!fundingAssigned) {
+                if (fSplit != null) {
+                    java.util.TreeMap<Long, Float> fm = new java.util.TreeMap<>();
+                    if (fSplit[li] != 0f) fm.put(orderMulti.timeUpdate, fSplit[li]);
+                    order.time2FundingFee = fm;
+                } else if (!fundingAssigned) {
                     order.time2FundingFee = orderMulti.time2FundingFee;   // toàn bộ phí cụm vào leg đầu
                     fundingAssigned = true;
                 }
+                li++;
 
                 putOrderDone(order);   // F8 FIX: khong ghi de khi key dung do
                 BudgetManagerSimple.getInstance().updatePnl(order);
@@ -1172,6 +1181,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         symbol2OrdersEntry[symbolId] = null;
         symbol2OrderRunning[symbolId] = null;
         removeActiveRunningId(symbolId);
+        if (!inSleeve && !m1AnchorTime.isEmpty()) {   // [NUP4-FIX] cum dong => bo anchor M1
+            m1AnchorTime.remove(symbolId);
+            m1AnchorEntry.remove(symbolId);
+        }
 
         BudgetManagerSimple.getInstance().marginRunning -= orderMulti.calMargin();
         // [NUP4] M2: vi the da dong => so NEN khong con 'dang giu' symbol nay nua
@@ -1256,6 +1269,15 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // [DCA-SIGNAL 2026-09-14] bac grid cua cum KHONG dem leg-signal (PREREG muc 3.4).
         //   Flag OFF => gridLegCount(orders) == orders.size() => byte-identical.
         orderResult.legCount = gridLegCount(orders);   // DCA GRID: cum dang o bac nao
+        // [NUP4-FIX] M1: cum sleeve da gop vao so NEN => dong ho time-stop + neo hard-SL = leg NEN dau tien
+        //   (khong thua huong tuoi/gia entry cua cum sleeve). Map rong (moi run khong M1) => khong lam gi.
+        if (!inSleeve && !m1AnchorTime.isEmpty()) {
+            Long at = m1AnchorTime.get(orders.get(0).symbolId);
+            if (at != null) {
+                orderResult.stopClockTime = at;
+                orderResult.firstEntryPrice = m1AnchorEntry.get(orders.get(0).symbolId);
+            }
+        }
         // [2026-09-02] FUNDING notional MARK: carry phan da tich + moc settle cuoi sang cum moi (khong tinh trung/khong mat).
         if (Configs.FUNDING_MARK_NOTIONAL && prevRunning != null) {
             orderResult.fundingAccrued = prevRunning.fundingAccrued;
@@ -1417,6 +1439,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     final java.util.LinkedHashMap<String, String> legOwner = new java.util.LinkedHashMap<>();
     final java.util.Set<Short> m2BaseHeld = new java.util.HashSet<>();
     long mrgCount, mrgM3Ticks;
+    // [NUP4-FIX] anchor M1 (symbolId -> thoi diem/gia leg NEN dau tien sau gop), bat bien one-way, kill-switch A40.
+    final java.util.HashMap<Short, Long> m1AnchorTime = new java.util.HashMap<>();
+    final java.util.HashMap<Short, Float> m1AnchorEntry = new java.util.HashMap<>();
+    long mrgOverlapTicks;
+    KillSwitchA40 killSw = new KillSwitchA40(Configs.KILLSW_A40_DD);
     float slUTotMax = 0f, slUTotMarginMax = 0f, slCombPeak = Float.NaN, slCombMaxDD = 0f, slCombMaxDDPct = 0f;
     int slMaxPosTotal = 0;
 
@@ -1445,8 +1472,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
         sleeveArm = arm;
         String mm = Configs.MERGE_MODE == null ? "NONE" : Configs.MERGE_MODE.trim().toUpperCase();
-        if (!("NONE".equals(mm) || "M1".equals(mm) || "M2".equals(mm) || "M3".equals(mm))) {
-            throw new IllegalStateException("[NUP4] MERGE_MODE phai la NONE/M1/M2/M3, nhan: " + mm);
+        if (!("NONE".equals(mm) || "M1".equals(mm) || "M2".equals(mm))) {
+            throw new IllegalStateException("[NUP4] MERGE_MODE phai la NONE/M1/M2 (M3 da bo, PREREG_NUP4 ADDENDUM-2), nhan: " + mm);
         }
         if (!"NONE".equals(mm) && Configs.BASE_SKIP_SLEEVE_SYMBOLS) {
             throw new IllegalStateException("[NUP4] MERGE_MODE chi dung khi BASE_SKIP_SLEEVE_SYMBOLS=false");
@@ -1455,6 +1482,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         mergeLog.setLength(0);
         legOwner.clear();
         m2BaseHeld.clear();
+        m1AnchorTime.clear();
+        m1AnchorEntry.clear();
+        mrgOverlapTicks = 0L;
+        killSw = new KillSwitchA40(Configs.KILLSW_A40_DD);
         mrgCount = 0L;
         mrgM3Ticks = 0L;
         if (!"NONE".equals(mergeMode)) LOG.warn("*** [NUP4] MERGE_MODE={} (gop vi the cung symbol) ***", mergeMode);
@@ -1491,6 +1522,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         mergeLog.setLength(0);
         legOwner.clear();
         m2BaseHeld.clear();
+        m1AnchorTime.clear();
+        m1AnchorEntry.clear();
+        mrgOverlapTicks = 0L;
+        killSw = new KillSwitchA40(Configs.KILLSW_A40_DD);
         mrgCount = 0L;
         mrgM3Ticks = 0L;
     }
@@ -1821,7 +1856,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
     // ===== [NUP4 2026-10-31] do luong equity MTM GOP cho MOI run (ke ca B0 khong sleeve) =====
     //  Khong tham gia quyet dinh; de cham G3 (maxDD) khi cache gia parquet khong con tren Oracle.
-    float eqPeakLow = Float.NaN, eqMaxDD = 0f, eqMaxDDPct = 0f;
+    float eqPeakLow = Float.NaN, eqMaxDD = 0f, eqMaxDDPct = 0f, eqPeakClose = Float.NaN, eqMaxDDClosePct = 0f;
     long eqMaxDDT = 0L, eqDayCur = Long.MIN_VALUE;
     float eqDayLow = Float.NaN, eqDayClose = Float.NaN;
     final StringBuilder eqDays = new StringBuilder();
@@ -1835,6 +1870,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         float realized = b.balanceBasic + b.profit + (sleeveBook != null ? sleeveBook.bm.profit : 0f);
         float eqClose = realized + acc[1];
         float eqLow = realized + acc[2];
+        killSw.update(eqClose);   // [NUP4-FIX] A40 tren equity GOP (close)
+        if (Float.isNaN(eqPeakClose) || eqClose > eqPeakClose) eqPeakClose = eqClose;   // DD kieu legacy (close/close)
+        if (eqPeakClose > 0f && (eqPeakClose - eqClose) / eqPeakClose > eqMaxDDClosePct)
+            eqMaxDDClosePct = (eqPeakClose - eqClose) / eqPeakClose;
+        if (sleeveBook != null && !"NONE".equals(mergeMode) && countOverlap(symbol2OrderRunning, activeRunningIds,
+                activeRunningCount, sleeveBook.symbol2OrderRunning) > 0) mrgOverlapTicks++;
         if (Float.isNaN(eqPeakLow) || eqLow > eqPeakLow) eqPeakLow = eqLow;
         float dd = eqPeakLow - eqLow;
         if (dd > eqMaxDD) {
@@ -1865,8 +1906,11 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         java.nio.file.Files.write(java.nio.file.Paths.get("storage/equity_day.csv"),
                 ("tMs,eq_close,eq_low\n" + eqDays).getBytes(java.nio.charset.StandardCharsets.UTF_8));
         String js = String.format(java.util.Locale.ROOT,
-                "{\"maxdd_mtm_low_usd\":%.2f,\"maxdd_mtm_low_pct\":%.6f,\"maxdd_t\":\"%s\",\"peak_low\":%.2f}",
-                eqMaxDD, eqMaxDDPct, Utils.normalizeDateYYYYMMDDHHmm(eqMaxDDT), eqPeakLow);
+                "{\"maxdd_mtm_low_usd\":%.2f,\"maxdd_mtm_low_pct\":%.6f,\"maxdd_t\":\"%s\",\"peak_low\":%.2f,"
+                        + "\"maxdd_close_pct\":%.6f,\"killsw_thr\":%.4f,\"killsw_triggers\":%d,\"killsw_blocked\":%d,"
+                        + "\"merge_overlap_ticks\":%d}",
+                eqMaxDD, eqMaxDDPct, Utils.normalizeDateYYYYMMDDHHmm(eqMaxDDT), eqPeakLow,
+                eqMaxDDClosePct, killSw.thr, killSw.triggers, killSw.blocked, mrgOverlapTicks);
         java.nio.file.Files.write(java.nio.file.Paths.get("storage/equity_summary.json"),
                 js.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         LOG.info("[NUP4-EQ] {}", js);
@@ -1985,9 +2029,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
     /** [NUP4] Quyet dinh khi mot leg moi duoc tao: gop ve dau / tach / khong xu ly. Thuan, test duoc. */
     static String mergeDecision(String mode, boolean inSleeve, boolean baseHeld, boolean sleeveHeld) {
         String m = mode == null ? "NONE" : mode.trim().toUpperCase();
-        if (!("M1".equals(m) || "M2".equals(m) || "M3".equals(m))) return "NONE";
+        if (!("M1".equals(m) || "M2".equals(m))) return "NONE";   // [NUP4-FIX] M3 da bo (ADDENDUM-2)
         if (inSleeve || baseHeld || !sleeveHeld) return "NONE";     // sleeve khong bao gio mo khi ben kia giu
-        return "M1".equals(m) ? "MERGE_BASE" : ("M2".equals(m) ? "MERGE_SLEEVE" : "SPLIT");
+        return "M1".equals(m) ? "MERGE_BASE" : "MERGE_SLEEVE";
     }
 
     /** [NUP4] Tong PnL theo chu so huu tu danh sach leg (moi leg tu mang entry/qty/funding cua no). */
@@ -2004,9 +2048,73 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         return out;
     }
 
-    /** [NUP4] 1 stop: sau khi gop, cum chi con MOT muc stop (priceSL) va MOT gia entry binh quan qty. */
-    static boolean singleStopAfterMerge(OrderTargetInfoTest merged) {
-        return merged != null && merged.priceSL == null;
+    /** [NUP4-FIX] bat bien one-way: symbol sid do DUNG MOT so giu (=> chi MOT vi the / MOT stop tren san). */
+    static boolean singleStopAfterMerge(OrderTargetInfoTest[] baseRunning, OrderTargetInfoTest[] sleeveRunning, short sid) {
+        return (baseRunning[sid] != null) ^ (sleeveRunning[sid] != null);
+    }
+
+    /** [NUP4-FIX] so symbol ma CA HAI so cung giu (vi pham one-way). M1/M2 phai = 0 moi tick. */
+    static int countOverlap(OrderTargetInfoTest[] baseRunning, short[] ids, int n, OrderTargetInfoTest[] sleeveRunning) {
+        int c = 0;
+        for (int i = 0; i < n; i++) {
+            short id = ids[i];
+            if (baseRunning[id] != null && sleeveRunning[id] != null) c++;
+        }
+        return c;
+    }
+
+    /** [NUP4-FIX] dong ho cho time-stop/cond-exit/DCA-signal: stopClockTime (M1) neu co, khong thi leg dau cum. */
+    static long clockOf(OrderTargetInfoTest o) {
+        if (o.stopClockTime > 0L) return o.stopClockTime;
+        return o.clusterFirstLegTime > 0L ? o.clusterFirstLegTime : o.timeStart;
+    }
+
+    /**
+     * [NUP4-FIX] funding cum TRON chu so huu chia theo qty: phan B vao leg B dau tien, phan S vao leg S dau tien,
+     * cac leg khac 0. Cum chi mot chu so huu => null (giu hanh vi cu: toan bo vao leg dau). Tong bao toan.
+     */
+    static float[] splitFundingByOwner(java.util.List<OrderTargetInfoTest> legs, java.util.Map<String, String> owner,
+                                       float total) {
+        int n = legs.size(), fB = -1, fS = -1;
+        double qB = 0.0, qS = 0.0;
+        for (int i = 0; i < n; i++) {
+            OrderTargetInfoTest o = legs.get(i);
+            String k = owner.get(o.symbol + "|" + o.timeStart);
+            double q = o.quantity == null ? 0.0 : o.quantity;
+            if ("S".equals(k)) {
+                qS += q;
+                if (fS < 0) fS = i;
+            } else {
+                qB += q;
+                if (fB < 0) fB = i;
+            }
+        }
+        if (fB < 0 || fS < 0 || qB + qS <= 0.0) return null;
+        float[] out = new float[n];
+        out[fB] = (float) (total * qB / (qB + qS));
+        out[fS] = total - out[fB];
+        return out;
+    }
+
+    /** [NUP4-FIX] kill-switch A40 toi thieu: DD tu dinh equity (close) >= thr => active (chan mo cum moi). */
+    static final class KillSwitchA40 {
+        final float thr;
+        float peak = Float.NaN;
+        boolean active;
+        long triggers, blocked;
+
+        KillSwitchA40(float thr) {
+            this.thr = thr;
+        }
+
+        boolean update(float eq) {
+            if (!(thr > 0f)) return false;
+            if (Float.isNaN(peak) || eq > peak) peak = eq;
+            boolean a = peak > 0f && (peak - eq) / peak >= thr;
+            if (a && !active) triggers++;
+            active = a;
+            return active;
+        }
     }
 
     private String sleeveSummaryJson(int nRows) {
@@ -2427,6 +2535,12 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                     Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime), ticker.startTime, selRank, symbolPred);
         }
 
+        // [NUP4-FIX] KILL-SWITCH A40 (equity GOP do o tick TRUOC => khong look-ahead): chan MO CUM MOI (ca nen
+        //   lan sleeve, ca gop M1/M2); DCA vao cum dang mo van chay. TAT (thr=0) => khong bao gio active.
+        if (killSw.active && symbol2OrdersEntry[symbolId] == null) {
+            killSw.blocked++;
+            return;
+        }
         // ===== [NUP4 2026-10-31] docs/prereg/PREREG_NUP4.md §3 — TRUNG SYMBOL tren MOT tai khoan one-way =====
         //  Chi nhanh NEN moi co the gap symbol SLEEVE dang giu (sleeve da tu chan chieu nguoc o sleeveSymbolFree).
         //  M1: gop ve so NEN (tail append leg nen vao cung list, prevRunning = cum sleeve => luat nen quan).
@@ -2457,6 +2571,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                     symbol2OrdersEntry[symbolId] = slvOrders;
                     symbol2OrderRunning[symbolId] = slvRun;
                     BudgetManagerSimple.getInstance().marginRunning += slvRun.calMargin();
+                    // [NUP4-FIX] leg NEN dung dong ho + neo hard-SL cua CHINH NO (ap trong mergeOrder)
+                    m1AnchorTime.put(symbolId, order.timeStart);
+                    m1AnchorEntry.put(symbolId, order.firstEntryPrice != null ? order.firstEntryPrice : order.priceEntry);
                 } else {
                     slvOrders.add(order);
                     OrderTargetInfoTest m = mergeOrder(slvOrders, ticker, slvRun);
@@ -2474,9 +2591,6 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                     sleeveBook.bm.counterOrderCreated.incrementAndGet();
                     return;                                  // leg nay KHONG vao so NEN
                 }
-            } else if ("SPLIT".equals(mdec)) {
-                mrgM3Ticks++;
-                mergeLog.append(ticker.startTime).append(',').append(order.symbol).append(",M3,,").append('\n');
             }
         }
 

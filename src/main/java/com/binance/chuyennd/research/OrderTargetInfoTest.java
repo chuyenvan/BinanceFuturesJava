@@ -93,6 +93,10 @@ public class OrderTargetInfoTest implements Serializable {
     // TÁCH RIÊNG khỏi timeStart (timeStart = leg-cuối, là tham chiếu logic mở/đóng — TUYỆT ĐỐI không đụng,
     // nếu không funding sẽ rò vào logic giao dịch → đổi số lệnh → vỡ GATE). transient: không serialize.
     public transient long clusterFirstLegTime = 0L;
+    // [NUP4-FIX 2026-10-31] dong ho cho time-stop/cond-exit/DCA-signal khi KHAC leg dau (M1: leg NEN gop vao cum
+    //   sleeve dung dong ho cua CHINH NO). 0 = khong dat => dung clusterFirstLegTime nhu cu (byte-identical).
+    //   KHONG dung cho funding (funding van quet tu clusterFirstLegTime).
+    public transient long stopClockTime = 0L;
     // [2026-09-02] FUNDING notional MARK (Configs.FUNDING_MARK_NOTIONAL): tich luy streaming tren object CUM
     //   (symbol2OrderRunning) tai moi tick: moi settle trong (fundingLastSettle, tick] cong rate x quantity_cum x priceClose.
     //   mergeOrder carry 2 field nay sang cum moi. computeFundingOnClose doc fundingAccrued thay cho quet lai.

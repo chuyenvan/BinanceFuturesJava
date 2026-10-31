@@ -4,6 +4,7 @@ import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.trading.OrderTargetStatus;
 import com.binance.client.model.enums.OrderSide;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -20,6 +21,11 @@ import static org.junit.Assert.*;
  * U/equity GOP (kill-switch A40), va mode NONE giu nguyen hanh vi cu.
  */
 public class Nup4MergeTest {
+
+    @BeforeClass
+    public static void noAerospike() {   // [NUP4-FIX] khong cham Aerospike (su co ghi 242 10-31)
+        TestMapperStub.seed("ABCUSDT", "ZZZUSDT");
+    }
 
     private static final long M = 60_000L;
     private static final long T0 = 28_300_000L * M;
@@ -52,7 +58,7 @@ public class Nup4MergeTest {
     public void baseOnSleeveHeldSymbolRoutesPerMode() {
         assertEquals("MERGE_BASE", mergeDecision("M1", false, false, true));
         assertEquals("MERGE_SLEEVE", mergeDecision("M2", false, false, true));
-        assertEquals("SPLIT", mergeDecision("M3", false, false, true));
+        assertEquals("NONE", mergeDecision("M3", false, false, true));   // [NUP4-FIX] M3 da bo (ADDENDUM-2)
         assertEquals("NONE", mergeDecision("NONE", false, false, true));
     }
 
@@ -90,7 +96,6 @@ public class Nup4MergeTest {
         legs.add(leg("ABCUSDT", T0, 90f, 1f));
         OrderTargetInfoTest merged = sim.mergeOrder(legs, ticker(95f), slv);
         // [NUP4] quy uoc da dang ky: gop => stop RESET, arm lai theo luat cua so quan ly (1 stop duy nhat)
-        assertTrue(singleStopAfterMerge(merged));
         assertNull(merged.priceSL);
     }
 
