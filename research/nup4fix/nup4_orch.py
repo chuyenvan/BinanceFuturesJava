@@ -72,22 +72,22 @@ def _http_code(ex):
     return None
 
 
-def transient(ex):
+def transient(ex, retry403=True):
     if isinstance(ex, Fatal):
         return False
     c = _http_code(ex)
     if c is None:
         return True                    # mang/timeout/protocol: coi la tam thoi
-    return c in (403, 408, 429) or c >= 500
+    return (c == 403 and retry403) or c in (408, 429) or c >= 500
 
 
-def kcall(desc, fn, *a, **kw):
+def kcall(desc, fn, *a, retry403=True, **kw):
     """Goi Kaggle voi retry: lan 1 + 3 lan thu lai (cho 30/90/240 s). Loi khong tam thoi => nem ngay."""
     for i in range(len(RETRY_WAITS) + 1):
         try:
             return fn(*a, **kw)
         except Exception as ex:  # noqa: BLE001
-            if not transient(ex) or i == len(RETRY_WAITS):
+            if not transient(ex, retry403) or i == len(RETRY_WAITS):
                 log.error("KAGGLE %s THAT BAI (lan %d, code=%s): %s", desc, i + 1, _http_code(ex), str(ex)[:200])
                 raise
             log.warning("KAGGLE %s loi tam thoi (lan %d, code=%s) — cho %ds: %s", desc, i + 1, _http_code(ex),
@@ -113,6 +113,9 @@ KLINE_DS = [USER + "/vz-kline1m-%d" % y for y in range(2021, 2027)]
 MTM_SRC = OD + "/mtm_kernel.py"
 MTM_BATCH, MTM_TOL_PP = 9, 0.01
 NO_HEAVY_DAY = "2026-11-03"
+PRIO = "/home/ubuntu/claude_master/locks/kaggle_priority"   # co file => KHONG push (job seed gate dry 11-03 uu tien)
+FETCH403_MAX_S = 7200                                       # 403 khi tai output = chua san sang; toi da 2 h/kernel
+_PRIO_LOG = {"t": 0.0}
 RES_MAX_MB = 200
 FETCH_RX = (r"^(result\.json|prof_run\.properties|storage/(printDone\.csv|equity_day\.csv|equity_summary\.json|"
             r"leg_owner\.csv|merge_log\.csv|sleeve_summary\.json)|mtm_result\.json|mtm_eq_daily_close07\.json)$")
@@ -134,6 +137,11 @@ SEED_NAME = {42: "a1", 7: "s7", 13: "s13", 21: "s21", 99: "s99", 123: "s123", 77
 P1A_SEEDS = [42, 7, 21, 99]
 B0_REST = [7, 21, 99, 13, 123, 777, 2024]
 VARIANTS = ["s1b", "m1a", "m1b", "m2a", "m2b"]
+
+
+def kslug(tag):
+    """slug KERNEL tren Kaggle (co tien to 'sim-'). KS.slug() KHONG co tien to — dung no goi API = 403 (sai id)."""
+    return KS.kernel_ref(tag).split("/")[1]
 
 
 def tag_of(arm, seed):
@@ -296,7 +304,7 @@ def push_sim(st, e):
 def push_mtm(st, b):
     refs = {}
     for t in b["runs"]:
-        refs[t] = KS.slug(t)
+        refs[t] = kslug(t)          # duong mount kernel_sources: /kaggle/input/**/<sim-...>/
     ctl = {}
     rows = {r["seed"]: r for r in __import__("csv").DictReader(open(GQ_CSV))
             if r["phase"] == "DEV" and r["period"] == "DEV_2022_25"}
@@ -334,7 +342,7 @@ def _fetch_small_once(tag):
     out = os.path.join(RES, tag)
     os.makedirs(out, exist_ok=True)
     a = KS._api()
-    resp = a.process_response(a.kernel_output_with_http_info(USER, KS.slug(tag)))
+    resp = a.process_response(a.kernel_output_with_http_info(USER, kslug(tag)))
     got = []
     for it in resp["files"]:
         fn = it["fileName"]
@@ -457,29 +465,49 @@ def verify_mtm(st, tag):
 
 
 def poll(st):
+    """Status (retry 3 lan/10 phut) cho kernel CHUA ket thuc; kernel COMPLETE cho tai: 403 = output chua san sang,
+    thu lai MOI vong toi FETCH403_MAX_S roi moi HALT; loi khac (sau retry) => HALT."""
     for tag, e in list(st.items()):
         if tag.startswith("_") or e.get("state") != "PUSHED":
             continue
-        try:
-            s = kcall("status " + tag, KS._status, e["ref"])
-        except Exception as ex:  # noqa: BLE001
-            halt(st, "status %s loi sau retry: %s" % (tag, str(ex)[:200]))
-            return
+        s = e.get("kstatus")
         if s not in KS.TERMINAL:
-            continue
-        e["kstatus"] = s
+            try:
+                s = kcall("status " + tag, KS._status, e["ref"])
+            except Exception as ex:  # noqa: BLE001
+                halt(st, "status %s loi sau retry: %s" % (tag, str(ex)[:200]))
+                return
+            if s not in KS.TERMINAL:
+                continue
+            e["kstatus"] = s
+            e["t_terminal"] = time.time()
+            save_state(st)
+            log.info("%s ket thuc: %s", tag, s)
         if light_only():
-            log.info("%s %s — ngay %s chi poll, keo file de mai", tag, s, NO_HEAVY_DAY)
             continue
-        try:
-            fetch_small(tag)
-        except Exception as ex:  # noqa: BLE001
-            halt(st, "fetch %s loi: %s" % (tag, str(ex)[:200]))
-            return
         if s != "COMPLETE":
+            try:
+                _fetch_small_once(tag)          # lay file nho de chan doan, loi thi bo qua
+            except Exception:  # noqa: BLE001
+                pass
             halt(st, "kernel %s ket thuc %s" % (tag, s))
             return
+        try:
+            kcall("fetch " + tag, _fetch_small_once, tag, retry403=False)
+        except Exception as ex:  # noqa: BLE001
+            if _http_code(ex) == 403:
+                t0 = e.setdefault("fetch403_since", time.time())
+                save_state(st)
+                waited = time.time() - t0
+                if waited > FETCH403_MAX_S:
+                    halt(st, "fetch %s van 403 sau %d phut" % (tag, waited // 60))
+                    return
+                log.info("fetch %s: 403 (output chua san sang) — thu lai vong sau (da cho %d phut)", tag, waited // 60)
+                continue
+            halt(st, "fetch %s loi: %s" % (tag, str(ex)[:200]))
+            return
         e["state"] = "FETCHED"
+        e.pop("fetch403_since", None)
         save_state(st)
 
 
@@ -516,7 +544,13 @@ def adopt_or_push(st, tag, pushfn):
 
 def schedule(st):
     sims = plan()
-    ours = [t for t, v in st.items() if not t.startswith("_") and v.get("state") == "PUSHED"]
+    if os.path.exists(PRIO):
+        if time.time() - _PRIO_LOG["t"] > 600:
+            log.warning("co %s => KHONG push kernel moi (van poll/tai)", PRIO)
+            _PRIO_LOG["t"] = time.time()
+        return
+    ours = [t for t, v in st.items() if not t.startswith("_") and v.get("state") == "PUSHED"
+            and v.get("kstatus") not in KS.TERMINAL]          # dang chay that; kernel cho tai KHONG chan push
     if len(ours) >= MAXPAR:
         return
     gate = sims[0]["tag"]
@@ -527,7 +561,7 @@ def schedule(st):
     if not todo and all(st.get(e["tag"], {}).get("state") == "DONE" for e in sims):
         todo = [dict(b, kind="mtm") for b in mtm_batches() if b["tag"] not in st]
     for e in todo:
-        if len(ours) >= MAXPAR or account_running_cached() >= MAXPAR:
+        if len(ours) >= MAXPAR or account_running() >= MAXPAR:    # kiem account qua API moi lan push
             return
         if e.get("kind") == "mtm":
             how, s = adopt_or_push(st, e["tag"], lambda: push_mtm(st, e))
@@ -624,7 +658,12 @@ def run():
                 return 0
             if not light_only():
                 schedule(st)
-            act = [t for t, v in st.items() if not t.startswith("_") and v.get("state") == "PUSHED"]
+            act = [t for t, v in st.items() if not t.startswith("_") and v.get("state") == "PUSHED"
+                   and v.get("kstatus") not in KS.TERMINAL]
+            pend = [t for t, v in st.items() if not t.startswith("_") and v.get("state") == "PUSHED"
+                    and v.get("kstatus") in KS.TERMINAL]
+            if pend:
+                log.info("cho tai output: %s", pend)
             done = sum(1 for t in names if st.get(t, {}).get("state") == "DONE")
             log.info("loop: DONE %d/%d, dang chay %s", done, len(names), act)
         except Exception as ex:  # noqa: BLE001  (da qua retry trong kcall => dung han)
@@ -714,6 +753,13 @@ def dry():
             except Exception:  # noqa: BLE001
                 pass
         print("kernel n4f-* da ton tai:", exist or "khong")
+        g = plan()[0]["tag"]
+        if any(t == g for t, _ in exist):
+            n = len(a.process_response(a.kernel_output_with_http_info(USER, kslug(g)))["files"])
+            print("liet ke output %s qua kslug=%s: %d file (duong tai cua orchestrator)" % (g, kslug(g), n))
+            ok = ok and n > 0
+        print("slug MTM khop duong mount:", all(("/" + kslug(t) + "/") in ("/kaggle/input/x/" + KS.kernel_ref(t).split("/")[1] + "/storage")
+                                               for t in [e["tag"] for e in plan()]))
         for ds in KLINE_DS:
             fs = a.dataset_list_files(ds)
             names = sorted(os.path.basename(getattr(f, "name", None) or str(f)) for f in (getattr(fs, "files", None) or []))
