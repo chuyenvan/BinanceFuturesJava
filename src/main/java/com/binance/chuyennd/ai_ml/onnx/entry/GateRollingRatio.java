@@ -148,7 +148,11 @@ public final class GateRollingRatio {
         if (f != null && !f.trim().isEmpty() && a != null && !a.trim().isEmpty()) {
             dumpFile = f.trim();
             dumpAt = Long.parseLong(a.trim());
-            LOG.warn("*** [GATE-SEED] dump buffer -> {} tai truy van dau tien ts >= {} ***", dumpFile, dumpAt);
+            LOG.warn("*** [GATE-SEED] dump buffer -> {} tai truy van dau tien ts >= {} (hoac cuoi run neu chua toi) ***", dumpFile, dumpAt);
+            try {
+                Runtime.getRuntime().addShutdownHook(new Thread(GateRollingRatio::finalDump, "GateSeedFinalDump"));
+            } catch (Exception ignore) {
+            }
         }
         String t = Cfg.get("SIM_GATE_TRACE_FILE");
         String tf = Cfg.get("SIM_GATE_TRACE_FROM");
@@ -168,21 +172,7 @@ public final class GateRollingRatio {
     /** [GATE_SEED_DUMP] goi TRUOC khi nap (ts, r): dump = moi record ts &lt; dumpAt va ts &gt;= dumpAt - days. */
     static synchronized void seedHook(long ts, float sp, float p15, float r) {
         if (dumpFile != null && !dumped && ts >= dumpAt) {
-            dumped = true;
-            long[] a = buffer.tsSnapshot();
-            float[] b = buffer.rSnapshot();
-            long cut = dumpAt - (long) days * 86_400_000L;
-            int lo = 0;
-            while (lo < a.length && a[lo] < cut) lo++;
-            long[] a2 = java.util.Arrays.copyOfRange(a, lo, a.length);
-            float[] b2 = java.util.Arrays.copyOfRange(b, lo, b.length);
-            try {
-                GateRatioPersist.writeFresh(dumpFile, a2, b2);
-                LOG.warn("[GATE-SEED] DA GHI {} record ({}..{}) -> {}", a2.length,
-                        a2.length > 0 ? a2[0] : -1, a2.length > 0 ? a2[a2.length - 1] : -1, dumpFile);
-            } catch (IOException e) {
-                LOG.error("[GATE-SEED] LOI ghi {}: {}", dumpFile, e.getMessage());
-            }
+            doDump("moc");
         }
         if (traceFile != null && ts >= traceFrom && ts < traceTo) {
             try {
@@ -196,6 +186,34 @@ public final class GateRollingRatio {
                 LOG.error("[GATE-SEED] LOI trace {}: {}", traceFile, e.getMessage());
             }
         }
+    }
+
+    /** [GATE_SEED_DUMP] ghi moi record ts in [dumpAt - days, dumpAt) (buffer sort ts tang). */
+    static synchronized void doDump(String why) {
+        if (dumpFile == null || dumped) return;
+        dumped = true;
+        long[] a = buffer.tsSnapshot();
+        float[] b = buffer.rSnapshot();
+        long cut = dumpAt - (long) days * 86_400_000L;
+        int lo = 0;
+        while (lo < a.length && a[lo] < cut) lo++;
+        int hi = lo;
+        while (hi < a.length && a[hi] < dumpAt) hi++;
+        long[] a2 = java.util.Arrays.copyOfRange(a, lo, hi);
+        float[] b2 = java.util.Arrays.copyOfRange(b, lo, hi);
+        try {
+            GateRatioPersist.writeFresh(dumpFile, a2, b2);
+            LOG.warn("[GATE-SEED] DA GHI ({}) {} record ({}..{}) -> {}", why, a2.length,
+                    a2.length > 0 ? a2[0] : -1, a2.length > 0 ? a2[a2.length - 1] : -1, dumpFile);
+        } catch (IOException e) {
+            LOG.error("[GATE-SEED] LOI ghi {}: {}", dumpFile, e.getMessage());
+        }
+    }
+
+    /** [GATE_SEED_DUMP] shutdown hook: run ket thuc truoc moc => dump buffer cuoi run (ts &lt; dumpAt). */
+    static void finalDump() {
+        doDump("cuoi-run");
+        closeTrace();
     }
 
     /** [GATE_SEED_DUMP] dong trace (shutdown hook / cuoi run / test). */

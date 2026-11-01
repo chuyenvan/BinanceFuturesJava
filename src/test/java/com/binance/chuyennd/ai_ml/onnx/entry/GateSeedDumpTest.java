@@ -55,4 +55,19 @@ public class GateSeedDumpTest {
         GateRollingRatio.addAndQuery(0L, 1f);
         assertFalse(d.exists());
     }
+
+    @Test
+    public void finalDumpWhenRunEndsBeforeMark() throws Exception {
+        GateRollingRatio.configureForTest(0.5f, 30);
+        File d = File.createTempFile("seedf", ".bin"); d.delete();
+        GateRollingRatio.configureSeedForTest(d.getPath(), 100 * DAY, null, Long.MAX_VALUE, Long.MIN_VALUE);
+        GateRollingRatio.addAndQuery(80 * DAY, 0.5f);
+        GateRollingRatio.addAndQuery(99 * DAY, 0.7f);
+        assertFalse(d.exists());
+        GateRollingRatio.finalDump();
+        GateRatioPersist.Records rec = GateRatioPersist.load(d.getPath(), Long.MIN_VALUE);
+        assertArrayEquals(new long[]{80 * DAY, 99 * DAY}, rec.ts);
+        GateRollingRatio.finalDump();   // idempotent
+        d.delete();
+    }
 }
