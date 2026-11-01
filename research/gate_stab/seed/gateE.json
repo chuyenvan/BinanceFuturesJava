@@ -1,0 +1,58 @@
+{
+ "BTCUSDT": {
+  "equal": true,
+  "n_month": 43200,
+  "n_daily": 43200,
+  "md5_m": "de2d92887abaa11090dce6af2e877864",
+  "md5_d": "de2d92887abaa11090dce6af2e877864",
+  "hdr_month": true,
+  "hdr_daily": [
+   true
+  ]
+ },
+ "ETHUSDT": {
+  "equal": true,
+  "n_month": 43200,
+  "n_daily": 43200,
+  "md5_m": "13bc03df89d40d5a05aeb2b64d045edf",
+  "md5_d": "13bc03df89d40d5a05aeb2b64d045edf",
+  "hdr_month": true,
+  "hdr_daily": [
+   true
+  ]
+ },
+ "SOLUSDT": {
+  "equal": true,
+  "n_month": 43200,
+  "n_daily": 43200,
+  "md5_m": "a064d8a2498837fdc35bbd8991ec059f",
+  "md5_d": "a064d8a2498837fdc35bbd8991ec059f",
+  "hdr_month": true,
+  "hdr_daily": [
+   true
+  ]
+ },
+ "PARTIUSDT": {
+  "equal": true,
+  "n_month": 43200,
+  "n_daily": 43200,
+  "md5_m": "5f3ca23350a35945902edea17160305f",
+  "md5_d": "5f3ca23350a35945902edea17160305f",
+  "hdr_month": true,
+  "hdr_daily": [
+   true
+  ]
+ },
+ "BLESSUSDT": {
+  "equal": true,
+  "n_month": 43200,
+  "n_daily": 43200,
+  "md5_m": "14a199d9051ee5ab09bdadb53f4afec5",
+  "md5_d": "14a199d9051ee5ab09bdadb53f4afec5",
+  "hdr_month": true,
+  "hdr_daily": [
+   true
+  ]
+ },
+ "PASS": true
+}
