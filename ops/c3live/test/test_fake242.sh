@@ -983,6 +983,30 @@ mkdir -p "$W/opt/c3py"
 OUT=$(echo YES | ci MODE=remove bash "$CI" 2>&1); RC=$?
 chk "r4k c3py go: thu muc KHONG co marker => KHONG xoa" "[ $RC = 1 ] && [ -d $W/opt/c3py ] && echo \"\$OUT\" | grep -q 'KHONG xoa'"
 rm -rf "$W/opt/c3py"
+echo "== 28. [V12 R4l] ws_soak_242.sh bai thu ket noi lai cuong buc: jar soak rieng, kiem SOAK_HOURS/FCM, chan song song canary/deploy (DRY)"
+WSK=$HERE/ws_soak_242.sh
+printf 'fake-soak-r4l' > "$W/fs.jar"; FSM=$(md5sum < "$W/fs.jar" | cut -c1-32); : > "$W/keys.env"; rm -rf "$W/soakrd"
+sk() { env SSH_242="bash -c" KEYS_FILE=$W/keys.env JAVA_BIN=true RD=$W/soakrd VTM=$F4 SJ_FC=$W/fs.jar SJ_FC_MD5=$FSM DEPLOY_LOCKD=$W/nolock.d "$@"; }
+OUT=$(sk DRY=1 SOAK_HOURS=1.1 SOAK_FORCE_CLOSE_MIN=10 bash "$WSK" 2>&1); RC=$?
+chk "r4l soak DRY che do cuong buc: jar soak RIENG (SJ_FC), env SOAK_FORCE_CLOSE_MIN=10 vao lenh chay, KHONG ghi gi" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q \"OK   jar soak $W/fs.jar md5=$FSM\" && echo \"\$OUT\" | grep -q 'SOAK_HOURS=1.1 SOAK_FORCE_CLOSE_MIN=10 LIVE_C3_KEYS_FILE' && echo \"\$OUT\" | grep -q 'DRY=1: chi kiem' && [ ! -e $W/soakrd ]"
+OUT=$(sk DRY=1 bash "$WSK" 2>&1)
+chk "r4l soak thuong (khong FCM) van dung jar r4j pin + SOAK_FORCE_CLOSE_MIN=0" "echo \"\$OUT\" | grep -q 'jar soak .*_v12_r4j' && echo \"\$OUT\" | grep -q 'SOAK_FORCE_CLOSE_MIN=0 '"
+OUT=$(sk DRY=1 SOAK_HOURS=1 SOAK_FORCE_CLOSE_MIN=10 bash "$WSK" 2>&1); RC=$?
+chk "r4l SOAK_HOURS=1 < 1.05 h cho 6 lan moi 10' => DUNG" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL SOAK_HOURS=1 du cho 6 lan'"
+OUT=$(sk DRY=1 SOAK_HOURS=1.1 SOAK_FORCE_CLOSE_MIN=abc bash "$WSK" 2>&1); RC=$?
+chk "r4l SOAK_FORCE_CLOSE_MIN khong hop le => DUNG" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'SOAK_FORCE_CLOSE_MIN=abc khong hop le'"
+bash -c 'exec -a deploy_v12_dry_r4_gia sleep 30' & DP=$!
+OUT=$(sk DRY=1 SOAK_HOURS=1.1 SOAK_FORCE_CLOSE_MIN=10 bash "$WSK" 2>&1); RC=$?
+chk "r4l job deploy dang chay tren Oracle => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL Oracle: khong co job deploy/rollback dang chay (1)'"
+kill $DP 2>/dev/null; wait $DP 2>/dev/null
+bash -c 'exec -a canary_early_all_gia sleep 30' & CP=$!
+OUT=$(sk DRY=1 SOAK_HOURS=1.1 SOAK_FORCE_CLOSE_MIN=10 bash "$WSK" 2>&1); RC=$?
+chk "r4l canary dang dieu phoi tren Oracle (cho khung gio, chua co JVM tren 242) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL Oracle: khong co script canary dang chay (1)'"
+kill $CP 2>/dev/null; wait $CP 2>/dev/null
+mkdir -p "$W/lk.d"; bash -c 'exec -a khoa_deploy_gia sleep 30' & LP=$!; echo $LP > "$W/lk.d/pid"
+OUT=$(sk DRY=1 SOAK_HOURS=1.1 SOAK_FORCE_CLOSE_MIN=10 DEPLOY_LOCKD=$W/lk.d bash "$WSK" 2>&1); RC=$?
+chk "r4l khoa deploy dry con pid song => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL Oracle: khong co job deploy/rollback dang chay (1)'"
+kill $LP 2>/dev/null; wait $LP 2>/dev/null
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]

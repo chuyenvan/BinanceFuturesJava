@@ -39,3 +39,14 @@ chưa được chứng minh trên sàn thật trước micro-live.
 ## An toàn vận hành
 Không chạy song song với canary (Oracle: `canary_early_*`/`canary_step`/`canary.sh`; 242: JVM `C3LiveCanary`) hay job
 deploy/rollback (`deploy_v12_dry_r4`, `deploy_ingest*`, `rollback_*`, khóa deploy dry); script TỪ CHỐI (FORCE=1 bỏ qua — không khuyến nghị).
+
+## Hiện thực (sau khi ghi tiêu chí; tiêu chí ở trên KHÔNG đổi)
+- Code: chỉ `soak/UserStreamSoak.java` (`ForceCloseConnector`, `forceCloseMin`, `forcePass`) + test `UserStreamSoakR4lTest`.
+  `UserStream.java`, `SoakGuard`, mọi code production không đổi.
+- Jar soak RIÊNG `~/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_soak_r4l` md5 `7239aa58b877fc554e30c410f3030417`:
+  so r4j (`ba71eab2`) chỉ khác `UserStreamSoak.class` + 2 class mới `UserStreamSoak$ForceCloseConnector(.$1)` (CRC 8959 entry còn lại trùng).
+- mvn package: 912 test 0 fail (bỏ `Live242WriteGuardTest#mode242_envMissing_writesReachClient`: test này cần env KHÔNG có
+  `LIVE_IS_SHADOW_HOST`, nhưng `~/.mavenrc` Oracle đặt guard chống ghi Aerospike 242 từ 10-31 — không gỡ guard).
+- `ws_soak_242.sh`: `SOAK_FORCE_CLOSE_MIN` (1..60) ⇒ jar `SJ_FC` pin md5; kiểm `SOAK_HOURS ≥ (6·N+3)/60`; từ chối khi Oracle
+  có script canary / job deploy-rollback / khóa deploy dry còn pid sống; log phiên trước đổi tên `soak.log.prev_<TS>`.
+  fake242 §28 + toàn bộ: TEST PASS 237/237.
