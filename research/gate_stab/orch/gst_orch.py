@@ -43,25 +43,46 @@ def sha256(p):
 
 
 # ---------------- Vision + cong E ----------------
-def vision_ready():
+VS = ("BTCUSDT", "ETHUSDT", "SOLUSDT", "PARTIUSDT", "BLESSUSDT")
+OCT = ["2026-10-%02d" % d for d in range(1, 32)]
+KMODE = {"m": None}                                     # "monthly" | "daily" | None (chua du)
+
+
+def _head(paths):
     import urllib.request
+    from concurrent.futures import ThreadPoolExecutor
     U = "https://data.binance.vision/data/futures/um/"
-    need = ["daily/klines/%s/1m/%s-1m-2026-10-31.zip" % (s, s) for s in ("BTCUSDT", "ETHUSDT", "SOLUSDT", "PARTIUSDT", "BLESSUSDT")] + \
-           ["monthly/fundingRate/%s/%s-fundingRate-2026-10.zip" % (s, s) for s in ("BTCUSDT", "ETHUSDT", "PARTIUSDT")] + \
-           ["daily/metrics/%s/%s-metrics-2026-10-31.zip" % (s, s) for s in ("BTCUSDT", "SOLUSDT", "PARTIUSDT")]
-    out = {}
-    for p in need:
-        try:
-            r = urllib.request.urlopen(urllib.request.Request(U + p, method="HEAD", headers={"User-Agent": "gst"}), timeout=30)
-            out[p] = r.status
-        except Exception as e:  # noqa: BLE001
-            out[p] = getattr(e, "code", str(e)[:30])
-    mon = None
-    try:
-        mon = urllib.request.urlopen(urllib.request.Request(U + "monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2026-10.zip", method="HEAD"), timeout=30).status
-    except Exception as e:  # noqa: BLE001
-        mon = getattr(e, "code", None)
-    return all(v == 200 for v in out.values()), out, mon == 200
+    def one(p):
+        for a in range(3):
+            try:
+                return p, urllib.request.urlopen(urllib.request.Request(U + p, method="HEAD", headers={"User-Agent": "gst"}), timeout=30).status
+            except Exception as e:  # noqa: BLE001
+                c = getattr(e, "code", None)
+                if c == 404:
+                    return p, 404
+                time.sleep(2)
+        return p, "err"
+    with ThreadPoolExecutor(16) as ex:
+        return dict(ex.map(one, paths))
+
+
+def vision_ready():
+    """Kiem DU moi ngay can dung (ADD5 + fix 11-02): klines monthly 2026-10 uu tien (du 5 symbol mau); neu chua co thi daily
+    PHAI du 31 ngay lien tuc cho 5 symbol mau; funding monthly 2026-10; metrics daily DU 31 ngay (OI). Tra (ok, thieu, mode)."""
+    mon = _head(["monthly/klines/%s/1m/%s-1m-2026-10.zip" % (s, s) for s in VS])
+    fund = _head(["monthly/fundingRate/%s/%s-fundingRate-2026-10.zip" % (s, s) for s in VS])
+    met = _head(["daily/metrics/%s/%s-metrics-%s.zip" % (s, s, d) for s in VS for d in OCT])
+    if all(v == 200 for v in mon.values()):
+        mode, kl = "monthly", {}
+    else:
+        kl = _head(["daily/klines/%s/1m/%s-1m-%s.zip" % (s, s, d) for s in VS for d in OCT])
+        mode = "daily" if all(v == 200 for v in kl.values()) else None
+    miss = sorted(p for dct in (fund, met, kl) for p, v in dct.items() if v != 200)
+    if mode is None:
+        miss = sorted(set(miss) | {p for p, v in mon.items() if v != 200})
+    ok = mode is not None and all(v == 200 for v in fund.values()) and all(v == 200 for v in met.values())
+    KMODE["m"] = mode
+    return ok, (miss[:12] + (["... +%d" % (len(miss) - 12)] if len(miss) > 12 else [])), mode
 
 
 def gate_e():
@@ -81,8 +102,11 @@ def x26_cfg():
     c = N.exp_cfg("gs-x26-q4", "q3", True)
     c["tag"] = "gs-x26-q4"
     c["S"] = [END3, TCUT]
-    c["months"] = ["2026-09"]
-    c["days"] = ["2026-10-%02d" % d for d in range(1, 32)]           # ADD5: klines daily 10-01..10-31
+    if KMODE["m"] == "monthly":                                        # monthly uu tien
+        c["months"], c["days"] = ["2026-09", "2026-10"], []
+    else:                                                              # ADD5: daily 10-01..10-31 (chi khi du lien tuc)
+        assert KMODE["m"] == "daily", "Vision chua du"
+        c["months"], c["days"] = ["2026-09"], list(OCT)
     c["fund_months"] = ["2026-08", "2026-09", "2026-10"]
     c["ingest"] = ["20260901", "20261031"]
     T = {t["name"]: t for t in c["tasks"]}
@@ -264,6 +288,8 @@ def prio_off(*_):
 
 
 def finish_seed():
+    while time.strftime("%Y-%m-%d") == "2026-11-03":            # luat MASTER: 11-03 khong job nang Oracle (gio may = +07)
+        log.info("11-03: hoan buoc build_seed/vovl toi 11-04"); time.sleep(1800)
     o = "/home/ubuntu/kaggle_sim/out/%s/" % SIM
     dump = (glob.glob(o + "**/gate_seed_A.bin", recursive=True) or [None])[0]
     tr = (glob.glob(o + "**/gate_trace_A.csv*", recursive=True) or [None])[0]
@@ -283,8 +309,10 @@ def main(dry):
     for t in ORDER:
         st.setdefault(t, {"state": "todo", "pushes": 0})
     ok, det, mon = vision_ready()
-    log.info("VISION ready=%s monthly10=%s %s", ok, mon, det)
+    log.info("VISION ready=%s klines_mode=%s thieu=%s", ok, mon, det)
     assert gate_e(), "cong E (ADD5) chua PASS"
+    if not dry and st["gs-x26-q4"]["state"] == "done" and st["gs-tk26"]["state"] == "failed":
+        log.error("state cu (x26 thieu 10-28) -> chay 'run_gst.sh rearm' truoc"); return 3
     if not dry:
         seen = 0                                   # can READY 2 lan cach >= 30 phut (cho Vision phat hanh xong moi symbol)
         while seen < 2:
@@ -298,9 +326,11 @@ def main(dry):
             time.sleep(1800)
             ok, det, mon = vision_ready()
             log.info("VISION ready=%s monthly10=%s %s", ok, mon, det)
+    if dry and KMODE["m"] is None:
+        KMODE["m"] = "daily"; log.info("DRY: Vision chua du -> compile thu voi mode daily")
     for t in ORDER[:-1]:
         code, meta = build(t); compile(code, t, "exec")
-    log.info("build+compile 4 kernel du lieu OK; OV sim=%s", json.dumps(OV))
+    log.info("build+compile 4 kernel du lieu OK (klines mode=%s); OV sim=%s", KMODE["m"], json.dumps(OV))
     jards(dry)
     if dry:
         for t in ORDER[:-1]:
@@ -368,6 +398,14 @@ if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "status"
     if cmd == "status":
         print(open(STP).read() if os.path.exists(STP) else "chua co state"); sys.exit(0)
+    if cmd == "rearm":      # 11-02: x26-q4 thieu 10-28 -> chay lai x26/tk/chain/sim; GIU gs-oi-c done
+        st = json.load(open(STP))
+        for t in ("gs-x26-q4", "gs-tk26", "gs-chain-q4", SIM):
+            st[t] = {"state": "todo", "pushes": 0, "prev": st.get(t)}
+        json.dump(st, open(STP, "w"), indent=1)
+        for f in (OD + "/arts.json",):
+            if os.path.exists(f): os.rename(f, f + ".old_%d" % int(time.time()))
+        print({t: st[t]["state"] for t in ORDER}); sys.exit(0)
     try:
         sys.exit(main(cmd == "dry"))
     finally:

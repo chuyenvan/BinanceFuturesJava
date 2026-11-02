@@ -25,5 +25,6 @@ case "${1:-status}" in
     sleep 2; rm -f /home/ubuntu/claude_master/locks/kaggle_priority && echo "da xoa kaggle_priority"
     ;;
   dry) exec $PY dry ;;
-  *) echo "dung: $0 start|status|stop|dry"; exit 1 ;;
+  rearm) if alive; then echo "dang chay -> stop truoc"; exit 1; fi; exec $PY rearm ;;
+  *) echo "dung: $0 start|status|stop|dry|rearm"; exit 1 ;;
 esac
