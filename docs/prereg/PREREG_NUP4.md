@@ -190,3 +190,26 @@ ADDENDUM-2 **thay** ADDENDUM_TECH-1 ở các điểm dưới; mọi điểm khô
 | **Tổng** | **≤ 37** |
 - Gate s42 FAIL ⇒ dừng, báo MASTER. Mọi run phải được Opus pre-review (G-PRE) và MASTER duyệt trước khi push Kaggle.
 - G1, G2, G5, luật chọn Calmar, §6: giữ nguyên. Không thêm biến thể, không đổi size.
+
+
+## ADDENDUM-3 (2026-11-02, audit Opus theo lệnh MASTER — viết TRƯỚC khi sửa code và TRƯỚC mọi số G1–G5 của Pha 1a)
+
+**Bug M2 (MERGE_SLEEVE), code gốc 45f6ce90, còn nguyên trong jar b4c4205c.** Khi nền gộp vào cụm sleeve, code gỡ symbol khỏi
+`sleeveBook.activeRunningIds` rồi gắn lại cụm gộp vào `symbol2OrdersEntry/symbol2OrderRunning` của sổ sleeve nhưng **không thêm
+lại id vào mảng active**. Vòng exit/DCA/MTM của sleeve chỉ duyệt mảng active ⇒ vị thế gộp không bao giờ được cập nhật, đóng,
+mark-to-market; symbol bị khoá vĩnh viễn ở cả 2 sổ (`m2BaseHeld` không được xoá); margin kẹt trong sổ sleeve làm cạn ngân sách
+U của sleeve; leg của vị thế gộp không bao giờ vào printDone.
+**Bằng chứng (n4f-m2a, chưa chấm cổng):** a1: sleeve mở 78 cụm = 21 leg sleeve trong printDone + 57 lần gộp (khớp đúng);
+s7: 154 = 101 + 53. a1: `not_opened` 7 787/8 839 ứng viên; tổng dòng printDone 3 437 < B0 3 935; sổ nền DEV 2 537 cụm,
+PnL 104 375 so với B0 2 871 cụm, 115 768. M1 (gộp về sổ nền) đi tiếp đường thường có `addActiveRunningId` ⇒ không dính
+(owner B 3 845 + S 3 258 = 7 103 dòng); S1b-SEP không có nhánh gộp, G-INV PASS.
+
+**Quyết định (không đổi cổng, biến thể, size, luật chọn):**
+- Loại 8 run M2 cũ (`n4f-m2a-*`, `n4f-m2b-*`, jar b4c4205c) và MTM của chúng khỏi mọi phép chấm.
+- Sửa: nhánh MERGE_SLEEVE thêm lại id vào mảng active của sổ sleeve (tách thành hàm `mergeSleeveCluster`, có unit test tái hiện:
+  vị thế gộp phải được exit, symbol được giải phóng, margin trả lại, printDone đủ leg). Build jar mới từ commit sạch, full test.
+- Chạy lại 8 run M2 (`n4g-m2{a,b}-{a1,s7,s21,s99}`, cùng cấu hình ADDENDUM-2) + 1 kernel MTM legacy (kèm B0 a1 đối chứng).
+  B0, S1b-SEP, M1 giữ số của jar b4c4205c (code của chúng không đổi; sẽ kiểm hồi quy bằng test, không chạy lại).
+- Pha 1b chỉ chọn sau khi có số M2 mới, theo đúng §6 (đạt G1/G2/G5, Calmar cao nhất, ≤ 2 biến thể).
+- Ngân sách: trần nâng từ ~40 lên **45 run sim** CHỈ để chạy lại 8 run hỏng do bug (37 + 8). Không thêm biến thể.
+- Khi audit Pha 1a: kèm 1 test đối kháng độc lập cho phần sửa M2 (người sửa = người audit).
