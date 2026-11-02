@@ -16,7 +16,7 @@ rc=$?
 restore; trap - EXIT
 echo "mvn rc=$rc HEAD=$HEAD"
 [ $rc -eq 0 ] || exit $rc
-mkdir -p $FX/jar && cp target/binance-java-sdk-1.2.4.jar $FX/jar/sim.jar
-echo "$HEAD" > $FX/jar/HEAD.txt
-sha256sum $FX/jar/sim.jar; md5sum $FX/jar/sim.jar
+JO=${JAR_OUT:-$FX/jar}; mkdir -p $JO && cp target/binance-java-sdk-1.2.4.jar $JO/sim.jar
+echo "$HEAD" > $JO/HEAD.txt
+sha256sum $JO/sim.jar; md5sum $JO/sim.jar
 git status --porcelain | wc -l

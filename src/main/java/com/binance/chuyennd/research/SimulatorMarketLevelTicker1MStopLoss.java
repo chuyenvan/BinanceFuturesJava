@@ -1141,7 +1141,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
     }
 
-    private void closeOrder(short symbolId, OrderTargetInfoTest orderMulti) {
+    void closeOrder(short symbolId, OrderTargetInfoTest orderMulti) {   // package-private cho test (NUP4 ADD-3)
         List<OrderTargetInfoTest> orders = symbol2OrdersEntry[symbolId];
         if (orders != null) {
             // === FUNDING (Bước 3) — tính 1 LƯỢT cho cả cụm tại thời điểm đóng (timeStart leg đầu → timeUpdate).
@@ -1646,7 +1646,66 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         }
     }
 
-    /** Nhan book cho dong printDone cua sleeve: dat o cot cuoi (khong ten) cua header => so cot giu nguyen. */
+    /**
+     * [NUP4] chuyen cum SLEEVE dang giu symbolId khi NEN muon vao: M1 (MERGE_BASE) => sang so NEN (caller di tiep duong thuong,
+     * addActiveRunningId); M2 (MERGE_SLEEVE) => leg nen gop vao so SLEEVE, tra true (caller return).
+     * [NUP4 ADDENDUM-3] M2 truoc day KHONG them lai id vao sleeveBook.activeRunningIds => vi the gop khong bao gio exit/MTM,
+     * symbol khoa vinh vien, margin ket. Nay them lai (addSleeveActiveId).
+     */
+    boolean mergeSleeveCluster(short symbolId, OrderTargetInfoTest order, KlineObjectSimple ticker, String mdec) {
+        OrderTargetInfoTest slvRun = sleeveBook.symbol2OrderRunning[symbolId];
+        List<OrderTargetInfoTest> slvOrders = sleeveBook.symbol2OrdersEntry[symbolId];
+        int nFrom = slvOrders.size();
+        // go vi the khoi so sleeve (mang active O(1) + margin)
+        short[] slvIds = sleeveBook.activeRunningIds;
+        for (int i2 = 0; i2 < sleeveBook.activeRunningCount; i2++) {
+            if (slvIds[i2] == symbolId) {
+                slvIds[i2] = slvIds[sleeveBook.activeRunningCount - 1];
+                sleeveBook.activeRunningCount--;
+                break;
+            }
+        }
+        sleeveBook.symbol2OrdersEntry[symbolId] = null;
+        sleeveBook.symbol2OrderRunning[symbolId] = null;
+        sleeveBook.bm.marginRunning -= slvRun.calMargin();
+        if ("MERGE_BASE".equals(mdec)) {
+            symbol2OrdersEntry[symbolId] = slvOrders;
+            symbol2OrderRunning[symbolId] = slvRun;
+            BudgetManagerSimple.getInstance().marginRunning += slvRun.calMargin();
+            // [NUP4-FIX] leg NEN dung dong ho + neo hard-SL cua CHINH NO (ap trong mergeOrder)
+            m1AnchorTime.put(symbolId, order.timeStart);
+            m1AnchorEntry.put(symbolId, order.firstEntryPrice != null ? order.firstEntryPrice : order.priceEntry);
+        } else {
+            slvOrders.add(order);
+            OrderTargetInfoTest m = mergeOrder(slvOrders, ticker, slvRun);
+            sleeveBook.symbol2OrdersEntry[symbolId] = slvOrders;
+            sleeveBook.symbol2OrderRunning[symbolId] = m;
+            sleeveBook.activeRunningCount = addSleeveActiveId(sleeveBook.activeRunningIds, sleeveBook.activeRunningCount,
+                    symbolId);                                   // [NUP4 ADDENDUM-3] FIX
+            sleeveBook.bm.marginRunning += m.calMargin();
+            m2BaseHeld.add(symbolId);
+        }
+        mrgCount++;
+        mergeLog.append(ticker.startTime).append(',').append(order.symbol).append(',').append(mergeMode)
+                .append(',').append(nFrom).append(',').append("M1".equals(mergeMode) ? 0 : 1).append('\n');
+        LOG.info("NUP4-MERGE mode={} sym={} t={} nSleeveLegs={} to={}", mergeMode, order.symbol,
+                Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime), nFrom, "MERGE_BASE".equals(mdec) ? "BASE" : "SLEEVE");
+        if ("MERGE_SLEEVE".equals(mdec)) {
+            sleeveBook.bm.counterOrderCreated.incrementAndGet();
+            return true;
+        }
+        return false;
+    }
+
+    /** [NUP4 ADDENDUM-3] them id vao mang active (khong trung, khong vuot dung luong); tra so phan tu moi. */
+    static int addSleeveActiveId(short[] ids, int n, short id) {
+        for (int i = 0; i < n; i++) if (ids[i] == id) return n;
+        if (n >= ids.length) throw new IllegalStateException("[NUP4] mang active sleeve day");
+        ids[n] = id;
+        return n + 1;
+    }
+
+    /** [NUP3-SLEEVE] Nhan book cho dong printDone cua sleeve: dat o cot cuoi (khong ten) cua header => so cot giu nguyen. */
     static String labelSleeveLine(String ln) {
         return ln.endsWith(",") ? ln + "book=sleeve" : ln + ",book=sleeve";
     }
@@ -2552,45 +2611,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 sleeveBook.symbol2OrderRunning[symbolId] != null);
         if (!"NONE".equals(mdec)) {
             if ("MERGE_BASE".equals(mdec) || "MERGE_SLEEVE".equals(mdec)) {
-                OrderTargetInfoTest slvRun = sleeveBook.symbol2OrderRunning[symbolId];
-                List<OrderTargetInfoTest> slvOrders = sleeveBook.symbol2OrdersEntry[symbolId];
-                int nFrom = slvOrders.size();
-                // go vi the khoi so sleeve (mang active O(1) + margin)
-                short[] slvIds = sleeveBook.activeRunningIds;
-                for (int i2 = 0; i2 < sleeveBook.activeRunningCount; i2++) {
-                    if (slvIds[i2] == symbolId) {
-                        slvIds[i2] = slvIds[sleeveBook.activeRunningCount - 1];
-                        sleeveBook.activeRunningCount--;
-                        break;
-                    }
-                }
-                sleeveBook.symbol2OrdersEntry[symbolId] = null;
-                sleeveBook.symbol2OrderRunning[symbolId] = null;
-                sleeveBook.bm.marginRunning -= slvRun.calMargin();
-                if ("MERGE_BASE".equals(mdec)) {
-                    symbol2OrdersEntry[symbolId] = slvOrders;
-                    symbol2OrderRunning[symbolId] = slvRun;
-                    BudgetManagerSimple.getInstance().marginRunning += slvRun.calMargin();
-                    // [NUP4-FIX] leg NEN dung dong ho + neo hard-SL cua CHINH NO (ap trong mergeOrder)
-                    m1AnchorTime.put(symbolId, order.timeStart);
-                    m1AnchorEntry.put(symbolId, order.firstEntryPrice != null ? order.firstEntryPrice : order.priceEntry);
-                } else {
-                    slvOrders.add(order);
-                    OrderTargetInfoTest m = mergeOrder(slvOrders, ticker, slvRun);
-                    sleeveBook.symbol2OrdersEntry[symbolId] = slvOrders;
-                    sleeveBook.symbol2OrderRunning[symbolId] = m;
-                    sleeveBook.bm.marginRunning += m.calMargin();
-                    m2BaseHeld.add(symbolId);
-                }
-                mrgCount++;
-                mergeLog.append(ticker.startTime).append(',').append(order.symbol).append(',').append(mergeMode)
-                        .append(',').append(nFrom).append(',').append("M1".equals(mergeMode) ? 0 : 1).append('\n');
-                LOG.info("NUP4-MERGE mode={} sym={} t={} nSleeveLegs={} to={}", mergeMode, order.symbol,
-                        Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime), nFrom, "MERGE_BASE".equals(mdec) ? "BASE" : "SLEEVE");
-                if ("MERGE_SLEEVE".equals(mdec)) {
-                    sleeveBook.bm.counterOrderCreated.incrementAndGet();
-                    return;                                  // leg nay KHONG vao so NEN
-                }
+                if (mergeSleeveCluster(symbolId, order, ticker, mdec)) return;   // M2: leg vao so SLEEVE
             }
         }
 
