@@ -41,3 +41,5 @@ Hậu quả trước R4n: `exinfo_validate.py:44` (đòi serverTime mới hơn f
   lỗi ⇒ giữ file+sidecar cũ, sidecar lệch trước restart ⇒ dừng, deploy XONG có sidecar, status).
 - 242 thật: `DRY=1 FORCE=1` DRY PASS; thử làm mới 3 lần trong thư mục tạm (đã xoá): 3/3 rc 0 dù serverTime lùi; bộ kiểm cũ với lần
   tải kế tiếp ⇒ "KHONG moi hon" (tái hiện lỗi), bộ kiểm mới ⇒ ĐẠT.
+- fake242: lần 1 `r4n_fake.log` 256/257 — 1 FAIL `r4 tu choi truoc 2026-11-18 07:54` (§22, mục không liên quan R4n; tái hiện riêng
+  15/15 lần ĐẠT); lần 2 `r4n_fake2.log` **TEST PASS 255/255** (số mục phụ thuộc khung giờ chạy).
