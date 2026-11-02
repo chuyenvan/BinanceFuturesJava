@@ -865,6 +865,7 @@ nw = {'symbol': 'NEW1USDT', 'contractType': 'PERPETUAL', 'underlyingType': 'COIN
 dump('ex_new.json', st + 900000, s + [nw])
 dump('ex_noob.json', st + 1800000, [{k: v for k, v in x.items() if k != 'onboardDate'} for x in s])
 dump('ex_notnewer.json', st + 900000, s + [nw])
+dump('ex_few.json', st + 900000, s[:50])   # [R4n] thay ca 'KHONG moi hon' (R4n bo cong serverTime)
 dump('ex_drop.json', st + 2700000, s[:130] + [x for x in s if 'TRADIFI' in x['contractType']])
 dump('ex_new2.json', st + 3600000, s + [nw])
 EOF
@@ -876,8 +877,8 @@ chk "r4e lam moi hop le (serverTime moi hon, listing moi NEW1USDT) => thay file 
 M0=$(md5sum < $XF)
 OUT=$(rf "$W/ex_noob.json"); RC=$?
 chk "r4e lam moi thieu onboardDate => GIU file cu, fails=1" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'thieu onboardDate/underlyingType' && [ \"\$(md5sum < $XF)\" = \"$M0\" ] && grep -qx 'fails=1' $F4/run/c3live_exinfo_refresh.state"
-OUT=$(rf "$W/ex_notnewer.json"); RC=$?
-chk "r4e lam moi serverTime KHONG moi hon => GIU file cu" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'KHONG moi hon' && [ \"\$(md5sum < $XF)\" = \"$M0\" ] && [ ! -f $W/tg_exr.txt ]"
+OUT=$(rf "$W/ex_few.json"); RC=$?
+chk "r4e lam moi chi 50 symbol => GIU file cu" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'chi 50 symbol' && [ \"\$(md5sum < $XF)\" = \"$M0\" ] && [ ! -f $W/tg_exr.txt ]"
 OUT=$(rf "$W/ex_drop.json"); RC=$?
 chk "r4e so symbol giam > 10 % => GIU file cu; loi thu 3 lien tiep => Telegram KHAN" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'so symbol giam 224 -> 190' && [ \"\$(md5sum < $XF)\" = \"$M0\" ] && grep -qx 'fails=3' $F4/run/c3live_exinfo_refresh.state && [ \$(grep -c 'KHAN: lam moi exchangeInfo LOI 3 lan' $W/tg_exr.txt) = 1 ]"
 OUT=$(rf "$W/khong_co.json"); RC=$?
@@ -1058,6 +1059,50 @@ TSM=$(grep -ho 'TS=[0-9_]*' "$W/m2.out" | head -1 | cut -d= -f2); rm -rf "$LKD"
 echo YES | APP_DIR=$F4 FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TSM" > /dev/null 2>&1
 rm -f "$W/PAUSE" "$F4/FAKE_R4"
 chk "r4m sau MIN-1/2: env c3_shadow" "grep -qx 'export LIVE_PROFILE=c3_shadow' $F4/conf/env.sh"
+echo "== 30. [V12 R4n] A1 R4M MAJ-X: tuoi exchangeInfo theo LUC TAI (sidecar .meta); serverTime cache cu / lui KHONG chan"
+python3 - "$W" <<'EOF'
+import json, sys, time
+w = sys.argv[1]
+b = json.load(open(w + '/exinfo_r4.json'))
+now = int(time.time() * 1000)
+def dump(n, t):
+    json.dump({'serverTime': t, 'symbols': b['symbols']}, open(w + '/' + n, 'w'), separators=(',', ':'))
+dump('ex_cur80.json', now - 80 * 60000)
+dump('ex_old88.json', now - 88 * 60000)
+dump('ex_back6.json', now - 88 * 60000 - 6)
+dump('ex_30h.json', now - 30 * 3600000)
+EOF
+XF=$F4/run/c3live_exchangeInfo.json; cp "$W/ex_cur80.json" "$XF"; rm -f "$XF.meta" "$F4/run/c3live_exinfo_refresh.state"
+mfa() { sed -n 's/.*"fetchedAtMs":\([0-9]*\).*/\1/p' "$XF.meta"; }
+msha() { sed -n 's/.*"sha256":"\([0-9a-f]*\)".*/\1/p' "$XF.meta"; }
+mns() { sed -n 's/.*"n_symbols":\([0-9]*\).*/\1/p' "$XF.meta"; }
+T0=$(date +%s%3N)
+OUT=$(rf "$W/ex_old88.json"); RC=$?
+chk "r4n lam moi: serverTime cu 88' (cu hon file hien tai 80') nhung vua tai => DAT; sidecar fetchedAtMs = luc tai, sha256 + n_symbols khop" "[ $RC = 0 ] && cmp -s $XF $W/ex_old88.json && [ \"\$(mfa)\" -ge $T0 ] && [ \"\$(msha)\" = \"\$(sha256sum < $XF | cut -c1-64)\" ] && [ \"\$(mns)\" = 223 ] && ! echo \"\$OUT\" | grep -q CANH_BAO"
+OUT=$(rf "$W/ex_back6.json"); RC=$?
+chk "r4n lam moi: serverTime LUI 6 ms => DAT (truoc R4n: TRUOT 'KHONG moi hon')" "[ $RC = 0 ] && cmp -s $XF $W/ex_back6.json && [ \"\$(msha)\" = \"\$(sha256sum < $XF | cut -c1-64)\" ] && grep -qx 'fails=0' $F4/run/c3live_exinfo_refresh.state"
+OUT=$(rf "$W/ex_30h.json"); RC=$?
+chk "r4n serverTime lech 30 h => DAT, CHI canh bao" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'CANH_BAO_serverTime_lech=30'"
+M0=$(cat "$XF.meta"); X0=$(md5sum < $XF)
+OUT=$(rf "$W/khong_co.json"); RC=$?
+chk "r4n lam moi loi => GIU file + sidecar cu (khop nhau), khong de .meta.tmp" "[ $RC = 1 ] && [ \"\$(cat $XF.meta)\" = '$M0' ] && [ \"\$(md5sum < $XF)\" = \"$X0\" ] && [ ! -f $XF.meta.tmp ]"
+cat > "$W/fakessh_meta.sh" <<EOF
+# ssh GIA: lam lech sidecar ngay o buoc kiem truoc restart
+case "\$1" in *PRE_RESTART_A1*) printf '{"fetchedAtMs":1,"sha256":"%064d","n_symbols":1}\n' 0 > "$XF.meta";; esac
+exec bash -c "\$1"
+EOF
+touch "$F4/FAKE_R4"; P0=$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 SSH_242="bash $W/fakessh_meta.sh" bash "$D4" 2>&1); RC=$?
+chk "r4n sidecar lech file ngay truoc restart => DUNG truoc khi dung bot cu (env khoi phuc, cung pid)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL a1_meta_thieu_hoac_lech' && ! grep -q UNIVERSE_A1 $F4/conf/env.sh && [ \"\$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)\" = \"$P0\" ]"
+rm -f "$XF.meta"
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?
+TS4=$(echo "$OUT" | grep -o 'TS=[0-9_]*' | head -1 | cut -d= -f2)
+chk "r4n deploy XONG: buoc chuan bi ghi sidecar, kiem truoc restart sidecar khop, lam moi lan dau DAT" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'OK exchangeInfo symbols=223 .*fetchedAtMs=' && echo \"\$OUT\" | grep -q 'OK a1_meta_khop' && echo \"\$OUT\" | grep -q 'OK lam_moi_lan_dau rc=0 fails=0' && [ \"\$(msha)\" = \"\$(sha256sum < $XF | cut -c1-64)\" ]"
+OUT=$(APP_DIR=$F4 bash "$HERE/c3live_status.sh" 2>&1)
+chk "r4n status in sidecar" "echo \"\$OUT\" | grep -q '== exchangeInfo sidecar (R4n luc tai): {\"fetchedAtMs\"'"
+echo YES | APP_DIR=$F4 FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TS4" > /dev/null 2>&1
+rm -f "$F4/FAKE_R4"
+chk "r4n rollback xong: c3_shadow" "grep -qx 'export LIVE_PROFILE=c3_shadow' $F4/conf/env.sh"
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]

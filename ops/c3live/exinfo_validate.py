@@ -2,11 +2,17 @@
 #   - deploy_v12_dry_r4.sh: PRE (nguon doc ra stdout, "-") va buoc chuan bi (file tai ve);
 #   - exinfo_refresh_242.sh (cron 242): moi lan lam moi.
 # Chay: python3 -I exinfo_validate.py <file_moi|-> <file_hien_tai|""> <min_tradfi> <max_giam_symbol>
-# Kiem: JSON; serverTime > 0 (va MOI HON file hien tai neu co); > 100 symbol; MOI symbol co onboardDate + underlyingType;
+# Kiem: JSON; co serverTime > 0; > 100 symbol; MOI symbol co onboardDate + underlyingType;
 #   >= min_tradfi hop dong TradFi (contractType chua TRADIFI/TRADFI); so symbol giam <= max_giam so voi file hien tai.
+# [V12 R4n MAJ-X A1 R4M] serverTime cua exchangeInfo la ANH CHUP CACHE cua san (do 11-02: cu 88', lui 6 ms giua 2 lan tai) =>
+#   KHONG con doi serverTime moi hon file hien tai; tuoi file tinh theo LUC TAI (sidecar <file>.meta fetchedAtMs / mtime).
+#   serverTime lech dong ho may > 24 h => CHI canh bao (them "CANH_BAO_serverTime_lech=..h" vao dong OK), khong chan.
 # rc 0 + "symbols=.. TradFi=.. onboardDate=.. underlyingType=.. serverTime=.." ; rc 2 + ly do. Phan loai TF/INDEX KHONG o day.
 import json
 import sys
+import time
+
+WARN_MS = 24 * 3600 * 1000
 
 
 def main(a):
@@ -41,13 +47,12 @@ def main(a):
         except Exception:
             c = None
     if isinstance(c, dict):
-        cst = c.get('serverTime') or 0
-        if st <= cst:
-            return 'serverTime %d KHONG moi hon file hien tai %d' % (st, cst)
         n0 = len(c.get('symbols') or [])
         if n0 and len(sy) < n0 * (1 - drop):
             return 'so symbol giam %d -> %d (> %d %%)' % (n0, len(sy), int(round(drop * 100)))
-    print('symbols=%d TradFi=%d onboardDate=%d underlyingType=%d serverTime=%d' % (len(sy), tf, len(sy), len(sy), st))
+    lech = abs(int(time.time() * 1000) - st)
+    warn = (' CANH_BAO_serverTime_lech=%.1fh' % (lech / 3600000.0)) if lech > WARN_MS else ''
+    print('symbols=%d TradFi=%d onboardDate=%d underlyingType=%d serverTime=%d%s' % (len(sy), tf, len(sy), len(sy), st, warn))
     return None
 
 

@@ -20,6 +20,7 @@ fi
 [ -f run/heartbeat ] && echo "== heartbeat tuoi=$(( $(date +%s) - $(stat -c %Y run/heartbeat) ))s" || echo "== heartbeat: chua co"
 X=run/c3live_exchangeInfo.json   # [R4e] nguon A1 + R7 (cron lam moi tren 242)
 [ -f "$X" ] && echo "== exchangeInfo: tuoi=$(( $(date +%s) - $(stat -c %Y "$X") ))s lam_moi: $(tr '\n' ' ' < run/c3live_exinfo_refresh.state 2>/dev/null)" || echo "== exchangeInfo: chua co $X"
+[ -f "$X.meta" ] && echo "== exchangeInfo sidecar (R4n luc tai): $(cat "$X.meta")" || echo "== exchangeInfo sidecar: CHUA CO"
 echo "== cron lam moi: $($CT -l 2>/dev/null | grep -cF '# C3LIVE_EXINFO_REFRESH') dong; [UNIVERSE-A1]: $(grep -a '\[UNIVERSE-A1\] BAT' $L | tail -1 | grep -o 'TradFi=[0-9]*, INDEX=[0-9]*')"
 echo "== [OI-GUARD-2] oi_feat STALE (INFO): $(grep -a -c '\[OI-GUARD-2\].*STALE' $L) dong; gan nhat: $(grep -a '\[OI-GUARD-2\].*STALE' $L | tail -1 | cut -c1-160)"
 echo "== kill-switch latch: $( [ -f run/killsw_latch.json ] && cat run/killsw_latch.json || echo '(chua co file = chua latch)')"

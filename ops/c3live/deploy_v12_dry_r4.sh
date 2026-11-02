@@ -26,8 +26,8 @@ SCP_242=${SCP_242:-"scp -P 2222 -o BatchMode=yes -i /home/ubuntu/.ssh/id_rsa_chu
 RHOST=${RHOST-"root@103.157.218.242:"}
 A=${APP_DIR:-/home/chuyennd/java/v_t_m}
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}
-NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4j}
-NJ_MD5=${NJ_MD5:-ba71eab2da6aac7bd296d7d5812e2d83}   # [V12 R4j] jar r4j = 4g..4j (docs/c3live/ROUND4J.md; A1 R4J PASS-WITH-MINOR)
+NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4n}
+NJ_MD5=${NJ_MD5:-fb6711efe473e0e0a5b0ca9813c62af3}   # [V12 R4n] jar r4n = r4j + R7 tuoi exchangeInfo theo LUC TAI (docs/c3live/ROUND4N.md)
 # jar v_t_m dang chay (shadow v1.1 dcae2e2b): deploy_v12_dry.sh / rollback_v12.sh / fix_featdump_242 10-27 ("OK jar_dcae2e2b").
 # Kiem lai tren 242 o buoc 2 — khac => TU CHOI.
 OLD_MD5=${OLD_MD5:-dcae2e2bbb1a357bc15703b416d4dccb}
@@ -37,9 +37,9 @@ RB_SH=${RB_SH:-$(cd "$(dirname "$0")" && pwd)/rollback_v12.sh}
 RB_MD5=${RB_MD5:-b03233d45d57e2fed287a80924d4e2a3}   # [R4c D2] md5 rollback_v12.sh (kiem truoc khi dung, ca trong autorb)
 DEPLOY_TG_ENV=${DEPLOY_TG_ENV:-/home/ubuntu/.config/health242/tg.env}
 EXR_SH=${EXR_SH:-$(cd "$(dirname "$0")" && pwd)/exinfo_refresh_242.sh}
-EXR_MD5=${EXR_MD5:-dc7e40d7fa5a0fe1c5ca8ac61540fc84}   # [R4e MAJOR-1 + R4k C3PY] md5 exinfo_refresh_242.sh (cron lam moi exchangeInfo tren 242)
+EXR_MD5=${EXR_MD5:-2af2a11cfb08533a505a904f3a7b91f4}   # [R4e MAJOR-1 + R4k C3PY] md5 exinfo_refresh_242.sh (cron lam moi exchangeInfo tren 242)
 EXV_PY=${EXV_PY:-$(cd "$(dirname "$0")" && pwd)/exinfo_validate.py}
-EXV_MD5=${EXV_MD5:-94d2f39d9eb4fe177d92b683f22f7bbd}   # [R4f MINOR-2] md5 bo kiem exchangeInfo CHUNG (PRE + chuan bi + cron lam moi)
+EXV_MD5=${EXV_MD5:-e5eb154bf3c87e144ce81aeda1679306}   # [R4f MINOR-2] md5 bo kiem exchangeInfo CHUNG (PRE + chuan bi + cron lam moi)
 # [R4k] python3 RIENG tren 242, duong dan tuyet doi (242 CentOS 7 chi co python2.7; KHONG dung python theo PATH / he thong).
 # Cai bang ops/c3live/c3py_install_242.sh (python-build-standalone pin sha256). Dung cho PRE + chuan bi + cron lam moi.
 PY242=${PY242:-/opt/c3py/python/bin/python3}
@@ -316,12 +316,19 @@ echo "OK md5_jar_tren_242"
 echo "OK backup TS=\$TS"
 restore() { \cp -f conf/env.sh.bak_v12pre_\$TS conf/env.sh; echo "DA_KHOI_PHUC env.sh"; }
 $EXINFO_CMD > run/c3live_exchangeInfo.json.tmp 2>/dev/null
+FAT=\$(date +%s%3N)   # [R4n MAJ-X] luc tai => sidecar fetchedAtMs (R7 tinh tuoi theo luc tai, KHONG theo serverTime)
 X=run/c3live_exchangeInfo.json.tmp
 # [R4f MINOR-2] CUNG bo kiem voi PRE + cron lam moi (ops/exinfo_validate.py, md5 pin)
 [ "\$(md5sum < ops/exinfo_validate.py 2>/dev/null | cut -c1-32)" = "\$EXVM" ] || { rm -f \$X; echo "FAIL md5_exinfo_validate_tren_242"; exit 0; }
 V=\$($PY242 -I ops/exinfo_validate.py \$X run/c3live_exchangeInfo.json \$MINTF 0.10 2>&1); VR=\$?
 if [ "\$VR" = 0 ]; then
-  mv -f \$X run/c3live_exchangeInfo.json; echo "OK exchangeInfo \$V"
+  NS=\$(printf '%s' "\$V" | sed -n 's/^symbols=\([0-9]*\) .*/\1/p' | head -1); SH=\$(sha256sum < \$X | cut -c1-64)
+  if [ -n "\$NS" ] && printf '{"fetchedAtMs":%s,"sha256":"%s","n_symbols":%s}\n' "\$FAT" "\$SH" "\$NS" > run/c3live_exchangeInfo.json.meta.tmp \
+     && mv -f \$X run/c3live_exchangeInfo.json && mv -f run/c3live_exchangeInfo.json.meta.tmp run/c3live_exchangeInfo.json.meta; then
+    echo "OK exchangeInfo \$V fetchedAtMs=\$FAT"
+  else
+    rm -f \$X run/c3live_exchangeInfo.json.meta.tmp; echo "FAIL exchangeInfo_sidecar"; exit 0
+  fi
 else
   rm -f \$X; echo "FAIL exchangeInfo \$V"; exit 0
 fi
@@ -356,6 +363,11 @@ NO=$(grep -o '"onboardDate":[0-9]' $X | wc -l)
 ST=$(grep -o '"serverTime":[0-9]*' $X | head -1 | cut -d: -f2)
 if [ "$N" -gt 100 ] && [ "$NT" -ge "$MINTF" ] && [ "$NO" -ge "$N" ] && [ "${ST:-0}" -gt 0 ]; then
   echo "OK a1_file symbols=$N TradFi=$NT onboardDate=$NO serverTime=$ST md5=$(md5sum < $X | cut -c1-32)"
+  # [R4n MAJ-X] sidecar luc tai phai khop file (R7 fail-closed khi lech)
+  MS=$(sed -n 's/.*"sha256":"\([0-9a-f]\{64\}\)".*/\1/p' $X.meta 2>/dev/null)
+  MN=$(sed -n 's/.*"n_symbols":\([0-9]*\).*/\1/p' $X.meta 2>/dev/null)
+  [ -n "$MS" ] && [ "$MS" = "$(sha256sum < $X | cut -c1-64)" ] && [ "$MN" = "$N" ] && echo "OK a1_meta_khop $(cat $X.meta)" \
+    || echo "FAIL a1_meta_thieu_hoac_lech ($X.meta: sha256/n_symbols phai khop file)"
 else
   echo "FAIL a1_file symbols=$N TradFi=$NT onboardDate=$NO serverTime=${ST:-0}"
 fi

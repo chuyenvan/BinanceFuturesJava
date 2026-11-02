@@ -68,7 +68,7 @@ public class UniverseA1ListingRefreshTest {
         v1.add("symbols", a1);
         Path f = tmp.getRoot().toPath().resolve("c3live_exchangeInfo.json");
         Files.write(f, v1.toString().getBytes(StandardCharsets.UTF_8));
-        Files.setLastModifiedTime(f, FileTime.fromMillis(System.currentTimeMillis() - 120_000L));
+        Files.setLastModifiedTime(f, FileTime.fromMillis(st0 + 60_000L - 120_000L));   // [R4n] tuoi theo LUC TAI (mtime, khong sidecar)
         AtomicLong clock = new AtomicLong(st0 + 60_000L);
         UniverseA1Filter.setConfigForTest(true, f, true);
         UniverseA1Filter.initEager();
@@ -84,7 +84,7 @@ public class UniverseA1ListingRefreshTest {
         JsonObject v2 = full.deepCopy();
         v2.addProperty("serverTime", st0 + 15 * 60_000L);
         Files.write(f, v2.toString().getBytes(StandardCharsets.UTF_8));
-        Files.setLastModifiedTime(f, FileTime.fromMillis(System.currentTimeMillis()));
+        Files.setLastModifiedTime(f, FileTime.fromMillis(st0 + 15 * 60_000L));
         clock.set(st0 + 16 * 60_000L);
         UniverseA1Filter.resetStatForTest();
         t = clock.get();

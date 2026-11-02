@@ -8,6 +8,8 @@ import com.binance.chuyennd.c3live.client.C3LiveClientConfig;
 import com.binance.chuyennd.c3live.log.OrderAuditLog;
 import com.binance.chuyennd.c3live.rate.ProductionRatePolicy;
 import com.binance.chuyennd.c3live.rate.RateGuard;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,6 +19,7 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.security.MessageDigest;
 import java.util.Locale;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
@@ -108,23 +111,97 @@ public final class GatewayFactory {
         }
     }
 
+    /** [V12 R4n MAJ-X A1 R4M] sidecar canh file exchangeInfo: {"fetchedAtMs":..,"sha256":"..","n_symbols":..} (cron/deploy ghi). */
+    public static final String META_SUFFIX = ".meta";
+    /** [V12 R4n] fetchedAt o tuong lai qua muc nay (lech dong ho / file sai) => tu choi. */
+    static final long FETCHED_FUTURE_TOL_MS = 5L * 60_000L;
+    /** [V12 R4n] serverTime lech fetchedAt qua muc nay => CHI canh bao (serverTime la anh chup cache cua san, KHONG phai dong ho). */
+    static final long SERVERTIME_WARN_MS = 24L * 3_600_000L;
+
     /**
-     * [V12 R4e MAJOR-1] R7 khi UNIVERSE_A1=1 (dry VA live): doc CUNG file raw exchangeInfo voi bo loc tin hieu (cron lam moi tren
-     * 242), kem kiem tuoi: serverTime cu hon {@code maxAgeMs} / file thieu / hong => nem (R7 giu snapshot cu; qua han => STALE,
-     * khong mua). Khong bao gio doc API => R7 va A1 khong the lech nguon.
+     * [V12 R4e MAJOR-1 + R4n MAJ-X] R7 khi UNIVERSE_A1=1 (dry VA live): doc CUNG file raw exchangeInfo voi bo loc tin hieu (cron lam
+     * moi tren 242), kem kiem tuoi theo LUC TAI (fetchedAt): sidecar {@code <file>.meta} (sha256 + n_symbols phai khop file; hong /
+     * lech => nem, fail-closed) hoac mtime khi KHONG co sidecar. Tuoi &gt; {@code maxAgeMs} / fetchedAt o tuong lai &gt; 5' / file thieu
+     * / hong / thieu serverTime => nem (R7 giu snapshot cu; qua han => STALE, khong mua). serverTime cua san la anh chup cache (do
+     * 10-31/11-02: cu 9-88', co luc lui vai ms) => KHONG dung lam dong ho, chi canh bao khi lech &gt; 24 h.
+     * Khong bao gio doc API => R7 va A1 khong the lech nguon.
      */
     public static Supplier<ExchangeInfo> freshFileSource(File file, java.util.function.LongSupplier clock, long maxAgeMs) {
         final Supplier<ExchangeInfo> base = fileSource(file);
+        final File meta = new File(file.getPath() + META_SUFFIX);
+        final long[] warnedFetched = {Long.MIN_VALUE};
         return () -> {
             ExchangeInfo ei = base.get();
             if (ei == null) throw new IllegalStateException("khong doc duoc exchangeInfo " + file.getPath());
-            long age = clock.getAsLong() - ei.getServerTime();
-            if (ei.getServerTime() <= 0L || age > maxAgeMs) {
-                throw new IllegalStateException("exchangeInfo " + file.getPath() + " CU: serverTime=" + ei.getServerTime() + " tuoi "
-                        + age / 60_000L + "' > " + maxAgeMs / 60_000L + "' (cron lam moi tren 242?)");
+            if (ei.getServerTime() <= 0L) {
+                throw new IllegalStateException("exchangeInfo " + file.getPath() + " thieu serverTime (khong phai raw /fapi/v1/exchangeInfo)");
+            }
+            long fetched = fetchedAtMs(file, meta, ei);
+            long now = clock.getAsLong();
+            long age = now - fetched;
+            if (age > maxAgeMs || fetched > now + FETCHED_FUTURE_TOL_MS) {
+                throw new IllegalStateException("exchangeInfo " + file.getPath() + " CU: tai luc fetchedAt=" + fetched + " ("
+                        + (meta.exists() ? "sidecar" : "mtime") + ") tuoi " + age / 60_000L + "' > " + maxAgeMs / 60_000L
+                        + "' hoac o tuong lai (cron lam moi tren 242?)");
+            }
+            long skew = Math.abs(fetched - ei.getServerTime());
+            if (skew > SERVERTIME_WARN_MS && warnedFetched[0] != fetched) {
+                warnedFetched[0] = fetched;
+                LOG.warn("[C3-LIVE] exchangeInfo {}: serverTime={} lech luc tai {} h (> 24 h) — CHI canh bao (serverTime la anh chup cache)",
+                        file.getPath(), ei.getServerTime(), skew / 3_600_000L);
             }
             return ei;
         };
+    }
+
+    /** [V12 R4n] luc tai: sidecar (fail-closed khi hong/lech file) hoac mtime khi khong co sidecar. */
+    static long fetchedAtMs(File file, File meta, ExchangeInfo ei) {
+        if (!meta.exists()) {
+            long m = file.lastModified();
+            if (m <= 0L) throw new IllegalStateException("exchangeInfo " + file.getPath() + " khong doc duoc mtime");
+            return m;
+        }
+        final JsonObject o;
+        final byte[] raw;
+        try {
+            o = JsonParser.parseString(new String(Files.readAllBytes(meta.toPath()), StandardCharsets.UTF_8)).getAsJsonObject();
+            raw = Files.readAllBytes(file.toPath());
+        } catch (Exception e) {
+            throw new IllegalStateException("sidecar " + meta.getPath() + " HONG (" + e.getClass().getSimpleName() + ") => tu choi");
+        }
+        long fa;
+        String sha;
+        long n;
+        try {
+            fa = o.get("fetchedAtMs").getAsLong();
+            sha = o.get("sha256").getAsString();
+            n = o.get("n_symbols").getAsLong();
+        } catch (RuntimeException e) {
+            throw new IllegalStateException("sidecar " + meta.getPath() + " thieu/sai truong fetchedAtMs/sha256/n_symbols => tu choi");
+        }
+        if (fa <= 0L || sha == null || !sha.matches("[0-9a-f]{64}") || n <= 0L) {
+            throw new IllegalStateException("sidecar " + meta.getPath() + " gia tri khong hop le => tu choi");
+        }
+        String got = sha256Hex(raw);
+        if (!sha.equals(got)) {
+            throw new IllegalStateException("sidecar " + meta.getPath() + " sha256 KHONG khop file (" + sha.substring(0, 12) + " != "
+                    + got.substring(0, 12) + ") => tu choi");
+        }
+        if (n != ei.getSymbols().size()) {
+            throw new IllegalStateException("sidecar " + meta.getPath() + " n_symbols=" + n + " != file " + ei.getSymbols().size() + " => tu choi");
+        }
+        return fa;
+    }
+
+    static String sha256Hex(byte[] b) {
+        try {
+            byte[] d = MessageDigest.getInstance("SHA-256").digest(b);
+            StringBuilder sb = new StringBuilder(64);
+            for (byte x : d) sb.append(String.format("%02x", x & 0xff));
+            return sb.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException("khong co SHA-256", e);
+        }
     }
 
     /** Doc exchangeInfo tu file (cache theo mtime). File thieu/hong => null. */

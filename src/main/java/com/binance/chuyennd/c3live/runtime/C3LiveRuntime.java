@@ -703,6 +703,7 @@ public final class C3LiveRuntime {
     public static final long A1_MAX_AGE_MS = 45L * 60_000L;
     private volatile String a1Source;
     private volatile long a1SeenMtime = Long.MIN_VALUE;
+    private volatile long a1SeenMetaMtime = Long.MIN_VALUE;
     private volatile long a1LastStaleAlertMs = Long.MIN_VALUE / 2;
 
     /**
@@ -714,8 +715,10 @@ public final class C3LiveRuntime {
         if (src == null) return;
         File f = new File(src);
         long m = f.lastModified();
-        if (m != a1SeenMtime) {
+        long mm = new File(src + GatewayFactory.META_SUFFIX).lastModified();   // [V12 R4n] sidecar fetchedAt doi => nap lai
+        if (m != a1SeenMtime || mm != a1SeenMetaMtime) {
             a1SeenMtime = m;
+            a1SeenMetaMtime = mm;
             if (universe != null) universe.refresh(now);
         }
         if (m > 0L && now - m > A1_MAX_AGE_MS && now - a1LastStaleAlertMs >= 1_800_000L) {
