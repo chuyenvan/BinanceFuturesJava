@@ -709,6 +709,7 @@ EOF
 # [R4k] 242 that KHONG co python3 (CentOS 7, chi python2.7): moi lenh "tren 242" cua deploy/cron chay voi PATH co python3/python GIA
 # (in "command not found", rc 127); python3 RIENG = $W/c3py_t/python/bin/python3 (nhu /opt/c3py do c3py_install_242.sh cai).
 REALPY=$(command -v python3); ln -sf "$REALPY" "$W/realpy"
+export WD_PAUSE_MAX_S=300   # [R4m] bo tu go PAUSE (moi deploy 1 tien trinh canh) — test: 5 phut
 mkdir -p "$W/nopy" "$W/c3py_t/python/bin"
 printf '#!/bin/sh\necho "bash: $(basename "$0"): command not found" >&2\nexit 127\n' > "$W/nopy/python3"; cp "$W/nopy/python3" "$W/nopy/python"; chmod +x "$W/nopy/python3" "$W/nopy/python"
 printf '#!/bin/sh\nexec %s "$@"\n' "$REALPY" > "$W/c3py_t/python/bin/python3"; chmod +x "$W/c3py_t/python/bin/python3"
@@ -1007,6 +1008,56 @@ mkdir -p "$W/lk.d"; bash -c 'exec -a khoa_deploy_gia sleep 30' & LP=$!; echo $LP
 OUT=$(sk DRY=1 SOAK_HOURS=1.1 SOAK_FORCE_CLOSE_MIN=10 DEPLOY_LOCKD=$W/lk.d bash "$WSK" 2>&1); RC=$?
 chk "r4l khoa deploy dry con pid song => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL Oracle: khong co job deploy/rollback dang chay (1)'"
 kill $LP 2>/dev/null; wait $LP 2>/dev/null
+echo "== 29. [V12 R4m] A1 R4K MIN-1 gate_ratio_live.bin backup/khoi phuc cung TS + MIN-2 PAUSE token cua job tu go (trap / het han)"
+GRF=$F4/run/gate_ratio_live.bin
+printf 'v11-buffer-quy-uoc-cu' > "$GRF"; G0=$(md5sum < "$GRF" | cut -c1-32)
+touch "$F4/FAKE_R4"
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?
+TS4=$(echo "$OUT" | grep -o 'TS=[0-9_]*' | head -1 | cut -d= -f2)
+chk "r4m deploy XONG: backup gate_ratio_live.bin NGAY SAU stop v1.1 (md5 ghi kem), PAUSE token cua job, tu go dat lich" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q \"OK backup_gate_ratio md5=$G0\" && [ \"\$(cat $GRF.bak_v12pre_$TS4.md5)\" = $G0 ] && echo \"\$OUT\" | grep -q \"OK watchdog_PAUSE token='C3DEPLOY_V12 TS=$TS4 pid=\" && echo \"\$OUT\" | grep -q 'OK PAUSE_tu_go_sau=' && [ ! -f $W/PAUSE ]"
+printf 'v12-dry-quy-uoc-moi' > "$GRF"; G1=$(md5sum < "$GRF" | cut -c1-32)
+printf 'hong' > "$GRF.bak_v12pre_$TS4"
+OUT=$(APP_DIR=$F4 DRY=1 bash "$HERE/rollback_v12.sh" "$TS4" 2>&1); RC=$?
+chk "r4m rollback: backup gate_ratio sai md5 => DUNG, khong doi gi" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL gate_ratio_backup_md5=' && [ \"\$(md5sum < $GRF | cut -c1-32)\" = $G1 ] && grep -q LIVE_ADAPTER $F4/conf/env.sh"
+printf 'v11-buffer-quy-uoc-cu' > "$GRF.bak_v12pre_$TS4"
+OUT=$(echo YES | APP_DIR=$F4 FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TS4" 2>&1); RC=$?
+chk "r4m rollback: khoi phuc DUNG ban v1.1 (md5 = luc stop v1.1), ban dry doi ten .rb_TS, c3_shadow" "echo \"\$OUT\" | grep -q \"OK gate_ratio_khoi_phuc md5=$G0\" && [ \"\$(md5sum < $GRF | cut -c1-32)\" = $G0 ] && [ \"\$(md5sum < $GRF.rb_$TS4 | cut -c1-32)\" = $G1 ] && echo \"\$OUT\" | grep -q 'Rollback xong' && grep -qx 'export LIVE_PROFILE=c3_shadow' $F4/conf/env.sh"
+rm -f "$GRF"
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?
+TS4=$(echo "$OUT" | grep -o 'TS=[0-9_]*' | head -1 | cut -d= -f2)
+printf 'v12-dry-moi' > "$GRF"
+OUT2=$(echo YES | APP_DIR=$F4 FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TS4" 2>&1)
+chk "r4m truoc deploy CHUA co gate_ratio => marker NONE; rollback: v1.1 KHONG thay file cua dry (doi ten .rb_TS)" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'OK gate_ratio_chua_co (marker NONE)' && echo \"\$OUT2\" | grep -q 'Rollback xong' && [ ! -f $GRF ] && [ -f $GRF.rb_$TS4 ]"
+LKD=$W/deploylog/.deploy_v12dry_r4.lock.d
+m2start() {   # deploy that o job NEN, cho LATCH dai de kip giet giua chung
+  rm -f "$W/PAUSE"
+  setsid bash -c "echo YES | env APP_DIR=$F4 NJ=$W/new_r4.jar NJ_MD5=$NEW4 PATH=$W/nopy:$PATH PY242=$W/c3py_t/python/bin/python3 EXINFO_CMD='$W/realpy $W/exgen.py $W/exinfo_r4.json' DEPLOY_TG_SINK=$TG4 FORCE=1 FORCE_TIME=1 LATCH_WAIT_S=40 WD_PAUSE_MAX_S=$1 bash $D4" > "$W/m2.out" 2>&1 < /dev/null &
+  for i in $(seq 1 120); do grep -q '^C3DEPLOY_V12 TS=' "$W/PAUSE" 2>/dev/null && break; sleep 1; done
+  sleep 2; JP=$(cat "$LKD/pid" 2>/dev/null)
+}
+m2start 600
+chk "r4m PAUSE mang token CUA job (pid job)" "[ -n \"$JP\" ] && grep -q \"^C3DEPLOY_V12 TS=[0-9_]* pid=$JP \" $W/PAUSE"
+kill -TERM -- -"$JP" 2>/dev/null
+for i in $(seq 1 30); do kill -0 "$JP" 2>/dev/null || break; sleep 1; done
+chk "r4m job bi giet (TERM) giua chung => trap go PAUSE cua job ngay, khoa duoc tra" "! kill -0 $JP 2>/dev/null && [ ! -f $W/PAUSE ] && grep -q 'da go watchdog PAUSE cua job' $W/deploylog/deploy_v12dry_r4_*_job_*.log && [ ! -e $LKD ]"
+TSM=$(grep -ho 'TS=[0-9_]*' "$W/m2.out" | head -1 | cut -d= -f2)
+echo YES | APP_DIR=$F4 FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TSM" > /dev/null 2>&1
+m2start 8
+kill -KILL -- -"$JP" 2>/dev/null; sleep 1
+chk "r4m job chet cung (kill -9 / Oracle reboot) => PAUSE con ngay sau do" "! kill -0 $JP 2>/dev/null && grep -q '^C3DEPLOY_V12 TS=' $W/PAUSE"
+sleep 12
+chk "r4m PAUSE token cua job tu go sau WD_PAUSE_MAX_S (canh tren 242) => watchdog cuu duoc v_t_m" "[ ! -f $W/PAUSE ]"
+TSM=$(grep -ho 'TS=[0-9_]*' "$W/m2.out" | head -1 | cut -d= -f2); rm -rf "$LKD"
+echo YES | APP_DIR=$F4 FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TSM" > /dev/null 2>&1
+m2start 8
+kill -KILL -- -"$JP" 2>/dev/null; sleep 1
+echo "C3ROLLBACK_V12 TS=tay t=1" > "$W/PAUSE"   # rollback / nguoi van hanh nhan PAUSE truoc khi het han
+sleep 12
+chk "r4m PAUSE KHONG con la token cua job (rollback da ghi de) => bo tu go KHONG dung toi" "[ -f $W/PAUSE ] && grep -q '^C3ROLLBACK_V12' $W/PAUSE"
+TSM=$(grep -ho 'TS=[0-9_]*' "$W/m2.out" | head -1 | cut -d= -f2); rm -rf "$LKD"
+echo YES | APP_DIR=$F4 FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TSM" > /dev/null 2>&1
+rm -f "$W/PAUSE" "$F4/FAKE_R4"
+chk "r4m sau MIN-1/2: env c3_shadow" "grep -qx 'export LIVE_PROFILE=c3_shadow' $F4/conf/env.sh"
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]

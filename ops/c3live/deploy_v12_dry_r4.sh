@@ -16,7 +16,7 @@
 # Ma thoat: 0 XONG | 1 DUNG (chua doi gi / env khoi phuc / da rollback xong) | 2 ROLLBACK LOI | 3 XONG nhung PAUSE con.
 # Rollback tay: FORCE_TIME=1 bash .../rollback_v12.sh <TS>
 # Script MOI (giu nguyen deploy_v12_dry.sh + pin cu cua no). Bien cho test (242 GIA): SSH_242, SCP_242, RHOST, APP_DIR,
-#   LOGDIR, WD_PAUSE, NJ, NJ_MD5, OLD_MD5, KILLSW_SH, KILLSW_MD5, RB_SH, RB_MD5, LATCH_WAIT_S, EXINFO_CMD, PY242, POST_WAIT_S,
+#   LOGDIR, WD_PAUSE, NJ, NJ_MD5, OLD_MD5, KILLSW_SH, KILLSW_MD5, RB_SH, RB_MD5, LATCH_WAIT_S, EXINFO_CMD, PY242, WD_PAUSE_MAX_S, POST_WAIT_S,
 #   POST_ROUNDS, PROC_PAT, WINDOW_WAIT_MAX_S, MIN_TRADFI, DEPLOY_TG_ENV, DEPLOY_TG_SINK (test: ghi Telegram ra file, KHONG gui).
 # =============================================================================
 set -uo pipefail
@@ -34,7 +34,7 @@ OLD_MD5=${OLD_MD5:-dcae2e2bbb1a357bc15703b416d4dccb}
 KILLSW_SH=${KILLSW_SH:-/home/ubuntu/claude_master/v12/c3live/ops/killsw_reset.sh}
 KILLSW_MD5=${KILLSW_MD5:-6f8d83481904f91b3f92601b31720ace}
 RB_SH=${RB_SH:-$(cd "$(dirname "$0")" && pwd)/rollback_v12.sh}
-RB_MD5=${RB_MD5:-57ee2baf384a22dfeb2f293c12108577}   # [R4c D2] md5 rollback_v12.sh (kiem truoc khi dung, ca trong autorb)
+RB_MD5=${RB_MD5:-b03233d45d57e2fed287a80924d4e2a3}   # [R4c D2] md5 rollback_v12.sh (kiem truoc khi dung, ca trong autorb)
 DEPLOY_TG_ENV=${DEPLOY_TG_ENV:-/home/ubuntu/.config/health242/tg.env}
 EXR_SH=${EXR_SH:-$(cd "$(dirname "$0")" && pwd)/exinfo_refresh_242.sh}
 EXR_MD5=${EXR_MD5:-dc7e40d7fa5a0fe1c5ca8ac61540fc84}   # [R4e MAJOR-1 + R4k C3PY] md5 exinfo_refresh_242.sh (cron lam moi exchangeInfo tren 242)
@@ -50,6 +50,10 @@ R4_JOB=${R4_JOB:-0}   # 1 = job nen (CHI foreground khoi dong, kem R4_YES_FILE)
 SELF=$(cd "$(dirname "$0")" && pwd)/$(basename "$0")
 LATCH_WAIT_S=${LATCH_WAIT_S:-120}
 WD_PAUSE=${WD_PAUSE:-/var/lib/h242_watchdog/PAUSE}
+# [R4m MIN-2 A1 R4K] PAUSE mang token CUA job ("C3DEPLOY_V12 TS=<TS> pid=<pid job>"): job bi giet (TERM/INT/HUP) => trap go;
+# job chet cung (kill -9 / Oracle reboot) => tien trinh canh tren 242 tu go sau WD_PAUSE_MAX_S neu PAUSE van la token do
+# (rollback ghi token rieng => khong bi go). Deploy dai nhat ~20 phut (LATCH 120 s + 5x120 s CHK) << 45 phut.
+WD_PAUSE_MAX_S=${WD_PAUSE_MAX_S:-2700}
 EXINFO_CMD=${EXINFO_CMD:-"curl -s --max-time 30 https://fapi.binance.com/fapi/v1/exchangeInfo"}
 MIN_TRADFI=${MIN_TRADFI:-50}   # = SymbolUniverseLive.MIN_TRADFI_IN_SOURCE
 POST_WAIT_S=${POST_WAIT_S:-120}
@@ -270,7 +274,18 @@ fi
 echo $$ > "$LOCKD/pid"   # [R4e MINOR-2] nhan khoa tu foreground
 rm -f "$R4_YES_FILE"
 trap 'rm -rf "$LOCKD"' EXIT
-trap 'exit 130' INT TERM HUP
+PAUSE_TOK="C3DEPLOY_V12 TS=$TS pid=$$"
+on_sig() {   # [R4m MIN-2] job bi dung giua chung => go PAUSE CUA CHINH job (token) de watchdog cuu v_t_m
+  trap - INT TERM HUP
+  if s242 "grep -q '^$PAUSE_TOK ' $WD_PAUSE 2>/dev/null && rm -f $WD_PAUSE && echo PAUSE_DA_GO" 2>/dev/null | grep -q PAUSE_DA_GO; then
+    say "job bi DUNG (tin hieu) => da go watchdog PAUSE cua job ($PAUSE_TOK)"
+  else
+    say "job bi DUNG (tin hieu); PAUSE cua job khong con (hoac khong go duoc — tu go sau ${WD_PAUSE_MAX_S}s)"
+  fi
+  tg "[deploy dry R4f] job TS=$TS bi DUNG giua chung (tin hieu). PAUSE cua job da go/tu go. Kiem: c3live_status.sh | rollback: FORCE_TIME=1 bash $RB_SH $TS"
+  exit 130
+}
+trap on_sig INT TERM HUP
 tg "[deploy dry R4f] job NEN bat dau TS=$TS: cho khung gio -> kiem 242 lai -> deploy. Log: $LOG"
 if [ "$FORCE_TIME" != 1 ]; then
   W=0
@@ -412,13 +427,25 @@ ok "lam moi lan dau DAT (cron chay duoc)"
 
 # ---------------------------------------------------------------- 5. restart (watchdog PAUSE)
 say "--- restart (PAUSE watchdog truoc, xoa sau kiem)"
-RS=$($SSH_242 "PP='$PROC_PAT' bash -s -- $A $NJ_MD5 $WD_PAUSE" <<'EOF'
-A=$1; NJM=$2; PAUSE=$3; cd "$A" || { echo "FAIL cd"; exit 0; }
-mkdir -p "$(dirname "$PAUSE")" 2>/dev/null; touch "$PAUSE" 2>/dev/null && echo "OK watchdog_PAUSE" || echo "WARN khong_tao_duoc_PAUSE"
+RS=$($SSH_242 "PP='$PROC_PAT' bash -s -- $A $NJ_MD5 $WD_PAUSE $TS $$ $WD_PAUSE_MAX_S" <<'EOF'
+A=$1; NJM=$2; PAUSE=$3; TS=$4; JP=$5; MAXS=$6; cd "$A" || { echo "FAIL cd"; exit 0; }
+TOK="C3DEPLOY_V12 TS=$TS pid=$JP"
+mkdir -p "$(dirname "$PAUSE")" 2>/dev/null; echo "$TOK t=$(date +%s)" > "$PAUSE" 2>/dev/null && echo "OK watchdog_PAUSE token='$TOK'" || echo "WARN khong_tao_duoc_PAUSE"
+# [R4m MIN-2] canh tren 242: sau MAXS s, PAUSE VAN la token cua job nay => go (job chet cung / Oracle reboot)
+setsid nohup bash -c "sleep $MAXS; grep -q '^$TOK ' '$PAUSE' 2>/dev/null && rm -f '$PAUSE'" > /dev/null 2>&1 < /dev/null &
+echo "OK PAUSE_tu_go_sau=${MAXS}s"
 bin/daemon.sh stop
 for i in $(seq 1 30); do pgrep -f "$PP" >/dev/null || break; sleep 2; done
 if pgrep -f "$PP" >/dev/null; then echo "FAIL van_con_process_sau_stop"; exit 0; fi
 echo "OK da_stop"
+# [R4m MIN-1 A1 R4K] gate_ratio_live.bin DUNG CHUNG v1.1/dry: backup NGAY SAU KHI v1.1 dung (truoc start v1.2) + md5; rollback khoi phuc
+GR=run/gate_ratio_live.bin; GB=$GR.bak_v12pre_$TS
+if [ -f "$GR" ]; then
+  { \cp -fp "$GR" "$GB" && GM=$(md5sum < "$GB" | cut -c1-32) && [ "$GM" = "$(md5sum < "$GR" | cut -c1-32)" ] && echo "$GM" > "$GB.md5"; } \
+    && echo "OK backup_gate_ratio md5=$GM" || { echo "FAIL backup_gate_ratio"; exit 0; }
+else
+  echo NONE > "$GB.md5" && echo "OK gate_ratio_chua_co (marker NONE)" || { echo "FAIL marker_gate_ratio"; exit 0; }
+fi
 \cp -f target/binance-java-sdk-1.2.4.jar.v12dry target/binance-java-sdk-1.2.4.jar
 [ "$(md5sum < target/binance-java-sdk-1.2.4.jar | cut -c1-32)" = "$NJM" ] && echo "OK jar_da_thay" || echo "FAIL jar_thay_sai"
 date +%s > run/.v12_start_epoch

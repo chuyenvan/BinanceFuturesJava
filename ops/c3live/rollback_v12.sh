@@ -6,6 +6,9 @@
 # Thu (chi doc): DRY=1 bash ~/claude_master/deploy/rollback_v12.sh <TS>
 # [2c] Chot gio nhu deploy (khan cap: FORCE_TIME=1). YES_AUTO=1 chi danh cho rollback tu dong cua deploy_v12_dry.sh.
 # KHONG xoa so dry (run/c3live_*): doi ten .rb_<TS> de lan deploy sau bat dau sach (so dry khong co tien that).
+# [R4m MIN-1 A1 R4K] run/gate_ratio_live.bin DUNG CHUNG v1.1/dry: khoi phuc DUNG ban deploy backup (cung TS, md5 kiem);
+#   file cua dry doi ten .rb_<TS>. Khong co backup TS (deploy chua toi restart) => giu nguyen.
+# [R4m MIN-2] PAUSE ghi token rieng 'C3ROLLBACK_V12 TS=..' (bo tu go PAUSE cua deploy khong dung toi).
 # =============================================================================
 set -uo pipefail
 TS=${1:?"Thieu TS. Vi du: bash rollback_v12.sh 20261118_0915"}
@@ -77,6 +80,14 @@ J=$(md5sum < target/binance-java-sdk-1.2.4.jar.bak_v12pre_$TS 2>/dev/null | cut 
 [ "$J" = "$OLD" ] && echo "OK backup_jar_md5=$J" || echo "FAIL backup_jar_md5=$J (mong $OLD)"
 echo "INFO jar_dang_chay=$(md5sum < target/binance-java-sdk-1.2.4.jar | cut -c1-32) so_process=$(pgrep -fc "$PP")"
 echo "INFO so_dry: $(ls run/c3live_* 2>/dev/null | tr '\n' ' ')"
+GB=run/gate_ratio_live.bin.bak_v12pre_$TS
+if [ -f "$GB.md5" ]; then
+  GM=$(cat "$GB.md5")
+  if [ "$GM" = NONE ]; then echo "OK gate_ratio_backup=NONE (truoc deploy chua co file)"
+  else G=$(md5sum < "$GB" 2>/dev/null | cut -c1-32); [ "$G" = "$GM" ] && echo "OK gate_ratio_backup_md5=$G" || echo "FAIL gate_ratio_backup_md5=$G (mong $GM)"; fi
+else
+  echo "INFO gate_ratio: khong co backup TS=$TS (deploy chua toi restart / deploy truoc R4m) => giu nguyen"
+fi
 EOF
 ) || { say "DUNG: ssh loi"; exit 1; }
 echo "$PRE"
@@ -91,13 +102,22 @@ else
 fi
 RS=$(s242in "PP='$PROC_PAT' CT='$CRONTAB_CMD' bash -s -- $A $TS $OLD_MD5 $WD_PAUSE" <<'EOF'
 A=$1; TS=$2; OLD=$3; PAUSE=$4; cd "$A" || { echo "FAIL cd"; exit 0; }
-touch "$PAUSE" 2>/dev/null
+echo "C3ROLLBACK_V12 TS=$TS t=$(date +%s)" > "$PAUSE" 2>/dev/null
 bin/daemon.sh stop
 for i in $(seq 1 30); do pgrep -f "$PP" >/dev/null || break; sleep 2; done
 pgrep -f "$PP" >/dev/null && { echo "FAIL van con process"; rm -f "$PAUSE"; exit 0; }
 \cp -f target/binance-java-sdk-1.2.4.jar.bak_v12pre_$TS target/binance-java-sdk-1.2.4.jar
 \cp -f conf/env.sh.bak_v12pre_$TS conf/env.sh
 \cp -f bin/start.sh.bak_v12pre_$TS bin/start.sh
+GR=run/gate_ratio_live.bin; GB=$GR.bak_v12pre_$TS
+if [ -f "$GB.md5" ]; then
+  GM=$(cat "$GB.md5")
+  [ ! -f "$GR" ] || mv -f "$GR" "$GR.rb_$TS"
+  if [ "$GM" = NONE ]; then echo "OK gate_ratio: truoc deploy khong co => file cua dry doi ten .rb_$TS"
+  else \cp -fp "$GB" "$GR"; G=$(md5sum < "$GR" 2>/dev/null | cut -c1-32); [ "$G" = "$GM" ] && echo "OK gate_ratio_khoi_phuc md5=$G" || echo "FAIL gate_ratio_khoi_phuc md5=$G (mong $GM)"; fi
+else
+  echo "INFO gate_ratio_khong_co_backup_TS (giu nguyen)"
+fi
 for f in run/c3live_book.json run/c3live_dry_state.json run/c3live_ledger.csv run/killsw_latch.json run/c3live_killsw_peak run/c3live_merged.txt run/c3live_equity_c3.json run/c3live_lost.txt run/ts_ext_daily.csv.a1; do
   [ -f "$f" ] && mv -f "$f" "$f.rb_$TS"
 done
