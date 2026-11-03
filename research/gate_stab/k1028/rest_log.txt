@@ -1,0 +1,35 @@
+2026-11-03 11:08:57 GATE_R BTCUSDT {'n_rest': 1440, 'n_vision': 1440, 'byte': True, 'f32': True, 'first_bad': []}
+2026-11-03 11:08:57 GATE_R ETHUSDT {'n_rest': 1440, 'n_vision': 1440, 'byte': True, 'f32': True, 'first_bad': []}
+2026-11-03 11:08:58 GATE_R SOLUSDT {'n_rest': 1440, 'n_vision': 1440, 'byte': True, 'f32': True, 'first_bad': []}
+2026-11-03 11:08:58 GATE_R PARTIUSDT {'n_rest': 1440, 'n_vision': 1440, 'byte': True, 'f32': True, 'first_bad': []}
+2026-11-03 11:08:59 GATE_R BLESSUSDT {'n_rest': 1440, 'n_vision': 1440, 'byte': True, 'f32': True, 'first_bad': []}
+2026-11-03 11:08:59 GATE_R_PASS True
+2026-11-03 11:09:14 tien do 0 643 0GUSDT 1440 weight 12
+2026-11-03 11:09:24 weight 290 -> ngu 61s
+2026-11-03 11:10:28 tien do 50 643 ALTUSDT 1440 weight 77
+2026-11-03 11:10:36 weight 287 -> ngu 61s
+2026-11-03 11:11:41 tien do 100 643 BEAMXUSDT 1440 weight 145
+2026-11-03 11:11:47 weight 290 -> ngu 61s
+2026-11-03 11:12:55 tien do 150 643 CHZUSDT 1440 weight 210
+2026-11-03 11:12:58 weight 287 -> ngu 61s
+2026-11-03 11:14:08 tien do 200 643 EDUUSDT 1440 weight 252
+2026-11-03 11:14:09 weight 287 -> ngu 61s
+2026-11-03 11:15:22 weight 290 -> ngu 61s
+2026-11-03 11:16:24 tien do 250 643 GMTUSDT 1440 weight 35
+2026-11-03 11:16:35 weight 287 -> ngu 61s
+2026-11-03 11:17:39 tien do 300 643 IRUSDT 1440 weight 123
+2026-11-03 11:17:44 weight 289 -> ngu 61s
+2026-11-03 11:18:51 tien do 350 643 MASKUSDT 1440 weight 189
+2026-11-03 11:18:54 weight 287 -> ngu 61s
+2026-11-03 11:20:08 tien do 400 643 OGNUSDT 1440 weight 89
+2026-11-03 11:20:18 weight 290 -> ngu 61s
+2026-11-03 11:21:24 tien do 450 643 PUMPBTCUSDT 1440 weight 147
+2026-11-03 11:21:29 weight 287 -> ngu 61s
+2026-11-03 11:22:36 tien do 500 643 SKATEUSDT 1440 weight 215
+2026-11-03 11:22:38 weight 290 -> ngu 61s
+2026-11-03 11:23:48 tien do 550 643 TAUSDT 1440 weight 280
+2026-11-03 11:23:48 weight 287 -> ngu 61s
+2026-11-03 11:24:58 weight 290 -> ngu 61s
+2026-11-03 11:26:02 tien do 600 643 WAVESUSDT 1440 weight 58
+2026-11-03 11:26:10 weight 294 -> ngu 61s
+2026-11-03 11:27:14 FETCH_DONE symbols 643 zip 643
