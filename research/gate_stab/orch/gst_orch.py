@@ -118,9 +118,52 @@ def x26_cfg():
     return c
 
 
+K28_DS = "gst-kline-1028"
+K28_ANCHOR = "KL = {}\nfor s in sorted(PARTS):\n"
+K28_SRC = '''# [ADD7 53ea666e] ngay 2026-10-28 (Vision thieu) tu REST Oracle, dataset gst-kline-1028, dang zip Vision
+_X28 = sorted(p for p in glob.glob("/kaggle/input/**/*-1m-2026-10-28.zip", recursive=True) if "gst-kline-1028" in p)
+_KS = set(ksyms); _n28 = 0
+for _p in _X28:
+    _s = os.path.basename(_p).split("-1m-")[0]
+    if _s not in _KS:
+        continue
+    _r = _parse(open(_p, "rb").read())
+    if _r is not None:
+        PARTS.setdefault(_s, []).append(_r); _n28 += 1
+RES["steps"]["add7_1028"] = dict(files=len(_X28), used=_n28)
+LOG.info("ADD7 10-28 REST: %d file, %d symbol dung", len(_X28), _n28)
+assert _n28 >= 500, "ADD7: thieu file 10-28"
+'''
+
+
 def x26_code(cfg):
-    return N.KX_NT.replace("__CFG_JSON__", repr(json.dumps(cfg))).replace("__JW_SRC__", repr(open(E.JW).read())).replace(
+    kx = N.KX_NT
+    assert kx.count(K28_ANCHOR) == 1, "anchor ADD7"
+    kx = kx.replace(K28_ANCHOR, K28_SRC + K28_ANCHOR)
+    return kx.replace("__CFG_JSON__", repr(json.dumps(cfg))).replace("__JW_SRC__", repr(open(E.JW).read())).replace(
         "__JBIN_SRC__", repr(open(os.path.join(os.path.dirname(E.JW), "jbin.py")).read()))
+
+
+def k28_ds(dry):
+    d = G + "/k1028/zips"
+    n = len(glob.glob(d + "/*-1m-2026-10-28.zip"))
+    assert n >= 500, ("thieu zip 10-28", n)
+    assert json.load(open(G + "/k1028/gateR.json")).get("PASS") is True, "cong R chua PASS"
+    if dry or os.path.exists(OD + "/k28_created"):
+        log.info("dataset %s: %d zip (%s)", K28_DS, n, "dry" if dry else "da tao"); return
+    from kaggle.api.kaggle_api_extended import KaggleApi
+    a = KaggleApi(); a.authenticate()
+    json.dump({"title": K28_DS, "id": USER + "/" + K28_DS, "licenses": [{"name": "CC0-1.0"}]}, open(d + "/dataset-metadata.json", "w"))
+    a.dataset_create_new(d, public=False, quiet=True, dir_mode="skip")
+    open(OD + "/k28_created", "w").write(time.strftime("%F %T"))
+    for _ in range(60):
+        try:
+            if "ready" in str(a.dataset_status(USER + "/" + K28_DS)).lower():
+                log.info("dataset %s ready (%d zip)", K28_DS, n); return
+        except Exception:  # noqa: BLE001
+            pass
+        time.sleep(30)
+    raise SystemExit("dataset 10-28 khong ready")
 
 
 def tk_days():
@@ -177,7 +220,7 @@ def build(tag):
         return oi_code(), md(tag, True, ["funding-oi-percoin"], [])
     if tag == "gs-x26-q4":
         c = x26_cfg()
-        return x26_code(c), md(tag, True, sorted({c["jar_ds"], c["cfg_ds"], c["as_ds"], c["asdata_ds"], c["dev_market_ds"]}), [])
+        return x26_code(c), md(tag, True, sorted({c["jar_ds"], c["cfg_ds"], c["as_ds"], c["asdata_ds"], c["dev_market_ds"], K28_DS}), [])
     if tag == "gs-tk26":
         return tk_code(), md(tag, False, [], sorted(QK4.values()))
     if tag == "gs-chain-q4":
@@ -316,6 +359,8 @@ def main(dry):
     if not dry:
         seen = 0                                   # can READY 2 lan cach >= 30 phut (cho Vision phat hanh xong moi symbol)
         while seen < 2:
+            if ok and KMODE["m"] == "monthly":     # monthly da phat hanh = co dinh, khong can xac nhan lan 2
+                break
             if ok:
                 seen += 1
                 if seen >= 2:
@@ -332,6 +377,7 @@ def main(dry):
         code, meta = build(t); compile(code, t, "exec")
     log.info("build+compile 4 kernel du lieu OK (klines mode=%s); OV sim=%s", KMODE["m"], json.dumps(OV))
     jards(dry)
+    k28_ds(dry)
     if dry:
         for t in ORDER[:-1]:
             push_data(t, True)

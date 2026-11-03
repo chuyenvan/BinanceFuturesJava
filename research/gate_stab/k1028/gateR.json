@@ -1,0 +1,38 @@
+{
+ "BTCUSDT": {
+  "n_rest": 1440,
+  "n_vision": 1440,
+  "byte": true,
+  "f32": true,
+  "first_bad": []
+ },
+ "ETHUSDT": {
+  "n_rest": 1440,
+  "n_vision": 1440,
+  "byte": true,
+  "f32": true,
+  "first_bad": []
+ },
+ "SOLUSDT": {
+  "n_rest": 1440,
+  "n_vision": 1440,
+  "byte": true,
+  "f32": true,
+  "first_bad": []
+ },
+ "PARTIUSDT": {
+  "n_rest": 1440,
+  "n_vision": 1440,
+  "byte": true,
+  "f32": true,
+  "first_bad": []
+ },
+ "BLESSUSDT": {
+  "n_rest": 1440,
+  "n_vision": 1440,
+  "byte": true,
+  "f32": true,
+  "first_bad": []
+ },
+ "PASS": true
+}
