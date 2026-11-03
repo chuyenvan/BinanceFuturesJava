@@ -171,6 +171,8 @@ def now7():
 
 
 def light_only():
+    if os.environ.get("NUP4_ALLOW_1103") == "1":      # MASTER go cam 11-03 (deploy dry xong 10:38)
+        return False
     return now7().strftime("%Y-%m-%d") == NO_HEAVY_DAY
 
 
