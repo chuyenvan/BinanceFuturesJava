@@ -120,14 +120,24 @@ def x26_cfg():
 
 K28_DS = "gst-kline-1028"
 K28_ANCHOR = "KL = {}\nfor s in sorted(PARTS):\n"
-K28_SRC = '''# [ADD7 53ea666e] ngay 2026-10-28 (Vision thieu) tu REST Oracle, dataset gst-kline-1028, dang zip Vision
-_X28 = sorted(p for p in glob.glob("/kaggle/input/**/*-1m-2026-10-28.zip", recursive=True) if "gst-kline-1028" in p)
-_KS = set(ksyms); _n28 = 0
+K28_SRC = '''# [ADD7 53ea666e] ngay 2026-10-28 (Vision thieu) tu REST Oracle, dataset gst-kline-1028, dang zip Vision.
+# Kaggle TU GIAI NEN zip khi tao dataset => file thuc te: <S>-1m-2026-10-28/<S>-1m-2026-10-28.csv. Doc ca .zip lan .csv;
+# .csv duoc goi lai thanh zip trong bo nho de di CUNG ham _parse (khong doi cach doc cot).
+_X28 = sorted(glob.glob("/kaggle/input/**/*-1m-2026-10-28.csv", recursive=True) + glob.glob("/kaggle/input/**/*-1m-2026-10-28.zip", recursive=True))
+LOG.info("ADD7 tim thay %d file 10-28, vi du %s", len(_X28), _X28[:1])
+_KS = set(ksyms); _n28 = 0; _seen28 = set()
 for _p in _X28:
     _s = os.path.basename(_p).split("-1m-")[0]
-    if _s not in _KS:
+    if _s not in _KS or _s in _seen28:
         continue
-    _r = _parse(open(_p, "rb").read())
+    _seen28.add(_s)
+    if _p.endswith(".csv"):
+        _bio = io.BytesIO()
+        with zipfile.ZipFile(_bio, "w") as _z:
+            _z.writestr(os.path.basename(_p), open(_p, "rb").read())
+        _r = _parse(_bio.getvalue())
+    else:
+        _r = _parse(open(_p, "rb").read())
     if _r is not None:
         PARTS.setdefault(_s, []).append(_r); _n28 += 1
 RES["steps"]["add7_1028"] = dict(files=len(_X28), used=_n28)
