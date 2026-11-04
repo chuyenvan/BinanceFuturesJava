@@ -98,8 +98,18 @@ def r6():
     return res["PASS"]
 
 
-def r5():
+def _nsym(p):
+    import pandas as pd
+    if not os.path.exists(p):
+        return None
+    x = pd.read_csv(p, usecols=["nsym"])
+    return [int(x.nsym.min()), int(x.nsym.max())]
+
+
+def r5(tag=None, exinfo=None):
     env = dict(os.environ, PV_DAY="2026-10-30", PV_R5="1", LIVE_IS_SHADOW_HOST="true")
+    if exinfo:   # [V12 ADD8 §2.3]
+        env["PV_R5_EXINFO"] = exinfo
     R = os.path.dirname(HERE)
     vis = os.path.expanduser("~/claude_master/parity_v11w/vision/klines_1m")
     steps = [["python3", HERE + "/day_prep.py", "prep"],
@@ -118,14 +128,17 @@ def r5():
     cf = json.load(open(run + "/cmp_ctl_fund.json")) if os.path.exists(run + "/cmp_ctl_fund.json") else None
     ctl = {"rows_bit_nonfund_gate": cg.get("rows_bit_nonfund") if cg else None,
            "rows_tol_nonfund_fund": cf.get("rows_tol_nonfund") if cf else None}
-    res = {"steps": log, "CTL": ctl, "exinfo": "fixture 20261027 (dry chua ton tai 10-30)",
+    res = {"steps": log, "CTL": ctl, "exinfo": exinfo or "fixture 20261027 (dry chua ton tai 10-30)", "ADD8": True,
+           "nsym": {k: _nsym(run + "/out_%s.csv.gz" % k) for k in ("BT", "NEW2")},
            "PASS": bool(cg and cf and cg.get("rows_bit_nonfund") == 1.0 and cf.get("rows_tol_nonfund") == 1.0)}
-    save("R5", res)
+    save("R5" + ("_" + tag if tag else ""), res)
     return res["PASS"]
 
 
 if __name__ == "__main__":
     c = sys.argv[1]
+    if c == "r5" and len(sys.argv) > 2:   # r5 <tag> <exinfo>
+        sys.exit(0 if r5(sys.argv[2], sys.argv[3]) else 1)
     fs = {"r4": [r4], "r6": [r6], "r5": [r5], "all": [r4, r6, r5]}[c]
     ok = [f() for f in fs]
     sys.exit(0 if all(ok) else 1)

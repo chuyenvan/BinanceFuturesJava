@@ -454,6 +454,10 @@ def a1_excl_at(ts):
     import a1cls
     if "a1" not in _HELD:
         _HELD["a1"] = a1cls.excluded(C["EXINFO"], T1) if C.get("EXINFO") else set()
+        if C.get("EXINFO"):   # [V12 ADD8] cung luat fail-closed voi day_prep (T0 > serverTime)
+            cf = W + "/univ/ucand_%s.txt" % TAG
+            if os.path.exists(cf):
+                _HELD["a1"] |= a1cls.fail_closed(C["EXINFO"], [x.strip() for x in open(cf) if x.strip()], T0)
     return _HELD["a1"]
 
 

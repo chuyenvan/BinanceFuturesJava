@@ -76,6 +76,8 @@ def cfg(day=None):
                  log_to=d0 + DAYMS + 10 * MIN)      # D+1 07:10 (+07)
     c["EXINFO"] = (os.path.expanduser("~/claude_master/v12/fixtures/exchangeInfo_20261027_1140.json.gz")
                    if os.environ.get("PV_R5") == "1" else exinfo_for(day))
+    if os.environ.get("PV_R5") == "1" and os.environ.get("PV_R5_EXINFO"):   # [V12 ADD8 §2.3] R5 phu
+        c["EXINFO"] = os.environ["PV_R5_EXINFO"]
     return c
 
 

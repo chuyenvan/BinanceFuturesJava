@@ -28,3 +28,11 @@ def excluded(path, t_ms):
         if kind(s.get("contractType"), s.get("underlyingType")) in ("TRADFI", "INDEX") and int(s.get("onboardDate", 0)) <= t_ms:
             out.add(s["symbol"])
     return out
+
+
+def fail_closed(path, syms, t_ms):
+    """[V12 ADD8] port UniverseA1Filter.excludedIn: symbol KHONG co trong snapshot va t_ms > serverTime => loai."""
+    d = load(path)
+    known = {x["symbol"] for x in d["symbols"]}
+    st = int(d["serverTime"])
+    return set() if t_ms <= st else {s for s in syms if s not in known}

@@ -238,6 +238,8 @@ def universe():
         print("KHONG_CO_EXINFO_PIT => KHONG DO DUOC phan phu thuoc universe"); sys.exit(4)
     import a1cls
     ex = a1cls.excluded(C["EXINFO"], T1)
+    # [V12 ADD8] fail-closed: chi khi T0 > serverTime (ca ngay sau snapshot); serverTime trong [T0,T1] => Java loc theo phut
+    ex |= a1cls.fail_closed(C["EXINFO"], cand, T0)
     have = [s for s in have if s not in ex]
     open(C["U"], "w").write("\n".join(have) + "\n")
     with open(UNIV + "/mapper_%s.csv" % TAG, "w") as f:

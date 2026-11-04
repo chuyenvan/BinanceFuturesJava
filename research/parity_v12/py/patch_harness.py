@@ -32,6 +32,18 @@ t = sub1(t, "        g.set(null, Boolean.FALSE);   // CHI DOC: chan moi ghi 242 
          "        OfflineGuard.install();       // HARNESS_OFFLINE=1: provider file + chan mang (khong bat => nhu cu)\n", "install")
 t = sub1(t, "        LOG.info(\"{}\", \"done \" + mode);\n        System.exit(0);",
          "        OfflineGuard.finish();\n        LOG.info(\"{}\", \"done \" + mode);\n        System.exit(0);", "finish")
+t = sub1(t, "            if (\"BT\".equals(mode)) {\n"
+            "                for (long ts = btFrom; ts <= last; ts += MIN) {\n"
+            "                    Map<String, KlineObjectSimple> raw = DATA.get(ts);\n"
+            "                    if (raw == null) continue;\n"
+            "                    Map<String, KlineObjectSimple> snap = cpMap(raw);\n",
+         "            if (\"BT\".equals(mode)) {\n"
+            "                for (long ts = btFrom; ts <= last; ts += MIN) {\n"
+            "                    Map<String, KlineObjectSimple> raw = DATA.get(ts);\n"
+            "                    if (raw == null) continue;\n"
+            "                    // [V12 ADD8] universe A1 tai phut ts, CUNG ham production (ExportGateDataset/LiveFeaturePipeline); co tat => nguyen map\n"
+            "                    Map<String, KlineObjectSimple> snap = com.binance.chuyennd.tradecore.selector.UniverseA1Filter.filter(cpMap(raw), ts);\n",
+         "bt-a1")
 os.makedirs(os.path.join(out, P), exist_ok=True)
 open(os.path.join(out, P + "V11FeatHarness.java"), "w").write(t)
 
