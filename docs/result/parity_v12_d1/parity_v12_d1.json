@@ -59,13 +59,39 @@
     "no_latch": true,
     "no_exinfo_stale": true,
     "featdump_budget_ok": true,
-    "collectData_restart_le2": null
+    "collectData_restart_le2": true
    },
    "ngay_sach": "KHONG SACH (no_restart)",
+   "collect": {
+    "day": "2026-11-03",
+    "n_lines": 9471,
+    "first": 1793664004067,
+    "last": 1793750370129,
+    "restart_too_many": 0,
+    "mainclass": 0,
+    "kline_cover_lines": 1440,
+    "kline_cover_chua_chot_minutes": 0,
+    "kline_cover_suspects": 0,
+    "rest_budget_lines": 1432,
+    "http429_max": 0,
+    "http418_max": 0,
+    "denied_max": 0,
+    "price_age_warn": 5,
+    "price_age_max_ms": 31886,
+    "covers_day": true,
+    "collectData_restart_le2": true,
+    "src": "/home/ubuntu/claude_master/parity_v12w/collect/collect_2026-11-03.log.gz"
+   },
+   "R4_R6": {
+    "R4": true,
+    "R5": false,
+    "R6": true
+   },
    "ket_luan": "KHONG DO DUOC (mot phan) + XAM",
    "ghi_chu": [
     "universe A1 khong do duoc",
-    "ngay restart/deploy => toi da XAM (\u00a75.2, ADD6)"
+    "ngay restart/deploy => toi da XAM (\u00a75.2, ADD6)",
+    "R4-R6 (\u00a76) chua dat/chua chay {'R4': True, 'R5': False, 'R6': True} => khong duoc DAT"
    ],
    "nhom_H_tinh": false,
    "nhom_K_tinh": false

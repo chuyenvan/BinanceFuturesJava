@@ -1,0 +1,92 @@
+{
+ "R4": {
+  "jar_commit": "1f505414",
+  "code_layers": {
+   "MD/breadth": true,
+   "feature/basket": true,
+   "ALT_EW": true,
+   "TsMktExt": true,
+   "S1/ung vien/gate": true,
+   "R7 thuc thi": true,
+   "offline replay (harness)": true
+  },
+  "log_marks": {
+   "filter BAT": true,
+   "R7+tin hieu": true,
+   "ALT_EW A1": true,
+   "gate a1_bo": true,
+   "TS-EXT": true
+  },
+  "log_file": "/home/ubuntu/claude_master/parity_v12w/d/2026-11-03/live/log_window.gz",
+  "sim_A1": "HO2026_NOTF loai X o tang du lieu (exporter in_uni + chain DUP_IDS|X_IDS) => moi tang sim khong co X",
+  "PASS": true
+ },
+ "R6": {
+  "same_file_1027": {
+   "live_cls_on_fix27": 232,
+   "sim_X": 230,
+   "only_live": [
+    "MDTUSDT",
+    "SPCXUSD1"
+   ],
+   "only_sim": [],
+   "explained_PIT": [
+    "MDTUSDT",
+    "SPCXUSD1"
+   ],
+   "unexplained": []
+  },
+  "dry_snapshot": {
+   "snap": "exinfo_1793754061893_3120c49e40a1.json.gz",
+   "live_cls": 238,
+   "new_listing_after_1027": [
+    "AMGNUSDT",
+    "EWZSUSDT",
+    "MDTUSDT",
+    "MELIUSDT",
+    "OXYUSDT",
+    "PFEUSDT",
+    "SMRUSDT",
+    "SPCXUSD1"
+   ],
+   "not_in_file_delisted": [],
+   "unexplained": []
+  },
+  "PASS": true
+ },
+ "R5": {
+  "steps": [
+   {
+    "step": "day_prep.py prep",
+    "rc": 0,
+    "tail": " 0,\n  \"sel_minutes\": 1440,\n  \"sel_bad_files\": 0,\n  \"s1_minutes\": 1440,\n  \"s1_bad_files\": 0\n },\n \"ucand\": {\n  \"n\": 752,\n  \"u_cache1017\": 738,\n  \"live_syms\": 747,\n  \"live_not_in_cache\": [\n   \"ABBVUSDT\",\n   \"AMGNUSDT\",\n   \"BACUSDT\",\n   \"CEGUSDT\",\n   \"EIDOUSDT\",\n   \"EQTUSDT\",\n   \"EWZSUSDT\",\n   \"IBKRUSDT\",\n   \"MELIUSDT\",\n   \"OXYUSDT\",\n   \"PFEUSDT\",\n   \"PREDICTUSDT\",\n   \"SMRUSDT\",\n   \"STMUSDT\"\n  ]\n }\n}\n"
+   },
+   {
+    "step": "vision_fetch.py ucand_20261030.txt",
+    "rc": 0,
+    "tail": "d': 746, '404': 6} 0s\n2026-11-04 21:45:33,064 INFO day 2026-10-27 syms=752 ok=746 (99.20%) stat={'cached': 746, '404': 6} 0s\n2026-11-04 21:45:38,243 INFO day 2026-10-28 syms=752 ok=0 (0.00%) stat={'404': 752} 5s\n2026-11-04 21:45:38,361 INFO day 2026-10-29 syms=752 ok=752 (100.00%) stat={'cached': 752} 0s\n2026-11-04 21:45:38,486 INFO day 2026-10-30 syms=752 ok=752 (100.00%) stat={'cached': 752} 0s\n"
+   },
+   {
+    "step": "day_prep.py universe",
+    "rc": 0,
+    "tail": "PROUSDT\"\n ],\n \"missing_live\": [],\n \"plan\": {\n  \"segs\": [\n   {\n    \"restart\": 1793082395000,\n    \"first\": 1793082360000,\n    \"last\": 1793404740000,\n    \"keep_from\": 1793318400000\n   }\n  ],\n  \"cache_from\": 1792849560000,\n  \"cache_to\": 1793404740000,\n  \"vision_days_cache\": [\n   \"2026-10-24\",\n   \"2026-10-25\",\n   \"2026-10-26\",\n   \"2026-10-27\",\n   \"2026-10-28\",\n   \"2026-10-29\",\n   \"2026-10-30\"\n  ]\n }\n}\n"
+   },
+   {
+    "step": "day_harness.py r0",
+    "rc": 0,
+    "tail": "jar cfg=off exit=98 ky_vong=98 => DAT\",\n  \"2026-11-04 21:45:43.751 INFO  [main] c.b.c.a.OfflineGuardSelfTest: [R0] case=ok cp=jar cfg=off exit=96 ky_vong=96 => DAT\",\n  \"2026-11-04 21:45:44.192 INFO  [main] c.b.c.a.OfflineGuardSelfTest: [R0] case=ok cp=stub+jar cfg=real exit=96 ky_vong=96 => DAT\",\n  \"2026-11-04 21:45:44.193 INFO  [main] c.b.c.a.OfflineGuardSelfTest: [R0] tong: 11 ca, 0 truot\"\n ]\n}\n"
+   },
+   {
+    "step": "day_harness.py main",
+    "rc": 0,
+    "tail": "| diff_fund={}\",\n \"CTL_fund\": \"2026-11-04 23:04:11,898 INFO fund /home/ubuntu/claude_master/parity_v12w/d/2026-10-30/runs/fund_NEW2.csv.gz rows ref=38881 new=38876 both=38876 only_ref=5 only_new=0 | nonfund bit=-1.000000 tol=-1.000000 bad_min=1440 | diff_nonfund={'f3': 2425, 'f4': 1083, 'f12': 38876, 'f13': 38876, 'f14': 38876, 'f15': 38876, 'f16': 38876, 'f33': 186, 'f34': 186} | diff_fund={}\"\n}\n"
+   }
+  ],
+  "CTL": {
+   "rows_bit_nonfund_gate": 0.0,
+   "rows_tol_nonfund_fund": 0.0
+  },
+  "exinfo": "fixture 20261027 (dry chua ton tai 10-30)",
+  "PASS": false
+ }
+}

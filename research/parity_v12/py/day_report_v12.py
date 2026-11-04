@@ -103,12 +103,17 @@ def v12_day(d):
              "no_latch": bool(lc) and lc["LATCH"] == 0,
              "no_exinfo_stale": bool(lc) and lc["EXINFO_STALE"] == 0,
              "featdump_budget_ok": bool(lc) and lc["FEAT_DUMP_budget"] == 0,
-             "collectData_restart_le2": None}   # chua keo log collectData => CHUA DO
+             "collectData_restart_le2": (J("collect") or {}).get("collectData_restart_le2")}   # None = CHUA DO
     v["clean_checks"] = clean
     if any(x is False for x in clean.values()):
         v["ngay_sach"] = "KHONG SACH (%s)" % ",".join(k for k, x in clean.items() if x is False)
+    elif any(x is None for x in clean.values()):
+        v["ngay_sach"] = "CHUA XAC DINH (%s chua do)" % ",".join(k for k, x in clean.items() if x is None)
     else:
-        v["ngay_sach"] = "CHUA XAC DINH (collectData chua do)"
+        v["ngay_sach"] = "SACH"
+    v["collect"] = J("collect")
+    r456 = DR.L(ROOT + "/r456.json") or {}
+    v["R4_R6"] = {k: (r456.get(k) or {}).get("PASS") for k in ("R4", "R5", "R6")}
     # verdict
     tot = st["ket_luan"].split(" (so bo")[0]
     notes = []
@@ -125,6 +130,10 @@ def v12_day(d):
         if tot.startswith("DAT"):
             tot = "XAM"
         notes.append("tap coin dang giu lech [GATE-PRE] => XAM (dieu tra)")
+    if not all(v["R4_R6"].values()) and not tot.startswith("TRUOT"):
+        notes.append("R4-R6 (§6) chua dat/chua chay %s => khong duoc DAT" % v["R4_R6"])
+        if tot.startswith("DAT"):
+            tot = "XAM"
     v["ket_luan"] = tot
     v["ghi_chu"] = notes
     v["nhom_H_tinh"] = (not deploy_day) and v["ngay_sach"].startswith("SACH")

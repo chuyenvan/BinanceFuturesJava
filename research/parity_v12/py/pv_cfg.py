@@ -38,7 +38,7 @@ def cfg(day=None):
     day = day or os.environ["PV_DAY"]
     d0 = day_ms(day)
     c = {"day": day, "day_prev": shift(day, -1), "day_next": shift(day, 1),
-         "T0": max(WINDOW_START, d0), "T1": d0 + DAYMS - MIN, "VIS": VIS, "MOD": MOD, "ROOT": ROOT,
+         "T0": d0 if os.environ.get("PV_R5") == "1" else max(WINDOW_START, d0), "T1": d0 + DAYMS - MIN, "VIS": VIS, "MOD": MOD, "ROOT": ROOT,
          "s1v_days": [shift(day, k) for k in range(-15, 1)]}
     legacy = day == "2026-10-21" and os.environ.get("PV_D1_LAYOUT", "legacy") == "legacy"
     if legacy:
@@ -74,7 +74,8 @@ def cfg(day=None):
                  tag=day.replace("-", ""),
                  log_from=d0 - H,                   # D 06:00 (+07)
                  log_to=d0 + DAYMS + 10 * MIN)      # D+1 07:10 (+07)
-    c["EXINFO"] = exinfo_for(day)
+    c["EXINFO"] = (os.path.expanduser("~/claude_master/v12/fixtures/exchangeInfo_20261027_1140.json.gz")
+                   if os.environ.get("PV_R5") == "1" else exinfo_for(day))
     return c
 
 
