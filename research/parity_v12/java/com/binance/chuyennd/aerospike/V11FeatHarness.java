@@ -122,7 +122,8 @@ public class V11FeatHarness {
                 for (long ts = btFrom; ts <= last; ts += MIN) {
                     Map<String, KlineObjectSimple> raw = DATA.get(ts);
                     if (raw == null) continue;
-                    Map<String, KlineObjectSimple> snap = cpMap(raw);
+                    // [V12 ADD8] universe A1 tai phut ts, CUNG ham production (ExportGateDataset/LiveFeaturePipeline); co tat => nguyen map
+                    Map<String, KlineObjectSimple> snap = com.binance.chuyennd.tradecore.selector.UniverseA1Filter.filter(cpMap(raw), ts);
                     MarketDataObject rate = md.update(snap);
                     hm.updateHistory(snap);
                     cr.getTopCoin(ts);

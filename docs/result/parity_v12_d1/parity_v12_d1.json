@@ -84,14 +84,13 @@
    },
    "R4_R6": {
     "R4": true,
-    "R5": false,
+    "R5": true,
     "R6": true
    },
    "ket_luan": "KHONG DO DUOC (mot phan) + XAM",
    "ghi_chu": [
     "universe A1 khong do duoc",
-    "ngay restart/deploy => toi da XAM (\u00a75.2, ADD6)",
-    "R4-R6 (\u00a76) chua dat/chua chay {'R4': True, 'R5': False, 'R6': True} => khong duoc DAT"
+    "ngay restart/deploy => toi da XAM (\u00a75.2, ADD6)"
    ],
    "nhom_H_tinh": false,
    "nhom_K_tinh": false
