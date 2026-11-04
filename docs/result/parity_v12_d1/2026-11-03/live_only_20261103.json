@@ -1,0 +1,45 @@
+{
+ "n_live_minutes": 1226,
+ "P1m": {
+  "frac_le_1e-6": 1.0,
+  "max_rel": 2.2736938032613239e-07
+ },
+ "held_check_V12": {
+  "book_anchor": "snap_20261104T142758Z.txt",
+  "gate_pre_lines": 1235,
+  "minutes_join": 1226,
+  "minutes_eq": 1226,
+  "mismatch": [],
+  "held_pairs_dropped": 1286
+ },
+ "GV_I": {
+  "n": 28138,
+  "n_minutes": 1226,
+  "frac_le1e-6": 1.0,
+  "n_diff": 0,
+  "skipped": []
+ },
+ "P2_live_side": {
+  "n_pairs": 28138,
+  "n_minutes": 1226,
+  "n_pass_live": 0,
+  "max_rq_live": 0.3445429801940918,
+  "n_rq_ge_09_live": 0,
+  "n_rq_ge_08_live": 0
+ },
+ "GATE_LOG": {
+  "n_lines": 1510,
+  "n_minutes_join": 1226,
+  "map_tick_check": {
+   "n_lines_with_MAP": 1510,
+   "n_tick_eq": 1510
+  },
+  "n_match": 1226,
+  "sum_log": 0,
+  "sum_calc": 0,
+  "thr_range_match_base0008": 1226,
+  "thr_range_mismatch": [],
+  "mismatch": [],
+  "gate_lines_not_joined": []
+ }
+}

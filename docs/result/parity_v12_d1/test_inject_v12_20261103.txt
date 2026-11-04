@@ -1,0 +1,15 @@
+{
+ "control": {
+  "ket_luan": "KHONG DO DUOC (mot phan) + XAM",
+  "P3": "DAT"
+ },
+ "inject_buffer_all_pre_T0_x1.01": {
+  "ket_luan": "TRUOT",
+  "P3": "TRUOT"
+ },
+ "inject_log_qt9_+1pct": {
+  "ket_luan": "TRUOT",
+  "P3": "TRUOT"
+ },
+ "TEST_PASS": true
+}

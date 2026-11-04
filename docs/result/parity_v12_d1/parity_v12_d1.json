@@ -1,0 +1,74 @@
+{
+ "round": "d1",
+ "prereg": "PREREG_PARITY_V12_DRY 3c7dae05 + ADD1..ADD7",
+ "window_start_ms": 1793676840000,
+ "days": {
+  "2026-11-03": {
+   "v11_status": {
+    "P1": "KHONG DO DUOC",
+    "P1m": "DAT",
+    "S1_I": "KHONG DO DUOC",
+    "S1_m": "KHONG DO DUOC",
+    "GV_I": "DAT",
+    "P2": "KHONG DO DUOC",
+    "GATE_LOG_n_pass": "1226/1226",
+    "P3": "DAT",
+    "TSX": "KHONG DO DUOC",
+    "CTL": "KHONG DO DUOC",
+    "K5_Kprime": null,
+    "K5_official": null,
+    "K5_rule": "ADDENDUM1",
+    "pull_incomplete": false,
+    "ket_luan": "KHONG DO DUOC (mot phan) (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)"
+   },
+   "universe_A1": "KHONG DO DUOC (khong co exchangeInfo PIT \u00a72.2)",
+   "held_check": {
+    "book_anchor": "snap_20261104T142758Z.txt",
+    "gate_pre_lines": 1235,
+    "minutes_join": 1226,
+    "minutes_eq": 1226,
+    "mismatch": [],
+    "held_pairs_dropped": 1286
+   },
+   "restart_in_day": [
+    1793676866000
+   ],
+   "deploy_day": true,
+   "log_counts": {
+    "OI-GUARD": 0,
+    "KLINE_STALE": 0,
+    "MAPPER_local": 0,
+    "MAPPER_REFRESH": 0,
+    "MAPPER_DUP": 0,
+    "LATCH": 0,
+    "EXINFO_STALE": 0,
+    "GATE_SEED": 0,
+    "FEAT_DUMP_budget": 0,
+    "MainClass": 1,
+    "MAPPER_DUP_sets": [],
+    "FEAT_PIPE_bad": 0
+   },
+   "KPI_TBOOK": "KHONG SO DUOC (truoc re-seed, ADD6 \u00a71)",
+   "clean_checks": {
+    "pull_complete": true,
+    "no_restart": false,
+    "no_oi_guard": true,
+    "no_kline_stale": true,
+    "no_featpipe_bad": true,
+    "mapper_ok": true,
+    "no_latch": true,
+    "no_exinfo_stale": true,
+    "featdump_budget_ok": true,
+    "collectData_restart_le2": null
+   },
+   "ngay_sach": "KHONG SACH (no_restart)",
+   "ket_luan": "KHONG DO DUOC (mot phan) + XAM",
+   "ghi_chu": [
+    "universe A1 khong do duoc",
+    "ngay restart/deploy => toi da XAM (\u00a75.2, ADD6)"
+   ],
+   "nhom_H_tinh": false,
+   "nhom_K_tinh": false
+  }
+ }
+}
