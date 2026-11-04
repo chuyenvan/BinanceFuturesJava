@@ -47,6 +47,19 @@ case "$1" in
         echo "$D INFO [main] x: [C5] GLOBAL OK"
         echo "$D INFO [main] x: [UNIVERSE] listed=640 alive=600 tradable=480 buyable=470 +0 -0 tradfi_excl=110"
         echo "$D INFO [main] x: [C3-LIVE-RECON] khoi dong: ok=true closedWhileDown=[]"
+        # [V12 R4o] JVM gia: C11 / LEGACY / gate tick / nap seed gate (GATE_BUFFER_SEED) nhu LiveGateRollingRatio
+        [ "${LIVE_SEED_EXCLUDE_DECISION_MIN:-0}" = 1 ] || echo "$D WARN [main] x: [FEAT-PIPE] LIVE_PROFILE=c3_live nhung LIVE_SEED_EXCLUDE_DECISION_MIN=0 => race seed/tick dau sau restart (C11) VAN CON"
+        echo "$D INFO [pool-3-thread-1] x: [LEGACY] managed 44: AAAUSDT,BBBUSDT"
+        echo "$D INFO [pool-1-thread-1] x: [GATE] scale=1.5500 topk=24 base=0.00800 n_cand=3 n_rej=3 n_pass=0"
+        if [ -n "${GATE_BUFFER_SEED:-}" ]; then
+          if [ -f run/gate_ratio_live.bin.seeded ]; then echo "$D WARN [main] x: [GATE-SEED] persist da nap seed truoc do (x) => BO QUA seed $GATE_BUFFER_SEED (persist thang), chay tiep"
+          elif [ -f FAKE_SEEDKHAN ] || [ "$(md5sum < "$GATE_BUFFER_SEED" 2>/dev/null | cut -c1-32)" != "${GATE_BUFFER_SEED_MD5:-}" ]; then
+            echo "$D ERROR [main] x: [GATE-SEED] KHAN: seed $GATE_BUFFER_SEED HONG (gia lap) — CHAN VAO LENH MOI"
+          else
+            echo "$D WARN [main] x: *** [GATE-SEED] nap seed $GATE_BUFFER_SEED md5=$GATE_BUFFER_SEED_MD5 n=10 [a .. b] + persist sau seed 0 (bo 3 ban ghi persist <= cuoi seed) => buffer 10 ***"
+            echo "md5=$GATE_BUFFER_SEED_MD5 seedLast=1 appliedAt=2" > run/gate_ratio_live.bin.seeded
+          fi
+        fi
         # [V12 R4b] dong cua jar R4b (chi khi co FAKE_R4) / exchangeInfo xau (FAKE_EXBAD)
         [ -f FAKE_R4 ] && echo "$D WARN [main] x: [C3-LIVE] khoi dong adapter=DRY gateway=c3scope(dry) cum=0 c3_capital=10000.0 tai_khoan=CHINH(pham vi c3) killSwitchArmed=true"
         [ -f FAKE_R4 ] && echo "$D WARN [C3LIVE-OPS] x: [C3-LIVE-SCOPE] LEGACY tren tai khoan chinh: 0 vi the (foreign DA BIET, khong phai cum ma, khong chan (A)); LEGACY-busy=0 symbol"
@@ -1103,6 +1116,50 @@ chk "r4n status in sidecar" "echo \"\$OUT\" | grep -q '== exchangeInfo sidecar (
 echo YES | APP_DIR=$F4 FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TS4" > /dev/null 2>&1
 rm -f "$F4/FAKE_R4"
 chk "r4n rollback xong: c3_shadow" "grep -qx 'export LIVE_PROFILE=c3_shadow' $F4/conf/env.sh"
+echo "== 31. [V12 R4o] C11 (LIVE_SEED_EXCLUDE_DECISION_MIN=1) trong deploy + restart_v12_dry_reseed.sh (seed ADD6 / SEED=none)"
+RSH=$HERE/restart_v12_dry_reseed.sh
+GRF=$F4/run/gate_ratio_live.bin; printf 'buffer-v11-cu' > "$GRF"
+touch "$F4/FAKE_R4"
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?
+TS4=$(echo "$OUT" | grep -o 'TS=[0-9_]*' | head -1 | cut -d= -f2)
+chk "r4o deploy XONG voi env C11: env.sh + process co LIVE_SEED_EXCLUDE_DECISION_MIN=1, khong canh bao race" "[ $RC = 0 ] && grep -qx 'export LIVE_SEED_EXCLUDE_DECISION_MIN=1' $F4/conf/env.sh && echo \"\$OUT\" | grep -q 'OK env LIVE_SEED_EXCLUDE_DECISION_MIN=1'"
+# gia lap dry dang chay tren 242 that (deploy 11-03 CHUA co C11): bo dong C11, restart
+sed -i '/LIVE_SEED_EXCLUDE_DECISION_MIN/d' $F4/conf/env.sh; (cd $F4 && bin/daemon.sh stop; sleep 1; bin/daemon.sh start)
+echo '{"version":1,"latch":"NONE","codes":[]}' > $F4/run/killsw_latch.json
+printf 'seed-A-uC-gia' > "$W/seed.bin"; SM=$(md5sum < $W/seed.bin | cut -c1-32); G0=$(md5sum < $GRF | cut -c1-32); E0=$(md5sum < $F4/conf/env.sh)
+rs() { env APP_DIR=$F4 NJ_MD5=$NEW4 DEPLOY_TG_SINK=$W/tg_rs.txt POST_WAIT_S=1 POST_ROUNDS=4 WD_PAUSE_MAX_S=300 MIN_MEM_MB=100 "$@"; }
+penv() { tr '\0' '\n' < /proc/$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)/environ; }
+OUT=$(rs DRY=1 SEED=$W/seed.bin SEED_MD5=$SM bash "$RSH" 2>&1); RC=$?
+chk "r4o reseed DRY: ke hoach 4 dong env (C11 + seed tuyet doi + md5), KHONG doi gi" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q 'se THEM vao .* (4 dong)' && echo \"\$OUT\" | grep -q \"export GATE_BUFFER_SEED=$F4/run/gate_seed_v12_$SM.bin\" && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ] && [ ! -f $F4/run/gate_seed_v12_$SM.bin ]"
+OUT=$(rs DRY=1 SEED=$W/seed.bin SEED_MD5=00000000000000000000000000000000 bash "$RSH" 2>&1); RC=$?
+chk "r4o seed md5 khac SEED_MD5 => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'md5 seed .* KHAC SEED_MD5'"
+OUT=$(rs DRY=1 bash "$RSH" 2>&1); RC=$?
+chk "r4o thieu SEED => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'thieu SEED'"
+OUT=$(rs DRY=1 NJ_MD5=00000000000000000000000000000000 SEED=none bash "$RSH" 2>&1); RC=$?
+chk "r4o jar dang chay khac r4n pin => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL jar_dang_chay_khac'"
+echo "$(TZ=Asia/Ho_Chi_Minh date '+%d/%m/%Y %H:%M:%S.000') INFO [pool-1] x: [GATE] scale=1.55 n_cand=3 n_rej=2 n_pass=1 FAKEPASS" >> $F4/logs/full.log
+OUT=$(rs DRY=1 SEED=$W/seed.bin SEED_MD5=$SM bash "$RSH" 2>&1); RC=$?
+chk "r4o ADD6: gate PASS trong 6 h truoc => TU CHOI re-seed (SEED=none van duoc)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL dang_co_dot_sap_6h gate_pass=1' && rs DRY=1 SEED=none bash $RSH 2>&1 | grep -q 'DRY PASS'"
+sed -i '/FAKEPASS/d' $F4/logs/full.log
+OUT=$(echo NO | rs FORCE_TIME=1 SEED=$W/seed.bin SEED_MD5=$SM bash "$RSH" 2>&1); RC=$?
+chk "r4o khong go YES => huy, khong doi gi" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'Huy. Khong doi gi.' && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ]"
+touch $F4/FAKE_SEEDKHAN; P0=$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)
+OUT=$(echo YES | rs FORCE_TIME=1 SEED=$W/seed.bin SEED_MD5=$SM bash "$RSH" 2>&1); RC=$?
+chk "r4o JVM bao [GATE-SEED] KHAN => ROLLBACK TU DONG: env.sh + gate_ratio (md5) nhu truoc, .seeded doi ten, PAUSE go, dry chay lai khong seed" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL GATE-SEED_KHAN' && echo \"\$OUT\" | grep -q 'Da ROLLBACK xong' && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ] && [ \"\$(md5sum < $GRF | cut -c1-32)\" = $G0 ] && [ ! -f $GRF.seeded ] && [ ! -f $W/PAUSE ] && ! penv | grep -q '^GATE_BUFFER_SEED=' && penv | grep -qx LIVE_ADAPTER=dry"
+chk "r4o rollback: Telegram FAIL + ROLLBACK XONG" "grep -q 'ROLLBACK TU DONG XONG' $W/tg_rs.txt"
+rm -f $F4/FAKE_SEEDKHAN
+OUT=$(echo YES | rs FORCE_TIME=1 SEED=none bash "$RSH" 2>&1); RC=$?
+chk "r4o SEED=none: chi them C11 (2 dong), process co C11, khong GATE_BUFFER_SEED, het canh bao race, PAUSE go" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'OK env_them_2_dong' && echo \"\$OUT\" | grep -q 'OK C11_khong_canh_bao_race' && penv | grep -qx LIVE_SEED_EXCLUDE_DECISION_MIN=1 && ! penv | grep -q '^GATE_BUFFER_SEED' && [ ! -f $W/PAUSE ] && echo \"\$OUT\" | grep -q '=== XONG (c11)'"
+OUT=$(rs DRY=1 SEED=none bash "$RSH" 2>&1); RC=$?
+chk "r4o SEED=none lan 2 (C11 da co) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL C11_da_co'"
+G1=$(md5sum < $GRF | cut -c1-32)
+OUT=$(echo YES | rs FORCE_TIME=1 SEED=$W/seed.bin SEED_MD5=$SM bash "$RSH" 2>&1); RC=$?
+chk "r4o re-seed XONG (C11 da co => chi 3 dong seed): seed md5 tren 242, [GATE-SEED] nap, .seeded md5, env process, backup gate_ratio md5, LEGACY 44, PAUSE go" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'OK env_them_3_dong' && echo \"\$OUT\" | grep -q \"OK seed tren 242 md5=$SM\" && echo \"\$OUT\" | grep -q \"OK GATE-SEED_nap md5=$SM\" && grep -q \"md5=$SM\" $GRF.seeded && penv | grep -qx \"GATE_BUFFER_SEED_MD5=$SM\" && penv | grep -qx LIVE_SEED_EXCLUDE_DECISION_MIN=1 && echo \"\$OUT\" | grep -q 'OK LEGACY_managed=44' && [ \"\$(cat $GRF.bak_reseed_*.md5 | tail -1)\" = $G1 ] && [ ! -f $W/PAUSE ] && grep -q 'XONG .* MODE=seed' $W/tg_rs.txt"
+OUT=$(rs DRY=1 SEED=$W/seed.bin SEED_MD5=$SM bash "$RSH" 2>&1); RC=$?
+chk "r4o re-seed lan 2 => TU CHOI (env.sh da co GATE_BUFFER_SEED / .seeded)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL env.sh_da_co_GATE_BUFFER_SEED' && echo \"\$OUT\" | grep -q 'FAIL da_co_run/gate_ratio_live.bin.seeded'"
+rm -f $F4/FAKE_R4 $F4/run/killsw_latch.json
+echo YES | APP_DIR=$F4 FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TS4" > /dev/null 2>&1
+chk "r4o don dep: rollback v1.2 -> c3_shadow" "grep -qx 'export LIVE_PROFILE=c3_shadow' $F4/conf/env.sh && ! grep -q 'GATE_BUFFER_SEED\|LIVE_SEED_EXCLUDE' $F4/conf/env.sh"
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]

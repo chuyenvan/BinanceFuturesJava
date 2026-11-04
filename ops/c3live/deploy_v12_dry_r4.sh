@@ -234,6 +234,7 @@ export LIVE_C3_EQUITY_FILE=run/c3live_equity_c3.json
 export LIVE_C3_EXCLUDE_TRADFI_FEATURES=1
 export UNIVERSE_A1=1
 export UNIVERSE_A1_EXCHANGE_INFO=run/c3live_exchangeInfo.json
+export LIVE_SEED_EXCLUDE_DECISION_MIN=1
 EOV
 )
 NADD=$(echo "$ENV_ADD" | wc -l)
@@ -537,7 +538,7 @@ T() { tail -n +$N $L | grep -a -c "$1"; }
 [ "$(md5sum < target/binance-java-sdk-1.2.4.jar | cut -c1-32)" = "$NJM" ] && echo "OK jar" || echo "FAIL jar"
 [ "$(pgrep -fc "$PP")" = 1 ] && echo "OK 1_process" || echo "FAIL so_process"
 E=$(tr '\0' '\n' < /proc/$P/environ 2>/dev/null)
-for k in 'LIVE_PROFILE=c3_live' 'LIVE_ADAPTER=dry' 'LIVE_KILLSW_MODE=act' 'SHADOW_NO_PUSH=true' 'C3_CAPITAL=10000' 'LIVE_TS_MKT_EXT=1' 'LIVE_HEARTBEAT=1' 'UNIVERSE_A1=1' 'UNIVERSE_A1_EXCHANGE_INFO=run/c3live_exchangeInfo.json'; do
+for k in 'LIVE_PROFILE=c3_live' 'LIVE_ADAPTER=dry' 'LIVE_KILLSW_MODE=act' 'SHADOW_NO_PUSH=true' 'C3_CAPITAL=10000' 'LIVE_TS_MKT_EXT=1' 'LIVE_HEARTBEAT=1' 'UNIVERSE_A1=1' 'UNIVERSE_A1_EXCHANGE_INFO=run/c3live_exchangeInfo.json' 'LIVE_SEED_EXCLUDE_DECISION_MIN=1'; do
   echo "$E" | grep -qx "$k" && echo "OK env $k" || echo "FAIL env $k"
 done
 echo "$E" | grep -q '^LIVE_ENTRY_ENABLED=true' && echo "FAIL env LIVE_ENTRY_ENABLED=true" || echo "OK env khong_LIVE_ENTRY_ENABLED"
