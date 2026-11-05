@@ -78,16 +78,21 @@ def r6():
     # giai thich PIT/niem yet (§2.3): (a) khong duoi USDT => ngoai universe (in_uni); (b) onboardDate sau cua so sim
     #   (vd MDTUSDT: ticker dung lai, crypto toi 10-13, TF Medtronic niem yet 10-21 — prereg HO2026_NOTF dong 13)
     expl = lambda s: (not s.endswith("USDT")) or int(s27.get(s, {}).get("onboardDate", 0)) > HO_END
+    # [PARITY ADD10 / PREMARKET-b] A1 loai PREMARKET (live + sim qua UniverseA1Filter); tap X sim HO2026_NOTF chi chua TF => symbol
+    #   PREMARKET chi co o phia live la DUNG thiet ke (backtest A1: 0 leg PREMARKET — MASTER 4q), khong tinh "unexplained".
+    pm = lambda sy, d: a1cls.kind(d.get(sy, {}).get("contractType"), d.get(sy, {}).get("underlyingType")) == "PREMARKET"
     d27 = sorted((L27 - X) | (X - L27))
     same = {"live_cls_on_fix27": len(L27), "sim_X": len(X), "only_live": sorted(L27 - X), "only_sim": sorted(X - L27),
-            "explained_PIT": [s for s in d27 if expl(s)], "unexplained": [s for s in d27 if not expl(s)]}
+            "explained_PIT": [s for s in d27 if expl(s)],
+            "explained_PREMARKET_b": [s for s in d27 if not expl(s) and pm(s, s27) and s in L27],
+            "unexplained": [s for s in d27 if not expl(s) and not (pm(s, s27) and s in L27)]}
     snaps = sorted(glob.glob(W + "/exinfo/exinfo_*.json.gz"))
     dry = None
     if snaps:
         ex = a1cls.load(snaps[-1])
         sy = {s["symbol"]: s for s in ex["symbols"]}
         Ld = a1cls.excluded(snaps[-1], 1 << 62)
-        new_after = {s for s in Ld - X if int(sy[s].get("onboardDate", 0)) > t27 or expl(s)}
+        new_after = {s for s in Ld - X if int(sy[s].get("onboardDate", 0)) > t27 or expl(s) or pm(s, sy)}
         gone = {s for s in X - Ld if s not in sy}
         unexpl = sorted((Ld - X - new_after) | (X - Ld - gone))
         dry = {"snap": os.path.basename(snaps[-1]), "live_cls": len(Ld), "new_listing_after_1027": sorted(new_after),
