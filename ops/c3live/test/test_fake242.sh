@@ -41,15 +41,25 @@ case "$1" in
       echo "$D INFO [main] x: [HEARTBEAT] BAT file=run/heartbeat"
       echo "$D INFO [main] x: [TS-EXT] BAT LIVE_TS_MKT_EXT=1 profile=c3_shadow|c3_live"
       if [ "$LIVE_PROFILE" = c3_live ]; then
-        echo "$D WARN [main] x: 🟠 [LIVE_PROFILE=c3_live] BAT — hanh vi C3 day du PUSH=OFF (SHADOW_NO_PUSH=true)"
+        # [V12 R4o] PUSH nhu LiveProfileC3.decideNoPush: ON chi khi SHADOW_NO_PUSH=false + LIVE_ENTRY_ENABLED=true + khong run/KILL_SWITCH
+        PUSHV=OFF; [ "${SHADOW_NO_PUSH:-}" = false ] && [ "${LIVE_ENTRY_ENABLED:-}" = true ] && [ ! -e run/KILL_SWITCH ] && PUSHV=ON
+        echo "$D WARN [main] x: 🟠 [LIVE_PROFILE=c3_live] BAT — hanh vi C3 day du PUSH=$PUSHV (SHADOW_NO_PUSH=${SHADOW_NO_PUSH:-})"
         echo "$D WARN [main] x: [KILLSW] BAT mode=act (c3_live): ..."
-        echo "$D WARN [main] x: [C3-LIVE] khoi dong adapter=DRY gateway=dry book=run/c3live_book.json cum=0 killSwitchArmed=true X14=true"
+        FLN=$(cat FAKE_LEGACY_N 2>/dev/null || echo 44)
+        if [ "${LIVE_ADAPTER:-}" = live ]; then
+          echo "$D WARN [main] x: [C3-LIVE] khoi dong adapter=LIVE gateway=c3scope(live) book=run/c3live_book.json cum=0 c3_capital=${C3_CAPITAL:-?}.0 tai_khoan=CHINH(pham vi c3) killSwitchArmed=true X14=true stream=ws"
+          echo "$D WARN [C3LIVE-OPS] x: [C3-LIVE-SCOPE] LEGACY tren tai khoan chinh: $FLN vi the (foreign DA BIET, khong phai cum ma, khong chan (A)); LEGACY-busy=$FLN symbol"
+          echo "$D INFO [C3LIVE-STREAM] x: [C3-LIVE-STREAM] da ket noi"
+          [ -f FAKE_C3EXEC ] && echo "$D INFO [C3LIVE-OPS] x: [C3-LIVE-EXEC] FILL C01USDT c3-C01-1 qty=1 avg=1 ref=1 slip=0"
+        else
+          echo "$D WARN [main] x: [C3-LIVE] khoi dong adapter=DRY gateway=dry book=run/c3live_book.json cum=0 killSwitchArmed=true X14=true"
+        fi
         echo "$D INFO [main] x: [C5] GLOBAL OK"
         echo "$D INFO [main] x: [UNIVERSE] listed=640 alive=600 tradable=480 buyable=470 +0 -0 tradfi_excl=110"
         echo "$D INFO [main] x: [C3-LIVE-RECON] khoi dong: ok=true closedWhileDown=[]"
         # [V12 R4o] JVM gia: C11 / LEGACY / gate tick / nap seed gate (GATE_BUFFER_SEED) nhu LiveGateRollingRatio
         [ "${LIVE_SEED_EXCLUDE_DECISION_MIN:-0}" = 1 ] || echo "$D WARN [main] x: [FEAT-PIPE] LIVE_PROFILE=c3_live nhung LIVE_SEED_EXCLUDE_DECISION_MIN=0 => race seed/tick dau sau restart (C11) VAN CON"
-        echo "$D INFO [pool-3-thread-1] x: [LEGACY] managed 44: AAAUSDT,BBBUSDT"
+        echo "$D INFO [pool-3-thread-1] x: [LEGACY] managed $(cat FAKE_LEGACY_N 2>/dev/null || echo 44): AAAUSDT,BBBUSDT"
         echo "$D INFO [pool-1-thread-1] x: [GATE] scale=1.5500 topk=24 base=0.00800 n_cand=3 n_rej=3 n_pass=0"
         if [ -n "${GATE_BUFFER_SEED:-}" ]; then
           if [ -f run/gate_ratio_live.bin.seeded ]; then echo "$D WARN [main] x: [GATE-SEED] persist da nap seed truoc do (x) => BO QUA seed $GATE_BUFFER_SEED (persist thang), chay tiep"
@@ -61,8 +71,8 @@ case "$1" in
           fi
         fi
         # [V12 R4b] dong cua jar R4b (chi khi co FAKE_R4) / exchangeInfo xau (FAKE_EXBAD)
-        [ -f FAKE_R4 ] && echo "$D WARN [main] x: [C3-LIVE] khoi dong adapter=DRY gateway=c3scope(dry) cum=0 c3_capital=10000.0 tai_khoan=CHINH(pham vi c3) killSwitchArmed=true"
-        [ -f FAKE_R4 ] && echo "$D WARN [C3LIVE-OPS] x: [C3-LIVE-SCOPE] LEGACY tren tai khoan chinh: 0 vi the (foreign DA BIET, khong phai cum ma, khong chan (A)); LEGACY-busy=0 symbol"
+        [ -f FAKE_R4 ] && [ "${LIVE_ADAPTER:-}" != live ] && echo "$D WARN [main] x: [C3-LIVE] khoi dong adapter=DRY gateway=c3scope(dry) cum=0 c3_capital=10000.0 tai_khoan=CHINH(pham vi c3) killSwitchArmed=true"
+        [ -f FAKE_R4 ] && [ "${LIVE_ADAPTER:-}" != live ] && echo "$D WARN [C3LIVE-OPS] x: [C3-LIVE-SCOPE] LEGACY tren tai khoan chinh: 0 vi the (foreign DA BIET, khong phai cum ma, khong chan (A)); LEGACY-busy=0 symbol"
         [ -f FAKE_EXBAD ] && echo "$D ERROR [C3LIVE-OPS] x: [C3-LIVE UNIVERSE] exchangeInfo KHONG hop le (R7 fail-fast): gia lap"
         [ -f FAKE_LATCH ] && echo "$D WARN [main] x: [KILLSW] LATCH action=FLATTEN (truoc NONE) code=C6 codes=[C6] detail=dd=-0.7144"
         # [V12 R4c D3] dong VO HAI (khong duoc gay FAIL) / CO HAI (phai FAIL + rollback)
@@ -1160,6 +1170,107 @@ chk "r4o re-seed lan 2 => TU CHOI (env.sh da co GATE_BUFFER_SEED / .seeded)" "[ 
 rm -f $F4/FAKE_R4 $F4/run/killsw_latch.json
 echo YES | APP_DIR=$F4 FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TS4" > /dev/null 2>&1
 chk "r4o don dep: rollback v1.2 -> c3_shadow" "grep -qx 'export LIVE_PROFILE=c3_shadow' $F4/conf/env.sh && ! grep -q 'GATE_BUFFER_SEED\|LIVE_SEED_EXCLUDE' $F4/conf/env.sh"
+echo "== 32. [V12 R4o] go-live tai khoan chinh: golive_check_key / micro_on / pilot_on / legacy_verify / monitor / live_off (GOLIVE_SCENARIO ADD1)"
+GD=$W/gates; rm -rf "$GD" "$W/api"; mkdir -p "$GD" "$W/api"
+printf 'C3_LIVE_API_KEY=fakekey_%040d\nC3_LIVE_API_SECRET=fakesecret_%040d\n' 1 2 > "$W/keys_c3.env"; chmod 600 "$W/keys_c3.env"
+cat > "$W/fakecurl.sh" <<EOF
+#!/bin/bash
+# curl GIA: doc cau hinh -K - tu stdin, tra fixture theo ten endpoint (khong mang)
+cfg=\$(cat); u=\$(printf '%s' "\$cfg" | sed -n 's/^url = "\([^"?]*\).*/\1/p'); n=\${u##*/}
+printf '%s' "\$cfg" | grep -q 'X-MBX-APIKEY: fakekey_' || { printf '{"code":-2015}\nHTTP=401'; exit 0; }
+c=200; [ -f "$W/api/\$n.code" ] && c=\$(cat "$W/api/\$n.code")
+cat "$W/api/\$n.json" 2>/dev/null; printf '\nHTTP=%s' "\$c"
+EOF
+chmod +x "$W/fakecurl.sh"
+api() { printf '%s' "$2" > "$W/api/$1.json"; }
+api apiRestrictions '{"ipRestrict":true,"createTime":1,"enableWithdrawals":false,"enableInternalTransfer":false,"permitsUniversalTransfer":false,"enableVanillaOptions":false,"enableReading":true,"enableFutures":true,"enableMargin":false,"enableSpotAndMarginTrading":false}'
+api positionRisk '[{"symbol":"L01USDT","positionAmt":"10"},{"symbol":"L02USDT","positionAmt":"5"},{"symbol":"Z0USDT","positionAmt":"0"}]'
+api openOrders '[]'; api openAlgoOrders '[]'
+GL() { env APP_DIR=$F4 NJ_MD5=$NEW4 GATE_DIR=$GD KEYS_FILE=$W/keys_c3.env PY242=$W/c3py_t/python/bin/python3 CURL242=$W/fakecurl.sh \
+  DEPLOY_TG_SINK=$W/tg_gl.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 "$@"; }
+penv() { tr '\0' '\n' < /proc/$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)/environ; }
+lgnow() { echo "$(TZ=Asia/Ho_Chi_Minh date '+%d/%m/%Y %H:%M:%S.000') INFO [pool-3-thread-1] x: [LEGACY] managed $1: x" >> $F4/logs/full.log; }
+touch "$F4/FAKE_R4"; echo 44 > "$F4/FAKE_LEGACY_N"
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?; TS4=$(echo "$OUT" | grep -o 'TS=[0-9_]*' | head -1 | cut -d= -f2)
+chk "r4p chuan bi: deploy dry XONG (PUSH=OFF dry giu nguyen)" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'OK push_OFF'"
+OUT=$(GL DRY=1 bash "$HERE/golive_check_key.sh" 2>&1); RC=$?
+chk "r4p check_key DRY: kiem file key + python, KHONG goi san" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && ! ls $GD/KEY_CHECK_* >/dev/null 2>&1"
+OUT=$(GL bash "$HERE/golive_check_key.sh" 2>&1); RC=$?
+chk "r4p check_key DAT: enableWithdrawals=false ipRestrict=true enableFutures=true, file ket qua, KHONG in key/secret" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'KET QUA: DAT' && grep -q 'KET QUA: DAT' $GD/KEY_CHECK_*.txt && ! grep -rq 'fakekey_\|fakesecret_' $W/deploylog/golive_check_key_*.log $GD && ! echo \"\$OUT\" | grep -q 'fakesecret_'"
+api apiRestrictions '{"ipRestrict":false,"enableWithdrawals":true,"enableFutures":true}'
+OUT=$(GL bash "$HERE/golive_check_key.sh" 2>&1); RC=$?
+chk "r4p check_key: rut tien BAT + khong gioi han IP => TRUOT (exit 3)" "[ $RC = 3 ] && echo \"\$OUT\" | grep -q 'KET QUA: TRUOT' && echo \"\$OUT\" | grep -q 'enableWithdrawals=true' && echo \"\$OUT\" | grep -q 'ipRestrict=false'"
+echo '{"clusters":[{"symbol":"D01USDT","legs":[1]}]}' > $F4/run/c3live_book.json; BK0=$(md5sum < $F4/run/c3live_book.json)
+OUT=$(GL DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "r4p micro_on: chua co gate G-MICRO => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'chua co cong G-MICRO'"
+printf 'G-MICRO test\njar_md5=00000000000000000000000000000000\n' > $GD/GOLIVE_GATE_MICRO.ok
+OUT=$(GL DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "r4p micro_on: gate co jar_md5 KHAC jar dang chay => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'khong co dong jar_md5'"
+printf 'G-MICRO test\njar_md5=%s\n' $NEW4 > $GD/GOLIVE_GATE_MICRO.ok
+echo x > $F4/run/KILL_SWITCH
+OUT=$(GL DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "r4p micro_on: run/KILL_SWITCH dang co => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL khong co run/KILL_SWITCH'"
+rm -f $F4/run/KILL_SWITCH; E0=$(md5sum < $F4/conf/env.sh)
+OUT=$(GL DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "r4p micro_on DRY: ke hoach env live/1000/push/key, KHONG doi gi" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q 'export LIVE_ADAPTER=live' && echo \"\$OUT\" | grep -q 'export C3_CAPITAL=1000' && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ]"
+touch $F4/FAKE_NORUNTIME
+OUT=$(echo YES | GL bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "r4p micro_on hau kiem TRUOT, c3 chua co lenh => ROLLBACK ve dry: env.sh + so dry tra lai, PAUSE go" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'Da ROLLBACK xong' && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ] && [ \"\$(md5sum < $F4/run/c3live_book.json)\" = \"$BK0\" ] && penv | grep -qx LIVE_ADAPTER=dry && [ ! -f $W/PAUSE ]"
+rm -f $F4/FAKE_NORUNTIME
+OUT=$(echo NO | GL bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "r4p micro_on khong go YES => huy" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'Huy. Khong doi gi.' && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ]"
+OUT=$(echo YES | GL bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "r4p micro_on XONG: process live/1000/push/key/C11, so dry doi ten .dry_TS (live bat dau sach), stream + recon + LEGACY 44, PAUSE go" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: MICRO-LIVE' && penv | grep -qx LIVE_ADAPTER=live && penv | grep -qx C3_CAPITAL=1000 && penv | grep -qx SHADOW_NO_PUSH=false && penv | grep -qx LIVE_ENTRY_ENABLED=true && penv | grep -qx LIVE_SEED_EXCLUDE_DECISION_MIN=1 && penv | grep -qx LIVE_C3_KEYS_FILE=$W/keys_c3.env && [ ! -f $F4/run/c3live_book.json ] && ls $F4/run/c3live_book.json.dry_* >/dev/null && echo \"\$OUT\" | grep -q 'OK LEGACY_managed=44' && echo \"\$OUT\" | grep -q 'OK user_stream' && [ ! -f $W/PAUSE ]"
+OUT=$(GL bash "$HERE/golive_monitor.sh" 2>&1)
+chk "r4p monitor: 1 lenh in TOM TAT adapter=live C3_CAPITAL=1000 push=ON, latch, so c3, RAM" "echo \"\$OUT\" | grep -q 'TOM TAT: adapter=live C3_CAPITAL=1000 push=ON' && echo \"\$OUT\" | grep -q '== may: MemAvailable='"
+OUT=$(GL DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+chk "r4p pilot_on: chua co gate G-PILOT => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'chua co cong G-PILOT'"
+printf 'G-PILOT test\njar_md5=%s\nsize=10000\n' $NEW4 > $GD/GOLIVE_GATE_PILOT.ok
+OUT=$(GL DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+chk "r4p pilot_on: chua co LEGACY_CUT_VERIFIED => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'LEGACY_CUT_VERIFIED.ok DAT'"
+OUT=$(GL bash "$HERE/golive_legacy_verify.sh" 2>&1); RC=$?
+chk "r4p legacy_verify: con 2 vi the + log managed 44 => TRUOT, khong ghi file" "[ $RC = 3 ] && echo \"\$OUT\" | grep -q 'POS_NONC3=2' && echo \"\$OUT\" | grep -q 'log_LEGACY_managed=44' && [ ! -f $GD/LEGACY_CUT_VERIFIED.ok ]"
+api positionRisk '[{"symbol":"Z0USDT","positionAmt":"0"}]'; api openAlgoOrders '[{"symbol":"L03USDT","clientAlgoId":"web_x1"}]'; lgnow 0
+OUT=$(GL bash "$HERE/golive_legacy_verify.sh" 2>&1); RC=$?
+chk "r4p legacy_verify: con 1 algo LEGACY => TRUOT" "[ $RC = 3 ] && echo \"\$OUT\" | grep -q 'ALGO_NONC3=1'"
+api openAlgoOrders '[]'
+OUT=$(GL bash "$HERE/golive_legacy_verify.sh" 2>&1); RC=$?
+chk "r4p legacy_verify DAT: 0 vi the/lenh/algo ngoai c3 + log managed 0 => ghi LEGACY_CUT_VERIFIED.ok" "[ $RC = 0 ] && grep -q 'KET QUA: DAT' $GD/LEGACY_CUT_VERIFIED.ok"
+echo 0 > $F4/FAKE_LEGACY_N
+OUT=$(echo YES | GL bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+chk "r4p pilot_on: go YES (khong phai 'YES DA CAT LEGACY') => huy" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'Huy. Khong doi gi.'"
+OUT=$(echo 'YES DA CAT LEGACY' | GL bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+chk "r4p pilot_on XONG: C3_CAPITAL 1000 -> 10000, adapter live giu, so live giu, PAUSE go" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: PILOT C3_CAPITAL=10000' && penv | grep -qx C3_CAPITAL=10000 && penv | grep -qx LIVE_ADAPTER=live && [ ! -f $W/PAUSE ]"
+printf 'G-PILOT test\njar_md5=%s\nsize=20000\n' $NEW4 > $GD/GOLIVE_GATE_PILOT.ok; touch $F4/FAKE_NORUNTIME
+OUT=$(echo 'YES DA CAT LEGACY' | GL bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+chk "r4p pilot_on hau kiem TRUOT => ROLLBACK ve C3_CAPITAL cu (10000), adapter live" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'Da ROLLBACK xong: live C3_CAPITAL=10000' && penv | grep -qx C3_CAPITAL=10000 && penv | grep -qx LIVE_ADAPTER=live"
+rm -f $F4/FAKE_NORUNTIME
+OUT=$(GL MODE=dry DRY=1 bash "$HERE/golive_live_off.sh" 2>&1); RC=$?
+chk "r4p live_off MODE=dry khi CHUA drain => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL da drain'"
+OUT=$(echo YES | GL MODE=drain bash "$HERE/golive_live_off.sh" 2>&1); RC=$?
+chk "r4p live_off drain: dat run/KILL_SWITCH, KHONG restart" "[ $RC = 0 ] && [ -f $F4/run/KILL_SWITCH ] && penv | grep -qx LIVE_ADAPTER=live"
+chk "r4p monitor sau drain: push=OFF" "GL bash $HERE/golive_monitor.sh 2>&1 | grep -q 'push=OFF'"
+echo '{"clusters":[{"symbol":"C01USDT"}]}' > $F4/run/c3live_book.json
+OUT=$(GL MODE=dry DRY=1 bash "$HERE/golive_live_off.sh" 2>&1); RC=$?
+chk "r4p live_off MODE=dry: so c3 con cum => TU CHOI (khong doi adapter khi con vi the)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL so c3 = 0 cum'"
+echo '{"clusters":[]}' > $F4/run/c3live_book.json; api openAlgoOrders '[{"symbol":"C01USDT","clientAlgoId":"c3s-C01-1"}]'
+OUT=$(GL MODE=dry DRY=1 bash "$HERE/golive_live_off.sh" 2>&1); RC=$?
+chk "r4p live_off MODE=dry: san con algo c3 => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL san: 0 lenh c3'"
+api openAlgoOrders '[]'
+OUT=$(echo YES | GL MODE=dry bash "$HERE/golive_live_off.sh" 2>&1); RC=$?
+chk "r4p live_off MODE=dry XONG: env dry, so live doi ten .live_TS, KILL_SWITCH giu" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: c3_live ve DRY' && penv | grep -qx LIVE_ADAPTER=dry && ls $F4/run/c3live_book.json.live_* >/dev/null && [ -f $F4/run/KILL_SWITCH ] && [ ! -f $W/PAUSE ]"
+echo 44 > $F4/FAKE_LEGACY_N; lgnow 44
+OUT=$(GL DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "r4p micro_on lan 2: KILL_SWITCH con (tu drain) => TU CHOI cho toi khi go co chu dich" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL khong co run/KILL_SWITCH'"
+rm -f $F4/run/KILL_SWITCH; touch $F4/FAKE_NORUNTIME $F4/FAKE_C3EXEC
+OUT=$(echo YES | GL bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "r4p micro_on TRUOT khi c3 DA co lenh => KHONG ve dry, dat KILL_SWITCH, KHAN, exit 2" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'KHONG ve dry' && [ -f $F4/run/KILL_SWITCH ] && penv | grep -qx LIVE_ADAPTER=live && grep -q 'KHAN TS=.* micro_on TRUOT' $W/tg_gl.txt"
+rm -f $F4/FAKE_NORUNTIME $F4/FAKE_C3EXEC
+OUT=$(echo YES | GL MODE=dry bash "$HERE/golive_live_off.sh" 2>&1); RC=$?
+chk "r4p don dep: live_off MODE=dry ve dry" "[ $RC = 0 ] && penv | grep -qx LIVE_ADAPTER=dry"
+rm -f $F4/FAKE_R4 $F4/FAKE_LEGACY_N $F4/run/KILL_SWITCH
+echo YES | APP_DIR=$F4 FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TS4" > /dev/null 2>&1
+chk "r4p don dep: rollback v1.2 -> c3_shadow" "grep -qx 'export LIVE_PROFILE=c3_shadow' $F4/conf/env.sh"
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]
