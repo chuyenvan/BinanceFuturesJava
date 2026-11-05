@@ -14,6 +14,8 @@ def kind(contract_type, underlying_type):
         return "TRADFI"
     if u == "INDEX":
         return "INDEX"
+    if u == "PREMARKET":  # [PREMARKET-b] loai khoi A1 (= UniverseA1Classifier nhanh v1.2/premarket-b-a1excl)
+        return "PREMARKET"
     return "UNCLASSIFIED" if u == "" else "CRYPTO"
 
 
@@ -22,10 +24,10 @@ def load(path):
 
 
 def excluded(path, t_ms):
-    """tap symbol bi A1 loai tai thoi diem t_ms (TRADFI/INDEX va onboardDate <= t_ms)."""
+    """tap symbol bi A1 loai tai thoi diem t_ms (TRADFI/INDEX/PREMARKET va onboardDate <= t_ms)."""
     out = set()
     for s in load(path)["symbols"]:
-        if kind(s.get("contractType"), s.get("underlyingType")) in ("TRADFI", "INDEX") and int(s.get("onboardDate", 0)) <= t_ms:
+        if kind(s.get("contractType"), s.get("underlyingType")) in ("TRADFI", "INDEX", "PREMARKET") and int(s.get("onboardDate", 0)) <= t_ms:
             out.add(s["symbol"])
     return out
 
