@@ -130,6 +130,8 @@ final class CrashDayRig {
     final Map<String, BigDecimal> lastPxBd = new HashMap<>();
     final Map<String, BigDecimal> legacyQty = new TreeMap<>();
     final Map<String, double[]> truth = new TreeMap<>();          // symbol -> [rp, fee] cac khop c3 (su that san)
+    final Map<String, double[]> c3Vwap = new TreeMap<>();         // [r4p Bug4] symbol -> [qty, cost, rp theo VWAP c3] tu khop san
+    final Set<String> everMerged = new TreeSet<>();               // [r4p Bug4] symbol tung MERGED trong lan chay
     final Map<String, Integer> buyCidCount = new HashMap<>();
     final Map<Long, Float> qByHour = new TreeMap<>();
 
@@ -284,7 +286,18 @@ final class CrashDayRig {
 
     void boot() {
         File run = new File(out, "run");
-        C3LiveOrderExecutor.ApiObserver api = (x, ok) -> ks.onApiResult(t(), x, ok);
+        // [r4p] = C3LiveRuntime: onOrderResult (bo dem 429 rieng duong dat lenh, Bug3)
+        C3LiveOrderExecutor.ApiObserver api = new C3LiveOrderExecutor.ApiObserver() {
+            @Override
+            public void onApiResult(String x, boolean ok) {
+                ks.onApiResult(t(), x, ok);
+            }
+
+            @Override
+            public void onOrderResult(String x, boolean ok, boolean rl) {
+                ks.onOrderResult(t(), x, ok, rl);
+            }
+        };
         book = new LiveBookC3(new File(run, "c3live_book.json"), 1.0);
         scope = new C3Scope(book, now::get, new File(run, "c3live_merged.txt"));
         sgw = new C3ScopedGateway(cnt, scope, now::get, ProductionRatePolicy.policy(Cfg::get));
@@ -301,6 +314,7 @@ final class CrashDayRig {
         ex = new C3LiveOrderExecutor(sgw, book, api, fill, now::get, this::advance, C3LiveOrderExecutor.DEFAULT_SAFE_RETRY_MS,
                 C3LiveOrderExecutor.DEFAULT_MAX_ATTEMPTS, Runnable::run);
         ex.setPriceResolver(pr);
+        ex.setCostRecovery(acct);   // [r4p] = C3LiveRuntime (Bug2: bu phi khi stream rot)
         eq = new C3MainEquity(sgw, book, scope, CAPITAL, new File(run, "c3live_equity_c3.json"),
                 o.venue == Venue.DRY ? "dry" : "live", 60_000L, now::get, api, alerts::add);
         ks.attachEquitySource(eq);
@@ -489,9 +503,11 @@ final class CrashDayRig {
                 ex.correctProvisional();
                 lastResolve = n;
             }
+            ex.tickCosts(n);   // [r4p] = C3LiveRuntime vong ops
             flat.step();
             refresher.tick();
             merged.poll();
+            everMerged.addAll(scope.merged().keySet());
             protector.check();
             eq.pollFunding(n);
             rec.confirmPendingFlat();
@@ -751,6 +767,21 @@ final class CrashDayRig {
             double[] a = truth.computeIfAbsent(s, k -> new double[2]);
             a[0] += x.has("rp") ? x.get("rp").getAsDouble() : 0d;
             a[1] += x.has("n") ? x.get("n").getAsDouble() : 0d;
+            double lq = x.get("l").getAsDouble(), lp = x.get("L").getAsDouble();
+            double[] v = c3Vwap.computeIfAbsent(s, k -> new double[3]);
+            if ("BUY".equals(x.get("S").getAsString())) {
+                v[0] += lq;
+                v[1] += lq * lp;
+            } else if (v[0] > 0d) {
+                double avg = v[1] / v[0], qq = Math.min(lq, v[0]);
+                v[2] += (lp - avg) * qq;
+                v[1] -= avg * qq;
+                v[0] -= qq;
+                if (v[0] <= 1e-12) {
+                    v[0] = 0d;
+                    v[1] = 0d;
+                }
+            }
             if ("BUY".equals(x.get("S").getAsString()) && cid.startsWith("c3-")) buyCidCount.merge(cid, 1, Integer::sum);
         } catch (RuntimeException e) {
             errors.add("truth parse: " + e);
@@ -1079,15 +1110,26 @@ final class CrashDayRig {
         double bookR = book.account().realized, bookF = book.account().commission;
         double openF = 0d;
         for (LiveBookC3.ClusterView c : book.clusters()) openF += c.commission;
-        double exR = 0, exF = 0;
-        for (double[] a : truth.values()) {
-            exR += a[0];
-            exF += a[1];
+        // [r4p Bug4] realized: LOAI rp san cua symbol MERGED (san tinh tren gia von gop LEGACY+c3); phan MERGED cua so = rp VWAP c3
+        // tinh doc lap tu khop san => so sanh (so - rpC3 MERGED) voi Σrp san non-MERGED. Phi: giu nguyen moi symbol.
+        double exR = 0, exF = 0, exRMergedBlend = 0, c3RMerged = 0;
+        for (Map.Entry<String, double[]> e : truth.entrySet()) {
+            exF += e.getValue()[1];
+            if (everMerged.contains(e.getKey())) {
+                exRMergedBlend += e.getValue()[0];
+                double[] v = c3Vwap.get(e.getKey());
+                c3RMerged += v == null ? 0d : v[2];
+            } else {
+                exR += e.getValue()[0];
+            }
         }
         Map<String, Object> x6 = new LinkedHashMap<>();
         x6.put("qty_mismatch_end", q);
         x6.put("realized_book", bookR);
-        x6.put("realized_exchange", exR);
+        x6.put("realized_exchange(non_merged)", exR);
+        x6.put("merged_symbols", new ArrayList<>(everMerged));
+        x6.put("realized_merged_c3_vwap", c3RMerged);
+        x6.put("realized_merged_exchange_blended(bo qua)", exRMergedBlend);
         x6.put("fee_book", bookF);
         x6.put("fee_exchange", exF);
         x6.put("fee_open_clusters(da gom trong fee_book)", openF);
@@ -1096,9 +1138,9 @@ final class CrashDayRig {
         x6.put("truth_rp_fee_by_symbol", tr);
         x6.put("recon_status", rec.status());
         res.put("X6", x6);
-        boolean rOk = Math.abs(bookR - exR) <= 1e-6 * Math.max(1d, Math.abs(exR));
+        boolean rOk = Math.abs(bookR - c3RMerged - exR) <= 1e-6 * Math.max(1d, Math.abs(exR));
         boolean fOk = Math.abs(bookF - exF) <= 1e-6 * Math.max(1d, Math.abs(exF));
-        if (!rOk) violation("X6", "realized so=" + bookR + " san=" + exR);
+        if (!rOk) violation("X6", "realized so=" + bookR + " (-MERGED c3 " + c3RMerged + ") san(non-MERGED)=" + exR);
         if (!fOk) violation("X6", "phi so=" + bookF + " san=" + exF);
         crit.put("X6", q == 0 && rOk && fOk && !viol.containsKey("X6"));
         // X7
