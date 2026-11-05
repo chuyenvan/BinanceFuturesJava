@@ -3,7 +3,7 @@
 # golive_pilot_on.sh — [V12 R4o] MICRO (C3_CAPITAL=1000) -> PILOT (C3_CAPITAL=<size>) tren TAI KHOAN CHINH (GOLIVE_SCENARIO ADD1 §4).
 #   DRY=1 bash ~/claude_master/v12/c3live/ops/c3live/golive_pilot_on.sh   # chi kiem
 #   bash ~/claude_master/v12/c3live/ops/c3live/golive_pilot_on.sh         # go 'YES DA CAT LEGACY' (khung :10-:44)
-# Kiem: gate G-PILOT (jar_md5 + size=), LEGACY_CUT_VERIFIED.ok (golive_legacy_verify.sh DAT <= 24 h), dang chay LIVE push ON,
+# Kiem: gate G-PILOT (jar_md5 + size= + g_exec= [ADD2]), LEGACY_CUT_VERIFIED.ok (golive_legacy_verify.sh DAT <= 24 h), dang chay LIVE push ON,
 #   C3_CAPITAL hien tai < size, latch NONE, khong KILL_SWITCH, LEGACY managed 0, RAM, khong PAUSE/canary/soak.
 # Lam: env +C3_CAPITAL=<size> ; PAUSE token ; restart (so live + vi the c3 GIU NGUYEN; adapter khong doi) ; hau kiem env, c3_capital,
 #   PUSH=ON, stream, recon ok, LEGACY 0, latch NONE, 0 KHAN. TRUOT => rollback: env.sh ve ban truoc (C3_CAPITAL cu), restart.
@@ -16,6 +16,10 @@ G=$GATE_DIR/GOLIVE_GATE_PILOT.ok
 GR=$(gl_gate "$G"); echo "$GR"; echo "$GR" | grep -q '^OK' || die "chua co cong G-PILOT hop le (MASTER tao $G voi jar_md5=$NJ_MD5 + size=)"
 SIZE=$(gl_gate_val "$G" size)
 [[ "$SIZE" =~ ^[0-9]+$ ]] && [ "$SIZE" -ge 1000 ] && [ "$SIZE" -le 100000 ] || die "size='$SIZE' trong $G khong hop le (1000..100000)"
+# [R4p ADD2] G-EXEC chuyen sang G-PILOT: gate phai co g_exec=<GREEN|AMBER|RED_SIZE|Q4_OWNER> <dan chung>
+GX=$(gl_gate_val "$G" g_exec)
+[[ "$GX" =~ ^(GREEN|AMBER|RED_SIZE|Q4_OWNER) ]] || die "$G thieu dong g_exec=<GREEN|AMBER|RED_SIZE|Q4_OWNER> <dan chung> (GOLIVE ADD2: G-PILOT muc 6)"
+echo "OK g_exec=$GX"
 LV=$GATE_DIR/LEGACY_CUT_VERIFIED.ok
 [ -s "$LV" ] && grep -q 'KET QUA: DAT' "$LV" || die "chua co $LV DAT (owner cat LEGACY roi chay golive_legacy_verify.sh)"
 AGE=$(( $(date +%s) - $(stat -c %Y "$LV") )); [ "$AGE" -le "$LEGACY_OK_MAX_AGE_S" ] || die "$LV cu ${AGE}s > ${LEGACY_OK_MAX_AGE_S}s — chay lai golive_legacy_verify.sh"

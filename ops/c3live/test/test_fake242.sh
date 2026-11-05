@@ -1227,6 +1227,9 @@ OUT=$(GL DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "r4p pilot_on: chua co gate G-PILOT => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'chua co cong G-PILOT'"
 printf 'G-PILOT test\njar_md5=%s\nsize=10000\n' $NEW4 > $GD/GOLIVE_GATE_PILOT.ok
 OUT=$(GL DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+chk "r4p pilot_on: gate thieu dong g_exec= (ADD2 G-EXEC o G-PILOT) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'thieu dong g_exec='"
+printf 'G-PILOT test\njar_md5=%s\nsize=10000\ng_exec=GREEN test\n' $NEW4 > $GD/GOLIVE_GATE_PILOT.ok
+OUT=$(GL DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "r4p pilot_on: chua co LEGACY_CUT_VERIFIED => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'LEGACY_CUT_VERIFIED.ok DAT'"
 OUT=$(GL bash "$HERE/golive_legacy_verify.sh" 2>&1); RC=$?
 chk "r4p legacy_verify: con 2 vi the + log managed 44 => TRUOT, khong ghi file" "[ $RC = 3 ] && echo \"\$OUT\" | grep -q 'POS_NONC3=2' && echo \"\$OUT\" | grep -q 'log_LEGACY_managed=44' && [ ! -f $GD/LEGACY_CUT_VERIFIED.ok ]"
@@ -1241,7 +1244,7 @@ OUT=$(echo YES | GL bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "r4p pilot_on: go YES (khong phai 'YES DA CAT LEGACY') => huy" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'Huy. Khong doi gi.'"
 OUT=$(echo 'YES DA CAT LEGACY' | GL bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "r4p pilot_on XONG: C3_CAPITAL 1000 -> 10000, adapter live giu, so live giu, PAUSE go" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: PILOT C3_CAPITAL=10000' && penv | grep -qx C3_CAPITAL=10000 && penv | grep -qx LIVE_ADAPTER=live && [ ! -f $W/PAUSE ]"
-printf 'G-PILOT test\njar_md5=%s\nsize=20000\n' $NEW4 > $GD/GOLIVE_GATE_PILOT.ok; touch $F4/FAKE_NORUNTIME
+printf 'G-PILOT test\njar_md5=%s\nsize=20000\ng_exec=Q4_OWNER test\n' $NEW4 > $GD/GOLIVE_GATE_PILOT.ok; touch $F4/FAKE_NORUNTIME
 OUT=$(echo 'YES DA CAT LEGACY' | GL bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "r4p pilot_on hau kiem TRUOT => ROLLBACK ve C3_CAPITAL cu (10000), adapter live" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'Da ROLLBACK xong: live C3_CAPITAL=10000' && penv | grep -qx C3_CAPITAL=10000 && penv | grep -qx LIVE_ADAPTER=live"
 rm -f $F4/FAKE_NORUNTIME
