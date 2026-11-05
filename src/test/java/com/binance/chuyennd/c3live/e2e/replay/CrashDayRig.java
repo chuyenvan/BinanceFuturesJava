@@ -715,7 +715,10 @@ final class CrashDayRig {
     boolean a1Excluded(String s, long b) {
         Optional<TradFiClassifier.Verdict> v = uni.classification(s);
         if (!v.isPresent()) return b > d.exInfo.getServerTime();   // fail-closed nhu UniverseA1Filter.excludedIn
-        return v.get().isTradFi();
+        // [4q] = UniverseA1Filter production: loai TRADFI + INDEX + PREMARKET (PREMARKET-b). Ban dau chi TradFi.
+        com.binance.chuyennd.c3live.api.SymbolMeta m = d.exInfo.getSymbols().get(s);
+        return v.get().isTradFi() || (m != null && com.binance.chuyennd.tradecore.selector.UniverseA1Classifier.excluded(
+                com.binance.chuyennd.tradecore.selector.UniverseA1Classifier.classify(m.getContractType(), m.getUnderlyingType())));
     }
 
     boolean bookFull() {

@@ -71,3 +71,17 @@ không đổi. Log `~/claude_master/e2e1105/logs/test_110622.log`.
 
 Khai: lần chạy r4p đầu (11:00, trước 2822bf78) F2b latch 2 lần — 429 thứ 6 xếp hàng rơi vào lệnh 07:18 và cộng dồn với bộ đếm cũ ⇒
 sửa production (429 ngoài cửa sổ giữ 5′ đếm lại từ 1) + test, rồi chạy lại toàn bộ (bảng trên).
+
+## 6. Chạy lại trên r4q (2026-11-05 11:59, HEAD 00a1f1f6, jar r4q md5 1590d606)
+- Code r4q gồm PREMARKET (b): A1 loại PREMARKET (MASTER 4q), queue LEGACY bị chặn khi c3_live, cùng Java 4p.
+- Sửa harness (khai): trước đây `CrashDayRig.a1Excluded` chỉ loại TradFi. Nay nó mirror `UniverseA1Filter` production và loại cả
+  TRADFI, INDEX, PREMARKET. Tiêu chí không đổi.
+- Log: `test_115940.log`. `check_ref.py` đã chạy lại cho R0, R0-DRY, F2b, F5.
+
+| mục | r4p | r4q |
+|---|---|---|
+| X1 | TRƯỢT mọi lượt (PREDICT NOT_BUYABLE) | **ĐẠT mọi lượt**: PREDICTUSDT bị A1_EXCLUDED ở tầng tín hiệu, 0 NOT_BUYABLE. R0 có 26 SUBMITTED |
+| E1 R0 ≡ REF numpy | ĐẠT | ĐẠT (R0, R0-DRY, F2b, F5: diff = {}) |
+| X2–X6, X8, X9, F1–F4, F6a/b, S-DCA | ĐẠT | ĐẠT. Phí sổ = sàn mọi lượt; F2b có phí 0,2213, khác trước vì slot PREDICT đã trống |
+| F5 X7 | ERROR do chính lỗi tiêm | không đổi |
+| E2a | TRƯỢT theo công thức (hết bản chụp buffer) | không đổi |
