@@ -127,6 +127,23 @@ public final class LiveProfileC3 {
         return np;
     }
 
+    /** [V12 R4q MIN-1] env tat chot chan queue LEGACY (chi "false" moi tat). */
+    public static final String KEY_LEGACY_QUEUE_BLOCK = "LEGACY_QUEUE_LIVE_BLOCK";
+
+    /**
+     * [V12 R4q MIN-1] c3_live: consumer queue LEGACY ({@code BinanceOrderTradingManager.processOrderNewMarketNew}) KHONG BAO GIO
+     * dat lenh MOI THAT (key tai khoan chinh) va KHONG mo so giay — du SHADOW_NO_PUSH=false. Trong JVM khong con producer
+     * (DetectEntrySignal2TradeNormal: c3_live luon shadowHandle), nhung queue Redis dung chung / ban ghi ton / nhanh rpush thu lai
+     * khong co chot => chan bang co rieng (doc env truc tiep, mac dinh CHAN).
+     */
+    public static boolean legacyQueueNewOrderBlocked() {
+        return decideLegacyQueueBlock(LIVE, System.getenv(KEY_LEGACY_QUEUE_BLOCK));
+    }
+
+    static boolean decideLegacyQueueBlock(boolean live, String flag) {
+        return live && !(flag != null && "false".equalsIgnoreCase(flag.trim()));
+    }
+
     /** [C3-LIVE] true khi {@code LIVE_PROFILE=c3_live}. */
     public static boolean isLive() {
         return LIVE;

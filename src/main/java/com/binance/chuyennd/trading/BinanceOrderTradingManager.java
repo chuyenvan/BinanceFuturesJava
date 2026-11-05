@@ -185,6 +185,14 @@ public class BinanceOrderTradingManager {
                 // (2026-09-03: da tung bi xoa trong dot refactor "xoa tham so tro" - SAI. Day
                 //  khong phai tham so chien luoc ma la lop chan cuoi truoc tien that. Da khoi phuc.)
                 // ============================================================================
+                // [V12 R4q MIN-1] c3_live: queue LEGACY KHONG dat lenh moi that, KHONG mo so giay (co rieng
+                // LEGACY_QUEUE_LIVE_BLOCK, mac dinh chan). Lenh that c3 chi di qua C3LiveHook.
+                if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.legacyQueueNewOrderBlocked()) {
+                    LOG.warn("[C3-LIVE] queue LEGACY: CHAN lenh MOI {} {} qty={} (c3_live, LEGACY_QUEUE_LIVE_BLOCK) — khong goi san",
+                            order.side, order.symbol, order.quantity);
+                    symbol2Processing.remove(order.symbol);
+                    return;
+                }
                 // [C3-SHADOW] profile bat => LUON chan (hardcode, khong doc env). Profile tat =>
                 // giu nguyen duong cu doc Cfg.get("SHADOW_NO_PUSH").
                 if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.forceNoPush()
