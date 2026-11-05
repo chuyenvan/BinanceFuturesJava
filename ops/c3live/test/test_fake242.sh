@@ -1334,7 +1334,8 @@ chk "r4p don dep: rollback v1.2 -> c3_shadow" "grep -qx 'export LIVE_PROFILE=c3_
 echo "== 33. [V12 R4q] swap_v12_dry_jar.sh: thay jar dry r4n -> r4q (C11, khong seed, hau kiem PREMARKET/LEGACY_QUEUE, rollback)"
 SW=$HERE/swap_v12_dry_jar.sh
 printf 'fake-new-jar-v12r4q' > "$W/new_r4q.jar"; NEWQ=$(md5sum < "$W/new_r4q.jar" | cut -c1-32)
-sw() { env APP_DIR=$F4 OLD_MD5=$NEW4 NJ=$W/new_r4q.jar NJ_MD5=$NEWQ DEPLOY_TG_SINK=$W/tg_sw.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 "$@"; }
+printf '#!/bin/bash\necho "$*" >> %s/reg_calls.txt\n[ -f %s/REG_FAIL ] && exit 3\nexit 0\n' $W $W > $W/fake_register.sh; rm -f $W/reg_calls.txt $W/REG_FAIL
+sw() { env APP_DIR=$F4 OLD_MD5=$NEW4 NJ=$W/new_r4q.jar NJ_MD5=$NEWQ DEPLOY_TG_SINK=$W/tg_sw.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 REG_JAR_SH=$W/fake_register.sh "$@"; }
 touch "$F4/FAKE_R4"; echo 44 > "$F4/FAKE_LEGACY_N"
 OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?
 chk "r4q swap chuan bi: deploy dry r4n (gia) XONG" "[ $RC = 0 ]"
@@ -1349,12 +1350,18 @@ OUT=$(sw NJ_MD5=$OLD DRY=1 bash "$SW" 2>&1); RC=$?
 chk "r4q swap: md5 jar moi KHAC pin => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'KHAC pin'"
 touch $F4/FAKE_NORUNTIME
 OUT=$(echo YES | sw bash "$SW" 2>&1); RC=$?
-chk "r4q swap hau kiem TRUOT => ROLLBACK: jar r4n (md5) + env.sh + gate_ratio khoi phuc, PAUSE go" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'ROLLBACK xong' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $J0 ] && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ] && [ \"\$(md5sum < $F4/run/gate_ratio_live.bin)\" = \"$G0\" ] && [ ! -f $W/PAUSE ] && penv | grep -qx LIVE_ADAPTER=dry"
+chk "r4q swap hau kiem TRUOT => ROLLBACK: jar r4n (md5) + env.sh + gate_ratio khoi phuc, PAUSE go, KHONG dang ky jar parity" "[ $RC = 1 ] && [ ! -e $W/reg_calls.txt ] && echo \"\$OUT\" | grep -q 'ROLLBACK xong' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $J0 ] && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ] && [ \"\$(md5sum < $F4/run/gate_ratio_live.bin)\" = \"$G0\" ] && [ ! -f $W/PAUSE ] && penv | grep -qx LIVE_ADAPTER=dry"
 rm -f $F4/FAKE_NORUNTIME
 OUT=$(echo NO | sw bash "$SW" 2>&1); RC=$?
 chk "r4q swap khong go YES => huy" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'Huy. Khong doi gi.' && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ]"
+touch $W/REG_FAIL
 OUT=$(echo YES | sw bash "$SW" 2>&1); RC=$?
-chk "r4q swap XONG: jar r4q, backup r4n .bak_swap (md5), C11 trong env process, dry giu, PREMARKET + premarket_bo + LEGACY_QUEUE_LIVE_BLOCK=true, PAUSE go" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: dry chay r4q' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWQ ] && cat $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_*.md5 | grep -qx $J0 && penv | grep -qx LIVE_SEED_EXCLUDE_DECISION_MIN=1 && penv | grep -qx LIVE_ADAPTER=dry && echo \"\$OUT\" | grep -q 'OK GATE-PRE_premarket_bo=1' && echo \"\$OUT\" | grep -q 'OK UNIVERSE-A1_PREMARKET=1' && echo \"\$OUT\" | grep -q 'OK LEGACY_QUEUE_LIVE_BLOCK=true' && [ ! -f $W/PAUSE ] && grep -q 'swap jar dry\] XONG' $W/tg_sw.txt"
+chk "r4q swap XONG + dang ky jar parity LOI => chi WARN (exit 0, dry r4q giu, KHONG rollback), dang ky dung tham so r4q <jar> <md5> <start_ms 13 so> 1" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'WARN dang ky jar parity LOI rc=3' && ! echo \"\$OUT\" | grep -q 'ROLLBACK' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWQ ] && grep -qE \"^r4q $W/new_r4q.jar $NEWQ [0-9]{13} 1\$\" $W/reg_calls.txt"
+# don: ve r4n de chay lai swap XONG (dang ky OK)
+(cd $F4 && bin/daemon.sh stop; B=$(ls target/binance-java-sdk-1.2.4.jar.bak_swap_* | grep -v 'md5$' | tail -1); cp -f $B target/binance-java-sdk-1.2.4.jar; F=$(ls conf/env.sh.bak_swap_* | tail -1); cp -f $F conf/env.sh; bin/daemon.sh start) > /dev/null 2>&1
+rm -f $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_* $W/REG_FAIL $W/reg_calls.txt; sleep 2
+OUT=$(echo YES | sw bash "$SW" 2>&1); RC=$?
+chk "r4q swap XONG: jar r4q, backup r4n .bak_swap (md5), C11 trong env process, dry giu, PREMARKET + premarket_bo + LEGACY_QUEUE_LIVE_BLOCK=true, PAUSE go" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: dry chay r4q' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWQ ] && cat $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_*.md5 | grep -qx $J0 && penv | grep -qx LIVE_SEED_EXCLUDE_DECISION_MIN=1 && penv | grep -qx LIVE_ADAPTER=dry && echo \"\$OUT\" | grep -q 'OK GATE-PRE_premarket_bo=1' && echo \"\$OUT\" | grep -q 'OK UNIVERSE-A1_PREMARKET=1' && echo \"\$OUT\" | grep -q 'OK LEGACY_QUEUE_LIVE_BLOCK=true' && [ ! -f $W/PAUSE ] && grep -q 'swap jar dry\] XONG' $W/tg_sw.txt && echo \"\$OUT\" | grep -q 'OK dang ky jar parity r4q start_ms=' && [ \"\$(wc -l < $W/reg_calls.txt)\" = 1 ]"
 OUT=$(sw DRY=1 bash "$SW" 2>&1); RC=$?
 chk "r4q swap lan 2: jar dang chay DA la r4q => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'DA_LA_moi'"
 pkill -f 'BinanceOrderTradingManager fake242'

@@ -13,9 +13,11 @@
 #   [GATE-PRE] co premarket_bo=, dong LIVE_PROFILE co LEGACY_QUEUE_LIVE_BLOCK=true, LEGACY managed = truoc, latch NONE, 0 KHAN,
 #   runtime, GATE tick -> go PAUSE.
 # Hau kiem TRUOT => ROLLBACK TU DONG: stop -> jar cu (md5 OLD) + env.sh + gate_ratio_live.bin (md5) -> start lai r4n nhu truoc.
+# [R4q ADD11] Hau kiem DAT => dang ky jar cho harness parity: register_jar.sh r4q <jar> <md5> <start_ms JVM r4q> 1 (Oracle).
+#   Rollback => KHONG dang ky. Lenh dang ky loi => chi WARN + Telegram (dry r4q GIU nguyen).
 # Ma thoat: 0 XONG | 1 DUNG/da rollback | 2 ROLLBACK LOI (PAUSE con — xem dong "PAUSE còn").
 # Bien (test): SSH_242 SCP_242 RHOST APP_DIR PROC_PAT OLD_MD5 NJ NJ_MD5 WD_PAUSE WD_PAUSE_MAX_S POST_WAIT_S POST_ROUNDS LOGDIR
-#   FORCE_TIME DEPLOY_TG_ENV DEPLOY_TG_SINK MIN_MEM_MB SSH_RETRY_S
+#   FORCE_TIME DEPLOY_TG_ENV DEPLOY_TG_SINK MIN_MEM_MB SSH_RETRY_S REG_JAR_SH REG_TIMEOUT_S
 # =============================================================================
 set -uo pipefail
 SSH_242=${SSH_242:-"ssh -p 2222 -o BatchMode=yes -o ConnectTimeout=20 -i /home/ubuntu/.ssh/id_rsa_chuyennd root@103.157.218.242"}
@@ -35,6 +37,8 @@ DRY=${DRY:-0}
 FORCE_TIME=${FORCE_TIME:-0}
 SSH_RETRY_S=${SSH_RETRY_S:-10}
 DEPLOY_TG_ENV=${DEPLOY_TG_ENV:-/home/ubuntu/.config/health242/tg.env}
+REG_JAR_SH=${REG_JAR_SH:-/home/ubuntu/claude_master/vz_e1_wt/research/parity_v12/sh/register_jar.sh}
+REG_TIMEOUT_S=${REG_TIMEOUT_S:-5400}
 TS=$(TZ=Asia/Ho_Chi_Minh date +%Y%m%d_%H%M%S)
 LOGDIR=${LOGDIR:-/home/ubuntu/claude_master/deploy}
 mkdir -p "$LOGDIR"
@@ -184,6 +188,7 @@ bin/daemon.sh start
 sleep 8
 P=$(pgrep -f "$PP" | head -1)
 [ -n "$P" ] && echo "OK started pid=$P lstart=$(ps -o lstart= -p $P)" || echo "FAIL khong_thay_process_sau_start"
+[ -n "$P" ] && echo "START_MS=$(( ($(date +%s) - $(ps -o etimes= -p $P | tr -d ' ')) * 1000 ))"
 EOF
 ) || RS="FAIL ssh_restart_loi"
 echo "$RS"
@@ -284,6 +289,18 @@ fi
 trap - INT TERM HUP
 if ! s242 "grep -q '^$PAUSE_TOK ' $WD_PAUSE 2>/dev/null && rm -f $WD_PAUSE; [ ! -e $WD_PAUSE ]"; then
   say "XONG nhung PAUSE còn (ssh?) — tu go sau ${WD_PAUSE_MAX_S}s neu van token lan nay"
+fi
+# [R4q ADD11] dang ky jar cho harness parity (CHI khi hau kiem DAT); loi => WARN, KHONG rollback
+STMS=$(echo "$RS" | sed -n 's/^START_MS=//p' | tail -1)
+if [[ "$STMS" =~ ^[0-9]{13}$ ]]; then
+  say "--- dang ky jar parity: $REG_JAR_SH r4q $NJ $NJ_MD5 $STMS 1"
+  timeout "$REG_TIMEOUT_S" bash "$REG_JAR_SH" r4q "$NJ" "$NJ_MD5" "$STMS" 1; RRC=$?
+  if [ "$RRC" = 0 ]; then say "OK dang ky jar parity r4q start_ms=$STMS"
+  else say "WARN dang ky jar parity LOI rc=$RRC (dry r4q GIU nguyen) — chay tay: bash $REG_JAR_SH r4q $NJ $NJ_MD5 $STMS 1"
+       tg "[swap jar dry] WARN TS=$TS: register_jar.sh rc=$RRC — chay tay: bash $REG_JAR_SH r4q $NJ $NJ_MD5 $STMS 1"; fi
+else
+  say "WARN khong lay duoc start_ms JVM r4q ('$STMS') => KHONG dang ky jar parity — MASTER chay tay register_jar.sh"
+  tg "[swap jar dry] WARN TS=$TS: thieu start_ms => chua dang ky jar parity"
 fi
 say "=== XONG: dry chay r4q $NJ_MD5. $(echo "$RS" | grep '^OK started') | jar cu backup target/*.bak_swap_$TS, gate_ratio truoc=$GR0"
 say "Ngay hom nay = XAM (ADD6/ADD10). Dry r4q smoke >= 24 h truoc micro (A1 R4PQ). Log: $LOG"
