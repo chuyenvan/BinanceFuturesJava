@@ -31,6 +31,13 @@ import java.util.function.Supplier;
  */
 public final class GatePreFilter {
 
+    private static final java.util.concurrent.atomic.AtomicBoolean PRE_LOGGED = new java.util.concurrent.atomic.AtomicBoolean();
+
+    /** [R4q] true dung 1 lan (tick dau sau khoi dong) => dong [GATE-PRE] luon co de hau kiem. */
+    public static boolean firstPreLog() {
+        return PRE_LOGGED.compareAndSet(false, true);
+    }
+
     private static final Logger LOG = LoggerFactory.getLogger(GatePreFilter.class);
 
     public enum Action {

@@ -90,9 +90,11 @@ public final class LiveProfileC3 {
             boolean np = decideNoPush(true, snp, le, kill);
             lastNoPush = np;
             LOG.warn("🟠 [LIVE_PROFILE=c3_live] BAT — hanh vi C3 day du (arm={} timeStop={}h ratchet=LIEN TUC "
-                            + "paperEquity={} sizeCap={}%). PUSH={} (SHADOW_NO_PUSH={} {}={} killSwitch={} exists={})",
+                            + "paperEquity={} sizeCap={}%). PUSH={} (SHADOW_NO_PUSH={} {}={} killSwitch={} exists={})"
+                            + " LEGACY_QUEUE_LIVE_BLOCK={}",
                     ARM_RATE, TIME_STOP_HOURS, eq, SIZE_CAP_OF_EQUITY * 100f, np ? "OFF" : "ON",
-                    snp, KEY_LIVE_ENTRY, le, KILL_FILE, kill);
+                    snp, KEY_LIVE_ENTRY, le, KILL_FILE, kill,
+                    decideLegacyQueueBlock(true, System.getenv("LEGACY_QUEUE_LIVE_BLOCK")));   // = KEY_LEGACY_QUEUE_BLOCK (tranh forward ref)
         }
     }
 

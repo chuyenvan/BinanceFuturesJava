@@ -223,6 +223,7 @@ public class UniverseA1FilterTest {
         for (String s : CRYPTO) assertFalse(s, UniverseA1Filter.isExcluded(s, late));   // UNK (thieu underlyingType) + PREMARKET giu
         for (String s : BANNED) assertTrue(s, UniverseA1Filter.isExcluded(s, late));
         assertTrue("[PREMARKET-b] PREMARKET loai khoi A1", UniverseA1Filter.isExcluded("PREUSDT", late));
+        assertEquals("[R4q] dem PREMARKET bi loai (GATE-PRE premarket_bo)", 1, UniverseA1Filter.premarketExcluded(late));
         // MDT point-in-time
         assertFalse(UniverseA1Filter.isExcluded("MDTUSDT", MDT_OB - MIN));
         assertTrue(UniverseA1Filter.isExcluded("MDTUSDT", MDT_OB));

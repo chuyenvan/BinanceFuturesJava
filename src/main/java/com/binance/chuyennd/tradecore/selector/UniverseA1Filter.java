@@ -66,6 +66,8 @@ public final class UniverseA1Filter {
         final long mtime;
         final boolean enforce;
         final String problem;
+        /** [R4q] PREMARKET bi loai (PREMARKET-b) — de log/hau kiem. */
+        Set<String> premarket = Collections.emptySet();
 
         Snap(Map<String, Long> ex, Set<String> known, long serverTime, int nSymbols, int nTradFi, int nIndex, int nTfContract,
              int nUnclassified, String sha256, String path, long mtime, boolean enforce, String problem) {
@@ -152,9 +154,9 @@ public final class UniverseA1Filter {
         if (enforce && s.problem != null) {
             throw new IllegalStateException("[UNIVERSE-A1] exchangeInfo KHONG hop le: " + s.problem + " (" + p + ")");
         }
-        LOG.warn("[UNIVERSE-A1] BAT — loai {} symbol (TradFi={}, INDEX={}) / {} symbol tu {} sha256={} serverTime={}"
+        LOG.warn("[UNIVERSE-A1] BAT — loai {} symbol (TradFi={}, INDEX={}, PREMARKET={}) / {} symbol tu {} sha256={} serverTime={}"
                         + " unclassified={} (co {}=1: S1/ung vien, breadth, ALT_EW, gate, funding/OI, replay)",
-                s.excludedOnboard.size(), s.nTradFi, s.nIndex, s.nSymbols, p, s.sha256, s.serverTime, s.nUnclassified, K_ENABLE);
+                s.excludedOnboard.size(), s.nTradFi, s.nIndex, s.premarket.size(), s.nSymbols, p, s.sha256, s.serverTime, s.nUnclassified, K_ENABLE);
         return s;
     }
 
@@ -202,6 +204,15 @@ public final class UniverseA1Filter {
     }
 
     /** Point-in-time: symbol co bi loai tai {@code tMs} khong (co tat => false). */
+    /** [R4q] so symbol PREMARKET dang bi A1 loai tai tMs (0 khi co tat / chua nap). */
+    public static int premarketExcluded(long tMs) {
+        Snap s = snap;
+        if (s == null) return 0;
+        int n = 0;
+        for (String x : s.premarket) if (excludedIn(s, x, tMs)) n++;
+        return n;
+    }
+
     public static boolean isExcluded(String symbol, long tMs) {
         Snap s = ensureInit();
         return s != null && excludedIn(s, symbol, tMs);
@@ -359,6 +370,7 @@ public final class UniverseA1Filter {
         Map<String, Long> ex = new HashMap<>();
         Set<String> known = new HashSet<>();
         int n = 0, nCt = 0, nUt = 0, nTfC = 0, nTf = 0, nIdx = 0, nUnc = 0;
+        Set<String> pm = new HashSet<>();
         for (JsonElement e : arr) {
             if (!e.isJsonObject()) continue;
             JsonObject o = e.getAsJsonObject();
@@ -378,9 +390,12 @@ public final class UniverseA1Filter {
             ex.put(sym, ob < 0L ? 0L : ob);
             if (k == UniverseA1Classifier.Kind.TRADFI) nTf++;
             else if (k == UniverseA1Classifier.Kind.INDEX) nIdx++;
+            else if (k == UniverseA1Classifier.Kind.PREMARKET) pm.add(sym);
         }
         String problem = UniverseA1Classifier.sourceProblem(n, nCt, nUt, nTfC);
-        return new Snap(ex, known, serverTime, n, nTf, nIdx, nTfC, nUnc, sha256(raw), p.toString(), mtime, enforce, problem);
+        Snap sn = new Snap(ex, known, serverTime, n, nTf, nIdx, nTfC, nUnc, sha256(raw), p.toString(), mtime, enforce, problem);
+        sn.premarket = Collections.unmodifiableSet(pm);
+        return sn;
     }
 
     private static long longOf(JsonElement e) {

@@ -35,13 +35,14 @@ public class R4pCostRecoveryTest {
     FillAccounting acct;
     C3LiveOrderExecutor ex;
     final List<String> api = new ArrayList<>();
+    final List<String> alerts = new ArrayList<>();
 
     @Before
     public void setUp() {
         gw = new MockExchangeGateway();
         gw.feeRate = new BigDecimal("0.0005");
         book = new LiveBookC3(new File(tmp.getRoot(), "run/c3live_book.json"), 1.0);
-        acct = new FillAccounting(book, gw, new OrderAuditLog(OrderAuditLog.LIVE_TAG, l -> { }), (s, b, f, r) -> { }, a -> { }, null, now::get,
+        acct = new FillAccounting(book, gw, new OrderAuditLog(OrderAuditLog.LIVE_TAG, l -> { }), (s, b, f, r) -> { }, alerts::add, null, now::get,
                 null);
         gw.wsSink = txt -> acct.dispatch(UserStreamEvents.parse(txt));
         ex = new C3LiveOrderExecutor(gw, book, (a, ok) -> api.add(a + ":" + ok), null, now::get, ms -> now.addAndGet(ms),
@@ -135,6 +136,13 @@ public class R4pCostRecoveryTest {
         }
         assertEquals(0, ex.pendingCostCount());
         assertEquals("1 + 1 + COST_MAX_TRIES", 2 + C3LiveOrderExecutor.COST_MAX_TRIES, gw.calls("userTrades"));
+        // [R4q A1 MIN] het lan thu => KHAN + co phi-thieu trong so (song qua restart)
+        long oid2 = book.leg(cid2).get().orderId;
+        assertTrue(book.feeMissing().contains("BUSDT:" + oid2));
+        assertTrue(alerts.toString(), alerts.stream().anyMatch(a -> a.contains("KHAN") && a.contains("BUSDT")));
+        assertFalse("AUSDT da bu => khong co co", book.feeMissing().stream().anyMatch(x -> x.startsWith("AUSDT:")));
+        LiveBookC3 re = new LiveBookC3(new File(tmp.getRoot(), "run/c3live_book.json"), 1.0);
+        assertTrue("persist", re.feeMissing().contains("BUSDT:" + oid2));
     }
 
     /** Duong REST ghi truoc, ghi lai cung tradeId qua bookEntryCosts => 0 (idempotent). */

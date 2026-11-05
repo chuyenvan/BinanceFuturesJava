@@ -595,6 +595,16 @@ public final class FillAccounting implements C3LiveOrderExecutor.CostRecovery {
         return bookEntryCostsLocked(sym, fills);
     }
 
+    /** [V12 R4q A1 MIN] bu phi that bai het lan thu => co fee_missing trong so + KHAN (Telegram). */
+    @Override
+    public void onCostGiveUp(String sym, String cid, long orderId, int tries) {
+        book.markFeeMissing(sym, orderId, clock.getAsLong());
+        String m = "[C3-LIVE] KHAN: phi khop VAO " + sym + " " + cid + " orderId=" + orderId + " KHONG bu duoc sau " + tries
+                + " lan userTrades (stream rot) => phi so THIEU (c3eq/C6/ledger lac quan nhe); da gan co fee_missing trong so — doi chieu userTrades";
+        LOG.error("{}", m);
+        alert.accept(m);
+    }
+
     private synchronized int bookEntryCostsLocked(String sym, List<com.binance.chuyennd.c3live.api.TradeFill> fills) {
         long now = clock.getAsLong();
         int n = 0;

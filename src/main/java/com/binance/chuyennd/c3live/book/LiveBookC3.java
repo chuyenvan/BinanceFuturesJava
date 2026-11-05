@@ -723,6 +723,8 @@ public final class LiveBookC3 {
     private final Map<String, Long> removedAtMs = new TreeMap<>();
     /** [V12 R4f MAJOR-L1] "SYM:tradeId" cua cum DA DONG (khop toi muon khong ghi lai); toi da RECENT_TRADES_MAX, persist. */
     private final java.util.LinkedHashSet<String> recentTrades = new java.util.LinkedHashSet<>();
+    /** [V12 R4q A1 MIN] "SYM:orderId" — phi khop VAO khong bu duoc (userTrades that bai sau COST_MAX_TRIES). Persist, toi da 500. */
+    private final java.util.LinkedHashSet<String> feeMissing = new java.util.LinkedHashSet<>();
     static final int RECENT_TRADES_MAX = 5000;
 
     /** Cum da dong het tren san => xoa khoi so (+ 1 dong ledger). */
@@ -932,6 +934,23 @@ public final class LiveBookC3 {
 
     // ------------------------------------------------------------------ [2b] ke toan fill (C7)
     /** Phi (USD, duong = mat) + realizedPnl cua 1 fill; cum khong con => van cong vao tong ke tu moc. */
+    /** [V12 R4q A1 MIN] gan co phi-thieu (persist). true = moi gan. */
+    public synchronized boolean markFeeMissing(String symbol, long orderId, long nowMs) {
+        boolean add = feeMissing.add(symbol + ":" + orderId);
+        java.util.Iterator<String> it = feeMissing.iterator();
+        while (feeMissing.size() > 500 && it.hasNext()) {
+            it.next();
+            it.remove();
+        }
+        if (add) persist(nowMs);
+        return add;
+    }
+
+    /** [V12 R4q] danh sach "SYM:orderId" phi khop vao THIEU. */
+    public synchronized java.util.List<String> feeMissing() {
+        return new java.util.ArrayList<>(feeMissing);
+    }
+
     public synchronized void addFillCosts(String symbol, double commissionUsd, double realizedPnl, long nowMs) {
         if (!(Double.isFinite(commissionUsd)) || !(Double.isFinite(realizedPnl))) return;
         if (commissionUsd == 0d && realizedPnl == 0d) return;
@@ -1041,6 +1060,9 @@ public final class LiveBookC3 {
         JsonArray rtr = new JsonArray();   // [V12 R4f]
         for (String x : recentTrades) rtr.add(x);
         root.add("recent_trade_ids", rtr);
+        JsonArray fmj = new JsonArray();   // [R4q]
+        for (String x : feeMissing) fmj.add(x);
+        root.add("fee_missing", fmj);
         JsonArray arr = new JsonArray();
         for (Cluster c : clusters.values()) {
             JsonObject o = new JsonObject();
@@ -1209,6 +1231,9 @@ public final class LiveBookC3 {
             double r = 0d, cm = 0d, fu = 0d, tr = 0d;
             if (root.has("recent_trade_ids")) {
                 for (JsonElement x : root.getAsJsonArray("recent_trade_ids")) recentTrades.add(x.getAsString());
+            }
+            if (root.has("fee_missing")) {   // [R4q]
+                for (JsonElement x : root.getAsJsonArray("fee_missing")) feeMissing.add(x.getAsString());
             }
             if (root.has("account")) {
                 JsonObject a = root.getAsJsonObject("account");

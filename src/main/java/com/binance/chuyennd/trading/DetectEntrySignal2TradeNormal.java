@@ -598,9 +598,11 @@ public class DetectEntrySignal2TradeNormal {
             gateThrMin = thrMM[0];
             gateThrMax = thrMM[1];
             int preHeld = selRes.held, preLegacy = selRes.legacy, preA1 = selRes.a1;
-            if (preHeld + preLegacy + preA1 > 0) {
-                LOG.info("[GATE-PRE] {} nguon={} bo_dang_giu={} legacy_qua_gate_khong_vao={} a1_bo={}",
-                        Utils.normalizeDateYYYYMMDDHHmm(time), heldSrc, preHeld, preLegacy, preA1);
+            // [R4q] PREMARKET-b: so PREMARKET dang bi A1 loai (truoc selector); dong in o tick dau sau khoi dong + khi co bo
+            int prePm = a1On ? com.binance.chuyennd.tradecore.selector.UniverseA1Filter.premarketExcluded(tSel) : 0;
+            if (preHeld + preLegacy + preA1 > 0 | GatePreFilter.firstPreLog()) {
+                LOG.info("[GATE-PRE] {} nguon={} bo_dang_giu={} legacy_qua_gate_khong_vao={} a1_bo={} premarket_bo={}",
+                        Utils.normalizeDateYYYYMMDDHHmm(time), heldSrc, preHeld, preLegacy, preA1, prePm);
                 if (preA1 > 0) LOG.warn("[GATE-PRE] {} symbol A1 loai van co trong pool selector (da bo truoc hang)", preA1);
             }
             // [GATE 2026-09-11, L7] MOT dong/tick chung minh cong entry tang 2 dang chay that tren

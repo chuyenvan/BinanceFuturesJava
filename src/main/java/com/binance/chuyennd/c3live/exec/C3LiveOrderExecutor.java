@@ -83,6 +83,10 @@ public final class C3LiveOrderExecutor {
 
         /** ghi phi cac khop (userTrades) chua ghi; tra so khop moi ghi. */
         int bookEntryCosts(String symbol, List<com.binance.chuyennd.c3live.api.TradeFill> fills);
+
+        /** [V12 R4q A1 MIN] het COST_MAX_TRIES ma chua bu du => KHAN + co phi-thieu trong so. */
+        default void onCostGiveUp(String symbol, String cid, long orderId, int tries) {
+        }
     }
 
     /** [V12 R4p Bug2] cho stream truoc khi bu phi qua REST; thu toi da / nhip; so call userTrades toi da / tick. */
@@ -227,6 +231,11 @@ public final class C3LiveOrderExecutor {
                 nCostGiveUp.incrementAndGet();
                 LOG.warn("[C3-LIVE-EXEC] {} {} orderId={} bu phi THAT BAI sau {} lan => phi so co the THIEU (KIEM)", p.symbol, p.cid,
                         p.orderId, p.tries);
+                try {
+                    cr.onCostGiveUp(p.symbol, p.cid, p.orderId, p.tries);
+                } catch (RuntimeException e) {
+                    LOG.error("[C3-LIVE-EXEC] onCostGiveUp loi {}", e.toString());
+                }
             } else {
                 p.dueMs = now + COST_WAIT_MS;
             }
