@@ -49,7 +49,9 @@ case "$1" in
       if [ "$LIVE_PROFILE" = c3_live ]; then
         # [V12 R4o] PUSH nhu LiveProfileC3.decideNoPush: ON chi khi SHADOW_NO_PUSH=false + LIVE_ENTRY_ENABLED=true + khong run/KILL_SWITCH
         PUSHV=OFF; [ "${SHADOW_NO_PUSH:-}" = false ] && [ "${LIVE_ENTRY_ENABLED:-}" = true ] && [ ! -e run/KILL_SWITCH ] && PUSHV=ON
-        echo "$D WARN [main] x: 🟠 [LIVE_PROFILE=c3_live] BAT — hanh vi C3 day du PUSH=$PUSHV (SHADOW_NO_PUSH=${SHADOW_NO_PUSH:-})"
+        R4Q=0; grep -q r4q target/binance-java-sdk-1.2.4.jar 2>/dev/null && R4Q=1   # [R4q] jar gia r4q => dong log moi
+        echo "$D WARN [main] x: 🟠 [LIVE_PROFILE=c3_live] BAT — hanh vi C3 day du PUSH=$PUSHV (SHADOW_NO_PUSH=${SHADOW_NO_PUSH:-})$([ $R4Q = 1 ] && echo ' LEGACY_QUEUE_LIVE_BLOCK=true')"
+        [ $R4Q = 1 ] && echo "$D INFO [pool-1-thread-1] x: [GATE-PRE] 2026-11-05 13:00 nguon=C3_LIVE_BOOK bo_dang_giu=0 legacy_qua_gate_khong_vao=0 a1_bo=0 premarket_bo=1"
         # [R4q] nhu LiveProfileC3.forceNoPush moi 10 s: KILL_SWITCH bi go => log "PUSH doi trang thai -> ON"
         if [ "$PUSHV" = OFF ] && [ "${SHADOW_NO_PUSH:-}" = false ] && [ "${LIVE_ENTRY_ENABLED:-}" = true ] && [ ! -f FAKE_NOPUSHON ]; then
           nohup bash -c 'for i in $(seq 1 300); do sleep 1; [ -e run/KILL_SWITCH ] || { echo "$(TZ=Asia/Ho_Chi_Minh date "+%d/%m/%Y %H:%M:%S.000") WARN [x] x: [C3-LIVE] PUSH doi trang thai -> ON (SHADOW_NO_PUSH=false LIVE_ENTRY_ENABLED=true killSwitch=run/KILL_SWITCH exists=false)" >> logs/full.log; exit 0; }; done' >/dev/null 2>&1 &
@@ -96,7 +98,8 @@ case "$1" in
           if [ -s run/c3live_exchangeInfo.json ]; then
             TFN=$(grep -o TRADIFI_PERPETUAL run/c3live_exchangeInfo.json | wc -l); [ -f FAKE_A1LOW ] && TFN=10
             IXN=$(grep -o '"underlyingType":"INDEX"' run/c3live_exchangeInfo.json | wc -l)
-            echo "$D WARN [main] x: [UNIVERSE-A1] BAT — loai $((TFN + IXN)) symbol (TradFi=$TFN, INDEX=$IXN) / 0 symbol tu run/c3live_exchangeInfo.json sha256=fake serverTime=1 unclassified=0"
+            PMX=""; grep -q r4q target/binance-java-sdk-1.2.4.jar 2>/dev/null && PMX=", PREMARKET=1"
+            echo "$D WARN [main] x: [UNIVERSE-A1] BAT — loai $((TFN + IXN)) symbol (TradFi=$TFN, INDEX=$IXN$PMX) / 0 symbol tu run/c3live_exchangeInfo.json sha256=fake serverTime=1 unclassified=0"
           else
             echo "$D ERROR [main] x: java.lang.IllegalStateException: [UNIVERSE-A1] BAT nhung KHONG thay exchangeInfo: run/c3live_exchangeInfo.json"
           fi
@@ -1328,6 +1331,32 @@ chk "r4p don dep: live_off MODE=dry ve dry" "[ $RC = 0 ] && penv | grep -qx LIVE
 rm -f $F4/FAKE_R4 $F4/FAKE_LEGACY_N $F4/run/KILL_SWITCH
 echo YES | APP_DIR=$F4 FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TS4" > /dev/null 2>&1
 chk "r4p don dep: rollback v1.2 -> c3_shadow" "grep -qx 'export LIVE_PROFILE=c3_shadow' $F4/conf/env.sh"
+echo "== 33. [V12 R4q] swap_v12_dry_jar.sh: thay jar dry r4n -> r4q (C11, khong seed, hau kiem PREMARKET/LEGACY_QUEUE, rollback)"
+SW=$HERE/swap_v12_dry_jar.sh
+printf 'fake-new-jar-v12r4q' > "$W/new_r4q.jar"; NEWQ=$(md5sum < "$W/new_r4q.jar" | cut -c1-32)
+sw() { env APP_DIR=$F4 OLD_MD5=$NEW4 NJ=$W/new_r4q.jar NJ_MD5=$NEWQ DEPLOY_TG_SINK=$W/tg_sw.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 "$@"; }
+touch "$F4/FAKE_R4"; echo 44 > "$F4/FAKE_LEGACY_N"
+OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?
+chk "r4q swap chuan bi: deploy dry r4n (gia) XONG" "[ $RC = 0 ]"
+sed -i '/^export LIVE_SEED_EXCLUDE_DECISION_MIN=1$/d' $F4/conf/env.sh
+echo '{"latch":"NONE"}' > $F4/run/killsw_latch.json; [ -s $F4/run/gate_ratio_live.bin ] || printf 'gate0' > $F4/run/gate_ratio_live.bin
+J0=$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32); E0=$(md5sum < $F4/conf/env.sh); G0=$(md5sum < $F4/run/gate_ratio_live.bin)
+OUT=$(sw DRY=1 bash "$SW" 2>&1); RC=$?
+chk "r4q swap DRY=1: kiem 242 chi doc + ke hoach (them C11), KHONG doi jar/env" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q 'export LIVE_SEED_EXCLUDE_DECISION_MIN=1' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $J0 ] && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ]"
+OUT=$(sw OLD_MD5=00000000000000000000000000000000 DRY=1 bash "$SW" 2>&1); RC=$?
+chk "r4q swap: jar dang chay KHAC r4n => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL jar_dang_chay'"
+OUT=$(sw NJ_MD5=$OLD DRY=1 bash "$SW" 2>&1); RC=$?
+chk "r4q swap: md5 jar moi KHAC pin => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'KHAC pin'"
+touch $F4/FAKE_NORUNTIME
+OUT=$(echo YES | sw bash "$SW" 2>&1); RC=$?
+chk "r4q swap hau kiem TRUOT => ROLLBACK: jar r4n (md5) + env.sh + gate_ratio khoi phuc, PAUSE go" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'ROLLBACK xong' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $J0 ] && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ] && [ \"\$(md5sum < $F4/run/gate_ratio_live.bin)\" = \"$G0\" ] && [ ! -f $W/PAUSE ] && penv | grep -qx LIVE_ADAPTER=dry"
+rm -f $F4/FAKE_NORUNTIME
+OUT=$(echo NO | sw bash "$SW" 2>&1); RC=$?
+chk "r4q swap khong go YES => huy" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'Huy. Khong doi gi.' && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ]"
+OUT=$(echo YES | sw bash "$SW" 2>&1); RC=$?
+chk "r4q swap XONG: jar r4q, backup r4n .bak_swap (md5), C11 trong env process, dry giu, PREMARKET + premarket_bo + LEGACY_QUEUE_LIVE_BLOCK=true, PAUSE go" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: dry chay r4q' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWQ ] && cat $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_*.md5 | grep -qx $J0 && penv | grep -qx LIVE_SEED_EXCLUDE_DECISION_MIN=1 && penv | grep -qx LIVE_ADAPTER=dry && echo \"\$OUT\" | grep -q 'OK GATE-PRE_premarket_bo=1' && echo \"\$OUT\" | grep -q 'OK UNIVERSE-A1_PREMARKET=1' && echo \"\$OUT\" | grep -q 'OK LEGACY_QUEUE_LIVE_BLOCK=true' && [ ! -f $W/PAUSE ] && grep -q 'swap jar dry\] XONG' $W/tg_sw.txt"
+OUT=$(sw DRY=1 bash "$SW" 2>&1); RC=$?
+chk "r4q swap lan 2: jar dang chay DA la r4q => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'DA_LA_moi'"
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]
