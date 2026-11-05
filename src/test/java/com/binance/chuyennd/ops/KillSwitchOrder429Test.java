@@ -88,6 +88,18 @@ public class KillSwitchOrder429Test {
         assertTrue("phai tu go", off > 0);
         assertTrue("go >= 30' sau latch: " + (off - on) / M, off - on >= 30 * M);
         assertTrue(alerts.stream().anyMatch(m -> m.contains("AUTO_RELEASE codes=[C3]")));
+        // E2E F2b lan 1 (r4p): 429 thu 6 (xep hang) roi vao 1 lenh 3 h sau => KHONG duoc latch lai
+        order429(e, off + 3 * 60 * M);
+        assertEquals("1 lenh 429 le sau 3 h: khong latch lai", KillSwitchEngine.Action.NONE, e.requiredAction());
+    }
+
+    @Test
+    public void order429OlderThanHoldWindowDoesNotAccumulate() {
+        KillSwitchEngine e = act(new ArrayList<>(), T0);
+        for (int i = 0; i < 4; i++) order429(e, T0 + i);
+        order429(e, T0 + 3 + KillSwitchEngine.C3_ORDER429_HOLD_MS + 1);
+        assertEquals(KillSwitchEngine.Action.NONE, e.requiredAction());
+        assertFalse(e.latchCodes().contains("C3"));
     }
 
     @Test

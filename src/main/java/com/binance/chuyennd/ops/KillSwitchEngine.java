@@ -601,12 +601,15 @@ public final class KillSwitchEngine {
     }
 
     /**
-     * [V12 R4p Bug3] Ket qua 1 lan DAT LENH. {@code rateLimited} (san 429/418) => +1; lenh duoc san nhan (ok) => 0; loi khac
+     * [V12 R4p Bug3] Ket qua 1 lan DAT LENH. {@code rateLimited} (san 429/418) => +1 (429 truoc do qua {@link #C3_ORDER429_HOLD_MS}
+     * => dem lai tu 1); lenh duoc san nhan (ok) => 0; loi khac
      * (mang/5xx/nghiep vu) khong doi. Dat {@link #C3_CONSEC} lien tiep => C3 (cung nguong) du cac call doc xen giua thanh cong.
      */
     public synchronized void onOrderResult(long nowMs, String api, boolean ok, boolean rateLimited) {
         roll(nowMs);
         if (rateLimited) {
+            // [R4p E2E F2b] 429 cu ngoai cua so giu KHONG cong don (1 lenh 429 le vai gio sau khong duoc latch lai)
+            if (nowMs - lastOrder429Ms > C3_ORDER429_HOLD_MS) order429Consec = 0;
             order429Consec++;
             lastOrder429Ms = nowMs;
         } else if (ok) {
