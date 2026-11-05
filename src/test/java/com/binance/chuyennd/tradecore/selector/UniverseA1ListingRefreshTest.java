@@ -91,7 +91,7 @@ public class UniverseA1ListingRefreshTest {
         assertFalse("A1: sau lam moi => vao universe", UniverseA1Filter.isExcluded(nw, t));
         r7.refresh(t);
         assertFalse("R7: sau lam moi => mua duoc", r7.whyNotBuyable(nw, t).isPresent());
-        assertEquals(UniverseA1Filter.excludedSymbols().size(), 232);
+        assertEquals(233, UniverseA1Filter.excludedSymbols().size());   // [PREMARKET-b] 229 TF + 3 INDEX + 1 PREMARKET
 
         // file qua tuoi (cron hong) => R7 tu choi snapshot moi (nem trong supplier), giu snapshot cu
         clock.set(st0 + 15 * 60_000L + 46 * 60_000L);

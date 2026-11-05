@@ -36,6 +36,7 @@ public class UniverseA1R7SharedClassifierTest {
         assertNotNull(def.apply(ei, now));
         int tf = 0;
         int idx = 0;
+        int pm = 0;
         int buyable = 0;
         for (SymbolMeta m : ei.getSymbols().values()) {
             String s = m.getSymbol();
@@ -49,10 +50,13 @@ public class UniverseA1R7SharedClassifierTest {
             if (UniverseA1Classifier.excluded(k)) {
                 assertTrue("TF/INDEX khong bao gio mua duoc: " + s, why.isPresent());
                 if ("TRADING".equals(m.getStatus()) && "USDT".equals(m.getQuoteAsset())) {
-                    assertTrue(s + " " + why.get(), why.get().startsWith(k == UniverseA1Classifier.Kind.TRADFI ? "TRADFI" : "INDEX"));
+                    // [PREMARKET-b] PREMARKET: A1 loai, R7 strictCoin NOT_COIN (nhat quan: khong bao gio mua)
+                    assertTrue(s + " " + why.get(), why.get().startsWith(k == UniverseA1Classifier.Kind.TRADFI ? "TRADFI"
+                            : k == UniverseA1Classifier.Kind.INDEX ? "INDEX" : "NOT_COIN"));
                 }
                 if (k == UniverseA1Classifier.Kind.TRADFI) tf++;
-                else idx++;
+                else if (k == UniverseA1Classifier.Kind.INDEX) idx++;
+                else pm++;
             } else if (!why.isPresent()) {
                 buyable++;
                 assertEquals("mua duoc => CRYPTO (COIN) theo bo loc A1: " + s, UniverseA1Classifier.Kind.CRYPTO, k);
@@ -60,6 +64,7 @@ public class UniverseA1R7SharedClassifierTest {
         }
         assertEquals(229, tf);
         assertEquals(3, idx);
+        assertEquals("[PREMARKET-b] snapshot 10-27: 1 PREMARKET (PREDICTUSDT)", 1, pm);
         assertTrue(buyable > 400);
         assertNull(SymbolUniverseLive.sourceProblem(ei));
         assertEquals(UniverseA1Classifier.MIN_TRADFI, SymbolUniverseLive.MIN_TRADFI_IN_SOURCE);
