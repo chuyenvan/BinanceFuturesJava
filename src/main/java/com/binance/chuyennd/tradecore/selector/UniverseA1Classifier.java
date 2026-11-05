@@ -16,15 +16,16 @@ import java.util.Set;
  *       {@link #TRADFI_UNDERLYING} = {EQUITY, HK_EQUITY, KR_EQUITY, CN_EQUITY, COMMODITY, FX};</li>
  *   <li>INDEX ⇔ {@code underlyingType=INDEX};</li>
  *   <li>UNCLASSIFIED ⇔ khong TRADFI va thieu {@code underlyingType} (KHONG bi loai o phia tin hieu; R7 chat van khong mua);</li>
- *   <li>con lai CRYPTO (COIN, PREMARKET, ...).</li>
+ *   <li>[PREMARKET-b] PREMARKET ⇔ {@code underlyingType=PREMARKET} (loai — CUNG R7 c3_live NOT_COIN);</li>
+ *   <li>con lai CRYPTO (COIN, ...).</li>
  * </ul>
- * Loai khoi universe A1 ⇔ TRADFI hoac INDEX ({@link #excluded}). Point-in-time theo onboardDate do {@link UniverseA1Filter} lo.
+ * Loai khoi universe A1 ⇔ TRADFI, INDEX hoac PREMARKET ({@link #excluded}). Point-in-time theo onboardDate do {@link UniverseA1Filter} lo.
  * Snapshot that 2026-10-27 (936 symbol): dinh nghia nay = luat bu {COIN, INDEX, PREMARKET} cua TradFiClassifier /
  * HO2026_TRADFI_AUDIT §2 (229 TF, 3 INDEX, 0 khac biet) — xem {@code UniverseA1ClassifierTest}.
  */
 public final class UniverseA1Classifier {
 
-    public enum Kind { CRYPTO, TRADFI, INDEX, UNCLASSIFIED }
+    public enum Kind { CRYPTO, TRADFI, INDEX, PREMARKET, UNCLASSIFIED }
 
     public static final Set<String> TRADFI_UNDERLYING = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "EQUITY", "HK_EQUITY", "KR_EQUITY", "CN_EQUITY", "COMMODITY", "FX")));
@@ -42,12 +43,13 @@ public final class UniverseA1Classifier {
         String ut = underlyingType == null ? "" : underlyingType.trim().toUpperCase(Locale.ROOT);
         if (TRADFI_UNDERLYING.contains(ut)) return Kind.TRADFI;
         if ("INDEX".equals(ut)) return Kind.INDEX;
+        if ("PREMARKET".equals(ut)) return Kind.PREMARKET;   // [PREMARKET-b] loai khoi A1 (tin hieu + buffer + sim) = R7
         if (ut.isEmpty()) return Kind.UNCLASSIFIED;
         return Kind.CRYPTO;
     }
 
     public static boolean excluded(Kind k) {
-        return k == Kind.TRADFI || k == Kind.INDEX;
+        return k == Kind.TRADFI || k == Kind.INDEX || k == Kind.PREMARKET;
     }
 
     /** Hop dong TradFi theo contractType (dem cho nguong {@link #MIN_TRADFI}, giong R4b). */
