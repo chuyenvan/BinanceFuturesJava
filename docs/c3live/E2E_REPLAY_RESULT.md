@@ -52,3 +52,22 @@ So shadow v1.1: R0 đợt 1 = 16/17 coin non-TF của shadow (thiếu PREDICT) +
 ## 4. Giới hạn thêm (ngoài §6)
 - Không nối `FlatConfirm` (dùng đồng hồ thật) ⇒ nhánh "nghi phẳng" chưa thử; cầu dao mật độ `is50PercentOrderLossProd` không mô hình;
   bookFull theo sổ c3 (production đọc sổ giấy twin); 43 ô TradFi trong top-24 ở phút có PASS ⇒ R0 có thể thiếu leg hạng 25+.
+
+## 5. Chạy lại trên r4p (2026-11-05 11:06, HEAD 2822bf78, jar r4p md5 ed0c30e9)
+Rig nối như runtime r4p: `ApiObserver.onOrderResult`, `setCostRecovery(acct)`, `tickCosts` trong vòng ops. X6 realized loại rp sàn
+của symbol MERGED (sàn tính trên giá vốn gộp LEGACY+c3); phần MERGED của sổ so với rp VWAP c3 tính độc lập từ khớp sàn. Tiêu chí
+không đổi. Log `~/claude_master/e2e1105/logs/test_110622.log`.
+
+| mục | lần 1 (33a81398) | r4p |
+|---|---|---|
+| F1 X6 phí | TRƯỢT 0,359 / 0,549 | **ĐẠT** 0,5491 / 0,5491; realized khớp |
+| F2 (3×429) | ĐẠT, không latch | ĐẠT, không latch |
+| F2b (6×429 MARKET xen đọc OK) | TRƯỢT, không latch | **ĐẠT**: latch C3 03:47:06, gỡ 04:23:00 (36′); 14 SUBMITTED / 56 KS_BLOCKED; X6 ĐẠT |
+| F5 X6 realized | TRƯỢT 1,0353 vs 0,8135 (EVAAUSDT) | **ĐẠT**: sổ 31,1732 − c3 MERGED 1,0353 = 30,1379 = Σrp sàn non-MERGED |
+| X6 mọi lượt khác | ĐẠT | ĐẠT (phí sổ = sàn tới 1e-6) |
+| X1 | TRƯỢT mọi lượt (PREDICT, phát hiện 1) | không đổi — chờ owner chọn PREMARKET (a)/(b) |
+| F5 X7 | ERROR do chính lỗi tiêm | không đổi |
+| E2a | TRƯỢT theo công thức (hết bản chụp buffer) | không đổi |
+
+Khai: lần chạy r4p đầu (11:00, trước 2822bf78) F2b latch 2 lần — 429 thứ 6 xếp hàng rơi vào lệnh 07:18 và cộng dồn với bộ đếm cũ ⇒
+sửa production (429 ngoài cửa sổ giữ 5′ đếm lại từ 1) + test, rồi chạy lại toàn bộ (bảng trên).
