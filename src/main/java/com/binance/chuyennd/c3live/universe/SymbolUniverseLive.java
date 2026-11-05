@@ -52,7 +52,7 @@ public final class SymbolUniverseLive {
         INDEX,
         /** [V12 R4 R7] universe chat: underlyingType thieu => chua phan loai => LOAI (fail-closed). */
         UNCLASSIFIED,
-        /** [V12 R4 R7] universe chat: underlyingType != COIN (vd PREMARKET) => LOAI. */
+        /** [V12 R4 R7] universe chat: underlyingType khong thuoc {COIN, PREMARKET} => LOAI. [PREMARKET-a] PREMARKET mua duoc (= A1). */
         NOT_COIN }
 
     /** Cau hinh bat bien. */
@@ -244,7 +244,8 @@ public final class SymbolUniverseLive {
             else if (!"PERPETUAL".equals(m.getContractType())) r = Reason.NOT_PERPETUAL;
             else if ("INDEX".equalsIgnoreCase(trimOrEmpty(m.getUnderlyingType()))) r = Reason.INDEX;
             else if (cfg.strictCoin && trimOrEmpty(m.getUnderlyingType()).isEmpty()) r = Reason.UNCLASSIFIED;
-            else if (cfg.strictCoin && !"COIN".equalsIgnoreCase(trimOrEmpty(m.getUnderlyingType()))) r = Reason.NOT_COIN;
+            else if (cfg.strictCoin && !"COIN".equalsIgnoreCase(trimOrEmpty(m.getUnderlyingType()))
+                    && !"PREMARKET".equalsIgnoreCase(trimOrEmpty(m.getUnderlyingType()))) r = Reason.NOT_COIN;   // [PREMARKET-a] R7 = A1
             else if (cfg.exclude.containsKey(sym)) r = Reason.EXCLUDED;
             if (r == null) {
                 tradable.add(sym);

@@ -64,11 +64,11 @@ public class C3UniverseStrictTest {
         assertFalse("TradFi contractType du underlyingType COIN", u.isBuyable("NVDAUSDT", NOW));
         assertFalse("COMMODITY", u.isBuyable("GOLDUSDT", NOW));
         assertEquals(Optional.of(SymbolUniverseLive.Reason.INDEX), u.notTradableReason("ALLUSDT"));
-        assertEquals(Optional.of(SymbolUniverseLive.Reason.NOT_COIN), u.notTradableReason("PREDICTUSDT"));
+        assertTrue("[PREMARKET-a] PREMARKET mua duoc (CUNG tang tin hieu A1)", u.isBuyable("PREDICTUSDT", NOW));
         assertEquals("chua phan loai => loai (fail-closed)", Optional.of(SymbolUniverseLive.Reason.UNCLASSIFIED),
                 u.notTradableReason("NEWCOINUSDT"));
-        assertEquals(20, u.tradableSymbols().size());
-        assertFalse(u.marketIndexMembers().contains("PREDICTUSDT"));
+        assertEquals(21, u.tradableSymbols().size());
+        assertTrue("[PREMARKET-a] PREMARKET vao chi so thi truong c3_live (= A1 tin hieu)", u.marketIndexMembers().contains("PREDICTUSDT"));
         assertNull(u.lastSourceError());
         // khong chat (canary / mac dinh cu): PREMARKET + chua phan loai van tradable (hanh vi cu giu nguyen)
         SymbolUniverseLive old = new SymbolUniverseLive(SymbolUniverseLive.Config.defaults(), () -> null, x -> { });
