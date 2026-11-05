@@ -234,7 +234,17 @@ public final class C3LiveRuntime {
         this.sgw = new C3ScopedGateway(rawGateway, scope, System::currentTimeMillis, rateGuard == null ? null : rateGuard.policy());
         this.sgw.setBook(book);
         this.gw = sgw;
-        C3LiveOrderExecutor.ApiObserver api = OpsHooks::onApiResult;
+        C3LiveOrderExecutor.ApiObserver api = new C3LiveOrderExecutor.ApiObserver() {
+            @Override
+            public void onApiResult(String a, boolean ok) {
+                OpsHooks.onApiResult(a, ok);
+            }
+
+            @Override
+            public void onOrderResult(String a, boolean ok, boolean rl) {   // [V12 R4p Bug3]
+                OpsHooks.onOrderResult(a, ok, rl);
+            }
+        };
         // [3j R2] 1 cache gia dung CHUNG: user stream (FillAccounting) -> executor (resolve gia khi ACK thieu avgPrice)
         com.binance.chuyennd.c3live.exec.FillPriceResolver priceResolver =
                 new com.binance.chuyennd.c3live.exec.FillPriceResolver(System::currentTimeMillis, Thread::sleep, api);
@@ -287,6 +297,7 @@ public final class C3LiveRuntime {
         this.acct = new FillAccounting(book, gw, audit, fillObs, alerts::send, api, System::currentTimeMillis,
                 TrailingStopManager::tsExtOnClosed);
         this.acct.setPriceResolver(priceResolver);   // [3j R2]
+        this.executor.setCostRecovery(this.acct);   // [V12 R4p Bug2] bu phi khop vao khi stream rot
         this.reanchorFile = new File(Cfg.getOr(KEY_REANCHOR_FILE, Reconciler.DEFAULT_REANCHOR_FILE));
         // [2c MAJ-2] 1 bo xac nhan "phang" dung chung cho Reconciler + Flattener
         this.flat = new FlatConfirm(gw, api, alerts::send, FlatConfirm.DEFAULT_MIN_GAP_MS, FlatConfirm.DEFAULT_MIN_READS);
@@ -490,6 +501,7 @@ public final class C3LiveRuntime {
                         if (r2.ok) reconciler.hourly();
                     }
                 }
+                executor.tickCosts(now);     // [V12 R4p Bug2] bu phi leg xac nhan REST ma stream khong ghi (0 call khi stream du)
                 flattener.step();
                 legacyRefresher.tick();      // [V12 R4 R2] LEGACY-busy moi chu ky (60 s)
                 merged.poll();               // [V12 R4 R2] xac nhan / go MERGED

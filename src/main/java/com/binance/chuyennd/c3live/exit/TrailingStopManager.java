@@ -324,6 +324,7 @@ public final class TrailingStopManager {
                 resp = gw.newStopMarket(sym, Side.SELL, price, cid, true);
             }
             api.onApiResult("newStopMarket", true);
+            api.onOrderResult("newStopMarket", true, false);   // [V12 R4p Bug3]
             String old = book.promotePendingStop(sym, now);
             nPlace.incrementAndGet();
             if ("MOVE".equals(why)) nMove.incrementAndGet();
@@ -336,7 +337,10 @@ public final class TrailingStopManager {
         } catch (GatewayException e) {
             int code = e.getExchangeCode();
             boolean business = code == CODE_CLOSE_POSITION_EXISTS || code == CODE_WOULD_TRIGGER;
-            if (!(e instanceof com.binance.chuyennd.c3live.api.ClientSideRefusal)) api.onApiResult("newStopMarket", business);   // [R4b MINOR-2]
+            if (!(e instanceof com.binance.chuyennd.c3live.api.ClientSideRefusal)) {
+                api.onApiResult("newStopMarket", business);   // [R4b MINOR-2]
+                api.onOrderResult("newStopMarket", business, C3LiveOrderExecutor.ApiObserver.rateLimited(e));   // [V12 R4p Bug3]
+            }
             if (code == CODE_CLOSE_POSITION_EXISTS && !qtyMode && allowFallback) {
                 closePositionConflictSeen = true;
                 nFallbackQty.incrementAndGet();

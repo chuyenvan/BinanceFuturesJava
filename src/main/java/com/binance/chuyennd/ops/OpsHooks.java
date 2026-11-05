@@ -180,6 +180,16 @@ public final class OpsHooks {
         }
     }
 
+    /** [V12 R4p Bug3] ket qua DAT LENH => bo dem 429 rieng cua C3. */
+    public static void onOrderResult(String api, boolean ok, boolean rateLimited) {
+        if (KS == null) return;
+        try {
+            KS.onOrderResult(System.currentTimeMillis(), api, ok, rateLimited);
+        } catch (Throwable e) {
+            err("onOrderResult", e);
+        }
+    }
+
     /** Dau shadowTickC3: so trong (0 cum) => C4/C6 tren equity = PAPER_EQUITY + realized (khong can gia). */
     public static void onPaperBook(ShadowBookC3 book) {
         if (KS == null || book == null || C3LIVE) return;

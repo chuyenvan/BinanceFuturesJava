@@ -89,6 +89,11 @@ public final class KillSwitchEngine {
     public static final long C1_NODATA_SEC = 240L;
     public static final double C2_SLIP = 0.025;
     public static final int C3_CONSEC = 5;
+    /**
+     * [V12 R4p Bug3] C3 con DAT do 429 lenh toi khi het cua so nay tinh tu 429 lenh cuoi (khong co lenh OK xen giua); sau do
+     * tu go van can >= autoReleaseMs sach + c3ReleaseOkConsec call OK nhu cu.
+     */
+    public static final long C3_ORDER429_HOLD_MS = 5 * 60_000L;
     public static final int C4_MAX_POS = 90;
     public static final long C5_NOTICK_SEC = 300L;
     public static final double C6_DD = -0.40;
@@ -360,6 +365,9 @@ public final class KillSwitchEngine {
     private long lastCapLogMs = Long.MIN_VALUE / 2;
     /** [V12 2b] so call API thanh cong lien tiep (dieu kien tu go C3). */
     private int apiOkConsec;
+    /** [V12 R4p Bug3] 429 LIEN TIEP rieng duong DAT LENH; call doc OK KHONG reset, lenh OK reset. */
+    private int order429Consec;
+    private long lastOrder429Ms = Long.MIN_VALUE / 2;
 
     /**
      * @param mode        mode HIEU LUC (LOG; ACT chi khi da cai). OFF => khong nen tao engine.
@@ -589,7 +597,37 @@ public final class KillSwitchEngine {
         lastApi = api;
         c3Consec = ok ? 0 : c3Consec + 1;
         apiOkConsec = ok ? apiOkConsec + 1 : 0;
-        set("C3", c3(c3Consec), "api=" + api + " consec=" + c3Consec, nowMs);
+        set("C3", c3Met(nowMs), c3Detail(api), nowMs);
+    }
+
+    /**
+     * [V12 R4p Bug3] Ket qua 1 lan DAT LENH. {@code rateLimited} (san 429/418) => +1; lenh duoc san nhan (ok) => 0; loi khac
+     * (mang/5xx/nghiep vu) khong doi. Dat {@link #C3_CONSEC} lien tiep => C3 (cung nguong) du cac call doc xen giua thanh cong.
+     */
+    public synchronized void onOrderResult(long nowMs, String api, boolean ok, boolean rateLimited) {
+        roll(nowMs);
+        if (rateLimited) {
+            order429Consec++;
+            lastOrder429Ms = nowMs;
+        } else if (ok) {
+            if (order429Consec == 0) return;
+            order429Consec = 0;
+        } else {
+            return;
+        }
+        set("C3", c3Met(nowMs), c3Detail(api), nowMs);
+    }
+
+    static boolean c3Order429(int consec429, long sinceLastMs) {
+        return consec429 >= C3_CONSEC && sinceLastMs <= C3_ORDER429_HOLD_MS;
+    }
+
+    private boolean c3Met(long nowMs) {
+        return c3(c3Consec) || c3Order429(order429Consec, nowMs - lastOrder429Ms);
+    }
+
+    private String c3Detail(String api) {
+        return "api=" + api + " consec=" + c3Consec + " order429=" + order429Consec;
     }
 
     /**
@@ -711,6 +749,9 @@ public final class KillSwitchEngine {
             }
             onAccountEquity(nowMs, eq);
         }
+        // [V12 R4p Bug3] het cua so 429 lenh ma khong co call nao => van ha C3 (bat dau dem sach cho auto-release)
+        CodeState c3s = st.get("C3");
+        if (c3s != null && c3s.active && !c3Met(nowMs)) set("C3", false, c3Detail(lastApi) + " (het cua so 429 lenh)", nowMs);
         if (mode == Mode.ACT) {
             if (latch != Action.NONE && prm.latchFile != null && !prm.latchFile.exists()) {
                 if (nowMs - lastStateWarnMs >= REPEAT_LOG_MS) {
@@ -1094,7 +1135,7 @@ public final class KillSwitchEngine {
         }
         b.append(" (met/edge) | lag_s=").append(lastLagSec == Long.MIN_VALUE ? "-" : String.valueOf(lastLagSec))
                 .append(" miss=").append(lastMiss).append('/').append(lastUni)
-                .append(" api=").append(lastApi).append(" consec=").append(c3Consec)
+                .append(" api=").append(lastApi).append(" consec=").append(c3Consec).append(" order429=").append(order429Consec)
                 .append(" open=").append(lastOpen)
                 .append(" U=").append(fmt4(lastEquity > 0f ? lastMargin / lastEquity : Float.NaN))
                 .append(" eq=").append(fmt2(lastEquity)).append(" peak=").append(fmt2(peak))

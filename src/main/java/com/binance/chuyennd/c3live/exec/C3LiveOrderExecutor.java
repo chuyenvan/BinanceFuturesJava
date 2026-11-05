@@ -55,6 +55,56 @@ public final class C3LiveOrderExecutor {
 
     public interface ApiObserver {
         void onApiResult(String api, boolean ok);
+
+        /**
+         * [V12 R4p Bug3] Ket qua 1 lan DAT LENH (MARKET vao/thoat, stop) cho bo dem 429 RIENG cua C3 (call doc OK khong reset).
+         * Goi THEM sau {@link #onApiResult}. Mac dinh bo qua.
+         */
+        default void onOrderResult(String api, boolean ok, boolean rateLimited) {
+        }
+
+        /** [V12 R4p Bug3] san tra 429/418 (-1003/-1015). Guard client (http 0, chua gui) / tu choi pham vi => false. */
+        static boolean rateLimited(Throwable e) {
+            if (!(e instanceof GatewayException) || e instanceof com.binance.chuyennd.c3live.api.ClientSideRefusal) return false;
+            GatewayException g = (GatewayException) e;
+            if (g.getKind() != ErrorKind.RATE_LIMIT) return false;
+            return g.getHttpStatus() == 429 || g.getHttpStatus() == 418 || g.getExchangeCode() == -1003
+                    || g.getExchangeCode() == -1015;
+        }
+    }
+
+    /**
+     * [V12 R4p Bug2] Bu phi khop VAO khi leg xac nhan qua REST ma user stream khong ghi khop (stream rot). Idempotent voi duong
+     * stream theo tradeId ({@link LiveBookC3#addFillCosts(String, long, double, double, long)}): khong bao gio dem 2 lan.
+     */
+    public interface CostRecovery {
+        /** tong qty khop stream DA ghi cua (symbol, orderId); 0 = chua thay. */
+        BigDecimal streamQty(String symbol, long orderId);
+
+        /** ghi phi cac khop (userTrades) chua ghi; tra so khop moi ghi. */
+        int bookEntryCosts(String symbol, List<com.binance.chuyennd.c3live.api.TradeFill> fills);
+    }
+
+    /** [V12 R4p Bug2] cho stream truoc khi bu phi qua REST; thu toi da / nhip; so call userTrades toi da / tick. */
+    public static final long COST_WAIT_MS = 15_000L;
+    public static final int COST_MAX_TRIES = 5;
+    static final int COST_MAX_PER_TICK = 10;
+
+    private static final class PendingCost {
+        final String symbol;
+        final String cid;
+        final long orderId;
+        final BigDecimal qty;
+        long dueMs;
+        int tries;
+
+        PendingCost(String symbol, String cid, long orderId, BigDecimal qty, long dueMs) {
+            this.symbol = symbol;
+            this.cid = cid;
+            this.orderId = orderId;
+            this.qty = qty;
+            this.dueMs = dueMs;
+        }
     }
 
     public interface FillObserver {
@@ -89,6 +139,10 @@ public final class C3LiveOrderExecutor {
     private volatile FillPriceResolver prices;
     private volatile PriceObserver priceObs = (t, s, c, p, src) -> { };
     private volatile long lastProvisionalCheckMs = Long.MIN_VALUE / 2;
+    private volatile CostRecovery costs;
+    private final java.util.Map<String, PendingCost> pendingCosts = new ConcurrentHashMap<>();
+    private final AtomicLong nCostBooked = new AtomicLong();
+    private final AtomicLong nCostGiveUp = new AtomicLong();
 
     public C3LiveOrderExecutor(ExchangeGateway gw, LiveBookC3 book, ApiObserver api, FillObserver fill, LongSupplier clock,
                                Sleeper sleeper, long safeRetryMs, int maxAttempts, Executor exec) {
@@ -114,6 +168,70 @@ public final class C3LiveOrderExecutor {
 
     public FillPriceResolver priceResolver() {
         return prices;
+    }
+
+    /** [V12 R4p Bug2] null = tat bu phi (giu hanh vi cu). Production: FillAccounting. */
+    public void setCostRecovery(CostRecovery c) {
+        this.costs = c;
+    }
+
+    /** [V12 R4p Bug2] so leg dang cho doi chieu phi (test/trang thai). */
+    public int pendingCostCount() {
+        return pendingCosts.size();
+    }
+
+    private void scheduleCost(String sym, String cid, long orderId, BigDecimal qty) {
+        if (costs == null || sym == null || orderId <= 0 || qty == null || qty.signum() <= 0) return;
+        pendingCosts.putIfAbsent(sym + ":" + orderId, new PendingCost(sym, cid, orderId, qty, clock.getAsLong() + COST_WAIT_MS));
+    }
+
+    /**
+     * [V12 R4p Bug2] Goi tu vong ops. Leg xac nhan qua REST >= {@link #COST_WAIT_MS}: stream da ghi du qty => bo (0 call);
+     * chua => userTrades theo orderId, ghi phi theo tradeId (khop stream toi sau bi bo qua — khong dem 2 lan). Thu lai toi
+     * {@link #COST_MAX_TRIES} lan khi userTrades loi / chua du qty.
+     */
+    public int tickCosts(long now) {
+        CostRecovery cr = costs;
+        if (cr == null || pendingCosts.isEmpty()) return 0;
+        int calls = 0;
+        for (java.util.Iterator<java.util.Map.Entry<String, PendingCost>> it = pendingCosts.entrySet().iterator();
+             it.hasNext() && calls < COST_MAX_PER_TICK; ) {
+            PendingCost p = it.next().getValue();
+            if (now < p.dueMs) continue;
+            BigDecimal seen = cr.streamQty(p.symbol, p.orderId);
+            if (seen != null && seen.compareTo(p.qty) >= 0) {
+                it.remove();
+                continue;
+            }
+            calls++;
+            boolean done = false;
+            try {
+                List<com.binance.chuyennd.c3live.api.TradeFill> f = gw.userTrades(p.symbol, p.orderId);
+                api.onApiResult("userTrades", true);
+                BigDecimal got = BigDecimal.ZERO;
+                if (f != null) for (com.binance.chuyennd.c3live.api.TradeFill t : f) if (t != null && t.getQty() != null) got = got.add(t.getQty());
+                int n = cr.bookEntryCosts(p.symbol, f);
+                nCostBooked.addAndGet(n);
+                if (n > 0) LOG.info("[C3-LIVE-EXEC] {} {} bu phi {} khop qua userTrades (stream khong ghi)", p.symbol, p.cid, n);
+                done = got.compareTo(p.qty) >= 0;
+            } catch (UnsupportedOperationException e) {
+                done = true;
+            } catch (RuntimeException e) {
+                api.onApiResult("userTrades", false);
+                LOG.warn("[C3-LIVE-EXEC] {} {} userTrades loi {} => bu phi thu lai sau", p.symbol, p.cid, e.toString());
+            }
+            if (done) {
+                it.remove();
+            } else if (++p.tries >= COST_MAX_TRIES) {
+                it.remove();
+                nCostGiveUp.incrementAndGet();
+                LOG.warn("[C3-LIVE-EXEC] {} {} orderId={} bu phi THAT BAI sau {} lan => phi so co the THIEU (KIEM)", p.symbol, p.cid,
+                        p.orderId, p.tries);
+            } else {
+                p.dueMs = now + COST_WAIT_MS;
+            }
+        }
+        return calls;
     }
 
     public void setPriceObserver(PriceObserver o) {
@@ -162,11 +280,15 @@ public final class C3LiveOrderExecutor {
             try {
                 OrderInfo o = gw.newMarketOrder(sym, Side.BUY, qty, cid, false);
                 api.onApiResult("newMarketOrder", true);
+                api.onOrderResult("newMarketOrder", true, false);   // [V12 R4p Bug3]
                 apply(cid, o, true, true);
                 return;
             } catch (GatewayException e) {
                 // [V12 R4b MINOR-2] lop pham vi c3 tu choi (chua gui) KHONG phai loi API san => khong dem C3
-                if (!(e instanceof com.binance.chuyennd.c3live.api.ClientSideRefusal)) api.onApiResult("newMarketOrder", false);
+                if (!(e instanceof com.binance.chuyennd.c3live.api.ClientSideRefusal)) {
+                    api.onApiResult("newMarketOrder", false);
+                    api.onOrderResult("newMarketOrder", false, ApiObserver.rateLimited(e));   // [V12 R4p Bug3]
+                }
                 if (e.isDefinitelyNotExecuted()) {
                     book.cancel(cid, "not_executed:" + e.getKind() + ":" + e.getExchangeCode(), clock.getAsLong());
                     nCancelled.incrementAndGet();
@@ -286,6 +408,7 @@ public final class C3LiveOrderExecutor {
                 double prov = markPrice(lv.get().symbol, lv.get().refPx);
                 if (prov > 0d && book.confirmProvisional(cid, qty, prov, o.getOrderId(), clock.getAsLong())) {
                     nConfirmed.incrementAndGet();
+                    scheduleCost(lv.get().symbol, cid, o.getOrderId(), qty);   // [V12 R4p Bug2]
                     nProvisional.incrementAndGet();
                     LOG.warn("[C3-LIVE-EXEC] {} {} PX_PROVISIONAL qty={} gia tam={} (mark; cho gia that)", lv.get().symbol, cid,
                             qty.toPlainString(), prov);
@@ -299,6 +422,7 @@ public final class C3LiveOrderExecutor {
             }
             if (book.confirm(cid, qty, px, o.getOrderId(), clock.getAsLong())) {
                 nConfirmed.incrementAndGet();
+                scheduleCost(lv.get().symbol, cid, o.getOrderId(), qty);   // [V12 R4p Bug2] stream rot => bu phi qua userTrades
                 LOG.info("[C3-LIVE-EXEC] FILL {} {} qty={} avg={} ref={} slip={}", lv.get().symbol, cid, qty.toPlainString(),
                         px, lv.get().refPx, lv.get().refPx > 0 ? String.format("%.5f", px / lv.get().refPx - 1d) : "NA");
                 fill.onFill(lv.get().symbol, true, px, lv.get().refPx);

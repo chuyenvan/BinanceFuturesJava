@@ -43,7 +43,7 @@ import java.util.function.LongSupplier;
  * </ul>
  * Thread-safe (synchronized). Khong bao gio nem ra ngoai.
  */
-public final class FillAccounting {
+public final class FillAccounting implements C3LiveOrderExecutor.CostRecovery {
 
     private static final Logger LOG = LoggerFactory.getLogger(FillAccounting.class);
     public static final String REASON_TRAILING = "TRAILING_STOP";
@@ -72,6 +72,13 @@ public final class FillAccounting {
     private volatile OwnStopGuard stopGuard;
     private final Map<String, String> lastExitReason = new ConcurrentHashMap<>();
     private final Set<String> warnedAssets = ConcurrentHashMap.newKeySet();
+    /** [V12 R4p Bug2] qty khop stream da ghi theo "symbol:orderId" (gioi han 4096, cu nhat bi bo). Truy cap duoi khoa this. */
+    private final java.util.LinkedHashMap<String, BigDecimal> streamQty = new java.util.LinkedHashMap<String, BigDecimal>() {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, BigDecimal> e) {
+            return size() > 4096;
+        }
+    };
     private volatile FillPriceResolver prices;
     private final AtomicLong nOrder = new AtomicLong();
     private final AtomicLong nConfirm = new AtomicLong();
@@ -139,6 +146,7 @@ public final class FillAccounting {
             double comm = commissionUsd(u.commission, u.commissionAsset, nt);
             double rp = u.realizedPnl == null ? 0d : u.realizedPnl.doubleValue();
             fresh = book.addFillCosts(sym, u.tradeId, comm, rp, now);   // [V12 R4f] chong ghi trung theo tradeId
+            if (u.orderId > 0 && u.lastQty != null) streamQty.merge(sym + ":" + u.orderId, u.lastQty, BigDecimal::add);   // [R4p Bug2]
             if (!fresh) LOG.info("[C3-LIVE-FILL] {} khop t={} DA GHI (khoi phuc REST toi truoc) => bo qua ghi lai", sym, u.tradeId);
             audit.record(OrderAuditLog.Entry.of(now).clientOrderId(cid).orderId(u.orderId).symbol(sym).side(u.side)
                     .type(u.origType == null ? u.orderType : u.origType).qty(u.lastQty).price(u.lastPrice)
@@ -567,6 +575,41 @@ public final class FillAccounting {
 
     private static String plain(BigDecimal v) {
         return v == null ? "" : v.stripTrailingZeros().toPlainString();
+    }
+
+    /** [V12 R4p Bug2] {@inheritDoc} */
+    @Override
+    public synchronized BigDecimal streamQty(String symbol, long orderId) {
+        BigDecimal q = streamQty.get(symbol + ":" + orderId);
+        return q == null ? BigDecimal.ZERO : q;
+    }
+
+    /**
+     * [V12 R4p Bug2] Phi khop VAO (userTrades) khi leg xac nhan qua REST ma stream khong ghi: gia phi lay NGOAI khoa, ghi DUOI
+     * cung khoa stream theo tradeId (da ghi => bo; stream toi sau => bo) — khong bao gio dem 2 lan. realized = 0 (khop mua c3).
+     */
+    @Override
+    public int bookEntryCosts(String sym, List<com.binance.chuyennd.c3live.api.TradeFill> fills) {
+        if (sym == null || fills == null || fills.isEmpty()) return 0;
+        for (com.binance.chuyennd.c3live.api.TradeFill f : fills) if (f != null) prefetchAssetPx(f.getCommissionAsset());
+        return bookEntryCostsLocked(sym, fills);
+    }
+
+    private synchronized int bookEntryCostsLocked(String sym, List<com.binance.chuyennd.c3live.api.TradeFill> fills) {
+        long now = clock.getAsLong();
+        int n = 0;
+        for (com.binance.chuyennd.c3live.api.TradeFill f : fills) {
+            if (f == null || f.getTradeId() <= 0) continue;
+            if (f.getSymbol() != null && !sym.equals(f.getSymbol())) continue;
+            double nt = f.getQty() == null || f.getPrice() == null ? 0d : f.getQty().doubleValue() * f.getPrice().doubleValue();
+            double comm = commissionUsd(f.getCommission(), f.getCommissionAsset(), nt);
+            if (book.addFillCosts(sym, f.getTradeId(), comm, 0d, now)) {
+                n++;
+                LOG.info("[C3-LIVE-FILL] {} khop vao t={} phi {} USD ghi qua REST (userTrades; stream khong ghi)", sym, f.getTradeId(),
+                        comm);
+            }
+        }
+        return n;
     }
 
     public String stats() {
