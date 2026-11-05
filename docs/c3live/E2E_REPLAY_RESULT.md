@@ -1,0 +1,54 @@
+# E2E_REPLAY_RESULT — ngày sập 10-30 trên code v1.2 HEAD 33a81398 (lớp thực thi c3_live)
+
+Tiêu chí: `docs/c3live/E2E_REPLAY.md` (commit 788acf95, viết TRƯỚC code). Chạy 2026-11-05 trên Oracle qua
+`flock oracle_heavy.lock`, `LIVE_IS_SHADOW_HOST=true`, PrivateConfig STUB, config không host 242. Không đổi code production.
+Đầu ra: `~/claude_master/e2e1105/out/<run>/{result.json,check_ref.json,trace_dec.csv.gz,outcomes.csv,events.csv,run/}`.
+
+## 1. Phát hiện (rủi ro trước)
+1. **PREMARKET lệch tín hiệu ↔ R7 (production, parity):** `UniverseA1Classifier.java:46` coi `underlyingType=PREMARKET` là CRYPTO
+   (giữ ở tầng tín hiệu, = sim A1), nhưng R7 `SymbolUniverseLive.java:247` (strictCoin) loại `NOT_COIN`. 10-30: PREDICTUSDT
+   (PREMARKET, hạng 2 đợt 1, shadow v1.1 có vào) PASS gate 6 phút ⇒ cả 6 lần `NOT_BUYABLE NOT_COIN`; không giữ ⇒ chiếm slot
+   top-24 và tiếp tục nạp r mỗi phút (sim sẽ giữ ⇒ không nạp). Lệnh live vẫn là tập con của sim nhưng buffer q lệch dần.
+   Cần MASTER chọn: loại PREMARKET ở A1 (cả sim) hoặc cho R7 mua PREMARKET.
+2. **Phí khớp mất khi user stream rớt (production, MINOR):** phí chỉ ghi ở `FillAccounting.java:141` (sự kiện stream); đường
+   xác nhận REST `C3LiveOrderExecutor.java:300` không ghi phí, nối lại không bù. F1 (rớt 12′ giữa đợt 1, 15 leg): phí sổ 0,359
+   vs sàn 0,549 USDT (thiếu 35 %) ⇒ equity c3/C6/A40 và ledger lạc quan nhẹ. Realized khớp.
+3. **C3 không latch khi 429 chỉ dính lệnh (thiết kế, cần MASTER xác nhận):** F2b 6 lệnh MARKET 429 liên tiếp nhưng xen call đọc
+   thành công ⇒ bộ đếm "lỗi liên tiếp" reset, không latch. Leg 429 huỷ giữ chỗ đúng, không cid trùng; phút sau gate PASS lại ⇒
+   quyết định mới vào (F2: 29, F2b: 32 SUBMITTED vs 26). Rủi ro: 429 kéo dài trên lệnh không có ngắt.
+4. **MERGED: realized sổ ≠ rp sàn** (F5, EVAAUSDT 1,0353 vs 0,8135): sàn tính rp trên giá vốn gộp LEGACY+c3 — bản chất one-way,
+   không phải lỗi; ledger c3 đúng theo VWAP c3. Đối soát realized phải loại symbol MERGED.
+
+## 2. Bảng tiêu chí
+| mục | kết quả | ghi chú |
+|---|---|---|
+| D0 GateHeldReplay1030R4hTest | ĐẠT (gián tiếp) | E2b tái lập đúng số của test (cùng dữ liệu); test gốc không chạy riêng |
+| E2a bám buffer live | **TRƯỢT theo công thức** (98,98 %) | 102 600/102 600 bản ghi live khớp bit (0 lệch phía live); 1 056 bản ghi harness sau 11-01 06:14 = hết bản chụp buffer (iii dữ liệu) |
+| E2b neo MASTER | ĐẠT | q04 = 0,00756445155; đợt 2 mới = CAP CT DOS IDOL IRYS NIL PARTI Q (q đóng băng 29 pass; q theo giờ production 8 pass, cùng 8) |
+| E1 R0 ≡ REF numpy | ĐẠT | 103 656 dòng, 72 giờ q, PASS/rank/gated/q/nạp r trùng 100 % (R0, R0-DRY, F2b, F5) |
+| X1 vào lệnh | **TRƯỢT** mọi lượt | chỉ do phát hiện 1 (6× NOT_BUYABLE PREDICT); còn lại 25/25 PASS ⇒ SUBMITTED |
+| X2 khớp 1 lần, sổ=sàn | ĐẠT mọi lượt | xác nhận ≤ 9 s |
+| X3 arm + stop | ĐẠT mọi lượt | R0: 22 arm, 91 đặt, 69 dời, tối đa 1 stop/symbol |
+| X4 dời stop | ĐẠT | |
+| X5 không mồ côi | ĐẠT mọi lượt | |
+| X6 đối soát | ĐẠT trừ F1 (phát hiện 2), F5 (phát hiện 4) | qty khớp tuyệt đối mọi lượt |
+| X7 0 exception | ĐẠT; F5 ERROR = cảnh báo MERGED do chính lỗi tiêm | |
+| X8 kill-switch | ĐẠT (R0/R0-DRY 0 latch) | |
+| X9 rate | ĐẠT | đỉnh 264 weight/phút (03:47), 13 lệnh/10 s |
+| X10 DCA | KHÔNG XẢY RA tự nhiên; S-DCA ĐẠT | 1 due ⇒ 1 SUBMITTED |
+| F1 WS rớt | ĐẠT (trừ X6) | 15 leg trong khoảng rớt, xác nhận REST ≤ 9 s |
+| F2 / F2b 429 | ĐẠT / **TRƯỢT** (phát hiện 3) | |
+| F3 thiếu avgPrice | ĐẠT | 0 C2 giả |
+| F4 EXPIRE +4 ms | ĐẠT | sau ADDENDUM (ghép FLATTEN), 2 stop sàn tự EXPIRE |
+| F5 LEGACY/MERGED | ĐẠT | 0 call c3 lên LEGACY, r vẫn nạp, MERGED ⇒ stop qty, cuối sàn = qty LEGACY |
+| F6a DD | ĐẠT | latch C6+A40 ngay 10:00, phẳng 10:01, 0 stop, 0 lệnh sau |
+| F6b C1 | ĐẠT (một phần rỗng) | latch 12:05, gỡ 12:37; không có PASS trong latch ⇒ KS_BLOCKED chưa được thử |
+
+So shadow v1.1: R0 đợt 1 = 16/17 coin non-TF của shadow (thiếu PREDICT) + AGT vào lại; đợt 2 = AGT (BIG_DOWN) + đúng 8 coin MASTER kỳ vọng.
+
+## 3. Sửa sau lần chạy 1 (khai, viết SAU khi thấy số; không đổi ngưỡng)
+- harness X6 cộng phí cụm mở 2 lần ⇒ bỏ; rig thiếu `qtyModeFor(scope::isMerged)` (runtime có) ⇒ thêm (F5 X3 giả);
+  sàn giả thiếu từ chối -2021 ⇒ bật `rejectWouldTrigger` (F2 X3 giả); F4 rỗng (mọi thoát R0 do stop kích) ⇒ ghép FLATTEN.
+## 4. Giới hạn thêm (ngoài §6)
+- Không nối `FlatConfirm` (dùng đồng hồ thật) ⇒ nhánh "nghi phẳng" chưa thử; cầu dao mật độ `is50PercentOrderLossProd` không mô hình;
+  bookFull theo sổ c3 (production đọc sổ giấy twin); 43 ô TradFi trong top-24 ở phút có PASS ⇒ R0 có thể thiếu leg hạng 25+.
