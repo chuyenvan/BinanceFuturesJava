@@ -10,6 +10,7 @@ Khong doc/ghi 242. Timestamp int64 ms.
 """
 import datetime as dt
 import glob
+import json
 import os
 
 ROOT = os.environ.get("PV_ROOT") or os.path.expanduser("~/claude_master/parity_v12w")   # PV_ROOT: chi cho test tiem loi
@@ -20,6 +21,26 @@ VIS = ROOT_V11 + "/vision/klines_1m"            # kho Vision dung chung (chi doc
 WINDOW_START = 1793676840000          # V12 §5: nen quyet dinh dau tien sau deploy dry r4n (MainClass 11-03 10:34:26 +07 -> tick 03:34 UTC)
 EXINFO_DIR = ROOT + "/exinfo"         # §2.2: anh chup c3live_exchangeInfo.json.lastgood (sh/exinfo_snap.sh)
 MIN, H, DAYMS = 60000, 3600000, 86400000
+JARS_FILE = ROOT + "/jars.json"      # [ADD11 §2] so jar dry theo thoi gian (sh/register_jar.sh)
+R4N = {"name": "r4n", "md5": "fb6711efe473e0e0a5b0ca9813c62af3", "t0_tick": WINDOW_START, "premarket_excl": False}
+
+
+def jars():
+    try:
+        J = json.load(open(JARS_FILE))
+    except FileNotFoundError:
+        J = []
+    J = [j for j in J if j["name"] != "r4n"]
+    return [R4N] + sorted(J, key=lambda j: j["t0_tick"])
+
+
+def jar_at(t_ms):
+    """jar dang chay tai t_ms (tick quyet dinh dau tien t0_tick <= t_ms)."""
+    a = R4N
+    for j in jars():
+        if j["t0_tick"] <= t_ms:
+            a = j
+    return a
 
 
 def day_ms(day):
@@ -40,6 +61,13 @@ def cfg(day=None):
     c = {"day": day, "day_prev": shift(day, -1), "day_next": shift(day, 1),
          "T0": d0 if os.environ.get("PV_R5") == "1" else max(WINDOW_START, d0), "T1": d0 + DAYMS - MIN, "VIS": VIS, "MOD": MOD, "ROOT": ROOT,
          "s1v_days": [shift(day, k) for k in range(-15, 1)]}
+    # [ADD11 §1-2] jar tai T1 cua D; ngay swap (jar != r4n bat dau trong D) => chi cham sau swap (T0 = tick dau r4q)
+    J = R4N if os.environ.get("PV_R5") == "1" else jar_at(c["T1"])
+    c.update(JAR=J["name"], JAR_MD5=J["md5"], PREMARKET_EXCL=bool(J["premarket_excl"]),
+             BUILD=ROOT + ("/build" if J["name"] == "r4n" else "/build_" + J["name"]),
+             swap_day=J["name"] != "r4n" and d0 <= J["t0_tick"] < d0 + DAYMS)
+    if c["swap_day"]:
+        c["T0"] = max(c["T0"], J["t0_tick"])
     legacy = day == "2026-10-21" and os.environ.get("PV_D1_LAYOUT", "legacy") == "legacy"
     if legacy:
         live = ROOT + "/live"

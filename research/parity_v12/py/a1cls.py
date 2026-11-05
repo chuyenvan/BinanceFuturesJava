@@ -23,11 +23,11 @@ def load(path):
     return json.load(gzip.open(path) if path.endswith(".gz") else open(path))
 
 
-def excluded(path, t_ms):
-    """tap symbol bi A1 loai tai thoi diem t_ms (TRADFI/INDEX/PREMARKET va onboardDate <= t_ms)."""
+def excluded(path, t_ms, premarket=True):
+    """[ADD11] premarket=False cho ngay jar r4n (giu PREMARKET). tap symbol bi A1 loai tai thoi diem t_ms (TRADFI/INDEX/PREMARKET va onboardDate <= t_ms)."""
     out = set()
     for s in load(path)["symbols"]:
-        if kind(s.get("contractType"), s.get("underlyingType")) in ("TRADFI", "INDEX", "PREMARKET") and int(s.get("onboardDate", 0)) <= t_ms:
+        if kind(s.get("contractType"), s.get("underlyingType")) in (("TRADFI", "INDEX", "PREMARKET") if premarket else ("TRADFI", "INDEX")) and int(s.get("onboardDate", 0)) <= t_ms:
             out.add(s["symbol"])
     return out
 

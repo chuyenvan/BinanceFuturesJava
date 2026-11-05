@@ -5,7 +5,7 @@ export LIVE_IS_SHADOW_HOST=true
 J=${JAR:-$HOME/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4n}
 JMD5=${JAR_MD5:-fb6711efe473e0e0a5b0ca9813c62af3}
 R=$HOME/claude_master/vz_e1_wt/research/parity_v12
-B=$HOME/claude_master/parity_v12w/build
+B=${B:-$HOME/claude_master/parity_v12w/build}   # [ADD11] build_<jar> cho jar khac r4n
 echo "$JMD5  $J" | md5sum -c -
 python3 $R/py/patch_harness.py $HOME/claude_master/v11_settle/harness/src $R/java
 rm -rf $B && mkdir -p $B/cls $B/stubcls

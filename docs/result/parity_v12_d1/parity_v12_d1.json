@@ -1,6 +1,6 @@
 {
  "round": "d1",
- "prereg": "PREREG_PARITY_V12_DRY 3c7dae05 + ADD1..ADD7",
+ "prereg": "PREREG_PARITY_V12_DRY 3c7dae05 + ADD1..ADD11",
  "window_start_ms": 1793676840000,
  "days": {
   "2026-11-03": {
@@ -30,6 +30,9 @@
     "mismatch": [],
     "held_pairs_dropped": 1286
    },
+   "jar": "r4n",
+   "premarket_excl": false,
+   "swap_day": false,
    "restart_in_day": [
     1793676866000
    ],
@@ -93,7 +96,8 @@
     "ngay restart/deploy => toi da XAM (\u00a75.2, ADD6)"
    ],
    "nhom_H_tinh": false,
-   "nhom_K_tinh": false
+   "nhom_K_tinh": false,
+   "SACH_ADD11": false
   }
  }
 }

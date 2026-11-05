@@ -453,7 +453,7 @@ def drop_held(sel):
 def a1_excl_at(ts):
     import a1cls
     if "a1" not in _HELD:
-        _HELD["a1"] = a1cls.excluded(C["EXINFO"], T1) if C.get("EXINFO") else set()
+        _HELD["a1"] = a1cls.excluded(C["EXINFO"], T1, C["PREMARKET_EXCL"]) if C.get("EXINFO") else set()   # [ADD11 §2]
         if C.get("EXINFO"):   # [V12 ADD8] cung luat fail-closed voi day_prep (T0 > serverTime)
             cf = W + "/univ/ucand_%s.txt" % TAG
             if os.path.exists(cf):

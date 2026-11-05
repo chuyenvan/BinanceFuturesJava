@@ -21,7 +21,8 @@ C = cfg()
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))    # research/parity_v11
 ROOT, RUN, WORK, TAG = C["ROOT"], C["RUN"], C["WORK"], C["tag"]
 T0, T1 = C["T0"], C["T1"]
-CPE = dict(l.strip().split("=", 1) for l in open(ROOT + "/build/cp.env") if "=" in l)
+CPE = dict(l.strip().split("=", 1) for l in open(C["BUILD"] + "/cp.env") if "=" in l)   # [ADD11 §2] build theo jar cua ngay
+assert CPE.get("JAR_MD5") == C["JAR_MD5"], "build %s md5 %s != jar ngay %s %s" % (C["BUILD"], CPE.get("JAR_MD5"), C["JAR"], C["JAR_MD5"])
 FUNDING = ROOT + "/univ/funding_le202609.csv.gz"
 PKG = "com.binance.chuyennd.aerospike."
 

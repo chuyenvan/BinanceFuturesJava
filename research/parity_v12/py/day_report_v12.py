@@ -19,7 +19,8 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import day_report as DR  # noqa: E402  (ROOT = parity_v12w)
-from pv_cfg import WINDOW_START, day_ms, DAYMS  # noqa: E402
+from pv_cfg import WINDOW_START, day_ms, DAYMS, cfg as PVCFG, jars as PVJARS  # noqa: E402
+import gmicro  # noqa: E402
 
 ROOT, REPO = DR.ROOT, DR.REPO
 KD = "KHONG DO DUOC"
@@ -86,6 +87,9 @@ def v12_day(d):
     d0 = day_ms(d)
     inday = rs.get("in_day") or []
     deploy_day = d0 <= WINDOW_START < d0 + DAYMS
+    pc = PVCFG(d)                                   # [ADD11] jar cua ngay, ngay swap
+    v["jar"], v["premarket_excl"], v["swap_day"] = pc["JAR"], pc["PREMARKET_EXCL"], pc["swap_day"]
+    deploy_day = deploy_day or pc["swap_day"]       # ngay swap r4n->r4q = XAM (ADD11 §1)
     v["restart_in_day"] = inday
     v["deploy_day"] = deploy_day
     # log sach
@@ -138,6 +142,7 @@ def v12_day(d):
     v["ghi_chu"] = notes
     v["nhom_H_tinh"] = (not deploy_day) and v["ngay_sach"].startswith("SACH")
     v["nhom_K_tinh"] = reseed and v["nhom_H_tinh"]
+    v["SACH_ADD11"] = gmicro.is_sach(v)
     return v, work, run
 
 
@@ -145,7 +150,7 @@ def main():
     rnd, days = sys.argv[1], sys.argv[2:]
     out = REPO + "/docs/result/parity_v12_%s" % rnd
     os.makedirs(out, exist_ok=True)
-    res = {"round": rnd, "prereg": "PREREG_PARITY_V12_DRY 3c7dae05 + ADD1..ADD7", "window_start_ms": WINDOW_START, "days": {}}
+    res = {"round": rnd, "prereg": "PREREG_PARITY_V12_DRY 3c7dae05 + ADD1..ADD11", "window_start_ms": WINDOW_START, "days": {}}
     for d in days:
         v, work, run = v12_day(d)
         res["days"][d] = v
@@ -155,6 +160,13 @@ def main():
             if os.path.exists(p):
                 shutil.copy(p, od)
     json.dump(res, open(out + "/parity_v12_%s.json" % rnd, "w"), indent=1, default=str)
+    # [ADD11 §4] G-MICRO tren moi ngay da cham (ban moi nhat moi ngay)
+    sw = [j for j in PVJARS() if j["name"] != "r4n"]
+    sm, sinfo = gmicro.smoke(ROOT, sw[0]["start_ms"]) if sw else (None, {"chua_swap": True})
+    gm = gmicro.count(gmicro.collect(REPO), sm)
+    gm["smoke_info"] = sinfo
+    json.dump(gm, open(REPO + "/docs/result/parity_v12_gmicro.json", "w"), indent=1, default=str)
+    print("G-MICRO:", gm["G_MICRO"], "sach=", gm["sach"])
     print(json.dumps({d: {k: x[k] for k in ("ket_luan", "ngay_sach", "KPI_TBOOK", "ghi_chu")} for d, x in res["days"].items()},
                      indent=1, ensure_ascii=False))
 
