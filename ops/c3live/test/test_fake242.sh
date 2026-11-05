@@ -1348,6 +1348,11 @@ OUT=$(sw OLD_MD5=00000000000000000000000000000000 DRY=1 bash "$SW" 2>&1); RC=$?
 chk "r4q swap: jar dang chay KHAC r4n => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL jar_dang_chay'"
 OUT=$(sw NJ_MD5=$OLD DRY=1 bash "$SW" 2>&1); RC=$?
 chk "r4q swap: md5 jar moi KHAC pin => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'KHAC pin'"
+OUT=$(sw SW_JOB=1 SW_JOBLOG=$W/swjob_fake.log bash "$SW" 2>&1); RC=$?
+chk "r4q swap SW_JOB=1 khong co file YES cua foreground => TU CHOI, khong doi gi" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'KHONG co xac nhan YES' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $J0 ]"
+rm -f $W/tok
+OUT=$(echo YES | sw FORCE_TIME=0 TIME_OK_FILE=$W/tok WINDOW_WAIT_MAX_S=3 WINDOW_POLL_S=1 bash "$SW" 2>&1); RC=$?
+chk "r4q swap: YES -> JOB NEN (job_log + lenh xem tien do); ngoai khung qua tran cho => DUNG, bot KHONG dung, jar/env giu, khoa tra" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'job NEN pid=[0-9]* job_log=' && echo \"\$OUT\" | grep -q 'Xem tien do: tail -f' && echo \"\$OUT\" | grep -q 'cho khung gio qua 3s' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $J0 ] && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ] && [ ! -e $W/deploylog/.swap_v12_dry_jar.lock.d ]"
 touch $F4/FAKE_NORUNTIME
 OUT=$(echo YES | sw bash "$SW" 2>&1); RC=$?
 chk "r4q swap hau kiem TRUOT => ROLLBACK: jar r4n (md5) + env.sh + gate_ratio khoi phuc, PAUSE go, KHONG dang ky jar parity" "[ $RC = 1 ] && [ ! -e $W/reg_calls.txt ] && echo \"\$OUT\" | grep -q 'ROLLBACK xong' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $J0 ] && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ] && [ \"\$(md5sum < $F4/run/gate_ratio_live.bin)\" = \"$G0\" ] && [ ! -f $W/PAUSE ] && penv | grep -qx LIVE_ADAPTER=dry"
@@ -1356,7 +1361,7 @@ OUT=$(echo NO | sw bash "$SW" 2>&1); RC=$?
 chk "r4q swap khong go YES => huy" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'Huy. Khong doi gi.' && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ]"
 touch $W/REG_FAIL
 OUT=$(echo YES | sw bash "$SW" 2>&1); RC=$?
-chk "r4q swap XONG + dang ky jar parity LOI => chi WARN (exit 0, dry r4q giu, KHONG rollback), dang ky dung tham so r4q <jar> <md5> <start_ms 13 so> 1" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'WARN dang ky jar parity LOI rc=3' && ! echo \"\$OUT\" | grep -q 'ROLLBACK' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWQ ] && grep -qE \"^r4q $W/new_r4q.jar $NEWQ [0-9]{13} 1\$\" $W/reg_calls.txt"
+chk "r4q swap XONG + dang ky jar parity LOI => chi WARN (exit 0, dry r4q giu, KHONG rollback), dang ky dung tham so r4q <jar> <md5> <start_ms 13 so> 1" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'WARN dang ky jar parity LOI rc=3' && ! echo \"\$OUT\" | grep -q 'ROLLBACK TU DONG' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWQ ] && grep -qE \"^r4q $W/new_r4q.jar $NEWQ [0-9]{13} 1\$\" $W/reg_calls.txt"
 # don: ve r4n de chay lai swap XONG (dang ky OK)
 (cd $F4 && bin/daemon.sh stop; B=$(ls target/binance-java-sdk-1.2.4.jar.bak_swap_* | grep -v 'md5$' | tail -1); cp -f $B target/binance-java-sdk-1.2.4.jar; F=$(ls conf/env.sh.bak_swap_* | tail -1); cp -f $F conf/env.sh; bin/daemon.sh start) > /dev/null 2>&1
 rm -f $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_* $W/REG_FAIL $W/reg_calls.txt; sleep 2
@@ -1364,6 +1369,18 @@ OUT=$(echo YES | sw bash "$SW" 2>&1); RC=$?
 chk "r4q swap XONG: jar r4q, backup r4n .bak_swap (md5), C11 trong env process, dry giu, PREMARKET + premarket_bo + LEGACY_QUEUE_LIVE_BLOCK=true, PAUSE go" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: dry chay r4q' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWQ ] && cat $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_*.md5 | grep -qx $J0 && penv | grep -qx LIVE_SEED_EXCLUDE_DECISION_MIN=1 && penv | grep -qx LIVE_ADAPTER=dry && echo \"\$OUT\" | grep -q 'OK GATE-PRE_premarket_bo=1' && echo \"\$OUT\" | grep -q 'OK UNIVERSE-A1_PREMARKET=1' && echo \"\$OUT\" | grep -q 'OK LEGACY_QUEUE_LIVE_BLOCK=true' && [ ! -f $W/PAUSE ] && grep -q 'swap jar dry\] XONG' $W/tg_sw.txt && echo \"\$OUT\" | grep -q 'OK dang ky jar parity r4q start_ms=' && [ \"\$(wc -l < $W/reg_calls.txt)\" = 1 ]"
 OUT=$(sw DRY=1 bash "$SW" 2>&1); RC=$?
 chk "r4q swap lan 2: jar dang chay DA la r4q => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'DA_LA_moi'"
+(cd $F4 && bin/daemon.sh stop; B=$(ls target/binance-java-sdk-1.2.4.jar.bak_swap_* | grep -v 'md5$' | tail -1); cp -f $B target/binance-java-sdk-1.2.4.jar; F=$(ls conf/env.sh.bak_swap_* | tail -1); cp -f $F conf/env.sh; bin/daemon.sh start) > /dev/null 2>&1
+rm -f $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_* $W/tok; sleep 2
+setsid bash -c "echo YES | env APP_DIR=$F4 OLD_MD5=$NEW4 NJ=$W/new_r4q.jar NJ_MD5=$NEWQ DEPLOY_TG_SINK=$W/tg_sw.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 WD_PAUSE_MAX_S=300 REG_JAR_SH=$W/fake_register.sh FORCE_TIME=0 TIME_OK_FILE=$W/tok WINDOW_WAIT_MAX_S=120 WINDOW_POLL_S=1 bash $SW" > "$W/swfg.out" 2>&1 < /dev/null &
+FGP=$!
+for i in $(seq 1 20); do grep -q 'job_log=' $W/swfg.out 2>/dev/null && break; sleep 1; done
+sleep 2; kill -HUP -$FGP 2>/dev/null; kill -KILL -$FGP 2>/dev/null; sleep 1
+SJL=$(grep -o 'job_log=[^ ]*' $W/swfg.out | head -1 | cut -d= -f2)
+chk "r4q swap dong terminal (HUP/KILL nhom foreground) khi job dang CHO khung gio: job NEN van song" "! kill -0 $FGP 2>/dev/null && [ -n \"$SJL\" ] && grep -q 'cho khung gio hop le' $SJL"
+touch $W/tok
+for i in $(seq 1 90); do grep -q '=== XONG' $SJL 2>/dev/null && break; sleep 1; done
+sleep 1
+chk "r4q swap: vao khung => job tu chay tiep (kiem 242 lan 2 + kiem khung NGAY TRUOC stop) toi XONG, jar r4q, khoa tra" "grep -q '=== XONG' $SJL && grep -q 'ngay truoc stop' $SJL && grep -q 'lan 2: OK jar_dang_chay' $SJL && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWQ ] && [ ! -e $W/deploylog/.swap_v12_dry_jar.lock.d ]"
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]

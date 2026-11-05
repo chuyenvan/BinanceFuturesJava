@@ -4,7 +4,11 @@
 #   Them C11 (LIVE_SEED_EXCLUDE_DECISION_MIN=1) neu env.sh chua co. Khong doi gi khac (adapter/profile/push giu nguyen = dry).
 # Chay tren ORACLE (owner), 1 lenh:
 #   DRY=1 bash ~/claude_master/v12/c3live/ops/c3live/swap_v12_dry_jar.sh   # chi kiem (Oracle + 242 CHI DOC), KHONG ghi gi
-#   bash ~/claude_master/v12/c3live/ops/c3live/swap_v12_dry_jar.sh         # go YES (khung :10-:44)
+#   bash ~/claude_master/v12/c3live/ops/c3live/swap_v12_dry_jar.sh         # go YES => JOB NEN tren Oracle (setsid nohup)
+#   [A1 R4Q_SWAP MIN-1] Foreground CHI kiem + hoi YES + khoi dong JOB NEN (log rieng) + tail. Dong terminal / rot ssh KHONG dung job.
+#   Xem tien do: tail -f ~/claude_master/deploy/swap_v12_dry_jar_<TS>_job_<pid>.log (duong dan in ra sau YES; ket qua gui Telegram).
+#   [MIN-2] Job: cho khung gio hop le (:10-:44, toi da WINDOW_WAIT_MAX_S=5400 s) -> kiem 242 LAI -> chep jar -> kiem khung gio LAN NUA
+#   NGAY TRUOC stop (ngoai khung => cho tiep, cung tran).
 # Thu tu: kiem jar moi tren Oracle (md5) -> kiem 242 CHI DOC (1 process, jar dang chay = OLD r4n, dry, latch NONE, khong PAUSE/
 #   canary/soak, RAM/dia, LEGACY doc duoc, gate_ratio_live.bin co, khong seed treo) -> khung gio -> YES -> chep jar len 242
 #   (.v12swap_<TS>, kiem md5) -> backup env.sh -> them env -> PAUSE token (+ tu go sau WD_PAUSE_MAX_S) -> stop -> backup jar
@@ -17,7 +21,8 @@
 #   Rollback => KHONG dang ky. Lenh dang ky loi => chi WARN + Telegram (dry r4q GIU nguyen).
 # Ma thoat: 0 XONG | 1 DUNG/da rollback | 2 ROLLBACK LOI (PAUSE con — xem dong "PAUSE còn").
 # Bien (test): SSH_242 SCP_242 RHOST APP_DIR PROC_PAT OLD_MD5 NJ NJ_MD5 WD_PAUSE WD_PAUSE_MAX_S POST_WAIT_S POST_ROUNDS LOGDIR
-#   FORCE_TIME DEPLOY_TG_ENV DEPLOY_TG_SINK MIN_MEM_MB SSH_RETRY_S REG_JAR_SH REG_TIMEOUT_S
+#   FORCE_TIME DEPLOY_TG_ENV DEPLOY_TG_SINK MIN_MEM_MB SSH_RETRY_S REG_JAR_SH REG_TIMEOUT_S WINDOW_WAIT_MAX_S WINDOW_POLL_S
+#   TIME_OK_FILE (test: co file = trong khung)
 # =============================================================================
 set -uo pipefail
 SSH_242=${SSH_242:-"ssh -p 2222 -o BatchMode=yes -o ConnectTimeout=20 -i /home/ubuntu/.ssh/id_rsa_chuyennd root@103.157.218.242"}
@@ -39,11 +44,19 @@ SSH_RETRY_S=${SSH_RETRY_S:-10}
 DEPLOY_TG_ENV=${DEPLOY_TG_ENV:-/home/ubuntu/.config/health242/tg.env}
 REG_JAR_SH=${REG_JAR_SH:-/home/ubuntu/claude_master/vz_e1_wt/research/parity_v12/sh/register_jar.sh}
 REG_TIMEOUT_S=${REG_TIMEOUT_S:-5400}
-TS=$(TZ=Asia/Ho_Chi_Minh date +%Y%m%d_%H%M%S)
+WINDOW_WAIT_MAX_S=${WINDOW_WAIT_MAX_S:-5400}
+WINDOW_POLL_S=${WINDOW_POLL_S:-30}
+SW_JOB=${SW_JOB:-0}   # 1 = job nen (chi foreground khoi dong, kem SW_YES_FILE)
+SELF=$(cd "$(dirname "$0")" && pwd)/$(basename "$0")
+TS=${SW_TS:-$(TZ=Asia/Ho_Chi_Minh date +%Y%m%d_%H%M%S)}
 LOGDIR=${LOGDIR:-/home/ubuntu/claude_master/deploy}
 mkdir -p "$LOGDIR"
-LOG=$LOGDIR/swap_v12_dry_jar_${TS}.log
-exec > >(tee -a "$LOG") 2>&1
+if [ "$SW_JOB" = 1 ]; then
+  LOG=${SW_JOBLOG:?"job nen thieu SW_JOBLOG"}   # stdout/stderr job da vao file nay (nohup)
+else
+  LOG=$LOGDIR/swap_v12_dry_jar_${TS}.log
+  exec > >(tee -a "$LOG") 2>&1
+fi
 say() { echo "[$(TZ=Asia/Ho_Chi_Minh date '+%F %T')] $*"; }
 tg() {
   local msg code tok chat
@@ -57,7 +70,19 @@ tg() {
     --data-urlencode "chat_id=$chat" --data-urlencode "text=$msg" 2>/dev/null)
   tok=""; [ "$code" = 200 ]
 }
-die() { say "DUNG: $*"; say "KET QUA: TU_CHOI (khong doi gi). Log: $LOG"; exit 1; }
+die() { say "DUNG: $*"; say "KET QUA: TU_CHOI (khong doi gi). Log: $LOG"; [ "$SW_JOB" = 1 ] && tg "[swap jar dry] DUNG TS=$TS: $* | log $LOG"; exit 1; }
+LOCKD=$LOGDIR/.swap_v12_dry_jar.lock.d
+lock_take() {   # khoa 1 job NGUYEN TU (nhu deploy_v12_dry_r4.sh)
+  if mkdir "$LOCKD" 2>/dev/null; then echo $$ > "$LOCKD/pid"; return 0; fi
+  local p q; p=$(cat "$LOCKD/pid" 2>/dev/null)
+  if [ -n "$p" ] && kill -0 "$p" 2>/dev/null && tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null | grep -q swap_v12_dry_jar; then return 1; fi
+  mv "$LOCKD" "$LOCKD.orphan.$$" 2>/dev/null || return 1
+  q=$(cat "$LOCKD.orphan.$$/pid" 2>/dev/null)
+  if [ "$q" != "$p" ]; then mv "$LOCKD.orphan.$$" "$LOCKD" 2>/dev/null; return 1; fi
+  rm -rf "$LOCKD.orphan.$$"; say "khoa mo coi (pid ${p:-?} da chet) => lay lai"
+  mkdir "$LOCKD" 2>/dev/null || return 1
+  echo $$ > "$LOCKD/pid"
+}
 s242() {
   local i rc=255
   for i in 1 2 3; do
@@ -78,6 +103,7 @@ s242in() {
   return "$rc"
 }
 time_ok() {
+  if [ -n "${TIME_OK_FILE:-}" ]; then [ -e "$TIME_OK_FILE" ]; return; fi   # test
   local H M
   H=$(TZ=Asia/Ho_Chi_Minh date +%-H); M=$(TZ=Asia/Ho_Chi_Minh date +%-M)
   [ "$M" -ge 10 ] && [ "$M" -le 44 ] || return 1
@@ -85,8 +111,19 @@ time_ok() {
   if [ "$H" -eq 1 ] || [ "$H" -eq 13 ]; then [ "$M" -gt 20 ] || return 1; fi
   return 0
 }
+# [MIN-2] cho khung gio hop le (toi da WINDOW_WAIT_MAX_S); qua tran => DUNG (truoc stop: khong doi gi tren bot)
+wait_window() {
+  [ "$FORCE_TIME" = 1 ] && return 0
+  local W=0
+  until time_ok; do
+    [ "$W" -ge "$WINDOW_WAIT_MAX_S" ] && die "cho khung gio qua ${WINDOW_WAIT_MAX_S}s ($1). Bot KHONG bi dung. Chay lai sau."
+    [ $((W % 300)) = 0 ] && say "cho khung gio hop le ($1; phut :10-:44, tranh 07/19h, 00:50-01:20, 12:50-13:20) — da cho ${W}s"
+    sleep "$WINDOW_POLL_S"; W=$((W + WINDOW_POLL_S))
+  done
+  say "OK khung gio $(TZ=Asia/Ho_Chi_Minh date +%H:%M) hop le ($1)"
+}
 
-say "=== swap_v12_dry_jar TS=$TS OLD=$OLD_MD5 NEW=$NJ_MD5 DRY=$DRY ==="
+say "=== swap_v12_dry_jar TS=$TS OLD=$OLD_MD5 NEW=$NJ_MD5 DRY=$DRY $([ "$SW_JOB" = 1 ] && echo "JOB_NEN pid=$$" || echo foreground) ==="
 # ---------------------------------------------------------------- 0. jar moi tren Oracle
 [[ "$NJ_MD5" =~ ^[0-9a-f]{32}$ ]] || die "NJ_MD5 khong hop le"
 [ "$NJ_MD5" != "$OLD_MD5" ] || die "NJ_MD5 = OLD_MD5"
@@ -136,13 +173,47 @@ NADD=$(echo "$ENV_ADD" | wc -l)
 say "--- se THEM vao $A/conf/env.sh ($NADD dong):"; echo "$ENV_ADD" | sed 's/^/   + /'
 say "--- se thay $A/target/binance-java-sdk-1.2.4.jar: $OLD_MD5 (r4n, backup .bak_swap_$TS) -> $NJ_MD5 (r4q)"
 say "--- hau kiem: jar=$NJ_MD5, env dry + C11=1, [UNIVERSE-A1] PREMARKET=, [GATE-PRE] premarket_bo=, LEGACY_QUEUE_LIVE_BLOCK=true, LEGACY $L0, latch NONE, 0 KHAN"
-if [ "$DRY" = 1 ]; then say "DRY=1: dung o day, KHONG ghi gi len 242. (DRY PASS)"; exit 0; fi
-if [ "$FORCE_TIME" != 1 ] && ! time_ok; then
-  die "gio $(TZ=Asia/Ho_Chi_Minh date +%H:%M) khong hop le (phut :10-:44, tranh 07/19h, 00:50-01:20, 12:50-13:20). Chay lai trong khung."
+if [ "$SW_JOB" != 1 ]; then
+  if [ "$DRY" = 1 ]; then say "DRY=1: dung o day, KHONG ghi gi len 242. (DRY PASS)"; exit 0; fi
+  # ------------------------------------------------------------ YES 1 lan -> JOB NEN (setsid nohup) + tail log
+  lock_take || die "dang co 1 job swap_v12_dry_jar khac chay (pid $(cat "$LOCKD/pid" 2>/dev/null), $LOCKD). Khong doi gi."
+  trap 'rm -rf "$LOCKD"' EXIT
+  say ">>> THAY JAR v_t_m dry r4n -> r4q (restart). JOB NEN tren Oracle: cho khung gio hop le ke tiep (toi da ${WINDOW_WAIT_MAX_S}s),"
+  say "    dong terminal / rot ssh KHONG dung job. LEGACY ngung quan ly ~1-1,5' (SL tren san giu nguyen). Go YES de tiep tuc:"
+  read -r ANS || ANS=""
+  [ "$ANS" = YES ] || { say "Huy. Khong doi gi."; exit 0; }
+  JOBLOG=$LOGDIR/swap_v12_dry_jar_${TS}_job_$$.log
+  YESF=$LOCKD/yes
+  ( umask 077; echo "$TS" > "$YESF" ) || die "khong ghi duoc $YESF"
+  : > "$JOBLOG"
+  SW_JOB=1 SW_TS=$TS SW_JOBLOG=$JOBLOG SW_YES_FILE=$YESF setsid nohup bash "$SELF" >> "$JOBLOG" 2>&1 < /dev/null &
+  BG=$!
+  trap - EXIT   # khoa giao cho job
+  say "job NEN pid=$BG job_log=$JOBLOG"
+  say "Dong terminal / mat ket noi KHONG dung job. Xem tien do: tail -f $JOBLOG   (ket qua gui Telegram)"
+  tail --pid="$BG" -n +1 -f "$JOBLOG" &
+  TP=$!
+  wait "$BG"; RC=$?
+  wait "$TP" 2>/dev/null
+  [ "$(cat "$LOCKD/pid" 2>/dev/null)" = "$$" ] && rm -rf "$LOCKD"   # job chet truoc khi nhan khoa
+  say "job ket thuc rc=$RC (0 XONG | 1 DUNG/da rollback | 2 ROLLBACK LOI: PAUSE con). Log job: $JOBLOG"
+  exit "$RC"
 fi
-say ">>> THAY JAR v_t_m dry r4n -> r4q (restart). LEGACY ngung quan ly ~30-60 s (SL tren san giu nguyen). Go YES de tiep tuc:"
-read -r ANS || ANS=""
-[ "$ANS" = YES ] || { say "Huy. Khong doi gi."; exit 0; }
+# ================================================================ JOB NEN (SW_JOB=1)
+[ "${SW_YES_FILE:-}" = "$LOCKD/yes" ] && [ -f "$SW_YES_FILE" ] && [ "$(cat "$SW_YES_FILE" 2>/dev/null)" = "$TS" ] \
+  || die "job nen KHONG co xac nhan YES tu foreground (SW_YES_FILE) => TU CHOI, khong doi gi"
+echo $$ > "$LOCKD/pid"
+rm -f "$SW_YES_FILE"
+trap 'rm -rf "$LOCKD"' EXIT
+tg "[swap jar dry] job NEN bat dau TS=$TS: cho khung gio -> kiem 242 lai -> swap. Log $LOG"
+wait_window "truoc kiem lai"
+# kiem 242 LAI (trang thai co the doi trong luc cho)
+PRE=$(pre242) || die "ssh toi 242 loi (kiem lai)"
+echo "$PRE" | sed 's/^/   lan 2: /'
+echo "$PRE" | grep -qx END_PRE || die "kiem 242 lan 2 khong tron ven (ssh dut?)"
+echo "$PRE" | grep -q '^FAIL' && die "kiem 242 lan 2 co muc FAIL (xem tren)"
+[ "$(echo "$PRE" | sed -n 's/^INFO HAS_C11=\([0-9]*\).*/\1/p')" = "${HC:-0}" ] || die "trang thai C11 tren 242 doi trong luc cho => chay lai"
+L0=$(echo "$PRE" | sed -n 's/^OK LEGACY_N=//p'); GR0=$(echo "$PRE" | sed -n 's/^OK co_gate_ratio_live.bin md5=//p')
 
 # ---------------------------------------------------------------- 2. chep jar
 RJ=$A/target/binance-java-sdk-1.2.4.jar.v12swap_$TS
@@ -152,6 +223,8 @@ RM=$(s242 "md5sum < $RJ | cut -c1-32") || die "ssh kiem md5 jar loi"
 say "OK jar moi tren 242 md5=$RM ($RJ)"
 
 # ---------------------------------------------------------------- 3. env + PAUSE + stop + backup + cai jar + start
+# [MIN-2] kiem khung gio NGAY TRUOC stop (scp co the lau); ngoai khung => cho khung ke (cung tran)
+wait_window "ngay truoc stop"
 PAUSE_TOK="C3SWAP_V12 TS=$TS pid=$$"
 on_sig() {
   trap - INT TERM HUP
