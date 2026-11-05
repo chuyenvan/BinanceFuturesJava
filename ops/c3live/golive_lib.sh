@@ -113,6 +113,8 @@ echo "MEM=$(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo)"
 echo "DISK_K=$(df -Pk . | awk 'NR==2{print $4}')"
 LL=$(tail -c 20000000 logs/full.log 2>/dev/null | grep -a '\[LEGACY\] managed' | tail -1)
 echo "LEGACY_N=$(echo "$LL" | grep -aoE 'managed [0-9]+' | awk '{print $2}')"
+echo "LEGACY_SYMS=$(echo "$LL" | sed -n 's/.*\[LEGACY\] managed [0-9]*: *//p' | tr -d ' \r')"
+echo "LEDGER_SYMS=$(tail -n +2 run/c3live_ledger.csv 2>/dev/null | cut -d, -f1 | sort -u | tr '\n' ',' | sed 's/,$//')"
 LT=$(echo "$LL" | awk '{split($1,d,"/"); print d[3]"-"d[2]"-"d[1]" "substr($2,1,8)}')
 T=$(TZ=Asia/Ho_Chi_Minh date -d "$LT" +%s 2>/dev/null) && echo "LEGACY_AGE=$(( $(date +%s) - T ))" || echo "LEGACY_AGE=-1"
 B=run/c3live_book.json; [ -f $B ] && echo "BOOK_CUM=$(grep -o '"symbol":"' $B | wc -l)" || echo "BOOK_CUM=0"
@@ -129,23 +131,30 @@ gl_read_state() {
 sv() { echo "$ST" | sed -n "s/^$1=//p" | head -1; }
 
 # ---------------------------------------------------------------- restart co env moi + doi ten trang thai (tuy chon)
-# gl_restart "<ENV_ADD>" "<files can doi ten>" <hau to> ; in RS (dong OK/FAIL, START_LINE=)
+# gl_restart "<ENV_ADD>" "<files can doi ten>" <hau to> [ks] ; in RS (dong OK/FAIL, START_LINE=)
+#   ks=1 [R4q MAJ-1]: dat run/KILL_SWITCH (token "<ten script> <TS> ", vd "golive_micro_on 20261105_101500 ") TRUOC khi dung bot => JVM moi len KHONG mo lenh moi toi khi
+#   script go (sau hau kiem DAT). FAIL truoc khi dung bot => env + KILL_SWITCH cua minh duoc go lai.
 gl_restart() {
-  local envadd=$1 files=$2 suf=$3 nadd eb
+  local envadd=$1 files=$2 suf=$3 ks=${4:-0} nadd eb
   nadd=$(echo "$envadd" | wc -l); eb=$(echo "$envadd" | base64 -w0)
   PAUSE_TOK="C3GOLIVE_${GL_NAME} TS=$TS pid=$$"
-  RS=$(s242in "PP='$PROC_PAT' bash -s -- $A $TS $eb $nadd $WD_PAUSE $WD_PAUSE_MAX_S $$ $GL_NAME ${suf:-none}" <<EOF2
-A=\$1; TS=\$2; EB=\$3; NADD=\$4; PAUSE=\$5; MAXS=\$6; JP=\$7; NM=\$8; SUF=\$9; cd "\$A" || { echo "FAIL cd"; exit 0; }
+  RS=$(s242in "PP='$PROC_PAT' bash -s -- $A $TS $eb $nadd $WD_PAUSE $WD_PAUSE_MAX_S $$ $GL_NAME ${suf:-none} $ks" <<EOF2
+A=\$1; TS=\$2; EB=\$3; NADD=\$4; PAUSE=\$5; MAXS=\$6; JP=\$7; NM=\$8; SUF=\$9; KS=\${10:-0}; cd "\$A" || { echo "FAIL cd"; exit 0; }
+ksoff() { grep -q "^\${NM} \$TS " run/KILL_SWITCH 2>/dev/null && mv -f run/KILL_SWITCH run/KILL_SWITCH.rb_\$TS; }
 \cp -fp conf/env.sh conf/env.sh.bak_\${NM}_\$TS || { echo "FAIL backup_env"; exit 0; }
 echo "\$EB" | base64 -d >> conf/env.sh
 D=\$(diff conf/env.sh.bak_\${NM}_\$TS conf/env.sh | grep -c '^>')
 [ "\$D" = "\$NADD" ] && echo "OK env_them_\${D}_dong" || { \cp -f conf/env.sh.bak_\${NM}_\$TS conf/env.sh; echo "FAIL env_diff=\$D (da khoi phuc)"; exit 0; }
+if [ "\$KS" = 1 ]; then
+  echo "\${NM} \$TS hau_kiem: dung mo moi toi khi hau kiem DAT" > run/KILL_SWITCH && grep -q "^\${NM} \$TS " run/KILL_SWITCH \
+    && echo "OK KILL_SWITCH_dat_truoc_start" || { \cp -f conf/env.sh.bak_\${NM}_\$TS conf/env.sh; echo "FAIL khong_dat_duoc_KILL_SWITCH (env khoi phuc, bot KHONG dung)"; exit 0; }
+fi
 TOK="C3GOLIVE_\${NM} TS=\$TS pid=\$JP"
 mkdir -p "\$(dirname "\$PAUSE")" 2>/dev/null; echo "\$TOK t=\$(date +%s)" > "\$PAUSE" && echo "OK watchdog_PAUSE token='\$TOK'" || echo "WARN khong_tao_duoc_PAUSE"
 setsid nohup bash -c "sleep \$MAXS; grep -q '^\$TOK ' '\$PAUSE' 2>/dev/null && rm -f '\$PAUSE'" > /dev/null 2>&1 < /dev/null &
 bin/daemon.sh stop
 for i in \$(seq 1 30); do pgrep -f "\$PP" >/dev/null || break; sleep 2; done
-if pgrep -f "\$PP" >/dev/null; then \cp -f conf/env.sh.bak_\${NM}_\$TS conf/env.sh; echo "FAIL van_con_process_sau_stop (env khoi phuc)"; exit 0; fi
+if pgrep -f "\$PP" >/dev/null; then \cp -f conf/env.sh.bak_\${NM}_\$TS conf/env.sh; ksoff; echo "FAIL van_con_process_sau_stop (env khoi phuc)"; exit 0; fi
 echo "OK da_stop"
 : > run/.golive_\${NM}_\$TS.moved
 if [ "\$SUF" != none ]; then
@@ -172,6 +181,7 @@ bin/daemon.sh stop
 for i in $(seq 1 30); do pgrep -f "$PP" >/dev/null || break; sleep 2; done
 pgrep -f "$PP" >/dev/null && { echo "FAIL van_con_process"; echo END_RB; exit 0; }
 \cp -f conf/env.sh.bak_${NM}_$TS conf/env.sh && echo "OK env_khoi_phuc"
+grep -q "^${NM} $TS " run/KILL_SWITCH 2>/dev/null && mv -f run/KILL_SWITCH run/KILL_SWITCH.rb_$TS && echo "OK KILL_SWITCH_cua_minh_go"
 if [ "$SUF" != none ] && [ -f run/.golive_${NM}_$TS.moved ]; then
   for f in run/c3live_book.json run/c3live_dry_state.json run/c3live_ledger.csv run/c3live_merged.txt run/c3live_equity_c3.json run/c3live_lost.txt run/c3live_killsw_peak run/killsw_latch.json; do
     [ -e "$f" ] && mv -f "$f" "$f.rbnew_$TS"
@@ -228,7 +238,7 @@ K=\$(tail -n +\$SL \$L 2>/dev/null | grep -a 'KHAN' | grep -av 'DRY tren tai kho
 [ "\$(T 'RECON\] khoi dong: ok=false')" = 0 ] || echo "FAIL recon_khoi_dong_ok=false"
 LN=\$(tail -n +\$SL \$L 2>/dev/null | grep -a '\[LEGACY\] managed' | tail -1 | grep -aoE 'managed [0-9]+' | awk '{print \$2}')
 if [ -z "\$LN" ]; then echo "WAIT LEGACY_chua_co"; elif [ "\$L0" = -1 ] || [ "\$LN" = "\$L0" ]; then echo "OK LEGACY_managed=\$LN"; else echo "WARN LEGACY_managed=\$LN khac truoc \$L0 (SL khop luc dung? kiem tay)"; fi
-B=run/c3live_book.json; echo "INFO BOOK_CUM=\$([ -f \$B ] && grep -o '"symbol":"' \$B | wc -l || echo 0) C3EXEC=\$(T '\[C3-LIVE-EXEC\]')"
+B=run/c3live_book.json; echo "INFO BOOK_CUM=\$([ -f \$B ] && grep -o '"symbol":"' \$B | wc -l || echo 0) AUDIT_C3=\$(tail -n +\$SL \$L 2>/dev/null | grep -a '\[C3-LIVE-ORDER\]' | grep -avc 'status=SKIP')"
 $3
 echo END_CHK
 EOF3
@@ -276,28 +286,52 @@ if mode == 'restrictions':
     elif isinstance(j, dict):
         print('API_ERR=%s %s' % (j.get('code'), str(j.get('msg'))[:80]))
 elif mode == 'scope':
-    c3 = set()
+    # [R4q MAJ-2] c3 = qty MO tung symbol tu CUM MO cua so (adj_qty | sum exec_qty leg CONFIRMED) - exit_qty. Vi the san vuot qty c3
+    # => phan vuot = NGOAI c3 (LEGACY con sot, ke ca tren symbol c3 dang giu). c3 > san => lech so (khong kiem duoc).
+    from decimal import Decimal as Dd
+    c3 = {}; unres = set()
     try:
         b = json.load(open(bookf, encoding='utf-8'))
-        def walk(x):
-            if isinstance(x, dict):
-                if isinstance(x.get('symbol'), str): c3.add(x['symbol'])
-                for v in x.values(): walk(v)
-            elif isinstance(x, list):
-                for v in x: walk(v)
-        walk(b)
+        for c in (b.get('clusters') or []) if isinstance(b, dict) else []:
+            if not isinstance(c, dict) or not isinstance(c.get('symbol'), str): continue
+            sym = c['symbol']
+            if c.get('adj_qty') not in (None, ''):
+                q = Dd(str(c['adj_qty']))
+            else:
+                q = Dd(0)
+                for l in c.get('legs') or []:
+                    if not isinstance(l, dict): continue
+                    st = l.get('state')
+                    if st == 'CONFIRMED': q += Dd(str(l.get('exec_qty') or '0'))
+                    elif st in ('SENDING', 'UNKNOWN'): unres.add(sym)
+            q -= Dd(str(c.get('exit_qty') or '0'))
+            c3[sym] = c3.get(sym, Dd(0)) + q
     except FileNotFoundError:
         pass
     except Exception as e:
         print('ERR=book_hong_' + type(e).__name__); print('END_API'); sys.exit(0)
     print('C3_BOOK_SYMBOLS=%d' % len(c3))
+    print('C3_UNRESOLVED=%d %s' % (len(unres), ','.join(sorted(unres)[:8])))
     ok = True
     code, pr = call('https://fapi.binance.com', '/fapi/v3/positionRisk')
     if code != '200' or not isinstance(pr, list): ok = False; print('ERR_POS=HTTP%s' % code)
     else:
-        pos = [p['symbol'] for p in pr if float(p.get('positionAmt', 0) or 0) != 0]
-        non = sorted(x for x in pos if x not in c3)
+        pos = {}
+        for p in pr:
+            a = Dd(str(p.get('positionAmt') or '0'))
+            if a != 0: pos[p['symbol']] = pos.get(p['symbol'], Dd(0)) + a
+        non = []; mism = []
+        for sy, a in sorted(pos.items()):
+            if a < 0: non.append('%s:%s' % (sy, a)); continue   # c3 chi long
+            r = a - c3.get(sy, Dd(0))
+            if r > 0: non.append('%s:+%s' % (sy, r.normalize()))
+            elif r < 0: mism.append('%s:%s' % (sy, r.normalize()))
+        for sy, m in sorted(c3.items()):
+            if m > 0 and sy not in pos: mism.append('%s:-%s' % (sy, m.normalize()))
         print('POS_TOTAL=%d' % len(pos)); print('POS_NONC3=%d %s' % (len(non), ','.join(non[:8])))
+        print('POS_C3_MISMATCH=%d %s' % (len(mism), ','.join(mism[:8])))
+        print('POS_LIST=' + ','.join(sorted(pos)))
+        print('POS_SIG=' + hashlib.sha256(';'.join('%s=%s' % (sy, a.normalize()) for sy, a in sorted(pos.items())).encode()).hexdigest()[:16])
     code, oo = call('https://fapi.binance.com', '/fapi/v1/openOrders')
     if code != '200' or not isinstance(oo, list): ok = False; print('ERR_ORD=HTTP%s' % code)
     else:
@@ -318,3 +352,38 @@ PYEOF
 EOF
 }
 av() { echo "$API" | sed -n "s/^$1=//p" | head -1; }
+
+# gl_c3_seen <SL> <POS_SIG truoc restart> : [R4q MAJ-1] doc LAI 242 NGAY luc quyet (so + audit lenh c3 + san qua duong chi doc).
+#   In dong + "VERDICT=NONE" CHI khi MOI nguon doc duoc tron ven va: so 0 cum, 0 dong [C3-LIVE-ORDER] (tru SKIP) tu START_LINE
+#   (log chua xoay), san 0 lenh/algo c3, chu ky vi the = truoc restart. Thieu/khong chac => UNKNOWN (coi nhu DA co lenh); co => SEEN.
+gl_c3_seen() {
+  local R why="" unk=""
+  R=$(s242in "bash -s -- $A $1" <<'EOF'
+A=$1; SL=$2; cd "$A" || { echo "ERR=cd"; echo END_SEEN; exit 0; }
+L=logs/full.log; N=$(wc -l < $L 2>/dev/null || echo 0)
+[ "$N" -ge "$SL" ] && echo "LOG_OK=1" || echo "LOG_OK=0"
+echo "AUDIT_C3=$(tail -n +$SL $L 2>/dev/null | grep -a '\[C3-LIVE-ORDER\]' | grep -avc 'status=SKIP')"
+B=run/c3live_book.json
+if [ ! -e $B ]; then echo "BOOK_CUM=0"; elif [ -r $B ]; then echo "BOOK_CUM=$(grep -o '"symbol":"' $B | wc -l)"; else echo "ERR=book_khong_doc_duoc"; fi
+echo END_SEEN
+EOF
+) || R="ERR=ssh_doc_242"
+  echo "$R" | grep -v '^END_SEEN$'
+  API=$(gl_api242 scope) || API="ERR=ssh_api"
+  echo "$API" | grep -E '^(API_OK|ORD_C3|ALGO_C3|POS_SIG|POS_TOTAL|ERR)'
+  echo "$R" | grep -qx END_SEEN || unk="$unk doc_242_khong_tron_ven"
+  echo "$R" | grep -q '^ERR=' && unk="$unk $(echo "$R" | grep '^ERR=' | head -1)"
+  echo "$R" | grep -qx 'LOG_OK=1' || unk="$unk log_xoay_hoac_mat"
+  echo "$API" | grep -qx END_API && ! echo "$API" | grep -q '^ERR' && [ "$(av API_OK)" = 1 ] || unk="$unk doc_san_loi"
+  [ -n "$2" ] || unk="$unk thieu_chu_ky_vi_the_truoc"
+  local au bc
+  au=$(echo "$R" | sed -n 's/^AUDIT_C3=//p'); bc=$(echo "$R" | sed -n 's/^BOOK_CUM=//p')
+  [ "${au:-x}" = 0 ] || why="$why audit_lenh_c3=${au:-?}"
+  [ "${bc:-x}" = 0 ] || why="$why so_c3_cum=${bc:-?}"
+  [ "$(av ORD_C3)" = 0 ] || why="$why san_lenh_c3=$(av ORD_C3)"
+  [ "$(av ALGO_C3)" = 0 ] || why="$why san_algo_c3=$(av ALGO_C3)"
+  [ "$(av POS_SIG)" = "$2" ] || why="$why vi_the_san_doi(truoc=$2 nay=$(av POS_SIG))"
+  if [ -n "$unk" ]; then echo "VERDICT=UNKNOWN${unk}${why}"
+  elif [ -n "$why" ]; then echo "VERDICT=SEEN${why}"
+  else echo "VERDICT=NONE"; fi
+}

@@ -6,7 +6,9 @@
 #   MODE=undrain bash .../golive_live_off.sh  # go run/KILL_SWITCH (mo lai push) — chi khi co chu dich
 #   MODE=dry     bash .../golive_live_off.sh  # khi c3 PHANG: env ve dry, so/trang thai live doi ten .live_<TS>, restart (khung :10-:44)
 #   (moi MODE: DRY=1 chi kiem)
-# MODE=dry TU CHOI khi: chua drain (khong co run/KILL_SWITCH), so c3 con cum, san con lenh/algo cid 'c3', key/API loi.
+# MODE=dry TU CHOI khi: chua drain (khong co run/KILL_SWITCH), so c3 con cum, san con lenh/algo cid 'c3', key/API loi,
+#   [R4q] san con vi the tren symbol c3 tung giao dich (ledger live) hoac vi the NGOAI danh sach LEGACY (log [LEGACY] managed moi);
+#   sau cat LEGACY (managed 0) => moi vi the. Symbol MERGED cu chi con LEGACY: owner xac nhan LIVE_OFF_ACK_SYMS=SYM1,SYM2.
 #   KHONG BAO GIO doi adapter khi c3 con vi the (vi the that se mo coi). Can dong gap: owner dong tay vi the c3 tren UI roi MODE=dry.
 # MODE=dry hau kiem TRUOT => rollback ve live (env + so live tra lai; run/KILL_SWITCH van con => khong mo moi).
 # =============================================================================
@@ -46,6 +48,17 @@ API=$(gl_api242 scope) || die "ssh toi 242 loi"
 echo "$API" | grep -v '^END_API$' | sed 's/^/   san: /'
 chk "doc san duoc (key c3)" "echo \"\$API\" | grep -qx END_API && ! echo \"\$API\" | grep -q '^ERR=' && [ '$(av API_OK)' = 1 ]"
 chk "san: 0 lenh c3 + 0 algo c3 dang mo" "[ '$(av ORD_C3)' = 0 ] && [ '$(av ALGO_C3)' = 0 ]"
+# [R4q MIN-2] vi the c3 tren san = 0
+LSY=",$(sv LEGACY_SYMS),"; LGY=",$(sv LEDGER_SYMS),"; ACK=",${LIVE_OFF_ACK_SYMS:-},"; LA=$(sv LEGACY_AGE)
+chk "log [LEGACY] managed moi (${LA}s <= 600) de tach vi the LEGACY" "[ '$LA' -ge 0 ] && [ '$LA' -le 600 ] 2>/dev/null"
+UNK=""; C3P=""
+for x in $(av POS_LIST | tr ',' ' '); do
+  case "$ACK" in *",$x,"*) continue;; esac
+  case "$LGY" in *",$x,"*) C3P="$C3P $x"; continue;; esac
+  case "$LSY" in *",$x,"*) ;; *) UNK="$UNK $x";; esac
+done
+chk "san: 0 vi the tren symbol c3 tung giao dich${C3P:+ — CO:$C3P (neu chi con LEGACY: LIVE_OFF_ACK_SYMS=...)}" "[ -z '$C3P' ]"
+chk "san: 0 vi the ngoai danh sach LEGACY${UNK:+ — CO:$UNK}" "[ -z '$UNK' ]"
 L0=$(sv LEGACY_N)
 [ "$F" = 0 ] || die "chua phang / kiem co FAIL (xem tren) — KHONG doi adapter"
 ENV_ADD="# [v1.2 R4o golive_live_off $TS] LIVE -> DRY (c3 phang)
