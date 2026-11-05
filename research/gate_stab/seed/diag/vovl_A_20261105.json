@@ -1,0 +1,37 @@
+{
+ "prereg": "ADD4 feb32107",
+ "ovl_days": [
+  "2026-10-17",
+  "2026-10-18",
+  "2026-10-19",
+  "2026-10-20",
+  "2026-10-21",
+  "2026-10-22",
+  "2026-10-23",
+  "2026-10-24",
+  "2026-10-28",
+  "2026-10-29",
+  "2026-10-30",
+  "2026-10-31"
+ ],
+ "n_A_ovl": 384778,
+ "n_Cp_ovl": 283323,
+ "n_pairs": 6,
+ "i_frac_rel_le_1e9": 0.0,
+ "i_pass": false,
+ "ii_hours": 288,
+ "ii_median": 0.003424385603925233,
+ "ii_max": 0.020872591649548494,
+ "ii_nan_hours": 0,
+ "ii_pass": true,
+ "iii_A_only": {
+  "ngoai_top24_live(LEGACY r4f/so sim/khac)": 384770,
+  "universe": 1,
+  "giu_o_live": 1
+ },
+ "iii_C_only": {
+  "khac(so sim/top-24 sim)": 281592,
+  "giu_o_sim": 1725
+ },
+ "seed_usable": false
+}
