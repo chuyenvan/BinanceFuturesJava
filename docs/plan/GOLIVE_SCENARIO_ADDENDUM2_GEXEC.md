@@ -29,8 +29,10 @@ Nó chỉ đổi (a) G-EXEC chặn ở cổng nào và (b) leg nào được đ�
 - File `GOLIVE_GATE_PILOT.ok` phải có dòng `g_exec=<GREEN|AMBER|RED_SIZE|Q4_OWNER> <commit/đường dẫn dẫn chứng>`.
 
 ### 2.3 Fill micro-live thật được đếm vào G-EXEC
-- **Được đếm:** leg ENTRY/DCA của c3 (cid `c3-`) trên tài khoản chính trong kỳ micro, đã CONFIRMED, có dòng `[C3-LIVE-EXEC] FILL`
-  hoặc `[C3-LIVE-FILL] xac nhan qua stream`. Trượt = fill/ref − 1, ref = close nến 1m quyết định (cùng định nghĩa C2 và exec-probe).
+- **Được đếm:** leg ENTRY/DCA của c3 (cid `c3-`) trên tài khoản chính trong kỳ micro, trạng thái CONFIRMED trong sổ c3 (mỗi cid
+  đúng 1 lần). Dòng log tham chiếu [sửa R4q]: xác nhận REST `[C3-LIVE-EXEC] FILL <sym> <cid> …`
+  (`C3LiveOrderExecutor.java:426`) HOẶC xác nhận stream `[C3-LIVE-FILL] xac nhan qua stream <sym> <cid> …` (`FillAccounting`);
+  cùng cid chỉ một trong hai xuất hiện (sổ xác nhận 1 lần). Trượt = fill/ref − 1, ref = close nến 1m quyết định (cùng định nghĩa C2 và exec-probe).
 - **Gộp:** E = leg exec-probe (đến khi probe dừng) ∪ leg micro thật. Mỗi leg gắn nguồn (`probe` | `micro`). Verdict chấm 1 lần khi
   |E| ≥ 100, quy tắc PREREG_EXEC_PROBE giữ nguyên. Báo thêm verdict riêng từng nguồn (chỉ mô tả).
 - **V1–V5:** áp cho leg micro khi đo được. Mục chỉ có nghĩa với probe (vd lat_snap) ghi `N/A (micro)` kèm lý do, không tính là trượt.
@@ -43,3 +45,8 @@ Nó chỉ đổi (a) G-EXEC chặn ở cổng nào và (b) leg nào được đ�
 - Thứ tự: addendum này được commit TRƯỚC mọi thay đổi cổng trong script `ops/c3live/golive_*`.
 - Hiện không script nào kiểm G-EXEC (file gate do MASTER ký). Thay đổi duy nhất trong script: `golive_pilot_on.sh` từ chối khi
   `GOLIVE_GATE_PILOT.ok` thiếu dòng `g_exec=` (cùng cách kiểm `jar_md5=` / `size=`).
+
+## 4. Sửa R4q (2026-11-05)
+- §2.3: đơn vị đếm là cid CONFIRMED trong sổ. A1 4o MIN-5 nói tag `[C3-LIVE-EXEC] FILL` không tồn tại; thực tế có (dòng 426), nhưng
+  chỉ xuất hiện khi REST xác nhận trước stream. Đường stream dùng `[C3-LIVE-FILL] xac nhan qua stream`. Không đổi ngưỡng hay quy tắc.
+- Tiêu chí trượt THOÁT: xem ADDENDUM 3 (`GOLIVE_SCENARIO_ADDENDUM3_GEXIT.md`).
