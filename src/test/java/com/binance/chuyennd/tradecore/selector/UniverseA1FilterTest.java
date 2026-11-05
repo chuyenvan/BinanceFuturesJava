@@ -45,7 +45,7 @@ public class UniverseA1FilterTest {
     static final long S0 = 1793072475507L;          // serverTime snapshot that 2026-10-27
     static final long MDT_OB = 1792574400000L;      // onboardDate MDTUSDT (TF Medtronic) 2026-10-21
     static final long MIN = 60_000L;
-    static final String[] CRYPTO = {"BTCUSDT", "ETHUSDT", "AAAUSDT", "BBBUSDT", "PREUSDT", "UNKUSDT"};
+    static final String[] CRYPTO = {"BTCUSDT", "ETHUSDT", "AAAUSDT", "BBBUSDT", "UNKUSDT"};   // [PREMARKET-b] PREUSDT bi loai
     static final String[] BANNED = {"AAPLUSDT", "GOLDUSDT", "EURUSDT", "ALLUSDT", "DEFIUSDT", "TF000USDT"};
 
     @After
@@ -133,7 +133,8 @@ public class UniverseA1FilterTest {
         }
         assertEquals(UniverseA1Classifier.Kind.INDEX, UniverseA1Classifier.classify("PERPETUAL", "INDEX"));
         assertEquals(UniverseA1Classifier.Kind.CRYPTO, UniverseA1Classifier.classify("PERPETUAL", "COIN"));
-        assertEquals(UniverseA1Classifier.Kind.CRYPTO, UniverseA1Classifier.classify("PERPETUAL", "PREMARKET"));
+        assertEquals(UniverseA1Classifier.Kind.PREMARKET, UniverseA1Classifier.classify("PERPETUAL", "PREMARKET"));
+        assertTrue("[PREMARKET-b]", UniverseA1Classifier.excluded(UniverseA1Classifier.Kind.PREMARKET));
         assertEquals(UniverseA1Classifier.Kind.UNCLASSIFIED, UniverseA1Classifier.classify("PERPETUAL", null));
         assertTrue(UniverseA1Classifier.excluded(UniverseA1Classifier.Kind.TRADFI));
         assertTrue(UniverseA1Classifier.excluded(UniverseA1Classifier.Kind.INDEX));
@@ -157,6 +158,7 @@ public class UniverseA1FilterTest {
         Files.write(raw, root.toString().getBytes(StandardCharsets.UTF_8));
         Set<String> tf = new HashSet<>();
         Set<String> idx = new HashSet<>();
+        Set<String> pre = new HashSet<>();
         for (com.google.gson.JsonElement e : root.getAsJsonArray("symbols")) {
             JsonObject o = e.getAsJsonObject();
             String ct = o.has("contractType") ? o.get("contractType").getAsString() : null;
@@ -167,18 +169,21 @@ public class UniverseA1FilterTest {
             assertEquals(o.get("symbol").getAsString(), complement, k == UniverseA1Classifier.Kind.TRADFI);
             if (k == UniverseA1Classifier.Kind.TRADFI) tf.add(o.get("symbol").getAsString());
             if (k == UniverseA1Classifier.Kind.INDEX) idx.add(o.get("symbol").getAsString());
+            if (k == UniverseA1Classifier.Kind.PREMARKET) pre.add(o.get("symbol").getAsString());
         }
+        assertEquals("[PREMARKET-b] snapshot 10-27: 1 PREMARKET", java.util.Collections.singleton("PREDICTUSDT"), pre);
         assertEquals(229, tf.size());
         assertEquals(new HashSet<>(java.util.Arrays.asList("ALLUSDT", "BTCDOMUSDT", "DEFIUSDT")), idx);
         UniverseA1Filter.setConfigForTest(true, raw, true);
         UniverseA1Filter.initEager();
         Set<String> exp = new HashSet<>(tf);
         exp.addAll(idx);
+        exp.addAll(pre);
         assertEquals(exp, UniverseA1Filter.excludedSymbols());
         long t = S0 + 86_400_000L;
         assertFalse("crypto co trong snapshot KHONG bi loai sau serverTime", UniverseA1Filter.isExcluded("BTCUSDT", t));
         assertFalse(UniverseA1Filter.isExcluded("SPXUSDT", t));
-        assertFalse(UniverseA1Filter.isExcluded("PREDICTUSDT", t));
+        assertTrue("[PREMARKET-b] PREMARKET bi loai", UniverseA1Filter.isExcluded("PREDICTUSDT", t));
         assertTrue(UniverseA1Filter.isExcluded("MDTUSDT", t));
         assertFalse("MDT truoc onboard TF = crypto", UniverseA1Filter.isExcluded("MDTUSDT", MDT_OB - 1));
         assertTrue(UniverseA1Filter.isExcluded("BTCDOMUSDT", t));
@@ -217,6 +222,7 @@ public class UniverseA1FilterTest {
         long late = S0 + 3 * 86_400_000L;
         for (String s : CRYPTO) assertFalse(s, UniverseA1Filter.isExcluded(s, late));   // UNK (thieu underlyingType) + PREMARKET giu
         for (String s : BANNED) assertTrue(s, UniverseA1Filter.isExcluded(s, late));
+        assertTrue("[PREMARKET-b] PREMARKET loai khoi A1", UniverseA1Filter.isExcluded("PREUSDT", late));
         // MDT point-in-time
         assertFalse(UniverseA1Filter.isExcluded("MDTUSDT", MDT_OB - MIN));
         assertTrue(UniverseA1Filter.isExcluded("MDTUSDT", MDT_OB));

@@ -377,7 +377,7 @@ public final class UniverseA1Filter {
             long ob = longOf(o.get("onboardDate"));
             ex.put(sym, ob < 0L ? 0L : ob);
             if (k == UniverseA1Classifier.Kind.TRADFI) nTf++;
-            else nIdx++;
+            else if (k == UniverseA1Classifier.Kind.INDEX) nIdx++;
         }
         String problem = UniverseA1Classifier.sourceProblem(n, nCt, nUt, nTfC);
         return new Snap(ex, known, serverTime, n, nTf, nIdx, nTfC, nUnc, sha256(raw), p.toString(), mtime, enforce, problem);
