@@ -100,3 +100,30 @@ roller, exchangeInfo, repair). Pass kiểm lại xếp **ô cũ nhất trước*
   ADD-1b nói "live nhận bản sửa" chỉ đúng với ô lành trong 3′; ô lành muộn hơn ⇒ live giữ bản nặn cho phút đó (ghi nhận).
 - **Kiểm sau deploy (đổi):** repair khởi động có dòng tiến độ; còn tiến ⇒ chờ tiếp (tối đa 60′); không tiến 5′ ⇒ coi là kẹt ⇒ rollback.
 - **Script:** PAUSE watchdog mang token của chính lần chạy; chỉ gỡ đúng token đó; PAUSE người khác có sẵn ⇒ dừng, không gỡ; DRY=1 không ghi gì.
+
+## ADDENDUM 3 (2026-11-06, vòng QF4 — viết và commit TRƯỚC code QF4; lý do: lệch thật ở live 11-04 23:46, chẩn đoán của agent parity)
+- **Sự cố:** 11-04 23:47:00Z kết nối WS #4 (125 symbol) EOF, 5 s sau mới mở lại. Nến 23:46 lúc chốt (23:47:04) có 627/752 WS final
+  (`thieu_ws=125`). REST sớm +4 s bị BỎ vì thiếu 125 > `EARLY_REST_MAX`=60 (luật ADD-1b). REST bù chạy 23:47:20, SAU khi v_t_m quyết định
+  (23:47:06). `[KLINE-COVER]` (+30 s) không thấy vì ô đã lành ⇒ thiếu đo "thiếu tại thời điểm chốt".
+- **REST bù mất WS (mới, giây +2, `KLINE_GAP_REST_SEC`=2), mỗi phút M tối đa 1 lần:** tập "mất WS" = symbol CHƯA có WS final của M thuộc:
+  (a) kết nối đang đóng, hoặc đã đóng/mở lại từ (đầu phút M+1 − 1 s); (b) kết nối ≥ 20 symbol có ≥ 60 % symbol thiếu (im lặng mà watchdog
+  chưa phát hiện; bình thường chỉ ~22 % symbol ít giao dịch tới trễ ~3 s, đo 10-10); (c) MỌI symbol thiếu nếu tổng thiếu > 300
+  (`KLINE_GAP_GLOBAL_N`). REST limit=2 NGAY cho tập này, CHỈ lane KLINE (không mượn LOW, không đụng 60 của PRICE, tổng ≤ 300 như cũ), lấy vừa
+  room KLINE (không chờ), ưu tiên quote volume của nến M (bản x=false cuối) giảm dần. Không chạy khi đang ban / phút đóng trước khi JVM
+  start / vòng trễ > 50 s. Ô REST này vẫn là suspect (pass kiểm lại +30 s / pass bù ghi bản settle). REST sớm +4 s giữ luật ≤ 60 nhưng áp
+  trên phần CÒN thiếu sau pass +2 s (không gọi lại symbol đã REST ở +2 s).
+- **Giới hạn đã biết (ghi nhận, không nâng trần 300):** 1 kết nối (125–126) nằm gọn trong room KLINE bình thường (200 − mẫu 25 − bù)
+  ⇒ chốt đủ trước +4 s. 2 kết nối cùng rớt (250) > room ⇒ phần vượt room (~75–100 symbol ít giao dịch nhất) live đọc bản nặn ở +6 s,
+  lành bằng pass bù khi cửa sổ 60 s nhả room (~+60 s, trong cửa sổ đọc lại 3′ của live).
+- **Đo mới:** `thieu_luc_chot` của phút M = sau REST sớm +4 s, số symbol KHÔNG có WS final và KHÔNG có REST (pass +2 s hoặc +4 s) = ô live
+  đọc bản nặn ở +6 s. Ghi ở dòng chốt nến, ở `[KLINE-COVER]` của M (+ `thieu_luc_chot_tong` luỹ kế, `ws_mat`, `rest_ws_mat`); > 0 ⇒ WARN
+  `[KLINE-CHOT-THIEU]` kèm ví dụ. Mỗi lần pass +2 s chạy ⇒ WARN `[KLINE-WS-GAP]` (lý do a/b/c, số REST, thời điểm xong).
+- **Tiêu chí mới Q12 (72h, `ing_qf_check.py`):** (a) số phút có `thieu_luc_chot > 0` ≤ 1/giờ; (b) không phút nào `thieu_luc_chot > 130`
+  (> 1 kết nối). Phút khởi động (`khoi_dong=1`) và lúc ban không tính.
+- **Test pre-reg (mã production, mô phỏng ×10 như IngestScenarioTest; ngưỡng KHÔNG chỉnh sau khi xem kết quả):**
+  T-Q4-1 một kết nối 125 rớt đúng :00 ⇒ 125/125 ô có bản REST và pass +2 s xong trước +4 s, `thieu_luc_chot`=0, PRICE 0 từ chối, khoảng giá
+  ≤ 5 s, đỉnh ≤ 300, lành theo ADD-1b. T-Q4-2 hai kết nối (250) cùng rớt ⇒ ≥ 150 ô có REST trước +4 s, không vượt room KLINE (≤ 200),
+  `thieu_luc_chot` = 250 − số ô có REST, PRICE 0 từ chối, đỉnh ≤ 300, lành ≤ 3′. T-Q4-3 phút bình thường (22 % symbol final tới ở 3 s)
+  ⇒ 0 REST mất WS (không báo nhầm), `thieu_luc_chot`=0. T-Q4-4 kết nối im lặng không EOF (luật b) ⇒ như T-Q4-1. Ba kịch bản QF2 cũ
+  (WS chết 1′, 6 kết nối rớt 2′, phút biến động 376) chạy lại với pass +2 s, giữ nguyên ngưỡng ADD-1b.
+- **Deploy:** chỉ thay jar collectData (env giữ nguyên từ QF3), restart riêng collectData, KHÔNG đụng v_t_m; DRY=1; owner chạy.
