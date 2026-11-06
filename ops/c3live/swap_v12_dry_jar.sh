@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # =============================================================================
-# swap_v12_dry_jar.sh — [V12 R4q] THAY JAR v_t_m dry v1.2 (c3_live, LIVE_ADAPTER=dry) r4n -> r4q, 1 lan restart, KHONG seed.
+# swap_v12_dry_jar.sh — [V12 R4q/R4r] THAY JAR v_t_m dry v1.2 (c3_live, LIVE_ADAPTER=dry) OLD_TAG -> NEW_TAG (mac dinh r4q -> r4r),
+#   1 lan restart, KHONG seed.
+#   [R4r] tong quat: OLD_TAG/NEW_TAG/OLD_MD5/NJ/NJ_MD5 (pin = cap hien hanh); NEED_MGUARD=1 => hau kiem [MINUTE-GUARD] BAT
+#   (TAT => FAIL => rollback), env.sh co LIVE_MINUTE_GUARD=0 => TU CHOI truoc khi dung bot.
 #   Them C11 (LIVE_SEED_EXCLUDE_DECISION_MIN=1) neu env.sh chua co. Khong doi gi khac (adapter/profile/push giu nguyen = dry).
 # Chay tren ORACLE (owner), 1 lenh:
 #   DRY=1 bash ~/claude_master/v12/c3live/ops/c3live/swap_v12_dry_jar.sh   # chi kiem (Oracle + 242 CHI DOC), KHONG ghi gi
@@ -22,7 +25,7 @@
 # Ma thoat: 0 XONG | 1 DUNG/da rollback | 2 ROLLBACK LOI (PAUSE con — xem dong "PAUSE còn").
 # Bien (test): SSH_242 SCP_242 RHOST APP_DIR PROC_PAT OLD_MD5 NJ NJ_MD5 WD_PAUSE WD_PAUSE_MAX_S POST_WAIT_S POST_ROUNDS LOGDIR
 #   FORCE_TIME DEPLOY_TG_ENV DEPLOY_TG_SINK MIN_MEM_MB SSH_RETRY_S REG_JAR_SH REG_TIMEOUT_S WINDOW_WAIT_MAX_S WINDOW_POLL_S
-#   TIME_OK_FILE (test: co file = trong khung)
+#   TIME_OK_FILE (test: co file = trong khung) OLD_TAG NEW_TAG NEED_MGUARD
 # =============================================================================
 set -uo pipefail
 SSH_242=${SSH_242:-"ssh -p 2222 -o BatchMode=yes -o ConnectTimeout=20 -i /home/ubuntu/.ssh/id_rsa_chuyennd root@103.157.218.242"}
@@ -30,9 +33,12 @@ SCP_242=${SCP_242:-"scp -P 2222 -o BatchMode=yes -o ConnectTimeout=20 -i /home/u
 RHOST=${RHOST-"root@103.157.218.242:"}
 A=${APP_DIR:-/home/chuyennd/java/v_t_m}
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}
-OLD_MD5=${OLD_MD5:-fb6711efe473e0e0a5b0ca9813c62af3}   # jar dry DANG chay (r4n, ROUND4N) — khac => TU CHOI
-NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4q}
-NJ_MD5=${NJ_MD5:-8c81e6b560b61e7d43ca32c4a50ec926}   # jar r4q (docs/c3live/ROUND4Q.md)
+OLD_MD5=${OLD_MD5:-8c81e6b560b61e7d43ca32c4a50ec926}   # jar dry DANG chay (r4q, ROUND4Q) — khac => TU CHOI
+NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4r}
+NJ_MD5=${NJ_MD5:-bd85ca94504188c5a0dc8adac6f98a55}   # jar r4r (docs/c3live/ROUND4R.md)
+OLD_TAG=${OLD_TAG:-r4q}
+NEW_TAG=${NEW_TAG:-r4r}
+NEED_MGUARD=${NEED_MGUARD:-1}   # [R4r] jar moi co guard do du phut => hau kiem [MINUTE-GUARD] BAT
 WD_PAUSE=${WD_PAUSE:-/var/lib/h242_watchdog/PAUSE}
 WD_PAUSE_MAX_S=${WD_PAUSE_MAX_S:-1800}
 POST_WAIT_S=${POST_WAIT_S:-60}
@@ -133,16 +139,17 @@ say "OK jar moi $NJ md5=$NJ_MD5 ($(stat -c %s "$NJ") byte)"
 
 # ---------------------------------------------------------------- 1. kiem 242 CHI DOC
 pre242() {
-  s242in "PP='$PROC_PAT' bash -s -- $A $OLD_MD5 $NJ_MD5 $WD_PAUSE $MIN_MEM_MB" <<'EOF'
-A=$1; OJM=$2; NJM=$3; PAUSE=$4; MINMEM=$5; cd "$A" || { echo "FAIL cd"; echo END_PRE; exit 0; }
+  s242in "PP='$PROC_PAT' bash -s -- $A $OLD_MD5 $NJ_MD5 $WD_PAUSE $MIN_MEM_MB $NEED_MGUARD" <<'EOF'
+A=$1; OJM=$2; NJM=$3; PAUSE=$4; MINMEM=$5; MG=${6:-0}; cd "$A" || { echo "FAIL cd"; echo END_PRE; exit 0; }
 N=$(pgrep -fc "$PP"); [ "$N" = 1 ] && echo "OK so_process=1" || echo "FAIL so_process=$N"
 P=$(pgrep -f "$PP" | head -1)
 J=$(md5sum < target/binance-java-sdk-1.2.4.jar | cut -c1-32)
-if [ "$J" = "$OJM" ]; then echo "OK jar_dang_chay=$OJM (r4n)"; elif [ "$J" = "$NJM" ]; then echo "FAIL jar_dang_chay_DA_LA_moi_$NJM (da swap)"; else echo "FAIL jar_dang_chay_${J}_khac_${OJM}"; fi
+if [ "$J" = "$OJM" ]; then echo "OK jar_dang_chay=$OJM (OLD)"; elif [ "$J" = "$NJM" ]; then echo "FAIL jar_dang_chay_DA_LA_moi_$NJM (da swap)"; else echo "FAIL jar_dang_chay_${J}_khac_${OJM}"; fi
 E=$(tr '\0' '\n' < /proc/$P/environ 2>/dev/null)
 for k in LIVE_PROFILE=c3_live LIVE_ADAPTER=dry SHADOW_NO_PUSH=true; do echo "$E" | grep -qx "$k" && echo "OK env_dang_chay $k" || echo "FAIL env_dang_chay $k"; done
 grep -q '^export LIVE_ADAPTER=dry' conf/env.sh && echo "OK env.sh_dry" || echo "FAIL env.sh_khong_phai_dry"
 grep -q '^export LIVE_ADAPTER=live' conf/env.sh && echo "FAIL env.sh_LIVE_ADAPTER=live"
+[ "$MG" = 1 ] && grep -q '^export LIVE_MINUTE_GUARD=0' conf/env.sh && echo "FAIL env.sh_LIVE_MINUTE_GUARD=0 (jar moi can guard BAT)"
 HC=$(grep -c '^export LIVE_SEED_EXCLUDE_DECISION_MIN=1' conf/env.sh); HS=$(grep -c '^export GATE_BUFFER_SEED=' conf/env.sh)
 echo "INFO HAS_C11=$HC HAS_SEED_ENV=$HS"
 # khong seed: env co GATE_BUFFER_SEED ma CHUA co marker .seeded => restart se NAP seed => TU CHOI
@@ -166,19 +173,19 @@ echo "$PRE" | grep -q '^FAIL' && die "kiem 242 co muc FAIL (xem tren)"
 L0=$(echo "$PRE" | sed -n 's/^OK LEGACY_N=//p'); HC=$(echo "$PRE" | sed -n 's/^INFO HAS_C11=\([0-9]*\).*/\1/p')
 GR0=$(echo "$PRE" | sed -n 's/^OK co_gate_ratio_live.bin md5=//p')
 
-ENV_ADD="# [v1.2 R4q swap_v12_dry_jar $TS] jar r4n -> r4q ($NJ_MD5), khong seed"
+ENV_ADD="# [v1.2 swap_v12_dry_jar $TS] jar ${OLD_TAG} -> ${NEW_TAG} ($NJ_MD5), khong seed"
 [ "${HC:-0}" = 0 ] && ENV_ADD="$ENV_ADD
 export LIVE_SEED_EXCLUDE_DECISION_MIN=1"
 NADD=$(echo "$ENV_ADD" | wc -l)
 say "--- se THEM vao $A/conf/env.sh ($NADD dong):"; echo "$ENV_ADD" | sed 's/^/   + /'
-say "--- se thay $A/target/binance-java-sdk-1.2.4.jar: $OLD_MD5 (r4n, backup .bak_swap_$TS) -> $NJ_MD5 (r4q)"
-say "--- hau kiem: jar=$NJ_MD5, env dry + C11=1, [UNIVERSE-A1] PREMARKET=, [GATE-PRE] premarket_bo=, LEGACY_QUEUE_LIVE_BLOCK=true, LEGACY $L0, latch NONE, 0 KHAN"
+say "--- se thay $A/target/binance-java-sdk-1.2.4.jar: $OLD_MD5 (${OLD_TAG}, backup .bak_swap_$TS) -> $NJ_MD5 (${NEW_TAG})"
+say "--- hau kiem: jar=$NJ_MD5, env dry + C11=1, [UNIVERSE-A1] PREMARKET=, [GATE-PRE] premarket_bo=, LEGACY_QUEUE_LIVE_BLOCK=true, LEGACY $L0, latch NONE, 0 KHAN$([ "$NEED_MGUARD" = 1 ] && echo ', [MINUTE-GUARD] BAT')"
 if [ "$SW_JOB" != 1 ]; then
   if [ "$DRY" = 1 ]; then say "DRY=1: dung o day, KHONG ghi gi len 242. (DRY PASS)"; exit 0; fi
   # ------------------------------------------------------------ YES 1 lan -> JOB NEN (setsid nohup) + tail log
   lock_take || die "dang co 1 job swap_v12_dry_jar khac chay (pid $(cat "$LOCKD/pid" 2>/dev/null), $LOCKD). Khong doi gi."
   trap 'rm -rf "$LOCKD"' EXIT
-  say ">>> THAY JAR v_t_m dry r4n -> r4q (restart). JOB NEN tren Oracle: cho khung gio hop le ke tiep (toi da ${WINDOW_WAIT_MAX_S}s),"
+  say ">>> THAY JAR v_t_m dry ${OLD_TAG} -> ${NEW_TAG} (restart). JOB NEN tren Oracle: cho khung gio hop le ke tiep (toi da ${WINDOW_WAIT_MAX_S}s),"
   say "    dong terminal / rot ssh KHONG dung job. LEGACY ngung quan ly ~1-1,5' (SL tren san giu nguyen). Go YES de tiep tuc:"
   read -r ANS || ANS=""
   [ "$ANS" = YES ] || { say "Huy. Khong doi gi."; exit 0; }
@@ -267,7 +274,7 @@ EOF
 echo "$RS"
 
 autorb() {
-  say "$1 => ROLLBACK TU DONG (jar r4n + env.sh + gate_ratio_live.bin backup TS=$TS)"
+  say "$1 => ROLLBACK TU DONG (jar ${OLD_TAG} + env.sh + gate_ratio_live.bin backup TS=$TS)"
   local R
   R=$(s242in "PP='$PROC_PAT' bash -s -- $A $TS $WD_PAUSE $OLD_MD5" <<'EOF'
 A=$1; TS=$2; PAUSE=$3; OJM=$4; cd "$A" || { echo "FAIL cd"; echo END_RB; exit 0; }
@@ -302,8 +309,8 @@ EOF
 ) || R="FAIL ssh_rollback_loi"
   echo "$R"
   if echo "$R" | grep -qx END_RB && ! echo "$R" | grep -q '^FAIL'; then
-    say "SWAP FAIL ($1). Da ROLLBACK xong: dry r4n chay lai nhu truoc."
-    tg "[swap jar dry] FAIL TS=$TS: $1 => ROLLBACK TU DONG ve r4n XONG. Log $LOG"
+    say "SWAP FAIL ($1). Da ROLLBACK xong: dry ${OLD_TAG} chay lai nhu truoc."
+    tg "[swap jar dry] FAIL TS=$TS: $1 => ROLLBACK TU DONG ve ${OLD_TAG} XONG. Log $LOG"
     exit 1
   fi
   local M="PAUSE còn — kiem tay: bash $(cd "$(dirname "$0")" && pwd)/c3live_status.sh ; backup $A/conf/env.sh.bak_swap_$TS + $A/target/binance-java-sdk-1.2.4.jar.bak_swap_$TS"
@@ -320,8 +327,8 @@ SL=$(echo "$RS" | sed -n 's/^START_LINE=//p'); SL=${SL:-1}
 
 # ---------------------------------------------------------------- 4. hau kiem
 CHK() {
-  s242in "PP='$PROC_PAT' bash -s -- $A $SL $NJ_MD5 ${L0:-0}" <<'EOF'
-A=$1; SL=$2; NJM=$3; L0=$4; cd "$A"; L=logs/full.log
+  s242in "PP='$PROC_PAT' bash -s -- $A $SL $NJ_MD5 ${L0:-0} $NEED_MGUARD" <<'EOF'
+A=$1; SL=$2; NJM=$3; L0=$4; MG=${5:-0}; cd "$A"; L=logs/full.log
 T() { tail -n +$SL $L 2>/dev/null | grep -a -c "$1"; }
 P=$(pgrep -f "$PP" | head -1)
 [ "$(pgrep -fc "$PP")" = 1 ] && echo "OK 1_process" || echo "FAIL so_process"
@@ -341,6 +348,10 @@ K=$(tail -n +$SL $L 2>/dev/null | grep -a 'KHAN' | grep -av 'DRY tren tai khoan 
 [ "$(T 'KHONG tao duoc runtime')" = 0 ] && echo "OK runtime" || echo "FAIL KHONG_tao_duoc_runtime"
 LN=$(tail -n +$SL $L 2>/dev/null | grep -a '\[LEGACY\] managed' | tail -1 | grep -aoE 'managed [0-9]+' | awk '{print $2}')
 if [ -z "$LN" ]; then echo "WAIT LEGACY_chua_co"; elif [ "$LN" = "$L0" ]; then echo "OK LEGACY_managed=$LN"; else echo "WARN LEGACY_managed=$LN khac truoc restart $L0 (SL khop luc dung? kiem tay)"; fi
+if [ "$MG" = 1 ]; then   # [R4r] guard do du phut
+  if [ "$(T '\[MINUTE-GUARD\] TAT')" -ge 1 ]; then echo "FAIL MINUTE-GUARD_TAT"
+  elif [ "$(T '\[MINUTE-GUARD\] BAT')" -ge 1 ]; then echo "OK MINUTE-GUARD_BAT"; else echo "WAIT MINUTE-GUARD_BAT"; fi
+fi
 [ "$(T '\[GATE\] scale')" -ge 1 ] && echo "OK GATE_tick_chay" || echo "WAIT GATE_tick_chua_co"
 echo END_CHK
 EOF
@@ -366,16 +377,16 @@ fi
 # [R4q ADD11] dang ky jar cho harness parity (CHI khi hau kiem DAT); loi => WARN, KHONG rollback
 STMS=$(echo "$RS" | sed -n 's/^START_MS=//p' | tail -1)
 if [[ "$STMS" =~ ^[0-9]{13}$ ]]; then
-  say "--- dang ky jar parity: $REG_JAR_SH r4q $NJ $NJ_MD5 $STMS 1"
-  timeout "$REG_TIMEOUT_S" bash "$REG_JAR_SH" r4q "$NJ" "$NJ_MD5" "$STMS" 1; RRC=$?
-  if [ "$RRC" = 0 ]; then say "OK dang ky jar parity r4q start_ms=$STMS"
-  else say "WARN dang ky jar parity LOI rc=$RRC (dry r4q GIU nguyen) — chay tay: bash $REG_JAR_SH r4q $NJ $NJ_MD5 $STMS 1"
-       tg "[swap jar dry] WARN TS=$TS: register_jar.sh rc=$RRC — chay tay: bash $REG_JAR_SH r4q $NJ $NJ_MD5 $STMS 1"; fi
+  say "--- dang ky jar parity: $REG_JAR_SH ${NEW_TAG} $NJ $NJ_MD5 $STMS 1"
+  timeout "$REG_TIMEOUT_S" bash "$REG_JAR_SH" ${NEW_TAG} "$NJ" "$NJ_MD5" "$STMS" 1; RRC=$?
+  if [ "$RRC" = 0 ]; then say "OK dang ky jar parity ${NEW_TAG} start_ms=$STMS"
+  else say "WARN dang ky jar parity LOI rc=$RRC (dry ${NEW_TAG} GIU nguyen) — chay tay: bash $REG_JAR_SH ${NEW_TAG} $NJ $NJ_MD5 $STMS 1"
+       tg "[swap jar dry] WARN TS=$TS: register_jar.sh rc=$RRC — chay tay: bash $REG_JAR_SH ${NEW_TAG} $NJ $NJ_MD5 $STMS 1"; fi
 else
-  say "WARN khong lay duoc start_ms JVM r4q ('$STMS') => KHONG dang ky jar parity — MASTER chay tay register_jar.sh"
+  say "WARN khong lay duoc start_ms JVM ${NEW_TAG} ('$STMS') => KHONG dang ky jar parity — MASTER chay tay register_jar.sh"
   tg "[swap jar dry] WARN TS=$TS: thieu start_ms => chua dang ky jar parity"
 fi
-say "=== XONG: dry chay r4q $NJ_MD5. $(echo "$RS" | grep '^OK started') | jar cu backup target/*.bak_swap_$TS, gate_ratio truoc=$GR0"
-say "Ngay hom nay = XAM (ADD6/ADD10). Dry r4q smoke >= 24 h truoc micro (A1 R4PQ). Log: $LOG"
-tg "[swap jar dry] XONG TS=$TS r4n -> r4q $NJ_MD5 (C11=1, khong seed). Log $LOG"
+say "=== XONG: dry chay ${NEW_TAG} $NJ_MD5. $(echo "$RS" | grep '^OK started') | jar cu backup target/*.bak_swap_$TS, gate_ratio truoc=$GR0"
+say "Ngay hom nay = XAM (ADD6/ADD10). Dry ${NEW_TAG} smoke >= 24 h truoc micro (A1 R4PQ). Log: $LOG"
+tg "[swap jar dry] XONG TS=$TS ${OLD_TAG} -> ${NEW_TAG} $NJ_MD5 (C11=1, khong seed). Log $LOG"
 exit 0

@@ -52,6 +52,10 @@ case "$1" in
         R4Q=0; grep -q r4q target/binance-java-sdk-1.2.4.jar 2>/dev/null && R4Q=1   # [R4q] jar gia r4q => dong log moi
         echo "$D WARN [main] x: 🟠 [LIVE_PROFILE=c3_live] BAT — hanh vi C3 day du PUSH=$PUSHV (SHADOW_NO_PUSH=${SHADOW_NO_PUSH:-})$([ $R4Q = 1 ] && echo ' LEGACY_QUEUE_LIVE_BLOCK=true')"
         [ $R4Q = 1 ] && echo "$D INFO [pool-1-thread-1] x: [GATE-PRE] 2026-11-05 13:00 nguon=C3_LIVE_BOOK bo_dang_giu=0 legacy_qua_gate_khong_vao=0 a1_bo=0 premarket_bo=1"
+        if grep -q r4r target/binance-java-sdk-1.2.4.jar 2>/dev/null; then   # [R4r] jar gia r4r => dong [MINUTE-GUARD] nhu start()
+          MGS=BAT; { [ -f FAKE_MGTAT ] || [ "${LIVE_MINUTE_GUARD:-1}" = 0 ]; } && MGS="TAT (LIVE_MINUTE_GUARD=0)"
+          echo "$D INFO [main] x: [MINUTE-GUARD] $MGS — phut du <=> so symbol >= 99% trung vi 60' truoc [CHI live]"
+        fi
         # [R4q] nhu LiveProfileC3.forceNoPush moi 10 s: KILL_SWITCH bi go => log "PUSH doi trang thai -> ON"
         if [ "$PUSHV" = OFF ] && [ "${SHADOW_NO_PUSH:-}" = false ] && [ "${LIVE_ENTRY_ENABLED:-}" = true ] && [ ! -f FAKE_NOPUSHON ]; then
           nohup bash -c 'for i in $(seq 1 300); do sleep 1; [ -e run/KILL_SWITCH ] || { echo "$(TZ=Asia/Ho_Chi_Minh date "+%d/%m/%Y %H:%M:%S.000") WARN [x] x: [C3-LIVE] PUSH doi trang thai -> ON (SHADOW_NO_PUSH=false LIVE_ENTRY_ENABLED=true killSwitch=run/KILL_SWITCH exists=false)" >> logs/full.log; exit 0; }; done' >/dev/null 2>&1 &
@@ -1335,7 +1339,7 @@ echo "== 33. [V12 R4q] swap_v12_dry_jar.sh: thay jar dry r4n -> r4q (C11, khong 
 SW=$HERE/swap_v12_dry_jar.sh
 printf 'fake-new-jar-v12r4q' > "$W/new_r4q.jar"; NEWQ=$(md5sum < "$W/new_r4q.jar" | cut -c1-32)
 printf '#!/bin/bash\necho "$*" >> %s/reg_calls.txt\n[ -f %s/REG_FAIL ] && exit 3\nexit 0\n' $W $W > $W/fake_register.sh; rm -f $W/reg_calls.txt $W/REG_FAIL
-sw() { env APP_DIR=$F4 OLD_MD5=$NEW4 NJ=$W/new_r4q.jar NJ_MD5=$NEWQ DEPLOY_TG_SINK=$W/tg_sw.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 REG_JAR_SH=$W/fake_register.sh "$@"; }
+sw() { env OLD_TAG=r4n NEW_TAG=r4q NEED_MGUARD=0 APP_DIR=$F4 OLD_MD5=$NEW4 NJ=$W/new_r4q.jar NJ_MD5=$NEWQ DEPLOY_TG_SINK=$W/tg_sw.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 REG_JAR_SH=$W/fake_register.sh "$@"; }
 touch "$F4/FAKE_R4"; echo 44 > "$F4/FAKE_LEGACY_N"
 OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?
 chk "r4q swap chuan bi: deploy dry r4n (gia) XONG" "[ $RC = 0 ]"
@@ -1371,7 +1375,7 @@ OUT=$(sw DRY=1 bash "$SW" 2>&1); RC=$?
 chk "r4q swap lan 2: jar dang chay DA la r4q => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'DA_LA_moi'"
 (cd $F4 && bin/daemon.sh stop; B=$(ls target/binance-java-sdk-1.2.4.jar.bak_swap_* | grep -v 'md5$' | tail -1); cp -f $B target/binance-java-sdk-1.2.4.jar; F=$(ls conf/env.sh.bak_swap_* | tail -1); cp -f $F conf/env.sh; bin/daemon.sh start) > /dev/null 2>&1
 rm -f $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_* $W/tok; sleep 2
-setsid bash -c "echo YES | env APP_DIR=$F4 OLD_MD5=$NEW4 NJ=$W/new_r4q.jar NJ_MD5=$NEWQ DEPLOY_TG_SINK=$W/tg_sw.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 WD_PAUSE_MAX_S=300 REG_JAR_SH=$W/fake_register.sh FORCE_TIME=0 TIME_OK_FILE=$W/tok WINDOW_WAIT_MAX_S=120 WINDOW_POLL_S=1 bash $SW" > "$W/swfg.out" 2>&1 < /dev/null &
+setsid bash -c "echo YES | env OLD_TAG=r4n NEW_TAG=r4q NEED_MGUARD=0 APP_DIR=$F4 OLD_MD5=$NEW4 NJ=$W/new_r4q.jar NJ_MD5=$NEWQ DEPLOY_TG_SINK=$W/tg_sw.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 WD_PAUSE_MAX_S=300 REG_JAR_SH=$W/fake_register.sh FORCE_TIME=0 TIME_OK_FILE=$W/tok WINDOW_WAIT_MAX_S=120 WINDOW_POLL_S=1 bash $SW" > "$W/swfg.out" 2>&1 < /dev/null &
 FGP=$!
 for i in $(seq 1 20); do grep -q 'job_log=' $W/swfg.out 2>/dev/null && break; sleep 1; done
 sleep 2; kill -HUP -$FGP 2>/dev/null; kill -KILL -$FGP 2>/dev/null; sleep 1
@@ -1381,6 +1385,23 @@ touch $W/tok
 for i in $(seq 1 90); do grep -q '=== XONG' $SJL 2>/dev/null && break; sleep 1; done
 sleep 1
 chk "r4q swap: vao khung => job tu chay tiep (kiem 242 lan 2 + kiem khung NGAY TRUOC stop) toi XONG, jar r4q, khoa tra" "grep -q '=== XONG' $SJL && grep -q 'ngay truoc stop' $SJL && grep -q 'lan 2: OK jar_dang_chay' $SJL && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWQ ] && [ ! -e $W/deploylog/.swap_v12_dry_jar.lock.d ]"
+echo "== 34. [V12 R4r] swap_v12_dry_jar.sh r4q -> r4r (tag mac dinh, hau kiem [MINUTE-GUARD] BAT, rollback khi TAT)"
+printf 'fake-new-jar-v12r4q-r4r' > "$W/new_r4r.jar"; NEWR=$(md5sum < "$W/new_r4r.jar" | cut -c1-32)
+swr() { env APP_DIR=$F4 OLD_MD5=$NEWQ NJ=$W/new_r4r.jar NJ_MD5=$NEWR DEPLOY_TG_SINK=$W/tg_sw.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 REG_JAR_SH=$W/fake_register.sh "$@"; }
+rm -f $W/reg_calls.txt $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_*; sleep 2
+JQ=$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32); EQ=$(md5sum < $F4/conf/env.sh)
+OUT=$(swr DRY=1 bash "$SW" 2>&1); RC=$?
+chk "r4r swap DRY=1 (tag mac dinh r4q -> r4r): DRY PASS, ke hoach co [MINUTE-GUARD] BAT, khong doi jar/env" "[ $RC = 0 ] && [ $JQ = $NEWQ ] && echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q 'jar r4q -> r4r' && echo \"\$OUT\" | grep -q '0 KHAN, \[MINUTE-GUARD\] BAT' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $JQ ] && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$EQ\" ]"
+echo 'export LIVE_MINUTE_GUARD=0' >> $F4/conf/env.sh
+OUT=$(swr DRY=1 bash "$SW" 2>&1); RC=$?
+chk "r4r swap: env.sh co LIVE_MINUTE_GUARD=0 => TU CHOI truoc khi dung bot" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL env.sh_LIVE_MINUTE_GUARD=0'"
+sed -i '/^export LIVE_MINUTE_GUARD=0$/d' $F4/conf/env.sh
+touch $F4/FAKE_MGTAT
+OUT=$(echo YES | swr bash "$SW" 2>&1); RC=$?
+chk "r4r swap: JVM moi log [MINUTE-GUARD] TAT => FAIL => ROLLBACK ve r4q (md5) + env.sh, KHONG dang ky" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL MINUTE-GUARD_TAT' && echo \"\$OUT\" | grep -q 'ROLLBACK xong' && [ ! -e $W/reg_calls.txt ] && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $JQ ] && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$EQ\" ] && penv | grep -qx LIVE_ADAPTER=dry"
+rm -f $F4/FAKE_MGTAT $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_*; sleep 2
+OUT=$(echo YES | swr bash "$SW" 2>&1); RC=$?
+chk "r4r swap XONG: jar r4r, OK MINUTE-GUARD_BAT, backup r4q (md5), dang ky parity 'r4r <jar> <md5> <start_ms> 1', dry giu" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: dry chay r4r' && echo \"\$OUT\" | grep -q 'OK MINUTE-GUARD_BAT' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWR ] && cat $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_*.md5 | grep -qx $JQ && grep -qE \"^r4r $W/new_r4r.jar $NEWR [0-9]{13} 1\$\" $W/reg_calls.txt && penv | grep -qx LIVE_ADAPTER=dry && grep -q 'r4q -> r4r' $W/tg_sw.txt"
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]

@@ -6,7 +6,7 @@
 SSH_242=${SSH_242:-"ssh -p 2222 -o BatchMode=yes -o ConnectTimeout=20 -i /home/ubuntu/.ssh/id_rsa_chuyennd root@103.157.218.242"}
 A=${APP_DIR:-/home/chuyennd/java/v_t_m}
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}
-NJ_MD5=${NJ_MD5:-8c81e6b560b61e7d43ca32c4a50ec926}   # jar v1.2 dang chay (r4q, ROUND4Q; dua len bang swap_v12_dry_jar.sh)
+NJ_MD5=${NJ_MD5:-bd85ca94504188c5a0dc8adac6f98a55}   # jar v1.2 dang chay (r4r, ROUND4R; dua len bang swap_v12_dry_jar.sh; truoc: r4q 8c81e6b5)
 WD_PAUSE=${WD_PAUSE:-/var/lib/h242_watchdog/PAUSE}
 WD_PAUSE_MAX_S=${WD_PAUSE_MAX_S:-1800}
 POST_WAIT_S=${POST_WAIT_S:-60}
