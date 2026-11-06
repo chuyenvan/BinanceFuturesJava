@@ -252,6 +252,7 @@ D=$(diff conf/env.sh.bak_swap_$TS conf/env.sh | grep -c '^>')
 TOK="C3SWAP_V12 TS=$TS pid=$JP"
 mkdir -p "$(dirname "$PAUSE")" 2>/dev/null; echo "$TOK t=$(date +%s)" > "$PAUSE" && echo "OK watchdog_PAUSE token='$TOK'" || echo "WARN khong_tao_duoc_PAUSE"
 setsid nohup bash -c "sleep $MAXS; grep -q '^$TOK ' '$PAUSE' 2>/dev/null && rm -f '$PAUSE'" > /dev/null 2>&1 < /dev/null &
+echo "LEGACY_TRUOC_STOP=$(tail -c 20000000 logs/full.log 2>/dev/null | grep -a '\[LEGACY\] managed' | tail -1 | grep -aoE 'managed [0-9]+' | awk '{print $2}')"   # [R4r] chup NGAY truoc stop
 bin/daemon.sh stop
 for i in $(seq 1 30); do pgrep -f "$PP" >/dev/null || break; sleep 2; done
 if pgrep -f "$PP" >/dev/null; then \cp -f conf/env.sh.bak_swap_$TS conf/env.sh; echo "FAIL van_con_process_sau_stop (env khoi phuc)"; exit 0; fi
@@ -324,6 +325,8 @@ if echo "$RS" | grep -q '^FAIL'; then
   die "buoc env/stop FAIL truoc khi dung bot (env da khoi phuc neu da sua). Xem tren."
 fi
 SL=$(echo "$RS" | sed -n 's/^START_LINE=//p'); SL=${SL:-1}
+LB=$(echo "$RS" | sed -n 's/^LEGACY_TRUOC_STOP=\([0-9][0-9]*\)$/\1/p' | tail -1)   # [R4r] so LEGACY NGAY truoc stop (khong so cung)
+if [ -n "$LB" ]; then [ "$LB" != "${L0:-}" ] && say "INFO LEGACY truoc stop=$LB (luc kiem truoc: ${L0:-?}) => hau kiem so voi $LB"; L0=$LB; fi
 
 # ---------------------------------------------------------------- 4. hau kiem
 CHK() {
@@ -347,7 +350,7 @@ K=$(tail -n +$SL $L 2>/dev/null | grep -a 'KHAN' | grep -av 'DRY tren tai khoan 
 [ -z "$K" ] && echo "OK 0_KHAN" || echo "FAIL KHAN: $K"
 [ "$(T 'KHONG tao duoc runtime')" = 0 ] && echo "OK runtime" || echo "FAIL KHONG_tao_duoc_runtime"
 LN=$(tail -n +$SL $L 2>/dev/null | grep -a '\[LEGACY\] managed' | tail -1 | grep -aoE 'managed [0-9]+' | awk '{print $2}')
-if [ -z "$LN" ]; then echo "WAIT LEGACY_chua_co"; elif [ "$LN" = "$L0" ]; then echo "OK LEGACY_managed=$LN"; else echo "WARN LEGACY_managed=$LN khac truoc restart $L0 (SL khop luc dung? kiem tay)"; fi
+if [ -z "$LN" ]; then echo "WAIT LEGACY_chua_co"; elif [ "$LN" = "$L0" ]; then echo "OK LEGACY_managed=$LN"; elif [ "$LN" -lt "$L0" ] 2>/dev/null; then echo "WARN LEGACY_managed=$LN < truoc stop $L0 (dong tu nhien luc dung? kiem tay)"; else echo "FAIL LEGACY_managed=$LN > truoc stop $L0 (TANG)"; fi
 if [ "$MG" = 1 ]; then   # [R4r] guard do du phut
   if [ "$(T '\[MINUTE-GUARD\] TAT')" -ge 1 ]; then echo "FAIL MINUTE-GUARD_TAT"
   elif [ "$(T '\[MINUTE-GUARD\] BAT')" -ge 1 ]; then echo "OK MINUTE-GUARD_BAT"; else echo "WAIT MINUTE-GUARD_BAT"; fi

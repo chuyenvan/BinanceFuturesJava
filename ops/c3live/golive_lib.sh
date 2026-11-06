@@ -152,6 +152,7 @@ fi
 TOK="C3GOLIVE_\${NM} TS=\$TS pid=\$JP"
 mkdir -p "\$(dirname "\$PAUSE")" 2>/dev/null; echo "\$TOK t=\$(date +%s)" > "\$PAUSE" && echo "OK watchdog_PAUSE token='\$TOK'" || echo "WARN khong_tao_duoc_PAUSE"
 setsid nohup bash -c "sleep \$MAXS; grep -q '^\$TOK ' '\$PAUSE' 2>/dev/null && rm -f '\$PAUSE'" > /dev/null 2>&1 < /dev/null &
+echo "LEGACY_TRUOC_STOP=\$(tail -c 20000000 logs/full.log 2>/dev/null | grep -a '\[LEGACY\] managed' | tail -1 | grep -aoE 'managed [0-9]+' | awk '{print \$2}')"   # [R4r] chup NGAY truoc stop
 bin/daemon.sh stop
 for i in \$(seq 1 30); do pgrep -f "\$PP" >/dev/null || break; sleep 2; done
 if pgrep -f "\$PP" >/dev/null; then \cp -f conf/env.sh.bak_\${NM}_\$TS conf/env.sh; ksoff; echo "FAIL van_con_process_sau_stop (env khoi phuc)"; exit 0; fi
@@ -170,6 +171,8 @@ EOF2
 ) || RS="FAIL ssh_restart_loi"
   echo "$RS"
   SL=$(echo "$RS" | sed -n 's/^START_LINE=//p'); SL=${SL:-1}
+  local lb; lb=$(echo "$RS" | sed -n 's/^LEGACY_TRUOC_STOP=\([0-9][0-9]*\)$/\1/p' | tail -1)   # [R4r] so LEGACY NGAY truoc stop
+  if [ -n "$lb" ] && [ -n "${L0:-}" ]; then [ "$lb" != "$L0" ] && say "INFO LEGACY truoc stop=$lb (luc kiem truoc: $L0) => hau kiem so voi $lb"; L0=$lb; fi
 }
 # gl_rollback <hau to> : stop, env.sh ve ban backup, trang thai doi ten tra lai (ban moi -> .rbnew_TS), start. In RB.
 gl_rollback() {
@@ -237,7 +240,7 @@ K=\$(tail -n +\$SL \$L 2>/dev/null | grep -a 'KHAN' | grep -av 'DRY tren tai kho
 [ "\$(T 'RECON\] khoi dong: ok=true')" -ge 1 ] && echo "OK recon_khoi_dong" || echo "WAIT recon_khoi_dong"
 [ "\$(T 'RECON\] khoi dong: ok=false')" = 0 ] || echo "FAIL recon_khoi_dong_ok=false"
 LN=\$(tail -n +\$SL \$L 2>/dev/null | grep -a '\[LEGACY\] managed' | tail -1 | grep -aoE 'managed [0-9]+' | awk '{print \$2}')
-if [ -z "\$LN" ]; then echo "WAIT LEGACY_chua_co"; elif [ "\$L0" = -1 ] || [ "\$LN" = "\$L0" ]; then echo "OK LEGACY_managed=\$LN"; else echo "WARN LEGACY_managed=\$LN khac truoc \$L0 (SL khop luc dung? kiem tay)"; fi
+if [ -z "\$LN" ]; then echo "WAIT LEGACY_chua_co"; elif [ "\$L0" = -1 ] || [ "\$LN" = "\$L0" ]; then echo "OK LEGACY_managed=\$LN"; elif [ "\$LN" -lt "\$L0" ] 2>/dev/null; then echo "WARN LEGACY_managed=\$LN < truoc stop \$L0 (dong tu nhien luc dung? kiem tay)"; else echo "FAIL LEGACY_managed=\$LN > truoc stop \$L0 (TANG)"; fi
 B=run/c3live_book.json; echo "INFO BOOK_CUM=\$([ -f \$B ] && grep -o '"symbol":"' \$B | wc -l || echo 0) AUDIT_C3=\$(tail -n +\$SL \$L 2>/dev/null | grep -a '\[C3-LIVE-ORDER\]' | grep -avc 'status=SKIP')"
 $3
 echo END_CHK

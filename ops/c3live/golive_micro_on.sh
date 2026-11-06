@@ -71,7 +71,7 @@ grep -q "^golive_micro_on '"$TS"' " run/KILL_SWITCH 2>/dev/null && echo "OK KILL
 [ "$(T "PUSH=ON")" = 0 ] && echo "OK chua_PUSH_ON" || echo "FAIL PUSH_ON_khi_con_KILL_SWITCH"
 [ "$(T "C3-LIVE-STREAM\] da ket noi")" -ge 1 ] && echo "OK user_stream" || echo "WAIT user_stream"
 LS=$(tail -n +$SL $L | grep -a "LEGACY tren tai khoan chinh:" | tail -1 | grep -aoE "chinh: [0-9]+" | awk "{print \$2}")
-[ -z "$LS" ] && echo "WAIT scope_LEGACY" || { [ "$LS" = "$L0" ] && echo "OK scope_LEGACY=$LS" || echo "WARN scope_LEGACY=$LS khac $L0"; }'; }
+[ -z "$LS" ] && echo "WAIT scope_LEGACY" || { if [ "$LS" = "$L0" ]; then echo "OK scope_LEGACY=$LS"; elif [ "$LS" -lt "$L0" ] 2>/dev/null; then echo "WARN scope_LEGACY=$LS < truoc stop $L0 (dong tu nhien)"; else echo "FAIL scope_LEGACY=$LS > truoc stop $L0 (TANG)"; fi; }'; }
 if ! echo "$RS" | grep -q '^FAIL' && gl_postloop CHK; then
   # [R4q MAJ-1] hau kiem DAT => go KILL_SWITCH CUA MINH => cho JVM bao PUSH ON
   if s242 "cd $A && grep -q '^golive_micro_on $TS ' run/KILL_SWITCH && mv -f run/KILL_SWITCH run/KILL_SWITCH.ok_$TS && [ ! -e run/KILL_SWITCH ]"; then

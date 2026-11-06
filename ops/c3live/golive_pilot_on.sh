@@ -49,7 +49,7 @@ say "--- se THEM vao $A/conf/env.sh:"; echo "$ENV_ADD" | sed 's/^/   + /'
 say "--- so live / vi the c3 ($(sv BOOK_CUM) cum) GIU NGUYEN qua restart; hau kiem c3_capital=$SIZE, PUSH=ON, stream, recon ok, LEGACY 0"
 [ "$DRY" = 1 ] && { say "DRY=1: dung o day, KHONG ghi gi len 242. (DRY PASS)"; exit 0; }
 gl_time
-gl_yes "PILOT: C3_CAPITAL $C0 -> $SIZE tren tai khoan chinh. Owner XAC NHAN da cat 44 LEGACY." "YES DA CAT LEGACY"
+gl_yes "PILOT: C3_CAPITAL $C0 -> $SIZE tren tai khoan chinh. Owner XAC NHAN da cat TOAN BO LEGACY." "YES DA CAT LEGACY"
 trap 'say "BI DUNG (tin hieu) — kiem golive_monitor.sh"; gl_pause_clear >/dev/null 2>&1; exit 130' INT TERM HUP
 gl_restart "$ENV_ADD" "" none
 if echo "$RS" | grep -q '^FAIL'; then

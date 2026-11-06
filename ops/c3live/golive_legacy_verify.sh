@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# golive_legacy_verify.sh — [V12 R4o] CHI DOC: sau khi owner tu dong 44 vi the LEGACY (+ huy lenh/algo LEGACY) tren UI
+# golive_legacy_verify.sh — [V12 R4o] CHI DOC: sau khi owner tu dong TOAN BO vi the LEGACY (+ huy lenh/algo LEGACY) tren UI
 # (GOLIVE_SCENARIO ADD1 §5). Chay tren ORACLE:  bash ~/claude_master/v12/c3live/ops/c3live/golive_legacy_verify.sh
 #   (DRY=1: kiem nhu that nhung KHONG ghi file ket qua)
 # DAT <=> tren san (key c3, goi ky tu 242): [R4q MAJ-2] so QTY tung symbol: |vi the san| - qty MO c3 (cum mo cua so) = 0 moi symbol

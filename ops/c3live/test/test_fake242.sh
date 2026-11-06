@@ -1400,8 +1400,13 @@ touch $F4/FAKE_MGTAT
 OUT=$(echo YES | swr bash "$SW" 2>&1); RC=$?
 chk "r4r swap: JVM moi log [MINUTE-GUARD] TAT => FAIL => ROLLBACK ve r4q (md5) + env.sh, KHONG dang ky" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL MINUTE-GUARD_TAT' && echo \"\$OUT\" | grep -q 'ROLLBACK xong' && [ ! -e $W/reg_calls.txt ] && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $JQ ] && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$EQ\" ] && penv | grep -qx LIVE_ADAPTER=dry"
 rm -f $F4/FAKE_MGTAT $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_*; sleep 2
+echo 45 > $F4/FAKE_LEGACY_N
 OUT=$(echo YES | swr bash "$SW" 2>&1); RC=$?
-chk "r4r swap XONG: jar r4r, OK MINUTE-GUARD_BAT, backup r4q (md5), dang ky parity 'r4r <jar> <md5> <start_ms> 1', dry giu" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: dry chay r4r' && echo \"\$OUT\" | grep -q 'OK MINUTE-GUARD_BAT' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWR ] && cat $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_*.md5 | grep -qx $JQ && grep -qE \"^r4r $W/new_r4r.jar $NEWR [0-9]{13} 1\$\" $W/reg_calls.txt && penv | grep -qx LIVE_ADAPTER=dry && grep -q 'r4q -> r4r' $W/tg_sw.txt"
+chk "r4r swap: LEGACY TANG sau restart (44 truoc stop -> 45) => FAIL => ROLLBACK, KHONG dang ky" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'LEGACY_TRUOC_STOP=44' && echo \"\$OUT\" | grep -q 'FAIL LEGACY_managed=45 > truoc stop 44' && echo \"\$OUT\" | grep -q 'ROLLBACK xong' && [ ! -e $W/reg_calls.txt ] && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $JQ ]"
+rm -f $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_*; echo 43 > $F4/FAKE_LEGACY_N; sleep 2
+OUT=$(echo YES | swr bash "$SW" 2>&1); RC=$?
+chk "r4r swap XONG (LEGACY truoc stop 45 = log cuoi sau rollback; JVM moi 43 => chi WARN giam): jar r4r, OK MINUTE-GUARD_BAT, backup r4q (md5), dang ky parity 'r4r <jar> <md5> <start_ms> 1', dry giu" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: dry chay r4r' && echo \"\$OUT\" | grep -q 'OK MINUTE-GUARD_BAT' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWR ] && cat $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_*.md5 | grep -qx $JQ && grep -qE \"^r4r $W/new_r4r.jar $NEWR [0-9]{13} 1\$\" $W/reg_calls.txt && penv | grep -qx LIVE_ADAPTER=dry && grep -q 'r4q -> r4r' $W/tg_sw.txt && echo \"\$OUT\" | grep -q 'LEGACY_TRUOC_STOP=45' && echo \"\$OUT\" | grep -q 'WARN LEGACY_managed=43 < truoc stop 45'"
+echo 44 > $F4/FAKE_LEGACY_N
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]
