@@ -70,13 +70,29 @@ public class IngestScenarioTest {
         int maxEarlyRequested;
         long droppedCells;
         String log = "";
+        /** [QF4] pass +2 s / thieu luc chot (+4 s) / so o lost co ban REST trong store luc pass +2 s xong. */
+        Map<Long, KlinePassController.GapOut> gap = new HashMap<>();
+        Map<Long, Integer> thieuLucChot = new HashMap<>();
+        Map<Long, Integer> lostWithRestAt4s = new HashMap<>();
+        int maxGapRequested;
+    }
+
+    /** [QF4] 6 kết nối như prod (KlineWsClient.chunk, 150/kết nối ⇒ 126,126,125,125,125,125). */
+    List<List<String>> groups() {
+        return KlineWsClient.chunk(uni, 150);
+    }
+
+    Result run(int minutes, IntBinaryOperator wsDelay, int extraHealMinutes) throws Exception {
+        return run(minutes, wsDelay, extraHealMinutes, mi -> Collections.<Integer>emptySet());
     }
 
     /**
      * Chạy mô phỏng {@code minutes} phút đóng (từ M0). {@code wsDelay.applyAsInt(idx, minuteIdx)} = ms sau đóng nến WS final tới,
      * hoặc -1 nếu không bao giờ tới. Phút được kiểm lành: mọi phút có symbol thiếu ở +4 s.
      */
-    Result run(int minutes, IntBinaryOperator wsDelay, int extraHealMinutes) throws Exception {
+    Result run(int minutes, IntBinaryOperator wsDelay, int extraHealMinutes,
+               java.util.function.IntFunction<Set<Integer>> gapConnsAt) throws Exception {
+        final List<List<String>> groups = groups();
         final long realStart = System.currentTimeMillis();
         final LongSupplier sim = () -> M0 + (long) ((System.currentTimeMillis() - realStart) * SPEED);
         final RestBudget budget = RestBudget.create(300, 1600, 2000, 150, sim);
@@ -128,7 +144,7 @@ public class IngestScenarioTest {
         });
         price.start(); oi.start(); low.start();
         Map<Long, Set<Integer>> delivered = new HashMap<>();
-        Set<Long> flushed = new HashSet<>(), early = new HashSet<>(), settled = new HashSet<>(), caught = new HashSet<>();
+        Set<Long> flushed = new HashSet<>(), early = new HashSet<>(), settled = new HashSet<>(), caught = new HashSet<>(), gapped = new HashSet<>();
         long endSim = M0 + (long) (minutes + 1 + extraHealMinutes) * MIN + 35_000L;
         int peakW = 0, peakF = 0;
         while (sim.getAsLong() < endSim) {
@@ -148,10 +164,27 @@ public class IngestScenarioTest {
             if (m >= M0) {
                 if (!flushed.contains(m) && inMin >= 1_500L) { core.flushWsFinals(m); flushed.add(m); }
                 core.flushLateFinals();
+                if (!gapped.contains(m) && inMin >= 2_000L && flushed.contains(m) && m < M0 + (long) minutes * MIN) {   // [QF4] pass +2 s nhu Finalizer
+                    gapped.add(m);
+                    int mi = (int) ((m - M0) / MIN);
+                    Set<String> gs = new HashSet<>();
+                    for (int ci : gapConnsAt.apply(mi)) gs.addAll(groups.get(ci));
+                    KlinePassController.GapOut g = ctl.gap(m, uni, gs, null, true);
+                    res.gap.put(m, g);
+                    res.maxGapRequested = Math.max(res.maxGapRequested, g.requested);
+                    int have = 0;
+                    if (g.doneAtMs > 0 && g.doneAtMs - (m + MIN) <= 4_000L) {
+                        for (String s : g.lostSample.isEmpty() ? Collections.<String>emptyList() : uni) {
+                            if (gs.contains(s) && store.get(m, KlineIngestCore.shortSym(s)) != null) have++;
+                        }
+                    }
+                    res.lostWithRestAt4s.put(m, have);
+                }
                 if (!early.contains(m) && inMin >= 4_000L && flushed.contains(m) && m < M0 + (long) minutes * MIN) {
                     early.add(m);
                     KlinePassController.EarlyOut o = ctl.early(m, uni, true);
-                    res.missingAt4s.put(m, o.need);
+                    res.missingAt4s.put(m, o.missingWs);
+                    res.thieuLucChot.put(m, o.thieuLucChot);
                     res.maxEarlyRequested = Math.max(res.maxEarlyRequested, o.requested);
                 }
                 if (!settled.contains(m) && inMin >= 30_000L) {
@@ -183,9 +216,15 @@ public class IngestScenarioTest {
         res.peakWeight = peakW;
         res.peakFdata = peakF;
         res.droppedCells = planner.droppedCells();
-        res.log = String.format("price_max_gap_ms=%d price_denied=%d peak_weight=%d peak_fdata=%d oi_ok=%d rest_kline_calls=%d missing_at_4s=%s heal_ms=%s max_early_requested=%d dropped=%d",
+        StringBuilder gl = new StringBuilder();
+        for (Map.Entry<Long, KlinePassController.GapOut> e : new java.util.TreeMap<>(res.gap).entrySet()) {
+            KlinePassController.GapOut g = e.getValue();
+            gl.append(String.format("[lost=%d req=%d ok=%d xong_ms=%d co_rest_4s=%d thieu_luc_chot=%s]", g.lost, g.requested, g.closed,
+                    g.doneAtMs == 0 ? -1 : g.doneAtMs - (e.getKey() + MIN), res.lostWithRestAt4s.get(e.getKey()), res.thieuLucChot.get(e.getKey())));
+        }
+        res.log = String.format("price_max_gap_ms=%d price_denied=%d peak_weight=%d peak_fdata=%d oi_ok=%d rest_kline_calls=%d missing_at_4s=%s heal_ms=%s max_early_requested=%d dropped=%d gap=%s",
                 gap, res.priceDenied, peakW, peakF, res.oiOk, restCalls.get(), new java.util.TreeMap<>(res.missingAt4s).values(),
-                new java.util.TreeMap<>(res.healMs).values(), res.maxEarlyRequested, res.droppedCells);
+                new java.util.TreeMap<>(res.healMs).values(), res.maxEarlyRequested, res.droppedCells, gl);
         return res;
     }
 
@@ -239,5 +278,76 @@ public class IngestScenarioTest {
         Map<Long, Integer> exp = new HashMap<>();
         exp.put(M0 + MIN, miss);
         assertCommon("volatile_376", r, exp);
+    }
+
+    // ===================== [QF4, ADDENDUM 3 / ADD-3b] REST bù mất WS ở +2 s — ngưỡng pre-reg, KHÔNG chỉnh sau khi xem kết quả =====================
+
+    /** Chỉ số symbol (trong uni) của kết nối {@code ci}. */
+    Set<Integer> idxOf(int... cis) {
+        Set<Integer> out = new HashSet<>();
+        List<List<String>> g = groups();
+        for (int ci : cis) for (String s : g.get(ci)) out.add(uni.indexOf(s));
+        return out;
+    }
+
+    /** Kết nối {@code cis} rớt ĐÚNG ranh phút thứ 2 (mi=1): WS final của chúng không bao giờ tới; phút khác bình thường. */
+    Result runDrop(int... cis) throws Exception {
+        final Set<Integer> dead = idxOf(cis);
+        final Set<Integer> conns = new HashSet<>();
+        for (int ci : cis) conns.add(ci);
+        return run(3, (i, mi) -> mi == 1 && dead.contains(i) ? -1 : 500, 4,
+                mi -> mi == 1 ? conns : Collections.<Integer>emptySet());
+    }
+
+    void assertDropAt4s(String name, Result r, int lostExpect, int minWithRest) {
+        long m = M0 + MIN;
+        KlinePassController.GapOut g = r.gap.get(m);
+        System.out.println("[QF4-SCENARIO] " + name + " " + r.log);
+        assertNotNull(name + " khong chay pass +2 s", g);
+        assertEquals(name + " tap mat WS", lostExpect, g.lost);
+        assertTrue(name + " REST vuot room KLINE 200: " + g.requested, g.requested <= RestBudget.KLINE_QUOTA);
+        assertTrue(name + " pass +2 s xong sau +4 s: " + (g.doneAtMs - (m + MIN)), g.doneAtMs - (m + MIN) <= 4_000L);
+        int have = r.lostWithRestAt4s.get(m);
+        assertTrue(name + " o co ban REST truoc +4 s = " + have + " < " + minWithRest, have >= minWithRest);
+        assertEquals(name + " thieu_luc_chot = lost - co REST", lostExpect - have, (int) r.thieuLucChot.get(m));
+        Map<Long, Integer> exp = new HashMap<>();
+        exp.put(m, lostExpect);
+        assertCommon(name, r, exp);
+    }
+
+    /** T-Q4-1: một kết nối (125) rớt đúng :00 ⇒ 125/125 có REST trước +4 s, thieu_luc_chot = 0. */
+    @Test(timeout = 120_000)
+    public void tq4_1_oneConnectionDropsAtMinute() throws Exception {
+        assertDropAt4s("tq4_1_1conn", runDrop(3), 125, 125);
+    }
+
+    /** T-Q4-2: hai kết nối (250) cùng rớt ⇒ ≥150 có REST trước +4 s (vừa room KLINE), phần còn lại = thieu_luc_chot, lành ≤ 3′. */
+    @Test(timeout = 120_000)
+    public void tq4_2_twoConnectionsDropTogether() throws Exception {
+        assertDropAt4s("tq4_2_2conn", runDrop(2, 3), 250, 150);
+    }
+
+    /** T-Q4-3: phút bình thường (đo ADD-3b: 75 % symbol final tới ở 3,05 s) ⇒ 0 REST mất WS, thieu_luc_chot = 0. */
+    @Test(timeout = 120_000)
+    public void tq4_3_normalMinutesNoFalseGap() throws Exception {
+        Result r = run(3, (i, mi) -> i % 4 == 0 ? 500 : 3_050, 1);
+        System.out.println("[QF4-SCENARIO] tq4_3_normal " + r.log);
+        for (KlinePassController.GapOut g : r.gap.values()) {
+            assertTrue("thieu o +2 s phai lon (phan bo do duoc): " + g.missing, g.missing >= 500);
+            assertEquals("bao nham mat WS", 0, g.lost);
+        }
+        assertEquals(0, r.maxGapRequested);
+        for (int t : r.thieuLucChot.values()) assertEquals(0, t);
+        for (int miss : r.missingAt4s.values()) assertEquals(0, miss);
+        assertCommon("tq4_3_normal", r, new HashMap<>());
+    }
+
+    /** T-Q4-4: kết nối im lặng không EOF (luật b: KlineWsClient.silentNow) ⇒ như T-Q4-1 (kết nối 0, 126 symbol). */
+    @Test(timeout = 120_000)
+    public void tq4_4_silentConnectionNoEof() throws Exception {
+        long close = M0 + 2 * MIN;
+        assertTrue("im lang 2,1 s tai +2 s => mat", KlineWsClient.silentNow(126, close - 100, close + 2_000));
+        assertFalse("ket noi van song (EOF chua co) => luat a khong bat", KlineWsClient.hadGapSince(true, 0, close - 3_600_000L, close - 1_000));
+        assertDropAt4s("tq4_4_silent", runDrop(0), 126, 126);
     }
 }

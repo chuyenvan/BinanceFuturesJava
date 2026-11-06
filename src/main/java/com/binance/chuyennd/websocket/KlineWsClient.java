@@ -96,6 +96,8 @@ public final class KlineWsClient {
         volatile long nextRetryMs;
         volatile long backoffMs = 5_000L;
         volatile long rotateAtMs;
+        /** [QF4] lần đóng (kill) gần nhất / lần mở (open) gần nhất — để biết kết nối có hở quanh ranh phút. */
+        volatile long lastDownMs = 0, openedAtMs = 0;
 
         Conn(List<String> symbols, int idx) {
             this.symbols = symbols;
@@ -127,6 +129,7 @@ public final class KlineWsClient {
 
         void open() {
             lastMsgMs = System.currentTimeMillis();
+            openedAtMs = lastMsgMs;
             alive = true;
             rotateAtMs = lastMsgMs + rotateAfterMs(idx);   // [INGEST-QF2] moc xoay lech nhau theo idx
             ws = http.newWebSocket(new Request.Builder().url(url()).build(), this);
@@ -135,6 +138,7 @@ public final class KlineWsClient {
 
         void kill(String why) {
             alive = false;
+            lastDownMs = System.currentTimeMillis();
             WebSocket w = ws;
             if (w != null) w.cancel();
             WebSocket p = pending;
@@ -295,6 +299,42 @@ public final class KlineWsClient {
             }
             LOG.info("[KLINE-WS] them {} symbol moi vao WS", added.size());
         }
+    }
+
+    /**
+     * [QF4, ADDENDUM 3 luật a] Kết nối "hở" từ {@code sinceMs}: đang đóng, hoặc đã đóng/mở lại kể từ mốc đó (WS final của phút vừa
+     * đóng phát ở ~+0,5 s chỉ qua kết nối sống liên tục qua ranh phút). Thuần, test được.
+     */
+    static boolean hadGapSince(boolean alive, long lastDownMs, long openedAtMs, long sinceMs) {
+        return !alive || lastDownMs >= sinceMs || openedAtMs >= sinceMs;
+    }
+
+    /** [QF4, ADD-3b luật b] im lặng ≥ 1 500 ms (đo: 125 symbol ít giao dịch nhất, im lặng lớn nhất 788 ms) với kết nối ≥ 20 symbol. */
+    static final long GAP_SILENT_MS = 1_500L;
+
+    static boolean silentNow(int nSymbols, long lastMsgMs, long nowMs) {
+        return nSymbols >= SMALL_CONN && nowMs - lastMsgMs >= GAP_SILENT_MS;
+    }
+
+    /** Kết quả quét kết nối cho pass +2 s. */
+    public static final class GapConns {
+        public final Set<String> syms = new HashSet<>();
+        public int down, silent;
+    }
+
+    /** Symbol của kết nối hở từ {@code sinceMs} (luật a) hoặc đang im lặng (luật b) tại {@code nowMs}. */
+    public GapConns gapConns(long sinceMs, long nowMs) {
+        GapConns g = new GapConns();
+        for (Conn c : conns) {
+            if (hadGapSince(c.alive, c.lastDownMs, c.openedAtMs, sinceMs)) {
+                g.down++;
+                g.syms.addAll(c.symbols);
+            } else if (silentNow(c.symbols.size(), c.lastMsgMs, nowMs)) {
+                g.silent++;
+                g.syms.addAll(c.symbols);
+            }
+        }
+        return g;
     }
 
     public int aliveConnections() {

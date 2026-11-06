@@ -8,9 +8,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntSupplier;
 import java.util.function.LongSupplier;
+import java.util.function.ToDoubleFunction;
 
 /**
  * [INGEST-QF2 2026-10-31] Hai pass REST kline của mode ws_settle, tách khỏi TickerIngestor2AerospikeNew để test đối kháng chạy
@@ -38,6 +41,12 @@ final class KlinePassController {
 
     KlinePassController(KlineIngestCore core, SettlePlanner planner, IntSupplier klineRoom, LongSupplier clock,
                         int earlyMax, int settleLimit, long startMinute, long settleMinAgeMs) {
+        this(core, planner, klineRoom, clock, earlyMax, settleLimit, startMinute, settleMinAgeMs, 600);
+    }
+
+    KlinePassController(KlineIngestCore core, SettlePlanner planner, IntSupplier klineRoom, LongSupplier clock,
+                        int earlyMax, int settleLimit, long startMinute, long settleMinAgeMs, int gapGlobalN) {
+        this.gapGlobalN = gapGlobalN;
         this.settleMinAgeMs = settleMinAgeMs;
         this.core = core;
         this.planner = planner;
@@ -49,10 +58,125 @@ final class KlinePassController {
     }
 
     static final class EarlyOut {
-        int need, requested, closed, failed;
+        /** need = thiếu WS final TRỪ symbol đã REST ở pass +2 s (cơ sở luật ≤ earlyMax); missingWs = thiếu WS final (log thieu_ws). */
+        int need, missingWs, requested, closed, failed;
         boolean restSkipped;
         Map<String, KlineObjectOptimized> open = Collections.emptyMap();
         List<String> needSample = Collections.emptyList();
+        /** [QF4] symbol không WS final và không REST ngay sau pass +4 s = ô live đọc bản nặn ở +6 s. */
+        int thieuLucChot;
+        List<String> thieuEx = Collections.emptyList();
+    }
+
+    // ===================== [QF4, ADDENDUM 3] REST bù mất WS ở giây +2 =====================
+
+    static final class GapOut {
+        int missing, lost, byDown, requested, closed, failed;
+        boolean global, restSkipped;
+        long doneAtMs;
+        Map<String, KlineObjectOptimized> open = Collections.emptyMap();
+        List<String> lostSample = Collections.emptyList();
+    }
+
+    /** Thống kê lúc chốt của 1 phút (cho [KLINE-COVER] +30 s). */
+    static final class ChotStat {
+        final long minute;
+        final int wsMat, restWsMat, thieuLucChot;
+
+        ChotStat(long minute, int wsMat, int restWsMat, int thieuLucChot) {
+            this.minute = minute;
+            this.wsMat = wsMat;
+            this.restWsMat = restWsMat;
+            this.thieuLucChot = thieuLucChot;
+        }
+    }
+
+    final AtomicLong cWsMat = new AtomicLong(), cRestWsMat = new AtomicLong(), cThieuLucChot = new AtomicLong();
+    private final int gapGlobalN;
+    /** Symbol (ngắn) đã có bản REST cho phút {@link #restMinute} (pass +2 s và +4 s). */
+    private long restMinute = Long.MIN_VALUE;
+    private final Set<String> restClosed = new HashSet<>();
+    private int gapLostM, gapRestM;
+    private final java.util.concurrent.ConcurrentHashMap<Long, ChotStat> chot = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private synchronized Set<String> restClosedFor(long m) {
+        if (m != restMinute) {
+            restMinute = m;
+            restClosed.clear();
+            gapLostM = 0;
+            gapRestM = 0;
+        }
+        return restClosed;
+    }
+
+    ChotStat chotOf(long m) {
+        return chot.get(m);
+    }
+
+    /**
+     * Tập "mất WS" (thuần, test được; ADDENDUM 3 + ADD-3b): thiếu WS final ∩ {@code gapSyms} (symbol của kết nối hở — luật a — hoặc
+     * im lặng ≥ 1,5 s — luật b, do KlineWsClient tính); luật c: tổng thiếu &gt; globalN ⇒ mọi symbol thiếu.
+     * {@code stat} = {so_theo_ket_noi, toan_cuc}.
+     */
+    static Set<String> lostSet(List<String> missing, Set<String> gapSyms, int globalN, int[] stat) {
+        Set<String> lost = new java.util.LinkedHashSet<>();
+        for (String s : missing) if (gapSyms.contains(s)) lost.add(s);
+        stat[0] = lost.size();
+        if (missing.size() > globalN) {
+            lost.addAll(missing);
+            stat[1] = 1;
+        }
+        return lost;
+    }
+
+    /**
+     * Pass +2 s cho phút M vừa đóng: chỉ REST tập "mất WS" (lane KLINE, vừa room, không chờ, ưu tiên {@code prio} giảm dần).
+     * Không có mất WS ⇒ không gọi gì (phút bình thường để pass +4 s như cũ).
+     */
+    GapOut gap(long m, List<String> universe, Set<String> gapSyms, ToDoubleFunction<String> prio, boolean restAllowed) {
+        GapOut o = new GapOut();
+        Set<String> done = restClosedFor(m);
+        List<String> missing = core.missingFinals(m, universe);
+        o.missing = missing.size();
+        int[] st = new int[2];
+        Set<String> lost = lostSet(missing, gapSyms, gapGlobalN, st);
+        o.byDown = st[0];
+        o.global = st[1] == 1;
+        o.lost = lost.size();
+        if (lost.isEmpty()) return o;
+        List<String> l = new ArrayList<>(lost);
+        o.lostSample = l.subList(0, Math.min(10, l.size()));
+        planner.markSuspects(l, m);
+        synchronized (this) { gapLostM = l.size(); }
+        cWsMat.addAndGet(l.size());
+        if (!restAllowed || m < startMinute) {
+            o.restSkipped = true;
+            return o;
+        }
+        if (prio != null) {
+            final java.util.Map<String, Double> pv = new java.util.HashMap<>();
+            for (String s : l) pv.put(s, prio.applyAsDouble(s));
+            l.sort((a, b) -> {
+                int c = Double.compare(pv.get(b), pv.get(a));
+                return c != 0 ? c : a.compareTo(b);
+            });
+        }
+        int room = Math.max(0, klineRoom.getAsInt());
+        List<String> req = new ArrayList<>(l.subList(0, Math.min(room, l.size())));
+        o.requested = req.size();
+        if (!req.isEmpty()) {
+            KlineIngestCore.EarlyResult r = core.earlyRest(m, req);
+            o.closed = r.closed.size();
+            o.failed = r.failed.size();
+            o.open = r.open;
+            synchronized (this) {
+                done.addAll(r.closed.keySet());
+                gapRestM = r.closed.size();
+            }
+            cRestWsMat.addAndGet(r.closed.size());
+        }
+        o.doneAtMs = clock.getAsLong();
+        return o;
     }
 
     /** Cửa sổ live đọc lại nến (KFIX-B, LiveTickerWindow, mặc định 3′). */
@@ -71,24 +195,51 @@ final class KlinePassController {
     /** Pass +4 s cho phút M vừa đóng. {@code restAllowed}=false khi đang ban. */
     EarlyOut early(long m, List<String> universe, boolean restAllowed) {
         EarlyOut o = new EarlyOut();
-        List<String> need = core.missingFinals(m, universe);
+        Set<String> done = restClosedFor(m);
+        List<String> missing = core.missingFinals(m, universe);
+        planner.markSuspects(missing, m);
+        List<String> need = new ArrayList<>();
+        synchronized (this) {
+            for (String s : missing) if (!done.contains(KlineIngestCore.shortSym(s))) need.add(s);   // [QF4] da REST o +2 s => bo
+        }
+        o.missingWs = missing.size();
         o.need = need.size();
         o.needSample = need.subList(0, Math.min(10, need.size()));
-        planner.markSuspects(need, m);
-        if (need.isEmpty() || !restAllowed) return o;
-        if (m < startMinute || need.size() > earlyMax) {     // lo lon / phut truoc khi start: de pass +30 s (nen da settle)
-            o.restSkipped = true;
-            if (need.size() > earlyMax) cEarlySkippedBig.incrementAndGet();
-            return o;
+        if (!need.isEmpty() && restAllowed) {
+            if (m < startMinute || need.size() > earlyMax) {     // lo lon / phut truoc khi start: de pass +30 s (nen da settle)
+                o.restSkipped = true;
+                if (need.size() > earlyMax) cEarlySkippedBig.incrementAndGet();
+            } else {
+                List<String> req = SettlePlanner.take(need, klineRoom.getAsInt(), m / MIN);
+                o.requested = req.size();
+                if (!req.isEmpty()) {
+                    KlineIngestCore.EarlyResult r = core.earlyRest(m, req);
+                    o.closed = r.closed.size();
+                    o.failed = r.failed.size();
+                    o.open = r.open;
+                    synchronized (this) { done.addAll(r.closed.keySet()); }
+                }
+            }
         }
-        List<String> req = SettlePlanner.take(need, klineRoom.getAsInt(), m / MIN);
-        o.requested = req.size();
-        if (req.isEmpty()) return o;
-        KlineIngestCore.EarlyResult r = core.earlyRest(m, req);
-        o.closed = r.closed.size();
-        o.failed = r.failed.size();
-        o.open = r.open;
+        recordChot(m, universe, o);
         return o;
+    }
+
+    /** [QF4] Sau pass +4 s: symbol không WS final và không REST = thiếu lúc chốt (live đọc bản nặn ở +6 s). */
+    private void recordChot(long m, List<String> universe, EarlyOut o) {
+        List<String> still = core.missingFinals(m, universe);
+        List<String> thieu = new ArrayList<>();
+        int lostM, restM;
+        synchronized (this) {
+            for (String s : still) if (!restClosed.contains(KlineIngestCore.shortSym(s))) thieu.add(s);
+            lostM = gapLostM;
+            restM = gapRestM;
+        }
+        o.thieuLucChot = thieu.size();
+        o.thieuEx = thieu.subList(0, Math.min(10, thieu.size()));
+        cThieuLucChot.addAndGet(thieu.size());
+        chot.put(m, new ChotStat(m, lostM, restM, thieu.size()));
+        chot.keySet().removeIf(k -> k < m - 10 * MIN);
     }
 
     /** Pass +30 s: phút đang mở {@code curMin}, M = curMin-1 (kiểm lại suspects + đối soát mẫu). */

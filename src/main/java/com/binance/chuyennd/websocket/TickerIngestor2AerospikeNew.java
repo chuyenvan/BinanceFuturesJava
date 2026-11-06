@@ -71,8 +71,11 @@ public class TickerIngestor2AerospikeNew {
     static final long WS_WATCHDOG_MS = cfgLong("KLINE_WS_WATCHDOG_MS", 5_000);
     private final SettlePlanner planner = new SettlePlanner(RECON_SAMPLE, 30);
     private final long startMinute = Utils.getMinute(System.currentTimeMillis());
+    /** [QF4, ADDENDUM 3] REST bu mat WS: giay chay pass (sau flush WS 1,5 s) va nguong luat (c) tong thieu. */
+    static final long GAP_REST_SEC = cfgLong("KLINE_GAP_REST_SEC", 2);
+    static final int GAP_GLOBAL_N = (int) cfgLong("KLINE_GAP_GLOBAL_N", 600);   // ADD-3b: max do duoc 578 thieu o +1,5 s
     private final KlinePassController passes = new KlinePassController(core, planner, TickerIngestor2AerospikeNew::klineRoom,
-            System::currentTimeMillis, EARLY_REST_MAX, SETTLE_LIMIT, startMinute, SETTLE_MIN_AGE_SEC * 1000L);
+            System::currentTimeMillis, EARLY_REST_MAX, SETTLE_LIMIT, startMinute, SETTLE_MIN_AGE_SEC * 1000L, GAP_GLOBAL_N);
     /** Repair lich su luc khoi dong (startDataRepair) da xong — kiem sau deploy chi tinh tuoi gia sau moc nay. */
     static volatile boolean startupRepairDone = false;
 
@@ -349,9 +352,9 @@ public class TickerIngestor2AerospikeNew {
      */
     private void startFinalizerLoop() {
         Thread t = new Thread(com.binance.chuyennd.utils.LoopSupervisor.wrap("Kline-Finalizer", () -> {   // [INGEST-QF2] supervisor
-            long lastWsFlush = 0, lastEarly = 0, lastSettle = 0, lastStats = 0;
+            long lastWsFlush = 0, lastEarly = 0, lastSettle = 0, lastStats = 0, lastGap = 0;
             boolean firstSettle = true;
-            int wsCount = 0, earlyCalls = 0;
+            int wsCount = 0, earlyCalls = 0, gapCalls = 0;
             while (true) {
                 try {
                     long now = System.currentTimeMillis();
@@ -367,10 +370,16 @@ public class TickerIngestor2AerospikeNew {
                         core.flushLateFinals();
                     }
                     // [INGEST-QF2] bo luat "WS suy giam >50% o giay 2 => REST moi symbol" (10-30: 973 phut kich hoat, burst ~400 call)
+                    // [QF4, ADDENDUM 3] giay +2: ket noi WS ho / im lang / thieu > N => REST NGAY cho dung symbol mat (truoc +4 s)
+                    if (ws && m > lastGap && m <= lastWsFlush && inMin >= GAP_REST_SEC * 1000L) {
+                        lastGap = m;
+                        gapCalls = inMin <= 50_000L ? gapPass(m, curMin) : 0;
+                    }
                     boolean earlyDue = inMin >= EARLY_REST_SEC * 1000L;
                     if (m > lastEarly && earlyDue && (!ws || m <= lastWsFlush)) {
                         lastEarly = m;
-                        earlyCalls = earlyPass(m, curMin, ws, wsCount, inMin <= 50_000L);   // tre >50 s: chi danh dau suspect
+                        earlyCalls = gapCalls + earlyPass(m, curMin, ws, wsCount, inMin <= 50_000L);   // tre >50 s: chi danh dau suspect
+                        gapCalls = 0;
                     }
                     if (m > lastSettle && inMin >= SETTLE_SEC * 1000L) {
                         lastSettle = m;
@@ -447,10 +456,12 @@ public class TickerIngestor2AerospikeNew {
             LOG.warn("[KLINE-RECON] doi soat mau phut {}: {} o WS lech REST (da ghi de) + {} o thieu (da ghi) / {} symbol, diff_by_minute={}",
                     Utils.normalizeDateYYYYMMDDHHmm(m), o.smp.rewrittenDiff, o.smp.filledMissing, o.smp.fetched, o.smp.diffByMinute.values());
         }
-        LOG.info("[KLINE-COVER] phut={} chua_chot={} chua_chot_truoc={} bo_kiem={} ws_muon_go={} suspects={} goi={} mau={} khoi_dong={} lanh_ngoai_3p={} lanh_ngoai_3p_tong={}",
+        KlinePassController.ChotStat cs = passes.chotOf(m);   // [QF4] so do LUC CHOT (+4 s) cua chinh phut M; -1 = khong co (ban/tre)
+        LOG.info("[KLINE-COVER] phut={} chua_chot={} chua_chot_truoc={} bo_kiem={} ws_muon_go={} suspects={} goi={} mau={} khoi_dong={} lanh_ngoai_3p={} lanh_ngoai_3p_tong={} thieu_luc_chot={} ws_mat={} rest_ws_mat={} thieu_luc_chot_tong={}",
                 Utils.normalizeDateYYYYMMDDHHmm(m), o.pendingM, o.pendingPrev, o.dropped, o.wsCovered, o.suspects,
                 o.suspectsRequested, o.sampleRequested, curMin - startMinute < 5 * Utils.TIME_MINUTE ? 1 : 0, o.lateHeal,
-                passes.cLateHeal.get());
+                passes.cLateHeal.get(), cs == null ? -1 : cs.thieuLucChot, cs == null ? -1 : cs.wsMat, cs == null ? -1 : cs.restWsMat,
+                passes.cThieuLucChot.get());
         warnLateHeal(o);
         return o.calls;
     }
@@ -488,10 +499,38 @@ public class TickerIngestor2AerospikeNew {
         }
         KlinePassController.EarlyOut o = passes.early(m, syms, restInTime && !BinanceRestGuard.isBanned());
         if (!o.open.isEmpty()) timeBuffer.computeIfAbsent(curMin, k -> new ConcurrentHashMap<>()).putAll(o.open);
-        int wsHave = syms.size() - o.need;   // WS final da co (ghi o giay 1,5 + toi muon)
-        LOG.info("✅ [KLINE V9 {}] Chốt nến phút {} thành công. Total: {} symbols (ws_final={} ws_flush_1s5={} rest_som={} rest_loi={} thieu_ws={} rest_goi={} rest_bo_qua_lo_lon={} vd_thieu_ws={})",
-                MODE, Utils.normalizeDateYYYYMMDDHHmm(m), wsHave + o.closed, wsHave, wsCount, o.closed, o.failed, o.need,
-                o.requested, o.restSkipped ? 1 : 0, o.needSample);
+        int wsHave = syms.size() - o.missingWs;   // WS final da co (ghi o giay 1,5 + toi muon)
+        KlinePassController.ChotStat cs = passes.chotOf(m);
+        int restWsMat = cs == null ? 0 : cs.restWsMat;
+        LOG.info("✅ [KLINE V9 {}] Chốt nến phút {} thành công. Total: {} symbols (ws_final={} ws_flush_1s5={} rest_som={} rest_loi={} thieu_ws={} rest_goi={} rest_bo_qua_lo_lon={} vd_thieu_ws={} rest_ws_mat={} thieu_luc_chot={})",
+                MODE, Utils.normalizeDateYYYYMMDDHHmm(m), syms.size() - o.thieuLucChot, wsHave, wsCount, o.closed, o.failed, o.missingWs,
+                o.requested, o.restSkipped ? 1 : 0, o.needSample, restWsMat, o.thieuLucChot);
+        if (o.thieuLucChot > 0) {
+            LOG.warn("[KLINE-CHOT-THIEU] phut={} thieu_luc_chot={} (khong WS final, khong REST; live doc ban nan o +6 s) ws_mat={} rest_ws_mat={} rest_bo_qua_lo_lon={} vd={}",
+                    Utils.normalizeDateYYYYMMDDHHmm(m), o.thieuLucChot, cs == null ? 0 : cs.wsMat, restWsMat, o.restSkipped ? 1 : 0, o.thieuEx);
+        }
+        return o.requested;
+    }
+
+    /** [QF4, ADDENDUM 3] Pass +2 s: REST NGAY cho symbol cua ket noi WS ho/im lang (hoac moi symbol thieu khi > N); log khi co. */
+    private int gapPass(long m, long curMin) {
+        KlineWsClient w = wsClient;
+        List<String> syms = new ArrayList<>(globalSubscribedSymbols);
+        KlineWsClient.GapConns gc = w == null ? new KlineWsClient.GapConns() : w.gapConns(curMin - 1_000L, System.currentTimeMillis());
+        final Map<String, KlineObjectOptimized> vol = timeBuffer.get(m);   // nen x=false cuoi cua M (quote volume) => uu tien
+        java.util.function.ToDoubleFunction<String> prio = s -> {
+            KlineObjectOptimized k = vol == null ? null : vol.get(KlineIngestCore.shortSym(s));
+            return k == null ? 0d : k.getTotalUsdt();
+        };
+        long t0 = System.currentTimeMillis();
+        KlinePassController.GapOut o = passes.gap(m, syms, gc.syms, prio, !BinanceRestGuard.isBanned());
+        if (!o.open.isEmpty()) timeBuffer.computeIfAbsent(curMin, k -> new ConcurrentHashMap<>()).putAll(o.open);
+        if (o.lost > 0) {
+            LOG.warn("[KLINE-WS-GAP] phut={} mat_ws={} (ket_noi_ho={} ket_noi_im={} sym_theo_ket_noi={} toan_cuc={}) thieu_ws={} rest_goi={} rest_ok={} rest_loi={} bo_qua_ban_khoi_dong={} xong_luc_giay={} ({} ms) vd={}",
+                    Utils.normalizeDateYYYYMMDDHHmm(m), o.lost, gc.down, gc.silent, o.byDown, o.global ? 1 : 0, o.missing,
+                    o.requested, o.closed, o.failed, o.restSkipped ? 1 : 0,
+                    String.format("%.1f", (System.currentTimeMillis() - curMin) / 1000.0), System.currentTimeMillis() - t0, o.lostSample);
+        }
         return o.requested;
     }
 

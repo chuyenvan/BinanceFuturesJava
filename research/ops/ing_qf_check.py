@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """ing_qf_check.py — cham PREREG_INGEST_QUICKFIX (+ADD1/1b/1c). CHAY TREN ORACLE, CHI DOC 242, KHONG goi REST fapi tu Oracle.
-  python3 ing_qf_check.py                 # moi gio: Q1,Q2,Q4-Q7,Q10,Q11,O1 (+ bao cao lanh_ngoai_3p, loop_escalations) tu log collectData 242 + record kline_1m_opt ton tai
+  python3 ing_qf_check.py                 # moi gio: Q1,Q2,Q4-Q7,Q10,Q11,Q12,O1 (+ bao cao lanh_ngoai_3p, loop_escalations, ws_mat) tu log collectData 242 + record kline_1m_opt ton tai
   python3 ing_qf_check.py --vision DAY    # Q3: 30 symbol x 1440 phut ngay UTC DAY (YYYY-MM-DD) so Vision daily (data.binance.vision)
 Ghi 1 dong JSON vao ~/claude_master/ing1030/qf_check.jsonl. Goi y cron: 23 * * * * (gio) va 40 9 * * * --vision hom-truoc."""
 import sys, io, json, time, random, struct, zipfile, subprocess, urllib.request, datetime, re
@@ -56,7 +56,13 @@ def hourly():
                Q11_sent_banned=max(grab(bud, "sent_banned_total") or [0]),
                Q11_vi_pham_lines=sum(1 for l in lines if "Q11 VI PHAM" in l),
                R_lanh_ngoai_3p=sum(grab(cov, "lanh_ngoai_3p")), R_loop_escalations=max(grab(bud, "loop_escalations") or [0]))
-    hard = (res["Q1_restart_lines"] or res["Q1_oom"] or res["Q2_bad"] or (res["Q2_bo_kiem_max"] or 0) > 0 or no_rec
+    # [QF4, ADDENDUM 3] Q12: thieu LUC CHOT (+4 s) moi phut (bo phut khoi dong; -1 = khong co so do)
+    tlc = [(l[l.find("phut="):l.find("phut=") + 19], v) for l in cov_ss for v in grab([l], "thieu_luc_chot") if v >= 0]
+    res.update(Q12_lines=len(tlc), Q12_phut_thieu_luc_chot=sum(1 for _, v in tlc if v > 0),
+               Q12_max=max([v for _, v in tlc] or [0]), Q12_ex=[p + "=" + str(v) for p, v in tlc if v > 0][:5],
+               R_ws_mat=sum(v for v in grab(cov_ss, "ws_mat") if v > 0), R_rest_ws_mat=sum(v for v in grab(cov_ss, "rest_ws_mat") if v > 0))
+    hard = (res["Q12_phut_thieu_luc_chot"] > 1 or res["Q12_max"] > 130
+            or res["Q1_restart_lines"] or res["Q1_oom"] or res["Q2_bad"] or (res["Q2_bo_kiem_max"] or 0) > 0 or no_rec
             or (res["Q4_peak_max"] or 0) > 300 or (res["Q4_fdata_peak_max"] or 0) > 150 or res["Q6_429_418"] or res["Q6_ban_lines"]
             or (res["Q7_price_gap_max"] or 0) > 15000 or any(x > 35 for x in res["O1_sweep_min"])
             or res["Q11_sent_banned"] or res["Q11_vi_pham_lines"])
