@@ -23,7 +23,7 @@ SCP_242=${SCP_242:-"scp -P 2222 -o BatchMode=yes -o ConnectTimeout=20 -i /home/u
 RHOST=${RHOST-"root@103.157.218.242:"}
 A=${APP_DIR:-/home/chuyennd/java/v_t_m}
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}
-NJ_MD5=${NJ_MD5:-304697108dbe6be639fad570e7b766b3}   # jar dry dang chay (r4s, ROUND4S) — khac => TU CHOI
+NJ_MD5=${NJ_MD5:-694b29b2e5be32b537ca6c38557e64db}   # jar dry dang chay (r4t, ROUND4T) — khac => TU CHOI
 SEED=${SEED:-}
 SEED_MD5=${SEED_MD5:-}
 SEED_MAX_LAG_H=${SEED_MAX_LAG_H:-}
