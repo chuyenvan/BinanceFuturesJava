@@ -127,3 +127,12 @@ roller, exchangeInfo, repair). Pass kiểm lại xếp **ô cũ nhất trước*
   ⇒ 0 REST mất WS (không báo nhầm), `thieu_luc_chot`=0. T-Q4-4 kết nối im lặng không EOF (luật b) ⇒ như T-Q4-1. Ba kịch bản QF2 cũ
   (WS chết 1′, 6 kết nối rớt 2′, phút biến động 376) chạy lại với pass +2 s, giữ nguyên ngưỡng ADD-1b.
 - **Deploy:** chỉ thay jar collectData (env giữ nguyên từ QF3), restart riêng collectData, KHÔNG đụng v_t_m; DRY=1; owner chạy.
+
+**ADD-3b (2026-11-06, cùng vòng, TRƯỚC khi chạy bất kỳ test QF4 nào; lý do: số đo mới, ghi lại để không phải tune sau):**
+- Log 242 (6 000 phút gần nhất, 11-02 → 11-06): thiếu WS final lúc flush +1,5 s p50 436 / p99 543 / max 578 trên 752; lúc +4 s p99 0.
+- Đo từ Oracle (1 kết nối, 125 symbol ít giao dịch nhất, 4 phút): x=true tới p50 3 044 ms / max 3 053 ms sau đóng (sàn tự đóng nến không
+  trade ở ~3 s); chỉ 23–40 % tới trước +2 s; khoảng im lặng lớn nhất giữa 2 message 788 ms (p99,9 644 ms).
+- ⇒ Luật (b) "≥ 60 % thiếu" và luật (c) "> 300" của ADDENDUM 3 sẽ báo nhầm GẦN NHƯ MỌI PHÚT (5 442/6 000 phút > 300 ở +1,5 s). Đổi:
+  (b) kết nối ≥ 20 symbol **im lặng ≥ 1 500 ms** (không message nào) tại lúc chạy pass +2 s (≈ 1,9 × im lặng lớn nhất đo được);
+  (c) tổng thiếu **> 600** (`KLINE_GAP_GLOBAL_N`; max đo được 578 ở +1,5 s). Luật (a) giữ. Mọi tiêu chí/test khác của ADDENDUM 3 giữ;
+  T-Q4-3 (phút bình thường) dùng phân bố đo được: 75 % symbol final tới ở 3,05 s.
