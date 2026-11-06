@@ -10,8 +10,8 @@
 # Rollback sau nay: bash ~/claude_master/deploy/rollback_ingest_qf4.sh <TS>
 # =============================================================================
 set -uo pipefail
-JAR_SRC=/home/ubuntu/claude_master/ing1030/jar/binance-java-sdk-1.2.4.jar_ingqf4_f84cf2d7
-JAR_MD5=6b55dd17b92c66075ff0f08b185b8ca9
+JAR_SRC=/home/ubuntu/claude_master/ing1030/jar/binance-java-sdk-1.2.4.jar_ingqf4b_68a486d3
+JAR_MD5=15f47509d9b9331b340337215e671198
 OLD_MD5=a31fdd6caf12ce35c12b839a3cced929
 # INGQF_SSH / INGQF_SCP chi de TEST (test_pause_trap.sh); prod de mac dinh
 S=${INGQF_SSH:-"ssh -p 2222 -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=10 -o ServerAliveCountMax=6 -i /home/ubuntu/.ssh/id_rsa_chuyennd root@103.157.218.242"}
@@ -39,7 +39,7 @@ own_pause_cleanup() {
 say "=== deploy_ingest_qf4 (QF4) TS=$TS DRY=$DRY jar=$JAR_MD5 token=$TOKEN ==="
 [ -f "$RESTART_R" ] && [ -f "$CHECK_R" ] || die "thieu $RESTART_R / $CHECK_R"
 [ "$(md5sum < "$RESTART_R" | cut -c1-32)" = "35f60aff9b319346a28e3c10c91f9df8" ] || die "md5 $RESTART_R sai"
-[ "$(md5sum < "$CHECK_R" | cut -c1-32)" = "0afe05bf06b4224f271febf0b64477cd" ] || die "md5 $CHECK_R sai"
+[ "$(md5sum < "$CHECK_R" | cut -c1-32)" = "675ecf2daab369d77c38c6528a53e89e" ] || die "md5 $CHECK_R sai"
 
 # ---- khung gio: phut :10-:44, tranh gio 07/19, tranh 00:50-01:20 va 12:50-13:20 (+07); cho toi da 90'
 if [ "${FORCE_TIME:-0}" != 1 ] && [ "$DRY" != 1 ]; then
