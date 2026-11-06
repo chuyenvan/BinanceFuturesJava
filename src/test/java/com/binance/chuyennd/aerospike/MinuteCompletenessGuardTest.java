@@ -64,6 +64,8 @@ public class MinuteCompletenessGuardTest {
     Store st;
     AtomicLong now;
     LiveTickerWindow w;
+    List<String> alerts;
+    MinuteCompletenessGuard.State gs;
 
     @Before
     public void setUp() {
@@ -73,6 +75,9 @@ public class MinuteCompletenessGuardTest {
         MinuteCompletenessGuard.N_INCOMPLETE.set(0);
         MinuteCompletenessGuard.N_WAITED.set(0);
         MinuteCompletenessGuard.N_RECOVERED.set(0);
+        MinuteCompletenessGuard.N_ALERTS.set(0);
+        alerts = new ArrayList<>();
+        gs = new MinuteCompletenessGuard.State(alerts::add);   // KHONG gui Telegram that trong test
     }
 
     private void fill(long from, long to, int c) {
@@ -83,7 +88,7 @@ public class MinuteCompletenessGuardTest {
     private MinuteCompletenessGuard.Verdict tick(long endMinute, long atMsAfterClose) {
         now.set(endMinute + MIN + atMsAfterClose);
         w.read(now.get(), 120);
-        return MinuteCompletenessGuard.check(w, endMinute, now::get, ms -> now.addAndGet(ms));
+        return MinuteCompletenessGuard.check(gs, w, endMinute, now::get, ms -> now.addAndGet(ms));
     }
 
     @Test
@@ -92,14 +97,13 @@ public class MinuteCompletenessGuardTest {
         now.set(T + MIN + 6_000L);
         Map<String, List<KlineObjectSimple>> before = w.read(now.get(), 120);
         int r0 = st.reads.get();
-        MinuteCompletenessGuard.Verdict v = MinuteCompletenessGuard.check(w, T, now::get, ms -> now.addAndGet(ms));
+        MinuteCompletenessGuard.Verdict v = MinuteCompletenessGuard.check(gs, w, T, now::get, ms -> now.addAndGet(ms));
         assertTrue(v.complete);
         assertFalse(v.waited);
         assertEquals("du => 0 lan doc them", r0, st.reads.get());
         assertEquals("khong ngu", T + MIN + 6_000L, now.get());
         assertEquals(FULL, v.have);
         assertEquals(745, v.need);   // ceil(0.99 x 752)
-        assertEquals("cache khong doi", before.keySet(), w.minuteSnapshot(T).keySet().isEmpty() ? before.keySet() : before.keySet());
         assertEquals(FULL, w.minuteSnapshot(T).size());
         assertEquals(0, MinuteCompletenessGuard.N_INCOMPLETE.get());
     }
@@ -198,18 +202,78 @@ public class MinuteCompletenessGuardTest {
         assertEquals(dropped.size(), incomplete);
         assertEquals(incomplete, MinuteCompletenessGuard.N_INCOMPLETE.get());
         assertTrue("co phut REST bu kip", MinuteCompletenessGuard.N_RECOVERED.get() > 0);
+        assertFalse("ngay sap => co KHAN", alerts.isEmpty());
+        assertTrue("chong spam: <= 1 tin/30' (" + alerts.size() + ")", alerts.size() <= 300 / 30 + 1);
     }
 
     @Test
     public void median2AndNeed() {
-        int[] a = new int[60];
-        Arrays.fill(a, 752);
-        assertEquals(1504, MinuteCompletenessGuard.median2(a));
+        for (int i = 0; i < 29; i++) gs.addGood(T + i * MIN, 752);
+        assertEquals(-1, gs.median2());
+        for (int i = 29; i < 80; i++) gs.addGood(T + i * MIN, 752);
+        assertEquals("giu 60 phut DU gan nhat", 60, gs.good.size());
+        assertEquals(1504, gs.median2());
         assertEquals(745, MinuteCompletenessGuard.need(1504));
         assertEquals(693, MinuteCompletenessGuard.need(1400));   // 0.99 x 700 = 693 dung (khong loi dau phay dong)
-        int[] b = new int[60];
-        Arrays.fill(b, 0, 29, 752);
-        assertEquals(-1, MinuteCompletenessGuard.median2(b));
+    }
+
+    /** [R4s A1 MIN-3] Su co keo dai 35' (627/752): nguong KHONG tu ha — moi phut MI; trung vi 60' cache (cach cu) da ha sau 31'. */
+    @Test
+    public void longOutage35min_thresholdStays_allMinutesFailClosed() {
+        long start = T - 34 * MIN;
+        fill(start - 120 * MIN, start - MIN, FULL);
+        for (long m = start - 60 * MIN; m < start; m += MIN) assertTrue(tick(m, 6_000L).complete);
+        fill(start, T, 627);
+        for (long m = start; m <= T; m += MIN) {
+            MinuteCompletenessGuard.Verdict v = tick(m, 6_000L);
+            assertFalse("phut thu " + ((m - start) / MIN) + " phai MI: " + v.line(), v.complete);
+            assertEquals("nguong co dinh 745", 745, v.need);
+            assertTrue(now.get() - (m + MIN) <= 20_000L);
+        }
+        assertEquals(35, MinuteCompletenessGuard.N_INCOMPLETE.get());
+        int[] c = w.countsRange(T - 60 * MIN, 60);
+        int[] v = Arrays.stream(c).filter(x -> x > 0).sorted().toArray();
+        assertEquals("cach cu (trung vi 60' cache) da ha ve 627 => mu", 627, v[v.length / 2]);
+        assertEquals("tham chieu chi gom phut DU", 1504, gs.median2());
+        // KHAN: phut MI thu 3 (lien tiep) + lan 2 sau 30' (chong spam) = 2 tin
+        assertEquals(alerts.toString(), 2, alerts.size());
+        assertTrue(alerts.get(0).contains("KHAN") && alerts.get(0).contains("3 phut lien tiep"));
+        assertTrue(alerts.get(1).contains("33 phut lien tiep"));
+        // het su co => du lai, lien tiep ve 0
+        st.count.put(T + MIN, FULL);
+        assertTrue(tick(T + MIN, 6_000L).complete);
+        assertEquals(0, gs.consecutive);
+    }
+
+    /** [R4s MIN-2] 5 phut MI KHONG lien tiep trong 60' => KHAN o phut thu 5; them MI trong 30' => khong spam. */
+    @Test
+    public void alert_fiveIn60_nonConsecutive_thenCooldown() {
+        long start = T - 70 * MIN;
+        fill(start - 120 * MIN, T + 30 * MIN, FULL);
+        for (int k = 0; k < 8; k++) st.count.put(start + k * 9 * MIN, 600);   // MI cach 9' => lien tiep toi da 1
+        int miSeen = 0;
+        for (long m = start; m <= start + 70 * MIN; m += MIN) {
+            MinuteCompletenessGuard.Verdict v = tick(m, 6_000L);
+            if (!v.complete) {
+                miSeen++;
+                assertEquals("MI thu " + miSeen, miSeen < 5 ? 0 : 1, alerts.size());
+            }
+        }
+        assertEquals(8, miSeen);
+        assertEquals("trong 30' sau tin dau: khong gui them", 1, alerts.size());
+        assertTrue(alerts.get(0).contains("5 phut/60'"));
+    }
+
+    /** 2 phut MI lien tiep roi du => khong KHAN, dem lien tiep ve 0. */
+    @Test
+    public void twoConsecutive_noAlert() {
+        fill(T - 120 * MIN, T + 5 * MIN, FULL);
+        st.count.put(T, 600);
+        st.count.put(T + MIN, 600);
+        for (long m = T - 60 * MIN; m <= T + 3 * MIN; m += MIN) tick(m, 6_000L);
+        assertEquals(2, MinuteCompletenessGuard.N_INCOMPLETE.get());
+        assertTrue(alerts.isEmpty());
+        assertEquals(0, gs.consecutive);
     }
 
     /** Noi day production: guard ngay sau doc cua so, TRUOC loc A1/feature; chan lenh moi o DAU createOrderBuyRequest0. */
