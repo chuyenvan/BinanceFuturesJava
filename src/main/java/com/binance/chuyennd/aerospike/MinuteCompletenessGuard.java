@@ -5,10 +5,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 
 /**
  * [V12 R4r/R4s] Guard DO DU cua phut vua chot — CHI duong live ({@code DetectEntrySignal2TradeNormal}); sim/backtest khong co.
@@ -26,8 +29,10 @@ import java.util.function.LongSupplier;
  *       chong spam: toi da 1 tin / {@link #ALERT_COOLDOWN_MIN} phut.</li>
  *   <li>Du ngay tu dau =&gt; khong doc them, khong doi gi (byte-identical r4q).</li>
  * </ul>
- * Tat khan cap: env {@code LIVE_MINUTE_GUARD=0}. Han che da biet: universe giam &gt; 1 % mot lan (delist hang loat) =&gt; moi phut MI +
- * KHAN toi khi restart (mam lai tu cache) hoac {@code LIVE_MINUTE_GUARD=0}.
+ * [R4t A1 MAJ-S] So ky vong = min(trung vi 60 phut DU, |symbol da thay o phut DU ∩ TRADING theo exchangeInfo hien hanh|):
+ * delist hang loat =&gt; symbol roi TRADING =&gt; ky vong giam theo (khong ket fail-closed; tre toi lan lam moi exchangeInfo ke tiep);
+ * WS rot =&gt; symbol van TRADING =&gt; van bat. Universe tang =&gt; khong anh huong (min). exchangeInfo khong co / ky vong &lt; nua trung vi
+ * (nguon nghi sai) =&gt; chi dung trung vi. Tat khan cap: env {@code LIVE_MINUTE_GUARD=0}.
  */
 public final class MinuteCompletenessGuard {
 
@@ -51,8 +56,8 @@ public final class MinuteCompletenessGuard {
     public static final AtomicLong N_BLOCKED_LEGS = new AtomicLong();
     public static final AtomicLong N_ALERTS = new AtomicLong();
 
-    /** Trang thai live (1 luong quyet dinh). Telegram tren thread daemon rieng, khong chan tick. */
-    static final State LIVE = new State(m -> {
+    /** Trang thai live (1 luong quyet dinh). Telegram tren thread daemon rieng, khong chan tick. Ky vong exchangeInfo = A1 snapshot. */
+    static final State LIVE = new State(com.binance.chuyennd.tradecore.selector.UniverseA1Filter::tradingSymbols, m -> {
         Thread t = new Thread(() -> {
             try {
                 Utils.sendSms2Telegram(m);
@@ -80,9 +85,36 @@ public final class MinuteCompletenessGuard {
         int consecutive = 0;
         long lastAlertMinute = Long.MIN_VALUE;
         final Consumer<String> alertSink;
+        /** [R4t MAJ-S] symbol TRADING theo exchangeInfo hien hanh (null = khong co nguon => chi dung trung vi). */
+        final Supplier<Set<String>> trading;
+        /** [R4t] symbol da thay o phut DU (+ mam tu cache), dinh — WS rot keo dai khong lam mat symbol khoi tap nay. */
+        final Set<String> knownSyms = new HashSet<>();
+        long lastSanityWarnMinute = Long.MIN_VALUE;
 
         State(Consumer<String> alertSink) {
+            this(() -> null, alertSink);
+        }
+
+        State(Supplier<Set<String>> trading, Consumer<String> alertSink) {
+            this.trading = trading;
             this.alertSink = alertSink;
+        }
+
+        /**
+         * So symbol ky vong theo exchangeInfo = |knownSyms ∩ TRADING|; -1 khi khong co nguon. Delist that => symbol roi TRADING =>
+         * ky vong giam theo; WS rot => symbol van TRADING => ky vong giu.
+         */
+        int expectedEx() {
+            Set<String> t;
+            try {
+                t = trading.get();
+            } catch (RuntimeException e) {
+                t = null;
+            }
+            if (t == null || t.isEmpty()) return -1;
+            int n = 0;
+            for (String s : knownSyms) if (t.contains(s)) n++;
+            return n;
         }
 
         void addGood(long minute, int have) {
@@ -106,10 +138,18 @@ public final class MinuteCompletenessGuard {
                 long m = from + i * Utils.TIME_MINUTE;
                 if (c[i] > 0 && !good.containsKey(m)) addGood(m, c[i]);
             }
+            knownSyms.addAll(w.symbolsIn(from, LOOKBACK_MIN));
         }
 
         void onComplete() {
             consecutive = 0;
+        }
+
+        /** Phut DU: vao tham chieu + tap symbol da biet, reset dem lien tiep. */
+        void markGood(LiveTickerWindow w, long minute, int have) {
+            addGood(minute, have);
+            knownSyms.addAll(w.symbolsIn(minute, 1));
+            onComplete();
         }
 
         void onIncomplete(Verdict v) {
@@ -144,8 +184,14 @@ public final class MinuteCompletenessGuard {
         public final int need;
         public final int polls;
         public final long waitedMs;
+        /** [R4t] so symbol ky vong theo exchangeInfo (|knownSyms ∩ TRADING|); -1 = khong co nguon / bo qua. */
+        public final int expected;
 
         Verdict(long minute, boolean complete, boolean waited, int have, int median2, int need, int polls, long waitedMs) {
+            this(minute, complete, waited, have, median2, need, polls, waitedMs, -1);
+        }
+
+        Verdict(long minute, boolean complete, boolean waited, int have, int median2, int need, int polls, long waitedMs, int expected) {
             this.minute = minute;
             this.complete = complete;
             this.waited = waited;
@@ -154,6 +200,7 @@ public final class MinuteCompletenessGuard {
             this.need = need;
             this.polls = polls;
             this.waitedMs = waitedMs;
+            this.expected = expected;
         }
 
         public double median() {
@@ -163,6 +210,7 @@ public final class MinuteCompletenessGuard {
         public String line() {
             return "phut=" + Utils.normalizeDateYYYYMMDDHHmm(minute) + " co=" + have + " can=" + need + " trung_vi60du="
                     + (median2 < 0 ? "NA" : (median2 % 2 == 0 ? String.valueOf(median2 / 2) : (median2 / 2) + ".5"))
+                    + " ky_vong_ex=" + (expected < 0 ? "NA" : String.valueOf(expected))
                     + " cho=" + waitedMs + "ms doc_lai=" + polls;
         }
     }
@@ -181,15 +229,28 @@ public final class MinuteCompletenessGuard {
         int m2 = s.median2();
         int have = w.countAt(endMinute);
         if (m2 < 0) {   // chua du lich su => khong kiem (dem vao tham chieu)
-            s.addGood(endMinute, have);
-            s.onComplete();
+            s.markGood(w, endMinute, have);
             return new Verdict(endMinute, true, false, have, -1, 0, 0, 0L);
         }
-        int need = need(m2);
+        // [R4t MAJ-S] ky vong = min(trung vi DU, |knownSyms ∩ TRADING exchangeInfo|): delist that => giam theo, WS rot => giu.
+        int ex = s.expectedEx();
+        int ref2 = m2;
+        if (ex >= 0) {
+            if (4L * ex >= m2) {   // ex >= nua trung vi: hop ly
+                ref2 = Math.min(m2, 2 * ex);
+            } else {
+                if (s.lastSanityWarnMinute == Long.MIN_VALUE || endMinute - s.lastSanityWarnMinute >= LOOKBACK_MIN * Utils.TIME_MINUTE) {
+                    s.lastSanityWarnMinute = endMinute;
+                    LOG.warn("[MINUTE-GUARD] ky vong exchangeInfo {} < nua trung vi DU {} => BO QUA exchangeInfo (nguon nghi sai), dung trung vi",
+                            ex, m2 / 2.0);
+                }
+                ex = -1;
+            }
+        }
+        int need = need(ref2);
         if (have >= need) {   // du: 0 doc them
-            s.addGood(endMinute, have);
-            s.onComplete();
-            return new Verdict(endMinute, true, false, have, m2, need, 0, 0L);
+            s.markGood(w, endMinute, have);
+            return new Verdict(endMinute, true, false, have, m2, need, 0, 0L, ex);
         }
         long deadline = endMinute + Utils.TIME_MINUTE + DEADLINE_AFTER_CLOSE_MS;
         long timeout = deadline - clock.getAsLong();
@@ -198,12 +259,11 @@ public final class MinuteCompletenessGuard {
                 : new long[]{have, 0L, 0L};
         boolean ok = r[0] >= need;
         boolean waited = r[1] > 0;
-        Verdict v = new Verdict(endMinute, ok, waited, (int) r[0], m2, need, (int) r[1], r[2]);
+        Verdict v = new Verdict(endMinute, ok, waited, (int) r[0], m2, need, (int) r[1], r[2], ex);
         if (waited) N_WAITED.incrementAndGet();
         if (ok) {
             N_RECOVERED.incrementAndGet();
-            s.addGood(endMinute, (int) r[0]);
-            s.onComplete();
+            s.markGood(w, endMinute, (int) r[0]);
             LOG.warn("[MINUTE-WAIT] {} => DU sau khi cho (tong cho={} du={} thieu={})", v.line(), N_WAITED.get(), N_RECOVERED.get(),
                     N_INCOMPLETE.get());
         } else {

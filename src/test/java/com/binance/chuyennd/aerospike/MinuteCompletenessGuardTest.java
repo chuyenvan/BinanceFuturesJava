@@ -276,6 +276,111 @@ public class MinuteCompletenessGuardTest {
         assertEquals(0, gs.consecutive);
     }
 
+    // ------------------------------------------------------------------ [R4t A1 MAJ-S] ky vong theo exchangeInfo
+    static Set<String> syms(int n) {
+        Set<String> o = new HashSet<>();
+        for (int i = 0; i < n; i++) o.add("S" + i + "USDT");
+        return Collections.unmodifiableSet(o);
+    }
+
+    final java.util.concurrent.atomic.AtomicReference<Set<String>> trad = new java.util.concurrent.atomic.AtomicReference<>();
+
+    private void withExInfo(int nTrading) {
+        trad.set(syms(nTrading));
+        gs = new MinuteCompletenessGuard.State(trad::get, alerts::add);
+    }
+
+    /** Delist k symbol MOT lan (exchangeInfo moi da phan anh): ky vong giam theo, 0 phut MI, khong ket. */
+    private void delistOnce(int k, int lagMin) {
+        setUp();
+        withExInfo(FULL);
+        long d = T - 40 * MIN;
+        fill(d - 120 * MIN, d - MIN, FULL);
+        fill(d, T, FULL - k);
+        for (long m = d - 60 * MIN; m < d; m += MIN) assertTrue(tick(m, 6_000L).complete);
+        int mi = 0;
+        for (long m = d; m <= T; m += MIN) {
+            if (m - d >= lagMin * MIN) trad.set(syms(FULL - k));   // lan lam moi exchangeInfo ke tiep
+            MinuteCompletenessGuard.Verdict v = tick(m, 6_000L);
+            if (m - d < lagMin * MIN) {
+                assertFalse("k=" + k + " exchangeInfo chua lam moi => MI " + v.line(), v.complete);
+                mi++;
+            } else {
+                assertTrue("k=" + k + " sau lam moi exchangeInfo => DU: " + v.line(), v.complete);
+                assertEquals(FULL - k, v.expected);
+                assertEquals(MinuteCompletenessGuard.need(2 * (FULL - k)), v.need);
+                assertEquals(0, v.polls);
+            }
+        }
+        assertEquals(mi, MinuteCompletenessGuard.N_INCOMPLETE.get());
+    }
+
+    @Test
+    public void delist_8_20_60_once_expectationFollowsExchangeInfo_noStuck() {
+        for (int k : new int[]{8, 20, 60}) delistOnce(k, 0);
+    }
+
+    /** exchangeInfo tre 15' sau delist 20: MI 15 phut (+ KHAN) roi het ngay khi lam moi — khong ket vinh vien. */
+    @Test
+    public void delist20_exchangeInfoLag15_thenRecovers() {
+        delistOnce(20, 15);
+        assertEquals(15, MinuteCompletenessGuard.N_INCOMPLETE.get());
+        assertFalse("MI lien tiep >= 3 => KHAN", alerts.isEmpty());
+        assertEquals(0, gs.consecutive);
+    }
+
+    /** Su co 11-04 (627/752) voi exchangeInfo day du TRADING: van bat, ky vong 752. */
+    @Test
+    public void incident_627of752_withExchangeInfo_stillCaught() {
+        withExInfo(FULL);
+        fill(T - 119 * MIN, T - MIN, FULL);
+        for (long m = T - 60 * MIN; m < T; m += MIN) assertTrue(tick(m, 6_000L).complete);
+        st.count.put(T, 627);
+        MinuteCompletenessGuard.Verdict v = tick(T, 6_000L);
+        assertFalse(v.complete);
+        assertEquals(FULL, v.expected);
+        assertEquals(745, v.need);
+        assertTrue(now.get() - (T + MIN) <= 20_000L);
+    }
+
+    /** Delist 20 dung phut WS rot 1 ket noi (125): 607 < ceil(0.99 x 732) = 725 => MI; phut sau du 732 => DU. */
+    @Test
+    public void delist20_sameMinuteAsWsDrop_caught() {
+        withExInfo(FULL);
+        fill(T - 120 * MIN, T - MIN, FULL);
+        for (long m = T - 60 * MIN; m < T; m += MIN) assertTrue(tick(m, 6_000L).complete);
+        trad.set(syms(FULL - 20));
+        st.count.put(T, FULL - 20 - 125);
+        st.count.put(T + MIN, FULL - 20);
+        MinuteCompletenessGuard.Verdict v = tick(T, 6_000L);
+        assertFalse(v.line(), v.complete);
+        assertEquals(725, v.need);
+        assertEquals(FULL - 20, v.expected);
+        assertTrue(tick(T + MIN, 6_000L).complete);
+    }
+
+    /** Universe TANG (niem yet moi) khong anh huong; exchangeInfo vo ly (< nua trung vi) => bo qua, dung trung vi. */
+    @Test
+    public void universeGrowth_noEffect_andAbsurdExchangeInfoIgnored() {
+        withExInfo(FULL + 10);
+        fill(T - 120 * MIN, T - MIN, FULL);
+        fill(T, T + 2 * MIN, FULL + 10);
+        for (long m = T - 60 * MIN; m <= T + 2 * MIN; m += MIN) {
+            MinuteCompletenessGuard.Verdict v = tick(m, 6_000L);
+            assertTrue(v.complete);
+            if (m >= T - 30 * MIN) assertEquals(745, v.need);
+        }
+        setUp();
+        withExInfo(100);   // nguon sai: chi 100 TRADING
+        fill(T - 119 * MIN, T - MIN, FULL);
+        for (long m = T - 60 * MIN; m < T; m += MIN) assertTrue(tick(m, 6_000L).complete);
+        st.count.put(T, 627);
+        MinuteCompletenessGuard.Verdict v = tick(T, 6_000L);
+        assertFalse("nguon exchangeInfo vo ly KHONG duoc ha nguong", v.complete);
+        assertEquals(745, v.need);
+        assertEquals(-1, v.expected);
+    }
+
     /** Noi day production: guard ngay sau doc cua so, TRUOC loc A1/feature; chan lenh moi o DAU createOrderBuyRequest0. */
     @Test
     public void wiring_guardBeforeFeatures_blockAtOrderChokePoint() throws Exception {

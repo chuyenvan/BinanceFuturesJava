@@ -245,6 +245,16 @@ public final class LiveTickerWindow {
         return c;
     }
 
+    /** [V12 R4t] tap symbol co nen o it nhat 1 phut trong [fromMinute, fromMinute + n phut) — CHI doc cache. */
+    synchronized java.util.Set<String> symbolsIn(long fromMinute, int n) {
+        java.util.Set<String> out = new java.util.HashSet<>();
+        long to = fromMinute + (long) n * Utils.TIME_MINUTE;
+        for (Map.Entry<String, TreeMap<Long, KlineObjectSimple>> e : bySymbol.entrySet()) {
+            if (!e.getValue().subMap(fromMinute, true, to, false).isEmpty()) out.add(e.getKey());
+        }
+        return out;
+    }
+
     synchronized int countAt(long minute) {
         int n = 0;
         for (TreeMap<Long, KlineObjectSimple> m : bySymbol.values()) {

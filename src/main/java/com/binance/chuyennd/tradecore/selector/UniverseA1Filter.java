@@ -68,6 +68,8 @@ public final class UniverseA1Filter {
         final String problem;
         /** [R4q] PREMARKET bi loai (PREMARKET-b) — de log/hau kiem. */
         Set<String> premarket = Collections.emptySet();
+        /** [R4t] symbol status=TRADING trong snapshot (rong neu nguon khong co status). */
+        Set<String> trading = Collections.emptySet();
 
         Snap(Map<String, Long> ex, Set<String> known, long serverTime, int nSymbols, int nTradFi, int nIndex, int nTfContract,
              int nUnclassified, String sha256, String path, long mtime, boolean enforce, String problem) {
@@ -284,6 +286,17 @@ public final class UniverseA1Filter {
         return v == null ? -1L : v;
     }
 
+    /** [R4t] tap symbol status=TRADING cua snapshot hien hanh (bat bien); null khi co tat / chua nap / loi / nguon khong co status. */
+    public static Set<String> tradingSymbols() {
+        Snap s;
+        try {
+            s = ensureInit();
+        } catch (RuntimeException e) {
+            return null;
+        }
+        return s == null || s.trading.isEmpty() ? null : s.trading;
+    }
+
     public static long snapshotTs() {
         Snap s = ensureInit();
         return s == null ? 0L : s.serverTime;
@@ -371,6 +384,7 @@ public final class UniverseA1Filter {
         Set<String> known = new HashSet<>();
         int n = 0, nCt = 0, nUt = 0, nTfC = 0, nTf = 0, nIdx = 0, nUnc = 0;
         Set<String> pm = new HashSet<>();
+        Set<String> trading = new HashSet<>();
         for (JsonElement e : arr) {
             if (!e.isJsonObject()) continue;
             JsonObject o = e.getAsJsonObject();
@@ -383,6 +397,7 @@ public final class UniverseA1Filter {
             if (!ut.isEmpty()) nUt++;
             if (UniverseA1Classifier.isTradFiContract(ct)) nTfC++;
             known.add(sym);
+            if ("TRADING".equals(str(o, "status"))) trading.add(sym);
             UniverseA1Classifier.Kind k = UniverseA1Classifier.classify(ct, ut);
             if (k == UniverseA1Classifier.Kind.UNCLASSIFIED) nUnc++;
             if (!UniverseA1Classifier.excluded(k)) continue;
@@ -395,6 +410,7 @@ public final class UniverseA1Filter {
         String problem = UniverseA1Classifier.sourceProblem(n, nCt, nUt, nTfC);
         Snap sn = new Snap(ex, known, serverTime, n, nTf, nIdx, nTfC, nUnc, sha256(raw), p.toString(), mtime, enforce, problem);
         sn.premarket = Collections.unmodifiableSet(pm);
+        sn.trading = Collections.unmodifiableSet(trading);
         return sn;
     }
 
