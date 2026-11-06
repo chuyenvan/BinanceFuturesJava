@@ -8,7 +8,8 @@ R=$HOME/claude_master/vz_e1_wt/research/parity_v12
 B=${B:-$HOME/claude_master/parity_v12w/build}   # [ADD11] build_<jar> cho jar khac r4n
 echo "$JMD5  $J" | md5sum -c -
 python3 $R/py/patch_harness.py $HOME/claude_master/v11_settle/harness/src $R/java
-rm -rf $B && mkdir -p $B/cls $B/stubcls
+# [fix 11-06] chi xoa cls/stubcls; GIU $B/clspa (Pa1020Feat giai ma psym, day_prep.py:184) — truoc day rm -rf $B lam mat clspa
+rm -rf $B/cls $B/stubcls && mkdir -p $B/cls $B/stubcls
 javac -nowarn -encoding UTF-8 -cp $J -d $B/stubcls $R/stub/com/aerospike/client/AerospikeClient.java
 javac -nowarn -encoding UTF-8 -cp $J -d $B/cls $R/java/com/binance/chuyennd/aerospike/*.java 2>&1 | grep -v 'Unsafe\|^Note\|warning' || true
 ls $B/cls/com/binance/chuyennd/aerospike/ $B/stubcls/com/aerospike/client/
