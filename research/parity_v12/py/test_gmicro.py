@@ -26,3 +26,13 @@ d5 = dict(d); d5["2026-11-09"] = {"ket_luan": "XAM", "ngay_sach": "SACH", "jar":
 r5 = G.count(d5, True); ok.append(r5["n_sach"] == 6 and "2026-11-09" in r5["khong_tinh"] and not r5["dung_vi_truot"])
 print("cases", ok)
 print("TEST_GMICRO", "PASS" if all(ok) else "FAIL")
+
+# [ADD12] SACH-T dem nhu SACH, needs_M_regrade gom ca hai
+T = lambda jar="r4n": {"ket_luan": "KHONG DO DUOC (mot phan) + XAM", "ngay_sach": "SACH", "jar": jar, "SACH_T": True}
+d6 = {"2026-11-04": T(), "2026-11-05": X("r4q", True)}
+d6.update({"2026-11-%02d" % k: (T("r4q") if k % 2 else S("r4q")) for k in range(6, 12)})
+r6 = G.count(d6, True)
+ok2 = [r6["G_MICRO"] == "DAT", r6["n_sach"] == 7, len(r6["sach_T"]) == 4, r6["needs_M_regrade"] == r6["sach"],
+       G.count({"2026-11-04": dict(T(), SACH_T=False)}, None)["n_sach"] == 0]
+print("cases_add12", ok2)
+print("TEST_GMICRO_ADD12", "PASS" if all(ok2) else "FAIL")

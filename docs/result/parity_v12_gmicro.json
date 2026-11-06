@@ -1,14 +1,18 @@
 {
  "sach": [],
- "khong_tinh": {},
+ "khong_tinh": {
+  "2026-11-04": "KHONG DO DUOC (mot phan) + XAM | SACH"
+ },
  "dung_vi_truot": null,
  "n_sach": 0,
+ "sach_T": [],
+ "needs_M_regrade": [],
  "i": false,
  "r4q_sach_tron": [],
  "smoke_24h": null,
  "ii": false,
  "G_MICRO": "CHUA DU (i=False 0/7, ii=False)",
  "smoke_info": {
-  "chua_swap": true
+  "thieu_log": "2026-11-05"
  }
 }

@@ -17,6 +17,11 @@ def is_sach(v):
     return v.get("ket_luan") == "DAT" and v.get("ngay_sach") == "SACH"
 
 
+def is_count(v):
+    """[ADD12] SACH hoac SACH-T deu dem cho G-MICRO."""
+    return is_sach(v) or bool(v.get("SACH_T"))
+
+
 def count(days, smoke_ok):
     """days: {D: {ket_luan, ngay_sach, jar, swap_day}} ; smoke_ok: True/False/None (None = chua do)."""
     out = {"sach": [], "khong_tinh": {}, "dung_vi_truot": None}
@@ -27,12 +32,14 @@ def count(days, smoke_ok):
         if (v.get("ket_luan") or "").startswith("TRUOT"):
             out["dung_vi_truot"] = d
             break
-        if is_sach(v):
+        if is_count(v):
             out["sach"].append(d)
         else:
             out["khong_tinh"][d] = "%s | %s" % (v.get("ket_luan"), v.get("ngay_sach"))
     r4q_full = [d for d in out["sach"] if days[d].get("jar") not in (None, "r4n") and not days[d].get("swap_day")]
     out["n_sach"] = len(out["sach"])
+    out["sach_T"] = [d for d in out["sach"] if not is_sach(days[d])]
+    out["needs_M_regrade"] = [d for d in out["sach"]]   # [ADD12 §3] dieu kien G-PILOT, khong phai G-MICRO
     out["i"] = out["n_sach"] >= N_SACH
     out["r4q_sach_tron"] = r4q_full
     out["smoke_24h"] = smoke_ok

@@ -143,6 +143,18 @@ def v12_day(d):
     v["nhom_H_tinh"] = (not deploy_day) and v["ngay_sach"].startswith("SACH")
     v["nhom_K_tinh"] = reseed and v["nhom_H_tinh"]
     v["SACH_ADD11"] = gmicro.is_sach(v)
+    # [ADD12 §1] SACH-T: co hoc DAT + §5 SACH + khong lop phu V12; chi con funding so bo va/hoac TSX vision nan; K5 = 0
+    mech = all(str(st.get(k, "")).startswith("DAT") for k in ("P1", "P1m", "S1_I", "S1_m", "GV_I", "P2", "P3", "CTL"))
+    gl = str(st.get("GATE_LOG_n_pass") or "").split("/")
+    gate_full = len(gl) == 2 and gl[0] == gl[1] and gl[0].isdigit() and int(gl[0]) > 0
+    tsx_ok = str(st.get("TSX", "")).startswith("DAT") or str(st.get("TSX", "")).startswith(KD + " (vision=nan")
+    k5_ok = (st.get("K5_official") or 0) == 0 and st.get("K5_official") is not None
+    sT = {"co_hoc_DAT": mech, "gate_log_du": gate_full, "tsx_DAT_hoac_vision_nan": tsx_ok, "K5_bang_0": k5_ok,
+          "ngay_sach_SACH": v["ngay_sach"] == "SACH", "pull_complete": not st.get("pull_incomplete"),
+          "khong_lop_phu_V12": not notes, "khong_TRUOT": not tot.startswith("TRUOT")}
+    v["SACH_T_checks"] = sT
+    v["SACH_T"] = all(sT.values()) and not v["SACH_ADD11"]
+    v["needs_M_regrade"] = v["SACH_ADD11"] or v["SACH_T"]
     return v, work, run
 
 
@@ -150,7 +162,7 @@ def main():
     rnd, days = sys.argv[1], sys.argv[2:]
     out = REPO + "/docs/result/parity_v12_%s" % rnd
     os.makedirs(out, exist_ok=True)
-    res = {"round": rnd, "prereg": "PREREG_PARITY_V12_DRY 3c7dae05 + ADD1..ADD11", "window_start_ms": WINDOW_START, "days": {}}
+    res = {"round": rnd, "prereg": "PREREG_PARITY_V12_DRY 3c7dae05 + ADD1..ADD12", "window_start_ms": WINDOW_START, "days": {}}
     for d in days:
         v, work, run = v12_day(d)
         res["days"][d] = v
