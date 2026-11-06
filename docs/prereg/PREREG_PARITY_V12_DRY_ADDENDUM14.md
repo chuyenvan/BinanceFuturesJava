@@ -49,3 +49,24 @@ jar r4r chạy trên 242. Chưa chấm ngày nào có guard.
 - Thiếu lịch sử: bỏ qua guard.
 - Ngày sập: 300 phút, nhiều kết nối rớt, có REST bù muộn; mọi phút thiếu đều bị gắn cờ, không phút nào trễ quá +20 s.
 - Vị trí gắn guard (source check).
+
+## 5. Bổ sung R4s (2026-11-06, sau review A1 `A1_R4R.md`, TRƯỚC khi jar r4s chạy)
+1. **MIN-1, chỉ ghi nhận, không sửa code.** Guard chặn ở đầu `createOrderBuyRequest0`, nên ở phút MI không leg nào qua gate.
+   Live **không nạp r vào buffer GDV2** ở phút MI, trong khi sim vẫn nạp. Hệ quả: q_t của live lệch nhẹ so với sim trong các phút sau
+   phút MI, chừng nào buffer còn giữ phút đó. Cách chấm:
+   - lệch gate/q do thiếu r ở phút MI **không** được dùng để loại phút khỏi K5;
+   - mọi phút có lệch gate/q trong vòng 1 buffer sau ≥ 1 phút MI phải được **đánh dấu `mi_buffer`** và báo cáo cùng `mi_minutes`;
+   - nếu K5 > 0 chỉ vì các phút này, MASTER quyết riêng, không tự xếp nhãn.
+
+   Số đo 10-30 (ngày sập, log 242 `full.log`):
+   - `[LIVE-KLINE]` có 144/144 cửa sổ 10′ đạt `decided_on_unsettled=0/7520`, tức đủ 752/752 symbol ở cả 1 440 phút lúc quyết định;
+   - `[FEAT-PIPE]` có nsym = 752, partial = 0 (24/24 dòng).
+
+   Ngưỡng 745 ⇒ **0 phút MI** ⇒ MIN-1 không ảnh hưởng ngày 10-30. Từ QF3 tới 11-06, guard kích hoạt ở 6 phút (§3).
+2. **MIN-3, sửa code.** Tham chiếu là trung vị của **60 phút ĐỦ gần nhất**: phút MI không được đưa vào, và tham chiếu không hết hạn
+   theo thời gian. Mầm lúc khởi động lấy từ cache 60′. Sự cố kéo dài vì vậy không tự hạ ngưỡng.
+   - Có test sự cố 35′ ở 627/752: cả 35 phút đều MI, `can` giữ 745. Cách cũ (trung vị 60′ của cache) đã tụt về 627 sau 31′.
+   - Dòng log đổi tên trường: `trung_vi60=` thành `trung_vi60du=`.
+   - Hạn chế đã biết: universe giảm hơn 1 % trong một lần sẽ làm mọi phút thành MI và bắn KHẨN, tới khi restart hoặc đặt `LIVE_MINUTE_GUARD=0`.
+3. **MIN-2, sửa code.** MI liên tiếp ≥ 3 phút, hoặc ≥ 5 phút MI trong 60′ ⇒ Telegram **KHẨN** (dòng log `[MINUTE-GUARD] KHAN`).
+   Chống spam: tối đa 1 tin / 30′. Dòng này có chữ KHAN, nên hậu kiểm swap/deploy (đếm KHAN) sẽ TRƯỢT nếu nó xuất hiện. Đây là chủ đích.
