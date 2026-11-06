@@ -138,6 +138,12 @@ def v12_day(d):
         notes.append("R4-R6 (§6) chua dat/chua chay %s => khong duoc DAT" % v["R4_R6"])
         if tot.startswith("DAT"):
             tot = "XAM"
+    s1v = J("s1v") or {}                            # [ADD13] S1V KDD (gio thieu du lieu, fail-closed)
+    v["s1v_kdd_hours"] = s1v.get("kdd_hours")
+    if s1v.get("kdd_hours") and not tot.startswith("TRUOT"):
+        notes.append("S1V KHONG DO DUOC %d gio (%s)" % (s1v["kdd_hours"], ",".join(s1v.get("kdd_syms", [])[:5])))
+        if not tot.startswith(KD):
+            tot = KD + " (mot phan, S1V)" + (" + XAM" if "XAM" in tot else "")
     v["ket_luan"] = tot
     v["ghi_chu"] = notes
     v["nhom_H_tinh"] = (not deploy_day) and v["ngay_sach"].startswith("SACH")

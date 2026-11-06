@@ -13,7 +13,7 @@ import pandas as pd
 import onnxruntime as ort
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from pv_cfg import cfg, globs  # noqa: E402
+from pv_cfg import cfg, globs, VIS_GAP  # noqa: E402
 
 C = cfg()
 W, WORK, TAG = C["ROOT"], C["WORK"], C["tag"]
@@ -79,6 +79,53 @@ def rank_pct(v):
 
 
 RCACHE = {}
+HMS = 3600000
+
+
+class KDD(Exception):
+    """[ADD13] gio thieu sau gio dau tien trong cua so can dung => KHONG DO DUOC (khong truot cua so)."""
+
+
+def feats_time(th, cv, h):
+    """[ADD13] (vol, dd, hs, ret72, ret336) theo MOC GIO; None neu chua co gio dau (nhu ban cu idx<0); nem KDD neu gio thieu."""
+    if len(th) == 0:
+        return None
+    first = int(th[0])
+    pos = {int(t): i for i, t in enumerate(th)}
+    T = int(th[np.searchsorted(th, h - HMS, "right") - 1]) if np.searchsorted(th, h - HMS, "right") > 0 else None
+    if T is None:
+        return None
+    Tw = ((h - HMS) // HMS) * HMS
+    if T != Tw:                       # gio muc tieu thieu (sau niem yet) => ban cu lay gio truoc do: KDD
+        raise KDD("T")
+
+    def get(t):
+        if t < first:
+            return np.nan                # truoc niem yet / truoc cua so du lieu: NaN nhu live
+        if t not in pos:
+            raise KDD(t)
+        return cv[pos[t]]
+
+    rs = []
+    for k in range(167, -1, -1):
+        t = T - k * HMS
+        a = get(t)
+        b = get(t - HMS) if t - HMS >= first else np.nan
+        if not (np.isnan(a) or np.isnan(b) or b == 0):
+            rs.append(a / b - 1)
+    r = np.array(rs)
+    vol = np.nan if (len(r) < MINP or len(r) < 2) else float(np.sqrt(((r - r.mean()) ** 2).sum() / (len(r) - 1)))
+    cl = np.array([get(T - k * HMS) for k in range(167, -1, -1)])
+    cl = cl[~np.isnan(cl)]
+    mx = np.nan if len(cl) < MINP else float(np.max(cl))
+    cT = get(T)
+    dd = np.nan if (np.isnan(mx) or mx == 0 or np.isnan(cT)) else cT / mx - 1
+    hs = hrs_since_high(th, cv, pos[T])     # cua so 168 gio da kiem khong thieu o tren
+
+    def rett(k):
+        b = get(T - k * HMS) if T - k * HMS >= first else np.nan
+        return np.nan if (np.isnan(cT) or np.isnan(b) or b == 0) else cT / b - 1
+    return vol, dd, hs, rett(72), rett(336)
 
 
 def build_closes(syms):
@@ -88,6 +135,8 @@ def build_closes(syms):
         ts, cl = [], []
         for d in C["s1v_days"]:
             p = "%s/%s/%s.zip" % (C["VIS"], d, s)
+            if not os.path.exists(p) and d in VIS_GAP:      # [ADD13] Vision thieu ngay (10-28) -> REST ADD7
+                p = VIS_GAP[d].format(s=s)
             if not os.path.exists(p):
                 continue
             try:
@@ -125,32 +174,26 @@ def main():
     sess = ort.InferenceSession(MOD, providers=["CPUExecutionProvider"])
     nm = sess.get_inputs()[0].name
     rows = []
+    KDDH = {}
     hours = sorted(S.ts.unique())
     for h in hours:
         sh = S[S.ts == h]
         feats = {}
+        kdd_h = []
         for s in sh.symbol.values:
             if s not in C1:
                 continue
             th, cv = C1[s]
-            idx = np.searchsorted(th, h - 3600000, "right") - 1
-            if idx < 0:
+            try:
+                f = feats_time(th, cv, h)          # [ADD13] theo thoi gian, gio thieu -> KDD
+            except KDD:
+                kdd_h.append(s)
                 continue
-            st = max(0, idx - 167)
-            r_all = RCACHE.get(s)
-            if r_all is None or len(r_all) != len(cv):
-                r_all = np.full(len(cv), np.nan)
-                pv = cv[:-1]
-                with np.errstate(divide="ignore", invalid="ignore"):
-                    r_all[1:] = np.where(pv != 0, cv[1:] / np.where(pv == 0, 1, pv) - 1, np.nan)
-                RCACHE[s] = r_all
-            r = r_all[st:idx + 1]
-            r = r[~np.isnan(r)]
-            vol = np.nan if (len(r) < MINP or len(r) < 2) else float(np.sqrt(((r - r.mean()) ** 2).sum() / (len(r) - 1)))
-            mx = roll_max(cv, idx, 168, MINP)
-            dd = np.nan if (np.isnan(mx) or mx == 0 or np.isnan(cv[idx])) else cv[idx] / mx - 1
-            hs = hrs_since_high(th, cv, idx)
-            feats[s] = (vol, dd, hs, ret(cv, idx, 72), ret(cv, idx, 336))
+            if f is not None:
+                feats[s] = f
+        if kdd_h:                                   # feature hang phu thuoc ca tap -> ca gio KDD, loai khoi so sanh/K5
+            KDDH[int(h)] = kdd_h
+            continue
         if not feats:
             continue
         names = list(feats)
@@ -176,7 +219,8 @@ def main():
         b = np.asarray(b, float)
         return (np.abs(a - b) <= 1e-6 * (1 + np.abs(b))) | (np.isnan(a) & np.isnan(b))
 
-    res = {"n_rows": int(len(D)), "n_hours": int(D.ts.nunique())}
+    res = {"n_rows": int(len(D)), "n_hours": int(D.ts.nunique()), "kdd_hours": len(KDDH),
+           "kdd_syms": sorted({s for v in KDDH.values() for s in v}), "ADD13": True}
     for i in range(7):
         res["f%d" % i] = float(eq(D["c%d" % i], D["l%d" % i]).mean())
     res["score_le1e-6"] = float(eq(D.score_calc, D.score_live).mean())

@@ -19,6 +19,7 @@ PULL = os.path.expanduser("~/claude_master/pull242")
 MOD = os.path.expanduser("~/claude_master/parity_1020/raw242/models")
 VIS = ROOT_V11 + "/vision/klines_1m"            # kho Vision dung chung (chi doc)
 WINDOW_START = 1793676840000          # V12 §5: nen quyet dinh dau tien sau deploy dry r4n (MainClass 11-03 10:34:26 +07 -> tick 03:34 UTC)
+VIS_GAP = {"2026-10-28": os.path.expanduser("~/claude_master/gst1030/k1028/zips/{s}-1m-2026-10-28.zip")}   # [ADD13] REST ADD7, chi S1V
 EXINFO_DIR = ROOT + "/exinfo"         # §2.2: anh chup c3live_exchangeInfo.json.lastgood (sh/exinfo_snap.sh)
 MIN, H, DAYMS = 60000, 3600000, 86400000
 JARS_FILE = ROOT + "/jars.json"      # [ADD11 §2] so jar dry theo thoi gian (sh/register_jar.sh)
