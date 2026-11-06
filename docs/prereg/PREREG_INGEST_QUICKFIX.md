@@ -136,3 +136,16 @@ roller, exchangeInfo, repair). Pass kiểm lại xếp **ô cũ nhất trước*
   (b) kết nối ≥ 20 symbol **im lặng ≥ 1 500 ms** (không message nào) tại lúc chạy pass +2 s (≈ 1,9 × im lặng lớn nhất đo được);
   (c) tổng thiếu **> 600** (`KLINE_GAP_GLOBAL_N`; max đo được 578 ở +1,5 s). Luật (a) giữ. Mọi tiêu chí/test khác của ADDENDUM 3 giữ;
   T-Q4-3 (phút bình thường) dùng phân bố đo được: 75 % symbol final tới ở 3,05 s.
+
+**ADD-3c (2026-11-06, sau A1_QF4_REPORT PASS-WITH-MINOR, TRƯỚC deploy QF4; đổi SAU KHI thấy log QF3 — ghi rõ, không nới phần QF4 chịu trách nhiệm):**
+- Lý do: log QF3 (8 985 phút) có 4 phút thiếu > 60 lúc +4 s mà KHÔNG kết nối nào rớt (sàn trễ final toàn cục: 223/97/128/184) — lỗi có sẵn,
+  QF4 không sửa; giữ Q12(b) cũ ⇒ P(trượt 72h) ≈ 60 % vì lý do ngoài phạm vi.
+- `thieu_luc_chot` tách 2 phần (cùng thời điểm đo +4 s): **`thieu_ws`** = ô thiếu thuộc symbol "mất WS" (luật a/b/c ở +2 s HOẶC kết nối
+  hở/im lặng lúc +4 s); **`thieu_tre`** = phần còn lại (không kết nối nào hở — sàn trễ final). `[KLINE-COVER]` ghi cả hai + luỹ kế.
+- **Q12-ws (GATE):** số phút `thieu_ws > 0` ≤ 1/giờ và không phút nào `thieu_ws > 130`. **Q12-tre (CHỈ BÁO CÁO):** số phút `thieu_tre > 0`
+  và tổng/max symbol mỗi giờ. Phút khởi động và lúc ban không tính.
+- Sửa A1 MIN-1 (rẻ, cùng vòng): ở +4 s, symbol thiếu thuộc kết nối hở/im lặng LÚC +4 s (rớt giữa +2 và +4 s) được REST KHÔNG áp trần 60
+  (vẫn lane KLINE, vừa room); phần thiếu còn lại giữ luật ≤ 60. Test pre-reg T-Q4-5: 1 kết nối 125 rớt ở +3 s (sau pass +2 s) ⇒ 125 ô có
+  REST trong pass +4 s, `thieu_ws`=0; T-Q4-6: phút trễ toàn cục (300 final tới ở 4–6 s, không kết nối hở) ⇒ `thieu_ws`=0, `thieu_tre`>0.
+- Ưu tiên REST theo symbol LEGACY đang giữ + universe v1.2 (A1 kiến nghị): CHƯA làm — collectData không có nguồn đọc vị thế LEGACY/universe
+  v1.2 (cần chọn nguồn + ADD riêng); vẫn ưu tiên quote volume.
