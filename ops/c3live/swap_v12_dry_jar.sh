@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# swap_v12_dry_jar.sh — [V12 R4q/R4r] THAY JAR v_t_m dry v1.2 (c3_live, LIVE_ADAPTER=dry) OLD_TAG -> NEW_TAG (mac dinh r4q -> r4r),
+# swap_v12_dry_jar.sh — [V12 R4q/R4r] THAY JAR v_t_m dry v1.2 (c3_live, LIVE_ADAPTER=dry) OLD_TAG -> NEW_TAG (mac dinh r4q -> r4s),
 #   1 lan restart, KHONG seed.
 #   [R4r] tong quat: OLD_TAG/NEW_TAG/OLD_MD5/NJ/NJ_MD5 (pin = cap hien hanh); NEED_MGUARD=1 => hau kiem [MINUTE-GUARD] BAT
 #   (TAT => FAIL => rollback), env.sh co LIVE_MINUTE_GUARD=0 => TU CHOI truoc khi dung bot.
@@ -34,10 +34,10 @@ RHOST=${RHOST-"root@103.157.218.242:"}
 A=${APP_DIR:-/home/chuyennd/java/v_t_m}
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}
 OLD_MD5=${OLD_MD5:-8c81e6b560b61e7d43ca32c4a50ec926}   # jar dry DANG chay (r4q, ROUND4Q) — khac => TU CHOI
-NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4r}
-NJ_MD5=${NJ_MD5:-bd85ca94504188c5a0dc8adac6f98a55}   # jar r4r (docs/c3live/ROUND4R.md)
+NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4s}
+NJ_MD5=${NJ_MD5:-304697108dbe6be639fad570e7b766b3}   # jar r4s (docs/c3live/ROUND4S.md; r4r bd85ca94 KHONG len 242)
 OLD_TAG=${OLD_TAG:-r4q}
-NEW_TAG=${NEW_TAG:-r4r}
+NEW_TAG=${NEW_TAG:-r4s}
 NEED_MGUARD=${NEED_MGUARD:-1}   # [R4r] jar moi co guard do du phut => hau kiem [MINUTE-GUARD] BAT
 WD_PAUSE=${WD_PAUSE:-/var/lib/h242_watchdog/PAUSE}
 WD_PAUSE_MAX_S=${WD_PAUSE_MAX_S:-1800}

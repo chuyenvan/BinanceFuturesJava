@@ -26,8 +26,8 @@ SCP_242=${SCP_242:-"scp -P 2222 -o BatchMode=yes -i /home/ubuntu/.ssh/id_rsa_chu
 RHOST=${RHOST-"root@103.157.218.242:"}
 A=${APP_DIR:-/home/chuyennd/java/v_t_m}
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}
-NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4r}
-NJ_MD5=${NJ_MD5:-bd85ca94504188c5a0dc8adac6f98a55}   # [V12 R4r] jar r4r (docs/c3live/ROUND4R.md); truoc: r4q 8c81e6b5, r4n fb6711ef   # [V12 R4n] jar r4n = r4j + R7 tuoi exchangeInfo theo LUC TAI (docs/c3live/ROUND4N.md)
+NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4s}
+NJ_MD5=${NJ_MD5:-304697108dbe6be639fad570e7b766b3}   # [V12 R4s] jar r4s (docs/c3live/ROUND4S.md); truoc: r4q 8c81e6b5, r4n fb6711ef   # [V12 R4n] jar r4n = r4j + R7 tuoi exchangeInfo theo LUC TAI (docs/c3live/ROUND4N.md)
 # jar v_t_m dang chay (shadow v1.1 dcae2e2b): deploy_v12_dry.sh / rollback_v12.sh / fix_featdump_242 10-27 ("OK jar_dcae2e2b").
 # Kiem lai tren 242 o buoc 2 — khac => TU CHOI.
 OLD_MD5=${OLD_MD5:-dcae2e2bbb1a357bc15703b416d4dccb}
