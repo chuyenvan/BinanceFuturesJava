@@ -74,6 +74,7 @@ public class IngestScenarioTest {
         Map<Long, KlinePassController.GapOut> gap = new HashMap<>();
         Map<Long, Integer> thieuLucChot = new HashMap<>();
         Map<Long, Integer> lostWithRestAt4s = new HashMap<>();
+        Map<Long, Integer> thieuWs = new HashMap<>(), thieuTre = new HashMap<>(), lostClosedAt4 = new HashMap<>();
         int maxGapRequested;
     }
 
@@ -92,6 +93,13 @@ public class IngestScenarioTest {
      */
     Result run(int minutes, IntBinaryOperator wsDelay, int extraHealMinutes,
                java.util.function.IntFunction<Set<Integer>> gapConnsAt) throws Exception {
+        return run(minutes, wsDelay, extraHealMinutes, gapConnsAt, gapConnsAt);
+    }
+
+    /** {@code gapConnsAt4}: kết nối hở/im lặng LÚC +4 s (ADD-3c; rớt giữa +2 và +4 s). */
+    Result run(int minutes, IntBinaryOperator wsDelay, int extraHealMinutes,
+               java.util.function.IntFunction<Set<Integer>> gapConnsAt,
+               java.util.function.IntFunction<Set<Integer>> gapConnsAt4) throws Exception {
         final List<List<String>> groups = groups();
         final long realStart = System.currentTimeMillis();
         final LongSupplier sim = () -> M0 + (long) ((System.currentTimeMillis() - realStart) * SPEED);
@@ -182,9 +190,14 @@ public class IngestScenarioTest {
                 }
                 if (!early.contains(m) && inMin >= 4_000L && flushed.contains(m) && m < M0 + (long) minutes * MIN) {
                     early.add(m);
-                    KlinePassController.EarlyOut o = ctl.early(m, uni, true);
+                    Set<String> gs4 = new HashSet<>();
+                    for (int ci : gapConnsAt4.apply((int) ((m - M0) / MIN))) gs4.addAll(groups.get(ci));
+                    KlinePassController.EarlyOut o = ctl.early(m, uni, gs4, true);
                     res.missingAt4s.put(m, o.missingWs);
                     res.thieuLucChot.put(m, o.thieuLucChot);
+                    res.thieuWs.put(m, o.thieuWs);
+                    res.thieuTre.put(m, o.thieuTre);
+                    res.lostClosedAt4.put(m, o.lostClosed);
                     res.maxEarlyRequested = Math.max(res.maxEarlyRequested, o.requested);
                 }
                 if (!settled.contains(m) && inMin >= 30_000L) {
@@ -219,8 +232,9 @@ public class IngestScenarioTest {
         StringBuilder gl = new StringBuilder();
         for (Map.Entry<Long, KlinePassController.GapOut> e : new java.util.TreeMap<>(res.gap).entrySet()) {
             KlinePassController.GapOut g = e.getValue();
-            gl.append(String.format("[lost=%d req=%d ok=%d xong_ms=%d co_rest_4s=%d thieu_luc_chot=%s]", g.lost, g.requested, g.closed,
-                    g.doneAtMs == 0 ? -1 : g.doneAtMs - (e.getKey() + MIN), res.lostWithRestAt4s.get(e.getKey()), res.thieuLucChot.get(e.getKey())));
+            gl.append(String.format("[lost=%d req=%d ok=%d xong_ms=%d co_rest_4s=%d thieu_luc_chot=%s ws=%s tre=%s rest4_mat_ws=%s]", g.lost, g.requested, g.closed,
+                    g.doneAtMs == 0 ? -1 : g.doneAtMs - (e.getKey() + MIN), res.lostWithRestAt4s.get(e.getKey()), res.thieuLucChot.get(e.getKey()),
+                    res.thieuWs.get(e.getKey()), res.thieuTre.get(e.getKey()), res.lostClosedAt4.get(e.getKey())));
         }
         res.log = String.format("price_max_gap_ms=%d price_denied=%d peak_weight=%d peak_fdata=%d oi_ok=%d rest_kline_calls=%d missing_at_4s=%s heal_ms=%s max_early_requested=%d dropped=%d gap=%s",
                 gap, res.priceDenied, peakW, peakF, res.oiOk, restCalls.get(), new java.util.TreeMap<>(res.missingAt4s).values(),
@@ -310,6 +324,8 @@ public class IngestScenarioTest {
         int have = r.lostWithRestAt4s.get(m);
         assertTrue(name + " o co ban REST truoc +4 s = " + have + " < " + minWithRest, have >= minWithRest);
         assertEquals(name + " thieu_luc_chot = lost - co REST", lostExpect - have, (int) r.thieuLucChot.get(m));
+        assertEquals(name + " [ADD-3c] thieu do mat WS", lostExpect - have, (int) r.thieuWs.get(m));
+        assertEquals(name + " [ADD-3c] thieu do tre = 0", 0, (int) r.thieuTre.get(m));
         Map<Long, Integer> exp = new HashMap<>();
         exp.put(m, lostExpect);
         assertCommon(name, r, exp);
@@ -349,5 +365,37 @@ public class IngestScenarioTest {
         assertTrue("im lang 2,1 s tai +2 s => mat", KlineWsClient.silentNow(126, close - 100, close + 2_000));
         assertFalse("ket noi van song (EOF chua co) => luat a khong bat", KlineWsClient.hadGapSince(true, 0, close - 3_600_000L, close - 1_000));
         assertDropAt4s("tq4_4_silent", runDrop(0), 126, 126);
+    }
+
+    /** T-Q4-5 (ADD-3c, A1 MIN-1): kết nối 125 rớt ở +3 s (SAU pass +2 s) ⇒ pass +4 s REST cả 125 không áp trần 60, thieu_do_mat_ws = 0. */
+    @Test(timeout = 120_000)
+    public void tq4_5_connectionDropsBetween2sAnd4s() throws Exception {
+        final Set<Integer> dead = idxOf(3);
+        final Set<Integer> c3 = new HashSet<>(Collections.singletonList(3));
+        Result r = run(3, (i, mi) -> mi == 1 && dead.contains(i) ? -1 : 500, 4,
+                mi -> Collections.<Integer>emptySet(), mi -> mi == 1 ? c3 : Collections.<Integer>emptySet());
+        long m = M0 + MIN;
+        System.out.println("[QF4-SCENARIO] tq4_5_drop_3s " + r.log);
+        assertEquals("pass +2 s chua thay (ket noi con song)", 0, r.gap.get(m).lost);
+        assertEquals("pass +4 s REST ca 125 (khong tran 60)", 125, (int) r.lostClosedAt4.get(m));
+        assertEquals(0, (int) r.thieuLucChot.get(m));
+        assertEquals(0, (int) r.thieuWs.get(m));
+        Map<Long, Integer> exp = new HashMap<>();
+        exp.put(m, 125);
+        assertCommon("tq4_5_drop_3s", r, exp);
+    }
+
+    /** T-Q4-6 (ADD-3c): sàn trễ final toàn cục (300 final tới ở 4,5–5,85 s), KHÔNG kết nối hở ⇒ thieu_do_mat_ws = 0, thieu_do_tre > 0. */
+    @Test(timeout = 120_000)
+    public void tq4_6_exchangeLateFinalsCountedAsTre() throws Exception {
+        Result r = run(3, (i, mi) -> mi == 1 && i < 300 ? 4_500 + (i % 10) * 150 : 500, 4);
+        long m = M0 + MIN;
+        System.out.println("[QF4-SCENARIO] tq4_6_tre " + r.log);
+        assertEquals(0, r.gap.get(m).lost);
+        assertEquals(0, (int) r.thieuWs.get(m));
+        assertEquals(300, (int) r.thieuTre.get(m));
+        Map<Long, Integer> exp = new HashMap<>();
+        exp.put(m, 300);
+        assertCommon("tq4_6_tre", r, exp);
     }
 }

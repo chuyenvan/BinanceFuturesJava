@@ -457,11 +457,12 @@ public class TickerIngestor2AerospikeNew {
                     Utils.normalizeDateYYYYMMDDHHmm(m), o.smp.rewrittenDiff, o.smp.filledMissing, o.smp.fetched, o.smp.diffByMinute.values());
         }
         KlinePassController.ChotStat cs = passes.chotOf(m);   // [QF4] so do LUC CHOT (+4 s) cua chinh phut M; -1 = khong co (ban/tre)
-        LOG.info("[KLINE-COVER] phut={} chua_chot={} chua_chot_truoc={} bo_kiem={} ws_muon_go={} suspects={} goi={} mau={} khoi_dong={} lanh_ngoai_3p={} lanh_ngoai_3p_tong={} thieu_luc_chot={} ws_mat={} rest_ws_mat={} thieu_luc_chot_tong={}",
+        LOG.info("[KLINE-COVER] phut={} chua_chot={} chua_chot_truoc={} bo_kiem={} ws_muon_go={} suspects={} goi={} mau={} khoi_dong={} lanh_ngoai_3p={} lanh_ngoai_3p_tong={} thieu_luc_chot={} ws_mat={} rest_ws_mat={} thieu_luc_chot_tong={} thieu_do_mat_ws={} thieu_do_tre={} thieu_do_mat_ws_tong={} thieu_do_tre_tong={}",
                 Utils.normalizeDateYYYYMMDDHHmm(m), o.pendingM, o.pendingPrev, o.dropped, o.wsCovered, o.suspects,
                 o.suspectsRequested, o.sampleRequested, curMin - startMinute < 5 * Utils.TIME_MINUTE ? 1 : 0, o.lateHeal,
                 passes.cLateHeal.get(), cs == null ? -1 : cs.thieuLucChot, cs == null ? -1 : cs.wsMat, cs == null ? -1 : cs.restWsMat,
-                passes.cThieuLucChot.get());
+                passes.cThieuLucChot.get(), cs == null ? -1 : cs.thieuWs, cs == null ? -1 : cs.thieuTre, passes.cThieuWs.get(),
+                passes.cThieuTre.get());
         warnLateHeal(o);
         return o.calls;
     }
@@ -497,19 +498,22 @@ public class TickerIngestor2AerospikeNew {
                     MODE, Utils.normalizeDateYYYYMMDDHHmm(m), nClosed, nClosed, nFail);
             return syms.size();
         }
-        KlinePassController.EarlyOut o = passes.early(m, syms, restInTime && !BinanceRestGuard.isBanned());
+        KlineWsClient w = wsClient;   // [ADD-3c, A1 MIN-1] ket noi ho/im lang LUC +4 s (rot giua +2 va +4 s) => REST khong tran 60
+        Set<String> gap4 = w == null ? Collections.<String>emptySet() : w.gapConns(curMin - 1_000L, System.currentTimeMillis()).syms;
+        KlinePassController.EarlyOut o = passes.early(m, syms, gap4, restInTime && !BinanceRestGuard.isBanned());
         if (!o.open.isEmpty()) timeBuffer.computeIfAbsent(curMin, k -> new ConcurrentHashMap<>()).putAll(o.open);
         int wsHave = syms.size() - o.missingWs;   // WS final da co (ghi o giay 1,5 + toi muon)
         KlinePassController.ChotStat cs = passes.chotOf(m);
         int restWsMat = cs == null ? 0 : cs.restWsMat;
-        LOG.info("✅ [KLINE V9 {}] Chốt nến phút {} thành công. Total: {} symbols (ws_final={} ws_flush_1s5={} rest_som={} rest_loi={} thieu_ws={} rest_goi={} rest_bo_qua_lo_lon={} vd_thieu_ws={} rest_ws_mat={} thieu_luc_chot={})",
-                MODE, Utils.normalizeDateYYYYMMDDHHmm(m), syms.size() - o.thieuLucChot, wsHave, wsCount, o.closed, o.failed, o.missingWs,
-                o.requested, o.restSkipped ? 1 : 0, o.needSample, restWsMat, o.thieuLucChot);
+        LOG.info("✅ [KLINE V9 {}] Chốt nến phút {} thành công. Total: {} symbols (ws_final={} ws_flush_1s5={} rest_som={} rest_loi={} thieu_ws={} rest_goi={} rest_bo_qua_lo_lon={} vd_thieu_ws={} rest_ws_mat={} mat_ws_4s={} thieu_luc_chot={} thieu_do_mat_ws={} thieu_do_tre={})",
+                MODE, Utils.normalizeDateYYYYMMDDHHmm(m), syms.size() - o.thieuLucChot, wsHave, wsCount, o.closed + o.lostClosed, o.failed, o.missingWs,
+                o.requested + o.lostRequested, o.restSkipped ? 1 : 0, o.needSample, restWsMat, o.lostAt4, o.thieuLucChot, o.thieuWs, o.thieuTre);
         if (o.thieuLucChot > 0) {
-            LOG.warn("[KLINE-CHOT-THIEU] phut={} thieu_luc_chot={} (khong WS final, khong REST; live doc ban nan o +6 s) ws_mat={} rest_ws_mat={} rest_bo_qua_lo_lon={} vd={}",
-                    Utils.normalizeDateYYYYMMDDHHmm(m), o.thieuLucChot, cs == null ? 0 : cs.wsMat, restWsMat, o.restSkipped ? 1 : 0, o.thieuEx);
+            LOG.warn("[KLINE-CHOT-THIEU] phut={} thieu_luc_chot={} thieu_do_mat_ws={} thieu_do_tre={} (khong WS final, khong REST; live doc ban nan o +6 s) ws_mat={} rest_ws_mat={} rest_bo_qua_lo_lon={} vd={}",
+                    Utils.normalizeDateYYYYMMDDHHmm(m), o.thieuLucChot, o.thieuWs, o.thieuTre, cs == null ? 0 : cs.wsMat, restWsMat,
+                    o.restSkipped ? 1 : 0, o.thieuEx);
         }
-        return o.requested;
+        return o.requested + o.lostRequested;
     }
 
     /** [QF4, ADDENDUM 3] Pass +2 s: REST NGAY cho symbol cua ket noi WS ho/im lang (hoac moi symbol thieu khi > N); log khi co. */

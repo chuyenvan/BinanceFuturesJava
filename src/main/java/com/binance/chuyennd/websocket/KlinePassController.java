@@ -66,6 +66,10 @@ final class KlinePassController {
         /** [QF4] symbol không WS final và không REST ngay sau pass +4 s = ô live đọc bản nặn ở +6 s. */
         int thieuLucChot;
         List<String> thieuEx = Collections.emptyList();
+        /** [ADD-3c] thieuLucChot = thieuWs (symbol mất WS: luật +2 s hoặc kết nối hở/im lặng lúc +4 s) + thieuTre (sàn trễ final). */
+        int thieuWs, thieuTre;
+        /** [ADD-3c, A1 MIN-1] symbol của kết nối hở lúc +4 s: REST không áp trần earlyMax. */
+        int lostAt4, lostRequested, lostClosed;
     }
 
     // ===================== [QF4, ADDENDUM 3] REST bù mất WS ở giây +2 =====================
@@ -81,17 +85,22 @@ final class KlinePassController {
     /** Thống kê lúc chốt của 1 phút (cho [KLINE-COVER] +30 s). */
     static final class ChotStat {
         final long minute;
-        final int wsMat, restWsMat, thieuLucChot;
+        final int wsMat, restWsMat, thieuLucChot, thieuWs, thieuTre;
 
-        ChotStat(long minute, int wsMat, int restWsMat, int thieuLucChot) {
+        ChotStat(long minute, int wsMat, int restWsMat, int thieuLucChot, int thieuWs, int thieuTre) {
             this.minute = minute;
             this.wsMat = wsMat;
             this.restWsMat = restWsMat;
             this.thieuLucChot = thieuLucChot;
+            this.thieuWs = thieuWs;
+            this.thieuTre = thieuTre;
         }
     }
 
     final AtomicLong cWsMat = new AtomicLong(), cRestWsMat = new AtomicLong(), cThieuLucChot = new AtomicLong();
+    final AtomicLong cThieuWs = new AtomicLong(), cThieuTre = new AtomicLong();
+    /** [ADD-3c] symbol (đầy đủ) "mất WS" của phút {@link #restMinute} (pass +2 s + kết nối hở lúc +4 s). */
+    private final Set<String> lostM = new HashSet<>();
     private final int gapGlobalN;
     /** Symbol (ngắn) đã có bản REST cho phút {@link #restMinute} (pass +2 s và +4 s). */
     private long restMinute = Long.MIN_VALUE;
@@ -103,6 +112,7 @@ final class KlinePassController {
         if (m != restMinute) {
             restMinute = m;
             restClosed.clear();
+            lostM.clear();
             gapLostM = 0;
             gapRestM = 0;
         }
@@ -147,7 +157,10 @@ final class KlinePassController {
         List<String> l = new ArrayList<>(lost);
         o.lostSample = l.subList(0, Math.min(10, l.size()));
         planner.markSuspects(l, m);
-        synchronized (this) { gapLostM = l.size(); }
+        synchronized (this) {
+            gapLostM = l.size();
+            lostM.addAll(l);
+        }
         cWsMat.addAndGet(l.size());
         if (!restAllowed || m < startMinute) {
             o.restSkipped = true;
@@ -194,17 +207,44 @@ final class KlinePassController {
 
     /** Pass +4 s cho phút M vừa đóng. {@code restAllowed}=false khi đang ban. */
     EarlyOut early(long m, List<String> universe, boolean restAllowed) {
+        return early(m, universe, Collections.<String>emptySet(), restAllowed);
+    }
+
+    /**
+     * Pass +4 s. {@code gapSyms4} = symbol của kết nối hở/im lặng LÚC +4 s ([ADD-3c, A1 MIN-1]: rớt giữa +2 và +4 s) ⇒ REST vừa room
+     * KHÔNG áp trần earlyMax; phần thiếu còn lại giữ luật ≤ earlyMax.
+     */
+    EarlyOut early(long m, List<String> universe, Set<String> gapSyms4, boolean restAllowed) {
         EarlyOut o = new EarlyOut();
         Set<String> done = restClosedFor(m);
         List<String> missing = core.missingFinals(m, universe);
         planner.markSuspects(missing, m);
-        List<String> need = new ArrayList<>();
+        List<String> need = new ArrayList<>(), lost4 = new ArrayList<>(), rest = new ArrayList<>();
         synchronized (this) {
             for (String s : missing) if (!done.contains(KlineIngestCore.shortSym(s))) need.add(s);   // [QF4] da REST o +2 s => bo
+            for (String s : need) {
+                if (gapSyms4.contains(s)) { lost4.add(s); lostM.add(s); }
+                else rest.add(s);
+            }
         }
         o.missingWs = missing.size();
         o.need = need.size();
+        o.lostAt4 = lost4.size();
         o.needSample = need.subList(0, Math.min(10, need.size()));
+        if (!lost4.isEmpty() && restAllowed && m >= startMinute) {
+            List<String> req = new ArrayList<>(lost4.subList(0, Math.min(Math.max(0, klineRoom.getAsInt()), lost4.size())));
+            o.lostRequested = req.size();
+            if (!req.isEmpty()) {
+                KlineIngestCore.EarlyResult r = core.earlyRest(m, req);
+                o.lostClosed = r.closed.size();
+                o.failed += r.failed.size();
+                if (!r.open.isEmpty()) o.open = new java.util.HashMap<>(r.open);
+                synchronized (this) { done.addAll(r.closed.keySet()); }
+                cRestWsMat.addAndGet(r.closed.size());
+            }
+        }
+        cWsMat.addAndGet(lost4.size());
+        need = rest;
         if (!need.isEmpty() && restAllowed) {
             if (m < startMinute || need.size() > earlyMax) {     // lo lon / phut truoc khi start: de pass +30 s (nen da settle)
                 o.restSkipped = true;
@@ -215,8 +255,9 @@ final class KlinePassController {
                 if (!req.isEmpty()) {
                     KlineIngestCore.EarlyResult r = core.earlyRest(m, req);
                     o.closed = r.closed.size();
-                    o.failed = r.failed.size();
-                    o.open = r.open;
+                    o.failed += r.failed.size();
+                    if (o.open.isEmpty()) o.open = r.open;
+                    else o.open.putAll(r.open);
                     synchronized (this) { done.addAll(r.closed.keySet()); }
                 }
             }
@@ -229,16 +270,21 @@ final class KlinePassController {
     private void recordChot(long m, List<String> universe, EarlyOut o) {
         List<String> still = core.missingFinals(m, universe);
         List<String> thieu = new ArrayList<>();
-        int lostM, restM;
+        int wsMat, restM, tWs = 0;
         synchronized (this) {
             for (String s : still) if (!restClosed.contains(KlineIngestCore.shortSym(s))) thieu.add(s);
-            lostM = gapLostM;
-            restM = gapRestM;
+            for (String s : thieu) if (lostM.contains(s)) tWs++;   // [ADD-3c] thieu do mat WS (gate Q12-ws)
+            wsMat = lostM.size();
+            restM = gapRestM + o.lostClosed;
         }
         o.thieuLucChot = thieu.size();
+        o.thieuWs = tWs;
+        o.thieuTre = thieu.size() - tWs;
         o.thieuEx = thieu.subList(0, Math.min(10, thieu.size()));
         cThieuLucChot.addAndGet(thieu.size());
-        chot.put(m, new ChotStat(m, lostM, restM, thieu.size()));
+        cThieuWs.addAndGet(o.thieuWs);
+        cThieuTre.addAndGet(o.thieuTre);
+        chot.put(m, new ChotStat(m, wsMat, restM, thieu.size(), o.thieuWs, o.thieuTre));
         chot.keySet().removeIf(k -> k < m - 10 * MIN);
     }
 

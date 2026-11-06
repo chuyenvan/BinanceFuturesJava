@@ -49,6 +49,6 @@ if [ "$NC" -lt 2 ]; then echo "WAIT kline_cover_sau_khoi_dong=$NC (<2)"; else
   BAD=$(grep -v 'chua_chot_truoc=0 bo_kiem=0 ' <<<"$CV" | head -1)
   [ -z "$BAD" ] && echo "OK kline_phu_phut_da_chot (2 dong KLINE-COVER chua_chot_truoc=0 bo_kiem=0)" || echo "FAIL kline_cover: $(cut -c1-200 <<<"$BAD")"
   # [QF4] jar moi phai log thieu_luc_chot; so phut chot thieu chi bao (Q12 cham o ing_qf_check)
-  grep -q 'thieu_luc_chot=' <<<"$CV" && echo "INFO thieu_luc_chot_2_phut_cuoi=$(grep -o ' thieu_luc_chot=[-0-9]*' <<<"$CV" | sed 's/.*=//' | tr '\n' ',') canh_bao_chot_thieu=$(grep -a -c 'KLINE-CHOT-THIEU' <<<"$X") ws_gap=$(grep -a -c 'KLINE-WS-GAP' <<<"$X")" || echo "INFO chua_co_truong_thieu_luc_chot (jar cu?)"
+  grep -q 'thieu_luc_chot=' <<<"$CV" && echo "INFO thieu_luc_chot_2_phut_cuoi=$(grep -o ' thieu_luc_chot=[-0-9]*' <<<"$CV" | sed 's/.*=//' | tr '\n' ',') do_mat_ws=$(grep -o ' thieu_do_mat_ws=[-0-9]*' <<<"$CV" | sed 's/.*=//' | tr '\n' ',') canh_bao_chot_thieu=$(grep -a -c 'KLINE-CHOT-THIEU' <<<"$X") ws_gap=$(grep -a -c 'KLINE-WS-GAP' <<<"$X")" || echo "INFO chua_co_truong_thieu_luc_chot (jar cu?)"
 fi
 grep -a -q '\[PRICE-AGE\] price_realtime dung' <<<"$X" && echo "FAIL co_canh_bao_PRICE-AGE" || echo "OK 0_PRICE-AGE"
