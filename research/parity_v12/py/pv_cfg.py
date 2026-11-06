@@ -98,7 +98,7 @@ def cfg(day=None):
                  buffer=live + "/gate_ratio_live.bin",
                  legacy=("log", None),
                  U=ROOT + "/univ/u_" + day.replace("-", "") + ".txt",
-                 tsx_univ=sorted(set(glob.glob(ROOT + "/univ/u_2026*.txt") + [ROOT + "/univ/u_d21.txt"])),
+                 tsx_univ=sorted(set(glob.glob(ROOT + "/univ/u_2026*.txt") + glob.glob(ROOT + "/univ/u_d21.txt"))),   # [fix 11-06] v12 khong co u_d21 (bo cuc D1 v11) => chi gop U_D^A1 cac ngay v12
                  tag=day.replace("-", ""),
                  log_from=d0 - H,                   # D 06:00 (+07)
                  log_to=d0 + DAYMS + 10 * MIN)      # D+1 07:10 (+07)
