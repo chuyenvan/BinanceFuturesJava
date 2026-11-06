@@ -82,6 +82,8 @@ public class DetectEntrySignal2TradeNormal {
     private final LiveOiFeatProvider liveOiProvider = new LiveOiFeatProvider();
     // [B6-SPEED] Cửa sổ nến 1m trượt: đọc CHỈ phút mới mỗi tick (bỏ đọc lại 1000' ~1.8–2.4s/tick).
     private final LiveTickerWindow tickerWindow = new LiveTickerWindow();
+    /** [V12 R4r] phut quyet dinh hien tai THIEU du lieu (sau cho toi +20 s) => khong mo lenh moi trong tick nay. */
+    private volatile boolean minuteIncomplete = false;
     // [V11 2026-10-20] docs/plan/V11_COLLECTOR_SETTLE.md — LIVE_FEAT_INPUT=snapshot: feature gate tinh tren snapshot
     //   DAY DU phut M nhu replayToCsv (+ cho du symbol, sua tai cho khi doc lai). null = legacy (byte-identical).
     private com.binance.chuyennd.ai_ml.features.export.entry.LiveFeaturePipeline featPipeline = null;
@@ -128,6 +130,12 @@ public class DetectEntrySignal2TradeNormal {
     public void start() throws InterruptedException, ParseException {
         // [V12 R4d UNIVERSE-A1] fail-fast SOM, NGOAI try/catch cua initData: co tat => no-op; co bat ma nguon hong => nem.
         com.binance.chuyennd.tradecore.selector.UniverseA1Filter.initEager();
+        LOG.info("[MINUTE-GUARD] {} — phut du <=> so symbol >= {}% trung vi {}' truoc; thieu => doc lai toi giay +{} roi fail-closed"
+                        + " (khong mo lenh moi) [CHI live]",
+                com.binance.chuyennd.aerospike.MinuteCompletenessGuard.enabled() ? "BAT" : "TAT (LIVE_MINUTE_GUARD=0)",
+                com.binance.chuyennd.aerospike.MinuteCompletenessGuard.RATIO_PCT,
+                com.binance.chuyennd.aerospike.MinuteCompletenessGuard.LOOKBACK_MIN,
+                com.binance.chuyennd.aerospike.MinuteCompletenessGuard.DEADLINE_AFTER_CLOSE_MS / 1000L);
         initData();
         startThreadDetectMarketLevel2Trader();
     }
@@ -206,6 +214,15 @@ public class DetectEntrySignal2TradeNormal {
             // [B6-SPEED] ticker cache trượt: chỉ đọc phút MỚI mỗi tick, full reload khi lệch/khởi động.
             //   Parity BIT-IDENTICAL full-read (nội dung nến cùng record; offset sub-phút startTime vô hại).
             Map<String, List<KlineObjectSimple>> symbol2LastTickers = tickerWindow.read(System.currentTimeMillis(), 1000);
+            // [V12 R4r] guard DO DU phut vua chot (CHI live): du => khong doc them, khong doi gi; thieu => doc lai toi giay +20,
+            //   van thieu => fail-closed: tick van chay (quan ly vi the/trailing/stop) nhung KHONG mo lenh moi.
+            minuteIncomplete = false;
+            if (com.binance.chuyennd.aerospike.MinuteCompletenessGuard.enabled()) {
+                com.binance.chuyennd.aerospike.MinuteCompletenessGuard.Verdict mg =
+                        com.binance.chuyennd.aerospike.MinuteCompletenessGuard.check(tickerWindow, tickerWindow.lastEndMinute());
+                if (mg.waited) symbol2LastTickers = tickerWindow.read(System.currentTimeMillis(), 1000);   // cache da bu sau khi cho
+                minuteIncomplete = !mg.complete;
+            }
             // [V12 R4d UNIVERSE-A1] diem loc phia live: ngay sau tickerWindow.read => symbol2FinalTicker, market level/breadth,
             //   cascadeUniverse, predictAllCandidates (funding/OI), getTopSymbol (S1), DCA deu tu MOT tap. Co tat => cung map.
             symbol2LastTickers = com.binance.chuyennd.tradecore.selector.UniverseA1Filter.filter(symbol2LastTickers, System.currentTimeMillis());
@@ -1172,6 +1189,12 @@ public class DetectEntrySignal2TradeNormal {
                                         MarketDataObject marketRate, OnnxInferenceManager.PredictionResult prediction,
                                         Float symbolPred, Map<String, List<KlineObjectSimple>> symbol2LastTickers,
                                         List<String> rejectCollector, boolean liveOnly) {
+        if (minuteIncomplete) {   // [V12 R4r] phut thieu du lieu => fail-closed (khong vao/DCA, so giay + that)
+            long nb = com.binance.chuyennd.aerospike.MinuteCompletenessGuard.N_BLOCKED_LEGS.incrementAndGet();
+            LOG.warn("[MINUTE-INCOMPLETE] chan lenh moi {} {} (phut {} thieu du lieu) | tong_chan={}", levelChange, symbol,
+                    Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime), nb);
+            return;
+        }
 
 
         if (prediction == null) {

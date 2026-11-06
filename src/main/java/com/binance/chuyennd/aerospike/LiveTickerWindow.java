@@ -232,6 +232,19 @@ public final class LiveTickerWindow {
         return out;
     }
 
+    /** [V12 R4r] so symbol co nen o moi phut [fromMinute, fromMinute + n phut) — 1 luot qua cache, CHI doc. */
+    synchronized int[] countsRange(long fromMinute, int n) {
+        int[] c = new int[Math.max(0, n)];
+        long to = fromMinute + (long) n * Utils.TIME_MINUTE;
+        for (TreeMap<Long, KlineObjectSimple> m : bySymbol.values()) {
+            for (Long k : m.subMap(fromMinute, true, to, false).keySet()) {
+                int i = (int) ((k - fromMinute) / Utils.TIME_MINUTE);
+                if (i >= 0 && i < n) c[i]++;
+            }
+        }
+        return c;
+    }
+
     synchronized int countAt(long minute) {
         int n = 0;
         for (TreeMap<Long, KlineObjectSimple> m : bySymbol.values()) {
