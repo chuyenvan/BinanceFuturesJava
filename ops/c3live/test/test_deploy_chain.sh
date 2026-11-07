@@ -26,8 +26,9 @@ read -r A; [ "\$A" = YES ] || exit 1
 echo qf4 >> $W/calls
 [ -f $W/QF4_FAIL ] && { echo "rollback"; exit 1; }
 . $W/lib.sh
-ing_start $W/ing_qf4.jar; echo "XONG. collectData chay jar $Q4" >> $W/d/deploy_ingest_qf4_x.log; exit 0
+ing_start $W/ing_qf4.jar; { echo "XONG. collectData chay jar $Q4"; echo "Rollback 1 lenh: bash $W/rb.sh TSX"; } >> $W/d/deploy_ingest_qf4_x.log; exit 0
 EOF
+printf '#!/bin/bash\nexit 0\n' > $W/reg.sh
 cat > $W/swap.sh <<EOF
 #!/usr/bin/env bash
 NJ_MD5=\${NJ_MD5:-$RT}   # jar r4t
@@ -49,7 +50,10 @@ sleep 6; bash $W/qf4.sh <<< YES
 EOF
 export SSH_242="bash -c" APP_DIR=$W/vtm ING_DIR=$W/ing QF4_SH=$W/qf4.sh SWAP_SH=$W/swap.sh CHECK_R=$W/check.sh CHAIN_DIR=$W/d \
   STABLE_S=3 STABLE_MAX_S=40 CHK_POLL_S=1 FORCE_TIME=1 DEPLOY_TG_SINK=$W/tg.txt QF4_PAT="fakeqf4_job_$TAG" OTHER_PAT="nomatch_$TAG" \
-  PROC_PAT="BinanceOrderTradingManager $TAG"
+  PROC_PAT="BinanceOrderTradingManager $TAG" REG_JAR_SH=$W/reg.sh DLOCK=$W/d/.deploy.lock \
+  PIN_QF4_SH=$(md5sum < $W/qf4.sh | cut -c1-32) PIN_CHECK_R=$(md5sum < $W/check.sh | cut -c1-32) \
+  PIN_SWAP_SH=$(md5sum < $W/swap.sh | cut -c1-32) PIN_REG=$(md5sum < $W/reg.sh | cut -c1-32)
+cp -p $W/swap.sh $W/swap.sh.orig
 waitjob() { local p; p=$(cat $W/d/.deploy_chain/pid 2>/dev/null); for i in $(seq 1 120); do kill -0 "$p" 2>/dev/null || return 0; sleep 1; done; return 1; }
 JL() { cat "$(cat $W/d/.deploy_chain/log)"; }
 ingmd5() { md5sum < $W/ing/binance-java-sdk-1.2.4.jar | cut -c1-32; }
@@ -87,6 +91,30 @@ echo YES | FORCE_TIME=0 TIME_OK_FILE=$W/tok bash $CH qf4_then_r4t >/dev/null 2>&
 for i in $(seq 1 60); do JL 2>/dev/null | grep -q 'r4t: cho khung gio' && break; sleep 1; done
 bash $CH stop >/dev/null; waitjob
 chk "r4t CHO khung gio ke tiep sau qf4; stop => dung TRUOC swap" "JL | grep -q 'qf4: ON DINH' && JL | grep -q 'STOP theo yeu cau' && ! grep -q swap $W/calls && [ \$(ingmd5) = $Q4 ]"
+echo "== [A1 CHAIN] pin md5 / chay ban chep / stop giua hau kiem / khoa deploy / giu log"
+reset; echo '# sua sau duyet' >> $W/swap.sh; P0=$(cat $W/d/.deploy_chain/pid)
+OUT=$(echo YES | bash $CH qf4_then_r4t 2>&1); RC=$?
+chk "script con LECH pin => TU CHOI, khong job, khong goi gi" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'LECH swap_v12_dry_jar.sh' && echo \"\$OUT\" | grep -q 'TU CHOI' && [ \"\$(cat $W/d/.deploy_chain/pid)\" = \"$P0\" ] && [ ! -f $W/calls ]"
+OUT=$(DRY=1 bash $CH qf4_then_r4t 2>&1); RC=$?
+chk "DRY=1 cung bao LECH pin (DRY FAIL)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'DRY FAIL'"
+cp -p $W/swap.sh.orig $W/swap.sh
+reset; rm -f $W/tok
+echo YES | FORCE_TIME=0 TIME_OK_FILE=$W/tok bash $CH qf4_then_r4t >/dev/null 2>&1
+for i in $(seq 1 60); do JL 2>/dev/null | grep -q 'r4t: cho khung gio' && break; sleep 1; done
+sed -i "2i echo MODIFIED >> $W/calls" $W/swap.sh; touch $W/tok; waitjob
+chk "sua script goc SAU khi YES: job chay BAN CHEP (khong MODIFIED), XONG; thu muc job co md5.txt + chain.log" "grep -q swap $W/calls && ! grep -q MODIFIED $W/calls && JL | grep -q 'XONG CA CHUOI' && [ -s \"\$(cat $W/d/.deploy_chain/last)/md5.txt\" ]"
+cp -p $W/swap.sh.orig $W/swap.sh
+reset
+echo YES | STABLE_S=40 bash $CH qf4_then_r4t >/dev/null 2>&1
+for i in $(seq 1 60); do JL 2>/dev/null | grep -q 'qf4: hau kiem on dinh' && break; sleep 1; done
+bash $CH stop >/dev/null; waitjob
+chk "stop GIUA hau kiem => KHAN 'CHUA xac nhan on dinh' + lenh rollback, steps.txt ghi ro, KHONG swap" "grep -q 'KHAN.*STOP giua hau kiem' $W/tg.txt && grep -q 'CHUA xac nhan on dinh' $W/tg.txt && grep -q 'rb.sh TSX' $W/tg.txt && grep -q 'GIUA hau kiem qf4' \"\$(cat $W/d/.deploy_chain/last)/steps.txt\" && ! grep -q swap $W/calls"
+reset
+( flock $W/d/.deploy.lock sleep 8 ) & HL=$!; sleep 1
+echo YES | bash $CH qf4_then_r4t >/dev/null 2>&1; waitjob; wait $HL 2>/dev/null
+chk "khoa deploy dang bi giu => CHO (khong chay), nha khoa => chay tiep XONG" "JL | grep -q 'dang bi giu' && JL | grep -q 'XONG CA CHUOI'"
+NJ=$(ls -d $W/d/.deploy_chain/jobs/*/ | wc -l); NL=$(ls $W/d/.deploy_chain/jobs/*/chain.log | wc -l)
+chk "giu lau dai: moi lan YES 1 thu muc job ($NJ), co chain.log ($NL), ca lan TU CHOI" "[ $NJ -ge 11 ] && [ $NL -ge 10 ] && grep -rlq 'TU CHOI: lech pin' $W/d/.deploy_chain/jobs/*/steps.txt"
 pkill -f "$TAG" 2>/dev/null
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]

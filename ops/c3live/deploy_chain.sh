@@ -15,6 +15,9 @@
 # Buoc ke chi bat dau trong KHUNG GIO hop le ke tiep (:10-:39 de con >= 5' trong khung :10-:44; tranh gio 07/19, 00:50-01:20,
 #   12:50-13:20). Buoc FAIL / rollback / hau kiem TRUOT => DUNG CA CHUOI + Telegram KHAN; khong chay buoc sau.
 # Idempotent: buoc da XONG (md5 tren 242) => bo qua (van kiem on dinh truoc buoc ke).
+# [A1 CHAIN MAJ-C] Luc YES: chep script con (+ register_jar) vao .deploy_chain/jobs/<TS>_<preset>/ + kiem md5 PIN_* (ban A1 duyet);
+#   job CHI chay ban chep (kiem lai truoc moi buoc); lech => TU CHOI. Thu muc job (chain.log, steps.txt, md5.txt) giu lau dai.
+#   stop/FAIL giua hau kiem => KHAN "jar moi chua xac nhan on dinh" + lenh rollback. Kiem "khong job khac" + chay buoc DUOI flock $DLOCK.
 # Ma thoat job: 0 XONG ca chuoi | 1 DUNG (FAIL/stop/het gio). Bien test: SSH_242 APP_DIR ING_DIR QF4_SH SWAP_SH CHECK_R CHAIN_DIR
 #   STABLE_S STABLE_MAX_S CHK_POLL_S WAIT_RUNNING_MAX_S WINDOW_WAIT_MAX_S FORCE_TIME TIME_OK_FILE DEPLOY_TG_SINK QF4_PAT
 # =============================================================================
@@ -35,6 +38,15 @@ WAIT_RUNNING_MAX_S=${WAIT_RUNNING_MAX_S:-10800}
 WINDOW_WAIT_MAX_S=${WINDOW_WAIT_MAX_S:-10800}
 FORCE_TIME=${FORCE_TIME:-0}
 DRY=${DRY:-0}
+# [A1 CHAIN MAJ-C] pin md5 script con = ban A1 da duyet. Luc YES: chep vao thu muc job + kiem md5; CHI chay ban chep; lech => KHONG chay.
+REG_JAR_SH=${REG_JAR_SH:-/home/ubuntu/claude_master/vz_e1_wt/research/parity_v12/sh/register_jar.sh}
+PIN_QF4_SH=${PIN_QF4_SH:-958e1e49398cc75dbe0908d5657fd7ca}     # deploy_ingest_qf4.sh QF4b (tu pin md5 ingqf_restart/ingqf4_check remote)
+PIN_CHECK_R=${PIN_CHECK_R:-675ecf2daab369d77c38c6528a53e89e}   # ingqf4_check_remote.sh
+PIN_SWAP_SH=${PIN_SWAP_SH:-09ae28e828dde1238570fb6434f29962}   # swap_v12_dry_jar.sh @9fc5ffcb (r4q -> r4t)
+PIN_REG=${PIN_REG:-7d9b2ee0285bdaec05574de86764e73f}           # register_jar.sh (swap goi sau hau kiem DAT)
+R4Q_JAR=${R4Q_JAR:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4q}
+R4Q_MD5=${R4Q_MD5:-8c81e6b560b61e7d43ca32c4a50ec926}
+DLOCK=${DLOCK:-$D/.deploy.lock}   # [MIN TOCTOU] kiem "khong job deploy khac" + chay buoc DUOI khoa nay
 DEPLOY_TG_ENV=${DEPLOY_TG_ENV:-/home/ubuntu/.config/health242/tg.env}
 ST=$D/.deploy_chain
 mkdir -p "$ST"
@@ -52,13 +64,32 @@ tg() {
     --data-urlencode "chat_id=$chat" --data-urlencode "text=$msg" 2>/dev/null)
   tok=""; [ "$code" = 200 ]
 }
-setst() { echo "$*" > "$ST/step"; }
+setst() { echo "$*" > "$ST/step"; [ -n "${JD:-}" ] && echo "[$(TZ=Asia/Ho_Chi_Minh date '+%F %T')] $*" >> "$JD/steps.txt"; return 0; }
+md5f() { md5sum < "$1" 2>/dev/null | cut -c1-32; }
+# chep script con vao $1 (thu muc job) + kiem pin; in dong OK/LECH; tra 1 neu lech/thieu
+stage_scripts() {
+  local jd=$1 bad=0 n src pin dst
+  mkdir -p "$jd" || return 1
+  for n in "deploy_ingest_qf4.sh|$QF4_SH|$PIN_QF4_SH" "ingqf4_check_remote.sh|$CHECK_R|$PIN_CHECK_R" \
+           "swap_v12_dry_jar.sh|$SWAP_SH|$PIN_SWAP_SH" "register_jar.sh|$REG_JAR_SH|$PIN_REG"; do
+    dst=$jd/${n%%|*}; src=${n#*|}; pin=${src#*|}; src=${src%%|*}
+    if ! cp -p "$src" "$dst" 2>/dev/null; then echo "LECH ${n%%|*}: khong chep duoc $src"; bad=1; continue; fi
+    if [ "$(md5f "$dst")" = "$pin" ]; then echo "OK pin ${n%%|*} md5=$pin"; else echo "LECH ${n%%|*}: md5=$(md5f "$dst") != pin $pin ($src)"; bad=1; fi
+    echo "${n%%|*} $(md5f "$dst") pin=$pin src=$src" >> "$jd/md5.txt"
+  done
+  return $bad
+}
+verify_staged() {   # truoc moi buoc: ban chep van dung pin
+  [ "$(md5f "$JD/deploy_ingest_qf4.sh")" = "$PIN_QF4_SH" ] && [ "$(md5f "$JD/ingqf4_check_remote.sh")" = "$PIN_CHECK_R" ] \
+    && [ "$(md5f "$JD/swap_v12_dry_jar.sh")" = "$PIN_SWAP_SH" ] && [ "$(md5f "$JD/register_jar.sh")" = "$PIN_REG" ]
+}
 # ------------------------------------------------------------------ status / stop
 case "${1:-}" in
   status)
     P=$(cat "$ST/pid" 2>/dev/null); L=$(cat "$ST/log" 2>/dev/null)
     if [ -n "$P" ] && kill -0 "$P" 2>/dev/null; then echo "JOB CHAY pid=$P preset=$(cat "$ST/preset" 2>/dev/null)"; else echo "KHONG co job chuoi dang chay (pid cu ${P:-none})"; fi
     echo "buoc: $(cat "$ST/step" 2>/dev/null)"; [ -f "$ST/STOP" ] && echo "DA YEU CAU STOP"
+    echo "thu muc job (giu lau dai): $(cat "$ST/last" 2>/dev/null) | cac job: $(ls "$ST/jobs" 2>/dev/null | wc -l)"
     [ -n "$L" ] && { echo "log: $L"; tail -n 25 "$L"; }
     exit 0;;
   stop)
@@ -72,6 +103,11 @@ case "$PRESET" in
   qf4_then_r4t) STEPS="qf4 r4t";;
   *) echo "Dung: $0 <preset>|status|stop — preset: qf4_then_r4t"; exit 1;;
 esac
+JD=""
+if [ "${CHAIN_JOB:-0}" = 1 ]; then   # job: CHI dung ban chep trong thu muc job (da kiem pin luc YES)
+  JD=${CHAIN_JD:?job thieu CHAIN_JD}
+  QF4_SH=$JD/deploy_ingest_qf4.sh; CHECK_R=$JD/ingqf4_check_remote.sh; SWAP_SH=$JD/swap_v12_dry_jar.sh; REG_JAR_SH=$JD/register_jar.sh
+fi
 QF4_MD5=$(sed -n 's/^JAR_MD5=\([0-9a-f]\{32\}\).*/\1/p' "$QF4_SH" 2>/dev/null | head -1)
 R4T_MD5=$(sed -n 's/^NJ_MD5=\${NJ_MD5:-\([0-9a-f]\{32\}\)}.*/\1/p' "$SWAP_SH" 2>/dev/null | head -1)
 [ -n "$QF4_MD5" ] || { echo "khong doc duoc JAR_MD5 tu $QF4_SH"; exit 1; }
@@ -149,19 +185,29 @@ if [ "${CHAIN_JOB:-0}" != 1 ]; then
   P=$(cat "$ST/pid" 2>/dev/null)
   if [ -n "$P" ] && kill -0 "$P" 2>/dev/null; then say "DUNG: da co job chuoi pid $P dang chay (status/stop)."; exit 1; fi
   if [ "$DRY" = 1 ]; then
+    TD=$(mktemp -d); say "--- pin script con (ban A1 duyet):"; stage_scripts "$TD" | sed 's/^/   /'; PRC=${PIPESTATUS[0]}; rm -rf "$TD"
     read_state
     if ! step_done r4t; then say "--- DRY=1 cua swap (CHI DOC 242):"; DRY=1 bash "$SWAP_SH" 2>&1 | grep -E 'OK jar moi|jar_dang_chay|FAIL|DRY PASS|DUNG' | cut -c1-200; fi
+    [ "$PRC" = 0 ] || { say "DRY: script con LECH pin => chay that se TU CHOI. (DRY FAIL)"; exit 1; }
     say "DRY=1: KHONG chay gi. (DRY PASS)"; exit 0
   fi
   say ">>> Go YES de chay CA CHUOI o JOB NEN (tu cho/kiem/chay buoc ke; khong can canh gio):"
   read -r ANS || ANS=""
   [ "$ANS" = YES ] || { say "Huy. Khong doi gi."; exit 0; }
   TS=$(TZ=Asia/Ho_Chi_Minh date +%Y%m%d_%H%M%S)
-  JL=$D/deploy_chain_${PRESET}_${TS}.log
-  rm -f "$ST/STOP"; echo "$PRESET" > "$ST/preset"; echo "$JL" > "$ST/log"; setst "khoi dong"
-  CHAIN_JOB=1 CHAIN_TS=$TS setsid nohup bash "$SELF" "$PRESET" >> "$JL" 2>&1 < /dev/null &
+  JD=$ST/jobs/${TS}_$PRESET; JL=$JD/chain.log
+  say "--- chep script con vao $JD + kiem pin md5 (CHI chay ban chep):"
+  mkdir -p "$JD" || { say "DUNG: khong tao duoc $JD"; exit 1; }
+  stage_scripts "$JD" > "$JD/pin.txt"; PRC=$?
+  sed 's/^/   /' "$JD/pin.txt"
+  if [ "$PRC" != 0 ] || grep -q '^LECH' "$JD/pin.txt"; then
+    echo "TU CHOI: lech pin" >> "$JD/steps.txt"; echo "$JD" > "$ST/last"
+    say "TU CHOI: script con LECH md5 pin (ban A1 duyet) => KHONG chay gi. Chi tiet: $JD/md5.txt"; exit 1
+  fi
+  rm -f "$ST/STOP"; echo "$PRESET" > "$ST/preset"; echo "$JL" > "$ST/log"; echo "$JD" > "$ST/last"; setst "khoi dong"
+  CHAIN_JOB=1 CHAIN_TS=$TS CHAIN_JD=$JD setsid nohup bash "$SELF" "$PRESET" >> "$JL" 2>&1 < /dev/null &
   echo $! > "$ST/pid"
-  say "JOB NEN pid=$! log=$JL"
+  say "JOB NEN pid=$! thu muc job=$JD (log + ban chep + md5, giu lau dai)"
   say "Xem: bash $SELF status   | dung: bash $SELF stop   | tail -f $JL"
   exit 0
 fi
@@ -169,14 +215,37 @@ fi
 # ------------------------------------------------------------------ JOB NEN
 TS=${CHAIN_TS:-$(date +%s)}
 echo $$ > "$ST/pid"
-fail() { setst "DUNG: $*"; say "DUNG CHUOI: $*"; tg "[deploy_chain $PRESET] KHAN TS=$TS: DUNG CHUOI — $*. Cac buoc sau KHONG chay. Log $(cat "$ST/log" 2>/dev/null)"; exit 1; }
-chk_stop() { [ -f "$ST/STOP" ] && { rm -f "$ST/STOP"; setst "DUNG theo yeu cau stop"; say "STOP theo yeu cau owner"; tg "[deploy_chain $PRESET] DUNG theo yeu cau stop TS=$TS"; exit 1; }; return 0; }
+IN_STABLE=""   # buoc dang hau kiem on dinh (jar moi DA chay, CHUA xac nhan)
+rb_cmd() {   # lenh rollback 1 dong cho buoc $1
+  case "$1" in
+    qf4) local L4 r; L4=$(ls -t "$D"/deploy_ingest_qf4_*.log 2>/dev/null | grep -v '_dry.log' | head -1)
+         r=$(grep -h 'Rollback 1 lenh:' "$L4" 2>/dev/null | tail -1 | sed 's/.*Rollback 1 lenh: //')
+         echo "${r:-bash $D/rollback_ingest_qf4.sh <TS trong log deploy_ingest_qf4>}";;
+    r4t) echo "OLD_TAG=r4t NEW_TAG=r4q OLD_MD5=$R4T_MD5 NJ=$R4Q_JAR NJ_MD5=$R4Q_MD5 NEED_MGUARD=0 bash $JD/swap_v12_dry_jar.sh  (go YES; ve r4q)";;
+  esac
+}
+unverified_msg() { echo "jar moi $1 DANG CHAY nhung CHUA xac nhan on dinh — owner kiem ngay; rollback neu can: $(rb_cmd "$1")"; }
+fail() {
+  local extra=""; [ -n "$IN_STABLE" ] && extra=" | $(unverified_msg "$IN_STABLE")"
+  setst "DUNG: $*$extra"; say "DUNG CHUOI: $*$extra"
+  tg "[deploy_chain $PRESET] KHAN TS=$TS: DUNG CHUOI — $*$extra. Cac buoc sau KHONG chay. Log $(cat "$ST/log" 2>/dev/null)"; exit 1
+}
+chk_stop() {
+  [ -f "$ST/STOP" ] || return 0
+  rm -f "$ST/STOP"
+  if [ -n "$IN_STABLE" ]; then   # [A1 CHAIN] stop giua hau kiem: jar moi chua xac nhan on dinh => KHAN + lenh rollback
+    local m; m=$(unverified_msg "$IN_STABLE")
+    setst "DUNG theo stop GIUA hau kiem $IN_STABLE: $m"; say "STOP theo yeu cau owner GIUA hau kiem: $m"
+    tg "[deploy_chain $PRESET] KHAN TS=$TS: STOP giua hau kiem — $m"; exit 1
+  fi
+  setst "DUNG theo yeu cau stop"; say "STOP theo yeu cau owner"; tg "[deploy_chain $PRESET] DUNG theo yeu cau stop TS=$TS"; exit 1
+}
 sleep_chk() { local i; for i in $(seq 1 "$1"); do chk_stop; sleep 1; done; }
 
 # hau kiem on dinh: $1 = buoc, $2 = dong log v_t_m moc (dem ERROR tu day)
 stable() {
   local step=$1 base=$2 t0 ok_since=0 now K V lg lines err
-  t0=$(date +%s); setst "$step: hau kiem on dinh (${STABLE_S}s)"
+  t0=$(date +%s); IN_STABLE=$step; setst "$step: hau kiem on dinh (${STABLE_S}s)"
   say "--- $step: hau kiem on dinh ${STABLE_S}s (moi ${CHK_POLL_S}s), moc log v_t_m dong $base"
   while :; do
     chk_stop
@@ -209,7 +278,7 @@ $V" | grep '^FAIL' | head -3 | tr '\n' ' '))"
       [ "$ok_since" = 0 ] && ok_since=$now
       if [ $((now - ok_since)) -ge "$STABLE_S" ]; then
         say "$step: ON DINH ${STABLE_S}s: $(echo "$K" | grep -E '^OK (kline_phu|0_http|price_gap|price_age)' | tr '\n' ' ') | $(echo "$V" | grep '^OK' | tr '\n' ' ')"
-        return 0
+        IN_STABLE=""; return 0
       fi
     fi
     sleep_chk "$CHK_POLL_S"
@@ -235,7 +304,8 @@ wait_no_deploy() {   # khong chay song song voi job deploy khac
     sleep 10; w=$((w + 10))
   done
 }
-say "=== JOB deploy_chain $PRESET TS=$TS pid=$$ (buoc: $STEPS; QF4 $QF4_MD5, r4t $R4T_MD5) ==="
+say "=== JOB deploy_chain $PRESET TS=$TS pid=$$ (buoc: $STEPS; QF4 $QF4_MD5, r4t $R4T_MD5; ban chep $JD) ==="
+verify_staged || fail "ban chep script trong $JD khong dung pin md5"
 tg "[deploy_chain $PRESET] BAT DAU TS=$TS: buoc $STEPS (tu cho/kiem; FAIL => dung ca chuoi + KHAN)"
 FIRST=1
 for s in $STEPS; do
@@ -255,14 +325,25 @@ for s in $STEPS; do
   else
     wait_no_deploy "$s"
     if [ "$FIRST" = 0 ] || [ "$s" = r4t ]; then wait_window "$s"; fi
-    wait_no_deploy "$s"
+    # [A1 CHAIN MIN TOCTOU] lay khoa deploy ROI moi kiem "khong job khac" va chay buoc; khoa giu suot buoc (ca job nen cua swap)
+    while :; do
+      wait_no_deploy "$s"
+      exec 9>>"$DLOCK"
+      if ! flock -n 9; then
+        exec 9>&-; setst "$s: cho khoa deploy $DLOCK"; say "$s: khoa deploy $DLOCK dang bi giu — cho"; sleep_chk 10; continue
+      fi
+      if [ -z "$(qf4_running)" ] && [ -z "$(other_deploy)" ]; then break; fi
+      flock -u 9; exec 9>&-; sleep_chk 5
+    done
     read_state || fail "$s: khong doc duoc 242 truoc khi chay"
-    step_done "$s" && { say "$s: da XONG trong luc cho => bo qua"; continue; }
-    setst "$s: DANG CHAY"; say "--- $s: CHAY"; tg "[deploy_chain $PRESET] $s: BAT DAU"
+    step_done "$s" && { flock -u 9; exec 9>&-; say "$s: da XONG trong luc cho => bo qua"; continue; }
+    verify_staged || fail "$s: ban chep script trong $JD KHONG con dung pin md5 — khong chay"
+    setst "$s: DANG CHAY"; say "--- $s: CHAY (ban chep $JD, khoa $DLOCK)"; tg "[deploy_chain $PRESET] $s: BAT DAU"
     case "$s" in
       qf4) echo YES | bash "$QF4_SH"; RC=$?;;
-      r4t) echo YES | bash "$SWAP_SH"; RC=$?;;
+      r4t) echo YES | REG_JAR_SH=$REG_JAR_SH bash "$SWAP_SH"; RC=$?;;
     esac
+    flock -u 9; exec 9>&-
     [ "$RC" = 0 ] || fail "$s: script rc=$RC (FAIL/rollback)"
     read_state || fail "$s: khong doc duoc 242 sau buoc"
     step_done "$s" || fail "$s: rc=0 nhung md5 tren 242 khong dung"
