@@ -10,6 +10,8 @@ import os
 import re
 
 START = "2026-11-04"
+TARGET_JAR = "r4t"                 # [ADD15] (ii) theo jar se len live
+SMOKE_START_MS = 1793977834000      # [ADD15] 2026-11-06 22:10:34 +07 (start r4t)
 N_SACH = 7
 
 
@@ -36,12 +38,14 @@ def count(days, smoke_ok):
             out["sach"].append(d)
         else:
             out["khong_tinh"][d] = "%s | %s" % (v.get("ket_luan"), v.get("ngay_sach"))
-    r4q_full = [d for d in out["sach"] if days[d].get("jar") not in (None, "r4n") and not days[d].get("swap_day")]
+    r4q_full = [d for d in out["sach"] if days[d].get("jar") == TARGET_JAR and not days[d].get("swap_day")]   # [ADD15]
     out["n_sach"] = len(out["sach"])
     out["sach_T"] = [d for d in out["sach"] if not is_sach(days[d])]
     out["needs_M_regrade"] = [d for d in out["sach"]]   # [ADD12 §3] dieu kien G-PILOT, khong phai G-MICRO
     out["i"] = out["n_sach"] >= N_SACH
-    out["r4q_sach_tron"] = r4q_full
+    out["r4q_sach_tron"] = r4q_full    # ten giu cho tuong thich; noi dung = ngay SACH/SACH-T tron tren TARGET_JAR
+    out["target_jar"] = TARGET_JAR
+    out["target_sach_tron"] = r4q_full
     out["smoke_24h"] = smoke_ok
     out["ii"] = bool(r4q_full) and smoke_ok is True
     if out["dung_vi_truot"]:

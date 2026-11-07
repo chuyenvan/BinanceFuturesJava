@@ -179,8 +179,7 @@ def main():
                 shutil.copy(p, od)
     json.dump(res, open(out + "/parity_v12_%s.json" % rnd, "w"), indent=1, default=str)
     # [ADD11 §4] G-MICRO tren moi ngay da cham (ban moi nhat moi ngay)
-    sw = [j for j in PVJARS() if j["name"] != "r4n"]
-    sm, sinfo = gmicro.smoke(ROOT, sw[0]["start_ms"]) if sw else (None, {"chua_swap": True})
+    sm, sinfo = gmicro.smoke(ROOT, gmicro.SMOKE_START_MS)   # [ADD15] smoke tu start r4t
     gm = gmicro.count(gmicro.collect(REPO), sm)
     gm["smoke_info"] = sinfo
     json.dump(gm, open(REPO + "/docs/result/parity_v12_gmicro.json", "w"), indent=1, default=str)
