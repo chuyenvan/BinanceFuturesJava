@@ -12,6 +12,7 @@
   "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-10-25.csv",
   "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-10-26.csv",
   "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-10-27.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-10-28.csv",
   "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-10-29.csv",
   "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-10-30.csv",
   "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-10-31.csv",
@@ -20,18 +21,18 @@
   "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-11-03.csv",
   "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-11-04.csv"
  ],
- "flags_cmd_out": "2026-11-06 16:08:51.901 INFO  [main] t.TsxLiveOffline: flags /home/ubuntu/claude_master/parity_v12w/tsx/flags_20261104.csv 2026-09-20..2026-11-05 on=0",
+ "flags_cmd_out": "2026-11-09 09:10:17.231 INFO  [main] t.TsxLiveOffline: flags /home/ubuntu/claude_master/parity_v12w/tsx/flags_20261104.csv 2026-09-20..2026-11-05 on=0",
  "flag_2026-11-04": {
   "vision": {
    "flag_day": 20761,
    "date": "2026-11-04",
-   "state": NaN,
-   "dd": NaN,
-   "p": NaN,
-   "max_p": NaN,
-   "max_day": -1,
-   "min_n": 0,
-   "reason": "missing 2026-10-28"
+   "state": "OFF",
+   "dd": -0.2232154190052222,
+   "p": -0.2458863838182936,
+   "max_p": 0.0067058277725329,
+   "max_day": 20731,
+   "min_n": 1439,
+   "reason": "ok"
   },
   "live_lines": [
    {
@@ -53,13 +54,13 @@
   "vision": {
    "flag_day": 20762,
    "date": "2026-11-05",
-   "state": NaN,
-   "dd": NaN,
-   "p": NaN,
-   "max_p": NaN,
-   "max_day": -1,
-   "min_n": 0,
-   "reason": "missing 2026-10-28"
+   "state": "OFF",
+   "dd": -0.2087953139026727,
+   "p": -0.2341985759190214,
+   "max_p": 0.0,
+   "max_day": 20731,
+   "min_n": 1439,
+   "reason": "ok"
   },
   "live_lines": [
    {
@@ -75,8 +76,8 @@
   ],
   "live_status_flagToday": []
  },
- "flag_match": null,
- "flag_status": "KHONG DO DUOC (vision=nan, live=['OFF'])",
+ "flag_match": true,
+ "flag_status": "DAT",
  "S_D": {
   "vision64": 0.0183936356718052,
   "vision32": 0.0183936442191094,
@@ -135,9 +136,15 @@
    "live": null,
    "n_min_live": null
   },
+  "2026-10-28": {
+   "vision64": 0.0057001763100958,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
   "2026-10-29": {
-   "vision64": -0.083783457389261,
-   "n_min": 1439,
+   "vision64": -0.0833530238451902,
+   "n_min": 1440,
    "live": null,
    "n_min_live": null
   },

@@ -1,0 +1,88 @@
+{
+ "day": "2026-11-06",
+ "T0": 1793977800000,
+ "T1": 1794009540000,
+ "pull_dirs": {
+  "/home/ubuntu/claude_master/pull242/2026-11-06": {
+   "exists": true,
+   "COMPLETE": true
+  },
+  "/home/ubuntu/claude_master/pull242/2026-11-07": {
+   "exists": true,
+   "COMPLETE": true
+  }
+ },
+ "pull_incomplete": false,
+ "log": {
+  "files": [
+   {
+    "file": "/home/ubuntu/claude_master/pull242/2026-11-06/logs/full.log@1794014580_142816329.gz",
+    "lines": 794820,
+    "how": "first"
+   },
+   {
+    "file": "/home/ubuntu/claude_master/pull242/2026-11-07/logs/full.log@1794100980_150147155.gz",
+    "lines": 835515,
+    "how": "prefix-extend"
+   }
+  ],
+  "merged_lines": 835515,
+  "window_lines": 43150,
+  "first": "2026-11-06T06:00:00+07:00",
+  "last": "2026-11-07T07:10:00+07:00",
+  "covers_from": true,
+  "covers_to": true,
+  "minutes_with_lines_in_window": 530,
+  "markers": {
+   "[GATE] ": 1510,
+   "[GATE-RATIO] q_t=": 26,
+   "[MAP] tick=": 1510,
+   "[LIVE-KLINE]": 178,
+   "[FEAT-PIPE] ticks=": 24,
+   "[TS-EXT] day ": 2,
+   "[TS-EXT] flag day=": 3,
+   "MainClass:": 1,
+   "[LEGACY] managed": 1511
+  },
+  "gate_ticks_in_window": 530,
+  "gate_ratio_hours_in_window": 9
+ },
+ "restarts": {
+  "last_before_T0": 1793875312000,
+  "in_day": [
+   1793977835000
+  ],
+  "p07": [
+   "2026-11-05T17:41:52+07:00",
+   "2026-11-06T22:10:35+07:00"
+  ]
+ },
+ "buffer": {
+  "src": "/home/ubuntu/claude_master/pull242/2026-11-07/run/gate_ratio_live.bin.gz",
+  "bytes": 9080603
+ },
+ "psym": {
+  "files_in_window": 530,
+  "expected": 530,
+  "decode_stdout": "files=530 rows=268421",
+  "decode_stderr_tail": "",
+  "rc": 0,
+  "rows": 268421,
+  "minutes_decoded": 530,
+  "rows_per_min_min": 475
+ },
+ "dumps": {
+  "feat_minutes": 530,
+  "feat_bad_files": 0,
+  "sel_minutes": 530,
+  "sel_bad_files": 0,
+  "s1_minutes": 530,
+  "s1_bad_files": 0
+ },
+ "ucand": {
+  "n": 738,
+  "u_cache1017": 738,
+  "live_syms": 512,
+  "live_not_in_cache": []
+ }
+}
