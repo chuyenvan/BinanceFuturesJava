@@ -406,6 +406,10 @@ public class DetectEntrySignal2TradeNormal {
             //   universe ~250ms steady nên skip không còn cần thiết. Xem PREREG_PASS_SPEED_V2 §2.2.
             TreeMap<Float, String> sortedCandidates = predictAllCandidates(candidatesToPredict, symbol2FinalTicker,
                     rateDownAvg, rateUpAvg, rateDown15MAvg, time);
+            // [V12 R4u BIG_DOWN-SEL 2026-11-09] pool S1 cua tick: tinh 1 LAN (leg market-signal can truoc vong selector);
+            //   vong selector ben duoi dung lai => scoreAll/S1-dump van 1 lan/tick. Profile TAT => khong dung.
+            TreeMap<Float, String> s1PoolTick = null;
+            boolean s1PoolTried = false;
             if (levelChange != null) {
                 Integer numberOrder = Configs.NUMBER_ENTRY_EACH_SIGNAL;
                 if (levelChange.equals(MarketLevelChange.SMALL_UP)
@@ -418,8 +422,17 @@ public class DetectEntrySignal2TradeNormal {
                 allSymbols.removeAll(BudgetManager.getInstance().symbol2Pos.keySet());
 
                 Set<String> symbol2BUY = new HashSet<>();
-                symbol2BUY.addAll(MarketBigChangeDetector.getTopSymbol(numberOrder,
-                        symbol2FinalTicker, symbolLocked, sortedCandidates));
+                if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
+                    // [V12 R4u BIG_DOWN-SEL] c3: chon coin THEO DUNG sim (bins S1-map, Simulator:368-380), KHONG theo
+                    //   tier1Score (Funding/net015-raw) — xem BigDownSelect. Profile TAT => duong cu nguyen van.
+                    s1PoolTick = buildS1Pool(time);
+                    s1PoolTried = true;
+                    symbol2BUY.addAll(bigDownSelectS1(time, levelChange, numberOrder, s1PoolTick,
+                            symbol2FinalTicker, symbolLocked));
+                } else {
+                    symbol2BUY.addAll(MarketBigChangeDetector.getTopSymbol(numberOrder,
+                            symbol2FinalTicker, symbolLocked, sortedCandidates));
+                }
 
                 LOG.info("Level: {} {} -> {}", Utils.normalizeDateYYYYMMDDHHmm(btcTicker.startTime.longValue()),
                         levelChange, symbol2BUY);
@@ -512,7 +525,7 @@ public class DetectEntrySignal2TradeNormal {
             // chuoi do. Nay: chua co score => pool RONG => BO TICK. Xem EntryPoolGate.
             boolean s1Order = false;
             if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
-                TreeMap<Float, String> s1Pool = buildS1Pool(time);
+                TreeMap<Float, String> s1Pool = s1PoolTried ? s1PoolTick : buildS1Pool(time);   // [V12 R4u]
                 s1Order = com.binance.chuyennd.tradecore.selector.EntryPoolGate.usable(s1Pool);
                 selPool = com.binance.chuyennd.tradecore.selector.EntryPoolGate.choose(
                         true, selPool, s1Pool);
@@ -704,6 +717,35 @@ public class DetectEntrySignal2TradeNormal {
     }
 
     /**
+     * [V12 R4u BIG_DOWN-SEL 2026-11-09] leg market-signal (BIG_DOWN/SMALL_*) cua c3: top-n theo symbolPred S1-map (= gia tri
+     * gate GV-I cua vong selector), bo coin dang giu (vi the that {@code symbolLocked} HOP so c3 theo nguon
+     * {@link GatePreFilter} — quy uoc sim isSymbolRunning), bo coin thieu ticker, KHONG loc maxThres — y het
+     * {@code MarketBigChangeDetector.getTopSymbolArray} cua sim. Chua co S1/thang map => 0 leg (fail-closed, KHONG
+     * quay ve tier1/pNoPump). Mot dong {@code [BIG_DOWN-SEL]} cho parity.
+     */
+    private java.util.List<String> bigDownSelectS1(long time, MarketLevelChange levelChange, int numberOrder,
+                                                   TreeMap<Float, String> s1Pool,
+                                                   Map<String, KlineObjectSimple> tickers, Set<String> symbolLocked) {
+        com.binance.chuyennd.tradecore.selector.LiveBuildMap.Assigned a =
+                com.binance.chuyennd.tradecore.selector.EntryPoolGate.usable(s1Pool) ? computeValueMap(s1Pool) : null;
+        if (a == null) {
+            LOG.warn("[BIG_DOWN-SEL] {} level={} n={} CHUA co S1/thang net015-map -> 0 leg (KHONG thay bang tier1/pNoPump)",
+                    Utils.normalizeDateYYYYMMDDHHmm(time), levelChange, numberOrder);
+            return java.util.Collections.emptyList();
+        }
+        final java.util.function.Predicate<String> held = GatePreFilter.heldPredicate(GatePreFilter.source(
+                        com.binance.chuyennd.tradecore.selector.LiveProfileC3.on(),
+                        com.binance.chuyennd.c3live.runtime.C3LiveHook.enabled(),
+                        com.binance.chuyennd.c3live.runtime.C3LiveHook.liveAdapter()),
+                BudgetManager.getInstance().symbol2Pos.keySet());
+        java.util.List<String> sel = com.binance.chuyennd.tradecore.selector.BigDownSelect.select(a.symbolPred,
+                numberOrder, s -> symbolLocked.contains(s) || held.test(s), s -> tickers.get(s) != null);
+        LOG.info("[BIG_DOWN-SEL] {} level={} n={} pool={} top={}", Utils.normalizeDateYYYYMMDDHHmm(time), levelChange,
+                numberOrder, a.size(), com.binance.chuyennd.tradecore.selector.BigDownSelect.describe(sel, a.symbolPred));
+        return sel;
+    }
+
+    /**
      * [C3-SHADOW] Pool xep theo score S1 (thap = tot) tren DUNG tap coin ma selector live da
      * cham diem trong tick nay. Tra null khi model/lich su chua san sang -> caller giu duong cu.
      */
@@ -730,28 +772,27 @@ public class DetectEntrySignal2TradeNormal {
      * cho tung coin theo THU HANG S1 bang {@link LiveBuildMap} (quy uoc build_map.py) va DAO DAU
      * thanh {@code symbolPred = 1 - P(win)}.
      *
-     * @return false khi chua san sang — caller PHAI bo tick, khong duoc thay bang gia tri khac.
+     * @return null khi chua san sang (R4u: tach thanh ham thuan) — caller PHAI bo tick, khong thay bang gia tri khac.
      */
-    private boolean buildValueMap(long time, TreeMap<Float, String> s1Pool) {
-        selMapPred.clear();
+    private com.binance.chuyennd.tradecore.selector.LiveBuildMap.Assigned computeValueMap(TreeMap<Float, String> s1Pool) {
         com.binance.chuyennd.tradecore.selector.Net015ValueLive vm =
                 com.binance.chuyennd.tradecore.selector.Net015ValueLive.getInstance();
-        if (!vm.isReady()) return false;
+        if (!vm.isReady()) return null;
         java.util.List<String> uni = new ArrayList<>();
         for (String sym : s1Pool.values()) if (selFeat45.containsKey(sym)) uni.add(sym);
         if (uni.size() < 20) {
             LOG.warn("[MAP] chi {} coin co du 45 feature -> bo tick", uni.size());
-            return false;
+            return null;
         }
         java.util.Collections.sort(uni);   // thu tu dong TAT DINH cho tie-break rank("first")
         float[][] x = new float[uni.size()][];
         for (int i = 0; i < uni.size(); i++) x[i] = selFeat45.get(uni.get(i));
         float[] pwin = vm.pwin(x);
-        if (pwin == null) return false;
+        if (pwin == null) return null;
         Map<String, Float> pw = new HashMap<>();
         Map<String, Float> sc = new HashMap<>();
         for (int i = 0; i < uni.size(); i++) {
-            if (Float.isNaN(pwin[i])) return false;
+            if (Float.isNaN(pwin[i])) return null;
             pw.put(uni.get(i), pwin[i]);
         }
         for (Map.Entry<Float, String> e : s1Pool.entrySet()) {
@@ -759,6 +800,18 @@ public class DetectEntrySignal2TradeNormal {
         }
         com.binance.chuyennd.tradecore.selector.LiveBuildMap.Assigned a =
                 com.binance.chuyennd.tradecore.selector.LiveBuildMap.assign(uni, sc, pw);
+        return a;
+    }
+
+    /**
+     * [V12 R4u] tach tu ban cu: phan TINH (thuan, khong ghi state) o {@link #computeValueMap} — dung chung voi leg
+     * market-signal ({@code bigDownSelectS1}); ham nay ghi selMapPred/LATEST_SEL_MAPPRED + log [MAP] nhu cu.
+     *
+     * @return false khi chua san sang — caller PHAI bo tick, khong duoc thay bang gia tri khac.
+     */
+    private boolean buildValueMap(long time, TreeMap<Float, String> s1Pool) {
+        selMapPred.clear();
+        com.binance.chuyennd.tradecore.selector.LiveBuildMap.Assigned a = computeValueMap(s1Pool);
         if (a == null) return false;
         selMapPred.putAll(a.symbolPred);
         LATEST_SEL_MAPPRED.putAll(a.symbolPred);
