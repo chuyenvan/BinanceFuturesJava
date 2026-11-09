@@ -1,17 +1,23 @@
 #!/usr/bin/env bash
 # =============================================================================
-# golive_pilot_on.sh — [V12 R4o] MICRO (C3_CAPITAL=1000) -> PILOT (C3_CAPITAL=<size>) tren TAI KHOAN CHINH (GOLIVE_SCENARIO ADD1 §4).
+# golive_pilot_on.sh — [V12 R4o/ADD4] MICRO (C3_CAPITAL=1000) -> PILOT (C3_CAPITAL=<size>) (GOLIVE_SCENARIO ADD1 §4 / ADD4).
 #   DRY=1 bash ~/claude_master/v12/c3live/ops/c3live/golive_pilot_on.sh   # chi kiem
-#   bash ~/claude_master/v12/c3live/ops/c3live/golive_pilot_on.sh         # go 'YES DA CAT LEGACY' (khung :10-:44)
-# Kiem: gate G-PILOT (jar_md5 + size= + g_exec= [ADD2] + g_exit= DAT|Q4_OWNER [ADD3]), LEGACY_CUT_VERIFIED.ok (golive_legacy_verify.sh DAT <= 24 h), dang chay LIVE push ON,
-#   C3_CAPITAL hien tai < size, latch NONE, khong KILL_SWITCH, LEGACY managed 0, RAM, khong PAUSE/canary/soak.
+#   bash ~/claude_master/v12/c3live/ops/c3live/golive_pilot_on.sh         # SUB: go 'YES PILOT' | MAIN: 'YES DA CAT LEGACY' (khung :10-:44)
+# C3_ACCOUNT=SUB (mac dinh, ADD4 tk con) | MAIN (ADD1 tk chinh — chi khi chi dinh ro).
+# Kiem: gate G-PILOT (jar_md5 + size= + g_exec= [ADD2] + g_exit= DAT|Q4_OWNER [ADD3]), dang chay LIVE push ON, C3_CAPITAL hien tai < size,
+#   latch NONE, khong KILL_SWITCH, RAM, khong PAUSE/canary/soak.
+#   MAIN: + LEGACY_CUT_VERIFIED.ok (golive_legacy_verify.sh DAT <= 24 h) + LEGACY managed 0.
+#   [ADD4 SUB] BO LEGACY_CUT_VERIFIED / legacy_verify / LEGACY 0 (§3, chi ghi log); thay bang: bot live dung LIVE_C3_KEYS_FILE = file key
+#   tk con, key van dat (§2: IP-only, khong rut, futures, sha8 != tk chinh, dualSide=false, BFUSD), tk con 0 vi the / lenh / algo NGOAI c3 (§4).
 # Lam: env +C3_CAPITAL=<size> ; PAUSE token ; restart (so live + vi the c3 GIU NGUYEN; adapter khong doi) ; hau kiem env, c3_capital,
-#   PUSH=ON, stream, recon ok, LEGACY 0, latch NONE, 0 KHAN. TRUOT => rollback: env.sh ve ban truoc (C3_CAPITAL cu), restart.
+#   PUSH=ON, stream, recon ok, latch NONE, 0 KHAN (MAIN: LEGACY 0). TRUOT => rollback: env.sh ve ban truoc (C3_CAPITAL cu), restart.
 # =============================================================================
 set -uo pipefail
 . "$(cd "$(dirname "$0")" && pwd)/golive_lib.sh"
 LEGACY_OK_MAX_AGE_S=${LEGACY_OK_MAX_AGE_S:-86400}
 gl_init golive_pilot_on
+[ "$C3_ACCOUNT" = SUB ] && ACCT_TXT="tai khoan CON (ADD4)" || ACCT_TXT="tai khoan CHINH (ADD1)"
+say "tai khoan c3: C3_ACCOUNT=$C3_ACCOUNT — $ACCT_TXT, file key $KEYS_FILE"
 G=$GATE_DIR/GOLIVE_GATE_PILOT.ok
 GR=$(gl_gate "$G"); echo "$GR"; echo "$GR" | grep -q '^OK' || die "chua co cong G-PILOT hop le (MASTER tao $G voi jar_md5=$NJ_MD5 + size=)"
 SIZE=$(gl_gate_val "$G" size)
@@ -24,10 +30,14 @@ echo "OK g_exec=$GX"
 GE=$(gl_gate_val "$G" g_exit)
 [[ "$GE" =~ ^(DAT|Q4_OWNER) ]] || die "$G: g_exit='$GE' — can g_exit=<DAT|Q4_OWNER> <median_bps> <R> <n> <dan chung> (GOLIVE ADD3: G-PILOT muc 7; TRUOT => khong pilot)"
 echo "OK g_exit=$GE"
-LV=$GATE_DIR/LEGACY_CUT_VERIFIED.ok
-[ -s "$LV" ] && grep -q 'KET QUA: DAT' "$LV" || die "chua co $LV DAT (owner cat LEGACY roi chay golive_legacy_verify.sh)"
-AGE=$(( $(date +%s) - $(stat -c %Y "$LV") )); [ "$AGE" -le "$LEGACY_OK_MAX_AGE_S" ] || die "$LV cu ${AGE}s > ${LEGACY_OK_MAX_AGE_S}s — chay lai golive_legacy_verify.sh"
-say "OK LEGACY_CUT_VERIFIED ${AGE}s truoc: $(head -1 "$LV")"
+if [ "$C3_ACCOUNT" = SUB ]; then
+  say "INFO ADD4 §3: tk con — BO dieu kien LEGACY_CUT_VERIFIED / golive_legacy_verify / LEGACY managed 0"
+else
+  LV=$GATE_DIR/LEGACY_CUT_VERIFIED.ok
+  [ -s "$LV" ] && grep -q 'KET QUA: DAT' "$LV" || die "chua co $LV DAT (owner cat LEGACY roi chay golive_legacy_verify.sh)"
+  AGE=$(( $(date +%s) - $(stat -c %Y "$LV") )); [ "$AGE" -le "$LEGACY_OK_MAX_AGE_S" ] || die "$LV cu ${AGE}s > ${LEGACY_OK_MAX_AGE_S}s — chay lai golive_legacy_verify.sh"
+  say "OK LEGACY_CUT_VERIFIED ${AGE}s truoc: $(head -1 "$LV")"
+fi
 gl_read_state
 echo "$ST" | grep -v '^END_STATE$' | sed 's/^/   242: /'
 F=0; chk() { if eval "$2"; then say "OK   $1"; else say "FAIL $1"; F=1; fi; }
@@ -38,33 +48,53 @@ chk "dang chay c3_live LIVE, push mo (SHADOW_NO_PUSH=false, LIVE_ENTRY_ENABLED=t
 chk "C3_CAPITAL hien tai ($C0) < size $SIZE" "[[ '$C0' =~ ^[0-9]+$ ]] && [ '$C0' -lt $SIZE ]"
 chk "latch kill-switch NONE" "[ '$(sv LATCH)' = NONE ] || [ '$(sv LATCH)' = NOFILE ]"
 chk "khong co run/KILL_SWITCH" "[ '$(sv KILLSW_FILE)' = 0 ]"
-chk "LEGACY managed = 0 (da cat), moi" "[ '$(sv LEGACY_N)' = 0 ] && [ '$(sv LEGACY_AGE)' -ge 0 ] && [ '$(sv LEGACY_AGE)' -le 600 ] 2>/dev/null"
 chk "khong PAUSE watchdog" "[ '$(sv PAUSE | cut -c1)' = 0 ]"
 chk "khong canary/soak" "[ '$(sv CANARY_SOAK)' = 0 ]"
 chk "MemAvailable $(sv MEM) >= $MIN_MEM_MB MB" "[ '$(sv MEM)' -ge $MIN_MEM_MB ] 2>/dev/null"
+if [ "$C3_ACCOUNT" = SUB ]; then
+  L0=SKIP; YESW="YES PILOT"
+  say "INFO LEGACY managed=$(sv LEGACY_N) (tk chinh) — chi ghi log"
+  chk "bot live dung key tk con (LIVE_C3_KEYS_FILE=$KEYS_FILE; co: $(sv ENV_LIVE_C3_KEYS_FILE))" "[ '$(sv ENV_LIVE_C3_KEYS_FILE)' = '$KEYS_FILE' ]"
+  chk "file key $KEYS_FILE (600, 2 dong)" "[ '$(sv KEYS_OK)' = 1 ]"
+  API=$(gl_api242 sub) || die "ssh toi 242 loi (doc tk con)"
+  echo "$API" | grep -v '^END_API$' | sed 's/^/   tk con: /'
+  gl_sub_eval 0
+  chk "key tk con dat (ADD4 §2)${SUBWHY:+ —$SUBWHY}" "[ '$SUBV' = DAT ]"
+  NC=""; for k in POS_NONC3 ORD_NONC3 ALGO_NONC3; do n=$(av $k | awk '{print $1}'); [ "$n" = 0 ] || NC="$NC $k=$(av $k)"; done
+  NCOK=0; [ -z "$NC" ] && NCOK=1
+  chk "tk con: 0 vi the / lenh / algo NGOAI c3 (ADD4 §4)${NC:+ —$NC}" "[ $NCOK = 1 ]"
+  KEYCHK="envk LIVE_C3_KEYS_FILE=$KEYS_FILE"
+else
+  L0=0; YESW="YES DA CAT LEGACY"; KEYCHK=""
+  chk "LEGACY managed = 0 (da cat), moi" "[ '$(sv LEGACY_N)' = 0 ] && [ '$(sv LEGACY_AGE)' -ge 0 ] && [ '$(sv LEGACY_AGE)' -le 600 ] 2>/dev/null"
+fi
 [ "$F" = 0 ] || die "kiem truoc co muc FAIL (xem tren)"
-ENV_ADD="# [v1.2 R4o golive_pilot_on $TS] PILOT tai khoan chinh size=$SIZE (truoc $C0)
+ENV_ADD="# [v1.2 R4o/ADD4 golive_pilot_on $TS] PILOT $ACCT_TXT size=$SIZE (truoc $C0)
 export C3_CAPITAL=$SIZE"
 say "--- se THEM vao $A/conf/env.sh:"; echo "$ENV_ADD" | sed 's/^/   + /'
-say "--- so live / vi the c3 ($(sv BOOK_CUM) cum) GIU NGUYEN qua restart; hau kiem c3_capital=$SIZE, PUSH=ON, stream, recon ok, LEGACY 0"
+say "--- so live / vi the c3 ($(sv BOOK_CUM) cum) GIU NGUYEN qua restart; hau kiem c3_capital=$SIZE, PUSH=ON, stream, recon ok$([ "$C3_ACCOUNT" = SUB ] || echo ', LEGACY 0')"
 [ "$DRY" = 1 ] && { say "DRY=1: dung o day, KHONG ghi gi len 242. (DRY PASS)"; exit 0; }
 gl_time
-gl_yes "PILOT: C3_CAPITAL $C0 -> $SIZE tren tai khoan chinh. Owner XAC NHAN da cat TOAN BO LEGACY." "YES DA CAT LEGACY"
+if [ "$C3_ACCOUNT" = SUB ]; then
+  gl_yes "PILOT: C3_CAPITAL $C0 -> $SIZE tren $ACCT_TXT. Owner XAC NHAN da nap du von vao tk con." "$YESW"
+else
+  gl_yes "PILOT: C3_CAPITAL $C0 -> $SIZE tren $ACCT_TXT. Owner XAC NHAN da cat TOAN BO LEGACY." "$YESW"
+fi
 trap 'say "BI DUNG (tin hieu) — kiem golive_monitor.sh"; gl_pause_clear >/dev/null 2>&1; exit 130' INT TERM HUP
 gl_restart "$ENV_ADD" "" none
 if echo "$RS" | grep -q '^FAIL'; then
   echo "$RS" | grep -q '^OK da_stop' || { gl_pause_clear >/dev/null 2>&1; die "buoc env/stop FAIL truoc khi dung bot"; }
 fi
-CHK() { gl_chk_common "$SL" 0 '
-envk LIVE_ADAPTER=live; envk C3_CAPITAL='"$SIZE"'; envk SHADOW_NO_PUSH=false; envk LIVE_ENTRY_ENABLED=true
+CHK() { gl_chk_common "$SL" "$L0" '
+envk LIVE_ADAPTER=live; envk C3_CAPITAL='"$SIZE"'; envk SHADOW_NO_PUSH=false; envk LIVE_ENTRY_ENABLED=true; '"$KEYCHK"'
 [ "$(tail -n +$SL $L | grep -a "khoi dong adapter=LIVE" | grep -acE "c3_capital='"$SIZE"'(\.0)?( |$)")" -ge 1 ] && echo "OK c3_capital='"$SIZE"'" || echo "WAIT c3_capital"
 [ "$(T "PUSH=ON")" -ge 1 ] && echo "OK PUSH_ON" || echo "WAIT PUSH_ON"
 [ "$(T "C3-LIVE-STREAM\] da ket noi")" -ge 1 ] && echo "OK user_stream" || echo "WAIT user_stream"'; }
 if ! echo "$RS" | grep -q '^FAIL' && gl_postloop CHK; then
   trap - INT TERM HUP
   gl_pause_clear >/dev/null || say "PAUSE con (ssh?) — tu go sau ${WD_PAUSE_MAX_S}s"
-  say "=== XONG: PILOT C3_CAPITAL=$SIZE. Theo doi: golive_monitor.sh"
-  tg "[golive] PILOT BAT TS=$TS C3_CAPITAL=$SIZE (truoc $C0). Log $LOG"; exit 0
+  say "=== XONG: PILOT C3_CAPITAL=$SIZE ($ACCT_TXT). Theo doi: golive_monitor.sh"
+  tg "[golive] PILOT BAT TS=$TS C3_ACCOUNT=$C3_ACCOUNT C3_CAPITAL=$SIZE (truoc $C0). Log $LOG"; exit 0
 fi
 WHY=$(echo "${RESULT:-$RS}" | grep '^FAIL\|^WAIT' | tr '\n' ' ' | cut -c1-200)
 say "hau kiem TRUOT ($WHY) => ROLLBACK ve C3_CAPITAL=$C0 (adapter live, so + vi the giu nguyen)"

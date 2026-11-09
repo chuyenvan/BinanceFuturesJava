@@ -11,6 +11,7 @@
 set -uo pipefail
 . "$(cd "$(dirname "$0")" && pwd)/golive_lib.sh"
 gl_init golive_legacy_verify
+[ "$C3_ACCOUNT" = MAIN ] || die "ADD4 §3: c3 chay tai khoan CON — BO golive_legacy_verify (LEGACY doc lap o tk chinh). Chi dung voi C3_ACCOUNT=MAIN."
 gl_read_state
 [ "$(sv KEYS_OK)" = 1 ] || die "file key $KEYS_FILE khong hop le"
 API=$(gl_api242 scope) || die "ssh toi 242 loi"

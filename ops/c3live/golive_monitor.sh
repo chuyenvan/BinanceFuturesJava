@@ -5,6 +5,13 @@
 # In: process/jar/env (adapter, C3_CAPITAL, push), PUSH (env + run/KILL_SWITCH), latch + dinh kill-switch, equity c3 / HOURLY,
 #   so c3 (cum, da arm, stop c3s-), lenh c3 1 h qua, LEGACY, user stream, RAM/dia/RSS, weight/429/418/ban, KHAN/ERROR 1 h qua,
 #   PAUSE watchdog, cron exinfo. Ket thuc bang dong TOM TAT.
+# [ADD4] C3_ACCOUNT=SUB (mac dinh; MAIN = chi doc nhu R4o). SUB doc them san tk con CHI DOC (gl_api242 sub, ~150 weight IP):
+#   §4 vi the (vuot qty c3 trong so; leg dang khop => POS_PENDING) / lenh / algo cid KHONG c3-|c3x-|c3s- => KHAN + dat run/KILL_SWITCH
+#      (co san: chan MO MOI; vi the c3 van duoc quan ly), KHONG tu dong vi the. Owner/MASTER xu ly; go co: MODE=undrain golive_live_off.sh.
+#   §5 DD totalMarginBalance tk con (USDT, gom BFUSD) so voi dinh $SUB_PEAK_FILE (Oracle, theo key_sha8) <= -SUB_DD_LIMIT (0.40 = A40/C6)
+#      => KHAN + run/KILL_SWITCH. Owner NAP/RUT co chu dich: SUB_PEAK_RESET=1 bash golive_monitor.sh (dinh = tmb hien tai).
+#   Lop CHINH (jar r4t, khong doi): KillSwitchEngine A40/C6 (FLATTEN) tren C3MainEquity = C3_CAPITAL + PnL c3 (so) — day la lop ops THU HAI.
+#   DRY=1: chi doc + in, KHONG dat co, KHONG ghi dinh. Doc san loi => CANH BAO (khong dat co). Ma thoat: 0 | 2 KHAN.
 # =============================================================================
 set -uo pipefail
 . "$(cd "$(dirname "$0")" && pwd)/golive_lib.sh"
@@ -40,4 +47,54 @@ EOF
 echo "$OUT"
 echo "== PAUSE watchdog: $(sv PAUSE)  canary/soak=$(sv CANARY_SOAK)"
 PUSH=OFF; [ "$(sv ENV_LIVE_ADAPTER)" = live ] && [ "$(sv ENV_SHADOW_NO_PUSH)" = false ] && [ "$(sv ENV_LIVE_ENTRY_ENABLED)" = true ] && [ "$(sv KILLSW_FILE)" = 0 ] && PUSH=ON
-say "TOM TAT: adapter=$(sv ENV_LIVE_ADAPTER) C3_CAPITAL=$(sv ENV_C3_CAPITAL) push=$PUSH latch=$(sv LATCH) so_c3=$(sv BOOK_CUM)cum LEGACY=$(sv LEGACY_N) mem=$(sv MEM)MB jar=$(sv JAR_MD5 | cut -c1-8) pause=$(sv PAUSE | cut -c1)"
+RC=0; SUBSUM=""
+if [ "$C3_ACCOUNT" = SUB ]; then
+  # ---------------------------------------------------------------- [ADD4 §4/§5] tai khoan con: doc san CHI DOC, KHAN => co run/KILL_SWITCH
+  TS=$(TZ=Asia/Ho_Chi_Minh date +%Y%m%d_%H%M%S)
+  KP=$(sv ENV_LIVE_C3_KEYS_FILE)
+  [ "$(sv ENV_LIVE_ADAPTER)" != live ] || [ "$KP" = "$KEYS_FILE" ] || say "!! CANH BAO: bot live dung LIVE_C3_KEYS_FILE='$KP' KHAC $KEYS_FILE (C3_ACCOUNT=$C3_ACCOUNT) — so lieu duoi day la cua $KEYS_FILE"
+  API=$(gl_api242 sub) || API="ERR=ssh_api"
+  echo "$API" | grep -E '^(KEY_SHA8|TMB|AVAIL|MULTI|DUAL|BAL|MARGIN_ASSETS|BFUSD_|POS_TOTAL|POS_NONC3|POS_PENDING|POS_C3_MISMATCH|ORD_|ALGO_|C3_|W_|API_OK|ERR)' | sed 's/^/== tk con: /'
+  KH=""; UNK=""
+  if echo "$API" | grep -qx END_API; then
+    for k in POS_NONC3 ORD_NONC3 ALGO_NONC3; do
+      n=$(av $k | awk '{print $1}')
+      case "$n" in ''|*[!0-9]*) UNK="$UNK $k";; 0) ;; *) KH="$KH $k=$(av $k | tr ' ' ':')";; esac
+    done
+  else UNK="$UNK doc_san"; fi
+  [ -n "$UNK" ] && say "!! CANH BAO: doc san tk con KHONG tron ven ($UNK) — KHONG danh gia §4 cho phan nay (lop jar van fail-closed)"
+  # §5 DD totalMarginBalance (USDT, gom gia tri margin BFUSD) so voi dinh luu tren Oracle (theo key_sha8)
+  TMB=$(av TMB); KS8=$(av KEY_SHA8); DD=""
+  if [[ "$TMB" =~ ^[0-9]+(\.[0-9]+)?$ ]] && awk -v e="$TMB" 'BEGIN{exit !(e>0)}'; then
+    PK=""; PS=""
+    [ -r "$SUB_PEAK_FILE" ] && { PK=$(sed -n 's/^peak=//p' "$SUB_PEAK_FILE" | head -1); PS=$(sed -n 's/^key_sha8=//p' "$SUB_PEAK_FILE" | head -1); }
+    NEWPK=""
+    if [ "${SUB_PEAK_RESET:-0}" = 1 ]; then NEWPK=$TMB; say "dinh tmb DAT LAI = $TMB (SUB_PEAK_RESET=1)"
+    elif ! [[ "$PK" =~ ^[0-9]+(\.[0-9]+)?$ ]] || [ "$PS" != "$KS8" ]; then NEWPK=$TMB; say "dinh tmb khoi tao = $TMB (chua co dinh / key khac)"
+    elif awk -v e="$TMB" -v p="$PK" 'BEGIN{exit !(e>p)}'; then NEWPK=$TMB; fi
+    if [ -n "$NEWPK" ]; then
+      PK=$NEWPK
+      if [ "$DRY" = 1 ]; then say "DRY=1: KHONG ghi dinh $SUB_PEAK_FILE"
+      else mkdir -p "$(dirname "$SUB_PEAK_FILE")"; printf 'peak=%s\nkey_sha8=%s\nts=%s\n' "$PK" "$KS8" "$TS" > "$SUB_PEAK_FILE.tmp" && mv -f "$SUB_PEAK_FILE.tmp" "$SUB_PEAK_FILE"; fi
+    fi
+    DD=$(awk -v e="$TMB" -v p="$PK" 'BEGIN{printf "%.4f", e/p-1}')
+    say "== DD tk con (ops, tmb): tmb=$TMB dinh=$PK dd=$DD nguong=-$SUB_DD_LIMIT (A40/C6). Lop chinh trong jar: KillSwitchEngine tren C3MainEquity (so c3)"
+    awk -v d="$DD" -v l="$SUB_DD_LIMIT" 'BEGIN{exit !(d <= -l)}' && KH="$KH DD_tmb=${DD}_vuot_-${SUB_DD_LIMIT}_(A40/C6)"
+  else
+    say "!! CANH BAO: khong co totalMarginBalance hop le tk con ('$TMB') — KHONG danh gia DD"
+  fi
+  if [ -n "$KH" ]; then
+    RC=2
+    KT=$(echo "$KH" | tr -cd 'A-Za-z0-9_=:.,+ -' | sed 's/^ *//' | tr ' ' '_' | cut -c1-160)
+    say "KHAN (ADD4 tk con):$KH — CHAN mo moi (run/KILL_SWITCH), KHONG tu dong vi the; owner/MASTER xu ly"
+    if [ "$DRY" = 1 ]; then say "DRY=1: KHONG dat run/KILL_SWITCH"
+    elif s242 "cd $A && { [ -e run/KILL_SWITCH ] || echo 'golive_monitor $TS KHAN $KT' > run/KILL_SWITCH; } && [ -e run/KILL_SWITCH ]"; then
+      say "run/KILL_SWITCH DANG DAT (dung mo moi; vi the c3 van duoc quan ly). Go sau khi xu ly: MODE=undrain golive_live_off.sh"
+    else say "!! KHONG dat / xac nhan duoc run/KILL_SWITCH (ssh?) — owner dat tay: MODE=drain golive_live_off.sh"; fi
+    tg "[golive] KHAN tk con TS=$TS:$KH => run/KILL_SWITCH (chan mo moi), KHONG tu dong vi the. Kiem golive_monitor.sh"
+    PUSH=OFF
+  fi
+  SUBSUM=" tk=SUB key=$KS8 tmb=${TMB:-?} dd=${DD:-?} khan=$([ -n "$KH" ] && echo KHAN || { [ -n "$UNK" ] && echo '?' || echo 0; })"
+fi
+say "TOM TAT: adapter=$(sv ENV_LIVE_ADAPTER) C3_CAPITAL=$(sv ENV_C3_CAPITAL) push=$PUSH latch=$(sv LATCH) so_c3=$(sv BOOK_CUM)cum LEGACY=$(sv LEGACY_N) mem=$(sv MEM)MB jar=$(sv JAR_MD5 | cut -c1-8) pause=$(sv PAUSE | cut -c1)$SUBSUM"
+exit $RC

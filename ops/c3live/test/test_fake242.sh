@@ -62,9 +62,10 @@ case "$1" in
         fi
         echo "$D WARN [main] x: [KILLSW] BAT mode=act (c3_live): ..."
         FLN=$(cat FAKE_LEGACY_N 2>/dev/null || echo 44)
+        FSN=$(cat FAKE_SCOPE_N 2>/dev/null || echo $FLN)   # [ADD4] scope jar: vi the NGOAI c3 tren tk cua key c3 (tk con: phai 0)
         if [ "${LIVE_ADAPTER:-}" = live ]; then
           echo "$D WARN [main] x: [C3-LIVE] khoi dong adapter=LIVE gateway=c3scope(live) book=run/c3live_book.json cum=0 c3_capital=${C3_CAPITAL:-?}.0 tai_khoan=CHINH(pham vi c3) killSwitchArmed=true X14=true stream=ws"
-          echo "$D WARN [C3LIVE-OPS] x: [C3-LIVE-SCOPE] LEGACY tren tai khoan chinh: $FLN vi the (foreign DA BIET, khong phai cum ma, khong chan (A)); LEGACY-busy=$FLN symbol"
+          echo "$D WARN [C3LIVE-OPS] x: [C3-LIVE-SCOPE] LEGACY tren tai khoan chinh: $FSN vi the (foreign DA BIET, khong phai cum ma, khong chan (A)); LEGACY-busy=$FSN symbol"
           echo "$D INFO [C3LIVE-STREAM] x: [C3-LIVE-STREAM] da ket noi"
           [ -f FAKE_C3EXEC ] && echo "$D INFO [C3LIVE-OPS] x: [C3-LIVE-ORDER] ts=1 cid=c3-C01USDT-1-0 oid=1 sym=C01USDT side=BUY type=MARKET qty=1 px=1 status=FILLED lat_ms=5 err=- reason=-"
         else
@@ -1194,8 +1195,10 @@ cat > "$W/fakecurl.sh" <<EOF
 #!/bin/bash
 # curl GIA: doc cau hinh -K - tu stdin, tra fixture theo ten endpoint (khong mang)
 cfg=\$(cat); u=\$(printf '%s' "\$cfg" | sed -n 's/^url = "\([^"?]*\).*/\1/p'); n=\${u##*/}
+p=\${u%/*}; n2=\${p##*/}_\$n; [ -f "$W/api/\$n2.json" ] && n=\$n2   # [ADD4] fixture theo phien ban (vd v2_account)
 printf '%s' "\$cfg" | grep -q 'X-MBX-APIKEY: fakekey_' || { printf '{"code":-2015}\nHTTP=401'; exit 0; }
 c=200; [ -f "$W/api/\$n.code" ] && c=\$(cat "$W/api/\$n.code")
+printf 'HTTP/1.1 %s\r\nx-mbx-used-weight-1m: %s\r\n\r\n' "\$c" "\$(cat $W/api/weight 2>/dev/null || echo 77)" >&2   # [ADD4] header weight (-D /dev/stderr)
 cat "$W/api/\$n.json" 2>/dev/null; printf '\nHTTP=%s' "\$c"
 EOF
 chmod +x "$W/fakecurl.sh"
@@ -1211,7 +1214,7 @@ exec bash -c "$1"
 EOF
 chmod +x "$W/fakessh_q.sh"
 api openOrders '[]'; api openAlgoOrders '[]'
-GL() { env APP_DIR=$F4 NJ_MD5=$NEW4 GATE_DIR=$GD KEYS_FILE=$W/keys_c3.env PY242=$W/c3py_t/python/bin/python3 CURL242=$W/fakecurl.sh \
+GL() { env C3_ACCOUNT=MAIN APP_DIR=$F4 NJ_MD5=$NEW4 GATE_DIR=$GD KEYS_FILE=$W/keys_c3.env PY242=$W/c3py_t/python/bin/python3 CURL242=$W/fakecurl.sh \
   DEPLOY_TG_SINK=$W/tg_gl.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 "$@"; }
 penv() { tr '\0' '\n' < /proc/$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)/environ; }
 lgnow() { local l=AAAUSDT,BBBUSDT; [ "$1" = 0 ] && l=""; echo "$(TZ=Asia/Ho_Chi_Minh date '+%d/%m/%Y %H:%M:%S.000') INFO [pool-3-thread-1] x: [LEGACY] managed $1: $l" >> $F4/logs/full.log; }
@@ -1407,6 +1410,119 @@ rm -f $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_*; echo 43 > $F4/FAKE_LEGAC
 OUT=$(echo YES | swr bash "$SW" 2>&1); RC=$?
 chk "r4r swap XONG (LEGACY truoc stop 45 = log cuoi sau rollback; JVM moi 43 => chi WARN giam): jar r4t, OK MINUTE-GUARD_BAT, backup r4q (md5), dang ky parity 'r4t <jar> <md5> <start_ms> 1', dry giu" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: dry chay r4t' && echo \"\$OUT\" | grep -q 'OK MINUTE-GUARD_BAT' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWR ] && cat $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_*.md5 | grep -qx $JQ && grep -qE \"^r4t $W/new_r4r.jar $NEWR [0-9]{13} 1\$\" $W/reg_calls.txt && penv | grep -qx LIVE_ADAPTER=dry && grep -q 'r4q -> r4t' $W/tg_sw.txt && echo \"\$OUT\" | grep -q 'LEGACY_TRUOC_STOP=45' && echo \"\$OUT\" | grep -q 'WARN LEGACY_managed=43 < truoc stop 45'"
 echo 44 > $F4/FAKE_LEGACY_N
+echo "== 35. [V12 ADD4] TAI KHOAN CON: golive_use_sub_key / check_key SUB / micro_on SUB / pilot_on SUB / monitor SUB (§4 ngoai c3, §5 DD tmb) / live_off SUB / legacy_verify"
+GD=$W/gates5; rm -rf "$GD"; mkdir -p "$GD"
+SKEY=fakekey_sub_$(printf '%036d' 7); SK8=$(printf '%s' "$SKEY" | sha256sum | cut -c1-8)
+printf 'C3_LIVE_API_KEY=%s\nC3_LIVE_API_SECRET=fakesecret_sub_%036d\n' "$SKEY" 9 > $W/sub_src.env; chmod 600 $W/sub_src.env
+rm -f $W/keys_sub.env $W/sub_peak.txt $W/tg_sub.txt $F4/run/KILL_SWITCH $F4/run/c3live_book.json $W/PAUSE $F4/FAKE_SCOPE_N
+MK0=$(stat -c '%Y %s' $W/keys_c3.env)
+GS() { env C3_ACCOUNT=SUB APP_DIR=$F4 NJ_MD5=$NEWR GATE_DIR=$GD KEYS_FILE=$W/keys_sub.env PY242=$W/c3py_t/python/bin/python3 CURL242=$W/fakecurl.sh \
+  DEPLOY_TG_SINK=$W/tg_sub.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 SUB_PEAK_FILE=$W/sub_peak.txt "$@"; }
+US() { GS SUB_SRC=$W/sub_src.env SUB_KEY_SHA8=$SK8 MAIN_KEYS_FILE=$W/keys_c3.env KEY_UID=$(id -u) "$@"; }
+nosec() { ! echo "$1" | grep -q "$SKEY\|fakesecret_sub" && ! grep -rqs "$SKEY\|fakesecret_sub" $W/deploylog $GD $W/tg_sub.txt; }
+ACC_OK='{"totalMarginBalance":"1000.00","availableBalance":"1000.00","assets":[{"asset":"USDT","walletBalance":"1000.00","marginBalance":"1000.00","marginAvailable":true},{"asset":"BTC","walletBalance":"0","marginAvailable":true}]}'
+clean() { api account "$ACC_OK"; rm -f $W/api/v2_account.json; api multiAssetsMargin '{"multiAssetsMargin":true}'; api dual '{"dualSidePosition":false}'
+  api positionRisk '[{"symbol":"Z0USDT","positionAmt":"0"}]'; api openOrders '[]'; api openAlgoOrders '[]'
+  api apiRestrictions '{"ipRestrict":true,"enableWithdrawals":false,"enableFutures":true,"enableReading":true}'; }
+clean
+OUT=$(US DRY=1 bash "$HERE/golive_use_sub_key.sh" 2>&1); RC=$?
+chk "add4 use_sub_key DRY: nguon dat (sha8 khop, 600), in sha8/quyen/mtime, KHONG tao file dich, KHONG lo key/secret" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q \"key_sha8=$SK8\" && [ ! -e $W/keys_sub.env ] && nosec \"\$OUT\""
+OUT=$(US SUB_KEY_SHA8=deadbeef DRY=1 bash "$HERE/golive_use_sub_key.sh" 2>&1); RC=$?
+chk "add4 use_sub_key: sha8 nguon KHONG khop => DUNG, khong tao dich" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'nguon KHONG dat' && [ ! -e $W/keys_sub.env ]"
+OUT=$(echo YES | US bash "$HERE/golive_use_sub_key.sh" 2>&1); RC=$?
+chk "add4 use_sub_key: copy -> keys_sub.env (600, giong nguon), keys.env tk chinh KHONG doi, roi check_key SUB DAT (file KEY_CHECK_SUB), khong lo secret" "[ $RC = 0 ] && [ \"\$(stat -c %a $W/keys_sub.env)\" = 600 ] && cmp -s $W/sub_src.env $W/keys_sub.env && [ \"\$(stat -c '%Y %s' $W/keys_c3.env)\" = '$MK0' ] && echo \"\$OUT\" | grep -q 'OK file tk chinh khong doi' && echo \"\$OUT\" | grep -q 'KET QUA: DAT' && grep -q \"KET QUA: DAT\" $GD/KEY_CHECK_SUB_*.txt && grep -q \"key_sha8=$SK8\" $GD/KEY_CHECK_SUB_*.txt && ! ls $W/keys_sub.env.tmp_* >/dev/null 2>&1 && nosec \"\$OUT\""
+chk "add4 check_key SUB ghi lai multiAssetsMargin / so du / tai san margin / weight (W_NOMINAL=150, header X-MBX-USED-WEIGHT-1M)" "echo \"\$OUT\" | grep -q 'multiAssetsMargin=true' && echo \"\$OUT\" | grep -q 'so_du=\[USDT:1000.00' && echo \"\$OUT\" | grep -q 'tai_san_margin=\[BTC,USDT\]' && echo \"\$OUT\" | grep -q 'weight fapi danh nghia=150 X-MBX-USED-WEIGHT-1M cuoi=77'"
+OUT=$(echo YES | US bash "$HERE/golive_use_sub_key.sh" 2>&1); RC=$?
+chk "add4 use_sub_key lan 2: dich da co dung key => KHONG ghi lai, van kiem DAT" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'KHONG ghi lai' && cmp -s $W/sub_src.env $W/keys_sub.env"
+printf 'C3_LIVE_API_KEY=fakekey_other\nC3_LIVE_API_SECRET=x\n' > $W/keys_sub_o.env; chmod 600 $W/keys_sub_o.env
+OUT=$(US KEYS_FILE=$W/keys_sub_o.env DRY=1 bash "$HERE/golive_use_sub_key.sh" 2>&1); RC=$?
+chk "add4 use_sub_key: dich DA TON TAI voi key khac => TU CHOI, khong ghi de" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'KHONG ghi de' && grep -q fakekey_other $W/keys_sub_o.env"
+api positionRisk '[{"symbol":"Q1USDT","positionAmt":"3"},{"symbol":"Z0USDT","positionAmt":"0"}]'; api openOrders '[{"symbol":"Q1USDT","clientOrderId":"web_1"}]'; api openAlgoOrders '[{"symbol":"Q1USDT","clientAlgoId":"c3s-Q1-1"}]'
+OUT=$(GS bash "$HERE/golive_check_key.sh" 2>&1); RC=$?
+chk "add4 check_key SUB: tk con BAN (1 vi the, 1 lenh, 1 algo) => TRUOT exit 3" "[ $RC = 3 ] && echo \"\$OUT\" | grep -q 'KET QUA: TRUOT' && echo \"\$OUT\" | grep -q 'POS_TOTAL=1' && echo \"\$OUT\" | grep -q 'ORD_TOTAL=1' && echo \"\$OUT\" | grep -q 'ALGO_TOTAL=1'"
+clean
+printf 'C3_LIVE_API_KEY=badkey_%036d\nC3_LIVE_API_SECRET=badsec\n' 3 > $W/keys_bad.env; chmod 600 $W/keys_bad.env
+OUT=$(GS KEYS_FILE=$W/keys_bad.env bash "$HERE/golive_check_key.sh" 2>&1); RC=$?
+chk "add4 check_key SUB: key SAI (san tra 401) => TRUOT" "[ $RC = 3 ] && echo \"\$OUT\" | grep -q 'KET QUA: TRUOT' && echo \"\$OUT\" | grep -q 'apiRestrictions_HTTP=401'"
+OUT=$(GS MAIN_KEY_SHA8=$SK8 bash "$HERE/golive_check_key.sh" 2>&1); RC=$?
+chk "add4 check_key SUB: sha8 key = key tk chinh => TRUOT" "[ $RC = 3 ] && echo \"\$OUT\" | grep -q 'TRUNG_key_tk_chinh'"
+api apiRestrictions '{"ipRestrict":false,"enableWithdrawals":true,"enableFutures":false}'
+OUT=$(GS bash "$HERE/golive_check_key.sh" 2>&1); RC=$?
+chk "add4 check_key SUB: khong gioi han IP + rut tien + khong futures => TRUOT ca 3" "[ $RC = 3 ] && echo \"\$OUT\" | grep -q 'ipRestrict=false' && echo \"\$OUT\" | grep -q 'enableWithdrawals=true' && echo \"\$OUT\" | grep -q 'enableFutures=false'"
+clean; api account '{"totalMarginBalance":"999.5","availableBalance":"990","assets":[{"asset":"USDT","walletBalance":"0","marginAvailable":true},{"asset":"BFUSD","walletBalance":"1000.1","marginBalance":"999.5","marginAvailable":false}]}'
+OUT=$(GS bash "$HERE/golive_check_key.sh" 2>&1); RC=$?
+chk "add4 check_key SUB: von BFUSD nhung marginAvailable=false => TRUOT" "[ $RC = 3 ] && echo \"\$OUT\" | grep -q 'BFUSD=1000.1_marginAvailable=false'"
+api account '{"totalMarginBalance":"999.5","availableBalance":"990","assets":[{"asset":"USDT","walletBalance":"0"},{"asset":"BFUSD","walletBalance":"1000.1","marginBalance":"999.5"}]}'
+api v2_account '{"assets":[{"asset":"USDT","marginAvailable":true},{"asset":"BFUSD","marginAvailable":true}]}'
+OUT=$(GS bash "$HERE/golive_check_key.sh" 2>&1); RC=$?
+chk "add4 check_key SUB: v3/account thieu marginAvailable => doc them v2/account: BFUSD marginAvailable=true => DAT (weight 155)" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'ACC_V2_HTTP=200' && echo \"\$OUT\" | grep -q 'BFUSD=1000.1 marginAvailable=true' && echo \"\$OUT\" | grep -q 'danh nghia=155'"
+api v2_account '{"assets":[{"asset":"USDT","marginAvailable":true}]}'
+OUT=$(GS bash "$HERE/golive_check_key.sh" 2>&1); RC=$?
+chk "add4 check_key SUB: BFUSD khong ro marginAvailable (unknown) => TRUOT" "[ $RC = 3 ] && echo \"\$OUT\" | grep -q 'marginAvailable=unknown'"
+clean; api dual '{"dualSidePosition":true}'; api multiAssetsMargin '{"multiAssetsMargin":false}'
+OUT=$(GS bash "$HERE/golive_check_key.sh" 2>&1); RC=$?
+chk "add4 check_key SUB: dualSidePosition=true => TRUOT; multiAssetsMargin=false CHI ghi lai" "[ $RC = 3 ] && echo \"\$OUT\" | grep -q 'KET QUA: TRUOT — dualSidePosition=true\. File' && echo \"\$OUT\" | grep -q 'multiAssetsMargin=false'"
+clean
+printf 'G-MICRO test\njar_md5=%s\n' $NEWR > $GD/GOLIVE_GATE_MICRO.ok; E0=$(md5sum < $F4/conf/env.sh)
+OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "add4 micro_on SUB DRY: tk con sach => DRY PASS, env LIVE_C3_KEYS_FILE=keys_sub.env, LEGACY CHI ghi log (khong la dieu kien), khong doi env" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q \"export LIVE_C3_KEYS_FILE=$W/keys_sub.env\" && echo \"\$OUT\" | grep -q 'INFO LEGACY managed=' && ! echo \"\$OUT\" | grep -q 'LEGACY managed doc duoc' && echo \"\$OUT\" | grep -q 'OK   tk con SACH' && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ] && nosec \"\$OUT\""
+api positionRisk '[{"symbol":"XYZUSDT","positionAmt":"5"}]'
+OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "add4 micro_on SUB: tk con co vi the la => TU CHOI truoc khi doi gi" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL tk con SACH.*POS_TOTAL=1' && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ]"
+clean; echo 2 > $F4/FAKE_SCOPE_N
+OUT=$(echo YES | GS bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "add4 micro_on SUB: JVM live bao 2 vi the NGOAI c3 tren tk con (scope) => hau kiem FAIL => doc lai NONE => ROLLBACK ve dry" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL scope_tk_con_2_vi_the_ngoai_c3' && echo \"\$OUT\" | grep -q 'Da ROLLBACK xong' && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ] && penv | grep -qx LIVE_ADAPTER=dry && [ ! -e $F4/run/KILL_SWITCH ]"
+echo 0 > $F4/FAKE_SCOPE_N
+OUT=$(echo YES | GS bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "add4 micro_on SUB XONG: live/1000/push, process doc key keys_sub.env, scope tk con 0, LEGACY 44 chi INFO, KILL_SWITCH go, PUSH ON" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: MICRO-LIVE c3 tai khoan CON' && penv | grep -qx LIVE_ADAPTER=live && penv | grep -qx C3_CAPITAL=1000 && penv | grep -qx LIVE_C3_KEYS_FILE=$W/keys_sub.env && echo \"\$OUT\" | grep -q 'OK env LIVE_C3_KEYS_FILE=' && echo \"\$OUT\" | grep -q 'OK scope_tk_con_0_vi_the_ngoai_c3' && echo \"\$OUT\" | grep -q 'INFO LEGACY_managed=44' && [ ! -e $F4/run/KILL_SWITCH ] && nosec \"\$OUT\""
+OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "add4 monitor SUB sach: TOM TAT tk=SUB tmb=1000 dd=0, dinh tmb luu Oracle, KHONG dat KILL_SWITCH" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q \"TOM TAT: adapter=live C3_CAPITAL=1000 push=ON.* tk=SUB key=$SK8 tmb=1000.00 dd=0.0000 khan=0\" && grep -qx 'peak=1000.00' $W/sub_peak.txt && [ ! -e $F4/run/KILL_SWITCH ]"
+api account '{"totalMarginBalance":"650","availableBalance":"600","assets":[{"asset":"USDT","walletBalance":"650","marginAvailable":true}]}'
+OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "add4 monitor SUB DD -35 % (< 40 %): chi in, khong KHAN" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'dd=-0.3500' && [ ! -e $F4/run/KILL_SWITCH ]"
+api account '{"totalMarginBalance":"590","availableBalance":"500","assets":[{"asset":"USDT","walletBalance":"590","marginAvailable":true}]}'
+OUT=$(GS DRY=1 bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "add4 monitor SUB DRY=1 DD -41 %: KHAN nhung KHONG dat co" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'DRY=1: KHONG dat run/KILL_SWITCH' && [ ! -e $F4/run/KILL_SWITCH ]"
+OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "add4 monitor SUB DD -41 % cham nguong A40/C6: KHAN + run/KILL_SWITCH (token golive_monitor), Telegram, KHONG dong vi the, push=OFF" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'KHAN (ADD4 tk con): DD_tmb=-0.4100' && grep -q '^golive_monitor .* KHAN DD_tmb' $F4/run/KILL_SWITCH && grep -q 'KHAN tk con' $W/tg_sub.txt && echo \"\$OUT\" | grep -q 'push=OFF'"
+rm -f $F4/run/KILL_SWITCH
+OUT=$(GS SUB_PEAK_RESET=1 bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "add4 monitor SUB_PEAK_RESET=1 (owner rut von co chu dich): dinh = tmb hien tai, het KHAN" "[ $RC = 0 ] && grep -qx 'peak=590' $W/sub_peak.txt && echo \"\$OUT\" | grep -q 'dd=0.0000' && [ ! -e $F4/run/KILL_SWITCH ]"
+api positionRisk '[{"symbol":"XYZUSDT","positionAmt":"5"},{"symbol":"Z0USDT","positionAmt":"0"}]'
+OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "add4 monitor SUB: vi the NGOAI c3 tren tk con (khong co trong so) => KHAN + KILL_SWITCH, KHONG tu dong" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'KHAN (ADD4 tk con): POS_NONC3=1:XYZUSDT:+5' && grep -q '^golive_monitor .* KHAN POS_NONC3' $F4/run/KILL_SWITCH"
+rm -f $F4/run/KILL_SWITCH; api positionRisk '[{"symbol":"C01USDT","positionAmt":"10"}]'
+echo '{"clusters":[{"symbol":"C01USDT","legs":[{"cid":"c3-C01USDT-1-0","state":"SENDING","exec_qty":"0"}],"exit_qty":"0"}]}' > $F4/run/c3live_book.json
+OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "add4 monitor SUB: vi the c3 dang khop (leg SENDING trong so) => POS_PENDING, KHONG KHAN" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'POS_PENDING=1 C01USDT:+10' && [ ! -e $F4/run/KILL_SWITCH ]"
+rm -f $F4/run/c3live_book.json; clean; api account "$ACC_OK"; api openAlgoOrders '[{"symbol":"Q2USDT","clientAlgoId":"web_9"},{"symbol":"C01USDT","clientAlgoId":"c3s-C01-1"}]'
+api openOrders '[{"symbol":"C02USDT","clientOrderId":"c3x-C02-1"},{"symbol":"C03USDT","clientOrderId":"c3live-x"}]'
+OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "add4 monitor SUB: algo cid web_ + lenh cid c3live- (khong phai c3-/c3x-/c3s-) => KHAN; c3s-/c3x- la c3" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'ORD_NONC3=1:C03USDT' && echo \"\$OUT\" | grep -q 'ALGO_NONC3=1:Q2USDT' && echo \"\$OUT\" | grep -q 'ORD_C3=1' && [ -e $F4/run/KILL_SWITCH ]"
+rm -f $F4/run/KILL_SWITCH; clean; rm -f $W/sub_peak.txt
+OUT=$(GS bash "$HERE/golive_legacy_verify.sh" 2>&1); RC=$?
+chk "add4 legacy_verify o che do SUB => TU CHOI (ADD4 §3 bo)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'ADD4 §3'"
+printf 'G-PILOT test\njar_md5=%s\nsize=10000\ng_exec=GREEN test\ng_exit=DAT 18 0.92 25/12 test\n' $NEWR > $GD/GOLIVE_GATE_PILOT.ok; echo 44 > $F4/FAKE_LEGACY_N
+OUT=$(GS DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+chk "add4 pilot_on SUB DRY: KHONG can LEGACY_CUT_VERIFIED / LEGACY 0 (managed 44), bot dung key tk con, tk con 0 ngoai c3 => DRY PASS" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q 'BO dieu kien LEGACY_CUT_VERIFIED' && echo \"\$OUT\" | grep -q 'OK   bot live dung key tk con' && [ ! -e $GD/LEGACY_CUT_VERIFIED.ok ]"
+api openOrders '[{"symbol":"Q3USDT","clientOrderId":"web_2"}]'
+OUT=$(GS DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+chk "add4 pilot_on SUB: lenh NGOAI c3 tren tk con => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL tk con: 0 vi the / lenh / algo NGOAI c3.*ORD_NONC3=1'"
+clean
+OUT=$(echo YES | GS bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+chk "add4 pilot_on SUB: go YES (khong phai 'YES PILOT') => huy" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'Huy. Khong doi gi.'"
+OUT=$(echo 'YES PILOT' | GS bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+chk "add4 pilot_on SUB XONG: C3_CAPITAL 1000 -> 10000, key tk con giu, LEGACY chi INFO" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: PILOT C3_CAPITAL=10000' && penv | grep -qx C3_CAPITAL=10000 && penv | grep -qx LIVE_C3_KEYS_FILE=$W/keys_sub.env && echo \"\$OUT\" | grep -q 'INFO LEGACY_managed=44'"
+OUT=$(echo YES | GS MODE=drain bash "$HERE/golive_live_off.sh" 2>&1); RC=$?
+chk "add4 live_off SUB drain: dat run/KILL_SWITCH" "[ $RC = 0 ] && [ -e $F4/run/KILL_SWITCH ]"
+api positionRisk '[{"symbol":"C05USDT","positionAmt":"2"}]'
+OUT=$(GS MODE=dry DRY=1 bash "$HERE/golive_live_off.sh" 2>&1); RC=$?
+chk "add4 live_off SUB MODE=dry: tk con con vi the => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL san tk con: 0 vi the (co 1: C05USDT)'"
+clean
+OUT=$(echo YES | GS MODE=dry bash "$HERE/golive_live_off.sh" 2>&1); RC=$?
+chk "add4 live_off SUB MODE=dry XONG: tk con phang => ve DRY (khong can log LEGACY moi / danh sach LEGACY)" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: c3_live ve DRY' && penv | grep -qx LIVE_ADAPTER=dry && ! echo \"\$OUT\" | grep -q 'log \[LEGACY\] managed moi'"
+chk "add4 khong lo key/secret tk con trong log / gate / Telegram" "nosec ''"
+rm -f $F4/run/KILL_SWITCH $F4/FAKE_SCOPE_N
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]

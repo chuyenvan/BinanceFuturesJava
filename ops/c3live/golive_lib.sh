@@ -1,8 +1,10 @@
-# golive_lib.sh — [V12 R4o] thu vien CHUNG cho script owner go-live tai khoan CHINH (golive_*.sh). KHONG chay truc tiep.
+# golive_lib.sh — [V12 R4o/ADD4] thu vien CHUNG cho script owner go-live (golive_*.sh). KHONG chay truc tiep.
+# [ADD4] C3_ACCOUNT=SUB (MAC DINH: tai khoan CON rieng, key /root/.config/c3live/keys_sub.env) | MAIN (tk chinh keys.env, ADD1 —
+#   chi khi chi dinh ro C3_ACCOUNT=MAIN). KEYS_FILE (neu dat) thang moi mac dinh.
 # GOLIVE_SCENARIO ADDENDUM 1 (research/vz-e1 90cd2e77). Luat §4.1: DRY=1, YES 1 lan, khung :10-:44, PAUSE token, backup, hau kiem,
 # tu rollback, Telegram (token doc tu file, khong in). Khong in key/secret.
 # Bien (test): SSH_242 SCP_242 RHOST APP_DIR PROC_PAT NJ_MD5 WD_PAUSE WD_PAUSE_MAX_S POST_WAIT_S POST_ROUNDS MIN_MEM_MB LOGDIR GATE_DIR
-#   FORCE_TIME DEPLOY_TG_ENV DEPLOY_TG_SINK SSH_RETRY_S PY242 CURL242 KEYS_FILE
+#   FORCE_TIME DEPLOY_TG_ENV DEPLOY_TG_SINK SSH_RETRY_S PY242 CURL242 KEYS_FILE C3_ACCOUNT MAIN_KEY_SHA8 SUB_DD_LIMIT SUB_PEAK_FILE
 SSH_242=${SSH_242:-"ssh -p 2222 -o BatchMode=yes -o ConnectTimeout=20 -i /home/ubuntu/.ssh/id_rsa_chuyennd root@103.157.218.242"}
 A=${APP_DIR:-/home/chuyennd/java/v_t_m}
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}
@@ -20,7 +22,15 @@ GATE_DIR=${GATE_DIR:-/home/ubuntu/claude_master/deploy/gates}
 LOGDIR=${LOGDIR:-/home/ubuntu/claude_master/deploy}
 PY242=${PY242:-/opt/c3py/python/bin/python3}
 CURL242=${CURL242:-curl}
-KEYS_FILE=${KEYS_FILE:-/root/.config/c3live/keys.env}
+C3_ACCOUNT=${C3_ACCOUNT:-SUB}
+case "$C3_ACCOUNT" in
+  SUB)  KEYS_FILE=${KEYS_FILE:-/root/.config/c3live/keys_sub.env} ;;
+  MAIN) KEYS_FILE=${KEYS_FILE:-/root/.config/c3live/keys.env} ;;
+  *) echo "C3_ACCOUNT='$C3_ACCOUNT' khong hop le (SUB | MAIN)" >&2; exit 1 ;;
+esac
+MAIN_KEY_SHA8=${MAIN_KEY_SHA8:-3ef771e0}   # sha256(key tk chinh)[:8] — key tk con PHAI khac (ADD4 §2)
+SUB_DD_LIMIT=${SUB_DD_LIMIT:-0.40}         # ADD4 §5: A40/C6 -40 % (nguong giu nguyen) — lop ops tren totalMarginBalance tk con
+SUB_PEAK_FILE=${SUB_PEAK_FILE:-$LOGDIR/c3sub_tmb_peak.txt}   # dinh tmb tk con (Oracle; golive_monitor ghi; SUB_PEAK_RESET=1 dat lai)
 # so/trang thai c3 (doi ten khi doi adapter — so dry/live khong bao gio lan nhau)
 GL_STATE_FILES="run/c3live_book.json run/c3live_dry_state.json run/c3live_ledger.csv run/c3live_merged.txt run/c3live_equity_c3.json run/c3live_lost.txt run/c3live_killsw_peak run/killsw_latch.json"
 
@@ -172,7 +182,7 @@ EOF2
   echo "$RS"
   SL=$(echo "$RS" | sed -n 's/^START_LINE=//p'); SL=${SL:-1}
   local lb; lb=$(echo "$RS" | sed -n 's/^LEGACY_TRUOC_STOP=\([0-9][0-9]*\)$/\1/p' | tail -1)   # [R4r] so LEGACY NGAY truoc stop
-  if [ -n "$lb" ] && [ -n "${L0:-}" ]; then [ "$lb" != "$L0" ] && say "INFO LEGACY truoc stop=$lb (luc kiem truoc: $L0) => hau kiem so voi $lb"; L0=$lb; fi
+  if [ -n "$lb" ] && [ -n "${L0:-}" ] && [ "${L0:-}" != SKIP ]; then [ "$lb" != "$L0" ] && say "INFO LEGACY truoc stop=$lb (luc kiem truoc: $L0) => hau kiem so voi $lb"; L0=$lb; fi
 }
 # gl_rollback <hau to> : stop, env.sh ve ban backup, trang thai doi ten tra lai (ban moi -> .rbnew_TS), start. In RB.
 gl_rollback() {
@@ -240,7 +250,7 @@ K=\$(tail -n +\$SL \$L 2>/dev/null | grep -a 'KHAN' | grep -av 'DRY tren tai kho
 [ "\$(T 'RECON\] khoi dong: ok=true')" -ge 1 ] && echo "OK recon_khoi_dong" || echo "WAIT recon_khoi_dong"
 [ "\$(T 'RECON\] khoi dong: ok=false')" = 0 ] || echo "FAIL recon_khoi_dong_ok=false"
 LN=\$(tail -n +\$SL \$L 2>/dev/null | grep -a '\[LEGACY\] managed' | tail -1 | grep -aoE 'managed [0-9]+' | awk '{print \$2}')
-if [ -z "\$LN" ]; then echo "WAIT LEGACY_chua_co"; elif [ "\$L0" = -1 ] || [ "\$LN" = "\$L0" ]; then echo "OK LEGACY_managed=\$LN"; elif [ "\$LN" -lt "\$L0" ] 2>/dev/null; then echo "WARN LEGACY_managed=\$LN < truoc stop \$L0 (dong tu nhien luc dung? kiem tay)"; else echo "FAIL LEGACY_managed=\$LN > truoc stop \$L0 (TANG)"; fi
+if [ "\$L0" = SKIP ]; then echo "INFO LEGACY_managed=\${LN:-chua_co} (ADD4 tk con: LEGACY o tk chinh, chi ghi log)"; elif [ -z "\$LN" ]; then echo "WAIT LEGACY_chua_co"; elif [ "\$L0" = -1 ] || [ "\$LN" = "\$L0" ]; then echo "OK LEGACY_managed=\$LN"; elif [ "\$LN" -lt "\$L0" ] 2>/dev/null; then echo "WARN LEGACY_managed=\$LN < truoc stop \$L0 (dong tu nhien luc dung? kiem tay)"; else echo "FAIL LEGACY_managed=\$LN > truoc stop \$L0 (TANG)"; fi
 B=run/c3live_book.json; echo "INFO BOOK_CUM=\$([ -f \$B ] && grep -o '"symbol":"' \$B | wc -l || echo 0) AUDIT_C3=\$(tail -n +\$SL \$L 2>/dev/null | grep -a '\[C3-LIVE-ORDER\]' | grep -avc 'status=SKIP')"
 $3
 echo END_CHK
@@ -248,15 +258,22 @@ EOF3
 }
 
 # ---------------------------------------------------------------- goi API CHI DOC tu 242 bang key c3 (python /opt/c3py + curl)
-# gl_api242 restrictions|scope : in KEY=VAL + END_API. Key/secret CHI nam trong process python tren 242 (khong argv, khong in);
-# curl nhan url + header qua stdin (-K -). scope: positionRisk v3 + openOrders + openAlgoOrders, so voi cum trong so c3.
+# gl_api242 restrictions|scope|sub : in KEY=VAL + END_API. Key/secret CHI nam trong process python tren 242 (khong argv, khong in);
+# curl nhan url + header qua stdin (-K -). scope: positionRisk v3 + openOrders + openAlgoOrders, so voi cum trong so c3 (doc so 2 lan:
+#   truoc + sau positionRisk; symbol co leg chua xac dinh / so doi giua 2 lan => POS_PENDING, khong tinh NGOAI c3).
+# [ADD4] sub = restrictions + GET /fapi/v3/account (tmb, so du, marginAvailable; v3 thieu truong => them /fapi/v2/account)
+#   + multiAssetsMargin + positionSide/dual + scope. W_NOMINAL = weight fapi danh nghia, W_USED_1M = header X-MBX-USED-WEIGHT-1M cuoi
+#   (weight IP dung chung LEGACY). cid c3 = c3- | c3x- | c3s- (ADD4 §4).
 gl_api242() {
   s242in "bash -s -- $A $1 $KEYS_FILE $PY242 $CURL242" <<'EOF'
 A=$1; MODE=$2; KF=$3; PY=$4; CU=$5; cd "$A" 2>/dev/null || { echo "ERR=cd"; echo END_API; exit 0; }
 [ -x "$PY" ] || { echo "ERR=thieu_python_$PY"; echo END_API; exit 0; }
 "$PY" -I - "$MODE" "$KF" "$CU" run/c3live_book.json <<'PYEOF'
 import hashlib, hmac, json, subprocess, sys, time
+from decimal import Decimal as Dd
 mode, kf, cu, bookf = sys.argv[1:5]
+FAPI = 'https://fapi.binance.com'
+CIDOK = ('c3-', 'c3x-', 'c3s-')
 k = s = None
 try:
     for ln in open(kf, encoding='utf-8'):
@@ -268,18 +285,51 @@ except Exception as e:
 if not k or not s:
     print('ERR=keys_thieu_dong'); print('END_API'); sys.exit(0)
 print('KEY_SHA8=' + hashlib.sha256(k.encode()).hexdigest()[:8])
-def call(base, path):
+W = {'n': 0, 'used': ''}
+def call(base, path, w=0):
     q = 'timestamp=%d&recvWindow=10000' % int(time.time() * 1000)
     sig = hmac.new(s.encode(), q.encode(), hashlib.sha256).hexdigest()
     cfg = 'url = "%s%s?%s&signature=%s"\nheader = "X-MBX-APIKEY: %s"\n' % (base, path, q, sig, k)
-    r = subprocess.run([cu, '-s', '-m', '15', '-w', '\nHTTP=%{http_code}', '-K', '-'], input=cfg.encode(), stdout=subprocess.PIPE)
+    r = subprocess.run([cu, '-s', '-m', '15', '-D', '/dev/stderr', '-w', '\nHTTP=%{http_code}', '-K', '-'], input=cfg.encode(),
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    W['n'] += w
+    for hl in r.stderr.decode('utf-8', 'replace').splitlines():
+        if hl.lower().startswith('x-mbx-used-weight-1m:'): W['used'] = hl.split(':', 1)[1].strip()
     out = r.stdout.decode('utf-8', 'replace')
     body, _, code = out.rpartition('\nHTTP=')
     try:
         return code.strip(), json.loads(body)
     except Exception:
         return code.strip(), None
-if mode == 'restrictions':
+def b(v): return str(v).lower()
+def fq(d): return format(d.normalize(), 'f')   # 10 -> '10' (khong '1E+1')
+def num(v):
+    try: return Dd(str(v))
+    except Exception: return None
+def readbook():
+    # [R4q MAJ-2] c3 = qty MO tung symbol tu CUM MO cua so (adj_qty | sum exec_qty leg CONFIRMED) - exit_qty
+    c3 = {}; unres = set()
+    try:
+        bk = json.load(open(bookf, encoding='utf-8'))
+    except FileNotFoundError:
+        return c3, unres
+    for c in (bk.get('clusters') or []) if isinstance(bk, dict) else []:
+        if not isinstance(c, dict) or not isinstance(c.get('symbol'), str): continue
+        sym = c['symbol']
+        if c.get('adj_qty') not in (None, ''):
+            q = Dd(str(c['adj_qty']))
+        else:
+            q = Dd(0)
+            for l in c.get('legs') or []:
+                if not isinstance(l, dict): continue
+                st = l.get('state')
+                if st == 'CONFIRMED': q += Dd(str(l.get('exec_qty') or '0'))
+                elif st in ('SENDING', 'UNKNOWN'): unres.add(sym)
+        q -= Dd(str(c.get('exit_qty') or '0'))
+        c3[sym] = c3.get(sym, Dd(0)) + q
+    return c3, unres
+ok = True
+if mode in ('restrictions', 'sub'):
     code, j = call('https://api.binance.com', '/sapi/v1/account/apiRestrictions')
     print('HTTP=' + code)
     if isinstance(j, dict) and code == '200':
@@ -288,73 +338,121 @@ if mode == 'restrictions':
             if f in j: print('%s=%s' % (f, str(j[f]).lower()))
     elif isinstance(j, dict):
         print('API_ERR=%s %s' % (j.get('code'), str(j.get('msg'))[:80]))
-elif mode == 'scope':
-    # [R4q MAJ-2] c3 = qty MO tung symbol tu CUM MO cua so (adj_qty | sum exec_qty leg CONFIRMED) - exit_qty. Vi the san vuot qty c3
-    # => phan vuot = NGOAI c3 (LEGACY con sot, ke ca tren symbol c3 dang giu). c3 > san => lech so (khong kiem duoc).
-    from decimal import Decimal as Dd
-    c3 = {}; unres = set()
+if mode == 'sub':
+    code, ac = call(FAPI, '/fapi/v3/account', 5)
+    print('ACC_HTTP=' + code)
+    if code != '200' or not isinstance(ac, dict):
+        ok = False; print('ERR_ACC=HTTP%s' % code)
+    else:
+        print('TMB=%s' % ac.get('totalMarginBalance')); print('AVAIL=%s' % ac.get('availableBalance'))
+        assets = [a for a in (ac.get('assets') or []) if isinstance(a, dict) and isinstance(a.get('asset'), str)]
+        mav = {a['asset']: a['marginAvailable'] for a in assets if 'marginAvailable' in a}
+        if any('marginAvailable' not in a for a in assets):
+            c2, a2 = call(FAPI, '/fapi/v2/account', 5)
+            print('ACC_V2_HTTP=' + c2)
+            if c2 == '200' and isinstance(a2, dict):
+                for a in a2.get('assets') or []:
+                    if isinstance(a, dict) and isinstance(a.get('asset'), str) and 'marginAvailable' in a:
+                        mav.setdefault(a['asset'], a['marginAvailable'])
+        bal = []
+        for a in assets:
+            wb = num(a.get('walletBalance'))
+            if wb is not None and wb != 0:
+                bal.append('%s:%s:mb=%s:ma=%s' % (a['asset'], a.get('walletBalance'), a.get('marginBalance'), b(mav.get(a['asset'], '?'))))
+        print('BAL=' + ','.join(bal[:20]))
+        print('MARGIN_ASSETS=' + ','.join(sorted(x for x, v in mav.items() if b(v) == 'true')[:40]))
+        bf = next((a for a in assets if a['asset'] == 'BFUSD'), None)
+        bw = num(bf.get('walletBalance')) if bf else Dd(0)
+        print('BFUSD_WALLET=%s' % ('?' if bw is None else ('0' if bw == 0 else str(bw))))
+        print('BFUSD_MARGIN=%s' % (b(mav['BFUSD']) if 'BFUSD' in mav else 'unknown'))
+    code, j = call(FAPI, '/fapi/v1/multiAssetsMargin', 30)
+    if code == '200' and isinstance(j, dict) and 'multiAssetsMargin' in j: print('MULTI=' + b(j['multiAssetsMargin']))
+    else: ok = False; print('ERR_MULTI=HTTP%s' % code)
+    code, j = call(FAPI, '/fapi/v1/positionSide/dual', 30)
+    if code == '200' and isinstance(j, dict) and 'dualSidePosition' in j: print('DUAL=' + b(j['dualSidePosition']))
+    else: ok = False; print('ERR_DUAL=HTTP%s' % code)
+if mode in ('scope', 'sub'):
+    # vi the san vuot qty c3 => phan vuot = NGOAI c3 (LEGACY con sot / vi the la tren tk con). c3 > san => lech so.
     try:
-        b = json.load(open(bookf, encoding='utf-8'))
-        for c in (b.get('clusters') or []) if isinstance(b, dict) else []:
-            if not isinstance(c, dict) or not isinstance(c.get('symbol'), str): continue
-            sym = c['symbol']
-            if c.get('adj_qty') not in (None, ''):
-                q = Dd(str(c['adj_qty']))
-            else:
-                q = Dd(0)
-                for l in c.get('legs') or []:
-                    if not isinstance(l, dict): continue
-                    st = l.get('state')
-                    if st == 'CONFIRMED': q += Dd(str(l.get('exec_qty') or '0'))
-                    elif st in ('SENDING', 'UNKNOWN'): unres.add(sym)
-            q -= Dd(str(c.get('exit_qty') or '0'))
-            c3[sym] = c3.get(sym, Dd(0)) + q
-    except FileNotFoundError:
-        pass
+        c3a, ua = readbook()
     except Exception as e:
         print('ERR=book_hong_' + type(e).__name__); print('END_API'); sys.exit(0)
+    code, pr = call(FAPI, '/fapi/v3/positionRisk', 5)
+    try:
+        c3b, ub = readbook()
+    except Exception as e:
+        print('ERR=book_hong_' + type(e).__name__); print('END_API'); sys.exit(0)
+    unres = ua | ub
+    for sy in set(c3a) | set(c3b):
+        if c3a.get(sy) != c3b.get(sy): unres.add(sy)
+    c3 = {sy: max(c3a.get(sy, Dd(0)), c3b.get(sy, Dd(0))) for sy in set(c3a) | set(c3b)}
     print('C3_BOOK_SYMBOLS=%d' % len(c3))
     print('C3_UNRESOLVED=%d %s' % (len(unres), ','.join(sorted(unres)[:8])))
-    ok = True
-    code, pr = call('https://fapi.binance.com', '/fapi/v3/positionRisk')
     if code != '200' or not isinstance(pr, list): ok = False; print('ERR_POS=HTTP%s' % code)
     else:
         pos = {}
         for p in pr:
             a = Dd(str(p.get('positionAmt') or '0'))
             if a != 0: pos[p['symbol']] = pos.get(p['symbol'], Dd(0)) + a
-        non = []; mism = []
+        non = []; mism = []; pend = []
         for sy, a in sorted(pos.items()):
             if a < 0: non.append('%s:%s' % (sy, a)); continue   # c3 chi long
             r = a - c3.get(sy, Dd(0))
-            if r > 0: non.append('%s:+%s' % (sy, r.normalize()))
-            elif r < 0: mism.append('%s:%s' % (sy, r.normalize()))
+            if r > 0: (pend if sy in unres else non).append('%s:+%s' % (sy, fq(r)))
+            elif r < 0: mism.append('%s:%s' % (sy, fq(r)))
         for sy, m in sorted(c3.items()):
-            if m > 0 and sy not in pos: mism.append('%s:-%s' % (sy, m.normalize()))
+            if m > 0 and sy not in pos: mism.append('%s:-%s' % (sy, fq(m)))
         print('POS_TOTAL=%d' % len(pos)); print('POS_NONC3=%d %s' % (len(non), ','.join(non[:8])))
+        print('POS_PENDING=%d %s' % (len(pend), ','.join(pend[:8])))
         print('POS_C3_MISMATCH=%d %s' % (len(mism), ','.join(mism[:8])))
         print('POS_LIST=' + ','.join(sorted(pos)))
         print('POS_SIG=' + hashlib.sha256(';'.join('%s=%s' % (sy, a.normalize()) for sy, a in sorted(pos.items())).encode()).hexdigest()[:16])
-    code, oo = call('https://fapi.binance.com', '/fapi/v1/openOrders')
+    code, oo = call(FAPI, '/fapi/v1/openOrders', 40)
     if code != '200' or not isinstance(oo, list): ok = False; print('ERR_ORD=HTTP%s' % code)
     else:
-        non = [o.get('symbol') for o in oo if not str(o.get('clientOrderId', '')).startswith('c3')]
+        non = [o.get('symbol') for o in oo if not str(o.get('clientOrderId', '')).startswith(CIDOK)]
         print('ORD_TOTAL=%d' % len(oo)); print('ORD_NONC3=%d %s' % (len(non), ','.join(non[:8])))
         print('ORD_C3=%d' % (len(oo) - len(non)))
-    code, ao = call('https://fapi.binance.com', '/fapi/v1/openAlgoOrders')
+    code, ao = call(FAPI, '/fapi/v1/openAlgoOrders', 40)
     if isinstance(ao, dict): ao = ao.get('orders', ao.get('rows', []))
     if code != '200' or not isinstance(ao, list): ok = False; print('ERR_ALGO=HTTP%s' % code)
     else:
-        non = [o.get('symbol') for o in ao if not str(o.get('clientAlgoId', '')).startswith('c3')]
+        non = [o.get('symbol') for o in ao if not str(o.get('clientAlgoId', '')).startswith(CIDOK)]
         print('ALGO_TOTAL=%d' % len(ao)); print('ALGO_NONC3=%d %s' % (len(non), ','.join(non[:8])))
         print('ALGO_C3=%d' % (len(ao) - len(non)))
     print('API_OK=%d' % (1 if ok else 0))
+if mode == 'sub':
+    print('W_NOMINAL=%d' % W['n']); print('W_USED_1M=%s' % (W['used'] or '?'))
 k = s = None
 print('END_API')
 PYEOF
 EOF
 }
 av() { echo "$API" | sed -n "s/^$1=//p" | head -1; }
+
+# gl_sub_eval <can_sach 1|0> : [ADD4 §2] danh gia $API (gl_api242 sub) => SUBV=DAT|TRUOT, SUBWHY (ly do). can_sach=1: them 0 vi the,
+#   0 lenh mo, 0 algo (luc micro_on). multiAssetsMargin CHI ghi lai (jar r4t: AccountModeGuard.globalPolicy(false,false) khong doi hoi).
+gl_sub_eval() {
+  local n x
+  SUBV=DAT; SUBWHY=""
+  _sf() { SUBV=TRUOT; SUBWHY="$SUBWHY $1"; }
+  echo "$API" | grep -qx END_API || _sf "goi_API_khong_tron_ven"
+  echo "$API" | grep -q '^ERR' && _sf "$(echo "$API" | grep '^ERR' | head -3 | tr '\n' ' ' | sed 's/ $//')"
+  [ "$(av HTTP)" = 200 ] || _sf "apiRestrictions_HTTP=$(av HTTP)$(x=$(av API_ERR); [ -n "$x" ] && echo "($x)")"
+  [ "$(av ipRestrict)" = true ] || _sf "ipRestrict=$(av ipRestrict)"
+  [ "$(av enableWithdrawals)" = false ] || _sf "enableWithdrawals=$(av enableWithdrawals)"
+  [ "$(av enableFutures)" = true ] || _sf "enableFutures=$(av enableFutures)"
+  x=$(av KEY_SHA8); { [ -n "$x" ] && [ "$x" != "$MAIN_KEY_SHA8" ]; } || _sf "key_sha8=${x:-?}_TRUNG_key_tk_chinh_hoac_thieu"
+  [ "$(av DUAL)" = false ] || _sf "dualSidePosition=$(av DUAL)"
+  [ "$(av API_OK)" = 1 ] || _sf "doc_san_loi"
+  x=$(av BFUSD_WALLET)
+  if [ "$x" = '?' ]; then _sf "BFUSD_walletBalance_khong_doc_duoc"
+  elif [ -n "$x" ] && [ "$x" != 0 ]; then [ "$(av BFUSD_MARGIN)" = true ] || _sf "BFUSD=${x}_marginAvailable=$(av BFUSD_MARGIN)"; fi
+  if [ "${1:-1}" = 1 ]; then
+    for n in POS_TOTAL ORD_TOTAL ALGO_TOTAL; do x=$(av $n); [ "$x" = 0 ] || _sf "$n=${x:-?}"; done
+  fi
+  return 0
+}
 
 # gl_c3_seen <SL> <POS_SIG truoc restart> : [R4q MAJ-1] doc LAI 242 NGAY luc quyet (so + audit lenh c3 + san qua duong chi doc).
 #   In dong + "VERDICT=NONE" CHI khi MOI nguon doc duoc tron ven va: so 0 cum, 0 dong [C3-LIVE-ORDER] (tru SKIP) tu START_LINE
