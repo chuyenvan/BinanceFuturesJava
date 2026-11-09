@@ -29,3 +29,15 @@
 **§5 (sửa):** lớp kill-switch CHÍNH vẫn là kill-switch trong jar r4t, tính trên sổ c3 (`C3MainEquity`). Ngưỡng A40, C1–C6 giữ nguyên, không đổi jar vì G-MICRO (ii) gắn với r4t. Trên tk con chỉ có vị thế c3 nên sổ c3 ≈ equity tk con; chênh lệch chỉ do lãi hoặc giá BFUSD. Lớp PHỤ là `golive_monitor`, đo DD theo totalMarginBalance tk con ≤ −40 %: KHẨN + `run/KILL_SWITCH` (chặn mở mới, không flatten). Monitor phải có lịch chạy tự động trước `micro_on`.
 
 **§3 (sửa):** khi c3_live chạy cùng JVM, LEGACY bị chặn mở lệnh mới (`LiveProfileC3`/`LEGACY_QUEUE_LIVE_BLOCK`, từ thiết kế tk chính). Trong ADD4 hành vi này GIỮ NGUYÊN, vì không đổi jar trong cửa sổ G-MICRO. LEGACY vẫn quản lý vị thế đang có. Việc nới chặn (nếu env cho phép) là quyết định riêng của owner, phải qua A1, không gắn với gate go-live.
+
+## ERRATA 2 — 11-09
+
+**Bối cảnh:** tk con có BFUSD 10 000 + USDT 1 000 (tmb 10 976), micro chạy với `C3_CAPITAL` = 1 000. Đo DD trên tmb thô thì lớp monitor vô dụng trong micro: lỗ 400 USDT chỉ là khoảng −3,6 % tmb.
+
+**§5 lớp phụ (sửa):**
+- Monitor đo eq = C3_CAPITAL + (tmb − tmb₀). tmb₀ ghi lúc `micro_on`, ghi lại khi `pilot_on` hoặc khi owner nạp/rút (có lệnh rebase riêng).
+- Theo dõi đỉnh của eq; DD ≤ −40 % ⇒ KHẨN + `KILL_SWITCH`.
+- Lãi BFUSD (vài USD/ngày) và biến động giá BFUSD chấp nhận là nhiễu.
+- Lớp chính (`C3MainEquity` trong jar, trên C3_CAPITAL) không đổi.
+
+**§1 bổ sung:** live phải bắt đầu từ sổ c3 rỗng. Hậu kiểm `micro_on` bắt buộc sổ live rỗng (`BOOK_CUM=0`, không còn leg nào của sổ dry). Sổ dry được lưu sang `.dry_<TS>`, không đưa vào live (như ADD1 §2.7).
