@@ -49,7 +49,7 @@ o = np.argsort(t, kind="stable")
 t, r = t[o], r[o]
 lg = sorted(glob.glob(PULL + "/%s/logs/full.log@*" % nxt) + glob.glob(PULL + "/%s/logs/full.log@*" % D))[-1]
 pat = re.compile(r"^(\d\d)/(\d\d)/(\d{4}) (\d\d):(\d\d):(\d\d)")
-P = 0.99995083
+P = float(np.float32(0.999950829))   # [ADD17] = sim/live (float -> double)
 q = {}
 for s in gzip.open(lg, "rt", errors="ignore"):
     if "[GATE-RATIO] q_t=" in s and "q_t9=" in s:

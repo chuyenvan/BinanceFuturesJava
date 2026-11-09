@@ -179,7 +179,7 @@ def q_replay(h):
         _QR.update(sorted_in_file=bool(np.all(np.diff(bts) >= 0)), bts=bts[o], br32=br[o].astype(np.float32),
                    nbad=int(nbad), rs=restarts())
     bts, br32 = _QR["bts"], _QR["br32"]
-    PCT = 0.99995083
+    PCT = float(np.float32(0.999950829))   # [ADD17] = sim GateRollingRatio.java:75 (Float.parseFloat) -> (double) o GateRatioBuffer.java:80
 
     def q_at(cut_hi):
         i0 = np.searchsorted(bts, h - 90 * 86400000, "left")
