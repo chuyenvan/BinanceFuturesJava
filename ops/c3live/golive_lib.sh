@@ -47,6 +47,8 @@ HB_POLL_S=${HB_POLL_S:-10}
 MON_CRON_TAG='# golive_monitor (ADD4 C-1)'
 # [ADD4 ERRATA 2 §5] moc eq lop phu monitor: eq = C3_CAPITAL + (tmb - tmb0); micro_on / pilot_on / golive_rebase_equity ghi
 SUB_BASE_FILE=${SUB_BASE_FILE:-$LOGDIR/c3sub_eq_base.txt}
+SUB_HIST_FILE=${SUB_HIST_FILE:-$LOGDIR/c3sub_tmb_hist.txt}   # [A1 errata2 MIN-1] mau monitor: epoch tmb eq dinh base_id (rebase doi chieu delta)
+A1_APPROVED_FILE=${A1_APPROVED_FILE:-$GATE_DIR/A1_APPROVED_MONITOR.md5}   # [A1 errata2 MIN-3] md5(monitor+lib)[:12] da qua A1 (1 dong / ban)
 # so/trang thai c3 (doi ten khi doi adapter — so dry/live khong bao gio lan nhau)
 GL_STATE_FILES="run/c3live_book.json run/c3live_dry_state.json run/c3live_ledger.csv run/c3live_merged.txt run/c3live_equity_c3.json run/c3live_lost.txt run/c3live_killsw_peak run/killsw_latch.json"
 
@@ -62,8 +64,9 @@ say() { echo "[$(TZ=Asia/Ho_Chi_Minh date '+%F %T')] $*"; }
 gl_mon_flag_set() {   # [C-1] bat cron monitor (ghi tai khoan + file key de monitor doc dung tk). Loi => return 1 (micro_on/pilot_on DUNG)
   [ "$DRY" = 1 ] && return 0
   GL_FLAG_T=$(date +%s)
+  local dts=${GL_DRY_TS:-$(sed -n 's/^dry_ts=//p' "$GL_MON_FLAG" 2>/dev/null | head -1)}   # [A1 errata2 MIN-2] TS so dry cua micro_on (giu qua pilot/undrain)
   if mkdir -p "$(dirname "$GL_MON_FLAG")" 2>/dev/null \
-     && printf 'C3_ACCOUNT=%s\nKEYS_FILE=%s\nby=%s TS=%s\n' "$C3_ACCOUNT" "$KEYS_FILE" "${GL_NAME:-?}" "${TS:-?}" > "$GL_MON_FLAG.tmp" 2>/dev/null \
+     && printf 'C3_ACCOUNT=%s\nKEYS_FILE=%s\nby=%s TS=%s\ndry_ts=%s\n' "$C3_ACCOUNT" "$KEYS_FILE" "${GL_NAME:-?}" "${TS:-?}" "$dts" > "$GL_MON_FLAG.tmp" 2>/dev/null \
      && mv -f "$GL_MON_FLAG.tmp" "$GL_MON_FLAG" 2>/dev/null; then
     say "OK co monitor $GL_MON_FLAG (cron golive_monitor hoat dong)"; return 0
   fi
@@ -93,20 +96,23 @@ gl_hb_wait() {
   done
 }
 gl_no_canary() { local n; n=$(pgrep -fc "$CANARY_PAT" 2>/dev/null); [ "${n:-0}" = 0 ]; }
-# gl_eq_base_set <tmb0> <c3_capital> <key_sha8> <ly do> : [ERRATA 2] ghi moc eq (Oracle; ban cu => .bak_<TS>; log ly do). Loi => return 1
+# gl_eq_base_set <tmb0> <c3_capital> <key_sha8> <ly do> [base_id giu] : [ERRATA 2] ghi moc eq (Oracle; ban cu => .bak_<TS>; log ly do). Loi => return 1
 gl_eq_base_set() {
   if [ "$DRY" = 1 ]; then say "DRY=1: se ghi moc tmb0=$1 C3_CAPITAL=$2 vao $SUB_BASE_FILE"; return 0; fi
   { [[ "$1" =~ ^[0-9]+(\.[0-9]+)?$ ]] && [[ "$2" =~ ^[0-9]+(\.[0-9]+)?$ ]] && [ -n "$3" ]; } || { say "!! moc khong hop le: tmb0='$1' C3_CAPITAL='$2' key='$3'"; return 1; }
   mkdir -p "$(dirname "$SUB_BASE_FILE")" 2>/dev/null || return 1
   [ -f "$SUB_BASE_FILE" ] && cp -p "$SUB_BASE_FILE" "$SUB_BASE_FILE.bak_${TS:-x}"
-  printf 'tmb0=%s\nc3_capital=%s\nkey_sha8=%s\nbase_id=%s\nreason=%s\n' "$1" "$2" "$3" "${TS:-x}_$$" "$4" > "$SUB_BASE_FILE.tmp" 2>/dev/null \
+  printf 'tmb0=%s\nc3_capital=%s\nkey_sha8=%s\nbase_id=%s\nrebase_t=%s\nreason=%s\n' "$1" "$2" "$3" "${5:-${TS:-x}_$$}" "$(date +%s)" "$4" > "$SUB_BASE_FILE.tmp" 2>/dev/null \
     && mv -f "$SUB_BASE_FILE.tmp" "$SUB_BASE_FILE" 2>/dev/null || { say "!! KHONG ghi duoc moc $SUB_BASE_FILE"; return 1; }
-  echo "$(TZ=Asia/Ho_Chi_Minh date '+%F %T') tmb0=$1 c3_capital=$2 key_sha8=$3 base_id=${TS:-x}_$$ ly_do=$4" >> "${SUB_BASE_FILE%.txt}.log" 2>/dev/null
+  echo "$(TZ=Asia/Ho_Chi_Minh date '+%F %T') tmb0=$1 c3_capital=$2 key_sha8=$3 base_id=${5:-${TS:-x}_$$} ly_do=$4" >> "${SUB_BASE_FILE%.txt}.log" 2>/dev/null
   say "OK moc eq: tmb0=$1 C3_CAPITAL=$2 ($SUB_BASE_FILE)"
 }
 # gl_mon_repin : [ERRATA 2] goi installer cron (idempotent) => cron chay ban PIN = monitor + lib repo hien tai; in md5 pin. Loi => return 1
+gl_mon_m12() { cat "$GL_HERE/golive_monitor.sh" "$GL_HERE/golive_lib.sh" | md5sum | cut -c1-12; }
+gl_mon_approved() { [ -f "$A1_APPROVED_FILE" ] && grep -qE "^$(gl_mon_m12)([[:space:]]|$)" "$A1_APPROVED_FILE"; }
 gl_mon_repin() {
   local out rc m
+  gl_mon_approved || { say "!! md5 monitor+lib $(gl_mon_m12) KHONG co trong $A1_APPROVED_FILE (ban chua qua A1) — khong pin"; return 1; }
   out=$(DRY=$DRY bash "$GL_HERE/install_cron_golive_monitor.sh" 2>&1); rc=$?
   echo "$out" | sed 's/^/   pin| /'
   [ "$rc" = 0 ] || return 1
@@ -363,8 +369,8 @@ if not k or not s:
     print('ERR=keys_thieu_dong'); print('END_API'); sys.exit(0)
 print('KEY_SHA8=' + hashlib.sha256(k.encode()).hexdigest()[:8])
 W = {'n': 0, 'used': ''}
-def call(base, path, w=0):
-    q = 'timestamp=%d&recvWindow=10000' % int(time.time() * 1000)
+def call(base, path, w=0, qs=''):
+    q = (qs + '&' if qs else '') + 'timestamp=%d&recvWindow=10000' % int(time.time() * 1000)
     sig = hmac.new(s.encode(), q.encode(), hashlib.sha256).hexdigest()
     cfg = 'url = "%s%s?%s&signature=%s"\nheader = "X-MBX-APIKEY: %s"\n' % (base, path, q, sig, k)
     r = subprocess.run([cu, '-s', '-m', '15', '-D', '/dev/stderr', '-w', '\nHTTP=%{http_code}', '-K', '-'], input=cfg.encode(),
@@ -442,6 +448,12 @@ if mode in ('sub', 'mon'):
         bw = num(bf.get('walletBalance')) if bf else Dd(0)
         print('BFUSD_WALLET=%s' % ('?' if bw is None else ('0' if bw == 0 else str(bw))))
         print('BFUSD_MARGIN=%s' % (b(mav['BFUSD']) if 'BFUSD' in mav else 'unknown'))
+        if bw is not None and bw != 0:   # [A1 errata2 MIN-4] gia BFUSD (Multi-Assets asset index, weight 1) — chi ghi log
+            ci, ji = call(FAPI, '/fapi/v1/assetIndex', 1, 'symbol=BFUSDUSD')
+            if isinstance(ji, list) and ji: ji = ji[0]
+            if ci == '200' and isinstance(ji, dict):
+                print('BFUSD_INDEX=%s' % ji.get('index')); print('BFUSD_BIDRATE=%s' % ji.get('bidRate'))
+            else: print('BFUSD_INDEX=?_HTTP%s' % ci)
     if mode == 'sub':
         code, j = call(FAPI, '/fapi/v1/multiAssetsMargin', 30)
         if code == '200' and isinstance(j, dict) and 'multiAssetsMargin' in j: print('MULTI=' + b(j['multiAssetsMargin']))

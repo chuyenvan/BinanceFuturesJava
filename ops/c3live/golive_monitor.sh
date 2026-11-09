@@ -3,7 +3,7 @@
 # golive_monitor.sh — [V12 R4o / ADD4] 1 LENH: trang thai tong c3_live tren 242 (khong restart).
 #   bash ~/claude_master/v12/c3live/ops/c3live/golive_monitor.sh            # tay; C3_ACCOUNT=SUB mac dinh (MAIN = chi doc nhu R4o)
 #   DRY=1 ...            (SUB: chi doc + in, KHONG dat co, KHONG ghi dinh / bo dem)
-#   owner NAP/RUT co chu dich => bash golive_rebase_equity.sh "ly do" (dat lai moc tmb0)
+#   owner NAP/RUT co chu dich => bash golive_rebase_equity.sh <delta> "ly do" (tmb0 += delta, GIU dinh eq; delta phai khop tmb that)
 #   [A1 ADD4 C-1] CRON (install_cron_golive_monitor.sh, */2 phut, flock -n rieng): MONITOR_CRON=1 => KHONG co co $GL_MON_FLAG
 #   (micro_on/pilot_on tao, live_off MODE=dry xoa) => thoat NGAY, 0 ssh / 0 call. Co co => C3_ACCOUNT + KEYS_FILE lay tu co; log
 #   ~/claude_master/deploy/golive_monitor_cron.log (xoay > 20 MB); doc 4 MB log 242 / luot; Telegram KHAN lap lai toi da 1 lan / 30'.
@@ -83,6 +83,7 @@ if [ "$C3_ACCOUNT" = SUB ]; then
   [ "$(sv ENV_LIVE_ADAPTER)" != live ] || [ "$KP" = "$KEYS_FILE" ] || say "!! CANH BAO: bot live dung LIVE_C3_KEYS_FILE='$KP' KHAC $KEYS_FILE (C3_ACCOUNT=$C3_ACCOUNT) — so lieu duoi day la cua $KEYS_FILE"
   API=$(gl_api242 mon) || API="ERR=ssh_api"
   echo "$API" | grep -E '^(KEY_SHA8|TMB|AVAIL|BAL|MARGIN_ASSETS|BFUSD_|POS_TOTAL|POS_NONC3|POS_PENDING|POS_C3_MISMATCH|ORD_|ALGO_|C3_|W_|API_OK|ERR)' | sed 's/^/== tk con: /'
+  say "== BFUSD: so_du=$(av BFUSD_WALLET) index=$(av BFUSD_INDEX) bidRate=$(av BFUSD_BIDRATE) (gia BFUSD lech = nhieu chap nhan, phia an toan; A1 errata2 MIN-4)"
   KH=""; UNK=""
   [ "$READOK" = 1 ] || UNK="$UNK trang_thai_242"
   if echo "$API" | grep -qx END_API; then
@@ -111,6 +112,10 @@ if [ "$C3_ACCOUNT" = SUB ]; then
         else mkdir -p "$(dirname "$SUB_PEAK_FILE")"; printf 'peak=%s\nbase_id=%s\nts=%s\n' "$PK" "$BID" "$TS" > "$SUB_PEAK_FILE.tmp" && mv -f "$SUB_PEAK_FILE.tmp" "$SUB_PEAK_FILE"; fi
       fi
       DD=$(awk -v e="$EQ" -v p="$PK" 'BEGIN{ if (p > 0) printf "%.4f", e/p-1; else printf "-1.0000" }')
+      if [ "$DRY" != 1 ]; then   # [A1 errata2 MIN-1] mau cho golive_rebase_equity (doi chieu delta voi tmb that)
+        mkdir -p "$(dirname "$SUB_HIST_FILE")"; echo "$(date +%s) $TMB $EQ $PK $BID" >> "$SUB_HIST_FILE"
+        [ "$(wc -l < "$SUB_HIST_FILE")" -gt 1000 ] && { tail -n 1000 "$SUB_HIST_FILE" > "$SUB_HIST_FILE.tmp" && mv -f "$SUB_HIST_FILE.tmp" "$SUB_HIST_FILE"; }
+      fi
       say "== DD tk con (ops, eq = C3_CAPITAL + (tmb - tmb0) = $CB + ($TMB - $TB0)): eq=$EQ dinh=$PK dd=$DD nguong=-$SUB_DD_LIMIT (A40/C6). Lop chinh trong jar: KillSwitchEngine tren C3MainEquity (so c3)"
       awk -v d="$DD" -v l="$SUB_DD_LIMIT" 'BEGIN{exit !(d <= -l)}' && KH="$KH DD_eq=${DD}_vuot_-${SUB_DD_LIMIT}_(A40/C6)"
     elif [ "$FLAGON" = 1 ]; then

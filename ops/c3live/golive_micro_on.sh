@@ -57,6 +57,7 @@ if [ "$C3_ACCOUNT" = SUB ]; then
   chk "tk con SACH + key dat (ADD4 §2 = golive_check_key SUB)${SUBWHY:+ —$SUBWHY}" "[ '$SUBV' = DAT ]"
   chk "cron golive_monitor da cai, ban pin con nguyen (A1 ADD4 C-1; owner: bash $GL_HERE/install_cron_golive_monitor.sh)" "gl_mon_cron_ok"
   gl_mon_pin_cur || say "WARN cron golive_monitor chay ban pin KHAC repo hien tai — owner chay lai install_cron_golive_monitor.sh de cap nhat pin"
+  chk "md5 monitor+lib $(gl_mon_m12) da qua A1 ($A1_APPROVED_FILE)" "gl_mon_approved"
 else
   L0=$(sv LEGACY_N)
   chk "LEGACY managed doc duoc ($L0), moi ($(sv LEGACY_AGE) s <= 600)" "[ -n '$L0' ] && [ '$(sv LEGACY_AGE)' -ge 0 ] && [ '$(sv LEGACY_AGE)' -le 600 ] 2>/dev/null"
@@ -100,7 +101,7 @@ if [ "$C3_ACCOUNT" = SUB ]; then
   gl_mon_repin || die "pin lai cron golive_monitor LOI — khong bat (ADD4 errata 2)"
   gl_eq_base_set "$(av TMB)" "$MICRO_CAPITAL" "$(av KEY_SHA8)" "golive_micro_on $TS" || die "KHONG ghi duoc moc tmb0 — khong bat (ADD4 errata 2 §5)"
 fi
-gl_mon_flag_set || die "KHONG ghi duoc co monitor $GL_MON_FLAG — khong bat (A1 delta MIN-2)"
+GL_DRY_TS=$TS gl_mon_flag_set || die "KHONG ghi duoc co monitor $GL_MON_FLAG — khong bat (A1 delta MIN-2)"
 trap 'say "BI DUNG (tin hieu) — kiem: bash $(cd "$(dirname "$0")" && pwd)/golive_monitor.sh"; gl_pause_clear >/dev/null 2>&1; exit 130' INT TERM HUP
 gl_restart "$ENV_ADD" "$GL_STATE_FILES" dry 1
 if echo "$RS" | grep -q '^FAIL'; then

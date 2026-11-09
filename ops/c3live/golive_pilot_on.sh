@@ -13,7 +13,8 @@
 #   PUSH=ON, stream, recon ok, latch NONE, 0 KHAN (MAIN: LEGACY 0). TRUOT => rollback: env.sh ve ban truoc (C3_CAPITAL cu), restart.
 # [A1 ADD4] SUB: doi cron golive_monitor da cai (C-1), dam bao co monitor; MIN-2: co tien trinh canary_early* tren Oracle => TU CHOI.
 # [ADD4 ERRATA 2] SUB: tu PIN lai cron monitor + ghi lai moc tmb0 (doc san lai sau YES) / C3_CAPITAL=<size>; rollback => tra moc cu.
-#   Hau kiem: 0 leg mang cid so dry (.dry_* moi nhat) trong so live.
+#   Hau kiem: 0 leg mang cid so dry .dry_<dry_ts> (TS micro_on ghi trong co micro; thieu => TU CHOI) trong so live.
+#   [A1 errata2] pin chi khi md5 monitor+lib co trong deploy/gates/A1_APPROVED_MONITOR.md5; pilot RESET dinh eq co chu dich (log + Telegram).
 # =============================================================================
 set -uo pipefail
 . "$(cd "$(dirname "$0")" && pwd)/golive_lib.sh"
@@ -55,6 +56,8 @@ chk "khong PAUSE watchdog" "[ '$(sv PAUSE | cut -c1)' = 0 ]"
 chk "khong canary/soak" "[ '$(sv CANARY_SOAK)' = 0 ]"
 chk "MemAvailable $(sv MEM) >= $MIN_MEM_MB MB" "[ '$(sv MEM)' -ge $MIN_MEM_MB ] 2>/dev/null"
 chk "Oracle: khong co tien trinh $CANARY_PAT dang chay (A1 ADD4 MIN-2; co $(pgrep -fc "$CANARY_PAT" 2>/dev/null))" "gl_no_canary"
+DTS=$(sed -n 's/^dry_ts=//p' "$GL_MON_FLAG" 2>/dev/null | head -1)   # [A1 errata2 MIN-2] so dry .dry_<TS> do micro_on ghi
+chk "co micro/pilot co dry_ts (so dry .dry_<TS> cua micro_on: ${DTS:-THIEU})" "[ -n '$DTS' ]"
 if [ "$C3_ACCOUNT" = SUB ]; then
   L0=SKIP; YESW="YES PILOT"
   say "INFO LEGACY managed=$(sv LEGACY_N) (tk chinh) — chi ghi log"
@@ -63,6 +66,7 @@ if [ "$C3_ACCOUNT" = SUB ]; then
   chk "cron golive_monitor da cai, ban pin con nguyen (A1 ADD4 C-1; owner: bash $GL_HERE/install_cron_golive_monitor.sh)" "gl_mon_cron_ok"
   HBA=$(gl_hb_age)
   chk "heartbeat cron golive_monitor ${HBA}s <= ${MON_HB_MAX_AGE_S}s (A1 delta MIN-3; $MON_HB_FILE)" "[ $HBA -ge 0 ] && [ $HBA -le $MON_HB_MAX_AGE_S ]"
+  chk "md5 monitor+lib $(gl_mon_m12) da qua A1 ($A1_APPROVED_FILE)" "gl_mon_approved"
   API=$(gl_api242 sub) || die "ssh toi 242 loi (doc tk con)"
   echo "$API" | grep -v '^END_API$' | sed 's/^/   tk con: /'
   gl_sub_eval 0
@@ -94,17 +98,17 @@ if [ "$C3_ACCOUNT" = SUB ]; then
   gl_mon_repin || die "pin lai cron golive_monitor LOI — khong pilot (ADD4 errata 2)"
   API=$(gl_api242 mon) || die "ssh toi 242 loi (doc tmb)"
   echo "$API" | grep -qx END_API || die "doc tmb tk con khong tron ven"
-  gl_eq_base_set "$(av TMB)" "$SIZE" "$(av KEY_SHA8)" "golive_pilot_on $TS (C3_CAPITAL $C0 -> $SIZE)" || die "KHONG ghi duoc moc tmb0 — khong pilot (ADD4 errata 2 §5)"
+  gl_eq_base_set "$(av TMB)" "$SIZE" "$(av KEY_SHA8)" "golive_pilot_on $TS (C3_CAPITAL $C0 -> $SIZE) — RESET dinh eq co chu dich" || die "KHONG ghi duoc moc tmb0 — khong pilot (ADD4 errata 2 §5)"
 fi
 trap 'say "BI DUNG (tin hieu) — kiem golive_monitor.sh"; gl_pause_clear >/dev/null 2>&1; exit 130' INT TERM HUP
 gl_restart "$ENV_ADD" "" none
 if echo "$RS" | grep -q '^FAIL'; then
   echo "$RS" | grep -q '^OK da_stop' || { gl_pause_clear >/dev/null 2>&1; [ -f "$SUB_BASE_FILE.bak_$TS" ] && mv -f "$SUB_BASE_FILE.bak_$TS" "$SUB_BASE_FILE"; die "buoc env/stop FAIL truoc khi dung bot (moc tmb0 tra lai)"; }
 fi
-# [ADD4 ERRATA 2] khong leg nao mang cid cua so dry (.dry_* moi nhat) trong so live
+# [ADD4 ERRATA 2 / A1 MIN-2] khong leg nao mang cid cua so dry .dry_<dry_ts trong co micro> trong so live
 PCHK='
-B=run/c3live_book.json; DB=$(ls -t run/c3live_book.json.dry_* 2>/dev/null | head -1); DN=0
-[ -f $B ] && [ -n "$DB" ] && DN=$(grep -o "\"cid\":\"[^\"]*\"" $DB | sort -u | grep -cxFf - <(grep -o "\"cid\":\"[^\"]*\"" $B | sort -u))
+B=run/c3live_book.json; DB=run/c3live_book.json.dry_'"$DTS"'; DN=0
+[ -f $B ] && [ -f $DB ] && DN=$(grep -o "\"cid\":\"[^\"]*\"" $DB | sort -u | grep -cxFf - <(grep -o "\"cid\":\"[^\"]*\"" $B | sort -u))
 [ "${DN:-0}" = 0 ] && echo "OK 0_leg_so_dry_trong_so_live" || echo "FAIL ${DN}_leg_so_dry_trong_so_live"'
 CHK() { gl_chk_common "$SL" "$L0" '
 envk LIVE_ADAPTER=live; envk C3_CAPITAL='"$SIZE"'; envk SHADOW_NO_PUSH=false; envk LIVE_ENTRY_ENABLED=true; '"$KEYCHK"'
@@ -115,7 +119,8 @@ if ! echo "$RS" | grep -q '^FAIL' && gl_postloop CHK; then
   trap - INT TERM HUP
   gl_pause_clear >/dev/null || say "PAUSE con (ssh?) — tu go sau ${WD_PAUSE_MAX_S}s"
   say "=== XONG: PILOT C3_CAPITAL=$SIZE ($ACCT_TXT). Theo doi: golive_monitor.sh"
-  tg "[golive] PILOT BAT TS=$TS C3_ACCOUNT=$C3_ACCOUNT C3_CAPITAL=$SIZE (truoc $C0). Log $LOG"; exit 0
+  [ "$C3_ACCOUNT" = SUB ] && say "INFO lop phu monitor: moc tmb0 moi, RESET dinh eq co chu dich (pilot_on)"
+  tg "[golive] PILOT BAT TS=$TS C3_ACCOUNT=$C3_ACCOUNT C3_CAPITAL=$SIZE (truoc $C0)$([ "$C3_ACCOUNT" = SUB ] && echo '; lop phu monitor: moc tmb0 moi, RESET dinh eq co chu dich'). Log $LOG"; exit 0
 fi
 WHY=$(echo "${RESULT:-$RS}" | grep '^FAIL\|^WAIT' | tr '\n' ' ' | cut -c1-200)
 say "hau kiem TRUOT ($WHY) => ROLLBACK ve C3_CAPITAL=$C0 (adapter live, so + vi the giu nguyen)"

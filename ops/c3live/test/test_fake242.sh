@@ -1436,6 +1436,7 @@ chk "r4r swap XONG (LEGACY truoc stop 45 = log cuoi sau rollback; JVM moi 43 => 
 echo 44 > $F4/FAKE_LEGACY_N
 echo "== 35. [V12 ADD4] TAI KHOAN CON: golive_use_sub_key / check_key SUB / micro_on SUB / pilot_on SUB / monitor SUB (§4 ngoai c3, §5 DD tmb) / live_off SUB / legacy_verify"
 GD=$W/gates5; rm -rf "$GD"; mkdir -p "$GD"
+cat $HERE/golive_monitor.sh $HERE/golive_lib.sh | md5sum | cut -c1-12 | sed 's/$/ test_fake242 (repo hien tai)/' > $GD/A1_APPROVED_MONITOR.md5
 SKEY=fakekey_sub_$(printf '%036d' 7); SK8=$(printf '%s' "$SKEY" | sha256sum | cut -c1-8)
 printf 'C3_LIVE_API_KEY=%s\nC3_LIVE_API_SECRET=fakesecret_sub_%036d\n' "$SKEY" 9 > $W/sub_src.env; chmod 600 $W/sub_src.env
 rm -f $W/keys_sub.env $W/sub_peak.txt $W/tg_sub.txt $F4/run/KILL_SWITCH $F4/run/c3live_book.json $W/PAUSE $F4/FAKE_SCOPE_N
@@ -1479,7 +1480,7 @@ chk "add4 check_key SUB: von BFUSD nhung marginAvailable=false => TRUOT" "[ $RC 
 api account '{"totalMarginBalance":"999.5","availableBalance":"990","assets":[{"asset":"USDT","walletBalance":"0"},{"asset":"BFUSD","walletBalance":"1000.1","marginBalance":"999.5"}]}'
 api v2_account '{"assets":[{"asset":"USDT","marginAvailable":true},{"asset":"BFUSD","marginAvailable":true}]}'
 OUT=$(GS bash "$HERE/golive_check_key.sh" 2>&1); RC=$?
-chk "add4 check_key SUB: v3/account thieu marginAvailable => doc them v2/account: BFUSD marginAvailable=true => DAT (weight 155)" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'ACC_V2_HTTP=200' && echo \"\$OUT\" | grep -q 'BFUSD=1000.1 marginAvailable=true' && echo \"\$OUT\" | grep -q 'danh nghia=155'"
+chk "add4 check_key SUB: v3/account thieu marginAvailable => doc them v2/account: BFUSD marginAvailable=true => DAT (weight 155)" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'ACC_V2_HTTP=200' && echo \"\$OUT\" | grep -q 'BFUSD=1000.1 marginAvailable=true' && echo \"\$OUT\" | grep -q 'danh nghia=156'"
 api v2_account '{"assets":[{"asset":"USDT","marginAvailable":true}]}'
 OUT=$(GS bash "$HERE/golive_check_key.sh" 2>&1); RC=$?
 chk "add4 check_key SUB: BFUSD khong ro marginAvailable (unknown) => TRUOT" "[ $RC = 3 ] && echo \"\$OUT\" | grep -q 'marginAvailable=unknown'"
@@ -1518,6 +1519,10 @@ chk "delta MIN-4 cai lai tu repo => cron tro lai pin repo" "grep -qF '$PIN1/goli
 OUT=$(IC bash "$HERE/install_cron_golive_monitor.sh" --remove 2>&1); RC=$?
 chk "C-1 install_cron --remove: go dong monitor, giu dong khac; --remove lan 2 KHONG DOI" "[ $RC = 0 ] && ! grep -q golive_monitor $W/oracron.txt && grep -q '# HEALTH' $W/oracron.txt && IC bash $HERE/install_cron_golive_monitor.sh --remove 2>&1 | grep -q 'KHONG DOI'"
 IC bash "$HERE/install_cron_golive_monitor.sh" > /dev/null 2>&1
+mv $GD/A1_APPROVED_MONITOR.md5 $W/appr.bak; echo '000000000000 khac' > $GD/A1_APPROVED_MONITOR.md5
+OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "A1 errata2 MIN-3 micro_on: md5 monitor+lib KHONG co trong A1_APPROVED_MONITOR.md5 => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL md5 monitor+lib .* da qua A1'"
+mv $W/appr.bak $GD/A1_APPROVED_MONITOR.md5
 bash -c 'exec -a canary_early_fake242_NONE_run sleep 60' & CPX=$!; sleep 0.3
 OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "MIN-2 micro_on: co tien trinh canary_early* tren Oracle => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL Oracle: khong co tien trinh canary_early_fake242_NONE dang chay'"
@@ -1555,6 +1560,7 @@ OUT=$(echo YES | GS bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "add4 micro_on SUB XONG: live/1000/push, process doc key keys_sub.env, scope tk con 0, LEGACY 44 chi INFO, KILL_SWITCH go, PUSH ON" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: MICRO-LIVE c3 tai khoan CON' && penv | grep -qx LIVE_ADAPTER=live && penv | grep -qx C3_CAPITAL=1000 && penv | grep -qx LIVE_C3_KEYS_FILE=$W/keys_sub.env && echo \"\$OUT\" | grep -q 'OK env LIVE_C3_KEYS_FILE=' && echo \"\$OUT\" | grep -q 'OK scope_tk_con_0_vi_the_ngoai_c3' && echo \"\$OUT\" | grep -q 'INFO LEGACY_managed=44' && [ ! -e $F4/run/KILL_SWITCH ] && nosec \"\$OUT\""
 chk "errata2 micro_on tu PIN lai monitor (cron dang chay ban khac repo) => cron tro ban pin repo, in md5" "grep -qF '$PIN1/golive_monitor.sh' $W/oracron.txt && echo \"\$OUT\" | grep -q 'OK cron golive_monitor chay ban pin md5=${PIN1##*_}'"
 chk "errata2 micro_on ghi moc tmb0 = tmb luc bat (1000.00) + C3_CAPITAL=1000; so live rong, 0 leg so dry" "grep -qx 'tmb0=1000.00' $W/deploylog/c3sub_eq_base.txt && grep -qx 'c3_capital=1000' $W/deploylog/c3sub_eq_base.txt && echo \"\$OUT\" | grep -q 'OK so_live_rong' && echo \"\$OUT\" | grep -q 'OK 0_leg_so_dry_trong_so_live'"
+chk "A1 errata2 MIN-2 micro_on ghi dry_ts=<TS> vao co micro (pilot_on dung dung so .dry_<TS>)" "grep -q '^dry_ts=[0-9_]*$' $W/deploylog/golive_monitor.on && ls $F4/run/c3live_book.json.dry_\$(sed -n 's/^dry_ts=//p' $W/deploylog/golive_monitor.on) >/dev/null"
 chk "C-1 micro_on XONG => co monitor (C3_ACCOUNT=SUB + KEYS_FILE tk con)" "grep -qx C3_ACCOUNT=SUB $W/deploylog/golive_monitor.on && grep -qx KEYS_FILE=$W/keys_sub.env $W/deploylog/golive_monitor.on"
 kill $HBW 2>/dev/null; wait $HBW 2>/dev/null; rm -f $W/deploylog/run/monitor_heartbeat
 printf '#!/bin/bash\necho x >> %s/sshcnt.log\nexec bash -c "$1"\n' $W > $W/sshcnt.sh; rm -f $W/sshcnt.log $W/moncron.log
@@ -1584,23 +1590,36 @@ chk "add4 monitor SUB DRY=1 DD -41 %: KHAN nhung KHONG dat co" "[ $RC = 2 ] && e
 OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
 chk "add4 monitor SUB DD -41 % cham nguong A40/C6: KHAN + run/KILL_SWITCH (token golive_monitor), Telegram, KHONG dong vi the, push=OFF" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'KHAN (ADD4 tk con): DD_eq=-0.4100' && grep -q '^golive_monitor .* KHAN DD_eq' $F4/run/KILL_SWITCH && grep -q 'KHAN tk con' $W/tg_sub.txt && echo \"\$OUT\" | grep -q 'push=OFF'"
 rm -f $F4/run/KILL_SWITCH
-OUT=$(GS DRY=1 bash "$HERE/golive_rebase_equity.sh" "thu" 2>&1); RC=$?
-chk "errata2 rebase DRY=1: in moc cu/moi, KHONG ghi" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && grep -qx 'tmb0=1000.00' $W/deploylog/c3sub_eq_base.txt"
-OUT=$(echo YES | GS bash "$HERE/golive_rebase_equity.sh" 2>&1); RC=$?
-chk "errata2 rebase thieu ly do => DUNG" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'can ly do'"
-OUT=$(echo YES | GS bash "$HERE/golive_rebase_equity.sh" "rut 410 USDT (test)" 2>&1); RC=$?
-chk "errata2 rebase (owner rut 410): tmb0 = tmb hien tai 590, C3_CAPITAL 1000 tu process, log ly do" "[ $RC = 0 ] && grep -qx 'tmb0=590' $W/deploylog/c3sub_eq_base.txt && grep -qx 'c3_capital=1000' $W/deploylog/c3sub_eq_base.txt && grep -q 'rut 410 USDT (test)' $W/deploylog/c3sub_eq_base.log"
+BID0=$(sed -n 's/^base_id=//p' $W/deploylog/c3sub_eq_base.txt)
+echo 'golive_monitor 1 KHAN DD_eq=-0.4100' > $F4/run/KILL_SWITCH
+OUT=$(echo YES | GS bash "$HERE/golive_rebase_equity.sh" -410 "rut 410 USDT (test)" 2>&1); RC=$?
+chk "A1 errata2 MIN-1 rebase: run/KILL_SWITCH do golive_monitor dat => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'do golive_monitor dat' && grep -qx 'tmb0=1000.00' $W/deploylog/c3sub_eq_base.txt"
+rm -f $F4/run/KILL_SWITCH
+OUT=$(echo YES | GS bash "$HERE/golive_rebase_equity.sh" -410 2>&1); RC=$?
+chk "rebase thieu ly do => DUNG" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'can ly do'"
+OUT=$(echo YES | GS bash "$HERE/golive_rebase_equity.sh" "rut 410" 2>&1); RC=$?
+chk "rebase thieu / sai so tien delta => DUNG" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'can so tien delta'"
+OUT=$(echo YES | GS bash "$HERE/golive_rebase_equity.sh" -300 "rut 300 (khai sai)" 2>&1); RC=$?
+chk "A1 errata2 MIN-1 rebase: delta -300 KHONG khop bien dong tmb that (-410, lech > 2 %) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'KHONG khop bien dong tmb that' && grep -qx 'tmb0=1000.00' $W/deploylog/c3sub_eq_base.txt"
+OUT=$(GS DRY=1 bash "$HERE/golive_rebase_equity.sh" -410 "thu" 2>&1); RC=$?
+chk "rebase DRY=1: in moc moi, KHONG ghi" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && grep -qx 'tmb0=1000.00' $W/deploylog/c3sub_eq_base.txt"
+OUT=$(echo YES | GS bash "$HERE/golive_rebase_equity.sh" -410 "rut 410 USDT (test)" 2>&1); RC=$?
+chk "A1 errata2 MIN-1 rebase -410 (khop tmb 1000 -> 590): tmb0 += delta = 590, base_id + dinh eq GIU (1000), log ly do" "[ $RC = 0 ] && grep -qx 'tmb0=590.00' $W/deploylog/c3sub_eq_base.txt && grep -qx 'c3_capital=1000' $W/deploylog/c3sub_eq_base.txt && grep -qx \"base_id=$BID0\" $W/deploylog/c3sub_eq_base.txt && grep -qx 'peak=1000.00' $W/sub_peak.txt && grep -q 'rut 410 USDT (test)' $W/deploylog/c3sub_eq_base.log"
 OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
-chk "errata2 sau rebase: eq = 1000 + (590 - 590) = 1000, dinh dat lai theo moc moi, het KHAN" "[ $RC = 0 ] && grep -qx 'peak=1000.00' $W/sub_peak.txt && echo \"\$OUT\" | grep -q 'eq=1000.00 dinh=1000.00 dd=0.0000' && [ ! -e $F4/run/KILL_SWITCH ]"
+chk "sau rebase: eq = 1000 + (590 - 590) = 1000, dinh giu 1000, het KHAN" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'eq=1000.00 dinh=1000.00 dd=0.0000' && [ ! -e $F4/run/KILL_SWITCH ]"
+OUT=$(echo YES | GS bash "$HERE/golive_rebase_equity.sh" -410 "rut 410 lan 2 (trung)" 2>&1); RC=$?
+chk "A1 errata2 MIN-1 rebase lap lai cung delta (khong co bien dong moi sau lan rebase) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'KHONG khop' && grep -qx 'tmb0=590.00' $W/deploylog/c3sub_eq_base.txt"
 api account '{"totalMarginBalance":"10976.22","availableBalance":"10976.22","assets":[{"asset":"USDT","walletBalance":"1000","marginAvailable":true},{"asset":"BFUSD","walletBalance":"10000","marginAvailable":true}]}'
-echo YES | GS bash "$HERE/golive_rebase_equity.sh" "nap BFUSD 10000 (test)" > /dev/null 2>&1
+api assetIndex '{"symbol":"BFUSDUSD","index":"0.99930000","bidRate":"0.95","askRate":"1.05"}'
+OUT=$(echo YES | GS bash "$HERE/golive_rebase_equity.sh" 10386.22 "nap BFUSD 10000 + 386 USDT (test)" 2>&1); RC=$?
+chk "rebase +10386.22 (nap BFUSD, khop tmb 590 -> 10976.22): tmb0 = 10976.22" "[ $RC = 0 ] && grep -qx 'tmb0=10976.22' $W/deploylog/c3sub_eq_base.txt"
 OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
-chk "errata2 tk con tmb 10976 (BFUSD), C3_CAPITAL 1000: eq = 1000 (khong phai 10976)" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'eq=1000.00 dinh=1000.00 dd=0.0000'"
+chk "errata2 tk con tmb 10976 (BFUSD), C3_CAPITAL 1000: eq = 1000; A1 MIN-4 log gia BFUSD moi luot" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'eq=1000.00 dinh=1000.00 dd=0.0000' && echo \"\$OUT\" | grep -q '== BFUSD: so_du=10000 index=0.99930000 bidRate=0.95'"
 api account '{"totalMarginBalance":"10576.22","availableBalance":"10576.22","assets":[{"asset":"USDT","walletBalance":"600","marginAvailable":true},{"asset":"BFUSD","walletBalance":"10000","marginAvailable":true}]}'
 OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
 chk "errata2 c3 lo 400 (tmb chi -3.6 %): eq 600 = -40 % dinh => KHAN + KILL_SWITCH" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'eq=600.00 dinh=1000.00 dd=-0.4000' && echo \"\$OUT\" | grep -q 'KHAN (ADD4 tk con): DD_eq=-0.4000' && grep -q '^golive_monitor .* KHAN DD_eq' $F4/run/KILL_SWITCH"
 rm -f $F4/run/KILL_SWITCH; api account '{"totalMarginBalance":"590","availableBalance":"500","assets":[{"asset":"USDT","walletBalance":"590","marginAvailable":true}]}'
-echo YES | GS bash "$HERE/golive_rebase_equity.sh" "rut ve 590 (test)" > /dev/null 2>&1
+printf 'tmb0=590\nc3_capital=1000\nkey_sha8=%s\nbase_id=test_reset_1\nrebase_t=%s\nreason=test dat lai trang thai\n' $SK8 $(date +%s) > $W/deploylog/c3sub_eq_base.txt; rm -f $W/sub_peak.txt
 api positionRisk '[{"symbol":"XYZUSDT","positionAmt":"5"},{"symbol":"Z0USDT","positionAmt":"0"}]'
 OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
 chk "add4 monitor SUB: vi the NGOAI c3 tren tk con (khong co trong so) => KHAN + KILL_SWITCH, KHONG tu dong" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'KHAN (ADD4 tk con): POS_NONC3=1:XYZUSDT:+5' && grep -q '^golive_monitor .* KHAN POS_NONC3' $F4/run/KILL_SWITCH"
@@ -1642,8 +1661,14 @@ touch -d '7 min ago' $W/deploylog/run/monitor_heartbeat
 OUT=$(GS DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "delta MIN-3 pilot_on SUB: heartbeat cron monitor cu > 6' => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL heartbeat cron golive_monitor'"
 touch $W/deploylog/run/monitor_heartbeat
-OUT=$(echo 'YES PILOT' | GS GL_MON_FLAG=/proc/golive_monitor.on bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+rm -rf $W/roflag; mkdir -p $W/roflag; cp $W/deploylog/golive_monitor.on $W/roflag/; chmod 555 $W/roflag   # co doc duoc (dry_ts) nhung KHONG ghi duoc
+OUT=$(echo 'YES PILOT' | GS GL_MON_FLAG=$W/roflag/golive_monitor.on bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+chmod 755 $W/roflag
 chk "delta MIN-2 pilot_on: KHONG ghi duoc co monitor => DUNG truoc restart, C3_CAPITAL giu 1000" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'KHONG ghi duoc co monitor' && penv | grep -qx C3_CAPITAL=1000"
+cp $W/deploylog/golive_monitor.on $W/monon.bak; sed -i '/^dry_ts=/d' $W/deploylog/golive_monitor.on
+OUT=$(GS DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+chk "A1 errata2 MIN-2 pilot_on: co micro KHONG co dry_ts => TU CHOI (khong doan so dry bang ls -t)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL co micro/pilot co dry_ts'"
+cp $W/monon.bak $W/deploylog/golive_monitor.on
 api openOrders '[{"symbol":"Q3USDT","clientOrderId":"web_2"}]'
 OUT=$(GS DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "add4 pilot_on SUB: lenh NGOAI c3 tren tk con => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL tk con: 0 vi the / lenh / algo NGOAI c3.*ORD_NONC3=1'"
@@ -1653,6 +1678,7 @@ chk "add4 pilot_on SUB: go YES (khong phai 'YES PILOT') => huy" "[ $RC = 0 ] && 
 OUT=$(echo 'YES PILOT' | GS bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "add4 pilot_on SUB XONG: C3_CAPITAL 1000 -> 10000, key tk con giu, LEGACY chi INFO" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: PILOT C3_CAPITAL=10000' && penv | grep -qx C3_CAPITAL=10000 && penv | grep -qx LIVE_C3_KEYS_FILE=$W/keys_sub.env && echo \"\$OUT\" | grep -q 'INFO LEGACY_managed=44'"
 chk "errata2 pilot_on ghi lai moc tmb0 + C3_CAPITAL=10000; 0 leg so dry trong so live" "grep -qx 'c3_capital=10000' $W/deploylog/c3sub_eq_base.txt && grep -q 'golive_pilot_on' $W/deploylog/c3sub_eq_base.txt && echo \"\$OUT\" | grep -q 'OK 0_leg_so_dry_trong_so_live'"
+chk "A1 errata2 MIN-1 pilot_on reset dinh eq CO CHU DICH: ghi ro trong log moc + Telegram" "grep -q 'RESET dinh eq co chu dich' $W/deploylog/c3sub_eq_base.txt && grep -q 'RESET dinh eq co chu dich' $W/tg_sub.txt"
 OUT=$(echo YES | GS MODE=drain bash "$HERE/golive_live_off.sh" 2>&1); RC=$?
 chk "add4 live_off SUB drain: dat run/KILL_SWITCH" "[ $RC = 0 ] && [ -e $F4/run/KILL_SWITCH ]"
 api positionRisk '[{"symbol":"C05USDT","positionAmt":"2"}]'
