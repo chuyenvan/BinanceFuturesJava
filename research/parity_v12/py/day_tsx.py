@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from pv_cfg import cfg, shift  # noqa: E402
+from pv_cfg import cfg, shift, VIS_GAP  # noqa: E402
 
 C = cfg()
 TSXD = C["ROOT"] + "/tsx"
@@ -31,12 +31,20 @@ FIRST_NEW = "2026-10-20"
 st_live = {}
 
 
+def vis_path(ds, s):
+    """[ADD16] file kline 1m ngay ds: Vision; Vision thieu va ds trong VIS_GAP (10-28) => REST ADD7/ADD13 (cong R)."""
+    p = "%s/%s/%s.zip" % (C["VIS"], ds, s)
+    if not os.path.exists(p) and ds in VIS_GAP:
+        p = VIS_GAP[ds].format(s=s)
+    return p
+
+
 def build_bin(days, uni, out_bin, out_syms):
     rows, miss, nsy = [], {}, {}
     for ds in days:
         n = 0
         for s in uni:
-            p = "%s/%s/%s.zip" % (C["VIS"], ds, s)
+            p = vis_path(ds, s)                  # [ADD16]
             if not os.path.exists(p):
                 miss[ds] = miss.get(ds, 0) + 1
                 continue
@@ -83,8 +91,8 @@ def s_day(j, uni):
     out = TSXD + "/S_%s.csv" % j
     if os.path.exists(out):
         return pd.read_csv(out)
-    zj = sum(1 for s in uni if os.path.exists("%s/%s/%s.zip" % (C["VIS"], j, s)))
-    zp = sum(1 for s in uni if os.path.exists("%s/%s/%s.zip" % (C["VIS"], shift(j, -1), s)))
+    zj = sum(1 for s in uni if os.path.exists(vis_path(j, s)))            # [ADD16]
+    zp = sum(1 for s in uni if os.path.exists(vis_path(shift(j, -1), s)))
     if zj == 0 or zj < 0.99 * zp:      # Vision ngay j chua phat hanh du => S_j KHONG DO DUOC (khong ghi cache)
         return None
     pre = TSXD + "/tmp_%s" % j
