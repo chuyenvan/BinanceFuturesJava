@@ -17,6 +17,8 @@
 # Hau kiem TRUOT: doc LAI 242 ngay luc quyet (so c3 + audit lenh [C3-LIVE-ORDER] + san: lenh/algo c3, chu ky vi the):
 #   CHAC CHAN 0 lenh c3 => ROLLBACK ve dry (env + so dry tra lai, KILL_SWITCH cua minh go);
 #   co dau hieu / doc loi / khong chac => coi nhu DA co lenh: GIU run/KILL_SWITCH (dung mo moi) + KHAN, KHONG ve dry, exit 2.
+# [A1 ADD4] C-1: SUB doi cron golive_monitor da cai (install_cron_golive_monitor.sh); tao co monitor NGAY truoc restart (rollback ve dry
+#   => go co). MIN-2: dang co tien trinh canary_early* tren Oracle => TU CHOI (kiem truoc + ngay truoc restart).
 # Ma thoat: 0 XONG | 1 DUNG/da rollback | 2 can owner/MASTER.
 # =============================================================================
 set -uo pipefail
@@ -41,6 +43,7 @@ chk "khong PAUSE watchdog" "[ '$(sv PAUSE | cut -c1)' = 0 ]"
 chk "khong canary/soak" "[ '$(sv CANARY_SOAK)' = 0 ]"
 chk "MemAvailable $(sv MEM) >= $MIN_MEM_MB MB" "[ '$(sv MEM)' -ge $MIN_MEM_MB ] 2>/dev/null"
 chk "dia trong >= 1 GB" "[ '$(sv DISK_K)' -gt 1048576 ] 2>/dev/null"
+chk "Oracle: khong co tien trinh $CANARY_PAT dang chay (A1 ADD4 MIN-2; co $(pgrep -fc "$CANARY_PAT" 2>/dev/null))" "gl_no_canary"
 if [ "$C3_ACCOUNT" = SUB ]; then
   L0=SKIP
   say "INFO LEGACY managed=$(sv LEGACY_N) (tuoi $(sv LEGACY_AGE) s) — ADD4 §3: LEGACY o tk chinh, KHONG la dieu kien (chi ghi log)"
@@ -48,6 +51,7 @@ if [ "$C3_ACCOUNT" = SUB ]; then
   echo "$API" | grep -v '^END_API$' | sed 's/^/   tk con: /'
   gl_sub_eval 1
   chk "tk con SACH + key dat (ADD4 §2 = golive_check_key SUB)${SUBWHY:+ —$SUBWHY}" "[ '$SUBV' = DAT ]"
+  chk "cron golive_monitor da cai (A1 ADD4 C-1; owner: bash $GL_HERE/install_cron_golive_monitor.sh)" "gl_mon_cron_ok"
 else
   L0=$(sv LEGACY_N)
   chk "LEGACY managed doc duoc ($L0), moi ($(sv LEGACY_AGE) s <= 600)" "[ -n '$L0' ] && [ '$(sv LEGACY_AGE)' -ge 0 ] && [ '$(sv LEGACY_AGE)' -le 600 ] 2>/dev/null"
@@ -85,10 +89,12 @@ else
   [ "$(av ORD_C3)" = 0 ] && [ "$(av ALGO_C3)" = 0 ] || die "san CON lenh/algo c3 truoc khi bat live (ORD_C3=$(av ORD_C3) ALGO_C3=$(av ALGO_C3)) — xu ly truoc"
 fi
 SIG0=$(av POS_SIG); [ -n "$SIG0" ] || die "khong co chu ky vi the san"
+gl_no_canary || die "co tien trinh $CANARY_PAT tren Oracle (vua xuat hien) — khong bat (A1 MIN-2)"
+gl_mon_flag_set
 trap 'say "BI DUNG (tin hieu) — kiem: bash $(cd "$(dirname "$0")" && pwd)/golive_monitor.sh"; gl_pause_clear >/dev/null 2>&1; exit 130' INT TERM HUP
 gl_restart "$ENV_ADD" "$GL_STATE_FILES" dry 1
 if echo "$RS" | grep -q '^FAIL'; then
-  echo "$RS" | grep -q '^OK da_stop' || { gl_pause_clear >/dev/null 2>&1; die "buoc env/KILL_SWITCH/stop FAIL truoc khi dung bot (env + KILL_SWITCH da go neu da dat)"; }
+  echo "$RS" | grep -q '^OK da_stop' || { gl_pause_clear >/dev/null 2>&1; gl_mon_flag_clear; die "buoc env/KILL_SWITCH/stop FAIL truoc khi dung bot (env + KILL_SWITCH da go neu da dat)"; }
 fi
 if [ "$C3_ACCOUNT" = SUB ]; then   # [ADD4 §4] dong scope cua jar dem vi the NGOAI c3 tren tai khoan cua key c3 (= tk con) — phai 0
   SCOPE_CHK='
@@ -140,7 +146,7 @@ V=$(echo "$SEEN" | sed -n 's/^VERDICT=//p' | tail -1)
 if [ "${V:-UNKNOWN}" = NONE ]; then
   say "CHAC CHAN c3 chua co lenh (so 0 cum, 0 audit lenh, san 0 lenh/algo c3, vi the khong doi) => ROLLBACK ve DRY"
   if gl_rollback dry; then
-    say "Da ROLLBACK xong: dry chay lai nhu truoc."; tg "[golive] micro_on FAIL TS=$TS: $WHY => ROLLBACK ve dry XONG. Log $LOG"; exit 1
+    gl_mon_flag_clear; say "Da ROLLBACK xong: dry chay lai nhu truoc."; tg "[golive] micro_on FAIL TS=$TS: $WHY => ROLLBACK ve dry XONG. Log $LOG"; exit 1
   fi
   M="ROLLBACK LOI — PAUSE con; kiem tay golive_monitor.sh; env backup $A/conf/env.sh.bak_golive_micro_on_$TS"
 else

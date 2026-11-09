@@ -11,6 +11,7 @@
 #   tk con, key van dat (§2: IP-only, khong rut, futures, sha8 != tk chinh, dualSide=false, BFUSD), tk con 0 vi the / lenh / algo NGOAI c3 (§4).
 # Lam: env +C3_CAPITAL=<size> ; PAUSE token ; restart (so live + vi the c3 GIU NGUYEN; adapter khong doi) ; hau kiem env, c3_capital,
 #   PUSH=ON, stream, recon ok, latch NONE, 0 KHAN (MAIN: LEGACY 0). TRUOT => rollback: env.sh ve ban truoc (C3_CAPITAL cu), restart.
+# [A1 ADD4] SUB: doi cron golive_monitor da cai (C-1), dam bao co monitor; MIN-2: co tien trinh canary_early* tren Oracle => TU CHOI.
 # =============================================================================
 set -uo pipefail
 . "$(cd "$(dirname "$0")" && pwd)/golive_lib.sh"
@@ -51,11 +52,13 @@ chk "khong co run/KILL_SWITCH" "[ '$(sv KILLSW_FILE)' = 0 ]"
 chk "khong PAUSE watchdog" "[ '$(sv PAUSE | cut -c1)' = 0 ]"
 chk "khong canary/soak" "[ '$(sv CANARY_SOAK)' = 0 ]"
 chk "MemAvailable $(sv MEM) >= $MIN_MEM_MB MB" "[ '$(sv MEM)' -ge $MIN_MEM_MB ] 2>/dev/null"
+chk "Oracle: khong co tien trinh $CANARY_PAT dang chay (A1 ADD4 MIN-2; co $(pgrep -fc "$CANARY_PAT" 2>/dev/null))" "gl_no_canary"
 if [ "$C3_ACCOUNT" = SUB ]; then
   L0=SKIP; YESW="YES PILOT"
   say "INFO LEGACY managed=$(sv LEGACY_N) (tk chinh) — chi ghi log"
   chk "bot live dung key tk con (LIVE_C3_KEYS_FILE=$KEYS_FILE; co: $(sv ENV_LIVE_C3_KEYS_FILE))" "[ '$(sv ENV_LIVE_C3_KEYS_FILE)' = '$KEYS_FILE' ]"
   chk "file key $KEYS_FILE (600, 2 dong)" "[ '$(sv KEYS_OK)' = 1 ]"
+  chk "cron golive_monitor da cai (A1 ADD4 C-1; owner: bash $GL_HERE/install_cron_golive_monitor.sh)" "gl_mon_cron_ok"
   API=$(gl_api242 sub) || die "ssh toi 242 loi (doc tk con)"
   echo "$API" | grep -v '^END_API$' | sed 's/^/   tk con: /'
   gl_sub_eval 0
@@ -80,6 +83,8 @@ if [ "$C3_ACCOUNT" = SUB ]; then
 else
   gl_yes "PILOT: C3_CAPITAL $C0 -> $SIZE tren $ACCT_TXT. Owner XAC NHAN da cat TOAN BO LEGACY." "$YESW"
 fi
+gl_no_canary || die "co tien trinh $CANARY_PAT tren Oracle (vua xuat hien) — khong pilot (A1 MIN-2)"
+gl_mon_flag_set
 trap 'say "BI DUNG (tin hieu) — kiem golive_monitor.sh"; gl_pause_clear >/dev/null 2>&1; exit 130' INT TERM HUP
 gl_restart "$ENV_ADD" "" none
 if echo "$RS" | grep -q '^FAIL'; then

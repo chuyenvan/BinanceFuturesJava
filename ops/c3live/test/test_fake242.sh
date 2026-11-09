@@ -11,6 +11,23 @@ HERE=$(cd "$(dirname "$0")/.." && pwd)
 REPO=$(cd "$HERE/../.." && pwd)
 W=${1:?"thieu thu muc tam"}
 rm -rf "$W"; mkdir -p "$W"
+# [A1 ADD4] trap: ket thuc / loi / ngat => don MOI tien trinh con cua bo test (ke ca setsid / nohup / mo coi): nhan dien bang duong dan
+#   "$W/" trong cmdline / cwd / environ. KHONG dong tien trinh ngoai $W (vd mo coi cua lan test khac), khong dong bo test + to tien.
+f242_cleanup() {
+  local p q=$$ anc=" $$ " L sig
+  while [ -n "$q" ] && [ "$q" != 0 ] && [ "$q" != 1 ]; do q=$(ps -o ppid= -p "$q" 2>/dev/null | tr -d ' '); anc="$anc$q "; done
+  for sig in TERM KILL; do
+    for p in $(ls /proc | grep -E '^[0-9]+$'); do
+      case "$anc" in *" $p "*) continue;; esac
+      [ -O "/proc/$p" ] || continue
+      L=$( { tr '\0' '\n' < /proc/$p/cmdline; echo; readlink /proc/$p/cwd; tr '\0' '\n' < /proc/$p/environ; } 2>/dev/null)
+      if printf '%s\n' "$L" | grep -qF "$W/" || printf '%s\n' "$L" | grep -qxF "$W"; then kill -$sig "$p" 2>/dev/null; fi
+    done
+    [ $sig = TERM ] && sleep 1
+  done
+}
+trap 'f242_cleanup' EXIT
+trap 'exit 130' INT TERM HUP
 F=$W/v_t_m
 mkdir -p "$F/conf" "$F/bin" "$F/logs" "$F/run" "$F/target" "$W/deploylog"
 cat > "$F/conf/env.sh" <<'EOF'
@@ -147,7 +164,8 @@ export PROC_PAT="BinanceOrderTradingManager fake242" SSH_242="bash -c" SCP_242=c
   NJ_MD5=$NEW KILLSW_SH=$REPO/ops/killsw_reset.sh EXINFO_CMD="cat $W/exinfo.json" POST_WAIT_S=2 POST_ROUNDS=2 WAIT_S=3 \
   REANCHOR_WAIT=2 LATCH_WAIT_S=2
 # KILLSW_MD5 KHONG dat => dung md5 pin mac dinh trong deploy_v12_dry.sh (kiem pin khop ops/killsw_reset.sh cua repo)
-PASS=0; FAILN=0
+PASS=0; FAILN=0; SKIPN=0
+skp() { SKIPN=$((SKIPN+1)); echo "  [SKIP] $1"; }   # chk phu thuoc gio/ngay chay: dem rieng => tong co dinh
 chk() { if eval "$2"; then PASS=$((PASS+1)); echo "  [PASS] $1"; else FAILN=$((FAILN+1)); echo "  [FAIL] $1"; fi; }
 
 echo "== 1. deploy DRY=1 (truoc 11-18: chi canh bao)"
@@ -160,6 +178,8 @@ echo "== 2. deploy that KHONG FORCE_DATE (phai tu choi truoc 2026-11-18)"
 OUT=$(echo YES | FORCE_TIME=1 bash "$HERE/deploy_v12_dry.sh" 2>&1); echo "$OUT" | tail -2
 if [ "$(date +%s)" -lt "$(date -d '2026-11-18 08:00 +07' +%s)" ]; then
   chk "tu choi truoc 11-18" "echo \"\$OUT\" | grep -q 'truoc 2026-11-18'"
+else
+  skp "tu choi truoc 11-18 (da qua ngay)"
 fi
 echo "== 3. deploy that (FORCE_DATE=1 FORCE_TIME=1, go YES) tren 242 gia"
 OUT=$(echo YES | FORCE_DATE=1 FORCE_TIME=1 bash "$HERE/deploy_v12_dry.sh" 2>&1); echo "$OUT" | tail -8
@@ -199,7 +219,7 @@ if [ "$TOK" = 0 ]; then
   OUT=$(echo YES | bash "$HERE/rollback_v12.sh" "$TS" 2>&1)
   chk "rollback tu choi ngoai khung gio (time_ok)" "echo \"\$OUT\" | grep -q 'khong hop le' && grep -qx 'export LIVE_ADAPTER=dry' $F/conf/env.sh"
 else
-  echo "  (bo qua kiem tu choi ngoai gio: dang trong khung gio hop le $HH:$MM)"
+  skp "rollback tu choi ngoai khung gio (dang trong khung $HH:$MM)"
 fi
 echo '{"version":1,"clusters":[]}' > $F/run/c3live_book.json
 echo '35015.29' > $F/run/c3live_killsw_peak
@@ -369,6 +389,8 @@ if [ "$HH" -eq 1 ] || [ "$HH" -eq 13 ]; then [ "$MM" -gt 20 ] || TOK=0; fi
 if [ "$TOK" = 0 ] && [ "$MM" -ne 9 ] && [ "$MM" -ne 20 ] && [ "$MM" -ne 59 ]; then   # tranh sat bien phut
   OUT=$(cv CANARY_EXPECT_TMB=10000 bash $CN/canary_preflight.sh 2>&1); RC=$?
   chk "preflight: ngoai khung gio => TU_CHOI (time_ok)" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'khong hop le'"
+else
+  skp "preflight: ngoai khung gio => TU_CHOI (dang trong khung / sat bien phut)"
 fi
 rm -f $F/run/canary/fake_calls.log
 OUT=$(cv FORCE_TIME=1 CANARY_EXPECT_TMB=10000 bash $CN/canary_preflight.sh 2>&1); RC=$?
@@ -763,6 +785,8 @@ chk "r4 NJ_MD5 chua pin => DUNG" "echo \"\$OUT\" | grep -q 'NJ_MD5 chua pin'"
 if [ "$(date +%s)" -lt "$(date -d '2026-11-18 07:54 +07' +%s)" ]; then
   OUT=$(echo YES | r4 FORCE_TIME=1 bash "$D4" 2>&1)
   chk "r4 tu choi truoc 2026-11-18 07:54 (khong FORCE)" "echo \"\$OUT\" | grep -q 'truoc 2026-11-18 07:54' && ! grep -q LIVE_ADAPTER $F4/conf/env.sh"
+else
+  skp "r4 tu choi truoc 2026-11-18 07:54 (da qua ngay)"
 fi
 OUT=$(r4 OLD_MD5=00000000000000000000000000000000 DRY=1 bash "$D4" 2>&1)
 chk "r4 jar dang chay khac OLD_MD5 => TU CHOI" "echo \"\$OUT\" | grep -q 'kiem 242 co muc FAIL' && echo \"\$OUT\" | grep -q 'FAIL jar_dang_chay'"
@@ -1214,7 +1238,7 @@ exec bash -c "$1"
 EOF
 chmod +x "$W/fakessh_q.sh"
 api openOrders '[]'; api openAlgoOrders '[]'
-GL() { env C3_ACCOUNT=MAIN APP_DIR=$F4 NJ_MD5=$NEW4 GATE_DIR=$GD KEYS_FILE=$W/keys_c3.env PY242=$W/c3py_t/python/bin/python3 CURL242=$W/fakecurl.sh \
+GL() { env C3_ACCOUNT=MAIN CANARY_PAT=canary_early_fake242_NONE APP_DIR=$F4 NJ_MD5=$NEW4 GATE_DIR=$GD KEYS_FILE=$W/keys_c3.env PY242=$W/c3py_t/python/bin/python3 CURL242=$W/fakecurl.sh \
   DEPLOY_TG_SINK=$W/tg_gl.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 "$@"; }
 penv() { tr '\0' '\n' < /proc/$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)/environ; }
 lgnow() { local l=AAAUSDT,BBBUSDT; [ "$1" = 0 ] && l=""; echo "$(TZ=Asia/Ho_Chi_Minh date '+%d/%m/%Y %H:%M:%S.000') INFO [pool-3-thread-1] x: [LEGACY] managed $1: $l" >> $F4/logs/full.log; }
@@ -1416,7 +1440,7 @@ SKEY=fakekey_sub_$(printf '%036d' 7); SK8=$(printf '%s' "$SKEY" | sha256sum | cu
 printf 'C3_LIVE_API_KEY=%s\nC3_LIVE_API_SECRET=fakesecret_sub_%036d\n' "$SKEY" 9 > $W/sub_src.env; chmod 600 $W/sub_src.env
 rm -f $W/keys_sub.env $W/sub_peak.txt $W/tg_sub.txt $F4/run/KILL_SWITCH $F4/run/c3live_book.json $W/PAUSE $F4/FAKE_SCOPE_N
 MK0=$(stat -c '%Y %s' $W/keys_c3.env)
-GS() { env C3_ACCOUNT=SUB APP_DIR=$F4 NJ_MD5=$NEWR GATE_DIR=$GD KEYS_FILE=$W/keys_sub.env PY242=$W/c3py_t/python/bin/python3 CURL242=$W/fakecurl.sh \
+GS() { env C3_ACCOUNT=SUB CANARY_PAT=canary_early_fake242_NONE ORA_CRONTAB_CMD="bash $W/oracron.sh" APP_DIR=$F4 NJ_MD5=$NEWR GATE_DIR=$GD KEYS_FILE=$W/keys_sub.env PY242=$W/c3py_t/python/bin/python3 CURL242=$W/fakecurl.sh \
   DEPLOY_TG_SINK=$W/tg_sub.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 SUB_PEAK_FILE=$W/sub_peak.txt "$@"; }
 US() { GS SUB_SRC=$W/sub_src.env SUB_KEY_SHA8=$SK8 MAIN_KEYS_FILE=$W/keys_c3.env KEY_UID=$(id -u) "$@"; }
 nosec() { ! echo "$1" | grep -q "$SKEY\|fakesecret_sub" && ! grep -rqs "$SKEY\|fakesecret_sub" $W/deploylog $GD $W/tg_sub.txt; }
@@ -1463,7 +1487,29 @@ clean; api dual '{"dualSidePosition":true}'; api multiAssetsMargin '{"multiAsset
 OUT=$(GS bash "$HERE/golive_check_key.sh" 2>&1); RC=$?
 chk "add4 check_key SUB: dualSidePosition=true => TRUOT; multiAssetsMargin=false CHI ghi lai" "[ $RC = 3 ] && echo \"\$OUT\" | grep -q 'KET QUA: TRUOT — dualSidePosition=true\. File' && echo \"\$OUT\" | grep -q 'multiAssetsMargin=false'"
 clean
-printf 'G-MICRO test\njar_md5=%s\n' $NEWR > $GD/GOLIVE_GATE_MICRO.ok; E0=$(md5sum < $F4/conf/env.sh)
+cat > $W/oracron.sh <<EOF
+# crontab GIA cua user ubuntu tren Oracle (file $W/oracron.txt) — KHONG dung crontab that
+case "\$1" in -l) [ -f $W/oracron.txt ] && cat $W/oracron.txt || { echo "no crontab for ubuntu" >&2; exit 1; } ;; -) cat > $W/oracron.txt ;; *) exit 2 ;; esac
+EOF
+echo '*/5 * * * * /home/ubuntu/ops/health_242.sh # HEALTH' > $W/oracron.txt; rm -f $W/deploylog/golive_monitor.on $W/deploylog/c3sub_monitor_fail.txt
+IC() { env ORA_CRONTAB_CMD="bash $W/oracron.sh" MON_LOCK=$W/locks/golive_monitor.lock "$@"; }
+printf 'G-MICRO test\njar_md5=%s\n' $NEWR > $GD/GOLIVE_GATE_MICRO.ok
+OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "C-1 micro_on SUB: CHUA cai cron golive_monitor => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL cron golive_monitor da cai'"
+OUT=$(IC DRY=1 bash "$HERE/install_cron_golive_monitor.sh" 2>&1); RC=$?
+chk "C-1 install_cron DRY=1: in truoc + sau du kien, KHONG ghi" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'crontab TRUOC' && echo \"\$OUT\" | grep -q 'DRY=1: crontab SAU' && ! grep -q golive_monitor $W/oracron.txt"
+OUT=$(IC bash "$HERE/install_cron_golive_monitor.sh" 2>&1); RC=$?
+chk "C-1 install_cron: 1 dong */2 + flock -n khoa rieng + MONITOR_CRON=1, dong cron khac giu, in truoc/sau" "[ $RC = 0 ] && [ \"\$(grep -c 'golive_monitor (ADD4 C-1)' $W/oracron.txt)\" = 1 ] && grep -q \"^\*/2 \* \* \* \* /usr/bin/flock -n $W/locks/golive_monitor.lock /usr/bin/env MONITOR_CRON=1 /bin/bash $HERE/golive_monitor.sh \" $W/oracron.txt && grep -q '# HEALTH' $W/oracron.txt && ! grep -q oracle_heavy $W/oracron.txt && echo \"\$OUT\" | grep -q 'crontab SAU' && echo \"\$OUT\" | grep -q 'XONG: cai cron'"
+C1=$(md5sum < $W/oracron.txt); OUT=$(IC bash "$HERE/install_cron_golive_monitor.sh" 2>&1); RC=$?
+chk "C-1 install_cron lan 2: idempotent (KHONG DOI)" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'KHONG DOI' && [ \"\$(md5sum < $W/oracron.txt)\" = \"$C1\" ]"
+OUT=$(IC bash "$HERE/install_cron_golive_monitor.sh" --remove 2>&1); RC=$?
+chk "C-1 install_cron --remove: go dong monitor, giu dong khac; --remove lan 2 KHONG DOI" "[ $RC = 0 ] && ! grep -q golive_monitor $W/oracron.txt && grep -q '# HEALTH' $W/oracron.txt && IC bash $HERE/install_cron_golive_monitor.sh --remove 2>&1 | grep -q 'KHONG DOI'"
+IC bash "$HERE/install_cron_golive_monitor.sh" > /dev/null 2>&1
+bash -c 'exec -a canary_early_fake242_NONE_run sleep 60' & CPX=$!; sleep 0.3
+OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "MIN-2 micro_on: co tien trinh canary_early* tren Oracle => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL Oracle: khong co tien trinh canary_early_fake242_NONE dang chay'"
+kill $CPX 2>/dev/null; wait $CPX 2>/dev/null
+E0=$(md5sum < $F4/conf/env.sh)
 OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "add4 micro_on SUB DRY: tk con sach => DRY PASS, env LIVE_C3_KEYS_FILE=keys_sub.env, LEGACY CHI ghi log (khong la dieu kien), khong doi env" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q \"export LIVE_C3_KEYS_FILE=$W/keys_sub.env\" && echo \"\$OUT\" | grep -q 'INFO LEGACY managed=' && ! echo \"\$OUT\" | grep -q 'LEGACY managed doc duoc' && echo \"\$OUT\" | grep -q 'OK   tk con SACH' && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ] && nosec \"\$OUT\""
 api positionRisk '[{"symbol":"XYZUSDT","positionAmt":"5"}]'
@@ -1472,9 +1518,18 @@ chk "add4 micro_on SUB: tk con co vi the la => TU CHOI truoc khi doi gi" "[ $RC 
 clean; echo 2 > $F4/FAKE_SCOPE_N
 OUT=$(echo YES | GS bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "add4 micro_on SUB: JVM live bao 2 vi the NGOAI c3 tren tk con (scope) => hau kiem FAIL => doc lai NONE => ROLLBACK ve dry" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL scope_tk_con_2_vi_the_ngoai_c3' && echo \"\$OUT\" | grep -q 'Da ROLLBACK xong' && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ] && penv | grep -qx LIVE_ADAPTER=dry && [ ! -e $F4/run/KILL_SWITCH ]"
+chk "C-1 micro_on rollback ve dry => go co monitor" "[ ! -e $W/deploylog/golive_monitor.on ]"
 echo 0 > $F4/FAKE_SCOPE_N
 OUT=$(echo YES | GS bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "add4 micro_on SUB XONG: live/1000/push, process doc key keys_sub.env, scope tk con 0, LEGACY 44 chi INFO, KILL_SWITCH go, PUSH ON" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: MICRO-LIVE c3 tai khoan CON' && penv | grep -qx LIVE_ADAPTER=live && penv | grep -qx C3_CAPITAL=1000 && penv | grep -qx LIVE_C3_KEYS_FILE=$W/keys_sub.env && echo \"\$OUT\" | grep -q 'OK env LIVE_C3_KEYS_FILE=' && echo \"\$OUT\" | grep -q 'OK scope_tk_con_0_vi_the_ngoai_c3' && echo \"\$OUT\" | grep -q 'INFO LEGACY_managed=44' && [ ! -e $F4/run/KILL_SWITCH ] && nosec \"\$OUT\""
+chk "C-1 micro_on XONG => co monitor (C3_ACCOUNT=SUB + KEYS_FILE tk con)" "grep -qx C3_ACCOUNT=SUB $W/deploylog/golive_monitor.on && grep -qx KEYS_FILE=$W/keys_sub.env $W/deploylog/golive_monitor.on"
+printf '#!/bin/bash\necho x >> %s/sshcnt.log\nexec bash -c "$1"\n' $W > $W/sshcnt.sh; rm -f $W/sshcnt.log $W/moncron.log
+mv $W/deploylog/golive_monitor.on $W/mon_on.bak
+OUT=$(GS MONITOR_CRON=1 MON_CRON_LOG=$W/moncron.log SSH_242="bash $W/sshcnt.sh" bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "C-1 cron monitor KHONG co co micro/pilot => thoat ngay: 0 ssh (0 call san), khong ghi log" "[ $RC = 0 ] && [ -z \"\$OUT\" ] && [ ! -e $W/sshcnt.log ] && [ ! -e $W/moncron.log ]"
+mv $W/mon_on.bak $W/deploylog/golive_monitor.on
+OUT=$(GS C3_ACCOUNT=MAIN KEYS_FILE=/khong/co MONITOR_CRON=1 MON_CRON_LOG=$W/moncron.log SSH_242="bash $W/sshcnt.sh" bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "C-1 cron monitor CO co: chay, tai khoan + file key lay tu co (SUB, keys_sub), ghi log cron, mon = 90 weight" "[ $RC = 0 ] && [ -z \"\$OUT\" ] && [ -s $W/sshcnt.log ] && grep -q \"TOM TAT: .* tk=SUB key=$SK8 \" $W/moncron.log && grep -q 'W_NOMINAL=90' $W/moncron.log"
 OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
 chk "add4 monitor SUB sach: TOM TAT tk=SUB tmb=1000 dd=0, dinh tmb luu Oracle, KHONG dat KILL_SWITCH" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q \"TOM TAT: adapter=live C3_CAPITAL=1000 push=ON.* tk=SUB key=$SK8 tmb=1000.00 dd=0.0000 khan=0\" && grep -qx 'peak=1000.00' $W/sub_peak.txt && [ ! -e $F4/run/KILL_SWITCH ]"
 api account '{"totalMarginBalance":"650","availableBalance":"600","assets":[{"asset":"USDT","walletBalance":"650","marginAvailable":true}]}'
@@ -1500,11 +1555,26 @@ api openOrders '[{"symbol":"C02USDT","clientOrderId":"c3x-C02-1"},{"symbol":"C03
 OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
 chk "add4 monitor SUB: algo cid web_ + lenh cid c3live- (khong phai c3-/c3x-/c3s-) => KHAN; c3s-/c3x- la c3" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'ORD_NONC3=1:C03USDT' && echo \"\$OUT\" | grep -q 'ALGO_NONC3=1:Q2USDT' && echo \"\$OUT\" | grep -q 'ORD_C3=1' && [ -e $F4/run/KILL_SWITCH ]"
 rm -f $F4/run/KILL_SWITCH; clean; rm -f $W/sub_peak.txt
+printf 500 > $W/api/positionRisk.code; rm -f $W/deploylog/c3sub_monitor_fail.txt $W/mon_frc.txt
+for i in 1 2 3 4; do GS bash "$HERE/golive_monitor.sh" > $W/mon_f$i.txt 2>&1; echo $? >> $W/mon_frc.txt; done
+chk "MIN-1 monitor doc san loi 4 luot lien tiep: chi CANH BAO, KHONG KILL_SWITCH" "grep -q 'luot loi lien tiep 4/5' $W/mon_f4.txt && [ ! -e $F4/run/KILL_SWITCH ] && [ \"\$(sort -u $W/mon_frc.txt)\" = 0 ]"
+OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "MIN-1 luot loi thu 5 lien tiep => KHAN + run/KILL_SWITCH + Telegram" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'doc_san_loi_5_luot_lien_tiep' && grep -q '^golive_monitor .* KHAN doc_san_loi_5' $F4/run/KILL_SWITCH && grep -q 'doc_san_loi_5' $W/tg_sub.txt"
+rm -f $W/api/positionRisk.code $F4/run/KILL_SWITCH
+OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "MIN-1 doc lai duoc => bo dem ve 0, khong KHAN" "[ $RC = 0 ] && grep -qx 'n=0' $W/deploylog/c3sub_monitor_fail.txt && [ ! -e $F4/run/KILL_SWITCH ]"
+OUT=$(GS MAIN_KEY_SHA8=$SK8 bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "add4 monitor: key doc san co sha8 = key tk chinh => KHAN + KILL_SWITCH" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'key_doc_san_LA_KEY_TK_CHINH' && [ -e $F4/run/KILL_SWITCH ]"
+rm -f $F4/run/KILL_SWITCH $W/sub_peak.txt
 OUT=$(GS bash "$HERE/golive_legacy_verify.sh" 2>&1); RC=$?
 chk "add4 legacy_verify o che do SUB => TU CHOI (ADD4 §3 bo)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'ADD4 §3'"
 printf 'G-PILOT test\njar_md5=%s\nsize=10000\ng_exec=GREEN test\ng_exit=DAT 18 0.92 25/12 test\n' $NEWR > $GD/GOLIVE_GATE_PILOT.ok; echo 44 > $F4/FAKE_LEGACY_N
 OUT=$(GS DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "add4 pilot_on SUB DRY: KHONG can LEGACY_CUT_VERIFIED / LEGACY 0 (managed 44), bot dung key tk con, tk con 0 ngoai c3 => DRY PASS" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q 'BO dieu kien LEGACY_CUT_VERIFIED' && echo \"\$OUT\" | grep -q 'OK   bot live dung key tk con' && [ ! -e $GD/LEGACY_CUT_VERIFIED.ok ]"
+bash -c 'exec -a canary_early_fake242_NONE_all sleep 60' & CPX=$!; sleep 0.3
+OUT=$(GS DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+chk "MIN-2 pilot_on: co tien trinh canary_early* tren Oracle => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL Oracle: khong co tien trinh canary_early_fake242_NONE'"
+kill $CPX 2>/dev/null; wait $CPX 2>/dev/null
 api openOrders '[{"symbol":"Q3USDT","clientOrderId":"web_2"}]'
 OUT=$(GS DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "add4 pilot_on SUB: lenh NGOAI c3 tren tk con => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL tk con: 0 vi the / lenh / algo NGOAI c3.*ORD_NONC3=1'"
@@ -1521,8 +1591,9 @@ chk "add4 live_off SUB MODE=dry: tk con con vi the => TU CHOI" "[ $RC = 1 ] && e
 clean
 OUT=$(echo YES | GS MODE=dry bash "$HERE/golive_live_off.sh" 2>&1); RC=$?
 chk "add4 live_off SUB MODE=dry XONG: tk con phang => ve DRY (khong can log LEGACY moi / danh sach LEGACY)" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: c3_live ve DRY' && penv | grep -qx LIVE_ADAPTER=dry && ! echo \"\$OUT\" | grep -q 'log \[LEGACY\] managed moi'"
+chk "C-1 live_off MODE=dry XONG => go co monitor (cron thoat ngay)" "[ ! -e $W/deploylog/golive_monitor.on ] && ls $W/deploylog/golive_monitor.on.off_* >/dev/null"
 chk "add4 khong lo key/secret tk con trong log / gate / Telegram" "nosec ''"
 rm -f $F4/run/KILL_SWITCH $F4/FAKE_SCOPE_N
 pkill -f 'BinanceOrderTradingManager fake242'
-echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
+echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN)) SKIP=$SKIPN (tong PASS+FAIL+SKIP=$((PASS+FAILN+SKIPN)) co dinh)"
 [ $FAILN = 0 ]

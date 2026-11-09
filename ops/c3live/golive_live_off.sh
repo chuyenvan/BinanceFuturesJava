@@ -13,6 +13,7 @@
 # MODE=dry hau kiem TRUOT => rollback ve live (env + so live tra lai; run/KILL_SWITCH van con => khong mo moi).
 # [ADD4] C3_ACCOUNT=SUB (mac dinh): tk con chi co c3 => MODE=dry doi bot dung key tk con + tk con 0 vi the + 0 lenh/algo (moi cid);
 #   KHONG dung log/danh sach LEGACY (LEGACY o tk chinh, chi ghi log). MAIN: nhu R4q.
+# [A1 ADD4 C-1] MODE=dry XONG => go co monitor (cron monitor thoat ngay); undrain => dam bao co; drain giu co.
 # =============================================================================
 set -uo pipefail
 . "$(cd "$(dirname "$0")" && pwd)/golive_lib.sh"
@@ -39,7 +40,7 @@ if [ "$MODE" = undrain ]; then
   [ "$DRY" = 1 ] && { say "DRY=1: KHONG ghi gi. (DRY PASS)"; exit 0; }
   gl_yes "UNDRAIN: go run/KILL_SWITCH, c3_live MO LAI lenh moi."
   s242 "cd $A && mv -f run/KILL_SWITCH run/KILL_SWITCH.off_$TS && [ ! -e run/KILL_SWITCH ]" || die "khong go duoc run/KILL_SWITCH"
-  say "XONG: push mo lai."; tg "[golive] UNDRAIN TS=$TS: run/KILL_SWITCH go, c3 mo lai lenh moi. Log $LOG"; exit 0
+  gl_mon_flag_set; say "XONG: push mo lai."; tg "[golive] UNDRAIN TS=$TS: run/KILL_SWITCH go, c3 mo lai lenh moi. Log $LOG"; exit 0
 fi
 # ---------------------------------------------------------------- MODE=dry
 F=0; chk() { if eval "$2"; then say "OK   $1"; else say "FAIL $1"; F=1; fi; }
@@ -93,7 +94,7 @@ envk LIVE_ADAPTER=dry; envk SHADOW_NO_PUSH=true; envk C3_CAPITAL='"$DRY_CAPITAL"
 if ! echo "$RS" | grep -q '^FAIL' && gl_postloop CHK; then
   trap - INT TERM HUP
   gl_pause_clear >/dev/null || say "PAUSE con (ssh?) — tu go sau ${WD_PAUSE_MAX_S}s"
-  say "=== XONG: c3_live ve DRY. So live: run/*.live_$TS"; tg "[golive] LIVE -> DRY XONG TS=$TS. Log $LOG"; exit 0
+  gl_mon_flag_clear; say "=== XONG: c3_live ve DRY. So live: run/*.live_$TS"; tg "[golive] LIVE -> DRY XONG TS=$TS. Log $LOG"; exit 0
 fi
 WHY=$(echo "${RESULT:-$RS}" | grep '^FAIL\|^WAIT' | tr '\n' ' ' | cut -c1-200)
 say "hau kiem TRUOT ($WHY) => ROLLBACK ve live (KILL_SWITCH van dat => khong mo moi)"

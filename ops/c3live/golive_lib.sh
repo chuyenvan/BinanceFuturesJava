@@ -31,6 +31,14 @@ esac
 MAIN_KEY_SHA8=${MAIN_KEY_SHA8:-3ef771e0}   # sha256(key tk chinh)[:8] — key tk con PHAI khac (ADD4 §2)
 SUB_DD_LIMIT=${SUB_DD_LIMIT:-0.40}         # ADD4 §5: A40/C6 -40 % (nguong giu nguyen) — lop ops tren totalMarginBalance tk con
 SUB_PEAK_FILE=${SUB_PEAK_FILE:-$LOGDIR/c3sub_tmb_peak.txt}   # dinh tmb tk con (Oracle; golive_monitor ghi; SUB_PEAK_RESET=1 dat lai)
+GL_HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# [A1 ADD4 C-1] co micro/pilot dang bat (Oracle): micro_on/pilot_on/undrain tao, live_off MODE=dry + rollback micro_on xoa;
+#   cron golive_monitor (install_cron_golive_monitor.sh) KHONG co co => thoat ngay, 0 call
+GL_MON_FLAG=${GL_MON_FLAG:-$LOGDIR/golive_monitor.on}
+SUB_FAIL_FILE=${SUB_FAIL_FILE:-$LOGDIR/c3sub_monitor_fail.txt}   # [A1 MIN-1] bo dem luot monitor doc san loi lien tiep
+MON_FAIL_MAX=${MON_FAIL_MAX:-5}
+CANARY_PAT=${CANARY_PAT:-canary_early}            # [A1 MIN-2] tien trinh canary tren Oracle => micro_on/pilot_on TU CHOI
+ORA_CRONTAB_CMD=${ORA_CRONTAB_CMD:-crontab}       # crontab user ubuntu tren Oracle (test: crontab gia)
 # so/trang thai c3 (doi ten khi doi adapter — so dry/live khong bao gio lan nhau)
 GL_STATE_FILES="run/c3live_book.json run/c3live_dry_state.json run/c3live_ledger.csv run/c3live_merged.txt run/c3live_equity_c3.json run/c3live_lost.txt run/c3live_killsw_peak run/killsw_latch.json"
 
@@ -43,6 +51,14 @@ gl_init() {   # $1 = ten script
   say "=== $GL_NAME TS=$TS DRY=$DRY ==="
 }
 say() { echo "[$(TZ=Asia/Ho_Chi_Minh date '+%F %T')] $*"; }
+gl_mon_flag_set() {   # [C-1] bat cron monitor (ghi tai khoan + file key de monitor doc dung tk)
+  [ "$DRY" = 1 ] && return 0
+  mkdir -p "$(dirname "$GL_MON_FLAG")" && printf 'C3_ACCOUNT=%s\nKEYS_FILE=%s\nby=%s TS=%s\n' "$C3_ACCOUNT" "$KEYS_FILE" "${GL_NAME:-?}" "${TS:-?}" > "$GL_MON_FLAG.tmp" \
+    && mv -f "$GL_MON_FLAG.tmp" "$GL_MON_FLAG" && say "OK co monitor $GL_MON_FLAG (cron golive_monitor hoat dong)" || say "!! KHONG ghi duoc co monitor $GL_MON_FLAG"
+}
+gl_mon_flag_clear() { [ "$DRY" = 1 ] && return 0; [ -e "$GL_MON_FLAG" ] && mv -f "$GL_MON_FLAG" "$GL_MON_FLAG.off_${TS:-x}" && say "OK go co monitor (cron monitor thoat ngay, 0 call)"; return 0; }
+gl_mon_cron_ok() { $ORA_CRONTAB_CMD -l 2>/dev/null | grep -v '^[[:space:]]*#' | grep -F 'MONITOR_CRON=1' | grep -qF "$GL_HERE/golive_monitor.sh"; }
+gl_no_canary() { local n; n=$(pgrep -fc "$CANARY_PAT" 2>/dev/null); [ "${n:-0}" = 0 ]; }
 tg() {
   local msg code tok chat
   msg=$(printf '%s' "$1" | sed -E 's/[0-9]{8,10}:[A-Za-z0-9_-]{35}/[CHE]/g; s/[A-Za-z0-9]{56,}/[CHE]/g' | head -c 3500)
@@ -264,6 +280,7 @@ EOF3
 # [ADD4] sub = restrictions + GET /fapi/v3/account (tmb, so du, marginAvailable; v3 thieu truong => them /fapi/v2/account)
 #   + multiAssetsMargin + positionSide/dual + scope. W_NOMINAL = weight fapi danh nghia, W_USED_1M = header X-MBX-USED-WEIGHT-1M cuoi
 #   (weight IP dung chung LEGACY). cid c3 = c3- | c3x- | c3s- (ADD4 §4).
+# [A1 C-1] mon = v3/account + scope (khong sapi / multiAssets / dual): 5 + 5 + 40 + 40 = 90 weight IP / luot (golive_monitor).
 gl_api242() {
   s242in "bash -s -- $A $1 $KEYS_FILE $PY242 $CURL242" <<'EOF'
 A=$1; MODE=$2; KF=$3; PY=$4; CU=$5; cd "$A" 2>/dev/null || { echo "ERR=cd"; echo END_API; exit 0; }
@@ -338,7 +355,7 @@ if mode in ('restrictions', 'sub'):
             if f in j: print('%s=%s' % (f, str(j[f]).lower()))
     elif isinstance(j, dict):
         print('API_ERR=%s %s' % (j.get('code'), str(j.get('msg'))[:80]))
-if mode == 'sub':
+if mode in ('sub', 'mon'):
     code, ac = call(FAPI, '/fapi/v3/account', 5)
     print('ACC_HTTP=' + code)
     if code != '200' or not isinstance(ac, dict):
@@ -365,13 +382,14 @@ if mode == 'sub':
         bw = num(bf.get('walletBalance')) if bf else Dd(0)
         print('BFUSD_WALLET=%s' % ('?' if bw is None else ('0' if bw == 0 else str(bw))))
         print('BFUSD_MARGIN=%s' % (b(mav['BFUSD']) if 'BFUSD' in mav else 'unknown'))
-    code, j = call(FAPI, '/fapi/v1/multiAssetsMargin', 30)
-    if code == '200' and isinstance(j, dict) and 'multiAssetsMargin' in j: print('MULTI=' + b(j['multiAssetsMargin']))
-    else: ok = False; print('ERR_MULTI=HTTP%s' % code)
-    code, j = call(FAPI, '/fapi/v1/positionSide/dual', 30)
-    if code == '200' and isinstance(j, dict) and 'dualSidePosition' in j: print('DUAL=' + b(j['dualSidePosition']))
-    else: ok = False; print('ERR_DUAL=HTTP%s' % code)
-if mode in ('scope', 'sub'):
+    if mode == 'sub':
+        code, j = call(FAPI, '/fapi/v1/multiAssetsMargin', 30)
+        if code == '200' and isinstance(j, dict) and 'multiAssetsMargin' in j: print('MULTI=' + b(j['multiAssetsMargin']))
+        else: ok = False; print('ERR_MULTI=HTTP%s' % code)
+        code, j = call(FAPI, '/fapi/v1/positionSide/dual', 30)
+        if code == '200' and isinstance(j, dict) and 'dualSidePosition' in j: print('DUAL=' + b(j['dualSidePosition']))
+        else: ok = False; print('ERR_DUAL=HTTP%s' % code)
+if mode in ('scope', 'sub', 'mon'):
     # vi the san vuot qty c3 => phan vuot = NGOAI c3 (LEGACY con sot / vi the la tren tk con). c3 > san => lech so.
     try:
         c3a, ua = readbook()
@@ -421,7 +439,7 @@ if mode in ('scope', 'sub'):
         print('ALGO_TOTAL=%d' % len(ao)); print('ALGO_NONC3=%d %s' % (len(non), ','.join(non[:8])))
         print('ALGO_C3=%d' % (len(ao) - len(non)))
     print('API_OK=%d' % (1 if ok else 0))
-if mode == 'sub':
+if mode in ('sub', 'mon'):
     print('W_NOMINAL=%d' % W['n']); print('W_USED_1M=%s' % (W['used'] or '?'))
 k = s = None
 print('END_API')
