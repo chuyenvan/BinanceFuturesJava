@@ -41,7 +41,8 @@ if want universe; then
 fi
 want r0 && run python3 $R/py/day_harness.py r0
 want harness && run python3 $R/py/day_harness.py main
-if want eval; then for s in gate fund net s1 gv p3; do run python3 $R/py/day_eval.py $s; done; fi
+if want eval; then for s in gate fund net s1 gv p3; do run python3 $R/py/day_eval.py $s; done
+  run python3 $R/py/day_bigdown.py; fi   # [ADD18] BIG_DOWN-SEL (can p2_pairs cua gv)
 want s1v && run python3 $R/py/day_s1v.py
 want tsx && run python3 $R/py/day_tsx.py
 want labels && run python3 $R/py/day_labels.py

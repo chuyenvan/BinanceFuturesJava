@@ -144,6 +144,16 @@ def v12_day(d):
         notes.append("S1V KHONG DO DUOC %d gio (%s)" % (s1v["kdd_hours"], ",".join(s1v.get("kdd_syms", [])[:5])))
         if not tot.startswith(KD):
             tot = KD + " (mot phan, S1V)" + (" + XAM" if "XAM" in tot else "")
+    bd = J("bigdown") or {}                       # [ADD18] BIG_DOWN-SEL
+    v["BIG_DOWN_SEL"] = bd.get("status", "CHUA DO")
+    v["bigdown_events"] = bd.get("n_events", 0)
+    if bd.get("ap_dung") and bd.get("status") == "TRUOT":
+        tot = "TRUOT"
+        notes.append("BIG_DOWN-SEL TRUOT (ADD18)")
+    elif bd.get("ap_dung") and bd.get("status") == "XAM" and not tot.startswith("TRUOT"):
+        notes.append("BIG_DOWN-SEL XAM (hoa diem/KDD, ADD18)")
+        if tot.startswith("DAT"):
+            tot = "XAM"
     v["ket_luan"] = tot
     v["ghi_chu"] = notes
     v["nhom_H_tinh"] = (not deploy_day) and v["ngay_sach"].startswith("SACH")
@@ -179,8 +189,12 @@ def main():
                 shutil.copy(p, od)
     json.dump(res, open(out + "/parity_v12_%s.json" % rnd, "w"), indent=1, default=str)
     # [ADD11 §4] G-MICRO tren moi ngay da cham (ban moi nhat moi ngay)
-    sm, sinfo = gmicro.smoke(ROOT, gmicro.SMOKE_START_MS)   # [ADD15] smoke tu start r4t
-    gm = gmicro.count(gmicro.collect(REPO), sm)
+    tj, tmd5, tsm = gmicro.load_target(ROOT)              # [ADD19] dich tu gmicro_target.json
+    sm, sinfo = gmicro.smoke(ROOT, tsm) if tsm else (None, {"smoke_start_chua_dien": tj})
+    jm = {j["name"]: j.get("md5") for j in PVJARS()}
+    md5_ok = (tmd5 is None) or (jm.get(tj) == tmd5)
+    gm = gmicro.count(gmicro.collect(REPO), sm, md5_ok)
+    gm["target"] = {"jar": tj, "md5": tmd5, "md5_jars_json": jm.get(tj), "smoke_start_ms": tsm}
     gm["smoke_info"] = sinfo
     json.dump(gm, open(REPO + "/docs/result/parity_v12_gmicro.json", "w"), indent=1, default=str)
     print("G-MICRO:", gm["G_MICRO"], "sach=", gm["sach"])

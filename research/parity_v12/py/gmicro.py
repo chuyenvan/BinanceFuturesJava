@@ -10,8 +10,20 @@ import os
 import re
 
 START = "2026-11-04"
-TARGET_JAR = "r4t"                 # [ADD15] (ii) theo jar se len live
+TARGET_JAR = "r4t"                 # [ADD15] mac dinh khi khong co gmicro_target.json
 SMOKE_START_MS = 1793977834000      # [ADD15] 2026-11-06 22:10:34 +07 (start r4t)
+TARGET_MD5 = None
+OLD_JARS = ("r4n", "r4q", "r4t")    # [ADD19 §2] jar chon BIG_DOWN khac sim
+
+
+def load_target(root):
+    """[ADD19 §3] doc root/gmicro_target.json {target_jar, target_md5, smoke_start_ms}; thieu file => ADD15."""
+    global TARGET_JAR, SMOKE_START_MS, TARGET_MD5
+    p = os.path.join(root, "gmicro_target.json")
+    if os.path.exists(p):
+        t = json.load(open(p))
+        TARGET_JAR, TARGET_MD5, SMOKE_START_MS = t["target_jar"], t.get("target_md5"), t.get("smoke_start_ms")
+    return TARGET_JAR, TARGET_MD5, SMOKE_START_MS
 N_SACH = 7
 
 
@@ -24,7 +36,7 @@ def is_count(v):
     return is_sach(v) or bool(v.get("SACH_T"))
 
 
-def count(days, smoke_ok):
+def count(days, smoke_ok, md5_ok=True):
     """days: {D: {ket_luan, ngay_sach, jar, swap_day}} ; smoke_ok: True/False/None (None = chua do)."""
     out = {"sach": [], "khong_tinh": {}, "dung_vi_truot": None}
     for d in sorted(days):
@@ -34,7 +46,9 @@ def count(days, smoke_ok):
         if (v.get("ket_luan") or "").startswith("TRUOT"):
             out["dung_vi_truot"] = d
             break
-        if is_count(v):
+        if is_count(v) and v.get("jar") in OLD_JARS and (v.get("bigdown_events") or 0) > 0:   # [ADD19 §2]
+            out["khong_tinh"][d] = "jar cu %s co %d su kien BIG_DOWN (chon khac sim)" % (v.get("jar"), v["bigdown_events"])
+        elif is_count(v):
             out["sach"].append(d)
         else:
             out["khong_tinh"][d] = "%s | %s" % (v.get("ket_luan"), v.get("ngay_sach"))
@@ -47,7 +61,8 @@ def count(days, smoke_ok):
     out["target_jar"] = TARGET_JAR
     out["target_sach_tron"] = r4q_full
     out["smoke_24h"] = smoke_ok
-    out["ii"] = bool(r4q_full) and smoke_ok is True
+    out["target_md5_ok"] = md5_ok
+    out["ii"] = bool(r4q_full) and smoke_ok is True and md5_ok
     if out["dung_vi_truot"]:
         out["G_MICRO"] = "DUNG (TRUOT %s) - MASTER chan doan" % out["dung_vi_truot"]
     elif out["i"] and out["ii"]:
