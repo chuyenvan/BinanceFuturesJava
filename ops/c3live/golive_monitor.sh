@@ -7,6 +7,7 @@
 #   [A1 ADD4 C-1] CRON (install_cron_golive_monitor.sh, */2 phut, flock -n rieng): MONITOR_CRON=1 => KHONG co co $GL_MON_FLAG
 #   (micro_on/pilot_on tao, live_off MODE=dry xoa) => thoat NGAY, 0 ssh / 0 call. Co co => C3_ACCOUNT + KEYS_FILE lay tu co; log
 #   ~/claude_master/deploy/golive_monitor_cron.log (xoay > 20 MB); doc 4 MB log 242 / luot; Telegram KHAN lap lai toi da 1 lan / 30'.
+#   [A1 delta MIN-3] cuoi moi luot cron ghi heartbeat ~/claude_master/deploy/run/monitor_heartbeat (c3live_status: KHAN neu > 6').
 # In: process/jar/env (adapter, C3_CAPITAL, push), PUSH (env + run/KILL_SWITCH), latch + dinh kill-switch, equity c3 / HOURLY,
 #   so c3 (cum, da arm, stop c3s-), lenh c3 1 h qua, LEGACY, user stream, RAM/dia/RSS, weight/429/418/ban, KHAN/ERROR 1 h qua,
 #   PAUSE watchdog, cron exinfo. Ket thuc bang dong TOM TAT.
@@ -139,4 +140,7 @@ if [ "$C3_ACCOUNT" = SUB ]; then
   SUBSUM=" tk=SUB key=${KS8:-?} tmb=${TMB:-?} dd=${DD:-?} khan=$([ -n "$KH" ] && echo KHAN || { [ -n "$UNK" ] && echo "?(loi $NF/$MON_FAIL_MAX)" || echo 0; })"
 fi
 say "TOM TAT: adapter=$(sv ENV_LIVE_ADAPTER) C3_CAPITAL=$(sv ENV_C3_CAPITAL) push=$PUSH latch=$(sv LATCH) so_c3=$(sv BOOK_CUM)cum LEGACY=$(sv LEGACY_N) mem=$(sv MEM)MB jar=$(sv JAR_MD5 | cut -c1-8) pause=$(sv PAUSE | cut -c1)$SUBSUM"
+if [ "$MON_CRON" = 1 ]; then
+  mkdir -p "$(dirname "$MON_HB_FILE")" && printf 'ts=%s TS=%s rc=%s\n' "$(date +%s)" "$TS" "$RC" > "$MON_HB_FILE.tmp" && mv -f "$MON_HB_FILE.tmp" "$MON_HB_FILE"
+fi
 exit $RC

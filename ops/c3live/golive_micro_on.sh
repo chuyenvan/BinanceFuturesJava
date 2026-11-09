@@ -19,6 +19,8 @@
 #   co dau hieu / doc loi / khong chac => coi nhu DA co lenh: GIU run/KILL_SWITCH (dung mo moi) + KHAN, KHONG ve dry, exit 2.
 # [A1 ADD4] C-1: SUB doi cron golive_monitor da cai (install_cron_golive_monitor.sh); tao co monitor NGAY truoc restart (rollback ve dry
 #   => go co). MIN-2: dang co tien trinh canary_early* tren Oracle => TU CHOI (kiem truoc + ngay truoc restart).
+#   [A1 delta] ghi co monitor LOI => DUNG truoc restart; SUB: hau kiem DAT con doi heartbeat cron monitor MOI hon co (toi da 5') —
+#   khong co => TRUOT (KILL_SWITCH van dat => doc lai => rollback ve dry).
 # Ma thoat: 0 XONG | 1 DUNG/da rollback | 2 can owner/MASTER.
 # =============================================================================
 set -uo pipefail
@@ -51,7 +53,8 @@ if [ "$C3_ACCOUNT" = SUB ]; then
   echo "$API" | grep -v '^END_API$' | sed 's/^/   tk con: /'
   gl_sub_eval 1
   chk "tk con SACH + key dat (ADD4 §2 = golive_check_key SUB)${SUBWHY:+ —$SUBWHY}" "[ '$SUBV' = DAT ]"
-  chk "cron golive_monitor da cai (A1 ADD4 C-1; owner: bash $GL_HERE/install_cron_golive_monitor.sh)" "gl_mon_cron_ok"
+  chk "cron golive_monitor da cai, ban pin con nguyen (A1 ADD4 C-1; owner: bash $GL_HERE/install_cron_golive_monitor.sh)" "gl_mon_cron_ok"
+  gl_mon_pin_cur || say "WARN cron golive_monitor chay ban pin KHAC repo hien tai — owner chay lai install_cron_golive_monitor.sh de cap nhat pin"
 else
   L0=$(sv LEGACY_N)
   chk "LEGACY managed doc duoc ($L0), moi ($(sv LEGACY_AGE) s <= 600)" "[ -n '$L0' ] && [ '$(sv LEGACY_AGE)' -ge 0 ] && [ '$(sv LEGACY_AGE)' -le 600 ] 2>/dev/null"
@@ -90,7 +93,7 @@ else
 fi
 SIG0=$(av POS_SIG); [ -n "$SIG0" ] || die "khong co chu ky vi the san"
 gl_no_canary || die "co tien trinh $CANARY_PAT tren Oracle (vua xuat hien) — khong bat (A1 MIN-2)"
-gl_mon_flag_set
+gl_mon_flag_set || die "KHONG ghi duoc co monitor $GL_MON_FLAG — khong bat (A1 delta MIN-2)"
 trap 'say "BI DUNG (tin hieu) — kiem: bash $(cd "$(dirname "$0")" && pwd)/golive_monitor.sh"; gl_pause_clear >/dev/null 2>&1; exit 130' INT TERM HUP
 gl_restart "$ENV_ADD" "$GL_STATE_FILES" dry 1
 if echo "$RS" | grep -q '^FAIL'; then
@@ -105,6 +108,14 @@ else
 LS=$(tail -n +$SL $L | grep -a "LEGACY tren tai khoan chinh:" | tail -1 | grep -aoE "chinh: [0-9]+" | awk "{print \$2}")
 [ -z "$LS" ] && echo "WAIT scope_LEGACY" || { if [ "$LS" = "$L0" ]; then echo "OK scope_LEGACY=$LS"; elif [ "$LS" -lt "$L0" ] 2>/dev/null; then echo "WARN scope_LEGACY=$LS < truoc stop $L0 (dong tu nhien)"; else echo "FAIL scope_LEGACY=$LS > truoc stop $L0 (TANG)"; fi; }'
 fi
+# [A1 delta MIN-3] SUB: heartbeat cron golive_monitor MOI hon co monitor (dat ngay truoc restart), cho toi da MON_HB_WAIT_S
+mon_hb_ok() {
+  [ "$C3_ACCOUNT" = SUB ] || return 0
+  say "--- cho heartbeat cron golive_monitor (toi da ${MON_HB_WAIT_S}s, moi hon co monitor)"
+  gl_hb_wait "${GL_FLAG_T:-0}" && return 0
+  RESULT="$RESULT
+FAIL monitor_heartbeat_khong_co_trong_${MON_HB_WAIT_S}s (cron golive_monitor khong chay? crontab -l; $MON_HB_FILE)"; return 1
+}
 CHK() { gl_chk_common "$SL" "$L0" '
 envk LIVE_ADAPTER=live; envk C3_CAPITAL='"$MICRO_CAPITAL"'; envk SHADOW_NO_PUSH=false; envk LIVE_ENTRY_ENABLED=true; envk LIVE_SEED_EXCLUDE_DECISION_MIN=1; envk LIVE_C3_KEYS_FILE='"$KEYS_FILE"'
 [ "$(T "khoi dong adapter=LIVE")" -ge 1 ] && echo "OK adapter_LIVE" || echo "WAIT adapter_LIVE"
@@ -112,7 +123,7 @@ envk LIVE_ADAPTER=live; envk C3_CAPITAL='"$MICRO_CAPITAL"'; envk SHADOW_NO_PUSH=
 grep -q "^golive_micro_on '"$TS"' " run/KILL_SWITCH 2>/dev/null && echo "OK KILL_SWITCH_con (chua mo lenh moi)" || echo "FAIL KILL_SWITCH_cua_script_mat"
 [ "$(T "PUSH=ON")" = 0 ] && echo "OK chua_PUSH_ON" || echo "FAIL PUSH_ON_khi_con_KILL_SWITCH"
 [ "$(T "C3-LIVE-STREAM\] da ket noi")" -ge 1 ] && echo "OK user_stream" || echo "WAIT user_stream"'"$SCOPE_CHK"; }
-if ! echo "$RS" | grep -q '^FAIL' && gl_postloop CHK; then
+if ! echo "$RS" | grep -q '^FAIL' && gl_postloop CHK && mon_hb_ok; then
   # [R4q MAJ-1] hau kiem DAT => go KILL_SWITCH CUA MINH => cho JVM bao PUSH ON
   if s242 "cd $A && grep -q '^golive_micro_on $TS ' run/KILL_SWITCH && mv -f run/KILL_SWITCH run/KILL_SWITCH.ok_$TS && [ ! -e run/KILL_SWITCH ]"; then
     say "OK go run/KILL_SWITCH (hau kiem DAT) — cho PUSH ON"

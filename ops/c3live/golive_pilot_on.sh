@@ -58,7 +58,9 @@ if [ "$C3_ACCOUNT" = SUB ]; then
   say "INFO LEGACY managed=$(sv LEGACY_N) (tk chinh) — chi ghi log"
   chk "bot live dung key tk con (LIVE_C3_KEYS_FILE=$KEYS_FILE; co: $(sv ENV_LIVE_C3_KEYS_FILE))" "[ '$(sv ENV_LIVE_C3_KEYS_FILE)' = '$KEYS_FILE' ]"
   chk "file key $KEYS_FILE (600, 2 dong)" "[ '$(sv KEYS_OK)' = 1 ]"
-  chk "cron golive_monitor da cai (A1 ADD4 C-1; owner: bash $GL_HERE/install_cron_golive_monitor.sh)" "gl_mon_cron_ok"
+  chk "cron golive_monitor da cai, ban pin con nguyen (A1 ADD4 C-1; owner: bash $GL_HERE/install_cron_golive_monitor.sh)" "gl_mon_cron_ok"
+  HBA=$(gl_hb_age)
+  chk "heartbeat cron golive_monitor ${HBA}s <= ${MON_HB_MAX_AGE_S}s (A1 delta MIN-3; $MON_HB_FILE)" "[ $HBA -ge 0 ] && [ $HBA -le $MON_HB_MAX_AGE_S ]"
   API=$(gl_api242 sub) || die "ssh toi 242 loi (doc tk con)"
   echo "$API" | grep -v '^END_API$' | sed 's/^/   tk con: /'
   gl_sub_eval 0
@@ -84,7 +86,7 @@ else
   gl_yes "PILOT: C3_CAPITAL $C0 -> $SIZE tren $ACCT_TXT. Owner XAC NHAN da cat TOAN BO LEGACY." "$YESW"
 fi
 gl_no_canary || die "co tien trinh $CANARY_PAT tren Oracle (vua xuat hien) — khong pilot (A1 MIN-2)"
-gl_mon_flag_set
+gl_mon_flag_set || die "KHONG ghi duoc co monitor $GL_MON_FLAG — khong pilot (A1 delta MIN-2)"
 trap 'say "BI DUNG (tin hieu) — kiem golive_monitor.sh"; gl_pause_clear >/dev/null 2>&1; exit 130' INT TERM HUP
 gl_restart "$ENV_ADD" "" none
 if echo "$RS" | grep -q '^FAIL'; then

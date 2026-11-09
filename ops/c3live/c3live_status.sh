@@ -4,6 +4,8 @@
 # Chay tren ORACLE:  bash ~/claude_master/deploy/c3live_status.sh
 # In: process/jar/env, latch kill-switch, so that/dry (so cum, da arm, stop mo), ledger gan nhat, doi chieu equity,
 #     user stream, so dong [LIVE-DRY]/[C3-LIVE-ORDER], loi 1h qua.
+# [A1 ADD4 delta MIN-3] co micro/pilot (~/claude_master/deploy/golive_monitor.on) ma heartbeat cron golive_monitor
+#     (~/claude_master/deploy/run/monitor_heartbeat) cu > 6' / khong co => in KHAN, exit 2.
 # =============================================================================
 set -uo pipefail
 SSH_242=${SSH_242:-"ssh -p 2222 -o BatchMode=yes -o ConnectTimeout=20 -i /home/ubuntu/.ssh/id_rsa_chuyennd root@103.157.218.242"}
@@ -49,3 +51,19 @@ echo "== dem dong: [LIVE-DRY]=$(grep -a -c '\[LIVE-DRY\]' $L) [C3-LIVE-ORDER]=$(
 H1=$(date -d '1 hour ago' '+%d/%m/%Y %H')
 echo "== loi trong log (ERROR/Exception, bo 'Picked up'): $(grep -a -v 'Picked up' $L | grep -a -c ' ERROR \|Exception')"
 EOF
+RC=$?
+# ---- [A1 ADD4 delta MIN-3] heartbeat cron golive_monitor (Oracle)
+GL_MON_FLAG=${GL_MON_FLAG:-${LOGDIR:-/home/ubuntu/claude_master/deploy}/golive_monitor.on}
+MON_HB_FILE=${MON_HB_FILE:-${LOGDIR:-/home/ubuntu/claude_master/deploy}/run/monitor_heartbeat}
+MON_HB_MAX_AGE_S=${MON_HB_MAX_AGE_S:-360}
+if [ -f "$GL_MON_FLAG" ]; then
+  m=$(stat -c %Y "$MON_HB_FILE" 2>/dev/null || echo 0); age=$(( $(date +%s) - m ))
+  if [ "$m" = 0 ] || [ "$age" -gt "$MON_HB_MAX_AGE_S" ]; then
+    echo "== KHAN monitor ADD4: co $GL_MON_FLAG (micro/pilot BAT) nhung heartbeat cron golive_monitor $([ "$m" = 0 ] && echo 'CHUA CO' || echo "cu ${age}s") > ${MON_HB_MAX_AGE_S}s — cron khong chay? (crontab -l | grep golive_monitor; ~/claude_master/deploy/golive_monitor_cron.log)"
+    exit 2
+  fi
+  echo "== monitor ADD4: co BAT, heartbeat ${age}s (<= ${MON_HB_MAX_AGE_S}s) OK"
+else
+  echo "== monitor ADD4: khong co co micro/pilot (cron monitor nghi, 0 call)"
+fi
+exit $RC

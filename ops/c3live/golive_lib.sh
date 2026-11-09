@@ -39,6 +39,12 @@ SUB_FAIL_FILE=${SUB_FAIL_FILE:-$LOGDIR/c3sub_monitor_fail.txt}   # [A1 MIN-1] bo
 MON_FAIL_MAX=${MON_FAIL_MAX:-5}
 CANARY_PAT=${CANARY_PAT:-canary_early}            # [A1 MIN-2] tien trinh canary tren Oracle => micro_on/pilot_on TU CHOI
 ORA_CRONTAB_CMD=${ORA_CRONTAB_CMD:-crontab}       # crontab user ubuntu tren Oracle (test: crontab gia)
+# [A1 delta MIN-3] heartbeat cron golive_monitor (Oracle): moi luot co co ghi; c3live_status KHAN neu > 6'; micro_on doi heartbeat moi
+MON_HB_FILE=${MON_HB_FILE:-$LOGDIR/run/monitor_heartbeat}
+MON_HB_MAX_AGE_S=${MON_HB_MAX_AGE_S:-360}
+MON_HB_WAIT_S=${MON_HB_WAIT_S:-300}
+HB_POLL_S=${HB_POLL_S:-10}
+MON_CRON_TAG='# golive_monitor (ADD4 C-1)'
 # so/trang thai c3 (doi ten khi doi adapter — so dry/live khong bao gio lan nhau)
 GL_STATE_FILES="run/c3live_book.json run/c3live_dry_state.json run/c3live_ledger.csv run/c3live_merged.txt run/c3live_equity_c3.json run/c3live_lost.txt run/c3live_killsw_peak run/killsw_latch.json"
 
@@ -51,13 +57,39 @@ gl_init() {   # $1 = ten script
   say "=== $GL_NAME TS=$TS DRY=$DRY ==="
 }
 say() { echo "[$(TZ=Asia/Ho_Chi_Minh date '+%F %T')] $*"; }
-gl_mon_flag_set() {   # [C-1] bat cron monitor (ghi tai khoan + file key de monitor doc dung tk)
+gl_mon_flag_set() {   # [C-1] bat cron monitor (ghi tai khoan + file key de monitor doc dung tk). Loi => return 1 (micro_on/pilot_on DUNG)
   [ "$DRY" = 1 ] && return 0
-  mkdir -p "$(dirname "$GL_MON_FLAG")" && printf 'C3_ACCOUNT=%s\nKEYS_FILE=%s\nby=%s TS=%s\n' "$C3_ACCOUNT" "$KEYS_FILE" "${GL_NAME:-?}" "${TS:-?}" > "$GL_MON_FLAG.tmp" \
-    && mv -f "$GL_MON_FLAG.tmp" "$GL_MON_FLAG" && say "OK co monitor $GL_MON_FLAG (cron golive_monitor hoat dong)" || say "!! KHONG ghi duoc co monitor $GL_MON_FLAG"
+  GL_FLAG_T=$(date +%s)
+  if mkdir -p "$(dirname "$GL_MON_FLAG")" 2>/dev/null \
+     && printf 'C3_ACCOUNT=%s\nKEYS_FILE=%s\nby=%s TS=%s\n' "$C3_ACCOUNT" "$KEYS_FILE" "${GL_NAME:-?}" "${TS:-?}" > "$GL_MON_FLAG.tmp" 2>/dev/null \
+     && mv -f "$GL_MON_FLAG.tmp" "$GL_MON_FLAG" 2>/dev/null; then
+    say "OK co monitor $GL_MON_FLAG (cron golive_monitor hoat dong)"; return 0
+  fi
+  say "!! KHONG ghi duoc co monitor $GL_MON_FLAG"; return 1
 }
 gl_mon_flag_clear() { [ "$DRY" = 1 ] && return 0; [ -e "$GL_MON_FLAG" ] && mv -f "$GL_MON_FLAG" "$GL_MON_FLAG.off_${TS:-x}" && say "OK go co monitor (cron monitor thoat ngay, 0 call)"; return 0; }
-gl_mon_cron_ok() { $ORA_CRONTAB_CMD -l 2>/dev/null | grep -v '^[[:space:]]*#' | grep -F 'MONITOR_CRON=1' | grep -qF "$GL_HERE/golive_monitor.sh"; }
+# gl_mon_cron_ok : crontab co DUNG 1 dong monitor (MONITOR_CRON=1 + nhan) tro ban PIN con nguyen (md5(monitor+lib)[:12] = ten thu muc)
+gl_mon_cron_ok() {
+  local ln d
+  ln=$($ORA_CRONTAB_CMD -l 2>/dev/null | grep -v '^[[:space:]]*#' | grep -F 'MONITOR_CRON=1' | grep -F "$MON_CRON_TAG")
+  [ "$(printf '%s\n' "$ln" | grep -c .)" = 1 ] || return 1
+  d=$(printf '%s\n' "$ln" | grep -oE '/[^ ]*/golive_monitor_[0-9a-f]{12}/golive_monitor\.sh' | head -1); d=${d%/golive_monitor.sh}
+  [ -n "$d" ] && [ -f "$d/golive_monitor.sh" ] && [ -f "$d/golive_lib.sh" ] || return 1
+  [ "$(cat "$d/golive_monitor.sh" "$d/golive_lib.sh" | md5sum | cut -c1-12)" = "${d##*_}" ]
+}
+gl_mon_pin_cur() { $ORA_CRONTAB_CMD -l 2>/dev/null | grep -qF "golive_monitor_$(cat "$GL_HERE/golive_monitor.sh" "$GL_HERE/golive_lib.sh" | md5sum | cut -c1-12)/"; }
+gl_hb_age() { local m; m=$(stat -c %Y "$MON_HB_FILE" 2>/dev/null) || { echo -1; return 0; }; echo $(( $(date +%s) - m )); }
+# gl_hb_wait <epoch moc> : cho toi MON_HB_WAIT_S heartbeat cron monitor MOI hon moc (co monitor vua dat) va <= MON_HB_MAX_AGE_S
+gl_hb_wait() {
+  local t0=$1 end m now
+  end=$(( $(date +%s) + MON_HB_WAIT_S ))
+  while :; do
+    now=$(date +%s); m=$(stat -c %Y "$MON_HB_FILE" 2>/dev/null || echo 0)
+    if [ "$m" -ge "$t0" ] && [ $(( now - m )) -le "$MON_HB_MAX_AGE_S" ]; then say "OK heartbeat cron golive_monitor $(( now - m ))s (moi hon co monitor)"; return 0; fi
+    [ "$now" -ge "$end" ] && return 1
+    sleep "$HB_POLL_S"
+  done
+}
 gl_no_canary() { local n; n=$(pgrep -fc "$CANARY_PAT" 2>/dev/null); [ "${n:-0}" = 0 ]; }
 tg() {
   local msg code tok chat

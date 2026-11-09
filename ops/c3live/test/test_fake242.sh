@@ -10,7 +10,7 @@ set -uo pipefail
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 REPO=$(cd "$HERE/../.." && pwd)
 W=${1:?"thieu thu muc tam"}
-rm -rf "$W"; mkdir -p "$W"
+chmod -R u+w "$W" 2>/dev/null; rm -rf "$W"; mkdir -p "$W"   # [delta MIN-4] pin chi doc
 # [A1 ADD4] trap: ket thuc / loi / ngat => don MOI tien trinh con cua bo test (ke ca setsid / nohup / mo coi): nhan dien bang duong dan
 #   "$W/" trong cmdline / cwd / environ. KHONG dong tien trinh ngoai $W (vd mo coi cua lan test khac), khong dong bo test + to tien.
 f242_cleanup() {
@@ -1492,16 +1492,29 @@ cat > $W/oracron.sh <<EOF
 case "\$1" in -l) [ -f $W/oracron.txt ] && cat $W/oracron.txt || { echo "no crontab for ubuntu" >&2; exit 1; } ;; -) cat > $W/oracron.txt ;; *) exit 2 ;; esac
 EOF
 echo '*/5 * * * * /home/ubuntu/ops/health_242.sh # HEALTH' > $W/oracron.txt; rm -f $W/deploylog/golive_monitor.on $W/deploylog/c3sub_monitor_fail.txt
-IC() { env ORA_CRONTAB_CMD="bash $W/oracron.sh" MON_LOCK=$W/locks/golive_monitor.lock "$@"; }
+IC() { env ORA_CRONTAB_CMD="bash $W/oracron.sh" MON_LOCK=$W/locks/golive_monitor.lock MON_PIN_ROOT=$W/pinned "$@"; }
 printf 'G-MICRO test\njar_md5=%s\n' $NEWR > $GD/GOLIVE_GATE_MICRO.ok
 OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "C-1 micro_on SUB: CHUA cai cron golive_monitor => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL cron golive_monitor da cai'"
 OUT=$(IC DRY=1 bash "$HERE/install_cron_golive_monitor.sh" 2>&1); RC=$?
 chk "C-1 install_cron DRY=1: in truoc + sau du kien, KHONG ghi" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'crontab TRUOC' && echo \"\$OUT\" | grep -q 'DRY=1: crontab SAU' && ! grep -q golive_monitor $W/oracron.txt"
 OUT=$(IC bash "$HERE/install_cron_golive_monitor.sh" 2>&1); RC=$?
-chk "C-1 install_cron: 1 dong */2 + flock -n khoa rieng + MONITOR_CRON=1, dong cron khac giu, in truoc/sau" "[ $RC = 0 ] && [ \"\$(grep -c 'golive_monitor (ADD4 C-1)' $W/oracron.txt)\" = 1 ] && grep -q \"^\*/2 \* \* \* \* /usr/bin/flock -n $W/locks/golive_monitor.lock /usr/bin/env MONITOR_CRON=1 /bin/bash $HERE/golive_monitor.sh \" $W/oracron.txt && grep -q '# HEALTH' $W/oracron.txt && ! grep -q oracle_heavy $W/oracron.txt && echo \"\$OUT\" | grep -q 'crontab SAU' && echo \"\$OUT\" | grep -q 'XONG: cai cron'"
+chk "C-1 install_cron: 1 dong */2 + flock -n khoa rieng + MONITOR_CRON=1, dong cron khac giu, in truoc/sau" "[ $RC = 0 ] && [ \"\$(grep -c 'golive_monitor (ADD4 C-1)' $W/oracron.txt)\" = 1 ] && grep -qE \"^\*/2 \* \* \* \* /usr/bin/flock -n $W/locks/golive_monitor.lock /usr/bin/timeout -k 10 100 /usr/bin/env MONITOR_CRON=1 /bin/bash $W/pinned/golive_monitor_[0-9a-f]{12}/golive_monitor.sh \" $W/oracron.txt && grep -q '# HEALTH' $W/oracron.txt && ! grep -q oracle_heavy $W/oracron.txt && echo \"\$OUT\" | grep -q 'crontab SAU' && echo \"\$OUT\" | grep -q 'XONG: cai cron'"
 C1=$(md5sum < $W/oracron.txt); OUT=$(IC bash "$HERE/install_cron_golive_monitor.sh" 2>&1); RC=$?
 chk "C-1 install_cron lan 2: idempotent (KHONG DOI)" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'KHONG DOI' && [ \"\$(md5sum < $W/oracron.txt)\" = \"$C1\" ]"
+PIN1=$(grep -oE "$W/pinned/golive_monitor_[0-9a-f]{12}" $W/oracron.txt | head -1)
+chk "delta MIN-4 pin: ban chep monitor + lib = repo, chi doc (444), ten = md5(monitor+lib)[:12]" "[ -n '$PIN1' ] && cmp -s $PIN1/golive_monitor.sh $HERE/golive_monitor.sh && cmp -s $PIN1/golive_lib.sh $HERE/golive_lib.sh && [ \"\$(stat -c %a $PIN1/golive_lib.sh)\" = 444 ] && [ \"\$(cat $HERE/golive_monitor.sh $HERE/golive_lib.sh | md5sum | cut -c1-12)\" = '${PIN1##*_}' ]"
+rm -rf $W/monsrc; mkdir -p $W/monsrc; cp $HERE/golive_monitor.sh $HERE/golive_lib.sh $W/monsrc/; echo '# sua thu' >> $W/monsrc/golive_lib.sh
+OUT=$(IC MON_SRC=$W/monsrc bash "$HERE/install_cron_golive_monitor.sh" 2>&1); RC=$?
+PIN2=$(grep -oE "$W/pinned/golive_monitor_[0-9a-f]{12}" $W/oracron.txt | head -1)
+chk "delta MIN-4 chay lai installer sau khi nguon doi => pin MOI, cron tro pin moi (van 1 dong), pin cu giu" "[ $RC = 0 ] && [ -n '$PIN2' ] && [ '$PIN2' != '$PIN1' ] && [ \"\$(grep -c 'golive_monitor (ADD4 C-1)' $W/oracron.txt)\" = 1 ] && [ -d '$PIN1' ] && grep -q '# sua thu' $PIN2/golive_lib.sh"
+OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1)
+chk "delta MIN-4 micro_on: cron chay pin khac repo => WARN cap nhat pin" "echo \"\$OUT\" | grep -q 'WARN cron golive_monitor chay ban pin KHAC repo'"
+chmod u+w $PIN2 $PIN2/golive_lib.sh; echo '# hong' >> $PIN2/golive_lib.sh
+OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "delta MIN-4 micro_on: ban pin bi sua (md5 lech ten) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL cron golive_monitor da cai, ban pin con nguyen'"
+IC bash "$HERE/install_cron_golive_monitor.sh" > /dev/null 2>&1
+chk "delta MIN-4 cai lai tu repo => cron tro lai pin repo" "grep -qF '$PIN1/golive_monitor.sh' $W/oracron.txt"
 OUT=$(IC bash "$HERE/install_cron_golive_monitor.sh" --remove 2>&1); RC=$?
 chk "C-1 install_cron --remove: go dong monitor, giu dong khac; --remove lan 2 KHONG DOI" "[ $RC = 0 ] && ! grep -q golive_monitor $W/oracron.txt && grep -q '# HEALTH' $W/oracron.txt && IC bash $HERE/install_cron_golive_monitor.sh --remove 2>&1 | grep -q 'KHONG DOI'"
 IC bash "$HERE/install_cron_golive_monitor.sh" > /dev/null 2>&1
@@ -1510,6 +1523,8 @@ OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "MIN-2 micro_on: co tien trinh canary_early* tren Oracle => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL Oracle: khong co tien trinh canary_early_fake242_NONE dang chay'"
 kill $CPX 2>/dev/null; wait $CPX 2>/dev/null
 E0=$(md5sum < $F4/conf/env.sh)
+OUT=$(echo YES | GS GL_MON_FLAG=/proc/golive_monitor.on bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "delta MIN-2 micro_on: KHONG ghi duoc co monitor => DUNG truoc restart, env khong doi, van dry" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'KHONG ghi duoc co monitor' && ! echo \"\$OUT\" | grep -q 'OK da_stop' && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ] && penv | grep -qx LIVE_ADAPTER=dry"
 OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "add4 micro_on SUB DRY: tk con sach => DRY PASS, env LIVE_C3_KEYS_FILE=keys_sub.env, LEGACY CHI ghi log (khong la dieu kien), khong doi env" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q \"export LIVE_C3_KEYS_FILE=$W/keys_sub.env\" && echo \"\$OUT\" | grep -q 'INFO LEGACY managed=' && ! echo \"\$OUT\" | grep -q 'LEGACY managed doc duoc' && echo \"\$OUT\" | grep -q 'OK   tk con SACH' && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ] && nosec \"\$OUT\""
 api positionRisk '[{"symbol":"XYZUSDT","positionAmt":"5"}]'
@@ -1520,16 +1535,33 @@ OUT=$(echo YES | GS bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "add4 micro_on SUB: JVM live bao 2 vi the NGOAI c3 tren tk con (scope) => hau kiem FAIL => doc lai NONE => ROLLBACK ve dry" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL scope_tk_con_2_vi_the_ngoai_c3' && echo \"\$OUT\" | grep -q 'Da ROLLBACK xong' && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ] && penv | grep -qx LIVE_ADAPTER=dry && [ ! -e $F4/run/KILL_SWITCH ]"
 chk "C-1 micro_on rollback ve dry => go co monitor" "[ ! -e $W/deploylog/golive_monitor.on ]"
 echo 0 > $F4/FAKE_SCOPE_N
+rm -f $W/deploylog/run/monitor_heartbeat
+OUT=$(echo YES | GS MON_HB_WAIT_S=4 HB_POLL_S=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "delta MIN-3 micro_on: hau kiem DAT nhung KHONG co heartbeat cron monitor trong han => TRUOT => ROLLBACK ve dry, go co" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL monitor_heartbeat_khong_co_trong_4s' && echo \"\$OUT\" | grep -q 'Da ROLLBACK xong' && penv | grep -qx LIVE_ADAPTER=dry && [ ! -e $W/deploylog/golive_monitor.on ] && [ ! -e $F4/run/KILL_SWITCH ]"
+touch -d '1 min ago' $W/deploylog/run/monitor_heartbeat 2>/dev/null || { mkdir -p $W/deploylog/run; touch -d '1 min ago' $W/deploylog/run/monitor_heartbeat; }
+OUT=$(echo YES | GS MON_HB_WAIT_S=3 HB_POLL_S=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "delta MIN-3 micro_on: heartbeat CU hon co monitor (khong phai luot cron moi) => khong tinh => TRUOT, rollback" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL monitor_heartbeat_khong_co' && penv | grep -qx LIVE_ADAPTER=dry"
+( while sleep 1; do [ -f $W/deploylog/golive_monitor.on ] && { mkdir -p $W/deploylog/run; touch $W/deploylog/run/monitor_heartbeat; }; done ) > /dev/null 2>&1 & HBW=$!
 OUT=$(echo YES | GS bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "add4 micro_on SUB XONG: live/1000/push, process doc key keys_sub.env, scope tk con 0, LEGACY 44 chi INFO, KILL_SWITCH go, PUSH ON" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: MICRO-LIVE c3 tai khoan CON' && penv | grep -qx LIVE_ADAPTER=live && penv | grep -qx C3_CAPITAL=1000 && penv | grep -qx LIVE_C3_KEYS_FILE=$W/keys_sub.env && echo \"\$OUT\" | grep -q 'OK env LIVE_C3_KEYS_FILE=' && echo \"\$OUT\" | grep -q 'OK scope_tk_con_0_vi_the_ngoai_c3' && echo \"\$OUT\" | grep -q 'INFO LEGACY_managed=44' && [ ! -e $F4/run/KILL_SWITCH ] && nosec \"\$OUT\""
 chk "C-1 micro_on XONG => co monitor (C3_ACCOUNT=SUB + KEYS_FILE tk con)" "grep -qx C3_ACCOUNT=SUB $W/deploylog/golive_monitor.on && grep -qx KEYS_FILE=$W/keys_sub.env $W/deploylog/golive_monitor.on"
+kill $HBW 2>/dev/null; wait $HBW 2>/dev/null; rm -f $W/deploylog/run/monitor_heartbeat
 printf '#!/bin/bash\necho x >> %s/sshcnt.log\nexec bash -c "$1"\n' $W > $W/sshcnt.sh; rm -f $W/sshcnt.log $W/moncron.log
 mv $W/deploylog/golive_monitor.on $W/mon_on.bak
 OUT=$(GS MONITOR_CRON=1 MON_CRON_LOG=$W/moncron.log SSH_242="bash $W/sshcnt.sh" bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
 chk "C-1 cron monitor KHONG co co micro/pilot => thoat ngay: 0 ssh (0 call san), khong ghi log" "[ $RC = 0 ] && [ -z \"\$OUT\" ] && [ ! -e $W/sshcnt.log ] && [ ! -e $W/moncron.log ]"
+chk "delta MIN-3 cron monitor KHONG co co => KHONG ghi heartbeat" "[ ! -e $W/deploylog/run/monitor_heartbeat ]"
 mv $W/mon_on.bak $W/deploylog/golive_monitor.on
-OUT=$(GS C3_ACCOUNT=MAIN KEYS_FILE=/khong/co MONITOR_CRON=1 MON_CRON_LOG=$W/moncron.log SSH_242="bash $W/sshcnt.sh" bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+PMON=$(grep -oE "$W/pinned/golive_monitor_[0-9a-f]{12}/golive_monitor.sh" $W/oracron.txt | head -1)
+OUT=$(GS C3_ACCOUNT=MAIN KEYS_FILE=/khong/co MONITOR_CRON=1 MON_CRON_LOG=$W/moncron.log SSH_242="bash $W/sshcnt.sh" bash "$PMON" 2>&1); RC=$?
 chk "C-1 cron monitor CO co: chay, tai khoan + file key lay tu co (SUB, keys_sub), ghi log cron, mon = 90 weight" "[ $RC = 0 ] && [ -z \"\$OUT\" ] && [ -s $W/sshcnt.log ] && grep -q \"TOM TAT: .* tk=SUB key=$SK8 \" $W/moncron.log && grep -q 'W_NOMINAL=90' $W/moncron.log"
+chk "delta MIN-3 cron monitor (ban PIN) co co => ghi heartbeat moi" "[ -f $W/deploylog/run/monitor_heartbeat ] && [ \$(( \$(date +%s) - \$(stat -c %Y $W/deploylog/run/monitor_heartbeat) )) -le 30 ]"
+OUT=$(APP_DIR=$F4 bash "$HERE/c3live_status.sh" 2>&1); RC=$?
+chk "delta MIN-3 c3live_status: co BAT + heartbeat moi => OK" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'monitor ADD4: co BAT, heartbeat'"
+touch -d '7 min ago' $W/deploylog/run/monitor_heartbeat
+OUT=$(APP_DIR=$F4 bash "$HERE/c3live_status.sh" 2>&1); RC=$?
+chk "delta MIN-3 c3live_status: co BAT + heartbeat cu > 6' => KHAN, exit 2" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'KHAN monitor ADD4: .* cu 4[0-9][0-9]s > 360s'"
+touch $W/deploylog/run/monitor_heartbeat
 OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
 chk "add4 monitor SUB sach: TOM TAT tk=SUB tmb=1000 dd=0, dinh tmb luu Oracle, KHONG dat KILL_SWITCH" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q \"TOM TAT: adapter=live C3_CAPITAL=1000 push=ON.* tk=SUB key=$SK8 tmb=1000.00 dd=0.0000 khan=0\" && grep -qx 'peak=1000.00' $W/sub_peak.txt && [ ! -e $F4/run/KILL_SWITCH ]"
 api account '{"totalMarginBalance":"650","availableBalance":"600","assets":[{"asset":"USDT","walletBalance":"650","marginAvailable":true}]}'
@@ -1568,6 +1600,7 @@ chk "add4 monitor: key doc san co sha8 = key tk chinh => KHAN + KILL_SWITCH" "[ 
 rm -f $F4/run/KILL_SWITCH $W/sub_peak.txt
 OUT=$(GS bash "$HERE/golive_legacy_verify.sh" 2>&1); RC=$?
 chk "add4 legacy_verify o che do SUB => TU CHOI (ADD4 §3 bo)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'ADD4 §3'"
+touch $W/deploylog/run/monitor_heartbeat
 printf 'G-PILOT test\njar_md5=%s\nsize=10000\ng_exec=GREEN test\ng_exit=DAT 18 0.92 25/12 test\n' $NEWR > $GD/GOLIVE_GATE_PILOT.ok; echo 44 > $F4/FAKE_LEGACY_N
 OUT=$(GS DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "add4 pilot_on SUB DRY: KHONG can LEGACY_CUT_VERIFIED / LEGACY 0 (managed 44), bot dung key tk con, tk con 0 ngoai c3 => DRY PASS" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q 'BO dieu kien LEGACY_CUT_VERIFIED' && echo \"\$OUT\" | grep -q 'OK   bot live dung key tk con' && [ ! -e $GD/LEGACY_CUT_VERIFIED.ok ]"
@@ -1575,6 +1608,12 @@ bash -c 'exec -a canary_early_fake242_NONE_all sleep 60' & CPX=$!; sleep 0.3
 OUT=$(GS DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "MIN-2 pilot_on: co tien trinh canary_early* tren Oracle => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL Oracle: khong co tien trinh canary_early_fake242_NONE'"
 kill $CPX 2>/dev/null; wait $CPX 2>/dev/null
+touch -d '7 min ago' $W/deploylog/run/monitor_heartbeat
+OUT=$(GS DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+chk "delta MIN-3 pilot_on SUB: heartbeat cron monitor cu > 6' => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL heartbeat cron golive_monitor'"
+touch $W/deploylog/run/monitor_heartbeat
+OUT=$(echo 'YES PILOT' | GS GL_MON_FLAG=/proc/golive_monitor.on bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+chk "delta MIN-2 pilot_on: KHONG ghi duoc co monitor => DUNG truoc restart, C3_CAPITAL giu 1000" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'KHONG ghi duoc co monitor' && penv | grep -qx C3_CAPITAL=1000"
 api openOrders '[{"symbol":"Q3USDT","clientOrderId":"web_2"}]'
 OUT=$(GS DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "add4 pilot_on SUB: lenh NGOAI c3 tren tk con => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL tk con: 0 vi the / lenh / algo NGOAI c3.*ORD_NONC3=1'"
