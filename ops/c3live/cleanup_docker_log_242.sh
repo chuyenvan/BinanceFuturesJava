@@ -7,7 +7,7 @@
 #   config.v2.json cua container co "Running":false; file khong ghi trong DAYS (30) ngay; KHONG tien trinh nao mo (/proc/*/fd).
 # ABORT truoc khi lam gi neu: khong doc duoc /proc, danh sach file dang mo rong, hoac dockerd/containerd dang chay.
 # KHONG xoa thu muc container/image, KHONG start/stop docker, chi truncate. In df truoc/sau.
-# Bien test: SSH_242 CL_DOCKER_DIR CL_PROC CL_DAEMON_PAT CL_LOGDIR DAYS
+# Bien test: SSH_242 CL_DOCKER_DIR CL_PROC CL_DAEMON_NAMES CL_LOGDIR DAYS
 # =============================================================================
 set -euo pipefail
 S=${SSH_242:-"ssh -p 2222 -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=10 -o ServerAliveCountMax=6 -i /home/ubuntu/.ssh/id_rsa_chuyennd root@103.157.218.242"}
@@ -19,7 +19,7 @@ case "${1:-}" in
 esac
 DAYS=${DAYS:-30}
 [ "$DAYS" -ge 30 ] 2>/dev/null || { echo "DAYS phai >= 30"; exit 1; }
-CL_DOCKER_DIR=${CL_DOCKER_DIR:-/var/lib/docker/containers}; CL_PROC=${CL_PROC:-/proc}; CL_DAEMON_PAT=${CL_DAEMON_PAT:-'(^|/)(dockerd|containerd)( |$)'}
+CL_DOCKER_DIR=${CL_DOCKER_DIR:-/var/lib/docker/containers}; CL_PROC=${CL_PROC:-/proc}; CL_DAEMON_NAMES=${CL_DAEMON_NAMES:-dockerd containerd}
 D=${CL_LOGDIR:-/home/ubuntu/claude_master/deploy}
 TS=$(TZ=Asia/Ho_Chi_Minh date +%Y%m%d_%H%M%S)
 SUF=""; if [ "$APPLY" = 0 ]; then SUF=_dry; fi
@@ -27,15 +27,17 @@ LOG=$D/cleanup_docker_log_242_${TS}${SUF}.log
 exec > >(tee -a "$LOG") 2>&1
 echo "[$(TZ=Asia/Ho_Chi_Minh date '+%F %T')] === cleanup_docker_log_242 APPLY=$APPLY DAYS=$DAYS dir=$CL_DOCKER_DIR ==="
 set +e
-$S "bash -s -- $APPLY $DAYS '$CL_DOCKER_DIR' '$CL_PROC' '$CL_DAEMON_PAT'" <<'EOF'
+$S "bash -s -- $APPLY $DAYS '$CL_DOCKER_DIR' '$CL_PROC' '$CL_DAEMON_NAMES'" <<'EOF'
 set -euo pipefail
-APPLY=$1; DAYS=$2; DD=$3; PROC=$4; DPAT=$5
+APPLY=$1; DAYS=$2; DD=$3; PROC=$4; DNAMES=$5
 fail() { echo "ABORT/FAIL: $* => DUNG NGAY"; df -h / | tail -1; exit 1; }
 gb() { awk -v b="$1" 'BEGIN{printf "%.2f GB", b/1073741824}'; }
 echo "--- df TRUOC:"; df -h / | tail -1
 DD=$(realpath -e -- "$DD") || fail "khong co $DD"
 [ -r "$PROC/self/maps" ] || fail "khong doc duoc $PROC"
-if pgrep -f -- "$DPAT" >/dev/null 2>&1; then fail "dockerd/containerd DANG CHAY ($(pgrep -af -- "$DPAT" | head -2 | tr '\n' ' ')) — khong truncate"; fi
+for dn in $DNAMES; do   # ten tien trinh CHINH XAC (pgrep -x) — khong tu khop dong lenh cua chinh script
+  if pgrep -x -- "$dn" >/dev/null 2>&1; then fail "$dn DANG CHAY (pid $(pgrep -x -- "$dn" | tr '\n' ' ')) — khong truncate"; fi
+done
 echo "OK dockerd/containerd khong chay"
 OPEN=$(find "$PROC" -mindepth 3 -maxdepth 3 -path "$PROC/[0-9]*/fd/*" -type l -printf '%l\n' 2>/dev/null | sort -u || true)
 [ -n "$OPEN" ] || fail "danh sach file dang mo RONG ($PROC khong doc duoc?)"

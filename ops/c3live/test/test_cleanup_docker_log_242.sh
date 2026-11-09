@@ -14,7 +14,7 @@ mk() {
   touch "$W/c/recent1/recent1-json.log"
   setsid bash -c "exec 3<'$W/c/open1/open1-json.log'; exec -a 'sleep $TAG' sleep 600" >/dev/null 2>&1 < /dev/null & sleep 0.3
 }
-export SSH_242="bash -c" CL_DOCKER_DIR="$W/c" CL_LOGDIR="$W/logdir" CL_DAEMON_PAT="nomatch_dockerd_$TAG"
+export SSH_242="bash -c" CL_DOCKER_DIR="$W/c" CL_LOGDIR="$W/logdir" CL_DAEMON_NAMES="nomatch_dk"
 sz() { stat -c %s "$W/c/$1/$1-json.log"; }
 echo "== cleanup_docker_log_242"
 mk
@@ -25,8 +25,8 @@ chk "APPLY: truncate dung 2 file, giu 3 file, thu muc/config con nguyen" "[ $RC 
 mk; mkdir -p "$W/noproc"
 OUT=$(CL_PROC="$W/noproc" bash "$CL" --apply 2>&1); RC=$?
 chk "khong doc duoc /proc => ABORT, khong truncate" "[ $RC != 0 ] && echo \"\$OUT\" | grep -q 'ABORT/FAIL: khong doc duoc' && [ \$(sz stopped1) -gt 0 ]"
-setsid bash -c "exec -a 'dockerd_gia $TAG' sleep 600" >/dev/null 2>&1 < /dev/null & sleep 0.3
-OUT=$(CL_DAEMON_PAT="dockerd_gia $TAG" bash "$CL" --apply 2>&1); RC=$?
+ln -sf "$(command -v sleep)" "$W/dkgia$$"; setsid "$W/dkgia$$" 600 >/dev/null 2>&1 < /dev/null & DKP=$!; sleep 0.3
+OUT=$(CL_DAEMON_NAMES="dkgia$$" bash "$CL" --apply 2>&1); RC=$?; kill $DKP 2>/dev/null
 chk "dockerd dang chay => ABORT, khong truncate" "[ $RC != 0 ] && echo \"\$OUT\" | grep -q 'DANG CHAY' && [ \$(sz stopped1) -gt 0 ]"
 pkill -f "$TAG" 2>/dev/null
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
