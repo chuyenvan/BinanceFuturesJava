@@ -1,5 +1,7 @@
 package com.binance.chuyennd.tradecore.selector;
 
+import com.binance.chuyennd.object.MarketLevelChange;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -54,6 +56,19 @@ public final class BigDownSelect {
             if (symbols.size() >= n) break;
         }
         return symbols;
+    }
+
+    /**
+     * [V12 R4u BIG_DOWN-GATE] sim KHONG goi entryGate cho leg BIG_DOWN (chi BIG_DOWN; SMALL_UP/SMALL_DOWN_15M van qua gate
+     * nguong co so nhu cu). Live: bo gate chi khi profile c3 BAT.
+     */
+    public static boolean bypassGate(boolean profileC3On, MarketLevelChange level) {
+        return profileC3On && level == MarketLevelChange.BIG_DOWN;
+    }
+
+    /** Guard van hanh con giu cho leg BIG_DOWN khi bo gate: seed buffer gate hong => REJECT (ly do); null = qua. */
+    public static String bigDownGuard(boolean seedBlocked) {
+        return seedBlocked ? "GATE-SEED HONG: chan vao lenh moi (van quan ly vi the/stop)" : null;
     }
 
     /** "SYM=0.123456,SYM2=..." cho dong log [BIG_DOWN-SEL]. */

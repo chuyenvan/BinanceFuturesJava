@@ -1274,8 +1274,21 @@ public class DetectEntrySignal2TradeNormal {
         boolean bookFull = Configs.GATE_QUOTA_SKIP_WHEN_FULL
                 && levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE
                 && liveBookFull(levelChange);
-        filterResult = aiRejectFilter.entryGate(predict, symbolPred,
-                levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE, bookFull);
+        if (com.binance.chuyennd.tradecore.selector.BigDownSelect.bypassGate(
+                com.binance.chuyennd.tradecore.selector.LiveProfileC3.on(), levelChange)) {
+            // [V12 R4u BIG_DOWN-GATE 2026-11-10] sim (Simulator createOrder: `else if (!levelChange.equals(BIG_DOWN))`)
+            //   KHONG goi entryGate cho leg BIG_DOWN => live c3 cung bo gate p15 >= 0.008 cho leg nay. Chi giu guard van
+            //   hanh fail-closed (seed buffer gate hong) nhu entryGate dang ap cho MOI leg moi. Profile TAT => y nguyen.
+            String g = com.binance.chuyennd.tradecore.selector.BigDownSelect.bigDownGuard(
+                    com.binance.chuyennd.ai_ml.onnx.entry.LiveGateRollingRatio.isSeedBlocked());
+            filterResult = g != null
+                    ? new AIRejectFilter.FilterResult(AIRejectFilter.FilterDecision.REJECT, g)
+                    : new AIRejectFilter.FilterResult(AIRejectFilter.FilterDecision.PASS,
+                    "BIG_DOWN: khong qua gate p15 (nhu sim)");
+        } else {
+            filterResult = aiRejectFilter.entryGate(predict, symbolPred,
+                    levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE, bookFull);
+        }
         // Gom log: với vòng PREDICT_SYMBOL_TRADE (hàng trăm coin/phút, market pred GIỐNG NHAU,
         // chỉ symbolPred khác) → KHÔNG log per-coin REJECT mà gom vào collector để in 1 dòng tổng hợp.
         // Mọi levelChange khác / collector null → giữ log cũ. Quyết định KHÔNG đổi.

@@ -1,5 +1,6 @@
 package com.binance.chuyennd.tradecore.selector;
 
+import com.binance.chuyennd.object.MarketLevelChange;
 import com.binance.chuyennd.object.sw.KlineObjectSimple;
 import com.binance.chuyennd.tradecore.MarketBigChangeDetector;
 import org.junit.Test;
@@ -142,6 +143,23 @@ public class BigDownSelectTest {
             int n = r.nextInt(4);
             assertEquals("trial " + t, sim(mp, n, locked, noTk), live(mp, n, locked, noTk));
         }
+    }
+
+    @Test
+    public void gateBypassOnlyBigDownWithC3LikeSim() {
+        // sim createOrder: gate chay khi !levelChange.equals(BIG_DOWN) => chi BIG_DOWN bo gate
+        for (MarketLevelChange lv : MarketLevelChange.values()) {
+            boolean simBypass = lv.equals(MarketLevelChange.BIG_DOWN);
+            assertEquals(lv.name(), simBypass, BigDownSelect.bypassGate(true, lv));
+            assertEquals(lv.name(), false, BigDownSelect.bypassGate(false, lv));   // profile TAT => y nguyen
+        }
+        assertEquals(false, BigDownSelect.bypassGate(true, null));
+    }
+
+    @Test
+    public void bigDownGuardSeedOnly() {
+        assertEquals(null, BigDownSelect.bigDownGuard(false));
+        assertTrue(BigDownSelect.bigDownGuard(true).startsWith("GATE-SEED HONG"));
     }
 
     @Test
