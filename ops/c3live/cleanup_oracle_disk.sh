@@ -1,29 +1,33 @@
 #!/usr/bin/env bash
 # =============================================================================
-# cleanup_oracle_disk.sh — don dia ORACLE (/dev/sda1). MAC DINH DRY (chi liet ke + GB); --apply moi chay that.
+# cleanup_oracle_disk.sh — don dia ORACLE (/dev/sda1). MAC DINH DRY; --apply chay pha 1 roi pha 2.
 #   bash ~/claude_master/deploy/cleanup_oracle_disk.sh            # DRY
 #   bash ~/claude_master/deploy/cleanup_oracle_disk.sh --apply    # owner chay
-# PHA 1 (XOA muc AN TOAN):
-#   a) ~/claude_master/a1_*scratch* (khong phai git) co file moi nhat truoc 2026-11-01.
-#   b) jar build cu ~/claude_master/v12/jar: GIU ten r4n/r4p/r4q/r4r/r4s/r4t, GIU moi jar co md5 trong parity_v12w/jars.json hoac
-#      duoc BAT KY file nao trong ~/claude_master/deploy (ca .deploy_chain/jobs), ~/ops, c3live/ops tro toi (32 hex), GIU jar < 7 ngay.
-#   c) worktree A1 v12 tao truoc 11-05 (a1_r4i/j/m/n, a1_soak) + ing1030 a1_wt/a1_wt2/a1_wt3/a1_wt4/qf2_build:
-#      CHI 'git worktree remove' (khong --force) neu dung la worktree that VA sach (status --porcelain rong); khong rm mu.
-#      GIU ing1030/a1_wt4b (nguon jar QF4b dang chay), qf_wt (cron ing_qf_check).
-# PHA 2 (NEN, khong xoa du lieu): ~/claude_master/1002..1016 va ~/wfo_ds_x1_2021 — CHI thu muc khong co file ghi trong 14 ngay
-#   VA khong bi tham chieu (grep 'claude_master/<ten>' / '<ten>' cho wfo) trong crontab, ~/ops, ~/claude_master/deploy,
-#   vz_e1_wt/research/parity_v12 (harness v12 + watcher), c3live/ops. Tung thu muc: tar | zstd -T2 -> ~/claude_master/archive/<ten>.tar.zst,
-#   zstd -t + so so file thuong (find vs tar -tv) => moi xoa ban goc. Qua 'flock -w 3600 oracle_heavy.lock nice -n 10' (khong long);
-#   free >= 4000 MB va dia trong >= 5 GB truoc MOI thu muc, khong thi DUNG.
-# CAM DUNG: aerospike-data, pull242, parity_v12w, parity_v11w, vz_e1_wt, c3live, e2e1105, collect/liq, shadow_c3, gvz, java/simulator,
-#   kaggle_sim, vz/out.
+# PHA 1 (XOA, danh sach co dinh):
+#   a) ~/claude_master/a1_*scratch* (khong phai git, khong chua .git) co file moi nhat truoc 2026-11-01.
+#   b) jar build cu ~/claude_master/v12/jar: GIU ten r4n/r4p/r4q/r4r/r4s/r4t, moi md5 trong parity_v12w/jars.json hoac duoc file
+#      trong ~/claude_master/deploy, ~/ops, c3live/ops tro toi, moi jar < 7 ngay.
+#   c) worktree A1 v12 (a1_r4i/j/m/n, a1_soak) + ing1030 (a1_wt, a1_wt2, a1_wt3, a1_wt4): CHI 'git worktree remove' (khong --force)
+#      khi la worktree phu that VA sach. KHONG rm -rf worktree o bat ky pha nao. (qf2_build: KHONG — co ledger.csv/logs/config.)
+# PHA 2 (NEN): WHITELIST CUNG = ~/claude_master/1006 (A1: 0 tham chieu). Thu muc co .git => ABORT.
+#   tar | zstd -T2 -> archive/<ten>.tar.zst, zstd -t + so file thuong, TAT CA trong 1 lan 'flock -w 3600 oracle_heavy.lock nice -n 10'
+#   (khong long); free >= 4000 MB; dia trong >= max(5 GB, kich thuoc thu muc) — khong thi DUNG.
+# Moi muc dich ma TRUNG / NAM TRONG / CHUA mot muc CAM DUNG => ABORT.
 # =============================================================================
 set -euo pipefail
 APPLY=0
 case "${1:-}" in --apply) APPLY=1;; ""|--dry) APPLY=0;; *) echo "Dung: $0 [--apply]"; exit 1;; esac
-H=/home/ubuntu; CM=$H/claude_master
-C3=$CM/v12/c3live; HARN=$CM/vz_e1_wt/research/parity_v12
+H=/home/ubuntu; CM=$H/claude_master; C3=$CM/v12/c3live
 LOCK=$CM/locks/oracle_heavy.lock; ARC=$CM/archive
+# ---------------------------------------------------------------- CAM DUNG (A1 + MASTER) — viet cung
+FORBID=(
+  "$H/aerospike-data" "$H/collect" "$H/shadow_c3" "$H/shadow_c3b" "$H/java/simulator" "$H/kaggle_sim" "$H/vz/out" "$H/wfo_ds_x1_2021"
+  "$H/src" "$H/ops" "$H/vz_e1" "$H/ledger" "$H/.openclaw"
+  "$CM/pull242" "$CM/parity_v12w" "$CM/parity_v11w" "$CM/vz_e1_wt" "$C3" "$CM/e2e1105" "$CM/gvz" "$CM/deploy" "$CM/locks"
+  "$CM/1002" "$CM/1003" "$CM/1004" "$CM/1005" "$CM/1007" "$CM/1008" "$CM/1009" "$CM/1010" "$CM/1011" "$CM/1012" "$CM/1013" "$CM/1016"
+  "$CM/1011/mapfix_wt" "$CM/ing1030/qf_wt" "$CM/ing1030/a1_wt4b" "$CM/ing1030/qf2_build" "$CM/ing1030/jar" "$CM/health242"
+  "$CM/v12/a1_r4r" "$CM/v12/a1_r4t" "$CM/v12/a1_pq" "$CM/v12/a1_sw" "$CM/v12/a1_r4o"
+)
 TS=$(date +%Y%m%d_%H%M%S); SUF=""; if [ "$APPLY" = 0 ]; then SUF=_dry; fi
 LOG=$CM/deploy/cleanup_oracle_disk_${TS}${SUF}.log
 exec > >(tee -a "$LOG") 2>&1
@@ -31,15 +35,22 @@ say() { echo "[$(date '+%F %T')] $*"; }
 fail() { say "ABORT: $*"; df -h / | tail -1; exit 1; }
 gb() { awk -v b="$1" 'BEGIN{printf "%.2f GB", b/1073741824}'; }
 dsz() { du -sb -- "$1" 2>/dev/null | cut -f1; }
-inside() { local rp; rp=$(realpath -e -- "$1") || return 1; case "$rp" in "$CM"/*|"$H/wfo_ds_x1_2021") return 0;; *) return 1;; esac; }
-say "=== cleanup_oracle_disk APPLY=$APPLY ==="
+guard() {   # $1 duong dan dich: phai trong $CM, khong trung/nam trong/chua muc CAM DUNG
+  local rp f; rp=$(realpath -e -- "$1") || fail "khong ton tai: $1"
+  case "$rp" in "$CM"/*) ;; *) fail "ngoai $CM: $rp";; esac
+  for f in "${FORBID[@]}"; do
+    case "$rp" in "$f"|"$f"/*) fail "CAM DUNG: $rp (thuoc $f)";; esac
+    case "$f" in "$rp"/*) fail "CAM DUNG: $rp chua $f";; esac
+  done
+}
+say "=== cleanup_oracle_disk APPLY=$APPLY (cam dung: ${#FORBID[@]} muc) ==="
 say "df TRUOC: $(df -h / | tail -1)"
 P1=0; P2=0
 # ================================================================ PHA 1a: scratch
 say "--- PHA 1a: a1_*scratch* (khong git, file moi nhat < 2026-11-01)"
 while IFS= read -r -d '' d; do
-  inside "$d" || fail "ngoai $CM: $d"
-  if git -C "$d" rev-parse --is-inside-work-tree >/dev/null 2>&1; then say "  BO QUA (la git) $d"; continue; fi
+  guard "$d"
+  if git -C "$d" rev-parse --is-inside-work-tree >/dev/null 2>&1 || [ -n "$(find "$d" -name .git -print -quit)" ]; then say "  BO QUA (co git) $d"; continue; fi
   newest=$(find "$d" -type f -printf '%TY-%Tm-%Td\n' 2>/dev/null | sort | tail -1)
   if [[ "$newest" > "2026-10-31" ]]; then say "  BO QUA (co file $newest) $d"; continue; fi
   s=$(dsz "$d"); P1=$((P1 + s))
@@ -56,7 +67,7 @@ KEEPMD5=$( { grep -ho '[0-9a-f]\{32\}' "$CM/parity_v12w/jars.json" 2>/dev/null |
 for m in 694b29b2e5be32b537ca6c38557e64db 8c81e6b560b61e7d43ca32c4a50ec926; do grep -qx "$m" <<< "$KEEPMD5" || fail "danh sach md5 thieu $m (r4t/r4q)"; done
 say "  md5 can giu: $(wc -l <<< "$KEEPMD5")"
 while IFS= read -r -d '' f; do
-  inside "$f" || fail "ngoai $CM: $f"
+  guard "$f"
   b=$(basename -- "$f"); m=$(md5sum < "$f" | cut -c1-32)
   case "$b" in *_r4n|*_r4p|*_r4q|*_r4r|*_r4s|*_r4t) say "  GIU (ten) $b"; continue;; esac
   if grep -qx "$m" <<< "$KEEPMD5"; then say "  GIU (md5 ${m:0:8} duoc tro toi) $b"; continue; fi
@@ -64,56 +75,46 @@ while IFS= read -r -d '' f; do
   s=$(stat -c %s -- "$f"); P1=$((P1 + s))
   if [ "$APPLY" = 1 ]; then rm -f -- "$(realpath -e -- "$f")" || fail "rm $f"; say "  DA xoa $b"; else say "  SE xoa $b (${m:0:8}, $(gb "$s"))"; fi
 done < <(find "$CM/v12/jar" -maxdepth 1 -type f -name 'binance-java-sdk-*' -print0 | sort -z)
-# ================================================================ PHA 1c: worktree
-say "--- PHA 1c: worktree A1 cu (git worktree remove, chi khi sach)"
+# ================================================================ PHA 1c: worktree (git worktree remove, khong --force)
+say "--- PHA 1c: worktree A1 cu (chi git worktree remove khi sach; khong rm -rf)"
 for d in "$CM/v12/a1_r4i" "$CM/v12/a1_r4j" "$CM/v12/a1_r4m" "$CM/v12/a1_r4n" "$CM/v12/a1_soak" \
-         "$CM/ing1030/a1_wt" "$CM/ing1030/a1_wt2" "$CM/ing1030/a1_wt3" "$CM/ing1030/a1_wt4" "$CM/ing1030/qf2_build"; do
+         "$CM/ing1030/a1_wt" "$CM/ing1030/a1_wt2" "$CM/ing1030/a1_wt3" "$CM/ing1030/a1_wt4"; do
   [ -d "$d" ] || { say "  BO QUA (khong co) $d"; continue; }
-  inside "$d" || fail "ngoai $CM: $d"
+  guard "$d"
   top=$(git -C "$d" rev-parse --show-toplevel 2>/dev/null || true)
   gd=$(git -C "$d" rev-parse --absolute-git-dir 2>/dev/null || true); cg=$(git -C "$d" rev-parse --git-common-dir 2>/dev/null || true)
   if [ "$top" != "$d" ] || [ "$gd" = "$cg" ] || [[ "$gd" != */worktrees/* ]]; then say "  BO QUA (khong phai worktree phu that) $d"; continue; fi
-  dirty=$(git -C "$d" status --porcelain 2>/dev/null | wc -l)
+  dirty=$(git -C "$d" status --porcelain --ignored=no 2>/dev/null | wc -l)
   if [ "$dirty" != 0 ]; then say "  BO QUA ($dirty thay doi/file chua commit) ${d#$CM/}"; continue; fi
   s=$(dsz "$d"); P1=$((P1 + s))
   if [ "$APPLY" = 1 ]; then git -C "$d" worktree remove -- "$d" || fail "git worktree remove $d"; say "  DA worktree remove ${d#$CM/}"
   else say "  SE git worktree remove ${d#$CM/} ($(gb "$s"))"; fi
 done
 say "=== PHA 1: $([ "$APPLY" = 1 ] && echo 'da giai phong' || echo 'du kien') $(gb "$P1")"
-# ================================================================ PHA 2: nen
-say "--- PHA 2: nen tar.zst (khong ghi 14 ngay + khong bi tham chieu)"
-REFTXT=$( { crontab -l 2>/dev/null || true
-            for t in "$H/ops" "$CM/deploy" "$HARN" "$C3/ops"; do
-              [ -d "$t" ] && find "$t" -type f -size -5M ! -name 'cleanup_oracle_disk*' -print0 | xargs -0 -r grep -hI "" 2>/dev/null || true   # -I: bo file nhi phan; bo chinh script + log cua no
-            done; } )
-[ -n "$REFTXT" ] || fail "khong doc duoc nguon tham chieu (crontab/ops/deploy/harness)"
-CANDS=()
-for d in "$CM"/10[01][0-9] "$H/wfo_ds_x1_2021"; do [ -d "$d" ] && CANDS+=("$d"); done
-for d in "${CANDS[@]}"; do
-  inside "$d" || fail "ngoai pham vi: $d"
-  n=$(basename -- "$d")
-  newest=$(find "$d" -printf '%T@\n' 2>/dev/null | sort -n | tail -1 | cut -d. -f1)
-  age=$(( ($(date +%s) - ${newest:-0}) / 86400 ))
-  if [ "$age" -lt 14 ]; then say "  LOAI $n: co file ghi $age ngay truoc (<14)"; continue; fi
-  if [ "$n" = wfo_ds_x1_2021 ]; then pat="wfo_ds_x1_2021"; else pat="claude_master/$n([/\"' ]|\$)"; fi
-  if grep -qE -- "$pat" <<< "$REFTXT"; then say "  LOAI $n: bi tham chieu trong cron/ops/deploy/harness"; continue; fi
-  s=$(dsz "$d"); nf=$(find "$d" -type f | wc -l)
-  if [ "$APPLY" = 0 ]; then say "  SE nen $n ($(gb "$s"), $nf file, khong ghi $age ngay) -> archive/$n.tar.zst"; P2=$((P2 + s)); continue; fi
-  mem=$(free -m | awk '/^Mem:/{print $7}'); avail=$(df -BG --output=avail / | tail -1 | tr -dc 0-9)
+# ================================================================ PHA 2: whitelist cung
+say "--- PHA 2: nen WHITELIST cung (1006)"
+for d in "$CM/1006"; do
+  [ -d "$d" ] || { say "  BO QUA (khong co / da nen) $d"; continue; }
+  guard "$d"
+  if [ -n "$(find "$d" -name .git -print -quit)" ] || git -C "$d" rev-parse --is-inside-work-tree >/dev/null 2>&1; then fail "$d chua .git/worktree — pha 2 khong bao gio dung"; fi
+  n=$(basename -- "$d"); s=$(dsz "$d"); nf=$(find "$d" -type f | wc -l)
+  if [ "$APPLY" = 0 ]; then say "  SE nen $n ($(gb "$s"), $nf file) -> archive/$n.tar.zst roi xoa ban goc sau khi kiem"; P2=$((P2 + s)); continue; fi
+  mem=$(free -m | awk '/^Mem:/{print $7}'); avail=$(df -B1 --output=avail / | tail -1 | tr -dc 0-9)
   [ "$mem" -ge 4000 ] || fail "free ${mem} MB < 4000 truoc $n"
-  [ "$avail" -ge 5 ] || fail "dia trong ${avail} GB < 5 truoc $n"
+  need=$(( s > 5368709120 ? s : 5368709120 )); [ "$avail" -ge "$need" ] || fail "dia trong $(gb "$avail") < $(gb "$need") truoc $n"
   mkdir -p "$ARC"; out="$ARC/$n.tar.zst"
-  [ -e "$out" ] && fail "da co $out (lan truoc do dang?) — kiem tay"
-  flock -w 3600 "$LOCK" nice -n 10 bash -c 'set -euo pipefail; tar -C "$1" -cf - "$2" | zstd -q -T2 -o "$3.tmp"' _ "$(dirname "$d")" "$n" "$out" \
-    || { rm -f -- "$out.tmp"; fail "nen $n loi"; }
-  zstd -q -t -- "$out.tmp" || { rm -f -- "$out.tmp"; fail "zstd -t $n loi"; }
-  na=$(zstd -q -dc -- "$out.tmp" | tar -tvf - | grep -c '^-' || true)
-  [ "$na" = "$nf" ] || { rm -f -- "$out.tmp"; fail "so file $n lech: goc $nf, archive $na"; }
-  mv -f -- "$out.tmp" "$out"
+  [ -e "$out" ] && fail "da co $out — kiem tay"
+  flock -w 3600 "$LOCK" nice -n 10 bash -c '
+    set -euo pipefail
+    tar -C "$1" -cf - "$2" | zstd -q -T2 -o "$3.tmp"
+    zstd -q -t -- "$3.tmp"
+    na=$(zstd -q -dc -- "$3.tmp" | tar -tvf - | grep -c "^-" || true)
+    [ "$na" = "$4" ] || { echo "so file lech: goc $4, archive $na"; exit 1; }
+    mv -f -- "$3.tmp" "$3"' _ "$(dirname "$d")" "$n" "$out" "$nf" || { rm -f -- "$out.tmp"; fail "nen/kiem $n loi"; }
   rm -rf -- "$(realpath -e -- "$d")" || fail "xoa goc $n"
   zs=$(stat -c %s -- "$out"); P2=$((P2 + s - zs))
   say "  DA nen $n: $(gb "$s") -> $(gb "$zs") ($nf file khop)"
 done
-say "=== PHA 2: $([ "$APPLY" = 1 ] && echo 'da giai phong' || echo 'du kien (truoc nen; thuc te tru kich thuoc .tar.zst)') $(gb "$P2")"
+say "=== PHA 2: $([ "$APPLY" = 1 ] && echo 'da giai phong' || echo 'du kien (truoc nen)') $(gb "$P2")"
 say "df SAU: $(df -h / | tail -1)"
 say "Log: $LOG"
