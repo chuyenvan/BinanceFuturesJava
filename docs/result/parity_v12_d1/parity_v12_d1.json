@@ -1,6 +1,6 @@
 {
  "round": "d1",
- "prereg": "PREREG_PARITY_V12_DRY 3c7dae05 + ADD1..ADD11",
+ "prereg": "PREREG_PARITY_V12_DRY 3c7dae05 + ADD1..ADD12",
  "window_start_ms": 1793676840000,
  "days": {
   "2026-11-03": {
@@ -90,6 +90,7 @@
     "R5": true,
     "R6": true
    },
+   "s1v_kdd_hours": null,
    "ket_luan": "KHONG DO DUOC (mot phan) + XAM",
    "ghi_chu": [
     "universe A1 khong do duoc",
@@ -97,7 +98,19 @@
    ],
    "nhom_H_tinh": false,
    "nhom_K_tinh": false,
-   "SACH_ADD11": false
+   "SACH_ADD11": false,
+   "SACH_T_checks": {
+    "co_hoc_DAT": false,
+    "gate_log_du": true,
+    "tsx_DAT_hoac_vision_nan": false,
+    "K5_bang_0": false,
+    "ngay_sach_SACH": false,
+    "pull_complete": true,
+    "khong_lop_phu_V12": false,
+    "khong_TRUOT": true
+   },
+   "SACH_T": false,
+   "needs_M_regrade": false
   }
  }
 }
