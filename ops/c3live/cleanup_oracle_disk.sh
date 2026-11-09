@@ -84,7 +84,7 @@ say "=== PHA 1: $([ "$APPLY" = 1 ] && echo 'da giai phong' || echo 'du kien') $(
 say "--- PHA 2: nen tar.zst (khong ghi 14 ngay + khong bi tham chieu)"
 REFTXT=$( { crontab -l 2>/dev/null || true
             for t in "$H/ops" "$CM/deploy" "$HARN" "$C3/ops"; do
-              [ -d "$t" ] && find "$t" -type f -size -5M -print0 | xargs -0 -r grep -hI "" 2>/dev/null || true   # -I: bo file nhi phan
+              [ -d "$t" ] && find "$t" -type f -size -5M ! -name 'cleanup_oracle_disk*' -print0 | xargs -0 -r grep -hI "" 2>/dev/null || true   # -I: bo file nhi phan; bo chinh script + log cua no
             done; } )
 [ -n "$REFTXT" ] || fail "khong doc duoc nguon tham chieu (crontab/ops/deploy/harness)"
 CANDS=()
