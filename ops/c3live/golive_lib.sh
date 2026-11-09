@@ -45,6 +45,8 @@ MON_HB_MAX_AGE_S=${MON_HB_MAX_AGE_S:-360}
 MON_HB_WAIT_S=${MON_HB_WAIT_S:-300}
 HB_POLL_S=${HB_POLL_S:-10}
 MON_CRON_TAG='# golive_monitor (ADD4 C-1)'
+# [ADD4 ERRATA 2 §5] moc eq lop phu monitor: eq = C3_CAPITAL + (tmb - tmb0); micro_on / pilot_on / golive_rebase_equity ghi
+SUB_BASE_FILE=${SUB_BASE_FILE:-$LOGDIR/c3sub_eq_base.txt}
 # so/trang thai c3 (doi ten khi doi adapter — so dry/live khong bao gio lan nhau)
 GL_STATE_FILES="run/c3live_book.json run/c3live_dry_state.json run/c3live_ledger.csv run/c3live_merged.txt run/c3live_equity_c3.json run/c3live_lost.txt run/c3live_killsw_peak run/killsw_latch.json"
 
@@ -91,6 +93,32 @@ gl_hb_wait() {
   done
 }
 gl_no_canary() { local n; n=$(pgrep -fc "$CANARY_PAT" 2>/dev/null); [ "${n:-0}" = 0 ]; }
+# gl_eq_base_set <tmb0> <c3_capital> <key_sha8> <ly do> : [ERRATA 2] ghi moc eq (Oracle; ban cu => .bak_<TS>; log ly do). Loi => return 1
+gl_eq_base_set() {
+  if [ "$DRY" = 1 ]; then say "DRY=1: se ghi moc tmb0=$1 C3_CAPITAL=$2 vao $SUB_BASE_FILE"; return 0; fi
+  { [[ "$1" =~ ^[0-9]+(\.[0-9]+)?$ ]] && [[ "$2" =~ ^[0-9]+(\.[0-9]+)?$ ]] && [ -n "$3" ]; } || { say "!! moc khong hop le: tmb0='$1' C3_CAPITAL='$2' key='$3'"; return 1; }
+  mkdir -p "$(dirname "$SUB_BASE_FILE")" 2>/dev/null || return 1
+  [ -f "$SUB_BASE_FILE" ] && cp -p "$SUB_BASE_FILE" "$SUB_BASE_FILE.bak_${TS:-x}"
+  printf 'tmb0=%s\nc3_capital=%s\nkey_sha8=%s\nbase_id=%s\nreason=%s\n' "$1" "$2" "$3" "${TS:-x}_$$" "$4" > "$SUB_BASE_FILE.tmp" 2>/dev/null \
+    && mv -f "$SUB_BASE_FILE.tmp" "$SUB_BASE_FILE" 2>/dev/null || { say "!! KHONG ghi duoc moc $SUB_BASE_FILE"; return 1; }
+  echo "$(TZ=Asia/Ho_Chi_Minh date '+%F %T') tmb0=$1 c3_capital=$2 key_sha8=$3 base_id=${TS:-x}_$$ ly_do=$4" >> "${SUB_BASE_FILE%.txt}.log" 2>/dev/null
+  say "OK moc eq: tmb0=$1 C3_CAPITAL=$2 ($SUB_BASE_FILE)"
+}
+# gl_mon_repin : [ERRATA 2] goi installer cron (idempotent) => cron chay ban PIN = monitor + lib repo hien tai; in md5 pin. Loi => return 1
+gl_mon_repin() {
+  local out rc m
+  out=$(DRY=$DRY bash "$GL_HERE/install_cron_golive_monitor.sh" 2>&1); rc=$?
+  echo "$out" | sed 's/^/   pin| /'
+  [ "$rc" = 0 ] || return 1
+  [ "$DRY" = 1 ] && return 0
+  gl_mon_cron_ok && gl_mon_pin_cur || return 1
+  m=$(cat "$GL_HERE/golive_monitor.sh" "$GL_HERE/golive_lib.sh" | md5sum | cut -c1-12)
+  say "OK cron golive_monitor chay ban pin md5=$m"
+}
+# gl_tag_drybook : [ERRATA 2] adapter=dry => dong doi chieu SO (dry) gan nhan "chi ghi log" (khong tinh ket qua)
+gl_tag_drybook() {
+  if [ "$(sv ENV_LIVE_ADAPTER)" = dry ]; then sed -E 's/^((POS_C3_MISMATCH|C3_BOOK_SYMBOLS|C3_UNRESOLVED|POS_PENDING)=.*)$/\1   [so DRY — chi ghi log, khong tinh ket qua]/'; else cat; fi
+}
 tg() {
   local msg code tok chat
   msg=$(printf '%s' "$1" | sed -E 's/[0-9]{8,10}:[A-Za-z0-9_-]{35}/[CHE]/g; s/[A-Za-z0-9]{56,}/[CHE]/g' | head -c 3500)
@@ -504,18 +532,25 @@ gl_sub_eval() {
   return 0
 }
 
-# gl_c3_seen <SL> <POS_SIG truoc restart> : [R4q MAJ-1] doc LAI 242 NGAY luc quyet (so + audit lenh c3 + san qua duong chi doc).
+# gl_c3_seen <SL> <POS_SIG truoc restart> [TS: leg cua so .dry_TS khong tinh] : [R4q MAJ-1] doc LAI 242 NGAY luc quyet (so + audit lenh c3 + san qua duong chi doc).
 #   In dong + "VERDICT=NONE" CHI khi MOI nguon doc duoc tron ven va: so 0 cum, 0 dong [C3-LIVE-ORDER] (tru SKIP) tu START_LINE
 #   (log chua xoay), san 0 lenh/algo c3, chu ky vi the = truoc restart. Thieu/khong chac => UNKNOWN (coi nhu DA co lenh); co => SEEN.
 gl_c3_seen() {
   local R why="" unk=""
-  R=$(s242in "bash -s -- $A $1" <<'EOF'
-A=$1; SL=$2; cd "$A" || { echo "ERR=cd"; echo END_SEEN; exit 0; }
+  R=$(s242in "bash -s -- $A $1 ${3:-none}" <<'EOF'
+A=$1; SL=$2; TSD=${3:-none}; cd "$A" || { echo "ERR=cd"; echo END_SEEN; exit 0; }
 L=logs/full.log; N=$(wc -l < $L 2>/dev/null || echo 0)
 [ "$N" -ge "$SL" ] && echo "LOG_OK=1" || echo "LOG_OK=0"
 echo "AUDIT_C3=$(tail -n +$SL $L 2>/dev/null | grep -a '\[C3-LIVE-ORDER\]' | grep -avc 'status=SKIP')"
 B=run/c3live_book.json
-if [ ! -e $B ]; then echo "BOOK_CUM=0"; elif [ -r $B ]; then echo "BOOK_CUM=$(grep -o '"symbol":"' $B | wc -l)"; else echo "ERR=book_khong_doc_duoc"; fi
+DB=run/c3live_book.json.dry_$TSD
+if [ ! -e $B ]; then echo "BOOK_CUM=0"
+elif [ ! -r $B ]; then echo "ERR=book_khong_doc_duoc"
+elif [ "$TSD" != none ] && [ -f $DB ]; then   # [ERRATA 2] leg mang cid cua so dry (.dry_<TS>) KHONG tinh la lenh c3 live
+  NC=$(grep -o '"cid":"[^"]*"' $B | sort -u | grep -vxFf <(grep -o '"cid":"[^"]*"' $DB | sort -u) | grep -c .)
+  [ "$(grep -o '"cid":"' $B | wc -l)" = 0 ] && NC=$(grep -o '"symbol":"' $B | wc -l)
+  echo "BOOK_CUM=$NC"; echo "BOOK_CUM_GOM_DRY=$(grep -o '"symbol":"' $B | wc -l)"
+else echo "BOOK_CUM=$(grep -o '"symbol":"' $B | wc -l)"; fi
 echo END_SEEN
 EOF
 ) || R="ERR=ssh_doc_242"

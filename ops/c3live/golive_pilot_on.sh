@@ -12,6 +12,8 @@
 # Lam: env +C3_CAPITAL=<size> ; PAUSE token ; restart (so live + vi the c3 GIU NGUYEN; adapter khong doi) ; hau kiem env, c3_capital,
 #   PUSH=ON, stream, recon ok, latch NONE, 0 KHAN (MAIN: LEGACY 0). TRUOT => rollback: env.sh ve ban truoc (C3_CAPITAL cu), restart.
 # [A1 ADD4] SUB: doi cron golive_monitor da cai (C-1), dam bao co monitor; MIN-2: co tien trinh canary_early* tren Oracle => TU CHOI.
+# [ADD4 ERRATA 2] SUB: tu PIN lai cron monitor + ghi lai moc tmb0 (doc san lai sau YES) / C3_CAPITAL=<size>; rollback => tra moc cu.
+#   Hau kiem: 0 leg mang cid so dry (.dry_* moi nhat) trong so live.
 # =============================================================================
 set -uo pipefail
 . "$(cd "$(dirname "$0")" && pwd)/golive_lib.sh"
@@ -78,6 +80,7 @@ ENV_ADD="# [v1.2 R4o/ADD4 golive_pilot_on $TS] PILOT $ACCT_TXT size=$SIZE (truoc
 export C3_CAPITAL=$SIZE"
 say "--- se THEM vao $A/conf/env.sh:"; echo "$ENV_ADD" | sed 's/^/   + /'
 say "--- so live / vi the c3 ($(sv BOOK_CUM) cum) GIU NGUYEN qua restart; hau kiem c3_capital=$SIZE, PUSH=ON, stream, recon ok$([ "$C3_ACCOUNT" = SUB ] || echo ', LEGACY 0')"
+[ "$C3_ACCOUNT" = SUB ] && [ "$DRY" = 1 ] && { gl_mon_repin || say "!! installer cron (DRY) loi"; }
 [ "$DRY" = 1 ] && { say "DRY=1: dung o day, KHONG ghi gi len 242. (DRY PASS)"; exit 0; }
 gl_time
 if [ "$C3_ACCOUNT" = SUB ]; then
@@ -87,16 +90,27 @@ else
 fi
 gl_no_canary || die "co tien trinh $CANARY_PAT tren Oracle (vua xuat hien) — khong pilot (A1 MIN-2)"
 gl_mon_flag_set || die "KHONG ghi duoc co monitor $GL_MON_FLAG — khong pilot (A1 delta MIN-2)"
+if [ "$C3_ACCOUNT" = SUB ]; then
+  gl_mon_repin || die "pin lai cron golive_monitor LOI — khong pilot (ADD4 errata 2)"
+  API=$(gl_api242 mon) || die "ssh toi 242 loi (doc tmb)"
+  echo "$API" | grep -qx END_API || die "doc tmb tk con khong tron ven"
+  gl_eq_base_set "$(av TMB)" "$SIZE" "$(av KEY_SHA8)" "golive_pilot_on $TS (C3_CAPITAL $C0 -> $SIZE)" || die "KHONG ghi duoc moc tmb0 — khong pilot (ADD4 errata 2 §5)"
+fi
 trap 'say "BI DUNG (tin hieu) — kiem golive_monitor.sh"; gl_pause_clear >/dev/null 2>&1; exit 130' INT TERM HUP
 gl_restart "$ENV_ADD" "" none
 if echo "$RS" | grep -q '^FAIL'; then
-  echo "$RS" | grep -q '^OK da_stop' || { gl_pause_clear >/dev/null 2>&1; die "buoc env/stop FAIL truoc khi dung bot"; }
+  echo "$RS" | grep -q '^OK da_stop' || { gl_pause_clear >/dev/null 2>&1; [ -f "$SUB_BASE_FILE.bak_$TS" ] && mv -f "$SUB_BASE_FILE.bak_$TS" "$SUB_BASE_FILE"; die "buoc env/stop FAIL truoc khi dung bot (moc tmb0 tra lai)"; }
 fi
+# [ADD4 ERRATA 2] khong leg nao mang cid cua so dry (.dry_* moi nhat) trong so live
+PCHK='
+B=run/c3live_book.json; DB=$(ls -t run/c3live_book.json.dry_* 2>/dev/null | head -1); DN=0
+[ -f $B ] && [ -n "$DB" ] && DN=$(grep -o "\"cid\":\"[^\"]*\"" $DB | sort -u | grep -cxFf - <(grep -o "\"cid\":\"[^\"]*\"" $B | sort -u))
+[ "${DN:-0}" = 0 ] && echo "OK 0_leg_so_dry_trong_so_live" || echo "FAIL ${DN}_leg_so_dry_trong_so_live"'
 CHK() { gl_chk_common "$SL" "$L0" '
 envk LIVE_ADAPTER=live; envk C3_CAPITAL='"$SIZE"'; envk SHADOW_NO_PUSH=false; envk LIVE_ENTRY_ENABLED=true; '"$KEYCHK"'
 [ "$(tail -n +$SL $L | grep -a "khoi dong adapter=LIVE" | grep -acE "c3_capital='"$SIZE"'(\.0)?( |$)")" -ge 1 ] && echo "OK c3_capital='"$SIZE"'" || echo "WAIT c3_capital"
 [ "$(T "PUSH=ON")" -ge 1 ] && echo "OK PUSH_ON" || echo "WAIT PUSH_ON"
-[ "$(T "C3-LIVE-STREAM\] da ket noi")" -ge 1 ] && echo "OK user_stream" || echo "WAIT user_stream"'; }
+[ "$(T "C3-LIVE-STREAM\] da ket noi")" -ge 1 ] && echo "OK user_stream" || echo "WAIT user_stream"'"$PCHK"; }
 if ! echo "$RS" | grep -q '^FAIL' && gl_postloop CHK; then
   trap - INT TERM HUP
   gl_pause_clear >/dev/null || say "PAUSE con (ssh?) — tu go sau ${WD_PAUSE_MAX_S}s"
@@ -106,6 +120,7 @@ fi
 WHY=$(echo "${RESULT:-$RS}" | grep '^FAIL\|^WAIT' | tr '\n' ' ' | cut -c1-200)
 say "hau kiem TRUOT ($WHY) => ROLLBACK ve C3_CAPITAL=$C0 (adapter live, so + vi the giu nguyen)"
 if gl_rollback none && echo "$RB" | grep -q "ENV_C3_CAPITAL=$C0"; then
+  [ -f "$SUB_BASE_FILE.bak_$TS" ] && mv -f "$SUB_BASE_FILE.bak_$TS" "$SUB_BASE_FILE" && say "OK moc tmb0 tra lai ban truoc pilot"
   say "Da ROLLBACK xong: live C3_CAPITAL=$C0."; tg "[golive] pilot_on FAIL TS=$TS: $WHY => ROLLBACK ve $C0 XONG. Log $LOG"; exit 1
 fi
 M="ROLLBACK LOI — PAUSE còn; kiem golive_monitor.sh; env backup $A/conf/env.sh.bak_golive_pilot_on_$TS"

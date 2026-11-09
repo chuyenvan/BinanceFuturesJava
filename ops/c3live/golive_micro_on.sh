@@ -21,6 +21,8 @@
 #   => go co). MIN-2: dang co tien trinh canary_early* tren Oracle => TU CHOI (kiem truoc + ngay truoc restart).
 #   [A1 delta] ghi co monitor LOI => DUNG truoc restart; SUB: hau kiem DAT con doi heartbeat cron monitor MOI hon co (toi da 5') —
 #   khong co => TRUOT (KILL_SWITCH van dat => doc lai => rollback ve dry).
+#   [ADD4 ERRATA 2] SUB: truoc co: tu PIN lai cron monitor (installer idempotent, in md5) + ghi moc tmb0 / C3_CAPITAL (lop phu eq).
+#   Hau kiem: so live RONG (BOOK_CUM=0) + 0 leg mang cid so dry .dry_<TS>; doc lai khong tinh leg so dry => rollback nhu loi khac.
 # Ma thoat: 0 XONG | 1 DUNG/da rollback | 2 can owner/MASTER.
 # =============================================================================
 set -uo pipefail
@@ -50,7 +52,7 @@ if [ "$C3_ACCOUNT" = SUB ]; then
   L0=SKIP
   say "INFO LEGACY managed=$(sv LEGACY_N) (tuoi $(sv LEGACY_AGE) s) — ADD4 §3: LEGACY o tk chinh, KHONG la dieu kien (chi ghi log)"
   API=$(gl_api242 sub) || die "ssh toi 242 loi (doc tk con)"
-  echo "$API" | grep -v '^END_API$' | sed 's/^/   tk con: /'
+  echo "$API" | grep -v '^END_API$' | gl_tag_drybook | sed 's/^/   tk con: /'
   gl_sub_eval 1
   chk "tk con SACH + key dat (ADD4 §2 = golive_check_key SUB)${SUBWHY:+ —$SUBWHY}" "[ '$SUBV' = DAT ]"
   chk "cron golive_monitor da cai, ban pin con nguyen (A1 ADD4 C-1; owner: bash $GL_HERE/install_cron_golive_monitor.sh)" "gl_mon_cron_ok"
@@ -76,6 +78,7 @@ if [ "$C3_ACCOUNT" = SUB ]; then
 else
   say "--- hau kiem: adapter=LIVE c3_capital=$MICRO_CAPITAL PUSH=OFF(KILL_SWITCH) stream, recon ok, LEGACY $L0, latch NONE, 0 KHAN => go KILL_SWITCH => PUSH ON"
 fi
+[ "$C3_ACCOUNT" = SUB ] && [ "$DRY" = 1 ] && { gl_mon_repin || say "!! installer cron (DRY) loi"; }
 [ "$DRY" = 1 ] && { say "DRY=1: dung o day, KHONG ghi gi len 242. (DRY PASS)"; exit 0; }
 gl_time
 gl_yes "BAT MICRO-LIVE: lenh THAT tren $ACCT_TXT (C3_CAPITAL=$MICRO_CAPITAL). LEGACY (cung JVM) ngung quan ly ~30-60 s luc restart."
@@ -93,6 +96,10 @@ else
 fi
 SIG0=$(av POS_SIG); [ -n "$SIG0" ] || die "khong co chu ky vi the san"
 gl_no_canary || die "co tien trinh $CANARY_PAT tren Oracle (vua xuat hien) — khong bat (A1 MIN-2)"
+if [ "$C3_ACCOUNT" = SUB ]; then
+  gl_mon_repin || die "pin lai cron golive_monitor LOI — khong bat (ADD4 errata 2)"
+  gl_eq_base_set "$(av TMB)" "$MICRO_CAPITAL" "$(av KEY_SHA8)" "golive_micro_on $TS" || die "KHONG ghi duoc moc tmb0 — khong bat (ADD4 errata 2 §5)"
+fi
 gl_mon_flag_set || die "KHONG ghi duoc co monitor $GL_MON_FLAG — khong bat (A1 delta MIN-2)"
 trap 'say "BI DUNG (tin hieu) — kiem: bash $(cd "$(dirname "$0")" && pwd)/golive_monitor.sh"; gl_pause_clear >/dev/null 2>&1; exit 130' INT TERM HUP
 gl_restart "$ENV_ADD" "$GL_STATE_FILES" dry 1
@@ -108,6 +115,13 @@ else
 LS=$(tail -n +$SL $L | grep -a "LEGACY tren tai khoan chinh:" | tail -1 | grep -aoE "chinh: [0-9]+" | awk "{print \$2}")
 [ -z "$LS" ] && echo "WAIT scope_LEGACY" || { if [ "$LS" = "$L0" ]; then echo "OK scope_LEGACY=$LS"; elif [ "$LS" -lt "$L0" ] 2>/dev/null; then echo "WARN scope_LEGACY=$LS < truoc stop $L0 (dong tu nhien)"; else echo "FAIL scope_LEGACY=$LS > truoc stop $L0 (TANG)"; fi; }'
 fi
+# [ADD4 ERRATA 2 §1] so live phai RONG + khong leg nao mang cid cua so dry vua doi ten (.dry_$TS)
+BOOK_CHK='
+B=run/c3live_book.json; BC=0; [ -f $B ] && BC=$(grep -o "\"symbol\":\"" $B | wc -l)
+[ "$BC" = 0 ] && echo "OK so_live_rong" || echo "FAIL so_live_${BC}_cum (ADD4 errata 2: live bat dau so c3 rong)"
+DB=run/c3live_book.json.dry_'"$TS"'; DN=0
+[ -f $B ] && [ -f $DB ] && DN=$(grep -o "\"cid\":\"[^\"]*\"" $DB | sort -u | grep -cxFf - <(grep -o "\"cid\":\"[^\"]*\"" $B | sort -u))
+[ "${DN:-0}" = 0 ] && echo "OK 0_leg_so_dry_trong_so_live" || echo "FAIL ${DN}_leg_so_dry_trong_so_live"'
 # [A1 delta MIN-3] SUB: heartbeat cron golive_monitor MOI hon co monitor (dat ngay truoc restart), cho toi da MON_HB_WAIT_S
 mon_hb_ok() {
   [ "$C3_ACCOUNT" = SUB ] || return 0
@@ -122,7 +136,7 @@ envk LIVE_ADAPTER=live; envk C3_CAPITAL='"$MICRO_CAPITAL"'; envk SHADOW_NO_PUSH=
 [ "$(tail -n +$SL $L | grep -a "khoi dong adapter=LIVE" | grep -acE "c3_capital='"$MICRO_CAPITAL"'(\.0)?( |$)")" -ge 1 ] && echo "OK c3_capital='"$MICRO_CAPITAL"'" || echo "WAIT c3_capital"
 grep -q "^golive_micro_on '"$TS"' " run/KILL_SWITCH 2>/dev/null && echo "OK KILL_SWITCH_con (chua mo lenh moi)" || echo "FAIL KILL_SWITCH_cua_script_mat"
 [ "$(T "PUSH=ON")" = 0 ] && echo "OK chua_PUSH_ON" || echo "FAIL PUSH_ON_khi_con_KILL_SWITCH"
-[ "$(T "C3-LIVE-STREAM\] da ket noi")" -ge 1 ] && echo "OK user_stream" || echo "WAIT user_stream"'"$SCOPE_CHK"; }
+[ "$(T "C3-LIVE-STREAM\] da ket noi")" -ge 1 ] && echo "OK user_stream" || echo "WAIT user_stream"'"$SCOPE_CHK$BOOK_CHK"; }
 if ! echo "$RS" | grep -q '^FAIL' && gl_postloop CHK && mon_hb_ok; then
   # [R4q MAJ-1] hau kiem DAT => go KILL_SWITCH CUA MINH => cho JVM bao PUSH ON
   if s242 "cd $A && grep -q '^golive_micro_on $TS ' run/KILL_SWITCH && mv -f run/KILL_SWITCH run/KILL_SWITCH.ok_$TS && [ ! -e run/KILL_SWITCH ]"; then
@@ -152,7 +166,7 @@ if ! echo "$RS" | grep -q '^FAIL' && gl_postloop CHK && mon_hb_ok; then
 fi
 WHY=$(echo "${RESULT:-$RS}" | grep '^FAIL\|^WAIT' | tr '\n' ' ' | cut -c1-200)
 say "hau kiem TRUOT ($WHY) — doc LAI 242 + san ngay luc quyet:"
-SEEN=$(gl_c3_seen "$SL" "$SIG0"); echo "$SEEN" | sed 's/^/   doc lai: /'
+SEEN=$(gl_c3_seen "$SL" "$SIG0" "$TS"); echo "$SEEN" | sed 's/^/   doc lai: /'
 V=$(echo "$SEEN" | sed -n 's/^VERDICT=//p' | tail -1)
 if [ "${V:-UNKNOWN}" = NONE ]; then
   say "CHAC CHAN c3 chua co lenh (so 0 cum, 0 audit lenh, san 0 lenh/algo c3, vi the khong doi) => ROLLBACK ve DRY"

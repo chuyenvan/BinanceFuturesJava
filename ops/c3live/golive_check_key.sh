@@ -25,7 +25,7 @@ if [ "$DRY" = 1 ]; then
 fi
 if [ "$C3_ACCOUNT" = SUB ]; then
   API=$(gl_api242 sub) || die "ssh toi 242 loi"
-  echo "$API" | grep -vE '^END_API$' | sed 's/^/   san: /'
+  echo "$API" | grep -vE '^END_API$' | gl_tag_drybook | sed 's/^/   san: /'
   gl_sub_eval 1
   V=$SUBV; WHY=$SUBWHY
   mkdir -p "$GATE_DIR"

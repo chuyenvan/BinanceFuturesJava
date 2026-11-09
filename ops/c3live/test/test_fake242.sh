@@ -1440,7 +1440,7 @@ SKEY=fakekey_sub_$(printf '%036d' 7); SK8=$(printf '%s' "$SKEY" | sha256sum | cu
 printf 'C3_LIVE_API_KEY=%s\nC3_LIVE_API_SECRET=fakesecret_sub_%036d\n' "$SKEY" 9 > $W/sub_src.env; chmod 600 $W/sub_src.env
 rm -f $W/keys_sub.env $W/sub_peak.txt $W/tg_sub.txt $F4/run/KILL_SWITCH $F4/run/c3live_book.json $W/PAUSE $F4/FAKE_SCOPE_N
 MK0=$(stat -c '%Y %s' $W/keys_c3.env)
-GS() { env C3_ACCOUNT=SUB CANARY_PAT=canary_early_fake242_NONE ORA_CRONTAB_CMD="bash $W/oracron.sh" APP_DIR=$F4 NJ_MD5=$NEWR GATE_DIR=$GD KEYS_FILE=$W/keys_sub.env PY242=$W/c3py_t/python/bin/python3 CURL242=$W/fakecurl.sh \
+GS() { env C3_ACCOUNT=SUB CANARY_PAT=canary_early_fake242_NONE ORA_CRONTAB_CMD="bash $W/oracron.sh" MON_PIN_ROOT=$W/pinned MON_LOCK=$W/locks/golive_monitor.lock APP_DIR=$F4 NJ_MD5=$NEWR GATE_DIR=$GD KEYS_FILE=$W/keys_sub.env PY242=$W/c3py_t/python/bin/python3 CURL242=$W/fakecurl.sh \
   DEPLOY_TG_SINK=$W/tg_sub.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 SUB_PEAK_FILE=$W/sub_peak.txt "$@"; }
 US() { GS SUB_SRC=$W/sub_src.env SUB_KEY_SHA8=$SK8 MAIN_KEYS_FILE=$W/keys_c3.env KEY_UID=$(id -u) "$@"; }
 nosec() { ! echo "$1" | grep -q "$SKEY\|fakesecret_sub" && ! grep -rqs "$SKEY\|fakesecret_sub" $W/deploylog $GD $W/tg_sub.txt; }
@@ -1541,9 +1541,20 @@ chk "delta MIN-3 micro_on: hau kiem DAT nhung KHONG co heartbeat cron monitor tr
 touch -d '1 min ago' $W/deploylog/run/monitor_heartbeat 2>/dev/null || { mkdir -p $W/deploylog/run; touch -d '1 min ago' $W/deploylog/run/monitor_heartbeat; }
 OUT=$(echo YES | GS MON_HB_WAIT_S=3 HB_POLL_S=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "delta MIN-3 micro_on: heartbeat CU hon co monitor (khong phai luot cron moi) => khong tinh => TRUOT, rollback" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL monitor_heartbeat_khong_co' && penv | grep -qx LIVE_ADAPTER=dry"
+echo '{"clusters":[{"symbol":"D01USDT","legs":[{"cid":"c3-D01USDT-1-0","state":"CONFIRMED","exec_qty":"1"}],"exit_qty":"0"}]}' > $F4/run/c3live_book.json; BKD=$(md5sum < $F4/run/c3live_book.json)
+OUT=$(GS bash "$HERE/golive_check_key.sh" 2>&1); RC=$?
+chk "errata2 check_key SUB khi adapter=dry: MISMATCH so dry CHI ghi log (gan nhan), ket qua van DAT" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'POS_C3_MISMATCH=1 D01USDT:-1 .*so DRY' && echo \"\$OUT\" | grep -q 'KET QUA: DAT'"
+echo 'cp "$(ls -t run/c3live_book.json.dry_* | head -1)" run/c3live_book.json' > $F4/FAKE_APIHOOK
+OUT=$(echo YES | GS bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "errata2 micro_on: JVM live van mang so dry (leg c3-D01USDT-1-0) => hau kiem FAIL so live khong rong => doc lai NONE (leg cua so dry) => ROLLBACK, so dry tra lai" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL so_live_1_cum' && echo \"\$OUT\" | grep -q 'FAIL 1_leg_so_dry_trong_so_live' && echo \"\$OUT\" | grep -q 'VERDICT=NONE' && echo \"\$OUT\" | grep -q 'Da ROLLBACK xong' && [ \"\$(md5sum < $F4/run/c3live_book.json)\" = \"$BKD\" ] && penv | grep -qx LIVE_ADAPTER=dry"
+rm -f $F4/FAKE_APIHOOK
+rm -rf $W/monsrc2; mkdir -p $W/monsrc2; cp $HERE/golive_monitor.sh $HERE/golive_lib.sh $W/monsrc2/; echo '# ban cu (test)' >> $W/monsrc2/golive_monitor.sh
+IC MON_SRC=$W/monsrc2 bash "$HERE/install_cron_golive_monitor.sh" > /dev/null 2>&1
 ( while sleep 1; do [ -f $W/deploylog/golive_monitor.on ] && { mkdir -p $W/deploylog/run; touch $W/deploylog/run/monitor_heartbeat; }; done ) > /dev/null 2>&1 & HBW=$!
 OUT=$(echo YES | GS bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "add4 micro_on SUB XONG: live/1000/push, process doc key keys_sub.env, scope tk con 0, LEGACY 44 chi INFO, KILL_SWITCH go, PUSH ON" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: MICRO-LIVE c3 tai khoan CON' && penv | grep -qx LIVE_ADAPTER=live && penv | grep -qx C3_CAPITAL=1000 && penv | grep -qx LIVE_C3_KEYS_FILE=$W/keys_sub.env && echo \"\$OUT\" | grep -q 'OK env LIVE_C3_KEYS_FILE=' && echo \"\$OUT\" | grep -q 'OK scope_tk_con_0_vi_the_ngoai_c3' && echo \"\$OUT\" | grep -q 'INFO LEGACY_managed=44' && [ ! -e $F4/run/KILL_SWITCH ] && nosec \"\$OUT\""
+chk "errata2 micro_on tu PIN lai monitor (cron dang chay ban khac repo) => cron tro ban pin repo, in md5" "grep -qF '$PIN1/golive_monitor.sh' $W/oracron.txt && echo \"\$OUT\" | grep -q 'OK cron golive_monitor chay ban pin md5=${PIN1##*_}'"
+chk "errata2 micro_on ghi moc tmb0 = tmb luc bat (1000.00) + C3_CAPITAL=1000; so live rong, 0 leg so dry" "grep -qx 'tmb0=1000.00' $W/deploylog/c3sub_eq_base.txt && grep -qx 'c3_capital=1000' $W/deploylog/c3sub_eq_base.txt && echo \"\$OUT\" | grep -q 'OK so_live_rong' && echo \"\$OUT\" | grep -q 'OK 0_leg_so_dry_trong_so_live'"
 chk "C-1 micro_on XONG => co monitor (C3_ACCOUNT=SUB + KEYS_FILE tk con)" "grep -qx C3_ACCOUNT=SUB $W/deploylog/golive_monitor.on && grep -qx KEYS_FILE=$W/keys_sub.env $W/deploylog/golive_monitor.on"
 kill $HBW 2>/dev/null; wait $HBW 2>/dev/null; rm -f $W/deploylog/run/monitor_heartbeat
 printf '#!/bin/bash\necho x >> %s/sshcnt.log\nexec bash -c "$1"\n' $W > $W/sshcnt.sh; rm -f $W/sshcnt.log $W/moncron.log
@@ -1571,10 +1582,25 @@ api account '{"totalMarginBalance":"590","availableBalance":"500","assets":[{"as
 OUT=$(GS DRY=1 bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
 chk "add4 monitor SUB DRY=1 DD -41 %: KHAN nhung KHONG dat co" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'DRY=1: KHONG dat run/KILL_SWITCH' && [ ! -e $F4/run/KILL_SWITCH ]"
 OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
-chk "add4 monitor SUB DD -41 % cham nguong A40/C6: KHAN + run/KILL_SWITCH (token golive_monitor), Telegram, KHONG dong vi the, push=OFF" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'KHAN (ADD4 tk con): DD_tmb=-0.4100' && grep -q '^golive_monitor .* KHAN DD_tmb' $F4/run/KILL_SWITCH && grep -q 'KHAN tk con' $W/tg_sub.txt && echo \"\$OUT\" | grep -q 'push=OFF'"
+chk "add4 monitor SUB DD -41 % cham nguong A40/C6: KHAN + run/KILL_SWITCH (token golive_monitor), Telegram, KHONG dong vi the, push=OFF" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'KHAN (ADD4 tk con): DD_eq=-0.4100' && grep -q '^golive_monitor .* KHAN DD_eq' $F4/run/KILL_SWITCH && grep -q 'KHAN tk con' $W/tg_sub.txt && echo \"\$OUT\" | grep -q 'push=OFF'"
 rm -f $F4/run/KILL_SWITCH
-OUT=$(GS SUB_PEAK_RESET=1 bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
-chk "add4 monitor SUB_PEAK_RESET=1 (owner rut von co chu dich): dinh = tmb hien tai, het KHAN" "[ $RC = 0 ] && grep -qx 'peak=590' $W/sub_peak.txt && echo \"\$OUT\" | grep -q 'dd=0.0000' && [ ! -e $F4/run/KILL_SWITCH ]"
+OUT=$(GS DRY=1 bash "$HERE/golive_rebase_equity.sh" "thu" 2>&1); RC=$?
+chk "errata2 rebase DRY=1: in moc cu/moi, KHONG ghi" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && grep -qx 'tmb0=1000.00' $W/deploylog/c3sub_eq_base.txt"
+OUT=$(echo YES | GS bash "$HERE/golive_rebase_equity.sh" 2>&1); RC=$?
+chk "errata2 rebase thieu ly do => DUNG" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'can ly do'"
+OUT=$(echo YES | GS bash "$HERE/golive_rebase_equity.sh" "rut 410 USDT (test)" 2>&1); RC=$?
+chk "errata2 rebase (owner rut 410): tmb0 = tmb hien tai 590, C3_CAPITAL 1000 tu process, log ly do" "[ $RC = 0 ] && grep -qx 'tmb0=590' $W/deploylog/c3sub_eq_base.txt && grep -qx 'c3_capital=1000' $W/deploylog/c3sub_eq_base.txt && grep -q 'rut 410 USDT (test)' $W/deploylog/c3sub_eq_base.log"
+OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "errata2 sau rebase: eq = 1000 + (590 - 590) = 1000, dinh dat lai theo moc moi, het KHAN" "[ $RC = 0 ] && grep -qx 'peak=1000.00' $W/sub_peak.txt && echo \"\$OUT\" | grep -q 'eq=1000.00 dinh=1000.00 dd=0.0000' && [ ! -e $F4/run/KILL_SWITCH ]"
+api account '{"totalMarginBalance":"10976.22","availableBalance":"10976.22","assets":[{"asset":"USDT","walletBalance":"1000","marginAvailable":true},{"asset":"BFUSD","walletBalance":"10000","marginAvailable":true}]}'
+echo YES | GS bash "$HERE/golive_rebase_equity.sh" "nap BFUSD 10000 (test)" > /dev/null 2>&1
+OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "errata2 tk con tmb 10976 (BFUSD), C3_CAPITAL 1000: eq = 1000 (khong phai 10976)" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'eq=1000.00 dinh=1000.00 dd=0.0000'"
+api account '{"totalMarginBalance":"10576.22","availableBalance":"10576.22","assets":[{"asset":"USDT","walletBalance":"600","marginAvailable":true},{"asset":"BFUSD","walletBalance":"10000","marginAvailable":true}]}'
+OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "errata2 c3 lo 400 (tmb chi -3.6 %): eq 600 = -40 % dinh => KHAN + KILL_SWITCH" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'eq=600.00 dinh=1000.00 dd=-0.4000' && echo \"\$OUT\" | grep -q 'KHAN (ADD4 tk con): DD_eq=-0.4000' && grep -q '^golive_monitor .* KHAN DD_eq' $F4/run/KILL_SWITCH"
+rm -f $F4/run/KILL_SWITCH; api account '{"totalMarginBalance":"590","availableBalance":"500","assets":[{"asset":"USDT","walletBalance":"590","marginAvailable":true}]}'
+echo YES | GS bash "$HERE/golive_rebase_equity.sh" "rut ve 590 (test)" > /dev/null 2>&1
 api positionRisk '[{"symbol":"XYZUSDT","positionAmt":"5"},{"symbol":"Z0USDT","positionAmt":"0"}]'
 OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
 chk "add4 monitor SUB: vi the NGOAI c3 tren tk con (khong co trong so) => KHAN + KILL_SWITCH, KHONG tu dong" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'KHAN (ADD4 tk con): POS_NONC3=1:XYZUSDT:+5' && grep -q '^golive_monitor .* KHAN POS_NONC3' $F4/run/KILL_SWITCH"
@@ -1598,6 +1624,10 @@ chk "MIN-1 doc lai duoc => bo dem ve 0, khong KHAN" "[ $RC = 0 ] && grep -qx 'n=
 OUT=$(GS MAIN_KEY_SHA8=$SK8 bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
 chk "add4 monitor: key doc san co sha8 = key tk chinh => KHAN + KILL_SWITCH" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'key_doc_san_LA_KEY_TK_CHINH' && [ -e $F4/run/KILL_SWITCH ]"
 rm -f $F4/run/KILL_SWITCH $W/sub_peak.txt
+mv $W/deploylog/c3sub_eq_base.txt $W/eqbase.bak
+OUT=$(GS bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "errata2 co micro/pilot BAT ma KHONG co tmb0 => fail-closed: KHAN + KILL_SWITCH" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'KHAN (ADD4 tk con):.*thieu_tmb0' && grep -q '^golive_monitor .* KHAN .*thieu_tmb0' $F4/run/KILL_SWITCH"
+mv $W/eqbase.bak $W/deploylog/c3sub_eq_base.txt; rm -f $F4/run/KILL_SWITCH
 OUT=$(GS bash "$HERE/golive_legacy_verify.sh" 2>&1); RC=$?
 chk "add4 legacy_verify o che do SUB => TU CHOI (ADD4 §3 bo)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'ADD4 §3'"
 touch $W/deploylog/run/monitor_heartbeat
@@ -1622,6 +1652,7 @@ OUT=$(echo YES | GS bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "add4 pilot_on SUB: go YES (khong phai 'YES PILOT') => huy" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'Huy. Khong doi gi.'"
 OUT=$(echo 'YES PILOT' | GS bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "add4 pilot_on SUB XONG: C3_CAPITAL 1000 -> 10000, key tk con giu, LEGACY chi INFO" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: PILOT C3_CAPITAL=10000' && penv | grep -qx C3_CAPITAL=10000 && penv | grep -qx LIVE_C3_KEYS_FILE=$W/keys_sub.env && echo \"\$OUT\" | grep -q 'INFO LEGACY_managed=44'"
+chk "errata2 pilot_on ghi lai moc tmb0 + C3_CAPITAL=10000; 0 leg so dry trong so live" "grep -qx 'c3_capital=10000' $W/deploylog/c3sub_eq_base.txt && grep -q 'golive_pilot_on' $W/deploylog/c3sub_eq_base.txt && echo \"\$OUT\" | grep -q 'OK 0_leg_so_dry_trong_so_live'"
 OUT=$(echo YES | GS MODE=drain bash "$HERE/golive_live_off.sh" 2>&1); RC=$?
 chk "add4 live_off SUB drain: dat run/KILL_SWITCH" "[ $RC = 0 ] && [ -e $F4/run/KILL_SWITCH ]"
 api positionRisk '[{"symbol":"C05USDT","positionAmt":"2"}]'

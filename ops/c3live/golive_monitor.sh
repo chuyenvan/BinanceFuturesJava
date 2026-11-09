@@ -3,7 +3,7 @@
 # golive_monitor.sh — [V12 R4o / ADD4] 1 LENH: trang thai tong c3_live tren 242 (khong restart).
 #   bash ~/claude_master/v12/c3live/ops/c3live/golive_monitor.sh            # tay; C3_ACCOUNT=SUB mac dinh (MAIN = chi doc nhu R4o)
 #   DRY=1 ...            (SUB: chi doc + in, KHONG dat co, KHONG ghi dinh / bo dem)
-#   SUB_PEAK_RESET=1 ... dat lai dinh tmb = tmb hien tai (sau khi owner NAP/RUT co chu dich)
+#   owner NAP/RUT co chu dich => bash golive_rebase_equity.sh "ly do" (dat lai moc tmb0)
 #   [A1 ADD4 C-1] CRON (install_cron_golive_monitor.sh, */2 phut, flock -n rieng): MONITOR_CRON=1 => KHONG co co $GL_MON_FLAG
 #   (micro_on/pilot_on tao, live_off MODE=dry xoa) => thoat NGAY, 0 ssh / 0 call. Co co => C3_ACCOUNT + KEYS_FILE lay tu co; log
 #   ~/claude_master/deploy/golive_monitor_cron.log (xoay > 20 MB); doc 4 MB log 242 / luot; Telegram KHAN lap lai toi da 1 lan / 30'.
@@ -14,8 +14,9 @@
 # [ADD4] SUB doc them san tk con CHI DOC (gl_api242 mon: v3/account 5 + v3/positionRisk 5 + openOrders 40 + openAlgoOrders 40 = 90 weight IP):
 #   §4 vi the (vuot qty c3 trong so; leg dang khop => POS_PENDING) / lenh / algo cid KHONG c3-|c3x-|c3s- => KHAN + dat run/KILL_SWITCH
 #      (co san: chan MO MOI; vi the c3 van duoc quan ly), KHONG tu dong vi the. Owner/MASTER xu ly; go co: MODE=undrain golive_live_off.sh.
-#   §5 DD totalMarginBalance tk con (USDT, gom BFUSD) so voi dinh $SUB_PEAK_FILE (Oracle, theo key_sha8) <= -SUB_DD_LIMIT (0.40 = A40/C6)
-#      => KHAN + run/KILL_SWITCH. Owner NAP/RUT co chu dich: SUB_PEAK_RESET=1 bash golive_monitor.sh (dinh = tmb hien tai).
+#   §5 [ERRATA 2] eq = C3_CAPITAL + (tmb - tmb0) (moc $SUB_BASE_FILE: micro_on / pilot_on / golive_rebase_equity ghi); dinh eq
+#      $SUB_PEAK_FILE (theo moc); DD <= -SUB_DD_LIMIT (0.40 = A40/C6) => KHAN + run/KILL_SWITCH. Co micro/pilot ma KHONG co moc => KHAN
+#      + KILL_SWITCH (fail-closed). tmb gom BFUSD; lai/gia BFUSD = nhieu chap nhan.
 #   key doc san co sha8 = key tk chinh => KHAN. [A1 MIN-1] doc 242/san loi: le => CANH BAO; >= MON_FAIL_MAX (5) luot LIEN TIEP => KHAN +
 #      KILL_SWITCH (neu ssh con dat duoc) + Telegram.
 #   Lop CHINH (jar r4t, khong doi): KillSwitchEngine A40/C6 (FLATTEN) tren C3MainEquity = C3_CAPITAL + PnL c3 (so) — day la lop ops THU HAI.
@@ -92,23 +93,32 @@ if [ "$C3_ACCOUNT" = SUB ]; then
   else UNK="$UNK doc_san"; fi
   KS8=$(av KEY_SHA8)
   [ -n "$KS8" ] && [ "$KS8" = "$MAIN_KEY_SHA8" ] && KH="$KH key_doc_san_LA_KEY_TK_CHINH($KS8)"
-  # §5 DD totalMarginBalance (USDT, gom gia tri margin BFUSD) so voi dinh luu tren Oracle (theo key_sha8)
-  TMB=$(av TMB); DD=""
-  if [[ "$TMB" =~ ^[0-9]+(\.[0-9]+)?$ ]] && awk -v e="$TMB" 'BEGIN{exit !(e>0)}'; then
-    PK=""; PS=""
-    [ -r "$SUB_PEAK_FILE" ] && { PK=$(sed -n 's/^peak=//p' "$SUB_PEAK_FILE" | head -1); PS=$(sed -n 's/^key_sha8=//p' "$SUB_PEAK_FILE" | head -1); }
-    NEWPK=""
-    if [ "${SUB_PEAK_RESET:-0}" = 1 ]; then NEWPK=$TMB; say "dinh tmb DAT LAI = $TMB (SUB_PEAK_RESET=1)"
-    elif ! [[ "$PK" =~ ^[0-9]+(\.[0-9]+)?$ ]] || [ "$PS" != "$KS8" ]; then NEWPK=$TMB; say "dinh tmb khoi tao = $TMB (chua co dinh / key khac)"
-    elif awk -v e="$TMB" -v p="$PK" 'BEGIN{exit !(e>p)}'; then NEWPK=$TMB; fi
-    if [ -n "$NEWPK" ]; then
-      PK=$NEWPK
-      if [ "$DRY" = 1 ]; then say "DRY=1: KHONG ghi dinh $SUB_PEAK_FILE"
-      else mkdir -p "$(dirname "$SUB_PEAK_FILE")"; printf 'peak=%s\nkey_sha8=%s\nts=%s\n' "$PK" "$KS8" "$TS" > "$SUB_PEAK_FILE.tmp" && mv -f "$SUB_PEAK_FILE.tmp" "$SUB_PEAK_FILE"; fi
+  # §5 (ADD4 ERRATA 2) eq = C3_CAPITAL + (tmb - tmb0); tmb0 + C3_CAPITAL tu $SUB_BASE_FILE (micro_on / pilot_on / golive_rebase_equity ghi)
+  TMB=$(av TMB); DD=""; EQ=""; TB0=""
+  FLAGON=0; [ -f "$GL_MON_FLAG" ] && FLAGON=1
+  if [[ "$TMB" =~ ^-?[0-9]+(\.[0-9]+)?$ ]]; then
+    TB0=$(sed -n 's/^tmb0=//p' "$SUB_BASE_FILE" 2>/dev/null | head -1); CB=$(sed -n 's/^c3_capital=//p' "$SUB_BASE_FILE" 2>/dev/null | head -1)
+    KB=$(sed -n 's/^key_sha8=//p' "$SUB_BASE_FILE" 2>/dev/null | head -1); BID=$(sed -n 's/^base_id=//p' "$SUB_BASE_FILE" 2>/dev/null | head -1)
+    if [[ "$TB0" =~ ^[0-9]+(\.[0-9]+)?$ ]] && [[ "$CB" =~ ^[0-9]+(\.[0-9]+)?$ ]] && [ -n "$KB" ] && [ "$KB" = "$KS8" ] && [ -n "$BID" ]; then
+      EQ=$(awk -v c="$CB" -v t="$TMB" -v b="$TB0" 'BEGIN{printf "%.2f", c+t-b}')
+      PK=$(sed -n 's/^peak=//p' "$SUB_PEAK_FILE" 2>/dev/null | head -1); PB=$(sed -n 's/^base_id=//p' "$SUB_PEAK_FILE" 2>/dev/null | head -1)
+      NEWPK=""
+      if ! [[ "$PK" =~ ^-?[0-9]+(\.[0-9]+)?$ ]] || [ "$PB" != "$BID" ]; then NEWPK=$EQ; say "dinh eq khoi tao = $EQ (moc tmb0 $BID)"
+      elif awk -v e="$EQ" -v p="$PK" 'BEGIN{exit !(e>p)}'; then NEWPK=$EQ; fi
+      if [ -n "$NEWPK" ]; then
+        PK=$NEWPK
+        if [ "$DRY" = 1 ]; then say "DRY=1: KHONG ghi dinh $SUB_PEAK_FILE"
+        else mkdir -p "$(dirname "$SUB_PEAK_FILE")"; printf 'peak=%s\nbase_id=%s\nts=%s\n' "$PK" "$BID" "$TS" > "$SUB_PEAK_FILE.tmp" && mv -f "$SUB_PEAK_FILE.tmp" "$SUB_PEAK_FILE"; fi
+      fi
+      DD=$(awk -v e="$EQ" -v p="$PK" 'BEGIN{ if (p > 0) printf "%.4f", e/p-1; else printf "-1.0000" }')
+      say "== DD tk con (ops, eq = C3_CAPITAL + (tmb - tmb0) = $CB + ($TMB - $TB0)): eq=$EQ dinh=$PK dd=$DD nguong=-$SUB_DD_LIMIT (A40/C6). Lop chinh trong jar: KillSwitchEngine tren C3MainEquity (so c3)"
+      awk -v d="$DD" -v l="$SUB_DD_LIMIT" 'BEGIN{exit !(d <= -l)}' && KH="$KH DD_eq=${DD}_vuot_-${SUB_DD_LIMIT}_(A40/C6)"
+    elif [ "$FLAGON" = 1 ]; then
+      say "!! co micro/pilot BAT nhung KHONG co moc tmb0 hop le ($SUB_BASE_FILE: tmb0='$TB0' c3_capital='$CB' key='$KB' vs '$KS8') — fail-closed"
+      KH="$KH thieu_tmb0"
+    else
+      say "INFO chua co moc tmb0 (khong co co micro/pilot) — bo qua DD eq"
     fi
-    DD=$(awk -v e="$TMB" -v p="$PK" 'BEGIN{printf "%.4f", e/p-1}')
-    say "== DD tk con (ops, tmb): tmb=$TMB dinh=$PK dd=$DD nguong=-$SUB_DD_LIMIT (A40/C6). Lop chinh trong jar: KillSwitchEngine tren C3MainEquity (so c3)"
-    awk -v d="$DD" -v l="$SUB_DD_LIMIT" 'BEGIN{exit !(d <= -l)}' && KH="$KH DD_tmb=${DD}_vuot_-${SUB_DD_LIMIT}_(A40/C6)"
   else
     UNK="$UNK TMB"
   fi
@@ -137,7 +147,7 @@ if [ "$C3_ACCOUNT" = SUB ]; then
     else say "(Telegram KHAN nay da gui < 30' truoc — khong gui lai)"; fi
     PUSH=OFF
   fi
-  SUBSUM=" tk=SUB key=${KS8:-?} tmb=${TMB:-?} dd=${DD:-?} khan=$([ -n "$KH" ] && echo KHAN || { [ -n "$UNK" ] && echo "?(loi $NF/$MON_FAIL_MAX)" || echo 0; })"
+  SUBSUM=" tk=SUB key=${KS8:-?} tmb=${TMB:-?} dd=${DD:-?} khan=$([ -n "$KH" ] && echo KHAN || { [ -n "$UNK" ] && echo "?(loi $NF/$MON_FAIL_MAX)" || echo 0; }) eq=${EQ:-?} tmb0=${TB0:-?}"
 fi
 say "TOM TAT: adapter=$(sv ENV_LIVE_ADAPTER) C3_CAPITAL=$(sv ENV_C3_CAPITAL) push=$PUSH latch=$(sv LATCH) so_c3=$(sv BOOK_CUM)cum LEGACY=$(sv LEGACY_N) mem=$(sv MEM)MB jar=$(sv JAR_MD5 | cut -c1-8) pause=$(sv PAUSE | cut -c1)$SUBSUM"
 if [ "$MON_CRON" = 1 ]; then
