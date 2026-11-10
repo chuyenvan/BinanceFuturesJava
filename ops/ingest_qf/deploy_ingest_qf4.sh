@@ -39,7 +39,7 @@ own_pause_cleanup() {
 say "=== deploy_ingest_qf4 (QF4) TS=$TS DRY=$DRY jar=$JAR_MD5 token=$TOKEN ==="
 [ -f "$RESTART_R" ] && [ -f "$CHECK_R" ] || die "thieu $RESTART_R / $CHECK_R"
 [ "$(md5sum < "$RESTART_R" | cut -c1-32)" = "35f60aff9b319346a28e3c10c91f9df8" ] || die "md5 $RESTART_R sai"
-[ "$(md5sum < "$CHECK_R" | cut -c1-32)" = "675ecf2daab369d77c38c6528a53e89e" ] || die "md5 $CHECK_R sai"
+[ "$(md5sum < "$CHECK_R" | cut -c1-32)" = "e8d87135085e81f48e8d86aef56bfbdc" ] || die "md5 $CHECK_R sai"
 
 # ---- khung gio: phut :10-:44, tranh gio 07/19, tranh 00:50-01:20 va 12:50-13:20 (+07); cho toi da 90'
 if [ "${FORCE_TIME:-0}" != 1 ] && [ "$DRY" != 1 ]; then
