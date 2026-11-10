@@ -145,7 +145,7 @@ public final class ExitParityEngine {
             Float prevSL = slBefore.get(s);
             if (c == null) {
                 if (prevSL == null) {
-                    l.add(new Ev("TIME_STOP", ts, px.get(s)));
+                    l.add(new Ev("TIME_STOP", ts, pxOrNaN(px, s)));   // [R1 T2a] coin thieu gia phut nay (vd LUNA 05-2022)
                 } else {
                     // ratchet trong cung nhip truoc khi cat: ghi SL cuoi
                     Float slAtClose = e.getValue().priceSL;
@@ -160,13 +160,18 @@ public final class ExitParityEngine {
             } else if (prevSL != null && c.priceSL != null && !prevSL.equals(c.priceSL)) {
                 l.add(new Ev("SL", ts, c.priceSL));
             } else if (c.priceSL == null && ts - c.tsFirstLeg > LiveProfileC3.TIME_STOP_HOURS * 3_600_000L) {
-                l.add(new Ev("DEFER", ts, px.get(s)));
+                l.add(new Ev("DEFER", ts, pxOrNaN(px, s)));
             }
         }
         // that
         Map<String, Float> livePx = new LinkedHashMap<>();
         for (String s : book.ownedSymbols()) if (px.containsKey(s)) livePx.put(s, px.get(s));
         mgr.step(livePx);
+    }
+
+    private static float pxOrNaN(Map<String, Float> px, String s) {
+        Float v = px.get(s);
+        return v == null ? Float.NaN : v;
     }
 
     /** Cum giay con mo (de leg DCA dung legCount giay). */
