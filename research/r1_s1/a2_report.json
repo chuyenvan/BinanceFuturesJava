@@ -1,0 +1,136 @@
+{
+ "folds": [
+  {
+   "fold": "20220101",
+   "rows": 1123854,
+   "finite": 1123854,
+   "changed_frac": 0.9923361931354072,
+   "multiset_eq": true,
+   "nan_eq": true
+  },
+  {
+   "fold": "20220401",
+   "rows": 1172010,
+   "finite": 1172010,
+   "changed_frac": 0.9925094495780753,
+   "multiset_eq": true,
+   "nan_eq": true
+  },
+  {
+   "fold": "20220701",
+   "rows": 1188418,
+   "finite": 1188418,
+   "changed_frac": 0.9925430277898853,
+   "multiset_eq": true,
+   "nan_eq": true
+  },
+  {
+   "fold": "20221001",
+   "rows": 1242626,
+   "finite": 1242626,
+   "changed_frac": 0.9928989092454206,
+   "multiset_eq": true,
+   "nan_eq": true
+  },
+  {
+   "fold": "20230101",
+   "rows": 1302607,
+   "finite": 1302607,
+   "changed_frac": 0.9933456522189732,
+   "multiset_eq": true,
+   "nan_eq": true
+  },
+  {
+   "fold": "20230401",
+   "rows": 1524605,
+   "finite": 1524605,
+   "changed_frac": 0.9943211520361012,
+   "multiset_eq": true,
+   "nan_eq": true
+  },
+  {
+   "fold": "20230701",
+   "rows": 1671614,
+   "finite": 1671614,
+   "changed_frac": 0.9946764025666213,
+   "multiset_eq": true,
+   "nan_eq": true
+  },
+  {
+   "fold": "20231001",
+   "rows": 1912959,
+   "finite": 1912959,
+   "changed_frac": 0.9953647725852984,
+   "multiset_eq": true,
+   "nan_eq": true
+  },
+  {
+   "fold": "20240101",
+   "rows": 2140992,
+   "finite": 2140992,
+   "changed_frac": 0.9959500082204884,
+   "multiset_eq": true,
+   "nan_eq": true
+  },
+  {
+   "fold": "20240401",
+   "rows": 2256504,
+   "finite": 2256504,
+   "changed_frac": 0.9961329561126415,
+   "multiset_eq": true,
+   "nan_eq": true
+  },
+  {
+   "fold": "20240701",
+   "rows": 2362741,
+   "finite": 2362741,
+   "changed_frac": 0.9962382673344222,
+   "multiset_eq": true,
+   "nan_eq": true
+  },
+  {
+   "fold": "20241001",
+   "rows": 2719452,
+   "finite": 2719452,
+   "changed_frac": 0.9967776596167169,
+   "multiset_eq": true,
+   "nan_eq": true
+  },
+  {
+   "fold": "20250101",
+   "rows": 3056303,
+   "finite": 3056303,
+   "changed_frac": 0.9971867972514505,
+   "multiset_eq": true,
+   "nan_eq": true
+  },
+  {
+   "fold": "20250401",
+   "rows": 3535785,
+   "finite": 3535785,
+   "changed_frac": 0.9975524529913442,
+   "multiset_eq": true,
+   "nan_eq": true
+  },
+  {
+   "fold": "20250701",
+   "rows": 4078299,
+   "finite": 4078299,
+   "changed_frac": 0.9978204148347142,
+   "multiset_eq": true,
+   "nan_eq": true
+  },
+  {
+   "fold": "20251001",
+   "rows": 4517610,
+   "finite": 4517610,
+   "changed_frac": 0.99801111649744,
+   "multiset_eq": true,
+   "nan_eq": true
+  }
+ ],
+ "rng": "default_rng(42), 16 file theo ten",
+ "src": "/home/ubuntu/predwf_map_s1a2_x1",
+ "a2_bins_sha256_concat": "eff8e1a5742d5c6fccff766ddfa93baafd6b902ab28d983bc108f5b0ee8c1ca0",
+ "G_SAN": true
+}
