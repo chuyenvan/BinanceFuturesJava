@@ -23,8 +23,9 @@ SCP_242=${SCP_242:-"scp -P 2222 -o BatchMode=yes -o ConnectTimeout=20 -i /home/u
 RHOST=${RHOST-"root@103.157.218.242:"}
 A=${APP_DIR:-/home/chuyennd/java/v_t_m}
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}
-NJ_MD5=${NJ_MD5:-694b29b2e5be32b537ca6c38557e64db}   # jar dry dang chay (r4t, ROUND4T) — khac => TU CHOI
+NJ_MD5=${NJ_MD5:-b1f12c3eeaeed72cb17afbe5b4da06cf}   # jar dry dang chay (r4u3, ADD19; truoc r4t 694b29b2) — khac => TU CHOI
 SEED=${SEED:-}
+C3_ACCOUNT=${C3_ACCOUNT:-SUB}   # [A1 r4u2 C-1] MAIN + C3_EXCLUDE_LEGACY_HELD=false => TU CHOI
 SEED_MD5=${SEED_MD5:-}
 SEED_MAX_LAG_H=${SEED_MAX_LAG_H:-}
 WD_PAUSE=${WD_PAUSE:-/var/lib/h242_watchdog/PAUSE}
@@ -126,6 +127,7 @@ F=$(df -Pk . | awk 'NR==2{print $4}'); [ "${F:-0}" -gt 1048576 ] && echo "OK dia
 L0=$(tail -c 20000000 logs/full.log 2>/dev/null | grep -a '\[LEGACY\] managed' | tail -1 | grep -aoE 'managed [0-9]+' | awk '{print $2}')
 [ -n "$L0" ] && echo "OK LEGACY_N=$L0" || echo "FAIL khong_doc_duoc_LEGACY_managed"
 grep -q '"latch":"NONE"' run/killsw_latch.json 2>/dev/null && echo "OK latch_NONE" || echo "FAIL latch_khac_NONE"
+echo "INFO EXCL_ENVSH=$(sed -n 's/^export C3_EXCLUDE_LEGACY_HELD=//p' conf/env.sh | tail -1)"; echo "INFO EXCL_PROC=$(echo "$E" | sed -n 's/^C3_EXCLUDE_LEGACY_HELD=//p' | tail -1)"
 if [ "$MODE" = seed ]; then   # ADD6 §2: khong re-seed khi co dot sap / gate PASS trong 6 h truoc (bao thu: 7 gio dong ho)
   PF=$(mktemp); for h in 0 1 2 3 4 5 6; do TZ=Asia/Ho_Chi_Minh date -d "-$h hour" '+%d/%m/%Y %H:'; done > $PF
   GP=$(tail -c 60000000 logs/full.log 2>/dev/null | grep -aF -f $PF | grep -a '\[GATE\] scale' | grep -avc 'n_pass=0')
@@ -139,6 +141,7 @@ EOF
 PRE=$(pre242) || die "ssh toi 242 loi"
 echo "$PRE"
 echo "$PRE" | grep -qx END_PRE || die "kiem 242 khong tron ven (ssh dut?)"
+if [ "$C3_ACCOUNT" = MAIN ] && echo "$PRE" | grep -qx 'INFO EXCL_\(ENVSH\|PROC\)=false'; then die "C3_ACCOUNT=MAIN di voi C3_EXCLUDE_LEGACY_HELD=false — TU CHOI (A1 r4u2 C-1: vi the c3 that bi tinh la LEGACY)"; fi
 echo "$PRE" | grep -q '^FAIL' && die "kiem 242 co muc FAIL (xem tren)"
 L0=$(echo "$PRE" | sed -n 's/^OK LEGACY_N=//p'); HC=$(echo "$PRE" | sed -n 's/^INFO HAS_C11=\([0-9]*\).*/\1/p')
 GR0=$(echo "$PRE" | sed -n 's/^OK co_gate_ratio_live.bin md5=//p')

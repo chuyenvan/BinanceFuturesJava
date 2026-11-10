@@ -1,9 +1,18 @@
 #!/usr/bin/env bash
 # =============================================================================
-# swap_v12_dry_jar.sh — [V12 R4q/R4r] THAY JAR v_t_m dry v1.2 (c3_live, LIVE_ADAPTER=dry) OLD_TAG -> NEW_TAG (mac dinh r4q -> r4t),
+# swap_v12_dry_jar.sh — [V12 R4q/R4r] THAY JAR v_t_m dry v1.2 (c3_live, LIVE_ADAPTER=dry) OLD_TAG -> NEW_TAG (mac dinh r4t -> r4u3),
 #   1 lan restart, KHONG seed.
 #   [R4r] tong quat: OLD_TAG/NEW_TAG/OLD_MD5/NJ/NJ_MD5 (pin = cap hien hanh); NEED_MGUARD=1 => hau kiem [MINUTE-GUARD] BAT
 #   (TAT => FAIL => rollback), env.sh co LIVE_MINUTE_GUARD=0 => TU CHOI truoc khi dung bot.
+#   [R4u] NEED_BIGDOWN=1 (mac dinh): jar moi PHAI co code [BIG_DOWN-SEL] (chuoi trong class com/binance/chuyennd/**, kiem tren Oracle)
+#   — khong co => DUNG truoc moi thao tac 242. Rollback ve r4t: OLD_TAG=r4u3 NEW_TAG=r4t OLD_MD5=15f9e14f... NJ=<jar r4t> NJ_MD5=694b29b2...
+#   NEED_BIGDOWN=0 bash swap_v12_dry_jar.sh
+#   [R4u2] C3_EXCLUDE_LEGACY_HELD: NEW_TAG r4u3* => ghi env.sh false (C3_ACCOUNT=SUB, mac dinh, ke ca dry) | true (MAIN); jar khac
+#   (vd ve r4t) => GO dong; hau kiem env process dung gia tri / khong con. Rollback tu dong => env.sh backup (khong co dong).
+#   [A1 r4u2 C-1] C3_ACCOUNT=MAIN + EXCL_HELD=false => TU CHOI; SUB: hau kiem log KHONG co [C3-EXCL-FORCE] (jar r4u3 ep true khi
+#   live + key khong phai keys_sub.env => env key sai).
+#   [ADD19] hau kiem DAT => in + luu START_MS JVM moi (~/claude_master/deploy/swap_start_<tag>_<TS>.txt), dang ky register_jar.sh,
+#   ghi smoke_start_ms vao parity_v12w/gmicro_target.json KHI file tro dung target_jar=<NEW_TAG> + target_md5=<NJ_MD5> (khac => WARN).
 #   Them C11 (LIVE_SEED_EXCLUDE_DECISION_MIN=1) neu env.sh chua co. Khong doi gi khac (adapter/profile/push giu nguyen = dry).
 # Chay tren ORACLE (owner), 1 lenh:
 #   DRY=1 bash ~/claude_master/v12/c3live/ops/c3live/swap_v12_dry_jar.sh   # chi kiem (Oracle + 242 CHI DOC), KHONG ghi gi
@@ -25,7 +34,7 @@
 # Ma thoat: 0 XONG | 1 DUNG/da rollback | 2 ROLLBACK LOI (PAUSE con — xem dong "PAUSE còn").
 # Bien (test): SSH_242 SCP_242 RHOST APP_DIR PROC_PAT OLD_MD5 NJ NJ_MD5 WD_PAUSE WD_PAUSE_MAX_S POST_WAIT_S POST_ROUNDS LOGDIR
 #   FORCE_TIME DEPLOY_TG_ENV DEPLOY_TG_SINK MIN_MEM_MB SSH_RETRY_S REG_JAR_SH REG_TIMEOUT_S WINDOW_WAIT_MAX_S WINDOW_POLL_S
-#   TIME_OK_FILE (test: co file = trong khung) OLD_TAG NEW_TAG NEED_MGUARD
+#   TIME_OK_FILE (test: co file = trong khung) OLD_TAG NEW_TAG NEED_MGUARD NEED_BIGDOWN C3_ACCOUNT EXCL_HELD GMICRO_TARGET
 # =============================================================================
 set -uo pipefail
 SSH_242=${SSH_242:-"ssh -p 2222 -o BatchMode=yes -o ConnectTimeout=20 -i /home/ubuntu/.ssh/id_rsa_chuyennd root@103.157.218.242"}
@@ -33,11 +42,19 @@ SCP_242=${SCP_242:-"scp -P 2222 -o BatchMode=yes -o ConnectTimeout=20 -i /home/u
 RHOST=${RHOST-"root@103.157.218.242:"}
 A=${APP_DIR:-/home/chuyennd/java/v_t_m}
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}
-OLD_MD5=${OLD_MD5:-8c81e6b560b61e7d43ca32c4a50ec926}   # jar dry DANG chay (r4q, ROUND4Q) — khac => TU CHOI
-NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4t}
-NJ_MD5=${NJ_MD5:-694b29b2e5be32b537ca6c38557e64db}   # jar r4t (docs/c3live/ROUND4T.md; r4r bd85ca94 / r4s 30469710 KHONG len 242)
-OLD_TAG=${OLD_TAG:-r4q}
-NEW_TAG=${NEW_TAG:-r4t}
+OLD_MD5=${OLD_MD5:-694b29b2e5be32b537ca6c38557e64db}   # jar dry DANG chay (r4t, ROUND4T) — khac => TU CHOI
+NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4u3}
+NJ_MD5=${NJ_MD5:-b1f12c3eeaeed72cb17afbe5b4da06cf}   # jar r4u3 (BIG_DOWN-SEL + BIG_DOWN-GATE, ADD18/19); truoc: r4t 694b29b2, r4q 8c81e6b5
+OLD_TAG=${OLD_TAG:-r4t}
+NEW_TAG=${NEW_TAG:-r4u3}
+NEED_BIGDOWN=${NEED_BIGDOWN:-1}   # [R4u] jar moi phai co code [BIG_DOWN-SEL]
+C3_ACCOUNT=${C3_ACCOUNT:-SUB}     # [R4u2] SUB (mac dinh, ADD4) | MAIN — quyet dinh C3_EXCLUDE_LEGACY_HELD
+case "$C3_ACCOUNT" in SUB|MAIN) ;; *) echo "C3_ACCOUNT=$C3_ACCOUNT khong hop le (SUB | MAIN)"; exit 1;; esac
+case "$NEW_TAG" in r4u3*) DEF_EXCL=$([ "$C3_ACCOUNT" = SUB ] && echo false || echo true);; *) DEF_EXCL="";; esac
+EXCL_HELD=${EXCL_HELD-$DEF_EXCL}   # [R4u2] export C3_EXCLUDE_LEGACY_HELD=<gia tri> vao env.sh (dong cu bo); RONG = go dong (jar cu / ve r4t)
+[ -z "$EXCL_HELD" ] || [ "$EXCL_HELD" = false ] || [ "$EXCL_HELD" = true ] || { echo "EXCL_HELD chi true | false | rong"; exit 1; }
+if [ "$C3_ACCOUNT" = MAIN ] && [ "$EXCL_HELD" = false ]; then echo "DUNG: C3_ACCOUNT=MAIN di voi C3_EXCLUDE_LEGACY_HELD=false — TU CHOI (A1 r4u2 C-1: vi the c3 that bi tinh la LEGACY)"; exit 1; fi
+GMICRO_TARGET=${GMICRO_TARGET:-/home/ubuntu/claude_master/parity_v12w/gmicro_target.json}   # [ADD19] smoke_start_ms
 NEED_MGUARD=${NEED_MGUARD:-1}   # [R4r] jar moi co guard do du phut => hau kiem [MINUTE-GUARD] BAT
 WD_PAUSE=${WD_PAUSE:-/var/lib/h242_watchdog/PAUSE}
 WD_PAUSE_MAX_S=${WD_PAUSE_MAX_S:-1800}
@@ -136,6 +153,21 @@ say "=== swap_v12_dry_jar TS=$TS OLD=$OLD_MD5 NEW=$NJ_MD5 DRY=$DRY $([ "$SW_JOB"
 [ -f "$NJ" ] || die "khong thay jar moi $NJ"
 GOT=$(md5sum < "$NJ" | cut -c1-32); [ "$GOT" = "$NJ_MD5" ] || die "md5 jar moi $GOT KHAC pin $NJ_MD5"
 say "OK jar moi $NJ md5=$NJ_MD5 ($(stat -c %s "$NJ") byte)"
+if [ "$NEED_BIGDOWN" = 1 ]; then   # [R4u] code [BIG_DOWN-SEL] (chon coin BIG_DOWN nhu sim) phai co trong jar moi
+  BD=$(python3 -I - "$NJ" <<'PYEOF'
+import sys, zipfile
+try:
+    z = zipfile.ZipFile(sys.argv[1])
+except Exception as e:
+    print('KHONG_DOC_DUOC_JAR_' + type(e).__name__); sys.exit(0)
+for n in sorted(z.namelist(), key=lambda n: 'DetectEntrySignal2TradeNormal' not in n):
+    if n.endswith('.class') and n.startswith('com/binance/chuyennd/') and b'BIG_DOWN-SEL' in z.read(n):
+        print('OK ' + n); sys.exit(0)
+print('KHONG_THAY_BIG_DOWN-SEL')
+PYEOF
+)
+  case "$BD" in OK*) say "OK jar moi co code [BIG_DOWN-SEL] (${BD#OK })";; *) die "jar moi KHONG co code [BIG_DOWN-SEL] ($BD) — NEED_BIGDOWN=1";; esac
+fi
 
 # ---------------------------------------------------------------- 1. kiem 242 CHI DOC
 pre242() {
@@ -176,7 +208,10 @@ GR0=$(echo "$PRE" | sed -n 's/^OK co_gate_ratio_live.bin md5=//p')
 ENV_ADD="# [v1.2 swap_v12_dry_jar $TS] jar ${OLD_TAG} -> ${NEW_TAG} ($NJ_MD5), khong seed"
 [ "${HC:-0}" = 0 ] && ENV_ADD="$ENV_ADD
 export LIVE_SEED_EXCLUDE_DECISION_MIN=1"
+[ -n "$EXCL_HELD" ] && ENV_ADD="$ENV_ADD
+export C3_EXCLUDE_LEGACY_HELD=$EXCL_HELD"
 NADD=$(echo "$ENV_ADD" | wc -l)
+say "--- C3_EXCLUDE_LEGACY_HELD (C3_ACCOUNT=$C3_ACCOUNT, jar $NEW_TAG): $([ -n "$EXCL_HELD" ] && echo "=$EXCL_HELD (dong cu trong env.sh bo)" || echo 'GO dong khoi env.sh (jar khong dung key)')"
 say "--- se THEM vao $A/conf/env.sh ($NADD dong):"; echo "$ENV_ADD" | sed 's/^/   + /'
 say "--- se thay $A/target/binance-java-sdk-1.2.4.jar: $OLD_MD5 (${OLD_TAG}, backup .bak_swap_$TS) -> $NJ_MD5 (${NEW_TAG})"
 say "--- hau kiem: jar=$NJ_MD5, env dry + C11=1, [UNIVERSE-A1] PREMARKET=, [GATE-PRE] premarket_bo=, LEGACY_QUEUE_LIVE_BLOCK=true, LEGACY $L0, latch NONE, 0 KHAN$([ "$NEED_MGUARD" = 1 ] && echo ', [MINUTE-GUARD] BAT')"
@@ -241,14 +276,19 @@ on_sig() {
 }
 trap on_sig INT TERM HUP
 EB=$(echo "$ENV_ADD" | base64 -w0)
-RS=$(s242in "PP='$PROC_PAT' bash -s -- $A $TS $EB $NADD $WD_PAUSE $WD_PAUSE_MAX_S $$ $OLD_MD5 $NJ_MD5" <<'EOF'
-A=$1; TS=$2; EB=$3; NADD=$4; PAUSE=$5; MAXS=$6; JP=$7; OJM=$8; NJM=$9; cd "$A" || { echo "FAIL cd"; exit 0; }
+RS=$(s242in "PP='$PROC_PAT' bash -s -- $A $TS $EB $NADD $WD_PAUSE $WD_PAUSE_MAX_S $$ $OLD_MD5 $NJ_MD5 ${EXCL_HELD:--}" <<'EOF'
+A=$1; TS=$2; EB=$3; NADD=$4; PAUSE=$5; MAXS=$6; JP=$7; OJM=$8; NJM=$9; EXN=${10:--}; cd "$A" || { echo "FAIL cd"; exit 0; }
 J=target/binance-java-sdk-1.2.4.jar; JN=$J.v12swap_$TS; JB=$J.bak_swap_$TS
 [ "$(md5sum < $JN | cut -c1-32)" = "$NJM" ] || { echo "FAIL jar_moi_tren_242_sai_md5"; exit 0; }
 \cp -fp conf/env.sh conf/env.sh.bak_swap_$TS || { echo "FAIL backup_env"; exit 0; }
+sed -i '/^export C3_EXCLUDE_LEGACY_HELD=/d' conf/env.sh   # [R4u2] bo dong cu; them lai (neu co gia tri) qua ENV_ADD
 echo "$EB" | base64 -d >> conf/env.sh
-D=$(diff conf/env.sh.bak_swap_$TS conf/env.sh | grep -c '^>')
+D=$(( $(wc -l < conf/env.sh) - $(wc -l < conf/env.sh.bak_swap_$TS) + $(grep -c '^export C3_EXCLUDE_LEGACY_HELD=' conf/env.sh.bak_swap_$TS) ))   # [R4u2] so dong them (tru dong cu da bo)
+tail -n "$NADD" conf/env.sh | cmp -s - <(echo "$EB" | base64 -d) || D=x
 [ "$D" = "$NADD" ] && echo "OK env_them_${D}_dong" || { \cp -f conf/env.sh.bak_swap_$TS conf/env.sh; echo "FAIL env_diff=$D (da khoi phuc)"; exit 0; }
+EXC=$(grep -c '^export C3_EXCLUDE_LEGACY_HELD=' conf/env.sh); EXW=1; [ "$EXN" = - ] && EXW=0
+{ [ "$EXC" = "$EXW" ] && { [ "$EXN" = - ] || grep -qx "export C3_EXCLUDE_LEGACY_HELD=$EXN" conf/env.sh; }; } && echo "OK env.sh C3_EXCLUDE_LEGACY_HELD=${EXN} ($EXC dong)" \
+  || { \cp -f conf/env.sh.bak_swap_$TS conf/env.sh; echo "FAIL env.sh_C3_EXCLUDE_LEGACY_HELD (co $EXC dong, can $EXW) (da khoi phuc)"; exit 0; }
 TOK="C3SWAP_V12 TS=$TS pid=$JP"
 mkdir -p "$(dirname "$PAUSE")" 2>/dev/null; echo "$TOK t=$(date +%s)" > "$PAUSE" && echo "OK watchdog_PAUSE token='$TOK'" || echo "WARN khong_tao_duoc_PAUSE"
 setsid nohup bash -c "sleep $MAXS; grep -q '^$TOK ' '$PAUSE' 2>/dev/null && rm -f '$PAUSE'" > /dev/null 2>&1 < /dev/null &
@@ -330,8 +370,8 @@ if [ -n "$LB" ]; then [ "$LB" != "${L0:-}" ] && say "INFO LEGACY truoc stop=$LB 
 
 # ---------------------------------------------------------------- 4. hau kiem
 CHK() {
-  s242in "PP='$PROC_PAT' bash -s -- $A $SL $NJ_MD5 ${L0:-0} $NEED_MGUARD" <<'EOF'
-A=$1; SL=$2; NJM=$3; L0=$4; MG=${5:-0}; cd "$A"; L=logs/full.log
+  s242in "PP='$PROC_PAT' bash -s -- $A $SL $NJ_MD5 ${L0:-0} $NEED_MGUARD ${EXCL_HELD:--} $C3_ACCOUNT" <<'EOF'
+A=$1; SL=$2; NJM=$3; L0=$4; MG=${5:-0}; EX=${6:--}; ACC=${7:-SUB}; cd "$A"; L=logs/full.log
 T() { tail -n +$SL $L 2>/dev/null | grep -a -c "$1"; }
 P=$(pgrep -f "$PP" | head -1)
 [ "$(pgrep -fc "$PP")" = 1 ] && echo "OK 1_process" || echo "FAIL so_process"
@@ -340,7 +380,10 @@ E=$(tr '\0' '\n' < /proc/$P/environ 2>/dev/null)
 for k in LIVE_PROFILE=c3_live LIVE_ADAPTER=dry SHADOW_NO_PUSH=true LIVE_SEED_EXCLUDE_DECISION_MIN=1; do
   echo "$E" | grep -qx "$k" && echo "OK env $k" || echo "FAIL env $k"
 done
+if [ "$EX" = - ]; then echo "$E" | grep -q '^C3_EXCLUDE_LEGACY_HELD=' && echo "FAIL env C3_EXCLUDE_LEGACY_HELD van con (jar nay khong dung key)" || echo "OK env khong_co_C3_EXCLUDE_LEGACY_HELD"
+else echo "$E" | grep -qx "C3_EXCLUDE_LEGACY_HELD=$EX" && echo "OK env C3_EXCLUDE_LEGACY_HELD=$EX" || echo "FAIL env C3_EXCLUDE_LEGACY_HELD (can $EX; co: $(echo "$E" | grep '^C3_EXCLUDE_LEGACY_HELD=' | tail -1))"; fi
 [ "$(T 'LIVE_SEED_EXCLUDE_DECISION_MIN=0 => race')" = 0 ] && echo "OK C11_khong_canh_bao_race" || echo "FAIL C11_van_canh_bao_race"
+if [ "$ACC" = SUB ]; then [ "$(T '\[C3-EXCL-FORCE\]')" = 0 ] && echo "OK 0_C3-EXCL-FORCE" || echo "FAIL C3-EXCL-FORCE (SUB: jar ep C3_EXCLUDE_LEGACY_HELD=true => env key sai)"; fi
 [ "$(T '\[GATE-SEED\] nap seed')" = 0 ] && echo "OK khong_nap_seed" || echo "FAIL co_nap_seed"
 [ "$(T '\[UNIVERSE-A1\] BAT .*PREMARKET=')" -ge 1 ] && echo "OK UNIVERSE-A1_$(tail -n +$SL $L | grep -a '\[UNIVERSE-A1\] BAT' | tail -1 | grep -aoE 'PREMARKET=[0-9]+')" || echo "WAIT UNIVERSE-A1_PREMARKET"
 [ "$(T '\[GATE-PRE\] .*premarket_bo=')" -ge 1 ] && echo "OK GATE-PRE_$(tail -n +$SL $L | grep -a '\[GATE-PRE\] .*premarket_bo=' | tail -1 | grep -aoE 'premarket_bo=[0-9]+')" || echo "WAIT GATE-PRE_premarket_bo"
@@ -380,6 +423,28 @@ fi
 # [R4q ADD11] dang ky jar cho harness parity (CHI khi hau kiem DAT); loi => WARN, KHONG rollback
 STMS=$(echo "$RS" | sed -n 's/^START_MS=//p' | tail -1)
 if [[ "$STMS" =~ ^[0-9]{13}$ ]]; then
+  SF=$LOGDIR/swap_start_${NEW_TAG}_$TS.txt
+  echo "tag=${NEW_TAG} md5=$NJ_MD5 start_ms=$STMS start=$(TZ=Asia/Ho_Chi_Minh date -d @$((STMS / 1000)) '+%F %T') ts=$TS" > "$SF"
+  say "START_MS JVM ${NEW_TAG} (gio start THAT) = $STMS ($(TZ=Asia/Ho_Chi_Minh date -d @$((STMS / 1000)) '+%F %T') +07) — luu $SF"
+  GM=$(python3 -I - "$GMICRO_TARGET" "${NEW_TAG}" "$NJ_MD5" "$STMS" <<'PYEOF'
+import json, os, shutil, sys, time
+p, tag, md5, ms = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4])
+if not os.path.exists(p):
+    print('WARN khong co %s — khong ghi (parity tao file)' % p); sys.exit(0)
+try:
+    cur = json.load(open(p))
+except Exception as e:
+    print('WARN file hong %s' % type(e).__name__); sys.exit(0)
+if cur.get('target_jar') != tag or cur.get('target_md5') != md5:
+    print('WARN file tro target_jar=%s target_md5=%s (khac %s %s) — KHONG ghi; parity cap nhat roi dien smoke_start_ms=%d' % (cur.get('target_jar'), cur.get('target_md5'), tag, md5, ms)); sys.exit(0)
+shutil.copy2(p, '%s.bak_%d' % (p, int(time.time())))
+cur['smoke_start_ms'] = ms
+json.dump(cur, open(p + '.tmp', 'w')); os.replace(p + '.tmp', p)
+print('OK smoke_start_ms=%d' % ms)
+PYEOF
+)
+  say "gmicro_target.json ($GMICRO_TARGET): $GM"
+  case "$GM" in OK*) ;; *) tg "[swap jar dry] WARN TS=$TS: gmicro_target.json $GM";; esac
   say "--- dang ky jar parity: $REG_JAR_SH ${NEW_TAG} $NJ $NJ_MD5 $STMS 1"
   timeout "$REG_TIMEOUT_S" bash "$REG_JAR_SH" ${NEW_TAG} "$NJ" "$NJ_MD5" "$STMS" 1; RRC=$?
   if [ "$RRC" = 0 ]; then say "OK dang ky jar parity ${NEW_TAG} start_ms=$STMS"

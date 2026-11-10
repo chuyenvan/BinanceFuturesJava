@@ -8,7 +8,7 @@
 SSH_242=${SSH_242:-"ssh -p 2222 -o BatchMode=yes -o ConnectTimeout=20 -i /home/ubuntu/.ssh/id_rsa_chuyennd root@103.157.218.242"}
 A=${APP_DIR:-/home/chuyennd/java/v_t_m}
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}
-NJ_MD5=${NJ_MD5:-694b29b2e5be32b537ca6c38557e64db}   # jar v1.2 dang chay (r4t, ROUND4T; dua len bang swap_v12_dry_jar.sh; truoc: r4q 8c81e6b5)
+NJ_MD5=${NJ_MD5:-b1f12c3eeaeed72cb17afbe5b4da06cf}   # jar v1.2 dang chay (r4u3, ADD19; dua len bang swap_v12_dry_jar.sh; truoc: r4t 694b29b2, r4q 8c81e6b5)
 WD_PAUSE=${WD_PAUSE:-/var/lib/h242_watchdog/PAUSE}
 WD_PAUSE_MAX_S=${WD_PAUSE_MAX_S:-1800}
 POST_WAIT_S=${POST_WAIT_S:-60}
@@ -192,10 +192,10 @@ P=$(pgrep -f "$PP" | head -1)
 echo "PID=$P"
 echo "JAR_MD5=$(md5sum < target/binance-java-sdk-1.2.4.jar | cut -c1-32)"
 E=$(tr '\0' '\n' < /proc/$P/environ 2>/dev/null)
-for k in LIVE_PROFILE LIVE_ADAPTER C3_CAPITAL SHADOW_NO_PUSH LIVE_ENTRY_ENABLED LIVE_SEED_EXCLUDE_DECISION_MIN LIVE_KILLSW_MODE GATE_BUFFER_SEED LIVE_C3_KEYS_FILE; do
+for k in LIVE_PROFILE LIVE_ADAPTER C3_CAPITAL SHADOW_NO_PUSH LIVE_ENTRY_ENABLED LIVE_SEED_EXCLUDE_DECISION_MIN LIVE_KILLSW_MODE GATE_BUFFER_SEED LIVE_C3_KEYS_FILE C3_EXCLUDE_LEGACY_HELD; do
   echo "ENV_$k=$(echo "$E" | sed -n "s/^$k=//p" | tail -1)"
 done
-for k in LIVE_ADAPTER C3_CAPITAL LIVE_SEED_EXCLUDE_DECISION_MIN; do
+for k in LIVE_ADAPTER C3_CAPITAL LIVE_SEED_EXCLUDE_DECISION_MIN C3_EXCLUDE_LEGACY_HELD; do
   echo "ENVSH_$k=$(sed -n "s/^export $k=//p" conf/env.sh | tail -1)"
 done
 L=$(sed -n 's/.*"latch":"\([A-Z_]*\)".*/\1/p' run/killsw_latch.json 2>/dev/null | head -1); echo "LATCH=${L:-NOFILE}"
@@ -221,6 +221,12 @@ gl_read_state() {
   echo "$ST" | grep -q '^ERR=' && die "doc trang thai 242 loi: $(echo "$ST" | grep '^ERR=')"
 }
 sv() { echo "$ST" | sed -n "s/^$1=//p" | head -1; }
+# gl_excl_guard : [A1 r4u2 C-1] C3_ACCOUNT=MAIN + C3_EXCLUDE_LEGACY_HELD=false (process HOAC env.sh) => DUNG
+gl_excl_guard() {
+  if [ "$C3_ACCOUNT" = MAIN ] && { [ "$(sv ENV_C3_EXCLUDE_LEGACY_HELD)" = false ] || [ "$(sv ENVSH_C3_EXCLUDE_LEGACY_HELD)" = false ]; }; then
+    die "C3_ACCOUNT=MAIN di voi C3_EXCLUDE_LEGACY_HELD=false — TU CHOI (A1 r4u2 C-1: vi the c3 that bi tinh la LEGACY)"
+  fi
+}
 
 # ---------------------------------------------------------------- restart co env moi + doi ten trang thai (tuy chon)
 # gl_restart "<ENV_ADD>" "<files can doi ten>" <hau to> [ks] ; in RS (dong OK/FAIL, START_LINE=)
@@ -521,7 +527,7 @@ EOF
 av() { echo "$API" | sed -n "s/^$1=//p" | head -1; }
 
 # gl_sub_eval <can_sach 1|0> : [ADD4 §2] danh gia $API (gl_api242 sub) => SUBV=DAT|TRUOT, SUBWHY (ly do). can_sach=1: them 0 vi the,
-#   0 lenh mo, 0 algo (luc micro_on). multiAssetsMargin CHI ghi lai (jar r4t: AccountModeGuard.globalPolicy(false,false) khong doi hoi).
+#   0 lenh mo, 0 algo (luc micro_on). multiAssetsMargin CHI ghi lai (jar r4t/r4u3: AccountModeGuard.globalPolicy(false,false) khong doi hoi).
 gl_sub_eval() {
   local n x
   SUBV=DAT; SUBWHY=""

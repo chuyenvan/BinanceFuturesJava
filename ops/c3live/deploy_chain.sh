@@ -9,6 +9,12 @@
 #   1. qf4 : collectData jar QF4 (deploy_ingest_qf4.sh). XONG neu jar ingestor dang chay = JAR_MD5 cua script. Dang co job QF4 chay
 #            (owner chay tay) => CHO no ket thuc (khong chay song song); ket thuc ma khong XONG => DUNG CHUOI + KHAN.
 #   2. r4t : v_t_m jar r4t (swap_v12_dry_jar.sh, NJ_MD5 pin). XONG neu jar v_t_m = NJ_MD5 va 1 process.
+#   (preset cu: chi chay khi swap_v12_dry_jar.sh co NEW_TAG mac dinh = r4t; nay mac dinh r4u3 => TU CHOI)
+# Preset swap_r4u3 [V12 R4u]: 1 buoc r4u3 = swap_v12_dry_jar.sh mac dinh r4t -> r4u3 (NJ_MD5 pin 15f9e14f).
+#   Truoc buoc: jar (Oracle) co code [BIG_DOWN-SEL]; chup LEGACY managed. Ngay sau swap XONG: ghi gio start THAT cua r4u3 vao
+#   ~/claude_master/parity_v12w/gmicro_target.json (ADD19 §1: target_jar/target_md5/smoke_start_ms; md5/ten khac => KHAN, khong ghi).
+#   Hau kiem STABLE_S (900 s = 15'): 1 process md5 r4u3, 0 ERROR + 0 KHAN tu JVM moi, latch NONE, [MINUTE-GUARD] BAT,
+#   MemAvailable >= MIN_MEM_MB, LEGACY managed = chup truoc swap (giam = WARN, tang = FAIL). Loi => KHAN + lenh rollback ve r4t.
 # Sau MOI buoc: chi di tiep khi rc=0 VA hau kiem on dinh >= STABLE_S (900 s) lien tuc:
 #   collectData (ingqf4_check_remote.sh): 0 FAIL, khong WAIT — KLINE-COVER du, 0 http429/418, price_gap/price_age OK, 0 ban/restart;
 #   v_t_m: 1 process, 0 dong ERROR tu moc buoc, latch NONE (+ [MINUTE-GUARD] BAT sau r4t). WAIT keo dai > STABLE_MAX_S => FAIL.
@@ -42,10 +48,76 @@ DRY=${DRY:-0}
 REG_JAR_SH=${REG_JAR_SH:-/home/ubuntu/claude_master/vz_e1_wt/research/parity_v12/sh/register_jar.sh}
 PIN_QF4_SH=${PIN_QF4_SH:-958e1e49398cc75dbe0908d5657fd7ca}     # deploy_ingest_qf4.sh QF4b (tu pin md5 ingqf_restart/ingqf4_check remote)
 PIN_CHECK_R=${PIN_CHECK_R:-675ecf2daab369d77c38c6528a53e89e}   # ingqf4_check_remote.sh
-PIN_SWAP_SH=${PIN_SWAP_SH:-09ae28e828dde1238570fb6434f29962}   # swap_v12_dry_jar.sh @9fc5ffcb (r4q -> r4t)
+PIN_SWAP_SH=${PIN_SWAP_SH:-a04ee5f6a905b4926b3b6e0efcb39e53}   # swap_v12_dry_jar.sh [R4u2] (mac dinh r4t -> r4u3 + C3_EXCLUDE_LEGACY_HELD; truoc 09ae28e8 r4q -> r4t)
 PIN_REG=${PIN_REG:-7d9b2ee0285bdaec05574de86764e73f}           # register_jar.sh (swap goi sau hau kiem DAT)
 R4Q_JAR=${R4Q_JAR:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4q}
 R4Q_MD5=${R4Q_MD5:-8c81e6b560b61e7d43ca32c4a50ec926}
+R4T_JAR=${R4T_JAR:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4t}   # [R4u] dich rollback cua buoc r4u3
+R4T_PIN_MD5=${R4T_PIN_MD5:-694b29b2e5be32b537ca6c38557e64db}
+GMICRO_TARGET=${GMICRO_TARGET:-/home/ubuntu/claude_master/parity_v12w/gmicro_target.json}   # [ADD19] target_jar/target_md5/smoke_start_ms
+JARS_JSON=${JARS_JSON:-/home/ubuntu/claude_master/parity_v12w/jars.json}
+MIN_MEM_MB=${MIN_MEM_MB:-1000}
+# [R4u] jar co code [BIG_DOWN-SEL] (chuoi trong class com/binance/chuyennd/**; CHI DOC Oracle) => in "OK <class>" | ly do
+jar_bigdown() {
+  python3 -I - "$1" <<'PYEOF'
+import sys, zipfile
+try:
+    z = zipfile.ZipFile(sys.argv[1])
+except Exception as e:
+    print('KHONG_DOC_DUOC_JAR_' + type(e).__name__); sys.exit(0)
+for n in sorted(z.namelist(), key=lambda n: 'DetectEntrySignal2TradeNormal' not in n):
+    if n.endswith('.class') and n.startswith('com/binance/chuyennd/') and b'BIG_DOWN-SEL' in z.read(n):
+        print('OK ' + n); sys.exit(0)
+print('KHONG_THAY_BIG_DOWN-SEL')
+PYEOF
+}
+# [ADD19] ghi gio start THAT cua jar dich (r4u3) vao gmicro_target.json; $1=1 luon ghi (vua swap), 0 = chi khi smoke_start_ms chua co
+gmicro_write() {
+  local ms src out rc
+  ms=$(python3 -I - "$JARS_JSON" "$TGT_TAG" "$TGT_MD5" <<'PYEOF'
+import json, sys
+try:
+    for x in json.load(open(sys.argv[1])):
+        if x.get('name') == sys.argv[2] and x.get('md5') == sys.argv[3]:
+            print(x.get('start_ms')); break
+except Exception:
+    pass
+PYEOF
+); src="jars.json (register_jar)"
+  if ! [[ "$ms" =~ ^[0-9]{12,13}$ ]]; then
+    ms=$($SSH_242 "P=\$(pgrep -f '${PROC_PAT:-BinanceOrderTradingManager}' | head -1); [ -n \"\$P\" ] && echo \$(( (\$(date +%s) - \$(ps -o etimes= -p \$P | tr -d ' ')) * 1000 ))" 2>/dev/null)
+    src="242 ps etimes"
+  fi
+  if ! [[ "$ms" =~ ^[0-9]{12,13}$ ]]; then
+    say "!! KHONG lay duoc gio start $TGT_TAG — KHONG ghi $GMICRO_TARGET (smoke = CHUA DO)"; tg "[deploy_chain $PRESET] KHAN TS=$TS: khong lay duoc gio start $TGT_TAG — gmicro_target.json CHUA dien smoke_start_ms"; return 1
+  fi
+  out=$(python3 -I - "$GMICRO_TARGET" "$TGT_TAG" "$TGT_MD5" "$ms" "$1" <<'PYEOF'
+import json, os, shutil, sys, time
+p, tag, md5, ms, force = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4]), sys.argv[5] == '1'
+cur = {}
+if os.path.exists(p):
+    try:
+        cur = json.load(open(p))
+    except Exception as e:
+        print('ERR file_hong_' + type(e).__name__); sys.exit(2)
+if cur.get('target_md5') not in (None, md5):
+    print('ERR target_md5 trong file %s KHAC jar %s' % (cur.get('target_md5'), md5)); sys.exit(2)
+if cur.get('target_jar') not in (None, tag):
+    print('ERR target_jar trong file %s KHAC %s' % (cur.get('target_jar'), tag)); sys.exit(2)
+if not force and cur.get('smoke_start_ms'):
+    print('GIU smoke_start_ms=%s' % cur['smoke_start_ms']); sys.exit(0)
+if os.path.exists(p):
+    shutil.copy2(p, '%s.bak_%d' % (p, int(time.time())))
+new = dict(cur); new.update({'target_jar': tag, 'target_md5': md5, 'smoke_start_ms': ms})
+os.makedirs(os.path.dirname(p) or '.', exist_ok=True)
+tmp = p + '.tmp'
+json.dump(new, open(tmp, 'w')); os.replace(tmp, p)
+print('OK smoke_start_ms=%d (%s +07)' % (ms, time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(ms / 1000 + 7 * 3600))))
+PYEOF
+); rc=$?
+  if [ "$rc" = 0 ]; then say "gmicro: $out ($GMICRO_TARGET, nguon $src)"; tg "[deploy_chain $PRESET] gmicro_target.json: $TGT_TAG $out (nguon $src)"; return 0; fi
+  say "!! gmicro: $out — KHONG ghi $GMICRO_TARGET"; tg "[deploy_chain $PRESET] KHAN TS=$TS: gmicro_target.json KHONG ghi: $out"; return 1
+}
 DLOCK=${DLOCK:-$D/.deploy.lock}   # [MIN TOCTOU] kiem "khong job deploy khac" + chay buoc DUOI khoa nay
 DEPLOY_TG_ENV=${DEPLOY_TG_ENV:-/home/ubuntu/.config/health242/tg.env}
 ST=$D/.deploy_chain
@@ -100,8 +172,9 @@ case "${1:-}" in
 esac
 PRESET=${1:-}
 case "$PRESET" in
-  qf4_then_r4t) STEPS="qf4 r4t";;
-  *) echo "Dung: $0 <preset>|status|stop — preset: qf4_then_r4t"; exit 1;;
+  qf4_then_r4t) STEPS="qf4 r4t"; WANT_TAG=r4t;;
+  swap_r4u3) STEPS="r4u3"; WANT_TAG=r4u3;;
+  *) echo "Dung: $0 <preset>|status|stop — preset: swap_r4u3 | qf4_then_r4t (cu)"; exit 1;;
 esac
 JD=""
 if [ "${CHAIN_JOB:-0}" = 1 ]; then   # job: CHI dung ban chep trong thu muc job (da kiem pin luc YES)
@@ -109,9 +182,13 @@ if [ "${CHAIN_JOB:-0}" = 1 ]; then   # job: CHI dung ban chep trong thu muc job 
   QF4_SH=$JD/deploy_ingest_qf4.sh; CHECK_R=$JD/ingqf4_check_remote.sh; SWAP_SH=$JD/swap_v12_dry_jar.sh; REG_JAR_SH=$JD/register_jar.sh
 fi
 QF4_MD5=$(sed -n 's/^JAR_MD5=\([0-9a-f]\{32\}\).*/\1/p' "$QF4_SH" 2>/dev/null | head -1)
-R4T_MD5=$(sed -n 's/^NJ_MD5=\${NJ_MD5:-\([0-9a-f]\{32\}\)}.*/\1/p' "$SWAP_SH" 2>/dev/null | head -1)
+TGT_MD5=$(sed -n 's/^NJ_MD5=\${NJ_MD5:-\([0-9a-f]\{32\}\)}.*/\1/p' "$SWAP_SH" 2>/dev/null | head -1)
+TGT_TAG=$(sed -n 's/^NEW_TAG=\${NEW_TAG:-\([a-z0-9_]*\)}.*/\1/p' "$SWAP_SH" 2>/dev/null | head -1); TGT_TAG=${TGT_TAG:-r4t}
+TGT_JAR=$(sed -n 's/^NJ=\${NJ:-\([^}]*\)}.*/\1/p' "$SWAP_SH" 2>/dev/null | head -1)
 [ -n "$QF4_MD5" ] || { echo "khong doc duoc JAR_MD5 tu $QF4_SH"; exit 1; }
-[ -n "$R4T_MD5" ] || { echo "khong doc duoc NJ_MD5 tu $SWAP_SH"; exit 1; }
+[ -n "$TGT_MD5" ] || { echo "khong doc duoc NJ_MD5 tu $SWAP_SH"; exit 1; }
+if [ "${C3_ACCOUNT:-SUB}" = MAIN ] && [ "${EXCL_HELD:-}" = false ]; then echo "DUNG: C3_ACCOUNT=MAIN di voi C3_EXCLUDE_LEGACY_HELD=false — TU CHOI (A1 r4u2 C-1: vi the c3 that bi tinh la LEGACY)"; exit 1; fi
+[ "$TGT_TAG" = "$WANT_TAG" ] || { echo "preset $PRESET can swap NEW_TAG=$WANT_TAG (swap $SWAP_SH mac dinh NEW_TAG=$TGT_TAG) — TU CHOI"; exit 1; }
 
 # ------------------------------------------------------------------ doc 242 (CHI DOC)
 rstate() {   # in KEY=VAL: ING_N ING_MD5 VTM_N VTM_MD5 VTM_PID LATCH LINES
@@ -126,6 +203,7 @@ echo "VTM_N=$(pgrep -fc "$PP")"; echo "VTM_PID=$(pgrep -f "$PP" | head -1)"
 echo "VTM_MD5=$(md5sum < target/binance-java-sdk-1.2.4.jar 2>/dev/null | cut -c1-32)"
 echo "LATCH=$(sed -n 's/.*"latch":"\([A-Z_]*\)".*/\1/p' run/killsw_latch.json 2>/dev/null | head -1)"
 echo "LINES=$(wc -l < logs/full.log 2>/dev/null || echo 0)"
+echo "LEGACY_N=$(tail -c 20000000 logs/full.log 2>/dev/null | grep -a '\[LEGACY\] managed' | tail -1 | grep -aoE 'managed [0-9]+' | awk '{print $2}')"
 echo END_ST
 EOF
 }
@@ -144,7 +222,7 @@ other_deploy() { pgrep -af "$OTHER_PAT" | grep -v "deploy_chain" | head -1; }
 step_done() {   # $1 = buoc; dua tren RS
   case "$1" in
     qf4) [ "$(kv ING_MD5)" = "$QF4_MD5" ] && [ "$(kv ING_N)" = 1 ];;
-    r4t) [ "$(kv VTM_MD5)" = "$R4T_MD5" ] && [ "$(kv VTM_N)" = 1 ];;
+    r4t|r4u3) [ "$(kv VTM_MD5)" = "$TGT_MD5" ] && [ "$(kv VTM_N)" = 1 ];;
   esac
 }
 time_ok() {
@@ -163,8 +241,11 @@ time_ok() {
 # ------------------------------------------------------------------ ke hoach + trang thai
 plan() {
   say "=== deploy_chain preset=$PRESET (buoc: $STEPS) DRY=$DRY ==="
-  echo "  1. qf4 : $QF4_SH (jar collectData $QF4_MD5) — dang co job QF4 => CHO no xong; XONG neu ingestor chay jar $QF4_MD5"
-  echo "  2. r4t : $SWAP_SH (jar v_t_m $R4T_MD5) — XONG neu v_t_m chay jar $R4T_MD5"
+  for s in $STEPS; do case "$s" in
+    qf4) echo "  - qf4 : $QF4_SH (jar collectData $QF4_MD5) — dang co job QF4 => CHO no xong; XONG neu ingestor chay jar $QF4_MD5";;
+    *) echo "  - $s : $SWAP_SH (jar v_t_m $TGT_TAG $TGT_MD5) — XONG neu v_t_m chay jar $TGT_MD5";;
+  esac; done
+  [ "$PRESET" = swap_r4u3 ] && echo "  r4u3: truoc buoc kiem code [BIG_DOWN-SEL] trong $TGT_JAR + chup LEGACY; sau swap ghi smoke_start_ms vao $GMICRO_TARGET; hau kiem ${STABLE_S}s: md5, 0 ERROR/KHAN, latch NONE, MINUTE-GUARD BAT, RAM >= ${MIN_MEM_MB} MB, LEGACY = chup truoc swap; loi => KHAN + lenh rollback ve r4t"
   echo "  Qua buoc: rc=0 + hau kiem on dinh ${STABLE_S}s lien tuc (collectData: KLINE-COVER du, 0 429/418, price_gap OK; v_t_m: 0 ERROR, latch NONE)"
   echo "  Buoc ke: khung gio ke tiep :10-:39 (tranh 07/19h, 00:50-01:20, 12:50-13:20). FAIL/rollback => DUNG CA CHUOI + Telegram KHAN."
   if read_state; then
@@ -187,8 +268,10 @@ if [ "${CHAIN_JOB:-0}" != 1 ]; then
   if [ "$DRY" = 1 ]; then
     TD=$(mktemp -d); say "--- pin script con (ban A1 duyet):"; stage_scripts "$TD" | sed 's/^/   /'; PRC=${PIPESTATUS[0]}; rm -rf "$TD"
     read_state
-    if ! step_done r4t; then say "--- DRY=1 cua swap (CHI DOC 242):"; DRY=1 bash "$SWAP_SH" 2>&1 | grep -E 'OK jar moi|jar_dang_chay|FAIL|DRY PASS|DUNG' | cut -c1-200; fi
-    [ "$PRC" = 0 ] || { say "DRY: script con LECH pin => chay that se TU CHOI. (DRY FAIL)"; exit 1; }
+    if [ "$PRESET" = swap_r4u3 ]; then BD=$(jar_bigdown "$TGT_JAR"); case "$BD" in OK*) say "OK code [BIG_DOWN-SEL] trong $TGT_JAR (${BD#OK })";; *) say "FAIL jar $TGT_JAR KHONG co code [BIG_DOWN-SEL] ($BD)"; PRC=1;; esac; fi
+    SWS=$(echo $STEPS | tr ' ' '\n' | grep -E '^r4(t|u3)$' | head -1)
+    if [ -n "$SWS" ] && ! step_done "$SWS"; then say "--- DRY=1 cua swap (CHI DOC 242):"; DRY=1 bash "$SWAP_SH" 2>&1 | grep -E 'OK jar moi|jar_dang_chay|FAIL|DRY PASS|DUNG' | cut -c1-200; fi
+    [ "$PRC" = 0 ] || { say "DRY: co muc FAIL (pin script con / code jar) => chay that se TU CHOI. (DRY FAIL)"; exit 1; }
     say "DRY=1: KHONG chay gi. (DRY PASS)"; exit 0
   fi
   say ">>> Go YES de chay CA CHUOI o JOB NEN (tu cho/kiem/chay buoc ke; khong can canh gio):"
@@ -204,6 +287,10 @@ if [ "${CHAIN_JOB:-0}" != 1 ]; then
     echo "TU CHOI: lech pin" >> "$JD/steps.txt"; echo "$JD" > "$ST/last"
     say "TU CHOI: script con LECH md5 pin (ban A1 duyet) => KHONG chay gi. Chi tiet: $JD/md5.txt"; exit 1
   fi
+  if [ "$PRESET" = swap_r4u3 ]; then
+    BD=$(jar_bigdown "$TGT_JAR"); case "$BD" in OK*) say "OK code [BIG_DOWN-SEL] trong $TGT_JAR (${BD#OK })";;
+      *) echo "TU CHOI: jar khong co [BIG_DOWN-SEL]" >> "$JD/steps.txt"; echo "$JD" > "$ST/last"; say "TU CHOI: jar $TGT_JAR KHONG co code [BIG_DOWN-SEL] ($BD)"; exit 1;; esac
+  fi
   rm -f "$ST/STOP"; echo "$PRESET" > "$ST/preset"; echo "$JL" > "$ST/log"; echo "$JD" > "$ST/last"; setst "khoi dong"
   CHAIN_JOB=1 CHAIN_TS=$TS CHAIN_JD=$JD setsid nohup bash "$SELF" "$PRESET" >> "$JL" 2>&1 < /dev/null &
   echo $! > "$ST/pid"
@@ -216,12 +303,14 @@ fi
 TS=${CHAIN_TS:-$(date +%s)}
 echo $$ > "$ST/pid"
 IN_STABLE=""   # buoc dang hau kiem on dinh (jar moi DA chay, CHUA xac nhan)
+LSNAP=-1      # [R4u] LEGACY managed chup truoc swap
 rb_cmd() {   # lenh rollback 1 dong cho buoc $1
   case "$1" in
     qf4) local L4 r; L4=$(ls -t "$D"/deploy_ingest_qf4_*.log 2>/dev/null | grep -v '_dry.log' | head -1)
          r=$(grep -h 'Rollback 1 lenh:' "$L4" 2>/dev/null | tail -1 | sed 's/.*Rollback 1 lenh: //')
          echo "${r:-bash $D/rollback_ingest_qf4.sh <TS trong log deploy_ingest_qf4>}";;
-    r4t) echo "OLD_TAG=r4t NEW_TAG=r4q OLD_MD5=$R4T_MD5 NJ=$R4Q_JAR NJ_MD5=$R4Q_MD5 NEED_MGUARD=0 bash $JD/swap_v12_dry_jar.sh  (go YES; ve r4q)";;
+    r4t) echo "OLD_TAG=r4t NEW_TAG=r4q OLD_MD5=$TGT_MD5 NJ=$R4Q_JAR NJ_MD5=$R4Q_MD5 NEED_MGUARD=0 NEED_BIGDOWN=0 bash $JD/swap_v12_dry_jar.sh  (go YES; ve r4q)";;
+    r4u3) echo "OLD_TAG=r4u3 NEW_TAG=r4t OLD_MD5=$TGT_MD5 NJ=$R4T_JAR NJ_MD5=$R4T_PIN_MD5 NEED_MGUARD=1 NEED_BIGDOWN=0 bash $JD/swap_v12_dry_jar.sh  (go YES; ve r4t)";;
   esac
 }
 unverified_msg() { echo "jar moi $1 DANG CHAY nhung CHUA xac nhan on dinh — owner kiem ngay; rollback neu can: $(rb_cmd "$1")"; }
@@ -255,14 +344,26 @@ stable() {
     lg=$(kv VTM_PID)
     K=$($SSH_242 "bash -s -- $ING_DIR $APP_DIR $QF4_MD5 ${lg:-0} new none" < "$CHECK_R" 2>/dev/null) || K="FAIL ssh_check_collectData"
     lines=$(kv LINES); [ "${lines:-0}" -lt $((base - 1)) ] && base=1   # log xoay (file ngan hon moc)
-    V=$($SSH_242 "bash -s -- $APP_DIR $base $step" <<'EOF'
-A=$1; B=$2; S=$3; cd "$A" || { echo "FAIL cd_vtm"; exit 0; }
+    V=$($SSH_242 "bash -s -- $APP_DIR $base $step ${LSNAP:--1} $MIN_MEM_MB ${C3_ACCOUNT:-SUB}" <<'EOF'
+A=$1; B=$2; S=$3; L0=$4; MM=$5; ACC=${6:-SUB}; cd "$A" || { echo "FAIL cd_vtm"; exit 0; }
 PP=${PROC_PAT:-BinanceOrderTradingManager}
 [ "$(pgrep -fc "$PP")" = 1 ] && echo "OK vtm_1_process" || echo "FAIL vtm_so_process=$(pgrep -fc "$PP")"
 E=$(tail -n +$B logs/full.log 2>/dev/null | grep -a ' ERROR ' | head -1 | cut -c1-160)
 [ -z "$E" ] && echo "OK vtm_0_ERROR" || echo "FAIL vtm_ERROR: $E"
 grep -q '"latch":"NONE"' run/killsw_latch.json 2>/dev/null && echo "OK latch_NONE" || echo "FAIL latch_khac_NONE"
-if [ "$S" = r4t ]; then tail -n +$B logs/full.log | grep -a -q '\[MINUTE-GUARD\] TAT' && echo "FAIL MINUTE-GUARD_TAT"; fi
+if [ "$S" = r4t ] || [ "$S" = r4u3 ]; then tail -n +$B logs/full.log | grep -a -q '\[MINUTE-GUARD\] TAT' && echo "FAIL MINUTE-GUARD_TAT"; fi
+if [ "$S" = r4u3 ]; then   # [R4u] 0 KHAN, RAM, LEGACY = chup truoc swap
+  K=$(tail -n +$B logs/full.log 2>/dev/null | grep -a 'KHAN' | grep -av 'DRY tren tai khoan chinh' | head -1 | cut -c1-160)
+  [ -z "$K" ] && echo "OK vtm_0_KHAN" || echo "FAIL vtm_KHAN: $K"
+  if [ "$ACC" = SUB ]; then tail -n +$B logs/full.log 2>/dev/null | grep -aq '\[C3-EXCL-FORCE\]' && echo "FAIL C3-EXCL-FORCE (SUB: env key sai)" || echo "OK 0_C3-EXCL-FORCE"; fi
+  MA=$(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo)
+  [ "${MA:-0}" -ge "$MM" ] && echo "OK ram_MemAvailable_${MA}MB" || echo "FAIL ram_MemAvailable_${MA}MB<${MM}MB"
+  LN=$(tail -n +$B logs/full.log 2>/dev/null | grep -a '\[LEGACY\] managed' | tail -1 | grep -aoE 'managed [0-9]+' | awk '{print $2}')
+  if [ -z "$LN" ]; then echo "WAIT vtm_LEGACY_chua_co"
+  elif [ "$L0" = -1 ] || [ "$LN" = "$L0" ]; then echo "OK LEGACY_managed=$LN (truoc swap ${L0})"
+  elif [ "$LN" -lt "$L0" ] 2>/dev/null; then echo "OK LEGACY_managed=$LN (WARN < truoc swap $L0: dong tu nhien?)"
+  else echo "FAIL LEGACY_managed=$LN > truoc swap $L0"; fi
+fi
 echo END_V
 EOF
 ) || V="FAIL ssh_check_vtm"
@@ -272,8 +373,9 @@ FAIL vtm_check_khong_tron_ven"
       echo "$K"; echo "$V"; fail "$step: hau kiem FAIL ($(echo "$K
 $V" | grep '^FAIL' | head -3 | tr '\n' ' '))"
     fi
-    if echo "$K" | grep -q '^WAIT' || ! echo "$K" | grep -q '^OK kline_phu_phut_da_chot'; then
-      ok_since=0; say "$step: cho on dinh: $(echo "$K" | grep '^WAIT' | tr '\n' ' ' | cut -c1-200)"
+    if echo "$K" | grep -q '^WAIT' || echo "$V" | grep -q '^WAIT' || ! echo "$K" | grep -q '^OK kline_phu_phut_da_chot'; then
+      ok_since=0; say "$step: cho on dinh: $(echo "$K
+$V" | grep '^WAIT' | tr '\n' ' ' | cut -c1-200)"
     else
       [ "$ok_since" = 0 ] && ok_since=$now
       if [ $((now - ok_since)) -ge "$STABLE_S" ]; then
@@ -304,7 +406,7 @@ wait_no_deploy() {   # khong chay song song voi job deploy khac
     sleep 10; w=$((w + 10))
   done
 }
-say "=== JOB deploy_chain $PRESET TS=$TS pid=$$ (buoc: $STEPS; QF4 $QF4_MD5, r4t $R4T_MD5; ban chep $JD) ==="
+say "=== JOB deploy_chain $PRESET TS=$TS pid=$$ (buoc: $STEPS; QF4 $QF4_MD5, $TGT_TAG $TGT_MD5; ban chep $JD) ==="
 verify_staged || fail "ban chep script trong $JD khong dung pin md5"
 tg "[deploy_chain $PRESET] BAT DAU TS=$TS: buoc $STEPS (tu cho/kiem; FAIL => dung ca chuoi + KHAN)"
 FIRST=1
@@ -322,9 +424,10 @@ for s in $STEPS; do
     say "qf4: job QF4 da XONG (jar $QF4_MD5)"; tg "[deploy_chain $PRESET] qf4 XONG (job owner) — kiem on dinh ${STABLE_S}s"
   elif step_done "$s"; then
     say "--- $s: DA XONG tu truoc (md5 tren 242 dung) => bo qua"
+    if [ "$s" = r4u3 ]; then LSNAP=$(kv LEGACY_N); [[ "$LSNAP" =~ ^[0-9]+$ ]] || LSNAP=-1; gmicro_write 0; fi
   else
     wait_no_deploy "$s"
-    if [ "$FIRST" = 0 ] || [ "$s" = r4t ]; then wait_window "$s"; fi
+    if [ "$FIRST" = 0 ] || [ "$s" = r4t ] || [ "$s" = r4u3 ]; then wait_window "$s"; fi
     # [A1 CHAIN MIN TOCTOU] lay khoa deploy ROI moi kiem "khong job khac" va chay buoc; khoa giu suot buoc (ca job nen cua swap)
     while :; do
       wait_no_deploy "$s"
@@ -338,21 +441,26 @@ for s in $STEPS; do
     read_state || fail "$s: khong doc duoc 242 truoc khi chay"
     step_done "$s" && { flock -u 9; exec 9>&-; say "$s: da XONG trong luc cho => bo qua"; continue; }
     verify_staged || fail "$s: ban chep script trong $JD KHONG con dung pin md5 — khong chay"
+    if [ "$s" = r4u3 ]; then
+      BD=$(jar_bigdown "$TGT_JAR"); case "$BD" in OK*) say "r4u3: OK code [BIG_DOWN-SEL] (${BD#OK })";; *) fail "r4u3: jar $TGT_JAR KHONG co code [BIG_DOWN-SEL] ($BD)";; esac
+      LSNAP=$(kv LEGACY_N); [[ "$LSNAP" =~ ^[0-9]+$ ]] || LSNAP=-1; say "r4u3: chup LEGACY managed truoc swap = $LSNAP"
+    fi
     setst "$s: DANG CHAY"; say "--- $s: CHAY (ban chep $JD, khoa $DLOCK)"; tg "[deploy_chain $PRESET] $s: BAT DAU"
     case "$s" in
       qf4) echo YES | bash "$QF4_SH"; RC=$?;;
-      r4t) echo YES | REG_JAR_SH=$REG_JAR_SH bash "$SWAP_SH"; RC=$?;;
+      r4t|r4u3) echo YES | REG_JAR_SH=$REG_JAR_SH bash "$SWAP_SH"; RC=$?;;
     esac
     flock -u 9; exec 9>&-
     [ "$RC" = 0 ] || fail "$s: script rc=$RC (FAIL/rollback)"
     read_state || fail "$s: khong doc duoc 242 sau buoc"
     step_done "$s" || fail "$s: rc=0 nhung md5 tren 242 khong dung"
+    [ "$s" = r4u3 ] && gmicro_write 0   # [ADD19] swap da ghi smoke_start_ms (khi file tro r4u3); con trong => chain dien (loi => KHAN, khong dung chuoi)
     tg "[deploy_chain $PRESET] $s: script XONG rc=0 — kiem on dinh ${STABLE_S}s"
   fi
   FIRST=0
   read_state || fail "$s: khong doc duoc 242"
   BASE=$(( $(kv LINES) + 1 ))
-  if [ "$s" = r4t ]; then   # sau swap: 0 ERROR tinh tu dong khoi dong JVM moi nhat
+  if [ "$s" = r4t ] || [ "$s" = r4u3 ]; then   # sau swap: 0 ERROR tinh tu dong khoi dong JVM moi nhat
     SB=$($SSH_242 "grep -a -n 'MainClass: com.binance.chuyennd.trading.BinanceOrderTradingManager' $APP_DIR/logs/full.log | tail -1 | cut -d: -f1" 2>/dev/null)
     [[ "$SB" =~ ^[0-9]+$ ]] && BASE=$SB
   fi
@@ -360,5 +468,5 @@ for s in $STEPS; do
   setst "$s: XONG + on dinh"; tg "[deploy_chain $PRESET] $s: XONG + on dinh ${STABLE_S}s"
 done
 setst "XONG ca chuoi"; say "=== XONG CA CHUOI $PRESET ==="
-tg "[deploy_chain $PRESET] XONG CA CHUOI TS=$TS (QF4 $QF4_MD5 + r4t $R4T_MD5, on dinh)"
+tg "[deploy_chain $PRESET] XONG CA CHUOI TS=$TS (buoc $STEPS; $TGT_TAG $TGT_MD5, on dinh)"
 exit 0

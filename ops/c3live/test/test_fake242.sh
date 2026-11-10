@@ -108,6 +108,7 @@ case "$1" in
         [ -f FAKE_R4 ] && [ "${LIVE_ADAPTER:-}" != live ] && echo "$D WARN [main] x: [C3-LIVE] khoi dong adapter=DRY gateway=c3scope(dry) cum=0 c3_capital=10000.0 tai_khoan=CHINH(pham vi c3) killSwitchArmed=true"
         [ -f FAKE_R4 ] && [ "${LIVE_ADAPTER:-}" != live ] && echo "$D WARN [C3LIVE-OPS] x: [C3-LIVE-SCOPE] LEGACY tren tai khoan chinh: 0 vi the (foreign DA BIET, khong phai cum ma, khong chan (A)); LEGACY-busy=0 symbol"
         [ -f FAKE_EXBAD ] && echo "$D ERROR [C3LIVE-OPS] x: [C3-LIVE UNIVERSE] exchangeInfo KHONG hop le (R7 fail-fast): gia lap"
+        [ -f FAKE_EXCL_FORCE ] && echo "$D WARN [main] x: [C3-EXCL-FORCE] C3_EXCLUDE_LEGACY_HELD=false bi EP ve true: gia lap"   # [r4u3]
         [ -f FAKE_LATCH ] && echo "$D WARN [main] x: [KILLSW] LATCH action=FLATTEN (truoc NONE) code=C6 codes=[C6] detail=dd=-0.7144"
         # [V12 R4c D3] dong VO HAI (khong duoc gay FAIL) / CO HAI (phai FAIL + rollback)
         [ -f FAKE_HARMLESS ] && echo "$D WARN [pool-1] x: [OI-GUARD-2] oi_feat pipeline STALE age=130m > 120m (Oracle/compute down?)"
@@ -160,6 +161,7 @@ esac
 EOF
 echo "*/5 * * * * /bin/bash /root/h242_watchdog.sh # WATCHDOG" > "$W/crontab.txt"
 export CRONTAB_CMD="bash $W/fakecrontab.sh" SSH_RETRY_S=0
+export GMICRO_TARGET=$W/gmicro_target_test.json   # [R4u2] swap ghi smoke_start_ms — KHONG dung file that
 export PROC_PAT="BinanceOrderTradingManager fake242" SSH_242="bash -c" SCP_242=cp RHOST="" APP_DIR=$F LOGDIR=$W/deploylog WD_PAUSE=$W/PAUSE OLD_MD5=$OLD NJ=$W/new.jar \
   NJ_MD5=$NEW KILLSW_SH=$REPO/ops/killsw_reset.sh EXINFO_CMD="cat $W/exinfo.json" POST_WAIT_S=2 POST_ROUNDS=2 WAIT_S=3 \
   REANCHOR_WAIT=2 LATCH_WAIT_S=2
@@ -1213,6 +1215,7 @@ rm -f $F4/FAKE_R4 $F4/run/killsw_latch.json
 echo YES | APP_DIR=$F4 FORCE_TIME=1 bash "$HERE/rollback_v12.sh" "$TS4" > /dev/null 2>&1
 chk "r4o don dep: rollback v1.2 -> c3_shadow" "grep -qx 'export LIVE_PROFILE=c3_shadow' $F4/conf/env.sh && ! grep -q 'GATE_BUFFER_SEED\|LIVE_SEED_EXCLUDE' $F4/conf/env.sh"
 echo "== 32. [V12 R4o] go-live tai khoan chinh: golive_check_key / micro_on / pilot_on / legacy_verify / monitor / live_off (GOLIVE_SCENARIO ADD1)"
+echo 'export C3_EXCLUDE_LEGACY_HELD=true' >> "$F4/conf/env.sh"   # [R4u2] §32 = MAIN: micro_on doi env true
 GD=$W/gates; rm -rf "$GD" "$W/api"; mkdir -p "$GD" "$W/api"
 printf 'C3_LIVE_API_KEY=fakekey_%040d\nC3_LIVE_API_SECRET=fakesecret_%040d\n' 1 2 > "$W/keys_c3.env"; chmod 600 "$W/keys_c3.env"
 cat > "$W/fakecurl.sh" <<EOF
@@ -1366,7 +1369,7 @@ echo "== 33. [V12 R4q] swap_v12_dry_jar.sh: thay jar dry r4n -> r4q (C11, khong 
 SW=$HERE/swap_v12_dry_jar.sh
 printf 'fake-new-jar-v12r4q' > "$W/new_r4q.jar"; NEWQ=$(md5sum < "$W/new_r4q.jar" | cut -c1-32)
 printf '#!/bin/bash\necho "$*" >> %s/reg_calls.txt\n[ -f %s/REG_FAIL ] && exit 3\nexit 0\n' $W $W > $W/fake_register.sh; rm -f $W/reg_calls.txt $W/REG_FAIL
-sw() { env OLD_TAG=r4n NEW_TAG=r4q NEED_MGUARD=0 APP_DIR=$F4 OLD_MD5=$NEW4 NJ=$W/new_r4q.jar NJ_MD5=$NEWQ DEPLOY_TG_SINK=$W/tg_sw.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 REG_JAR_SH=$W/fake_register.sh "$@"; }
+sw() { env OLD_TAG=r4n NEW_TAG=r4q NEED_MGUARD=0 NEED_BIGDOWN=0 APP_DIR=$F4 OLD_MD5=$NEW4 NJ=$W/new_r4q.jar NJ_MD5=$NEWQ DEPLOY_TG_SINK=$W/tg_sw.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 REG_JAR_SH=$W/fake_register.sh "$@"; }
 touch "$F4/FAKE_R4"; echo 44 > "$F4/FAKE_LEGACY_N"
 OUT=$(echo YES | r4 FORCE=1 FORCE_TIME=1 bash "$D4" 2>&1); RC=$?
 chk "r4q swap chuan bi: deploy dry r4n (gia) XONG" "[ $RC = 0 ]"
@@ -1402,7 +1405,7 @@ OUT=$(sw DRY=1 bash "$SW" 2>&1); RC=$?
 chk "r4q swap lan 2: jar dang chay DA la r4q => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'DA_LA_moi'"
 (cd $F4 && bin/daemon.sh stop; B=$(ls target/binance-java-sdk-1.2.4.jar.bak_swap_* | grep -v 'md5$' | tail -1); cp -f $B target/binance-java-sdk-1.2.4.jar; F=$(ls conf/env.sh.bak_swap_* | tail -1); cp -f $F conf/env.sh; bin/daemon.sh start) > /dev/null 2>&1
 rm -f $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_* $W/tok; sleep 2
-setsid bash -c "echo YES | env OLD_TAG=r4n NEW_TAG=r4q NEED_MGUARD=0 APP_DIR=$F4 OLD_MD5=$NEW4 NJ=$W/new_r4q.jar NJ_MD5=$NEWQ DEPLOY_TG_SINK=$W/tg_sw.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 WD_PAUSE_MAX_S=300 REG_JAR_SH=$W/fake_register.sh FORCE_TIME=0 TIME_OK_FILE=$W/tok WINDOW_WAIT_MAX_S=120 WINDOW_POLL_S=1 bash $SW" > "$W/swfg.out" 2>&1 < /dev/null &
+setsid bash -c "echo YES | env OLD_TAG=r4n NEW_TAG=r4q NEED_MGUARD=0 NEED_BIGDOWN=0 APP_DIR=$F4 OLD_MD5=$NEW4 NJ=$W/new_r4q.jar NJ_MD5=$NEWQ DEPLOY_TG_SINK=$W/tg_sw.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 WD_PAUSE_MAX_S=300 REG_JAR_SH=$W/fake_register.sh FORCE_TIME=0 TIME_OK_FILE=$W/tok WINDOW_WAIT_MAX_S=120 WINDOW_POLL_S=1 bash $SW" > "$W/swfg.out" 2>&1 < /dev/null &
 FGP=$!
 for i in $(seq 1 20); do grep -q 'job_log=' $W/swfg.out 2>/dev/null && break; sleep 1; done
 sleep 2; kill -HUP -$FGP 2>/dev/null; kill -KILL -$FGP 2>/dev/null; sleep 1
@@ -1414,7 +1417,7 @@ sleep 1
 chk "r4q swap: vao khung => job tu chay tiep (kiem 242 lan 2 + kiem khung NGAY TRUOC stop) toi XONG, jar r4q, khoa tra" "grep -q '=== XONG' $SJL && grep -q 'ngay truoc stop' $SJL && grep -q 'lan 2: OK jar_dang_chay' $SJL && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWQ ] && [ ! -e $W/deploylog/.swap_v12_dry_jar.lock.d ]"
 echo "== 34. [V12 R4r] swap_v12_dry_jar.sh r4q -> r4t (tag mac dinh, hau kiem [MINUTE-GUARD] BAT, rollback khi TAT)"
 printf 'fake-new-jar-v12r4q-r4r-r4s-r4t' > "$W/new_r4r.jar"; NEWR=$(md5sum < "$W/new_r4r.jar" | cut -c1-32)
-swr() { env APP_DIR=$F4 OLD_MD5=$NEWQ NJ=$W/new_r4r.jar NJ_MD5=$NEWR DEPLOY_TG_SINK=$W/tg_sw.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 REG_JAR_SH=$W/fake_register.sh "$@"; }
+swr() { env OLD_TAG=r4q NEW_TAG=r4t NEED_BIGDOWN=0 EXCL_HELD=false APP_DIR=$F4 OLD_MD5=$NEWQ NJ=$W/new_r4r.jar NJ_MD5=$NEWR DEPLOY_TG_SINK=$W/tg_sw.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 REG_JAR_SH=$W/fake_register.sh "$@"; }
 rm -f $W/reg_calls.txt $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_*; sleep 2
 JQ=$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32); EQ=$(md5sum < $F4/conf/env.sh)
 OUT=$(swr DRY=1 bash "$SW" 2>&1); RC=$?
@@ -1534,6 +1537,9 @@ OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "add4 micro_on SUB DRY: tk con sach => DRY PASS, env LIVE_C3_KEYS_FILE=keys_sub.env, LEGACY CHI ghi log (khong la dieu kien), khong doi env" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q \"export LIVE_C3_KEYS_FILE=$W/keys_sub.env\" && echo \"\$OUT\" | grep -q 'INFO LEGACY managed=' && ! echo \"\$OUT\" | grep -q 'LEGACY managed doc duoc' && echo \"\$OUT\" | grep -q 'OK   tk con SACH' && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ] && nosec \"\$OUT\""
 api positionRisk '[{"symbol":"XYZUSDT","positionAmt":"5"}]'
 OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "R4u2 micro_on SUB: process env C3_EXCLUDE_LEGACY_HELD=false => OK" "grep -q 'OK   process env C3_EXCLUDE_LEGACY_HELD=false' $W/deploylog/golive_micro_on_*.log"
+OUT2=$(GS C3_ACCOUNT=MAIN KEYS_FILE=$W/keys_sub.env DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC2=$?
+chk "R4u2 micro_on MAIN tren process C3_EXCLUDE_LEGACY_HELD=false => TU CHOI (MAIN can true; gl_excl_guard)" "[ $RC2 = 1 ] && echo \"\$OUT2\" | grep -q 'C3_ACCOUNT=MAIN di voi C3_EXCLUDE_LEGACY_HELD=false'"
 chk "add4 micro_on SUB: tk con co vi the la => TU CHOI truoc khi doi gi" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL tk con SACH.*POS_TOTAL=1' && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E0\" ]"
 clean; echo 2 > $F4/FAKE_SCOPE_N
 OUT=$(echo YES | GS bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
@@ -1546,6 +1552,10 @@ chk "delta MIN-3 micro_on: hau kiem DAT nhung KHONG co heartbeat cron monitor tr
 touch -d '1 min ago' $W/deploylog/run/monitor_heartbeat 2>/dev/null || { mkdir -p $W/deploylog/run; touch -d '1 min ago' $W/deploylog/run/monitor_heartbeat; }
 OUT=$(echo YES | GS MON_HB_WAIT_S=3 HB_POLL_S=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "delta MIN-3 micro_on: heartbeat CU hon co monitor (khong phai luot cron moi) => khong tinh => TRUOT, rollback" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL monitor_heartbeat_khong_co' && penv | grep -qx LIVE_ADAPTER=dry"
+touch $F4/FAKE_EXCL_FORCE
+OUT=$(echo YES | GS MON_HB_WAIT_S=3 HB_POLL_S=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+rm -f $F4/FAKE_EXCL_FORCE
+chk "A1 r4u2 C-1 micro_on SUB: log co [C3-EXCL-FORCE] (env key sai) => hau kiem FAIL => ROLLBACK" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL C3-EXCL-FORCE' && echo \"\$OUT\" | grep -q 'Da ROLLBACK xong' && penv | grep -qx LIVE_ADAPTER=dry"
 echo '{"clusters":[{"symbol":"D01USDT","legs":[{"cid":"c3-D01USDT-1-0","state":"CONFIRMED","exec_qty":"1"}],"exit_qty":"0"}]}' > $F4/run/c3live_book.json; BKD=$(md5sum < $F4/run/c3live_book.json)
 OUT=$(GS bash "$HERE/golive_check_key.sh" 2>&1); RC=$?
 chk "errata2 check_key SUB khi adapter=dry: MISMATCH so dry CHI ghi log (gan nhan), ket qua van DAT" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'POS_C3_MISMATCH=1 D01USDT:-1 .*so DRY' && echo \"\$OUT\" | grep -q 'KET QUA: DAT'"
@@ -1653,6 +1663,8 @@ touch $W/deploylog/run/monitor_heartbeat
 printf 'G-PILOT test\njar_md5=%s\nsize=10000\ng_exec=GREEN test\ng_exit=DAT 18 0.92 25/12 test\n' $NEWR > $GD/GOLIVE_GATE_PILOT.ok; echo 44 > $F4/FAKE_LEGACY_N
 OUT=$(GS DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "add4 pilot_on SUB DRY: KHONG can LEGACY_CUT_VERIFIED / LEGACY 0 (managed 44), bot dung key tk con, tk con 0 ngoai c3 => DRY PASS" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q 'BO dieu kien LEGACY_CUT_VERIFIED' && echo \"\$OUT\" | grep -q 'OK   bot live dung key tk con' && [ ! -e $GD/LEGACY_CUT_VERIFIED.ok ]"
+OUT=$(GS C3_ACCOUNT=MAIN KEYS_FILE=$W/keys_sub.env DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+chk "A1 r4u2 C-1 pilot_on: C3_ACCOUNT=MAIN tren process C3_EXCLUDE_LEGACY_HELD=false => DUNG" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'C3_ACCOUNT=MAIN di voi C3_EXCLUDE_LEGACY_HELD=false'"
 bash -c 'exec -a canary_early_fake242_NONE_all sleep 60' & CPX=$!; sleep 0.3
 OUT=$(GS DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "MIN-2 pilot_on: co tien trinh canary_early* tren Oracle => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL Oracle: khong co tien trinh canary_early_fake242_NONE'"
@@ -1690,6 +1702,46 @@ chk "add4 live_off SUB MODE=dry XONG: tk con phang => ve DRY (khong can log LEGA
 chk "C-1 live_off MODE=dry XONG => go co monitor (cron thoat ngay)" "[ ! -e $W/deploylog/golive_monitor.on ] && ls $W/deploylog/golive_monitor.on.off_* >/dev/null"
 chk "add4 khong lo key/secret tk con trong log / gate / Telegram" "nosec ''"
 rm -f $F4/run/KILL_SWITCH $F4/FAKE_SCOPE_N
+echo "== 36. [V12 R4u] swap_v12_dry_jar.sh MAC DINH r4t -> r4u3: code [BIG_DOWN-SEL] trong jar moi (kiem tren Oracle), hau kiem, dang ky r4u3"
+python3 - "$W/new_r4u.jar" "$W/new_r4u_bad.jar" <<'PYEOF'
+import sys, zipfile
+for p, body in ((sys.argv[1], b'fake-new-jar-v12r4q-r4r-r4s-r4t-r4u3 LOG.info("[BIG_DOWN-SEL] {} level={}")'), (sys.argv[2], b'fake-new-jar-v12r4q-r4r-r4s-r4t-r4u3-khong-sel')):
+    with zipfile.ZipFile(p, 'w', zipfile.ZIP_STORED) as z:
+        z.writestr('META-INF/MANIFEST.MF', 'Manifest-Version: 1.0\n')
+        z.writestr('com/binance/chuyennd/trading/DetectEntrySignal2TradeNormal.class', body)
+PYEOF
+NEWU=$(md5sum < $W/new_r4u.jar | cut -c1-32); NEWUB=$(md5sum < $W/new_r4u_bad.jar | cut -c1-32)
+swu() { env APP_DIR=$F4 OLD_MD5=$NEWR NJ=$W/new_r4u.jar NJ_MD5=$NEWU DEPLOY_TG_SINK=$W/tg_sw.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 REG_JAR_SH=$W/fake_register.sh "$@"; }
+# 242 gia ve trang thai dry THUAN nhu truoc go-live (§35 de lai dong env LIVE_ADAPTER=live + doi ten latch .dry_/.live_)
+sed -i '/^export LIVE_ADAPTER=live$/d' $F4/conf/env.sh; echo '{"latch":"NONE"}' > $F4/run/killsw_latch.json
+rm -f $W/reg_calls.txt $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_* $F4/run/KILL_SWITCH; sleep 2
+JU0=$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32); EU0=$(md5sum < $F4/conf/env.sh)
+OUT=$(swu DRY=1 bash "$SW" 2>&1); RC=$?
+chk "r4u3 swap DRY=1 (tag MAC DINH r4t -> r4u3): jar moi co code [BIG_DOWN-SEL], DRY PASS, khong doi jar/env" "[ $RC = 0 ] && [ $JU0 = $NEWR ] && echo \"\$OUT\" | grep -q 'jar r4t -> r4u3' && echo \"\$OUT\" | grep -q 'OK jar moi co code \[BIG_DOWN-SEL\] (com/binance/chuyennd/trading/DetectEntrySignal2TradeNormal.class)' && echo \"\$OUT\" | grep -q 'DRY PASS' && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$EU0\" ]"
+OUT=$(swu NJ=$W/new_r4u_bad.jar NJ_MD5=$NEWUB DRY=1 bash "$SW" 2>&1); RC=$?
+chk "r4u3 swap: jar moi KHONG co code [BIG_DOWN-SEL] => DUNG (truoc moi thao tac 242)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'jar moi KHONG co code \[BIG_DOWN-SEL\]' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $JU0 ]"
+OUT=$(swu OLD_MD5=$NEWQ DRY=1 bash "$SW" 2>&1); RC=$?
+chk "r4u3 swap: jar dang chay KHAC OLD_MD5 (pin r4t) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL jar_dang_chay'"
+OUT=$(swu C3_ACCOUNT=MAIN EXCL_HELD=false DRY=1 bash "$SW" 2>&1); RC=$?
+chk "A1 r4u2 C-1 swap: C3_ACCOUNT=MAIN + EXCL_HELD=false => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'C3_ACCOUNT=MAIN di voi C3_EXCLUDE_LEGACY_HELD=false'"
+touch $F4/FAKE_EXCL_FORCE
+OUT=$(echo YES | swu bash "$SW" 2>&1); RC=$?
+rm -f $F4/FAKE_EXCL_FORCE $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_*; sleep 2
+chk "A1 r4u2 C-1 swap SUB: log co [C3-EXCL-FORCE] => hau kiem FAIL => ROLLBACK ve jar cu" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL C3-EXCL-FORCE' && echo \"\$OUT\" | grep -q 'ROLLBACK' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWR ]"
+echo '{"target_jar": "r4u3", "target_md5": "'$NEWU'", "smoke_start_ms": null}' > $GMICRO_TARGET
+OUT=$(swu C3_ACCOUNT=MAIN DRY=1 bash "$SW" 2>&1); RC=$?
+chk "R4u2 swap C3_ACCOUNT=MAIN: ke hoach export C3_EXCLUDE_LEGACY_HELD=true" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'export C3_EXCLUDE_LEGACY_HELD=true'"
+OUT=$(echo YES | swu bash "$SW" 2>&1); RC=$?
+chk "r4u3 swap XONG: jar r4u3 (md5), [MINUTE-GUARD] BAT, backup r4t (md5), dang ky parity 'r4u3 <jar> <md5> <start_ms> 1', dry giu" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: dry chay r4u3' && echo \"\$OUT\" | grep -q 'OK MINUTE-GUARD_BAT' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWU ] && cat $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_*.md5 | grep -qx $NEWR && grep -qE \"^r4u3 $W/new_r4u.jar $NEWU [0-9]{13} 1\$\" $W/reg_calls.txt && penv | grep -qx LIVE_ADAPTER=dry"
+chk "R4u2 swap SUB: env.sh dung 1 dong export C3_EXCLUDE_LEGACY_HELD=false, process env false, START_MS in + luu file, gmicro_target.json smoke_start_ms" "[ \"\$(grep -c '^export C3_EXCLUDE_LEGACY_HELD=' $F4/conf/env.sh)\" = 1 ] && grep -qx 'export C3_EXCLUDE_LEGACY_HELD=false' $F4/conf/env.sh && penv | grep -qx C3_EXCLUDE_LEGACY_HELD=false && echo \"\$OUT\" | grep -q 'START_MS JVM r4u3 (gio start THAT) = [0-9]\\{13\\}' && grep -q '^tag=r4u3 md5=$NEWU start_ms=[0-9]\\{13\\}' $W/deploylog/swap_start_r4u3_*.txt && python3 -c \"import json,sys; d=json.load(open('$GMICRO_TARGET')); sys.exit(0 if len(str(d['smoke_start_ms']))==13 else 1)\""
+rm -f $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_*; sleep 2
+OUT=$(echo YES | env APP_DIR=$F4 OLD_TAG=r4u3 NEW_TAG=r4t OLD_MD5=$NEWU NJ=$W/new_r4r.jar NJ_MD5=$NEWR NEED_BIGDOWN=0 DEPLOY_TG_SINK=$W/tg_sw.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 REG_JAR_SH=$W/fake_register.sh bash "$SW" 2>&1); RC=$?
+chk "R4u2 swap ve r4t (lenh rollback cua chuoi): GO dong C3_EXCLUDE_LEGACY_HELD khoi env.sh + process env khong con" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'GO dong khoi env.sh' && ! grep -q '^export C3_EXCLUDE_LEGACY_HELD=' $F4/conf/env.sh && ! penv | grep -q '^C3_EXCLUDE_LEGACY_HELD=' && echo \"\$OUT\" | grep -q 'OK env khong_co_C3_EXCLUDE_LEGACY_HELD'"
+echo 'export C3_EXCLUDE_LEGACY_HELD=false' >> $F4/conf/env.sh
+OUT=$(rs NJ_MD5=$NEWR C3_ACCOUNT=MAIN DRY=1 SEED=none bash "$RSH" 2>&1); RC=$?
+OUT2=$(rs NJ_MD5=$NEWR C3_ACCOUNT=SUB DRY=1 SEED=none bash "$RSH" 2>&1)
+chk "A1 r4u2 C-1 restart_reseed: C3_ACCOUNT=MAIN + env.sh C3_EXCLUDE_LEGACY_HELD=false => TU CHOI (SUB thi khong)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'C3_ACCOUNT=MAIN di voi C3_EXCLUDE_LEGACY_HELD=false' && ! echo \"\$OUT2\" | grep -q 'C3_ACCOUNT=MAIN di voi'"
+echo "$OUT" | grep -q 'C3_ACCOUNT=MAIN di voi' || echo "$OUT" | tail -5
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN)) SKIP=$SKIPN (tong PASS+FAIL+SKIP=$((PASS+FAILN+SKIPN)) co dinh)"
 [ $FAILN = 0 ]

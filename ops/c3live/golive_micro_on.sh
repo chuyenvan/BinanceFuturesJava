@@ -4,7 +4,7 @@
 #   DRY=1 bash ~/claude_master/v12/c3live/ops/c3live/golive_micro_on.sh   # chi kiem + in ke hoach, KHONG ghi gi
 #   bash ~/claude_master/v12/c3live/ops/c3live/golive_micro_on.sh         # go YES (khung :10-:44)
 # C3_ACCOUNT=SUB (mac dinh, ADD4: tk con, key /root/.config/c3live/keys_sub.env) | MAIN (ADD1 tk chinh — chi khi chi dinh ro).
-# Kiem: file gate G-MICRO (jar_md5 = jar dang chay = pin r4t), dry dang chay, latch NONE, khong run/KILL_SWITCH, key file, RAM/dia,
+# Kiem: file gate G-MICRO (jar_md5 = jar dang chay = pin r4u3, golive_lib NJ_MD5), dry dang chay, latch NONE, khong run/KILL_SWITCH, key file, RAM/dia,
 #   khong canary/soak/PAUSE; [R4q] doc san (chi doc) TRUOC: vi the + 0 lenh/algo c3 => chu ky vi the.
 #   MAIN: LEGACY managed moi. [ADD4 SUB] KHONG con dieu kien LEGACY (§3, chi ghi log); thay bang tk con SACH + key dat (§2, = golive_check_key
 #   SUB: IP-only, khong rut, futures, sha8 != key tk chinh, 0 vi the/lenh/algo, dualSide=false, BFUSD co so du => marginAvailable) —
@@ -23,6 +23,7 @@
 #   khong co => TRUOT (KILL_SWITCH van dat => doc lai => rollback ve dry).
 #   [ADD4 ERRATA 2] SUB: truoc co: tu PIN lai cron monitor (installer idempotent, in md5) + ghi moc tmb0 / C3_CAPITAL (lop phu eq).
 #   Hau kiem: so live RONG (BOOK_CUM=0) + 0 leg mang cid so dry .dry_<TS>; doc lai khong tinh leg so dry => rollback nhu loi khac.
+# [R4u2] process env C3_EXCLUDE_LEGACY_HELD phai = false (SUB) | true (MAIN) truoc + sau restart (swap ghi env.sh), sai => DUNG / TRUOT.
 # Ma thoat: 0 XONG | 1 DUNG/da rollback | 2 can owner/MASTER.
 # =============================================================================
 set -uo pipefail
@@ -34,12 +35,15 @@ say "tai khoan c3: C3_ACCOUNT=$C3_ACCOUNT — $ACCT_TXT, file key $KEYS_FILE"
 G=$GATE_DIR/GOLIVE_GATE_MICRO.ok
 GR=$(gl_gate "$G"); echo "$GR"; echo "$GR" | grep -q '^OK' || die "chua co cong G-MICRO hop le (MASTER tao $G voi jar_md5=$NJ_MD5)"
 gl_read_state
+gl_excl_guard
 echo "$ST" | grep -v '^END_STATE$' | sed 's/^/   242: /'
 F=0; chk() { if eval "$2"; then say "OK   $1"; else say "FAIL $1"; F=1; fi; }
 chk "1 process bot" "[ '$(sv NPROC)' = 1 ]"
 chk "jar dang chay = pin $NJ_MD5" "[ '$(sv JAR_MD5)' = '$NJ_MD5' ]"
 chk "dang chay c3_live DRY (env process + env.sh)" "[ '$(sv ENV_LIVE_PROFILE)' = c3_live ] && [ '$(sv ENV_LIVE_ADAPTER)' = dry ] && [ '$(sv ENVSH_LIVE_ADAPTER)' = dry ]"
 chk "LIVE_KILLSW_MODE=act" "[ '$(sv ENV_LIVE_KILLSW_MODE)' = act ]"
+EXW=false; [ "$C3_ACCOUNT" = MAIN ] && EXW=true   # [R4u2] SUB: c3 chi loai coin c3 dang giu; MAIN: loai ca LEGACY
+chk "process env C3_EXCLUDE_LEGACY_HELD=$EXW (C3_ACCOUNT=$C3_ACCOUNT; co: $(sv ENV_C3_EXCLUDE_LEGACY_HELD))" "[ '$(sv ENV_C3_EXCLUDE_LEGACY_HELD)' = $EXW ]"
 chk "latch kill-switch NONE (khac => owner xem + DRY=0 bash ops/killsw_reset.sh truoc)" "[ '$(sv LATCH)' = NONE ] || [ '$(sv LATCH)' = NOFILE ]"
 chk "khong co run/KILL_SWITCH (co => xoa co chu dich truoc)" "[ '$(sv KILLSW_FILE)' = 0 ]"
 chk "file key $KEYS_FILE (600, 2 dong)" "[ '$(sv KEYS_OK)' = 1 ]"
@@ -109,6 +113,7 @@ if echo "$RS" | grep -q '^FAIL'; then
 fi
 if [ "$C3_ACCOUNT" = SUB ]; then   # [ADD4 §4] dong scope cua jar dem vi the NGOAI c3 tren tai khoan cua key c3 (= tk con) — phai 0
   SCOPE_CHK='
+[ "$(T "\[C3-EXCL-FORCE\]")" = 0 ] && echo "OK 0_C3-EXCL-FORCE" || echo "FAIL C3-EXCL-FORCE (SUB: jar ep C3_EXCLUDE_LEGACY_HELD=true => LIVE_C3_KEYS_FILE sai)"
 LS=$(tail -n +$SL $L | grep -a "LEGACY tren tai khoan chinh:" | tail -1 | grep -aoE "chinh: [0-9]+" | awk "{print \$2}")
 if [ -z "$LS" ]; then echo "WAIT scope_tk_con"; elif [ "$LS" = 0 ]; then echo "OK scope_tk_con_0_vi_the_ngoai_c3"; else echo "FAIL scope_tk_con_${LS}_vi_the_ngoai_c3 (ADD4 §4)"; fi'
 else
@@ -132,7 +137,7 @@ mon_hb_ok() {
 FAIL monitor_heartbeat_khong_co_trong_${MON_HB_WAIT_S}s (cron golive_monitor khong chay? crontab -l; $MON_HB_FILE)"; return 1
 }
 CHK() { gl_chk_common "$SL" "$L0" '
-envk LIVE_ADAPTER=live; envk C3_CAPITAL='"$MICRO_CAPITAL"'; envk SHADOW_NO_PUSH=false; envk LIVE_ENTRY_ENABLED=true; envk LIVE_SEED_EXCLUDE_DECISION_MIN=1; envk LIVE_C3_KEYS_FILE='"$KEYS_FILE"'
+envk LIVE_ADAPTER=live; envk C3_CAPITAL='"$MICRO_CAPITAL"'; envk SHADOW_NO_PUSH=false; envk LIVE_ENTRY_ENABLED=true; envk LIVE_SEED_EXCLUDE_DECISION_MIN=1; envk LIVE_C3_KEYS_FILE='"$KEYS_FILE"'; envk C3_EXCLUDE_LEGACY_HELD='"$EXW"'
 [ "$(T "khoi dong adapter=LIVE")" -ge 1 ] && echo "OK adapter_LIVE" || echo "WAIT adapter_LIVE"
 [ "$(tail -n +$SL $L | grep -a "khoi dong adapter=LIVE" | grep -acE "c3_capital='"$MICRO_CAPITAL"'(\.0)?( |$)")" -ge 1 ] && echo "OK c3_capital='"$MICRO_CAPITAL"'" || echo "WAIT c3_capital"
 grep -q "^golive_micro_on '"$TS"' " run/KILL_SWITCH 2>/dev/null && echo "OK KILL_SWITCH_con (chua mo lenh moi)" || echo "FAIL KILL_SWITCH_cua_script_mat"

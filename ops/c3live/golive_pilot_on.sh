@@ -20,6 +20,7 @@ set -uo pipefail
 . "$(cd "$(dirname "$0")" && pwd)/golive_lib.sh"
 LEGACY_OK_MAX_AGE_S=${LEGACY_OK_MAX_AGE_S:-86400}
 gl_init golive_pilot_on
+[ "$C3_ACCOUNT" = MAIN ] && { gl_read_state; gl_excl_guard; }   # [A1 r4u2 C-1]
 [ "$C3_ACCOUNT" = SUB ] && ACCT_TXT="tai khoan CON (ADD4)" || ACCT_TXT="tai khoan CHINH (ADD1)"
 say "tai khoan c3: C3_ACCOUNT=$C3_ACCOUNT — $ACCT_TXT, file key $KEYS_FILE"
 G=$GATE_DIR/GOLIVE_GATE_PILOT.ok
@@ -74,7 +75,8 @@ if [ "$C3_ACCOUNT" = SUB ]; then
   NC=""; for k in POS_NONC3 ORD_NONC3 ALGO_NONC3; do n=$(av $k | awk '{print $1}'); [ "$n" = 0 ] || NC="$NC $k=$(av $k)"; done
   NCOK=0; [ -z "$NC" ] && NCOK=1
   chk "tk con: 0 vi the / lenh / algo NGOAI c3 (ADD4 §4)${NC:+ —$NC}" "[ $NCOK = 1 ]"
-  KEYCHK="envk LIVE_C3_KEYS_FILE=$KEYS_FILE"
+  KEYCHK="envk LIVE_C3_KEYS_FILE=$KEYS_FILE; envk C3_EXCLUDE_LEGACY_HELD=false; [ \"\$(T '\\[C3-EXCL-FORCE\\]')\" = 0 ] && echo 'OK 0_C3-EXCL-FORCE' || echo 'FAIL C3-EXCL-FORCE (SUB: env key sai)'"
+  chk "process env C3_EXCLUDE_LEGACY_HELD=false (tk con; co: $(sv ENV_C3_EXCLUDE_LEGACY_HELD))" "[ '$(sv ENV_C3_EXCLUDE_LEGACY_HELD)' = false ]"
 else
   L0=0; YESW="YES DA CAT LEGACY"; KEYCHK=""
   chk "LEGACY managed = 0 (da cat), moi" "[ '$(sv LEGACY_N)' = 0 ] && [ '$(sv LEGACY_AGE)' -ge 0 ] && [ '$(sv LEGACY_AGE)' -le 600 ] 2>/dev/null"

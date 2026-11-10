@@ -5,7 +5,7 @@
 #   bash ~/claude_master/deploy/cleanup_oracle_disk.sh --apply    # owner chay
 # PHA 1 (XOA, danh sach co dinh):
 #   a) ~/claude_master/a1_*scratch* (khong phai git, khong chua .git) co file moi nhat truoc 2026-11-01.
-#   b) jar build cu ~/claude_master/v12/jar: GIU ten r4n/r4p/r4q/r4r/r4s/r4t, moi md5 trong parity_v12w/jars.json hoac duoc file
+#   b) jar build cu ~/claude_master/v12/jar: GIU ten r4n/r4p/r4q/r4r/r4s/r4t/r4u/r4u_final/r4u2/r4u3, moi md5 trong parity_v12w/jars.json hoac duoc file
 #      trong ~/claude_master/deploy, ~/ops, c3live/ops tro toi, moi jar < 7 ngay.
 #   c) worktree A1 v12 (a1_r4i/j/m/n, a1_soak) + ing1030 (a1_wt, a1_wt2, a1_wt3, a1_wt4): CHI 'git worktree remove' (khong --force)
 #      khi la worktree phu that VA sach. KHONG rm -rf worktree o bat ky pha nao. (qf2_build: KHONG — co ledger.csv/logs/config.)
@@ -69,7 +69,7 @@ say "  md5 can giu: $(wc -l <<< "$KEEPMD5")"
 while IFS= read -r -d '' f; do
   guard "$f"
   b=$(basename -- "$f"); m=$(md5sum < "$f" | cut -c1-32)
-  case "$b" in *_r4n|*_r4p|*_r4q|*_r4r|*_r4s|*_r4t) say "  GIU (ten) $b"; continue;; esac
+  case "$b" in *_r4n|*_r4p|*_r4q|*_r4r|*_r4s|*_r4t|*_r4u|*_r4u_final|*_r4u2|*_r4u3) say "  GIU (ten) $b"; continue;; esac
   if grep -qx "$m" <<< "$KEEPMD5"; then say "  GIU (md5 ${m:0:8} duoc tro toi) $b"; continue; fi
   if [ -n "$(find "$f" -mtime -7)" ]; then say "  GIU (<7 ngay) $b"; continue; fi
   s=$(stat -c %s -- "$f"); P1=$((P1 + s))
