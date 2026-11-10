@@ -87,6 +87,18 @@ public class AIRejectFilter {
         // [G2-LIVE-PORT 2026-09-29] docs/plan/PLAN_G2_LIVE_PORT.md — quantile cuộn trên CHÍNH TỈ SỐ r.
         //   LIVE key (LIVE_GATE_ROLLING_*) ưu tiên; SIM key (SIM_GATE_ROLLING_*) giữ nguyên GDV2.
         //   Cả hai vắng => thrBase = MIN_MOMENTUM_15M => byte-identical HEAD.
+        // [R3-G3 MTF-OR 2026-11-10] PREREG_R3_GATE_FAMILY b901016e: chi SIM (LIVE tat), chi nhanh PREDICT. Key TAT => bo qua.
+        if (sp != null && !LiveGateRollingRatio.isOn() && GateRollingRatio.mtfOn()) {
+            boolean ok = GateRollingRatio.mtfPass(prediction.timestamp, prediction.predReturn15M, sp);
+            if (!ok) {
+                mom15RejectCount.incrementAndGet();
+                return new FilterResult(FilterDecision.REJECT,
+                        String.format("BAD MOMENTUM: MTF-OR khong qua khung nao (p15 %.2f%%)", prediction.predReturn15M * 100));
+            }
+            if (predictSymbolTrade) GateRollingRatio.notePass(prediction.timestamp);
+            return new FilterResult(FilterDecision.PASS,
+                    String.format("PERFECT: MTF-OR 15M(%.2f%%)", prediction.predReturn15M * 100));
+        }
         float thrBase;
         if (LiveGateRollingRatio.isOn() && sp != null) {
             thrBase = LiveGateRollingRatio.threshold(prediction.timestamp, prediction.predReturn15M, sp);
