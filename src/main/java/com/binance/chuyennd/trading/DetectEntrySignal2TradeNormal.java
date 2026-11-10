@@ -590,7 +590,7 @@ public class DetectEntrySignal2TradeNormal {
             final Float[] thrMM = new Float[2];
             GatePreFilter.Result selRes = GatePreFilter.runSelector(selPool.entrySet(), Configs.SELECTOR_RANK_TOPK,
                     s -> a1On && com.binance.chuyennd.tradecore.selector.UniverseA1Filter.isExcluded(s, tSel),
-                    com.binance.chuyennd.tradecore.selector.LegacySymbols::isLegacySymbol, heldPre, tickersF::get,
+                    com.binance.chuyennd.tradecore.selector.LegacySymbols::blocksC3, heldPre, tickersF::get,   // [V12 R4u2]
                     (s, k) -> s1OrderF ? selMapPred.get(s) : k,
                     new GatePreFilter.SelectorSink<KlineObjectSimple>() {
                         @Override
@@ -739,7 +739,9 @@ public class DetectEntrySignal2TradeNormal {
                         com.binance.chuyennd.c3live.runtime.C3LiveHook.liveAdapter()),
                 BudgetManager.getInstance().symbol2Pos.keySet());
         java.util.List<String> sel = com.binance.chuyennd.tradecore.selector.BigDownSelect.select(a.symbolPred,
-                numberOrder, s -> symbolLocked.contains(s) || held.test(s), s -> tickers.get(s) != null);
+                numberOrder, com.binance.chuyennd.tradecore.selector.BigDownSelect.lockedFor(
+                        com.binance.chuyennd.tradecore.selector.LegacySymbols.excludeLegacyHeld(), symbolLocked, held),
+                s -> tickers.get(s) != null);   // [V12 R4u2] TAT => chi so c3
         LOG.info("[BIG_DOWN-SEL] {} level={} n={} pool={} top={}", Utils.normalizeDateYYYYMMDDHHmm(time), levelChange,
                 numberOrder, a.size(), com.binance.chuyennd.tradecore.selector.BigDownSelect.describe(sel, a.symbolPred));
         return sel;
@@ -1314,7 +1316,7 @@ public class DetectEntrySignal2TradeNormal {
         // [V12 R4h] LEGACY qua gate CHI de nap r nhu sim (sim khong co LEGACY) — KHONG vao lenh o so nao (that/giay).
         if (levelChange == MarketLevelChange.PREDICT_SYMBOL_TRADE
                 && com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()
-                && com.binance.chuyennd.tradecore.selector.LegacySymbols.isLegacySymbol(symbol)) {
+                && com.binance.chuyennd.tradecore.selector.LegacySymbols.blocksC3(symbol)) {   // [V12 R4u2]
             LOG.info("[SHADOW] skip-LEGACY {} (sau gate: da nap r nhu sim, khong vao)", symbol);
             return;
         }
@@ -1352,7 +1354,7 @@ public class DetectEntrySignal2TradeNormal {
         if (com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()) {
             // [L3 LEGACY] chan MOI duong (selector, market-signal, DCA) mo entry GIAY tren coin
             // dang co vi the THAT cu — hai duong khong duoc cham cung mot symbol.
-            if (com.binance.chuyennd.tradecore.selector.LegacySymbols.isLegacySymbol(symbol)) {
+            if (com.binance.chuyennd.tradecore.selector.LegacySymbols.blocksC3(symbol)) {   // [V12 R4u2]
                 LOG.info("[SHADOW] skip-LEGACY {}", symbol);
                 return;
             }

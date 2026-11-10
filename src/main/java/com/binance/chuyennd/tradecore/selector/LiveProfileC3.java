@@ -96,6 +96,12 @@ public final class LiveProfileC3 {
                     snp, KEY_LIVE_ENTRY, le, KILL_FILE, kill,
                     decideLegacyQueueBlock(true, System.getenv("LEGACY_QUEUE_LIVE_BLOCK")));   // = KEY_LEGACY_QUEUE_BLOCK (tranh forward ref)
         }
+        if (ON) {   // [V12 R4u2] 1 dong luc khoi dong
+            boolean ex = LegacySymbols.excludeLegacyHeld();
+            LOG.warn("[C3-LEGACY] C3_EXCLUDE_LEGACY_HELD={} => {}", ex, ex
+                    ? "c3 KHONG vao symbol LEGACY (tk chinh dung chung, nhu r4t)"
+                    : "c3 CHI loai coin c3 dang giu (nhu sim); LEGACY = toan bo vi the that tk chinh (CHI dung voi C3_ACCOUNT=SUB)");
+        }
     }
 
     /** true khi {@code LIVE_PROFILE=c3_shadow}. Moi nhanh moi PHAI nam sau ham nay. */

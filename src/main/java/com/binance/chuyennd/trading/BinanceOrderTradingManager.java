@@ -242,7 +242,7 @@ public class BinanceOrderTradingManager {
      * {@code isLegacySymbol} luon false => nhanh nay y het HEAD (chi log would-BUY).
      */
     static void shadowHandleOrder(OrderTargetInfo order) {
-        if (com.binance.chuyennd.tradecore.selector.LegacySymbols.isLegacySymbol(order.symbol)) {
+        if (com.binance.chuyennd.tradecore.selector.LegacySymbols.blocksC3(order.symbol)) {   // [V12 R4u2]
             LOG.info("[SHADOW] skip-LEGACY {}", order.symbol);
             return;
         }

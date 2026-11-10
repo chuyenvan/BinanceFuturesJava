@@ -82,6 +82,44 @@ public final class LegacySymbols {
         return symbol != null && getInstance().legacy.contains(symbol);
     }
 
+    // ===================== [V12 R4u2 C3_EXCLUDE_LEGACY_HELD 2026-11-10] =====================
+    /** Key env/profile. Mac dinh true = hanh vi r4t (tk chinh dung chung c3 + LEGACY). */
+    public static final String KEY_EXCLUDE = "C3_EXCLUDE_LEGACY_HELD";
+    static volatile Boolean excludeForTest = null;
+    private static volatile Boolean excludeCached = null;
+
+    /** Chi "false"/"0" (khong phan biet hoa thuong, bo khoang trang) moi TAT; con lai (ke ca vang/rong) = BAT. */
+    static boolean parseExclude(String v) {
+        if (v == null) return true;
+        String s = v.trim();
+        return !("false".equalsIgnoreCase(s) || "0".equals(s));
+    }
+
+    /**
+     * true (mac dinh): c3 KHONG vao lenh tren symbol LEGACY (tk chinh, one-way dung chung). false (chi khi
+     * C3_ACCOUNT=SUB, LEGACY o tk chinh khac): c3 chi loai coin c3 dang giu — dung quy uoc sim isSymbolRunning.
+     */
+    public static boolean excludeLegacyHeld() {
+        Boolean t = excludeForTest;
+        if (t != null) return t;
+        Boolean c = excludeCached;
+        if (c == null) {
+            c = parseExclude(Cfg.get(KEY_EXCLUDE));
+            excludeCached = c;
+        }
+        return c;
+    }
+
+    /** Thuan: c3 bi chan vao symbol nay vi LEGACY? */
+    static boolean blocksC3(boolean exclude, boolean isLegacy) {
+        return exclude && isLegacy;
+    }
+
+    /** Cong cho MOI duong VAO LENH cua c3 (that + giay). Luat DONG cua LEGACY van doc {@link #isLegacySymbol}. */
+    public static boolean blocksC3(String symbol) {
+        return blocksC3(excludeLegacyHeld(), isLegacySymbol(symbol));
+    }
+
     public int size() {
         return legacy.size();
     }
@@ -123,6 +161,12 @@ public final class LegacySymbols {
 
     /** [V12 C1] nhu {@link #reconcile(Set, Set)} nhung loai ca symbol c3_live dang so huu (so that). */
     public void reconcile(Set<String> realPositions, Set<String> paperPositions, Set<String> c3LiveOwned) {
+        if (!excludeLegacyHeld()) {
+            // [V12 R4u2] TAT (SUB): vi the that (tk chinh) chi la LEGACY => KHONG tru so giay/so c3. Neu tru, coin ma
+            //   c3 cung giu se roi khoi LEGACY va vi the THAT cua LEGACY bi ap luat dong C3 (arm/ratchet/time-stop).
+            reconcile(realPositions, Collections.<String>emptySet());
+            return;
+        }
         TreeSet<String> ex = new TreeSet<>();
         if (paperPositions != null) ex.addAll(paperPositions);
         if (c3LiveOwned != null) ex.addAll(c3LiveOwned);

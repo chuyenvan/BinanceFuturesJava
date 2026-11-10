@@ -71,6 +71,17 @@ public final class BigDownSelect {
         return seedBlocked ? "GATE-SEED HONG: chan vao lenh moi (van quan ly vi the/stop)" : null;
     }
 
+    /**
+     * [V12 R4u2] tap "dang giu" cua leg market-signal c3: co BAT => vi the that tk chinh (LEGACY) HOP so c3 (r4u);
+     * TAT => CHI so c3 (nhu sim isSymbolRunning).
+     */
+    public static Predicate<String> lockedFor(boolean excludeLegacy, java.util.Set<String> realPositions,
+                                              Predicate<String> c3Held) {
+        final java.util.Set<String> real = realPositions == null ? java.util.Collections.<String>emptySet() : realPositions;
+        final Predicate<String> held = c3Held == null ? s -> false : c3Held;
+        return s -> (excludeLegacy && real.contains(s)) || held.test(s);
+    }
+
     /** "SYM=0.123456,SYM2=..." cho dong log [BIG_DOWN-SEL]. */
     public static String describe(List<String> sel, Map<String, Float> mapPred) {
         StringBuilder sb = new StringBuilder();

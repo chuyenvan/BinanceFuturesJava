@@ -414,7 +414,7 @@ public final class C3LiveRuntime {
                 .modeGuard(modeGuard)
                 .rules(() -> rules)
                 .capital(equity::capital)
-                .legacy(s -> LegacySymbols.isLegacySymbol(s) || scope.entryBlocked(s, System.currentTimeMillis()))   // [V12 R4 R2]
+                .legacy(s -> LegacySymbols.blocksC3(s) || scope.entryBlocked(s, System.currentTimeMillis()))   // [V12 R4 R2] [V12 R4u2 blocksC3: TAT => chi scope]
                 .budgetFn((m, c) -> TradeUtils.managerBudget(null, m, c, null))
                 .legBudgetFn(LiveGridSizing::legBudget)
                 .gridDue((f, p, n) -> DcaUtils.shouldDcaGrid(f, p, n))

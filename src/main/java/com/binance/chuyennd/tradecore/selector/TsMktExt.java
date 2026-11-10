@@ -67,7 +67,7 @@ public final class TsMktExt {
 
     private static final boolean ENABLED;
     static volatile Boolean enabledForTest = null;
-    static volatile Predicate<String> legacyCheck = LegacySymbols::isLegacySymbol;
+    static volatile Predicate<String> legacyCheck = LegacySymbols::blocksC3;   // [V12 R4u2] TAT => khong coi LEGACY
     private static volatile TsMktExt INSTANCE;
     /** [V12 c3_live P0-U3] loc thanh vien ALT_EW theo {@link MarketIndexFilter} (null = khong loc: c3_shadow/sim y nguyen). */
     static Map<String, KlineObjectSimple> filterMembers(Map<String, KlineObjectSimple> bars) {
