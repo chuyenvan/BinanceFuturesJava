@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """[ADD18] BIG_DOWN-SEL: top-n leg BIG_DOWN live ([BIG_DOWN-SEL]) == tap tinh lai offline theo logic S1-map cua SIM
 (SimulatorMarketLevelTicker1MStopLoss:368-380 = MarketBigChangeDetector.getTopSymbolArray tren bins S1-map).
-Offline: symbolPred = gv_off (GV-I harness, p2_pairs: coin dang giu da bo theo ADD1), xep (gv_off tang) nhu TreeMap<Float,.> cua sim,
-bo coin LEGACY dang giu ([LEGACY] managed gan nhat truoc phut), lay n dau. Hoa diem o bien hang n/n+1 (|dv| <= 1e-6*max|v|),
+Offline: symbolPred = gv_off (GV-I harness, p2_pairs: coin c3 dang giu da bo theo ADD1), xep (gv_off tang) nhu TreeMap<Float,.> cua sim,
+lay n dau. [ADD19 errata r4u3] tap loai tru GIONG SIM: CHI coin c3 dang giu, KHONG loai coin LEGACY (C3_EXCLUDE_LEGACY_HELD=false). Hoa diem o bien hang n/n+1 (|dv| <= 1e-6*max|v|),
 hoac 2 coin trung gia tri (sim mat 1) => XAM. Thieu du lieu => KHONG DO DUOC (=> XAM ngay, ADD18 §1).
 Ngay khong co su kien => "KHONG AP DUNG (0 su kien)". Chi cham khi jar ngay co BIG_DOWN-SEL (r4u*); jar cu chi dem su kien.
 Ham thuan evaluate() de test. Doc WORK/p2_pairs.csv.gz + LIVE/log_window.gz. Khong doc 242."""
@@ -123,13 +123,8 @@ def main():
     ev, sel, leg = parse_log(L)
     leg.sort()
 
-    def legacy_at(ts):
-        s = set()
-        for t, x in leg:
-            if t > ts + 66000:
-                break
-            s = x
-        return s
+    def legacy_at(ts):   # [ADD19 errata r4u3] sim khong loai LEGACY => tap loai tru them = rong (coin c3 giu da bo o p2)
+        return set()
     applies = str(C.get("JAR", "")).startswith("r4u")
     p2 = {}
     pf = W + "/p2_pairs.csv.gz"

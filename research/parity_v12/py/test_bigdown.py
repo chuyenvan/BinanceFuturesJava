@@ -18,13 +18,17 @@ ts = B.ms7("20261110 04:55")
 leg_at = lambda t: leg[-1][1] if leg else set()
 rows = [("LEGAUSDT", 0.05), ("AUSDT", 0.10), ("CUSDT", 0.12), ("DUSDT", 0.13)]
 ok = []
-r = B.evaluate(ev, sel, {ts: rows}, leg_at); ok.append(r["status"] == "DAT")                       # 1 khop (LEGACY bo)
-r = B.evaluate(ev, sel, {ts: [("AUSDT", 0.1), ("DUSDT", 0.11), ("CUSDT", 0.12)]}, leg_at); ok.append(r["status"] == "TRUOT")   # 2 lech that
-r = B.evaluate(ev, sel, {ts: [("AUSDT", 0.1), ("CUSDT", 0.12), ("DUSDT", 0.12)]}, leg_at); ok.append(r["status"] in ("DAT", "XAM"))  # 3 hoa bien
-r = B.evaluate(ev, sel, {ts: [("AUSDT", 0.1), ("DUSDT", 0.12), ("CUSDT", 0.1200000001)]}, leg_at); ok.append(r["status"] == "XAM")  # 3b hoa bien lech
-r = B.evaluate({}, {}, {}, leg_at); ok.append(r["status"].startswith("KHONG AP DUNG"))                # 4 khong su kien
-ev2, sel2, _ = B.parse_log(lines[:2]); r = B.evaluate(ev2, sel2, {ts: rows}, leg_at); ok.append(r["status"] == "TRUOT")  # 5 thieu dong SEL
-r = B.evaluate(ev, sel, {}, leg_at); ok.append(r["status"] == "XAM")                                 # 6 KDD -> XAM
+nolock = lambda t: set()                                                                      # [ADD19 errata r4u3] chi loai coin c3 (da bo o p2)
+r = B.evaluate(ev, sel, {ts: rows[1:]}, nolock); ok.append(r["status"] == "DAT")                   # 1 khop
+r = B.evaluate(ev, sel, {ts: rows}, nolock); ok.append(r["status"] == "TRUOT")                     # 1b coin LEGACY KHONG duoc loai
+sel_l = {k: dict(v, top=["LEGAUSDT", "AUSDT"]) for k, v in sel.items()}
+r = B.evaluate(ev, sel_l, {ts: rows}, nolock); ok.append(r["status"] == "DAT")                     # 1c live chon ca coin LEGACY nhu sim
+r = B.evaluate(ev, sel, {ts: [("AUSDT", 0.1), ("DUSDT", 0.11), ("CUSDT", 0.12)]}, nolock); ok.append(r["status"] == "TRUOT")   # 2 lech that
+r = B.evaluate(ev, sel, {ts: [("AUSDT", 0.1), ("CUSDT", 0.12), ("DUSDT", 0.12)]}, nolock); ok.append(r["status"] in ("DAT", "XAM"))  # 3 hoa bien
+r = B.evaluate(ev, sel, {ts: [("AUSDT", 0.1), ("DUSDT", 0.12), ("CUSDT", 0.1200000001)]}, nolock); ok.append(r["status"] == "XAM")  # 3b hoa bien lech
+r = B.evaluate({}, {}, {}, nolock); ok.append(r["status"].startswith("KHONG AP DUNG"))                # 4 khong su kien
+ev2, sel2, _ = B.parse_log(lines[:2]); r = B.evaluate(ev2, sel2, {ts: rows}, nolock); ok.append(r["status"] == "TRUOT")  # 5 thieu dong SEL
+r = B.evaluate(ev, sel, {}, nolock); ok.append(r["status"] == "XAM")                                 # 6 KDD -> XAM
 # gmicro ADD19
 S = lambda jar, bd=0, sw=False: {"ket_luan": "DAT", "ngay_sach": "SACH", "jar": jar, "swap_day": sw, "bigdown_events": bd}
 d = {"2026-11-07": S("r4t"), "2026-11-08": S("r4t", 1),
