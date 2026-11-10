@@ -40,6 +40,8 @@ echo swap >> $W/calls
 vtm_start $W/vtm_r4t.jar; [ -f $W/ERR_AFTER ] && echo "x ERROR [main] x: loi gia" >> $W/vtm/logs/full.log; exit 0
 EOF
 cat > $W/check.sh <<EOF
+echo "\${7:-none}" >> $W/check_args
+[ -f $W/OLD_SPIKE ] && { [ "\${7:-0}" -gt "\$(cat $W/OLD_SPIKE)" ] 2>/dev/null && echo "OK price_gap_tu_moc" || echo "FAIL price_gap_max_ms_sau_repair=12428 (spike cu)"; }
 [ -f $W/ING_FAIL ] && echo "FAIL http429=3"
 [ -f $W/ING_WAIT ] && echo "WAIT kline_cover_sau_khoi_dong=0 (<2)"
 echo "OK 0_http429_418"; echo "OK price_gap_max_ms_sau_repair=1200"; echo "OK kline_phu_phut_da_chot (gia)"
@@ -168,6 +170,33 @@ chk "A1 r4u2 C-1: C3_ACCOUNT=MAIN + EXCL_HELD=false => chain TU CHOI" "[ $RC = 1
 resetu; touch $W/FORCE_AFTER
 echo YES | U bash $CH swap_r4u3 >/dev/null 2>&1; waitjob
 chk "A1 r4u2 C-1: SUB log co [C3-EXCL-FORCE] sau swap => hau kiem FAIL + lenh rollback ve r4t" "JL | grep -q 'FAIL C3-EXCL-FORCE' && grep -q 'OLD_TAG=r4u3 NEW_TAG=r4t' $W/tg.txt"
+echo "== [11-10] hau kiem CHI tinh tu moc bat dau buoc (spike cu truoc moc)"
+RCK=${REAL_CHECK:-/home/ubuntu/claude_master/ing1030/qf_wt/ops/ingest_qf/ingqf4_check_remote.sh}
+mkdir -p $W/rc/ing/logs $W/rc/vtm/logs; : > $W/rc/vtm/logs/full.log
+bash -c "exec -a 'websocket.BinanceDataIngestor rcktest_$TAG' sleep 120" & RCKP=$!; sleep 1
+NOW=$(date +%s); ts() { date -d "@$1" '+%d/%m/%Y %H:%M:%S.000'; }
+bud() { echo "$(ts $1) INFO  [ThreadAutoRestartProgram] c.b.c.w.BinanceDataIngestor: [REST-BUDGET] calls=47 weight=85 peak60s=$2 now60s=85 fdata=0 denied=0 http429=$3 http418=0 http4xx=0 hdr_max=90 | price_gap_max_ms=$4 price_age_ms=800 price_diff=10 loop_restarts=0 repair_xong=1 banned=0"; }
+{ for p in $(pgrep -f 'websocket.BinanceDataIngestor'); do echo "$(ts $((NOW-200000))) INFO  [main] x: PID $p written"; done
+  echo "$(ts $((NOW-200000))) INFO  [main] x: [REST-BUDGET] bat"; echo "$(ts $((NOW-199000))) INFO  [main] x: repair khoi dong xong"
+  bud $((NOW-180000)) 85 0 3300; bud $((NOW-170000)) 410 3 12428
+  echo "$(ts $((NOW-170000))) WARN  [x] x: Too many symbol price errors"; echo "$(ts $((NOW-160000))) WARN  [x] x: [PRICE-AGE] price_realtime dung 9s"
+  for d in 300 200 100; do bud $((NOW-d)) 85 0 3300
+    echo "$(ts $((NOW-d))) INFO  [Kline-Finalizer] x: [KLINE-COVER] phut=x chua_chot=0 chua_chot_truoc=0 bo_kiem=0 khoi_dong=0 thieu_luc_chot=0 thieu_do_mat_ws=0 "
+    echo "$(ts $((NOW-d))) INFO  [Kline-Finalizer] x: Chot nen phut ok"; done; } > $W/rc/ing/logs/full.log
+O1=$(bash "$RCK" $W/rc/ing $W/rc/vtm x 0 new none $((NOW-400)) 2>&1 < /dev/null)
+O0=$(bash "$RCK" $W/rc/ing $W/rc/vtm x 0 new none 2>&1 < /dev/null)
+kill $RCKP 2>/dev/null
+chk "ingqf4_check_remote THAT + moc buoc: spike cu TRUOC moc (gap 12428, http429=3, peak 410, restart JVM, PRICE-AGE) KHONG tinh => OK; budget_bat/repair van doc tu start; khong moc => FAIL 12428 nhu cu" "echo \"\$O1\" | grep -q 'OK price_gap_max_ms_sau_repair=3300' && echo \"\$O1\" | grep -q 'OK 0_http429_418' && echo \"\$O1\" | grep -q 'OK weight_peak=85' && echo \"\$O1\" | grep -q 'OK 0_restart' && echo \"\$O1\" | grep -q 'OK 0_PRICE-AGE' && echo \"\$O1\" | grep -q 'OK budget_bat' && echo \"\$O1\" | grep -q 'OK kline_phu_phut_da_chot' && echo \"\$O1\" | grep -q 'INFO moc_hau_kiem=' && echo \"\$O0\" | grep -q 'FAIL price_gap_max_ms_sau_repair=12428' && echo \"\$O0\" | grep -q 'FAIL co_restart_JVM'"
+O2=$(bash "$RCK" $W/rc/ing $W/rc/vtm x 0 new none $((NOW-30)) 2>&1 < /dev/null)
+chk "ingqf4_check_remote THAT: moc sau moi dong budget => WAIT (khong OK/FAIL gia)" "echo \"\$O2\" | grep -q 'WAIT budget_sau_repair=0' && ! echo \"\$O2\" | grep -q 'price_gap_max_ms_sau_repair'"
+resetu; date -d '-2 day' +%s > $W/OLD_SPIKE; rm -f $W/check_args; T0=$(date +%s)
+echo YES | U bash $CH swap_r4u3 >/dev/null 2>&1; waitjob
+chk "chain: check collectData nhan moc = luc bat dau buoc (arg 7) => spike cu truoc moc KHONG lam FAIL, XONG" "JL | grep -q 'XONG CA CHUOI' && JL | grep -q 'moc hau kiem = ' && A7=\$(head -1 $W/check_args) && [ \"\$A7\" -ge $T0 ] && [ \"\$A7\" -le \$(date +%s) ]"
+echo "x ERROR [main] x: loi CU truoc buoc" >> $W/vtm/logs/full.log; rm -f $W/check_args; T1=$(date +%s)
+( for i in $(seq 1 40); do sleep 1; echo "x INFO [pool-3-thread-1] x: [LEGACY] managed 44: A,B" >> $W/vtm/logs/full.log; done ) & LAP=$!   # LEGACY log moi phut (that) sau moc
+echo YES | U bash $CH swap_r4u3 >/dev/null 2>&1; waitjob; kill $LAP 2>/dev/null
+chk "chain: buoc da XONG tu truoc => moc = luc bat dau hau kiem: ERROR cu (sau dong khoi dong JVM, truoc moc) KHONG lam FAIL" "JL | grep -q 'XONG CA CHUOI' && ! JL | grep -q 'FAIL vtm_ERROR' && [ \"\$(head -1 $W/check_args)\" -ge $T1 ]"
+rm -f $W/OLD_SPIKE
 pkill -f "$TAG" 2>/dev/null
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]

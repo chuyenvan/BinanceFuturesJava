@@ -46,8 +46,8 @@ FORCE_TIME=${FORCE_TIME:-0}
 DRY=${DRY:-0}
 # [A1 CHAIN MAJ-C] pin md5 script con = ban A1 da duyet. Luc YES: chep vao thu muc job + kiem md5; CHI chay ban chep; lech => KHONG chay.
 REG_JAR_SH=${REG_JAR_SH:-/home/ubuntu/claude_master/vz_e1_wt/research/parity_v12/sh/register_jar.sh}
-PIN_QF4_SH=${PIN_QF4_SH:-958e1e49398cc75dbe0908d5657fd7ca}     # deploy_ingest_qf4.sh QF4b (tu pin md5 ingqf_restart/ingqf4_check remote)
-PIN_CHECK_R=${PIN_CHECK_R:-675ecf2daab369d77c38c6528a53e89e}   # ingqf4_check_remote.sh
+PIN_QF4_SH=${PIN_QF4_SH:-880531e5a4545950a02b773b83880432}     # deploy_ingest_qf4.sh QF4b (tu pin md5 ingqf_restart/ingqf4_check remote)
+PIN_CHECK_R=${PIN_CHECK_R:-e8d87135085e81f48e8d86aef56bfbdc}   # ingqf4_check_remote.sh
 PIN_SWAP_SH=${PIN_SWAP_SH:-a04ee5f6a905b4926b3b6e0efcb39e53}   # swap_v12_dry_jar.sh [R4u2] (mac dinh r4t -> r4u3 + C3_EXCLUDE_LEGACY_HELD; truoc 09ae28e8 r4q -> r4t)
 PIN_REG=${PIN_REG:-7d9b2ee0285bdaec05574de86764e73f}           # register_jar.sh (swap goi sau hau kiem DAT)
 R4Q_JAR=${R4Q_JAR:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4q}
@@ -333,7 +333,7 @@ sleep_chk() { local i; for i in $(seq 1 "$1"); do chk_stop; sleep 1; done; }
 
 # hau kiem on dinh: $1 = buoc, $2 = dong log v_t_m moc (dem ERROR tu day)
 stable() {
-  local step=$1 base=$2 t0 ok_since=0 now K V lg lines err
+  local step=$1 base=$2 since=${3:-0} t0 ok_since=0 now K V lg lines err   # since = moc bat dau buoc (epoch s)
   t0=$(date +%s); IN_STABLE=$step; setst "$step: hau kiem on dinh (${STABLE_S}s)"
   say "--- $step: hau kiem on dinh ${STABLE_S}s (moi ${CHK_POLL_S}s), moc log v_t_m dong $base"
   while :; do
@@ -342,7 +342,7 @@ stable() {
     [ $((now - t0)) -gt "$STABLE_MAX_S" ] && fail "$step: hau kiem khong on dinh sau ${STABLE_MAX_S}s"
     if ! read_state; then say "ssh doc 242 loi — thu lai"; ok_since=0; sleep_chk "$CHK_POLL_S"; continue; fi
     lg=$(kv VTM_PID)
-    K=$($SSH_242 "bash -s -- $ING_DIR $APP_DIR $QF4_MD5 ${lg:-0} new none" < "$CHECK_R" 2>/dev/null) || K="FAIL ssh_check_collectData"
+    K=$($SSH_242 "bash -s -- $ING_DIR $APP_DIR $QF4_MD5 ${lg:-0} new none $since" < "$CHECK_R" 2>/dev/null) || K="FAIL ssh_check_collectData"
     lines=$(kv LINES); [ "${lines:-0}" -lt $((base - 1)) ] && base=1   # log xoay (file ngan hon moc)
     V=$($SSH_242 "bash -s -- $APP_DIR $base $step ${LSNAP:--1} $MIN_MEM_MB ${C3_ACCOUNT:-SUB}" <<'EOF'
 A=$1; B=$2; S=$3; L0=$4; MM=$5; ACC=${6:-SUB}; cd "$A" || { echo "FAIL cd_vtm"; exit 0; }
@@ -445,6 +445,7 @@ for s in $STEPS; do
       BD=$(jar_bigdown "$TGT_JAR"); case "$BD" in OK*) say "r4u3: OK code [BIG_DOWN-SEL] (${BD#OK })";; *) fail "r4u3: jar $TGT_JAR KHONG co code [BIG_DOWN-SEL] ($BD)";; esac
       LSNAP=$(kv LEGACY_N); [[ "$LSNAP" =~ ^[0-9]+$ ]] || LSNAP=-1; say "r4u3: chup LEGACY managed truoc swap = $LSNAP"
     fi
+    RAN_T0=$(date +%s); RAN_L0=$(( $(kv LINES) + 1 ))   # [11-10] moc bat dau buoc (thoi gian + dong log v_t_m)
     setst "$s: DANG CHAY"; say "--- $s: CHAY (ban chep $JD, khoa $DLOCK)"; tg "[deploy_chain $PRESET] $s: BAT DAU"
     case "$s" in
       qf4) echo YES | bash "$QF4_SH"; RC=$?;;
@@ -459,12 +460,16 @@ for s in $STEPS; do
   fi
   FIRST=0
   read_state || fail "$s: khong doc duoc 242"
-  BASE=$(( $(kv LINES) + 1 ))
-  if [ "$s" = r4t ] || [ "$s" = r4u3 ]; then   # sau swap: 0 ERROR tinh tu dong khoi dong JVM moi nhat
+  # [11-10 MASTER] moi chi so hau kiem CHI tinh tu moc bat dau buoc (collectData: theo timestamp; v_t_m: dong log tai moc).
+  # Buoc da XONG tu truoc (khong chay lai) => moc = luc bat dau hau kiem. KHONG tinh tu luc process start.
+  if [ -n "${RAN_T0:-}" ]; then SINCE=$RAN_T0; BASE=$RAN_L0; else SINCE=$(date +%s); BASE=$(( $(kv LINES) + 1 )); fi
+  RAN_T0=""; RAN_L0=""
+  say "$s: moc hau kiem = $(date -d "@$SINCE" '+%F %T') (v_t_m tu dong $BASE)"
+  if [ "$s" = r4t ] || [ "$s" = r4u3 ]; then   # sau swap: tinh tu dong khoi dong JVM moi nhat NEU no SAU moc buoc (bo log tat JVM cu)
     SB=$($SSH_242 "grep -a -n 'MainClass: com.binance.chuyennd.trading.BinanceOrderTradingManager' $APP_DIR/logs/full.log | tail -1 | cut -d: -f1" 2>/dev/null)
-    [[ "$SB" =~ ^[0-9]+$ ]] && BASE=$SB
+    [[ "$SB" =~ ^[0-9]+$ ]] && [ "$SB" -gt "$BASE" ] && BASE=$SB
   fi
-  stable "$s" "$BASE"
+  stable "$s" "$BASE" "$SINCE"
   setst "$s: XONG + on dinh"; tg "[deploy_chain $PRESET] $s: XONG + on dinh ${STABLE_S}s"
 done
 setst "XONG ca chuoi"; say "=== XONG CA CHUOI $PRESET ==="
