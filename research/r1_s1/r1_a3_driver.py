@@ -163,9 +163,9 @@ def upload():
     B.wait_ds(ks.USER + "/" + A3_DS) if hasattr(B, "wait_ds") else None
 
 
-def build(seed):
+def build(seed, arm="A3"):
     ks = GA.ks_mod()
-    tag = "r1-a3-" + seed.lower()
+    tag = ("r1-a3-" if arm == "A3" else "r1-p0-") + seed.lower()
     ref = ks.kernel_ref(tag)
     folder = os.path.join(ks.WORKDIR, ks.slug(tag))
     os.makedirs(folder, exist_ok=True)
@@ -175,6 +175,10 @@ def build(seed):
            "a3_ds": A3_DS, "moc21_ds": MOC21_DS, "want_a3_sha": a3_sha()}
     dss = [ks.USER + "/" + GA.BUNDLE] + ks.TICKER_DS + [ks.USER + "/" + JAR_DS, ks.USER + "/" + MOC21_DS,
                                                          ks.USER + "/" + A3_DS]
+    if arm == "P0":  # G-P0: A0 = tsx-x14 nguyen ban (A3_BLOCK bi bo qua vi khong co a3_ds)
+        for _k in ("a3_ds", "moc21_ds", "want_a3_sha"):
+            cfg.pop(_k)
+        dss = [ks.USER + "/" + GA.BUNDLE] + ks.TICKER_DS + [ks.USER + "/" + JAR_DS]
     dsn, md5 = G.pred_of(seed)
     if dsn is not None:
         cfg.update(pred_ds=dsn, want_pred_md5=md5, want_pred_base=GA.PRED0_MD5)
@@ -190,9 +194,9 @@ def build(seed):
     return ks, folder, ref, cfg
 
 
-def check(seed):
+def check(seed, arm="A3"):
     """So cau hinh voi run tham chieu tsx-x14-<seed> (overrides, jar)."""
-    ks, folder, ref, cfg = build(seed)
+    ks, folder, ref, cfg = build(seed, arm)
     rj = json.load(open("/home/ubuntu/kaggle_sim/out/tsx-x14-%s/result.json" % seed.lower()))
     same_ov = {str(k): str(v) for k, v in rj["overrides"].items()} == {str(k): str(v) for k, v in cfg["overrides"].items()}
     log.info("check %s: ref=%s overrides_same_as_tsx=%s profile_same=%s folder=%s", seed, ref, same_ov,
@@ -203,9 +207,9 @@ def check(seed):
     return same_ov
 
 
-def push(seed):
-    assert check(seed), "overrides khac run tham chieu -> DUNG"
-    ks, folder, ref, cfg = build(seed)
+def push(seed, arm="A3"):
+    assert check(seed, arm), "overrides khac run tham chieu -> DUNG"
+    ks, folder, ref, cfg = build(seed, arm)
     r = ks._api().kernels_push(folder)
     log.info("PUSHED %s -> %s", ref, getattr(r, "url", r))
 
@@ -215,4 +219,5 @@ if __name__ == "__main__":
     ap.add_argument("cmd")
     ap.add_argument("seed", nargs="?", default="A1")
     a = ap.parse_args()
-    {"upload": lambda: upload(), "check": lambda: check(a.seed), "push": lambda: push(a.seed)}[a.cmd]()
+    {"upload": lambda: upload(), "check": lambda: check(a.seed), "push": lambda: push(a.seed),
+     "check_p0": lambda: check(a.seed, "P0"), "push_p0": lambda: push(a.seed, "P0")}[a.cmd]()

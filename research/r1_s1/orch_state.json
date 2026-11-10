@@ -1,0 +1,330 @@
+{
+ "done": {
+  "r1-a3-a1": {
+   "tag": "r1-a3-a1",
+   "ok": true,
+   "date_last": "20251230",
+   "n_trades": 3622,
+   "equity_final": 145391,
+   "md5": "8986d3320262adfa593a3735762e87f5",
+   "md5_ref": "dc62609b6d7169093c001f2ce0d198ed",
+   "gate": {
+    "n_cand": 50507093,
+    "n_pass": 3638,
+    "ratio_pass": 3311,
+    "tsx": [
+     "336",
+     "214"
+    ]
+   },
+   "gate_ref": {
+    "n_cand": 52026549,
+    "n_pass": 3557,
+    "ratio_pass": 3220,
+    "tsx": [
+     "336",
+     "214"
+    ]
+   },
+   "jar": "cc0f9d11ef6b865e9070e79b3111f6786ca7008a8c4a3a28571f54322e1b1dfe",
+   "a3": {
+    "bins_sha256": "0d6e3781b50b451acea4fcf7b0f8ad629eea623a98e02686d0d35a2c9981c2b8",
+    "funding_md5": "50c4bc8d9a8238e89c0a99467adac100",
+    "funding_count": 2301065,
+    "fold_count": 18,
+    "leak_free_from": "2021-07-01",
+    "md5_printdone": "8986d3320262adfa593a3735762e87f5"
+   },
+   "valid": true
+  },
+  "r1-p0-a1": {
+   "tag": "r1-p0-a1",
+   "ok": true,
+   "date_last": "20251230",
+   "n_trades": 3531,
+   "equity_final": 157714,
+   "md5": "dc62609b6d7169093c001f2ce0d198ed",
+   "md5_ref": "dc62609b6d7169093c001f2ce0d198ed",
+   "gate": {
+    "n_cand": 52026549,
+    "n_pass": 3557,
+    "ratio_pass": 3220,
+    "tsx": [
+     "336",
+     "214"
+    ]
+   },
+   "gate_ref": {
+    "n_cand": 52026549,
+    "n_pass": 3557,
+    "ratio_pass": 3220,
+    "tsx": [
+     "336",
+     "214"
+    ]
+   },
+   "jar": "cc0f9d11ef6b865e9070e79b3111f6786ca7008a8c4a3a28571f54322e1b1dfe",
+   "G_P0": true,
+   "valid": true
+  },
+  "r1-a3-s7": {
+   "tag": "r1-a3-s7",
+   "ok": true,
+   "date_last": "20251230",
+   "n_trades": 3548,
+   "equity_final": 138042,
+   "md5": "083e3de004271d736832124aef4d59d4",
+   "md5_ref": "622b03e264fdd0b59a1673e144f4148f",
+   "gate": {
+    "n_cand": 50528375,
+    "n_pass": 3726,
+    "ratio_pass": 3243,
+    "tsx": [
+     "336",
+     "214"
+    ]
+   },
+   "gate_ref": {
+    "n_cand": 51925604,
+    "n_pass": 3822,
+    "ratio_pass": 3235,
+    "tsx": [
+     "336",
+     "214"
+    ]
+   },
+   "jar": "cc0f9d11ef6b865e9070e79b3111f6786ca7008a8c4a3a28571f54322e1b1dfe",
+   "a3": {
+    "bins_sha256": "0d6e3781b50b451acea4fcf7b0f8ad629eea623a98e02686d0d35a2c9981c2b8",
+    "funding_md5": "50c4bc8d9a8238e89c0a99467adac100",
+    "funding_count": 2301065,
+    "fold_count": 18,
+    "leak_free_from": "2021-07-01",
+    "md5_printdone": "083e3de004271d736832124aef4d59d4"
+   },
+   "valid": true
+  },
+  "r1-a3-s13": {
+   "tag": "r1-a3-s13",
+   "ok": true,
+   "date_last": "20251230",
+   "n_trades": 3462,
+   "equity_final": 161737,
+   "md5": "aa59a1a4177b8e751451d0bd5dba2fab",
+   "md5_ref": "77bd5374c8e3f625bf6ce1d630d25509",
+   "gate": {
+    "n_cand": 50809742,
+    "n_pass": 3455,
+    "ratio_pass": 3156,
+    "tsx": [
+     "336",
+     "214"
+    ]
+   },
+   "gate_ref": {
+    "n_cand": 51992817,
+    "n_pass": 3699,
+    "ratio_pass": 3227,
+    "tsx": [
+     "336",
+     "214"
+    ]
+   },
+   "jar": "cc0f9d11ef6b865e9070e79b3111f6786ca7008a8c4a3a28571f54322e1b1dfe",
+   "a3": {
+    "bins_sha256": "0d6e3781b50b451acea4fcf7b0f8ad629eea623a98e02686d0d35a2c9981c2b8",
+    "funding_md5": "50c4bc8d9a8238e89c0a99467adac100",
+    "funding_count": 2301065,
+    "fold_count": 18,
+    "leak_free_from": "2021-07-01",
+    "md5_printdone": "aa59a1a4177b8e751451d0bd5dba2fab"
+   },
+   "valid": true
+  },
+  "r1-a3-s21": {
+   "tag": "r1-a3-s21",
+   "ok": true,
+   "date_last": "20251230",
+   "n_trades": 3550,
+   "equity_final": 145914,
+   "md5": "a485b262560e6f40371b136d3ecd6efe",
+   "md5_ref": "6f15b4d7c8e1474a17111ee8a4969a58",
+   "gate": {
+    "n_cand": 50701900,
+    "n_pass": 3566,
+    "ratio_pass": 3242,
+    "tsx": [
+     "336",
+     "214"
+    ]
+   },
+   "gate_ref": {
+    "n_cand": 52000440,
+    "n_pass": 4261,
+    "ratio_pass": 3211,
+    "tsx": [
+     "336",
+     "214"
+    ]
+   },
+   "jar": "cc0f9d11ef6b865e9070e79b3111f6786ca7008a8c4a3a28571f54322e1b1dfe",
+   "a3": {
+    "bins_sha256": "0d6e3781b50b451acea4fcf7b0f8ad629eea623a98e02686d0d35a2c9981c2b8",
+    "funding_md5": "50c4bc8d9a8238e89c0a99467adac100",
+    "funding_count": 2301065,
+    "fold_count": 18,
+    "leak_free_from": "2021-07-01",
+    "md5_printdone": "a485b262560e6f40371b136d3ecd6efe"
+   },
+   "valid": true
+  },
+  "r1-a3-s99": {
+   "tag": "r1-a3-s99",
+   "ok": true,
+   "date_last": "20251230",
+   "n_trades": 3554,
+   "equity_final": 160201,
+   "md5": "f88fd3a162ca160ce46c5f31889f751b",
+   "md5_ref": "53fa789df0c1595b64e79335966a2eb0",
+   "gate": {
+    "n_cand": 50749168,
+    "n_pass": 3530,
+    "ratio_pass": 3251,
+    "tsx": [
+     "336",
+     "214"
+    ]
+   },
+   "gate_ref": {
+    "n_cand": 51920348,
+    "n_pass": 3599,
+    "ratio_pass": 3346,
+    "tsx": [
+     "336",
+     "214"
+    ]
+   },
+   "jar": "cc0f9d11ef6b865e9070e79b3111f6786ca7008a8c4a3a28571f54322e1b1dfe",
+   "a3": {
+    "bins_sha256": "0d6e3781b50b451acea4fcf7b0f8ad629eea623a98e02686d0d35a2c9981c2b8",
+    "funding_md5": "50c4bc8d9a8238e89c0a99467adac100",
+    "funding_count": 2301065,
+    "fold_count": 18,
+    "leak_free_from": "2021-07-01",
+    "md5_printdone": "f88fd3a162ca160ce46c5f31889f751b"
+   },
+   "valid": true
+  },
+  "r1-a3-s123": {
+   "tag": "r1-a3-s123",
+   "ok": true,
+   "date_last": "20251230",
+   "n_trades": 3584,
+   "equity_final": 144003,
+   "md5": "a11ce5f938e8e03c5d30e385fc6e681f",
+   "md5_ref": "7134187dfd31ac03dfe622e35a665ad6",
+   "gate": {
+    "n_cand": 50603923,
+    "n_pass": 3632,
+    "ratio_pass": 3277,
+    "tsx": [
+     "336",
+     "214"
+    ]
+   },
+   "gate_ref": {
+    "n_cand": 51981737,
+    "n_pass": 4035,
+    "ratio_pass": 3229,
+    "tsx": [
+     "336",
+     "214"
+    ]
+   },
+   "jar": "cc0f9d11ef6b865e9070e79b3111f6786ca7008a8c4a3a28571f54322e1b1dfe",
+   "a3": {
+    "bins_sha256": "0d6e3781b50b451acea4fcf7b0f8ad629eea623a98e02686d0d35a2c9981c2b8",
+    "funding_md5": "50c4bc8d9a8238e89c0a99467adac100",
+    "funding_count": 2301065,
+    "fold_count": 18,
+    "leak_free_from": "2021-07-01",
+    "md5_printdone": "a11ce5f938e8e03c5d30e385fc6e681f"
+   },
+   "valid": true
+  },
+  "r1-a3-s777": {
+   "tag": "r1-a3-s777",
+   "ok": true,
+   "date_last": "20251230",
+   "n_trades": 3538,
+   "equity_final": 157565,
+   "md5": "b1c4ad120f1542d781592ba023a007b5",
+   "md5_ref": "1781c5f5a4a9e222d021103df21cb651",
+   "gate": {
+    "n_cand": 50751776,
+    "n_pass": 3293,
+    "ratio_pass": 3236,
+    "tsx": [
+     "336",
+     "214"
+    ]
+   },
+   "gate_ref": {
+    "n_cand": 52148114,
+    "n_pass": 3204,
+    "ratio_pass": 3151,
+    "tsx": [
+     "336",
+     "214"
+    ]
+   },
+   "jar": "cc0f9d11ef6b865e9070e79b3111f6786ca7008a8c4a3a28571f54322e1b1dfe",
+   "a3": {
+    "bins_sha256": "0d6e3781b50b451acea4fcf7b0f8ad629eea623a98e02686d0d35a2c9981c2b8",
+    "funding_md5": "50c4bc8d9a8238e89c0a99467adac100",
+    "funding_count": 2301065,
+    "fold_count": 18,
+    "leak_free_from": "2021-07-01",
+    "md5_printdone": "b1c4ad120f1542d781592ba023a007b5"
+   },
+   "valid": true
+  },
+  "r1-a3-s2024": {
+   "tag": "r1-a3-s2024",
+   "ok": true,
+   "date_last": "20251230",
+   "n_trades": 3514,
+   "equity_final": 142744,
+   "md5": "bd52ee2dc09dad3329ab48159d18d2e2",
+   "md5_ref": "f7044b99580b5368f716927b7be8c825",
+   "gate": {
+    "n_cand": 50649990,
+    "n_pass": 3545,
+    "ratio_pass": 3207,
+    "tsx": [
+     "336",
+     "214"
+    ]
+   },
+   "gate_ref": {
+    "n_cand": 52027355,
+    "n_pass": 3592,
+    "ratio_pass": 3200,
+    "tsx": [
+     "336",
+     "214"
+    ]
+   },
+   "jar": "cc0f9d11ef6b865e9070e79b3111f6786ca7008a8c4a3a28571f54322e1b1dfe",
+   "a3": {
+    "bins_sha256": "0d6e3781b50b451acea4fcf7b0f8ad629eea623a98e02686d0d35a2c9981c2b8",
+    "funding_md5": "50c4bc8d9a8238e89c0a99467adac100",
+    "funding_count": 2301065,
+    "fold_count": 18,
+    "leak_free_from": "2021-07-01",
+    "md5_printdone": "bd52ee2dc09dad3329ab48159d18d2e2"
+   },
+   "valid": true
+  }
+ }
+}
