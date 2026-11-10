@@ -1,0 +1,65 @@
+{
+ "prereg": "6d92cdba",
+ "fee_roundtrip": 0.002,
+ "rng_seed": 20261110,
+ "n_boot": 2000,
+ "cluster": "ngay(+07) cua o",
+ "weight": "n_seed (gop 8 seed)",
+ "meta": {
+  "n": 22254,
+  "nan0": 0,
+  "nan24": 45,
+  "nan72": 139,
+  "by_kind": {
+   "near": 18981,
+   "pass_low": 3273
+  },
+  "nan72_by_kind": {
+   "near": 132,
+   "pass_low": 7
+  }
+ },
+ "H24": {
+  "n_near": 18938,
+  "n_pass_low": 3271,
+  "mean_near": 0.02586,
+  "ci90_near": [
+   0.00144,
+   0.04935
+  ],
+  "mean_pass_low": 0.03537,
+  "ci90_pass_low": [
+   0.0173,
+   0.05405
+  ],
+  "diff": -0.0095,
+  "ci90_diff": [
+   -0.02367,
+   0.00389
+  ],
+  "med_near": 0.02258,
+  "med_pass_low": 0.024
+ },
+ "H72": {
+  "n_near": 18849,
+  "n_pass_low": 3266,
+  "mean_near": 0.0383,
+  "ci90_near": [
+   0.01821,
+   0.05851
+  ],
+  "mean_pass_low": 0.04828,
+  "ci90_pass_low": [
+   0.02667,
+   0.07037
+  ],
+  "diff": -0.00998,
+  "ci90_diff": [
+   -0.02745,
+   0.00695
+  ],
+  "med_near": 0.01554,
+  "med_pass_low": 0.01555
+ },
+ "S4": false
+}
