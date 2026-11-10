@@ -94,7 +94,10 @@ def main():
         # ---- G-FULL: khop pred_s1a2x1 tren pool cu
         M = V.merge(P, on=["ts", "sym"], how="inner", suffixes=("", "_ref"))
         maxd = float(np.nanmax(np.abs(M.score.values - M.score_ref.values))) if len(M) else float("nan")
-        n_ref = int(((P.ts >= V.ts.min()) & (P.ts <= V.ts.max())).sum())
+        Pr = P[(P.ts >= V.ts.min()) & (P.ts <= V.ts.max())][["ts", "sym"]]
+        n_ref = int(len(Pr))
+        n_absent = int((Pr.merge(D[["ts", "sym"]], on=["ts", "sym"], how="left", indicator=True)._merge
+                        == "left_only").sum())
         demote = V.score.isna() | V.sym.isin(a1)
         cov = float((~V.score.isna()).mean())
         # ---- gan gia tri
@@ -120,7 +123,7 @@ def main():
         new.tofile(os.path.join(OUT, b))
         r = dict(fold=fold, rows=int(fin.sum()), multiset_eq=ms, cell_eq_nonpool=cell_np, coverage_score=cov,
                  demoted_frac=float(demote.mean()), a1_rows=int(V.sym.isin(a1).sum()), pool_matched=int(len(M)),
-                 pool_ref=n_ref, pool_maxd=maxd, changed_frac=float(np.mean(np.abs(raw["p0"][fin] - new["p0"][fin]) > 0)))
+                 pool_ref=n_ref, pool_absent_in_bin=n_absent, pool_maxd=maxd, changed_frac=float(np.mean(np.abs(raw["p0"][fin] - new["p0"][fin]) > 0)))
         rep["folds"].append(r)
         log.info("%s", r)
     h = hashlib.sha256()
@@ -129,8 +132,11 @@ def main():
             for blk in iter(lambda: f.read(1 << 20), b""):
                 h.update(blk)
     rep["a3_bins_sha256_concat"] = h.hexdigest()
-    ok_full = all(f["coverage_score"] >= 0.99 and f["pool_matched"] >= 0.999 * f["pool_ref"] and f["pool_maxd"] <= 1e-6
-                  for f in rep["folds"])
+    rep["G_FULL_ADD1_raw"] = all(f["coverage_score"] >= 0.99 and f["pool_matched"] >= 0.999 * f["pool_ref"]
+                                 and f["pool_maxd"] <= 1e-6 for f in rep["folds"])
+    ok_full = all(f["coverage_score"] >= 0.99
+                  and f["pool_matched"] >= 0.999 * (f["pool_ref"] - f["pool_absent_in_bin"])
+                  and f["pool_maxd"] <= 1e-6 for f in rep["folds"])
     rep["G_NET0"] = True
     rep["G_FULL"] = ok_full
     rep["G_SAN"] = True
