@@ -33,16 +33,20 @@ mk() {
   done
   mkdir -p $W/outside; echo bimat > $W/outside/holes.csv; ln -s $W/outside/holes.csv $CM/parity_v11w/d/2026-11-01/work/holes.csv
   mkdir -p $CM/v12/a1x_adv $CM/v12/a1y_drylog; echo x > $CM/v12/a1x_adv/f; echo x > $CM/v12/a1y_drylog/f; touch -d '2026-11-06' $CM/v12/a1x_adv/f $CM/v12/a1y_drylog/f
-  # [v3 g] target/
+  # [v4 g] target/: WHITELIST (v12/a1, v12/a1_*, ing1030/a1_wt*, wt_r4u*) — ngoai whitelist KHONG BAO GIO xoa
   mtg() { mkdir -p "$1/classes" "$1/maven-status"; head -c 3000 /dev/urandom > "$1/classes/A.class"; }
-  mtg $CM/v12/old_wt/target; mtg $H/shadow_c3/app/target; mtg $H/src_wt_x/target; mtg $H/src/target
-  mtg $CM/v12/wt_r4u3/target; mtg $CM/r3_wt/target; mtg $CM/res1109/r1/target
-  mkdir -p $CM/v12/data_wt/target/d; echo du_lieu > $CM/v12/data_wt/target/d/x.csv          # 'target' khong phai build => GIU
-  mtg $CM/v12/refonly_wt/target; head -c 5000 /dev/urandom > $CM/v12/refonly_wt/target/app.jar
-  echo "PIN2=$(md5sum < $CM/v12/refonly_wt/target/app.jar | cut -c1-32)" > $CM/v12/c3live/ops/pin_y.sh   # jar duoc tham chieu, KHONG co ban trong v12/jar => GIU
-  mtg $CM/v12/refcopy_wt/target; cp $CM/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4t $CM/v12/refcopy_wt/target/app.jar   # tham chieu nhung co ban r4t => XOA
+  mtg $CM/v12/a1_r4i/target                                                        # whitelist, khong ai dung => XOA
+  mtg $CM/v12/a1_r4j/target; mkdir -p $CM/tools_x; echo "java -cp \$CM/v12/a1_r4j/target/classes X" > $CM/tools_x/run.sh   # co script tham chieu => GIU
+  mtg $CM/v12/a1_soak/target                                                       # process mo file => GIU
+  mtg $CM/ing1030/a1_wt3/target; head -c 5000 /dev/urandom > $CM/ing1030/a1_wt3/target/app.jar
+  echo "PIN2=$(md5sum < $CM/ing1030/a1_wt3/target/app.jar | cut -c1-32)" > $CM/v12/c3live/ops/pin_y.sh   # jar tham chieu, khong co ban trong v12/jar => GIU
+  mtg $CM/ing1030/a1_wt2/target; cp $CM/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4t $CM/ing1030/a1_wt2/target/app.jar   # tham chieu nhung co ban r4t => XOA
   echo "PIN3=$(md5sum < $CM/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4t | cut -c1-32)" >> $CM/v12/c3live/ops/pin_y.sh
-  mtg $CM/v12/busy_wt/target
+  mkdir -p $CM/v12/a1_pq/target/d; echo du_lieu > $CM/v12/a1_pq/target/d/x.csv    # whitelist nhung 'target' khong phai build => GIU
+  # A1 MAJ: ngoai whitelist => GIU du khong ai tham chieu
+  mtg $CM/v12/wt_t2c/target; mkdir -p $CM/v12/wt_t2c/target/test-classes; echo c > $CM/v12/wt_t2c/target/test-classes/ExitReplayDevMain.class
+  mtg $H/src_wt_bcd/target; head -c 4000 /dev/urandom > $H/src_wt_bcd/target/binance-java-sdk-1.2.4.jar
+  mtg $CM/v12/old_wt/target; mtg $H/shadow_c3/app/target; mtg $CM/v12/wt_r4u3/target; mtg $CM/r3_wt/target; mtg $CM/res1109/r1/target
   # [v3 h] log shadow
   mkdir -p $H/shadow_c3/app/logs $H/shadow_c3/app/storage/data $H/shadow_c3b/app/logs
   echo cu > $H/shadow_c3/app/logs/full.log.1; touch -d '2026-10-20' $H/shadow_c3/app/logs/full.log.1
@@ -53,15 +57,16 @@ mk() {
 }
 jar() { [ -f $CM/v12/jar/binance-java-sdk-1.2.4.jar_v12_$1 ]; }
 P11=$CM/parity_v11w/d/2026-11-01
-echo "== cleanup_oracle_disk v3 (sandbox)"
+echo "== cleanup_oracle_disk v4 (sandbox)"
 mk
-bash -c "exec 3<$CM/v12/busy_wt/target/classes/A.class; exec sleep 120" & BUSY=$!; sleep 0.5
+bash -c "exec 3<$CM/v12/a1_soak/target/classes/A.class; exec sleep 120" & BUSY=$!; sleep 0.5
 OUT=$(CLEAN_H=$H bash $S 2>&1); RC=$?
-chk "DRY: rc0, khong xoa gi, ke hoach co 1b/1d/1e/1f/1g/1h + goi y journalctl (chi in)" "[ $RC = 0 ] && jar r4u && jar r4u2 && [ -d $CM/v12/wt_r4u ] && [ -f $P11/work/closes_cache.pkl ] && [ -d $CM/v12/a1r4s_fake ] && [ -d $CM/v12/old_wt/target ] && [ -f $H/shadow_c3/app/logs/full.log.1 ] && echo \"\$OUT\" | grep -q 'SE xoa binance-java-sdk-1.2.4.jar_v12_r4u2' && echo \"\$OUT\" | grep -q 'SE git worktree remove v12/wt_r4u ' && echo \"\$OUT\" | grep -q 'SE xoa a1r4s_fake' && echo \"\$OUT\" | grep -q 'SE xoa parity_v11w/d/2026-11-01: 2 file' && echo \"\$OUT\" | grep -q 'SE xoa claude_master/v12/old_wt/target' && echo \"\$OUT\" | grep -q 'sudo journalctl --vacuum-size=200M'"
+chk "DRY: rc0, khong xoa gi, ke hoach co 1b/1d/1e/1f/1g/1h + goi y journalctl (chi in)" "[ $RC = 0 ] && jar r4u && jar r4u2 && [ -d $CM/v12/wt_r4u ] && [ -f $P11/work/closes_cache.pkl ] && [ -d $CM/v12/a1r4s_fake ] && [ -d $CM/v12/old_wt/target ] && [ -f $H/shadow_c3/app/logs/full.log.1 ] && echo \"\$OUT\" | grep -q 'SE xoa binance-java-sdk-1.2.4.jar_v12_r4u2' && echo \"\$OUT\" | grep -q 'SE git worktree remove v12/wt_r4u ' && echo \"\$OUT\" | grep -q 'SE xoa a1r4s_fake' && echo \"\$OUT\" | grep -q 'SE xoa parity_v11w/d/2026-11-01: 2 file' && echo \"\$OUT\" | grep -q 'SE xoa claude_master/v12/a1_r4i/target' && echo \"\$OUT\" | grep -q 'sudo journalctl --vacuum-size=200M'"
 OUT=$(CLEAN_H=$H bash $S --apply 2>&1); RC=$?
 kill $BUSY 2>/dev/null
 echo "$OUT" | grep -E 'ABORT|PHA 1:' | head -3
-chk "1g: XOA target build (old_wt, shadow_c3/app, src_wt_x, src, refcopy co ban trong v12/jar); GIU wt_r4u3, r3_wt, res1109, 'target' du lieu, refonly (jar tham chieu khong co ban), busy (process mo file)" "[ $RC = 0 ] && [ ! -d $CM/v12/old_wt/target ] && [ ! -d $H/shadow_c3/app/target ] && [ ! -d $H/src_wt_x/target ] && [ ! -d $H/src/target ] && [ ! -d $CM/v12/refcopy_wt/target ] && [ -d $CM/v12/wt_r4u3/target ] && [ -d $CM/r3_wt/target ] && [ -d $CM/res1109/r1/target ] && [ -f $CM/v12/data_wt/target/d/x.csv ] && [ -f $CM/v12/refonly_wt/target/app.jar ] && [ -d $CM/v12/busy_wt/target ] && echo \"\$OUT\" | grep -q 'process dang dung file trong' && echo \"\$OUT\" | grep -q 'KHONG co ban trong v12/jar'"
+chk "1g whitelist: XOA a1_r4i/target (khong ai dung), a1_wt2/target (jar tham chieu nhung co ban v12/jar); GIU a1_r4j (script tham chieu), a1_soak (process mo file), a1_wt3 (jar tham chieu khong co ban), a1_pq ('target' du lieu)" "[ $RC = 0 ] && [ ! -d $CM/v12/a1_r4i/target ] && [ ! -d $CM/ing1030/a1_wt2/target ] && [ -d $CM/v12/a1_r4j/target ] && [ -d $CM/v12/a1_soak/target ] && [ -f $CM/ing1030/a1_wt3/target/app.jar ] && [ -f $CM/v12/a1_pq/target/d/x.csv ] && echo \"\$OUT\" | grep -q 'co script/crontab tham chieu' && echo \"\$OUT\" | grep -q 'process dang dung file' && echo \"\$OUT\" | grep -q 'KHONG co ban trong v12/jar'"
+chk "1g A1 MAJ: ngoai whitelist GIU nguyen: wt_t2c/target (test-classes ExitReplayDevMain), src_wt_bcd/target (sim.jar), old_wt, shadow_c3, wt_r4u3, r3_wt, res1109" "[ -f $CM/v12/wt_t2c/target/test-classes/ExitReplayDevMain.class ] && [ -f $H/src_wt_bcd/target/binance-java-sdk-1.2.4.jar ] && [ -d $CM/v12/old_wt/target ] && [ -d $H/shadow_c3/app/target ] && [ -d $CM/v12/wt_r4u3/target ] && [ -d $CM/r3_wt/target ] && [ -d $CM/res1109/r1/target ]"
 chk "1h: XOA log shadow_c3/shadow_c3b > 7 ngay; GIU log moi, storage/data, jar" "[ ! -f $H/shadow_c3/app/logs/full.log.1 ] && [ ! -f $H/shadow_c3b/app/logs/b.log ] && [ -f $H/shadow_c3/app/logs/full.log ] && [ -f $H/shadow_c3/app/storage/data/x.dat ] && [ -f $H/shadow_c3/app/logs/old.jar ]"
 chk "1e A1 MIN-1: GIU bang chung a1x_adv, a1y_drylog (du 11-06, > 24 h)" "[ -d $CM/v12/a1x_adv ] && [ -d $CM/v12/a1y_drylog ]"
 chk "1b: XOA jar r4u + r4u2 (md5 r4u2 chi o LOG); GIU r4u_final (md5 trong script), r4u3, r4t" "[ $RC = 0 ] && ! jar r4u && ! jar r4u2 && jar r4u_final && jar r4u3 && jar r4t && echo \"\$OUT\" | grep -q 'GIU (r4u thua nhung md5'"
@@ -83,6 +88,9 @@ chk "fail-closed: wt_r4u la symlink vao vz_e1 (ngoai claude_master / CAM DUNG) =
 mk; rm -rf $CM/v12/wt_r4u; mkdir -p $CM/res1109/kl; ln -s $CM/res1109 $CM/v12/wt_r4u
 OUT=$(CLEAN_H=$H bash $S --apply 2>&1); RC=$?
 chk "fail-closed: wt_r4u la symlink vao res1109 (CAM DUNG trong claude_master) => ABORT CAM DUNG, res1109 nguyen ven" "[ $RC != 0 ] && echo \"\$OUT\" | grep -q 'ABORT: CAM DUNG' && [ -d $CM/res1109/kl ]"
+mk; mkdir -p $CM/zz; echo x > $CM/zz/bad.sh; chmod 000 $CM/zz/bad.sh
+OUT=$(CLEAN_H=$H bash $S --apply 2>&1); RC=$?; chmod 644 $CM/zz/bad.sh
+chk "fail-closed: grep tham chieu khong doc duoc 1 file *.sh => ABORT truoc khi xoa target whitelist" "[ $RC != 0 ] && echo \"\$OUT\" | grep -q 'grep tham chieu loi' && [ -d $CM/v12/a1_r4i/target ]"
 mk; mkdir -p $CM/parity_v12w/d/2026-11-01/work/cache; echo x > $CM/parity_v12w/d/2026-11-01/work/cache/feat45_live.csv.gz
 OUT=$(CLEAN_H=$H bash $S --apply 2>&1); RC=$?
 chk "1f chi 3 ten: 'cache/' va feat45 trong cache khong bi dung" "[ $RC = 0 ] && [ -f $CM/parity_v12w/d/2026-11-01/work/cache/feat45_live.csv.gz ]"

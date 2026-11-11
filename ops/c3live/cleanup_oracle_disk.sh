@@ -22,10 +22,12 @@
 #      KHONG xoa: fund_NEW2 (A1 MIN-2), feat45_live* (day_prep giai ma tu psym pull242 — co the da het han),
 #        s1v_rows, join_fund, net_live_all, fund_BT (day_kpp/day_kprime read_csv truc tiep khi cham lai), fund_D/fund_d1 (nho), 'cache'.
 #      Ngoai le CAM DUNG chi cho dung 2 ten tren trong <parity>/d/<ngay>/; moi duong dan khac van fail-closed.
-#   g) [v3] thu muc build Maven 'target' duoi ~/claude_master, ~/shadow_c3, ~/shadow_c3b, ~/src*: CHI thu muc ten 'target' co
-#      classes/ hoac maven-status/ ben trong (dung lai bang mvn -o). TRU: wt_r4u3, r3_wt, res1109 va vung du lieu (TG_DENY);
-#      target co process dang mo file / cwd / cmdline ben trong (/proc); target chua jar co md5 trong jars.json/pin/script/
-#      gmicro_target ma KHONG co ban cung md5 trong v12/jar (=> LOAI, khong chep). Ngoai le CAM DUNG chi cho thu muc 'target'.
+#   g) [v4 A1 MAJ] 'target' Maven CHI trong WHITELIST cung worktree da xong viec (TG_WL: worktree audit A1 v12/a1*, ing1030/a1_wt*,
+#      wt_r4u, wt_r4u_final, wt_r4u2) — KHONG quet toan bo (v3 da tinh xoa nham wt_t2c/target (r1_t2a.sh dung test-classes) va
+#      src_wt_bcd/target (sim.jar ec01b7c0 cua burst_cooldown_driver.py)). Moi muc van phai: co classes/ hoac maven-status/;
+#      KHONG bi tham chieu trong *.sh/*.py cua ~/claude_master ~/ops ~/tools ~/kaggle_sim va crontab (grep loi => ABORT);
+#      /proc khong co process mo file/cwd/cmdline trong do (khong doc duoc /proc cua chinh user => ABORT); jar co md5 duoc tham
+#      chieu ma khong co ban trong v12/jar => LOAI. Worktree build cu vong 3c..r4s: khong con worktree nao (da kiem 11-11).
 #   h) [v3] log shadow_c3 / shadow_c3b (shadow tat 11-03): file trong */app/logs/ cu hon 7 ngay. KHONG dung storage/data, jar.
 #   KHONG dua vao: pull242 cu, kaggle_sim, aerospike-data. Cuoi script IN goi y 'sudo journalctl --vacuum-size=200M' (khong chay).
 # PHA 2 (NEN): WHITELIST CUNG = ~/claude_master/1006 (A1: 0 tham chieu). Thu muc co .git => ABORT.
@@ -101,9 +103,9 @@ guard_pf() {   # [v2 f] $1 file: PHAI la file thuong (khong symlink), ten trong 
     case "$rp" in "$f"|"$f"/*) fail "CAM DUNG: $rp (thuoc $f)";; esac
   done
 }
-say "=== cleanup_oracle_disk v3 APPLY=$APPLY (cam dung: ${#FORBID[@]} muc) ==="
+say "=== cleanup_oracle_disk v4 APPLY=$APPLY (cam dung: ${#FORBID[@]} muc) ==="
 say "df TRUOC: $(df -h / | tail -1)"
-P1=0; P2=0; declare -A G=()
+P1=0; P2=0; declare -A G=(); D_PLAN=()   # D_PLAN: worktree 1c/1d se go ca thu muc (1g bo qua de khong tinh 2 lan)
 add() { G[$1]=$(( ${G[$1]:-0} + $2 )); P1=$((P1 + $2)); }
 # ================================================================ PHA 1a: scratch
 say "--- PHA 1a: a1_*scratch* (khong git, file moi nhat < 2026-11-01)"
@@ -160,7 +162,7 @@ for d in "$CM/v12/a1_r4i" "$CM/v12/a1_r4j" "$CM/v12/a1_r4m" "$CM/v12/a1_r4n" "$C
   wt_real "$d" || { say "  BO QUA (khong phai worktree phu that) $d"; continue; }
   dirty=$(git -C "$d" status --porcelain --ignored=no 2>/dev/null | wc -l)
   if [ "$dirty" != 0 ]; then say "  BO QUA ($dirty thay doi/file chua commit) ${d#$CM/}"; continue; fi
-  s=$(dsz "$d"); add 1c "$s"
+  s=$(dsz "$d"); add 1c "$s"; D_PLAN+=("$d")
   if [ "$APPLY" = 1 ]; then git -C "$d" worktree remove -- "$d" || fail "git worktree remove $d"; say "  DA worktree remove ${d#$CM/}"
   else say "  SE git worktree remove ${d#$CM/} ($(gb "$s"))"; fi
 done
@@ -177,7 +179,7 @@ for d in "$CM/v12/wt_r4u" "$CM/v12/wt_r4u_final" "$CM/v12/wt_r4u2"; do
   other=$(grep -v 'PrivateConfig' <<< "$all" | grep -c . || true); npc=$(grep -c 'PrivateConfig' <<< "$all" || true)
   if [ "${other:-0}" != 0 ]; then say "  BO QUA ($other file chua commit ngoai PrivateConfig) ${d#$CM/}"; continue; fi
   FORCE=(); [ "${npc:-0}" != 0 ] && FORCE=(--force)
-  s=$(dsz "$d"); add 1d "$s"
+  s=$(dsz "$d"); add 1d "$s"; D_PLAN+=("$d")
   FS=${FORCE[*]:+--force }
   if [ "$APPLY" = 1 ]; then git -C "$d" worktree remove "${FORCE[@]}" -- "$d" || fail "git worktree remove $FS$d"; say "  DA worktree remove $FS${d#$CM/} ($(gb "$s"))"
   else say "  SE git worktree remove $FS${d#$CM/} ($(gb "$s"), commit ${head:0:8} thuoc $nb nhanh${FS:+, chi PrivateConfig chua commit})"; fi
@@ -217,17 +219,50 @@ for r in "${PF_ROOTS[@]}"; do
   done
 done
 # ================================================================ PHA 1g: target/ build Maven
-say "--- PHA 1g: thu muc build Maven 'target' (classes/ hoac maven-status/) duoi claude_master, shadow_c3, shadow_c3b, src*"
+say "--- PHA 1g: 'target' Maven trong WHITELIST worktree da xong viec (khong quet toan bo)"
+TG_WL=()
+for w in "$CM"/v12/a1 "$CM"/v12/a1_* "$CM"/ing1030/a1_wt*; do [ -d "$w" ] && [ ! -L "$w" ] && TG_WL+=("$w"); done
+TG_WL+=("$CM/v12/wt_r4u" "$CM/v12/wt_r4u_final" "$CM/v12/wt_r4u2")
 JARMD5=$(find "$CM/v12/jar" -maxdepth 1 -type f -name 'binance-java-sdk-*' -print0 2>/dev/null | xargs -0 -r md5sum | cut -c1-32 | sort -u)
-OPEN=$(for p in /proc/[0-9]*; do readlink "$p/cwd" 2>/dev/null; ls -l "$p/fd" 2>/dev/null | sed -n 's/.* -> //p'; tr '\0' '\n' < "$p/cmdline" 2>/dev/null; done | grep '/target' | sort -u)
-TGROOTS=("$CM"); for r in "$H/shadow_c3" "$H/shadow_c3b" "$H"/src "$H"/src[_-]*; do [ -d "$r" ] && TGROOTS+=("$r"); done
-while IFS= read -r -d '' t; do
-  rt=$(realpath -e -- "$t" 2>/dev/null) || continue
-  case "$rt" in "$CM"/v12/wt_r4u/*|"$CM"/v12/wt_r4u_final/*|"$CM"/v12/wt_r4u2/*) say "  BO QUA (da tinh trong 1d) ${rt#$H/}"; continue;; esac
-  [ -d "$rt/classes" ] || [ -d "$rt/maven-status" ] || { say "  BO QUA (khong co classes/ maven-status/ — co the la du lieu) ${rt#$H/}"; continue; }
-  den=""; for f in "${TG_DENY[@]}"; do case "$rt" in "$f"|"$f"/*) den=$f;; esac; done
-  [ -z "$den" ] || { say "  BO QUA (vung giu ${den#$H/}) ${rt#$H/}"; continue; }
-  if grep -qF -- "$rt" <<< "$OPEN"; then say "  BO QUA (process dang dung file trong) ${rt#$H/}"; continue; fi
+# /proc: fail-closed. Process CUA USER NAY phai doc duoc cwd + fd (bien mat giua chung thi bo qua); process user khac: cmdline (+cwd/fd neu doc duoc).
+NPROC=0; NOWN=0; NOTHER=0; NSKIP=0; UIDME=$(id -u); OPENF=$(mktemp); trap 'rm -f "$OPENF" "${GREPF:-}" "${PATF:-}"' EXIT
+for p in /proc/[0-9]*; do
+  [ -d "$p" ] || continue; NPROC=$((NPROC + 1))
+  pu=$(stat -c %u "$p" 2>/dev/null) || continue
+  if [ "$pu" = "$UIDME" ]; then
+    if c=$(readlink "$p/cwd" 2>/dev/null) && fl=$(ls -l "$p/fd" 2>/dev/null); then
+      { echo "$c"; sed -n 's/.* -> //p' <<< "$fl"; tr '\0' '\n' < "$p/cmdline" 2>/dev/null; } >> "$OPENF"; NOWN=$((NOWN + 1))
+    elif [ -d "$p" ]; then
+      cm=$(cat "$p/comm" 2>/dev/null || true)
+      case "$cm" in "(sd-pam)"|sshd) NSKIP=$((NSKIP + 1));;   # khong-dumpable co chu dich (PAM / phien ssh), khong mo file build
+        *) [ -d "$p" ] && fail "/proc: khong doc duoc cwd/fd cua process cung user pid $(basename "$p") comm=$cm — fail-closed";; esac
+    fi
+  else
+    { readlink "$p/cwd" 2>/dev/null; ls -l "$p/fd" 2>/dev/null | sed -n 's/.* -> //p'; tr '\0' '\n' < "$p/cmdline" 2>/dev/null; } >> "$OPENF" || true
+    NOTHER=$((NOTHER + 1))
+  fi
+done
+[ "$NPROC" -ge 5 ] && [ "$NOWN" -ge 1 ] || fail "/proc: liet ke duoc $NPROC process ($NOWN cua user nay) — khong tin duoc, fail-closed"
+say "  /proc: $NPROC process ($NOWN cua user nay doc du cwd/fd; $NSKIP sd-pam/sshd khong doc duoc (bo qua co ly do); $NOTHER user khac: cmdline + phan doc duoc)"
+# grep tham chieu: *.sh/*.py trong claude_master, ops, tools, kaggle_sim + crontab. Loi (rc 2) => ABORT.
+PATF=$(mktemp); for w in "${TG_WL[@]}"; do echo "${w#$CM/}/target"; done > "$PATF"   # vd v12/a1_r4i/target (khop $CM/..., ~/claude_master/..., tuyet doi)
+GREPF=$(mktemp); GD=(); for r in "$CM" "$H/ops" "$H/tools" "$H/kaggle_sim"; do [ -d "$r" ] && GD+=("$r"); done
+set +e
+grep -rhoF --include='*.sh' --include='*.py' --exclude=cleanup_oracle_disk.sh --exclude=test_cleanup_oracle_disk.sh -f "$PATF" "${GD[@]}" > "$GREPF" 2>"$GREPF.err"; grc=$?
+CT=$(crontab -l 2>&1); crc=$?
+set -e
+if [ "$grc" -gt 1 ]; then say "  grep loi: $(head -3 "$GREPF.err" | tr '\n' ' ')"; rm -f "$GREPF.err"; fail "grep tham chieu loi (rc=$grc) — fail-closed"; fi
+rm -f "$GREPF.err"
+if [ "$crc" != 0 ] && ! grep -qi 'no crontab' <<< "$CT"; then fail "crontab -l loi (rc=$crc) — fail-closed"; fi
+grep -oF -f "$PATF" <<< "$CT" >> "$GREPF" || true
+for w in "${TG_WL[@]}"; do
+  rt=$w/target; rel=${rt#$CM/}
+  [ -e "$rt" ] || continue
+  [ -L "$rt" ] && fail "target la symlink: $rt"
+  for d in "${D_PLAN[@]}"; do [ "$d" = "$w" ] && { say "  BO QUA (worktree ${w#$CM/} da go nguyen o 1c/1d) $rel"; continue 2; }; done
+  [ -d "$rt/classes" ] || [ -d "$rt/maven-status" ] || { say "  BO QUA (khong co classes/ maven-status/) $rel"; continue; }
+  if grep -qxF -- "$rel" "$GREPF"; then say "  BO QUA (co script/crontab tham chieu '$rel') $rel"; continue; fi
+  if grep -qF -- "$rt" "$OPENF"; then say "  BO QUA (process dang dung file / cwd / cmdline trong) $rel"; continue; fi
   ref=""; while IFS= read -r -d '' j; do
     m=$(md5sum < "$j" | cut -c1-32)
     if grep -qx "$m" <<< "$KEEPS"$'\n'"$KEEPMD5" && ! grep -qx "$m" <<< "$JARMD5"; then ref="$(basename -- "$j") ${m:0:8}"; break; fi
@@ -237,7 +272,7 @@ while IFS= read -r -d '' t; do
   s=$(dsz "$rt"); add 1g "$s"
   if [ "$APPLY" = 1 ]; then rm -rf -- "$rt" || fail "rm $rt"; say "  DA xoa ${rt#$H/} ($(gb "$s"))"
   else say "  SE xoa ${rt#$H/} ($(gb "$s"))"; fi
-done < <(find "${TGROOTS[@]}" -maxdepth 6 -type d -name target -not -path '*/node_modules/*' -prune -print0 2>/dev/null | sort -z)
+done
 # ================================================================ PHA 1h: log shadow cu
 say "--- PHA 1h: log shadow_c3 / shadow_c3b (app/logs) cu hon 7 ngay"
 for sd in "$H/shadow_c3/app/logs" "$H/shadow_c3b/app/logs"; do
