@@ -16,9 +16,10 @@
 #   hoac bundle da kem mapper / doi nguon (MASTER quyet). Muon mo them dai IP: AS_ALLOW="... <cidr>".
 # [A1_AS3222 sua] Oracle KHONG co conntrack => cat ket noi IP la bang 'ss -K'; khong cat duoc (kernel khong ho tro) => socket cu
 #   treo nhung goi bi DROP = CANH BAO (in thoi gian tu het); CHI FAIL khi co ket noi MOI tu IP la sau khi ap luat (dem lai sau 30 s).
-#   Kiem 242 chay ssh bang 'sudo -u $SUDO_USER' (key + known_hosts cua ubuntu); thieu SUDO_USER => DUNG truoc moi thay doi.
+#   Kiem 242 chay ssh bang 'sudo -u <user>': SUDO_USER (khac root), neu khong co (sudo -i / su) => chu thu muc chua script (ubuntu);
+#   user phai ton tai, khac root, co ~/.ssh/known_hosts — khong thi DUNG truoc moi thay doi. Khong root => in 'chay lai bang: sudo bash ...'.
 #   Chen ACCEPT loi => go lai luat da chen, KHONG chen DROP, KHONG ghi rules.v4, exit 1. rules.v4 da co AS3222_CLOSE => khong them trung.
-# Bien (test/sandbox): IPT IPT_RESTORE RULES_V4 SS_CMD SS_KILL SSH_242 AS_RUNAS AS_WAIT_S AS_PORTS AS_ALLOW AS_PUB_IP NO_ROOT_OK=1 AS_LOGDIR
+# Bien (test/sandbox): IPT IPT_RESTORE RULES_V4 SS_CMD SS_KILL SSH_242 AS_RUNAS AS_WAIT_S AS_PORTS AS_ALLOW AS_PUB_IP AS_UID AS_LOGDIR
 # =============================================================================
 set -uo pipefail
 MODE=dry
@@ -36,12 +37,23 @@ exec > >(tee -a "$LOG") 2>&1
 say() { echo "[$(date '+%F %T')] $*"; }
 NF=0; NW=0; ok() { say "OK   $*"; }; bad() { say "FAIL $*"; NF=$((NF + 1)); }; warn() { say "WARN $*"; NW=$((NW + 1)); }
 die() { say "DUNG: $*"; exit 1; }
-if [ "$MODE" = apply ]; then   # [MAJ-1b] kiem 242 phai chay ssh bang user goc (key + known_hosts cua ubuntu)
-  [ -n "${SUDO_USER:-}" ] && [ "${SUDO_USER}" != root ] || die "thieu SUDO_USER (chay bang 'sudo bash $0 --apply' tu user ubuntu) — chua doi gi"
-  if [ -n "${AS_RUNAS+x}" ]; then read -r -a RUNAS <<< "$AS_RUNAS"; else RUNAS=(sudo -u "$SUDO_USER"); fi
+MYUID=${AS_UID:-$(id -u)}; ROOT=0; [ "$MYUID" = 0 ] && ROOT=1   # AS_UID: chi cho test
+SELF=$(realpath -e -- "$0" 2>/dev/null || echo "$0")
+if [ "$ROOT" = 0 ]; then
+  [ "$MODE" = dry ] && say "!! khong phai root: DRY chi in ke hoach (khong doc duoc iptables/rules.v4) — DRY day du: sudo bash $SELF"
+  [ "$MODE" = dry ] || die "can quyen root. Chay lai bang: sudo bash $SELF $1   (chua doi gi)"
 fi
-[ "$(id -u)" = 0 ] || [ "${NO_ROOT_OK:-0}" = 1 ] || { [ "$MODE" = dry ] && say "!! khong phai root: DRY chi in ke hoach (khong doc duoc iptables/rules.v4) — chay lai bang sudo de DRY day du"; } 
-ROOT=0; { [ "$(id -u)" = 0 ] || [ "${NO_ROOT_OK:-0}" = 1 ]; } && ROOT=1
+if [ "$MODE" = apply ]; then   # [MAJ-1b] user cho ssh sang 242: SUDO_USER (khac root) > chu thu muc chua script; phai co ~/.ssh/known_hosts
+  SSHU=""; SRC=""
+  if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != root ]; then SSHU=$SUDO_USER; SRC=SUDO_USER
+  else SSHU=$(stat -c %U "$(dirname -- "$SELF")" 2>/dev/null || true); SRC="chu thu muc $(dirname -- "$SELF")"; fi
+  [ -n "$SSHU" ] && [ "$SSHU" != root ] && [ "$SSHU" != UNKNOWN ] || die "khong xac dinh duoc user (khac root) de ssh sang 242 ($SRC='$SSHU') — chua doi gi"
+  UHOME=$(getent passwd "$SSHU" | cut -d: -f6)
+  [ -n "$UHOME" ] || die "user '$SSHU' ($SRC) khong ton tai — chua doi gi"
+  [ -r "$UHOME/.ssh/known_hosts" ] || die "user '$SSHU' ($SRC) khong co $UHOME/.ssh/known_hosts — chua doi gi"
+  if [ -n "${AS_RUNAS+x}" ]; then read -r -a RUNAS <<< "$AS_RUNAS"; else RUNAS=(sudo -u "$SSHU"); fi
+  say "ssh sang 242 bang user '$SSHU' (theo $SRC)"
+fi
 for p in $PORTS; do [ "$p" = 22 ] && die "PORTS chua 22 — khong bao gio"; done
 # ---------------------------------------------------------------- spec luat (dung dinh dang iptables -S de -C/-D khop)
 specs() {   # $1 chain => in tung spec theo thu tu (ACCEPT truoc, DROP cuoi)

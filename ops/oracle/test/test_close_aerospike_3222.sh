@@ -36,23 +36,28 @@ reset() {
   cp $W/rules.v4 $W/rules.v4.orig; printf '103.157.218.242 54534\n35.241.236.214 47880\n' > $W/estab; rm -f $W/killed $W/rules.v4.bak_* $W/NO_KILL $W/FAIL_ON
 }
 E() { env IPT="$W/bin/ipt" IPT_RESTORE="$W/bin/iptr" SS_CMD="$W/bin/ss" SS_KILL="$W/bin/ss -K" RULES_V4=$W/rules.v4 AS_LOGDIR=$W/log \
-  SSH_242="bash -c" AS_PUB_IP=127.0.0.1 NO_ROOT_OK=1 SUDO_USER=ubuntu AS_RUNAS=env AS_WAIT_S=1 "$@"; }
+  SSH_242="bash -c" AS_PUB_IP=127.0.0.1 AS_UID=0 SUDO_USER=ubuntu AS_RUNAS=env AS_WAIT_S=1 "$@"; }
 echo "== close_aerospike_3222 (gia)"
 reset
 OUT=$(E bash $S 2>&1); RC=$?
 chk "DRY (mac dinh): ke hoach 5 ACCEPT + 1 DROP, rules.v4 moi hop le, bao se cat 35.241.236.214, nhac ss -K; KHONG doi iptables/rules.v4" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && [ \$(echo \"\$OUT\" | grep -c 'iptables -I INPUT') = 6 ] && echo \"\$OUT\" | grep -q 'OK   DRY: rules.v4 moi hop le' && echo \"\$OUT\" | grep -q 'se bi cat: 35.241.236.214' && echo \"\$OUT\" | grep -q 'ss -K' && cmp -s $W/ipt $W/ipt.orig && cmp -s $W/rules.v4 $W/rules.v4.orig && echo \"\$OUT\" | grep -q 'Security List'"
-OUT=$(echo YES | E SUDO_USER= bash $S --apply 2>&1); RC=$?
-chk "MAJ-1b: --apply thieu SUDO_USER => DUNG ngay tu dau, khong doi gi" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'thieu SUDO_USER' && ! echo \"\$OUT\" | grep -q 'Go YES' && cmp -s $W/ipt $W/ipt.orig && cmp -s $W/rules.v4 $W/rules.v4.orig"
+OUT=$(echo YES | E AS_UID=1001 bash $S --apply 2>&1); RC=$?
+chk "khong root (AS_UID=1001) --apply => DUNG 'Chay lai bang: sudo bash <script> --apply', khong doi gi" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'Chay lai bang: sudo bash .*close_aerospike_3222.sh --apply' && ! echo \"\$OUT\" | grep -q 'Go YES' && cmp -s $W/ipt $W/ipt.orig && cmp -s $W/rules.v4 $W/rules.v4.orig"
+OUT=$(echo YES | E SUDO_USER=nobody bash $S --apply 2>&1); RC=$?
+chk "user ssh khong co ~/.ssh/known_hosts (SUDO_USER=nobody) => DUNG truoc moi thay doi" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q \"user 'nobody' (SUDO_USER) khong co\" && cmp -s $W/ipt $W/ipt.orig && cmp -s $W/rules.v4 $W/rules.v4.orig"
 OUT=$(echo NO | E bash $S --apply 2>&1); RC=$?
 chk "--apply khong go YES => huy, khong doi gi" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'Huy' && cmp -s $W/ipt $W/ipt.orig && cmp -s $W/rules.v4 $W/rules.v4.orig"
 OUT=$(echo YES | E bash $S --apply 2>&1); RC=$?
-chk "--apply YES: 6 luat AS3222_CLOSE o DAU INPUT (ACCEPT truoc, DROP thu 6), luat ssh 22 + luat cu giu nguyen thu tu" "[ $RC = 0 ] && [ \"\$(head -6 $W/ipt | grep -c AS3222_CLOSE)\" = 6 ] && sed -n 6p $W/ipt | grep -q 'j DROP' && sed -n 1p $W/ipt | grep -q 's 127.0.0.0/8' && [ \"\$(tail -n +7 $W/ipt)\" = \"\$(cat $W/ipt.orig)\" ]"
+chk "--apply YES (root + SUDO_USER=ubuntu => ssh bang ubuntu): 6 luat AS3222_CLOSE o DAU INPUT (ACCEPT truoc, DROP thu 6), luat ssh 22 + luat cu giu nguyen thu tu" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q \"ssh sang 242 bang user 'ubuntu' (theo SUDO_USER)\" && [ \"\$(head -6 $W/ipt | grep -c AS3222_CLOSE)\" = 6 ] && sed -n 6p $W/ipt | grep -q 'j DROP' && sed -n 1p $W/ipt | grep -q 's 127.0.0.0/8' && [ \"\$(tail -n +7 $W/ipt)\" = \"\$(cat $W/ipt.orig)\" ]"
 chk "--apply: rules.v4 co 6 dong AS3222_CLOSE truoc -A INPUT dau tien + backup" "[ \"\$(grep -c AS3222_CLOSE $W/rules.v4)\" = 6 ] && [ \"\$(grep -n -m1 '^-A INPUT' $W/rules.v4 | grep -c AS3222_CLOSE)\" = 1 ] && ls $W/rules.v4.bak_AS3222_CLOSE_* >/dev/null 2>&1"
 chk "MAJ-1a: ss -K cat 35.241.236.214, KHONG cat 242; hau kiem localhost OK, 242 OK (ssh qua RUNAS), client chi con IP cho phep, XONG 0 canh bao" "grep -qx 35.241.236.214 $W/killed && ! grep -q 103.157 $W/killed && echo \"\$OUT\" | grep -q 'OK   Oracle -> 127.0.0.1:3222' && echo \"\$OUT\" | grep -q 'OK   242 -> .*ssh bang env' && echo \"\$OUT\" | grep -q 'OK   client Aerospike chi con IP cho phep: 103.157.218.242' && echo \"\$OUT\" | grep -q 'XONG: .*(0 canh bao)'"
 OUT=$(echo YES | E bash $S --apply 2>&1); RC=$?
 chk "--apply lan 2: da co luat live => DUNG, khong them trung" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'da co luat AS3222_CLOSE' && [ \"\$(grep -c AS3222_CLOSE $W/ipt)\" = 6 ]"
 OUT=$(echo YES | E bash $S --rollback 2>&1); RC=$?
 chk "--rollback YES: go DUNG 6 luat (iptables + rules.v4 tro ve y nguyen ban dau)" "[ $RC = 0 ] && cmp -s $W/ipt $W/ipt.orig && cmp -s $W/rules.v4 $W/rules.v4.orig && echo \"\$OUT\" | grep -q 'ROLLBACK XONG'"
+reset
+OUT=$(echo YES | E SUDO_USER= bash $S --apply 2>&1); RC=$?
+chk "root KHONG co SUDO_USER (sudo -i / su) => ssh bang chu thu muc script ($(stat -c %U $HERE)), ap luat XONG" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q \"ssh sang 242 bang user '$(stat -c %U $HERE)' (theo chu thu muc\" && [ \"\$(grep -c AS3222_CLOSE $W/ipt)\" = 6 ] && echo \"\$OUT\" | grep -q '=== XONG'"
 reset; touch $W/NO_KILL
 OUT=$(echo YES | E bash $S --apply 2>&1); RC=$?
 chk "MAJ-1a: kernel khong ho tro ss -K => socket CU con treo = WARN (kem thoi gian tu het), KHONG FAIL, rc 0" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'WARN socket CU tu IP la con treo.*35.241.236.214' && echo \"\$OUT\" | grep -q 'tu het sau ~15 phut' && echo \"\$OUT\" | grep -q '(1 canh bao)' && ! echo \"\$OUT\" | grep -q '^.*FAIL '"
