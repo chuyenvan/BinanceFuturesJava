@@ -128,6 +128,11 @@ def feats_time(th, cv, h):
     return vol, dd, hs, rett(72), rett(336)
 
 
+def sim_close(v):
+    """[ADD20] close nhu sim (x1_feat_v2_build.py:29-30: '>f4' roi float64) va live (ticker float32)."""
+    return np.asarray(v, np.float64).astype(np.float32).astype(np.float64)
+
+
 def build_closes(syms):
     """sym -> (hour_ts array, close array) tu Vision 1m daily (pandas C parser)."""
     out = {}
@@ -146,7 +151,7 @@ def build_closes(syms):
             if df.empty:
                 continue
             t = df.iloc[:, 0].astype("int64").values
-            c = df.iloc[:, 1].astype("float64").values
+            c = sim_close(df.iloc[:, 1].values)          # [ADD20] close float32 nhu sim/live
             hh = (t // 3600000) * 3600000
             g = pd.DataFrame({"h": hh, "t": t, "c": c}).sort_values("t").groupby("h").c.last()
             ts.append(g.index.values)
