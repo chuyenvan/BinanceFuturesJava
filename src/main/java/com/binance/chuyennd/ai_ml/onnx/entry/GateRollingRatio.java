@@ -72,6 +72,9 @@ public final class GateRollingRatio {
     private static int smoothW = 60;
     private static int smoothMinCov = 48;
     private static long smoothNoCov = 0;
+    // [R5P2] SIM_GATE_P15_AGG=max|mean (mac dinh mean) cho SMOOTH; SIM_GATE_Q_MINUTE=true => q theo phut tren buffer chinh.
+    private static boolean smoothMax = false;
+    private static boolean qMinute = false;
     private static boolean warnedBeforeFirst = false;
 
     // bộ đếm ρ (PREDICT candidates) — LUÔN chạy (kể cả G0 parity), không đổi hành vi
@@ -114,6 +117,7 @@ public final class GateRollingRatio {
                 String.format("%.8f", pct), days);
         initMtf();
         initSmooth();
+        initQMinute();
         // [NUP-TIER2] doc key rieng; mac dinh TAT. Key chi co tac dung khi gate ratio ON.
         String t2 = Cfg.get("GATE_TIER2_ENABLED");
         tier2On = t2 != null && Boolean.parseBoolean(t2.trim());
@@ -192,9 +196,26 @@ public final class GateRollingRatio {
         if (mtfOn || tier2On || Configs.SLEEVE_ENABLED) {
             throw new IllegalStateException("[R3B] SMOOTH khong duoc bat cung MTF/TIER2/SLEEVE");
         }
+        String ag = Cfg.get("SIM_GATE_P15_AGG");
+        String agv = ag == null ? "mean" : ag.trim().toLowerCase();
+        if (!agv.equals("mean") && !agv.equals("max")) throw new IllegalStateException("[R5P2] SIM_GATE_P15_AGG sai: " + ag);
+        smoothMax = agv.equals("max");
         smoothOn = true;
+        LOG.warn("*** [R5P2] SMOOTH agg={} ***", agv);
         LOG.warn("*** [R3B SMOOTH] BAT: p15 PREDICT = mean causal {}' (minCov {}) | pct gate {} ***",
                 smoothW, smoothMinCov, String.format("%.10f", pct));
+    }
+
+    /** [R5P2] q theo phut (chi khi gate ratio BAT). Khong ket hop MTF/TIER2/SLEEVE. */
+    private static void initQMinute() {
+        String v = Cfg.get("SIM_GATE_Q_MINUTE");
+        qMinute = v != null && Boolean.parseBoolean(v.trim());
+        if (!qMinute) return;
+        if (mtfOn || tier2On || Configs.SLEEVE_ENABLED) {
+            throw new IllegalStateException("[R5P2] SIM_GATE_Q_MINUTE khong duoc bat cung MTF/TIER2/SLEEVE");
+        }
+        buffer.enableMinuteMode();
+        LOG.warn("*** [R5P2] q theo PHUT: cua so [t-{}d, t), pct {} ***", days, String.format("%.10f", pct));
     }
 
     /** [R3B] smooth bat (gate ratio BAT + SIM_GATE_P15_SMOOTH). */
@@ -204,7 +225,7 @@ public final class GateRollingRatio {
 
     /** [R3B] p~ cho nhanh PREDICT (NaN neu thieu phu; dem noCov). */
     public static synchronized float smoothP15ForGate(long ts) {
-        float v = smoothedP15(ts, smoothW, smoothMinCov);
+        float v = smoothMax ? maxP15(ts, smoothW, smoothMinCov) : smoothedP15(ts, smoothW, smoothMinCov);
         if (Float.isNaN(v)) smoothNoCov++;
         return v;
     }
@@ -233,6 +254,30 @@ public final class GateRollingRatio {
     /** [R3-G3] mean causal p15 tren [ts-(W-1)', ts] (gom ts, theo thoi gian that); < minCov gia tri huu han => NaN. */
     static float smoothedP15(long ts) {
         return smoothedP15(ts, mtfW, mtfMinCov);
+    }
+
+    /** [R5P2] max causal p15 tren [ts-(w-1)', ts]; < minCov gia tri huu han => NaN. */
+    static float maxP15(long ts, int w, int minCov) {
+        if (p15Src == null) throw new IllegalStateException("[R5P2] chua setP15Source");
+        float mx = Float.NEGATIVE_INFINITY;
+        int n = 0;
+        for (com.binance.chuyennd.ai_ml.onnx.AiPredictionData d
+                : p15Src.subMap(ts - (long) (w - 1) * 60_000L, true, ts, true).values()) {
+            if (d == null || !Float.isFinite(d.predReturn15M)) continue;
+            if (d.predReturn15M > mx) mx = d.predReturn15M;
+            n++;
+        }
+        return n >= minCov ? mx : Float.NaN;
+    }
+
+    static void configureMaxForTest(boolean max) {
+        smoothMax = max;
+    }
+
+    static void configureQMinuteForTest() {
+        buffer.reset();
+        buffer.enableMinuteMode();
+        qMinute = true;
     }
 
     /** mean causal p15 tren [ts-(w-1)', ts]; < minCov gia tri huu han => NaN (dung chung G3/R3B). */
@@ -382,6 +427,8 @@ public final class GateRollingRatio {
         on = true;
         pct = pctValue;
         days = daysValue;
+        buffer.disableMinuteModeForTest();
+        qMinute = false;
         buffer.reset();
         currentTier2Q = Float.NaN;
         warnedBeforeFirst = false;
@@ -428,8 +475,9 @@ public final class GateRollingRatio {
             sb.append(String.format(" | %s:%d/%d", e.getKey(), e.getValue()[1], e.getValue()[0]));
         }
         if (Configs.GATE_QUOTA_SKIP_WHEN_FULL) sb.append(" | skipFull=").append(predictSkipFull);
+        if (qMinute) sb.append(" | QMINUTE");
         if (smoothOn) {
-            sb.append(String.format(" | SMOOTH W=%d minCov=%d noCov=%d", smoothW, smoothMinCov, smoothNoCov));
+            sb.append(String.format(" | SMOOTH agg=%s W=%d minCov=%d noCov=%d", smoothMax ? "max" : "mean", smoothW, smoothMinCov, smoothNoCov));
         }
         if (mtfOn) {
             sb.append(String.format(" | MTF W=%d minCov=%d c=%.4f pct_w=%.10f pass1=%d passW=%d both=%d noCov=%d bufW=%d",

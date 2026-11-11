@@ -39,7 +39,63 @@ final class GateRatioBuffer {
      * Lõi: tính (nếu qua giờ mới) q cho giờ của ts, trả q, rồi nạp (ts, r).
      * CAUSAL: q_h chỉ dùng r có ts &lt; h (mẫu hiện tại được nạp SAU khi tính q).
      */
+    // [R5P2 2026-11-11] docs/prereg/PREREG_R5P2_MAX15_GATE.md: che do q theo PHUT (SIM_GATE_Q_MINUTE). Cua so [t-90d, t)
+    //   (t = moc phut), tinh o truy van dau moi phut, TRUOC khi nap o cua phut t. Thu tu = TreeMap gia tri -> so lan
+    //   (phan tu thu k nho nhat = phan tu thu (m-1-k) lon nhat, giong quickselect). TAT => duong gio cu nguyen ven.
+    static final long MINUTE = 60_000L;
+    private boolean minuteMode = false;
+    private java.util.TreeMap<Float, int[]> sorted = null;
+
+    /** Bat che do phut (goi TRUOC moi add). */
+    void enableMinuteMode() {
+        if (tail != head) throw new IllegalStateException("[R5P2] enableMinuteMode sau khi da nap mau");
+        minuteMode = true;
+        sorted = new java.util.TreeMap<>();
+    }
+
+    /** chi test: tat che do phut (de test khac dung duong gio). */
+    void disableMinuteModeForTest() {
+        minuteMode = false;
+        sorted = null;
+    }
+
+    boolean minuteMode() {
+        return minuteMode;
+    }
+
+    private float computeQMinute(long t, float pct, int days, float fallbackBase) {
+        long cut = t - (long) days * DAY;
+        while (head < tail && tsBuf[head] < cut) {
+            float v = rBuf[head];
+            int[] c = sorted.get(v);
+            if (--c[0] == 0) sorted.remove(v);
+            head++;
+        }
+        int m = tail - head;
+        if (firstTs == Long.MIN_VALUE || m == 0 || (t - firstTs) < WARMUP_MS) {
+            nBeforeFirst++;
+            return fallbackBase;
+        }
+        int k = Math.min(m - 1, Math.max(0, (int) Math.floor((double) pct * (m - 1))));
+        long jj = (long) m - 1 - k, cum = 0;
+        for (java.util.Map.Entry<Float, int[]> e : sorted.descendingMap().entrySet()) {
+            cum += e.getValue()[0];
+            if (cum > jj) return e.getKey();
+        }
+        throw new IllegalStateException("[R5P2] TreeMap thieu phan tu m=" + m + " jj=" + jj);
+    }
+
     float addAndQuery(long ts, float r, float pct, int days, float fallbackBase) {
+        if (minuteMode) {
+            nQuery++;
+            long t = (ts / MINUTE) * MINUTE;
+            if (t != lastHour) {                     // lastHour = moc PHUT trong che do phut
+                currentQ = computeQMinute(t, pct, days, fallbackBase);
+                lastHour = t;
+            }
+            add(ts, r);
+            return currentQ;
+        }
         nQuery++;
         long h = (ts / HOUR) * HOUR;              // mốc giờ
         if (h != lastHour) {
@@ -158,6 +214,7 @@ final class GateRatioBuffer {
         tsBuf[tail] = ts;
         rBuf[tail] = r;
         tail++;
+        if (minuteMode) sorted.computeIfAbsent(r, x -> new int[1])[0]++;   // [R5P2]
         compactIfNeeded();
     }
 
@@ -229,5 +286,6 @@ final class GateRatioBuffer {
         currentQ = 0f;
         nQuery = nBeforeFirst = 0;
         scratchArr = null;
+        if (minuteMode) sorted = new java.util.TreeMap<>();   // [R5P2] giu che do, xoa thu tu
     }
 }
