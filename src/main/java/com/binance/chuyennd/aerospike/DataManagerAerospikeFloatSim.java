@@ -107,6 +107,7 @@ public class DataManagerAerospikeFloatSim {
     }
 
     public static AerospikeClient getClient242() {
+        SimDataFiles.guardAerospike("getClient242");   // [AS-FILE] che do file => chan
         if (client242 == null) {
             synchronized (DataManagerAerospikeFloatSim.class) {
                 if (client242 == null) {
@@ -118,6 +119,7 @@ public class DataManagerAerospikeFloatSim {
     }
 
     public static AerospikeClient getClientOracle() {
+        SimDataFiles.guardAerospike("getClientOracle");   // [AS-FILE] che do file => chan
         if (clientOracle == null) {
             synchronized (DataManagerAerospikeFloatSim.class) {
                 if (clientOracle == null) {
@@ -132,6 +134,13 @@ public class DataManagerAerospikeFloatSim {
      * Hàm lấy toàn bộ Mapper (String -> Short) từ Aerospike khi khởi động
      */
     public static Map<String, Short> loadSymbolMapper() {
+        String _f = SimDataFiles.mapperFile();   // [AS-FILE] SYMBOL_MAPPER_FILE => nap file, KHONG mo Aerospike
+        if (_f != null) return SimDataFiles.loadMapper(_f);
+        return loadSymbolMapperAerospike();
+    }
+
+    /** [AS-FILE] than cu cua loadSymbolMapper (doc Aerospike) — dung cho tool dump/verify. */
+    public static Map<String, Short> loadSymbolMapperAerospike() {
         Map<String, Short> result = new ConcurrentHashMap<>();
         try {
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_MAPPER, MAPPER_KEY_GLOBAL);
@@ -160,6 +169,7 @@ public class DataManagerAerospikeFloatSim {
      * Dùng MapOperation để chỉ ghi thêm, không cần ghi đè toàn bộ record.
      */
     public static void saveSymbolMapping(String symbol, short id) {
+        if (SimDataFiles.fileMode()) return;   // [AS-FILE] che do file: chi giu RAM, khong ghi Aerospike
         if (!Live242WriteGuard.allowed("symbol_mapper")) return;   // [FIX_NO_WRITE_242] shadow host => khong ghi 242
         try {
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_MAPPER, MAPPER_KEY_GLOBAL);
@@ -891,6 +901,8 @@ public class DataManagerAerospikeFloatSim {
      * Giải nén và đọc Map Funding
      */
     public static TreeMap<Long, Float> getFundingMap(String symbol) {
+        String _ff = SimDataFiles.fundingFile();   // [AS-FILE]
+        if (_ff != null) return SimDataFiles.fundingOne(_ff, symbol);
         TreeMap<Long, Float> results = new TreeMap<>();
         try {
             Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_FUNDINGFEE, symbol);
@@ -932,6 +944,13 @@ public class DataManagerAerospikeFloatSim {
      * @return Map<Symbol, TreeMap < Timestamp, Rate>>
      */
     public static Map<String, TreeMap<Long, Float>> getAllFundingMap() {
+        String _ff = SimDataFiles.fundingFile();   // [AS-FILE] FUNDING_FEE_FILE => nap file
+        if (_ff != null) return SimDataFiles.fundingAllCopy(_ff);
+        return getAllFundingMapAerospike();
+    }
+
+    /** [AS-FILE] than cu cua getAllFundingMap (scan Aerospike) — dung cho tool dump/verify. */
+    public static Map<String, TreeMap<Long, Float>> getAllFundingMapAerospike() {
         Map<String, TreeMap<Long, Float>> allResults = new HashMap<>();
         try {
             ScanPolicy scanPolicy = new ScanPolicy();
