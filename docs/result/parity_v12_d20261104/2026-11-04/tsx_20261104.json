@@ -21,7 +21,7 @@
   "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-11-03.csv",
   "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-11-04.csv"
  ],
- "flags_cmd_out": "2026-11-09 09:10:17.231 INFO  [main] t.TsxLiveOffline: flags /home/ubuntu/claude_master/parity_v12w/tsx/flags_20261104.csv 2026-09-20..2026-11-05 on=0",
+ "flags_cmd_out": "2026-11-11 09:36:04.446 INFO  [main] t.TsxLiveOffline: flags /home/ubuntu/claude_master/parity_v12w/tsx/flags_20261104.csv 2026-09-20..2026-11-05 on=0",
  "flag_2026-11-04": {
   "vision": {
    "flag_day": 20761,

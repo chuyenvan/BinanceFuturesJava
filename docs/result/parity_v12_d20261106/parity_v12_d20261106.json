@@ -15,7 +15,7 @@
     "P3": "DAT",
     "TSX": "DAT",
     "CTL": "DAT",
-    "K5_Kprime": 180,
+    "K5_Kprime": 0,
     "K5_official": 0,
     "K5_rule": "ADDENDUM2 4eef2788 + ADDENDUM3 67ce404a (chinh thuc)",
     "pull_incomplete": false,
@@ -91,6 +91,8 @@
     "R6": true
    },
    "s1v_kdd_hours": 0,
+   "BIG_DOWN_SEL": "CHUA DO",
+   "bigdown_events": 0,
    "ket_luan": "XAM",
    "ghi_chu": [
     "ngay restart/deploy => toi da XAM (\u00a75.2, ADD6)"

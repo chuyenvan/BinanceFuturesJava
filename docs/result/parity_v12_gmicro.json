@@ -1,6 +1,8 @@
 {
  "sach": [
-  "2026-11-07"
+  "2026-11-07",
+  "2026-11-08",
+  "2026-11-09"
  ],
  "khong_tinh": {
   "2026-11-04": "XAM | SACH",
@@ -8,30 +10,28 @@
   "2026-11-06": "XAM | KHONG SACH (no_restart)"
  },
  "dung_vi_truot": null,
- "n_sach": 1,
+ "n_sach": 3,
  "sach_T": [],
  "needs_M_regrade": [
-  "2026-11-07"
+  "2026-11-07",
+  "2026-11-08",
+  "2026-11-09"
  ],
  "i": false,
- "r4q_sach_tron": [
-  "2026-11-07"
- ],
- "target_jar": "r4t",
- "target_sach_tron": [
-  "2026-11-07"
- ],
- "smoke_24h": true,
- "ii": true,
- "G_MICRO": "CHUA DU (i=False 1/7, ii=True)",
+ "r4q_sach_tron": [],
+ "target_jar": "r4u3",
+ "target_sach_tron": [],
+ "smoke_24h": null,
+ "target_md5_ok": true,
+ "ii": false,
+ "G_MICRO": "CHUA DU (i=False 3/7, ii=False)",
+ "target": {
+  "jar": "r4u3",
+  "md5": "b1f12c3eeaeed72cb17afbe5b4da06cf",
+  "md5_jars_json": "b1f12c3eeaeed72cb17afbe5b4da06cf",
+  "smoke_start_ms": 1794284339000
+ },
  "smoke_info": {
-  "ERROR": 0,
-  "LATCH": 0,
-  "log_from": 1793919600790,
-  "log_to": 1794096600030,
-  "win": [
-   1793977834000,
-   1794064234000
-  ]
+  "thieu_log": "2026-11-10"
  }
 }
