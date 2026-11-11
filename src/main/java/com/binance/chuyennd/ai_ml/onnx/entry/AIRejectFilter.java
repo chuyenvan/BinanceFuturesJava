@@ -99,6 +99,18 @@ public class AIRejectFilter {
             return new FilterResult(FilterDecision.PASS,
                     String.format("PERFECT: MTF-OR 15M(%.2f%%)", prediction.predReturn15M * 100));
         }
+        // [R3B SMOOTH 2026-11-11] PREREG_R3B_SMOOTH_ISO 3ea5df40: chi SIM, chi PREDICT; p~ thay p15 cho r/buffer/nguong.
+        if (sp != null && !LiveGateRollingRatio.isOn() && GateRollingRatio.smoothOn()) {
+            float pw = GateRollingRatio.smoothP15ForGate(prediction.timestamp);
+            if (Float.isNaN(pw)) {
+                mom15RejectCount.incrementAndGet();
+                return new FilterResult(FilterDecision.REJECT, "SMOOTH: thieu phu p15 -> REJECT (khong nap r)");
+            }
+            float thrS = GateRollingRatio.threshold(prediction.timestamp, pw, sp);
+            FilterResult rs = evaluate(pw, EntryGate.threshold(thrS, sp));
+            if (predictSymbolTrade && rs.decision == FilterDecision.PASS) GateRollingRatio.notePass(prediction.timestamp);
+            return rs;
+        }
         float thrBase;
         if (LiveGateRollingRatio.isOn() && sp != null) {
             thrBase = LiveGateRollingRatio.threshold(prediction.timestamp, prediction.predReturn15M, sp);

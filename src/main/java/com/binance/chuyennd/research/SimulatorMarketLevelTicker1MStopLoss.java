@@ -978,8 +978,9 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // [GDV2-EVEN 2026-09-29] quantile cuon tren TY SO r (SIM_GATE_ROLLING_MODE=ratio). Key vang -> no-op.
         com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.init();
         // [R3-G3 MTF-OR] nguon p15 theo phut cho khung mean (chi khi key MTF bat; TAT => khong goi).
-        if (com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.mtfOn()) {
-            if (predictionMap == null) throw new IllegalStateException("[R3-G3] MTF bat nhung predictionMap null");
+        if (com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.mtfOn()
+                || com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.smoothOn()) {   // [R3B] smooth cung can p15 theo phut
+            if (predictionMap == null) throw new IllegalStateException("[R3-G3/R3B] MTF/SMOOTH bat nhung predictionMap null");
             com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.setP15Source(predictionMap);
         }
         preprocessFundingData(time2SymbolPred);
@@ -2650,7 +2651,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         // 3. CHẠY PRE-CALCULATE (SORT SẴN FUNDING FEE MỘT LẦN DUY NHẤT)
         // [GDV2-EVEN 2026-09-29] quantile cuon tren TY SO r (SIM_GATE_ROLLING_MODE=ratio). Key vang -> no-op.
         com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.init();
-        if (com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.mtfOn()) {   // [R3-G3 MTF-OR]
+        if (com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.mtfOn()
+                || com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.smoothOn()) {   // [R3-G3 MTF-OR / R3B]
             if (this.predictionMap == null) throw new IllegalStateException("[R3-G3] MTF bat nhung predictionMap null");
             com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.setP15Source(this.predictionMap);
         }

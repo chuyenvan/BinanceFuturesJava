@@ -64,6 +64,14 @@ public final class GateRollingRatio {
     private static final GateRatioBuffer bufferW = new GateRatioBuffer();
     private static java.util.NavigableMap<Long, com.binance.chuyennd.ai_ml.onnx.AiPredictionData> p15Src = null;
     private static long mtfPass1 = 0, mtfPassW = 0, mtfPassBoth = 0, mtfNoCov = 0;
+
+    // [R3B SMOOTH 2026-11-11] docs/prereg/PREREG_R3B_SMOOTH_ISO.md (3ea5df40): key SIM_GATE_P15_SMOOTH=W:minCov — nhanh PREDICT
+    //   dung p~ = mean causal p15 [t-(W-1)', t] (>= minCov phut) thay p15 diem cho r/buffer/so nguong; thieu phu => REJECT, khong nap.
+    //   DCA_LEVEL1 (sp=null) giu p15 diem. Key vang => TAT => byte-identical.
+    private static boolean smoothOn = false;
+    private static int smoothW = 60;
+    private static int smoothMinCov = 48;
+    private static long smoothNoCov = 0;
     private static boolean warnedBeforeFirst = false;
 
     // bộ đếm ρ (PREDICT candidates) — LUÔN chạy (kể cả G0 parity), không đổi hành vi
@@ -105,6 +113,7 @@ public final class GateRollingRatio {
         LOG.warn("*** [GATE-RATIO] BAT: mode=ratio pct={} window={}d | warm-up 7d | quantile tren TY SO r ***",
                 String.format("%.8f", pct), days);
         initMtf();
+        initSmooth();
         // [NUP-TIER2] doc key rieng; mac dinh TAT. Key chi co tac dung khi gate ratio ON.
         String t2 = Cfg.get("GATE_TIER2_ENABLED");
         tier2On = t2 != null && Boolean.parseBoolean(t2.trim());
@@ -166,6 +175,51 @@ public final class GateRollingRatio {
                 mtfW, mtfMinCov, mtfC, String.format("%.10f", mtfPct), String.format("%.10f", pct));
     }
 
+    /** [R3B] doc SIM_GATE_P15_SMOOTH=W:minCov (chi khi gate ratio BAT). Khong duoc bat cung MTF. */
+    private static void initSmooth() {
+        String v = Cfg.get("SIM_GATE_P15_SMOOTH");
+        if (v == null || v.trim().isEmpty()) {
+            smoothOn = false;
+            return;
+        }
+        String[] a = v.trim().split(":");
+        if (a.length != 2) throw new IllegalStateException("[R3B] SIM_GATE_P15_SMOOTH phai dang W:minCov, nhan " + v);
+        smoothW = Integer.parseInt(a[0].trim());
+        smoothMinCov = Integer.parseInt(a[1].trim());
+        if (smoothW < 2 || smoothMinCov < 1 || smoothMinCov > smoothW) {
+            throw new IllegalStateException("[R3B] tham so smooth sai W=" + smoothW + " minCov=" + smoothMinCov);
+        }
+        if (mtfOn || tier2On || Configs.SLEEVE_ENABLED) {
+            throw new IllegalStateException("[R3B] SMOOTH khong duoc bat cung MTF/TIER2/SLEEVE");
+        }
+        smoothOn = true;
+        LOG.warn("*** [R3B SMOOTH] BAT: p15 PREDICT = mean causal {}' (minCov {}) | pct gate {} ***",
+                smoothW, smoothMinCov, String.format("%.10f", pct));
+    }
+
+    /** [R3B] smooth bat (gate ratio BAT + SIM_GATE_P15_SMOOTH). */
+    public static boolean smoothOn() {
+        return on && smoothOn;
+    }
+
+    /** [R3B] p~ cho nhanh PREDICT (NaN neu thieu phu; dem noCov). */
+    public static synchronized float smoothP15ForGate(long ts) {
+        float v = smoothedP15(ts, smoothW, smoothMinCov);
+        if (Float.isNaN(v)) smoothNoCov++;
+        return v;
+    }
+
+    static void configureSmoothForTest(int w, int minCov) {
+        smoothW = w;
+        smoothMinCov = minCov;
+        smoothOn = true;
+        smoothNoCov = 0;
+    }
+
+    static void disableSmoothForTest() {
+        smoothOn = false;
+    }
+
     /** [R3-G3] MTF bat (gate ratio BAT + SIM_GATE_MTF_W). */
     public static boolean mtfOn() {
         return on && mtfOn;
@@ -178,16 +232,21 @@ public final class GateRollingRatio {
 
     /** [R3-G3] mean causal p15 tren [ts-(W-1)', ts] (gom ts, theo thoi gian that); < minCov gia tri huu han => NaN. */
     static float smoothedP15(long ts) {
-        if (p15Src == null) throw new IllegalStateException("[R3-G3] chua setP15Source");
+        return smoothedP15(ts, mtfW, mtfMinCov);
+    }
+
+    /** mean causal p15 tren [ts-(w-1)', ts]; < minCov gia tri huu han => NaN (dung chung G3/R3B). */
+    static float smoothedP15(long ts, int w, int minCov) {
+        if (p15Src == null) throw new IllegalStateException("[R3-G3/R3B] chua setP15Source");
         double s = 0.0;
         int n = 0;
         for (com.binance.chuyennd.ai_ml.onnx.AiPredictionData d
-                : p15Src.subMap(ts - (long) (mtfW - 1) * 60_000L, true, ts, true).values()) {
+                : p15Src.subMap(ts - (long) (w - 1) * 60_000L, true, ts, true).values()) {
             if (d == null || !Float.isFinite(d.predReturn15M)) continue;
             s += (double) d.predReturn15M;
             n++;
         }
-        return n >= mtfMinCov ? (float) (s / n) : Float.NaN;
+        return n >= minCov ? (float) (s / n) : Float.NaN;
     }
 
     /**
@@ -369,6 +428,9 @@ public final class GateRollingRatio {
             sb.append(String.format(" | %s:%d/%d", e.getKey(), e.getValue()[1], e.getValue()[0]));
         }
         if (Configs.GATE_QUOTA_SKIP_WHEN_FULL) sb.append(" | skipFull=").append(predictSkipFull);
+        if (smoothOn) {
+            sb.append(String.format(" | SMOOTH W=%d minCov=%d noCov=%d", smoothW, smoothMinCov, smoothNoCov));
+        }
         if (mtfOn) {
             sb.append(String.format(" | MTF W=%d minCov=%d c=%.4f pct_w=%.10f pass1=%d passW=%d both=%d noCov=%d bufW=%d",
                     mtfW, mtfMinCov, mtfC, mtfPct, mtfPass1, mtfPassW, mtfPassBoth, mtfNoCov, bufferW.size()));
