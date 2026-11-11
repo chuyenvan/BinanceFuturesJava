@@ -32,26 +32,48 @@ mk() {
     N=$CM/$p/d/2026-10-30; mkdir -p $N/work; echo x > $N/work/closes_cache.pkl
   done
   mkdir -p $W/outside; echo bimat > $W/outside/holes.csv; ln -s $W/outside/holes.csv $CM/parity_v11w/d/2026-11-01/work/holes.csv
+  mkdir -p $CM/v12/a1x_adv $CM/v12/a1y_drylog; echo x > $CM/v12/a1x_adv/f; echo x > $CM/v12/a1y_drylog/f; touch -d '2026-11-06' $CM/v12/a1x_adv/f $CM/v12/a1y_drylog/f
+  # [v3 g] target/
+  mtg() { mkdir -p "$1/classes" "$1/maven-status"; head -c 3000 /dev/urandom > "$1/classes/A.class"; }
+  mtg $CM/v12/old_wt/target; mtg $H/shadow_c3/app/target; mtg $H/src_wt_x/target; mtg $H/src/target
+  mtg $CM/v12/wt_r4u3/target; mtg $CM/r3_wt/target; mtg $CM/res1109/r1/target
+  mkdir -p $CM/v12/data_wt/target/d; echo du_lieu > $CM/v12/data_wt/target/d/x.csv          # 'target' khong phai build => GIU
+  mtg $CM/v12/refonly_wt/target; head -c 5000 /dev/urandom > $CM/v12/refonly_wt/target/app.jar
+  echo "PIN2=$(md5sum < $CM/v12/refonly_wt/target/app.jar | cut -c1-32)" > $CM/v12/c3live/ops/pin_y.sh   # jar duoc tham chieu, KHONG co ban trong v12/jar => GIU
+  mtg $CM/v12/refcopy_wt/target; cp $CM/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4t $CM/v12/refcopy_wt/target/app.jar   # tham chieu nhung co ban r4t => XOA
+  echo "PIN3=$(md5sum < $CM/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4t | cut -c1-32)" >> $CM/v12/c3live/ops/pin_y.sh
+  mtg $CM/v12/busy_wt/target
+  # [v3 h] log shadow
+  mkdir -p $H/shadow_c3/app/logs $H/shadow_c3/app/storage/data $H/shadow_c3b/app/logs
+  echo cu > $H/shadow_c3/app/logs/full.log.1; touch -d '2026-10-20' $H/shadow_c3/app/logs/full.log.1
+  echo moi > $H/shadow_c3/app/logs/full.log; echo d > $H/shadow_c3/app/storage/data/x.dat; touch -d '2026-10-01' $H/shadow_c3/app/storage/data/x.dat
+  echo j > $H/shadow_c3/app/logs/old.jar; touch -d '2026-10-01' $H/shadow_c3/app/logs/old.jar
+  echo cu > $H/shadow_c3b/app/logs/b.log; touch -d '2026-10-25' $H/shadow_c3b/app/logs/b.log
   cd "$W"
 }
 jar() { [ -f $CM/v12/jar/binance-java-sdk-1.2.4.jar_v12_$1 ]; }
 P11=$CM/parity_v11w/d/2026-11-01
-echo "== cleanup_oracle_disk v2 (sandbox)"
+echo "== cleanup_oracle_disk v3 (sandbox)"
 mk
+bash -c "exec 3<$CM/v12/busy_wt/target/classes/A.class; exec sleep 120" & BUSY=$!; sleep 0.5
 OUT=$(CLEAN_H=$H bash $S 2>&1); RC=$?
-chk "DRY: rc0, khong xoa gi, ke hoach co 1b/1d/1e/1f" "[ $RC = 0 ] && jar r4u && jar r4u2 && [ -d $CM/v12/wt_r4u ] && [ -f $P11/work/closes_cache.pkl ] && [ -d $CM/v12/a1r4s_fake ] && echo \"\$OUT\" | grep -q 'SE xoa binance-java-sdk-1.2.4.jar_v12_r4u2' && echo \"\$OUT\" | grep -q 'SE git worktree remove v12/wt_r4u ' && echo \"\$OUT\" | grep -q 'SE xoa a1r4s_fake' && echo \"\$OUT\" | grep -q 'SE xoa parity_v11w/d/2026-11-01: 3 file'"
+chk "DRY: rc0, khong xoa gi, ke hoach co 1b/1d/1e/1f/1g/1h + goi y journalctl (chi in)" "[ $RC = 0 ] && jar r4u && jar r4u2 && [ -d $CM/v12/wt_r4u ] && [ -f $P11/work/closes_cache.pkl ] && [ -d $CM/v12/a1r4s_fake ] && [ -d $CM/v12/old_wt/target ] && [ -f $H/shadow_c3/app/logs/full.log.1 ] && echo \"\$OUT\" | grep -q 'SE xoa binance-java-sdk-1.2.4.jar_v12_r4u2' && echo \"\$OUT\" | grep -q 'SE git worktree remove v12/wt_r4u ' && echo \"\$OUT\" | grep -q 'SE xoa a1r4s_fake' && echo \"\$OUT\" | grep -q 'SE xoa parity_v11w/d/2026-11-01: 2 file' && echo \"\$OUT\" | grep -q 'SE xoa claude_master/v12/old_wt/target' && echo \"\$OUT\" | grep -q 'sudo journalctl --vacuum-size=200M'"
 OUT=$(CLEAN_H=$H bash $S --apply 2>&1); RC=$?
+kill $BUSY 2>/dev/null
 echo "$OUT" | grep -E 'ABORT|PHA 1:' | head -3
+chk "1g: XOA target build (old_wt, shadow_c3/app, src_wt_x, src, refcopy co ban trong v12/jar); GIU wt_r4u3, r3_wt, res1109, 'target' du lieu, refonly (jar tham chieu khong co ban), busy (process mo file)" "[ $RC = 0 ] && [ ! -d $CM/v12/old_wt/target ] && [ ! -d $H/shadow_c3/app/target ] && [ ! -d $H/src_wt_x/target ] && [ ! -d $H/src/target ] && [ ! -d $CM/v12/refcopy_wt/target ] && [ -d $CM/v12/wt_r4u3/target ] && [ -d $CM/r3_wt/target ] && [ -d $CM/res1109/r1/target ] && [ -f $CM/v12/data_wt/target/d/x.csv ] && [ -f $CM/v12/refonly_wt/target/app.jar ] && [ -d $CM/v12/busy_wt/target ] && echo \"\$OUT\" | grep -q 'process dang dung file trong' && echo \"\$OUT\" | grep -q 'KHONG co ban trong v12/jar'"
+chk "1h: XOA log shadow_c3/shadow_c3b > 7 ngay; GIU log moi, storage/data, jar" "[ ! -f $H/shadow_c3/app/logs/full.log.1 ] && [ ! -f $H/shadow_c3b/app/logs/b.log ] && [ -f $H/shadow_c3/app/logs/full.log ] && [ -f $H/shadow_c3/app/storage/data/x.dat ] && [ -f $H/shadow_c3/app/logs/old.jar ]"
+chk "1e A1 MIN-1: GIU bang chung a1x_adv, a1y_drylog (du 11-06, > 24 h)" "[ -d $CM/v12/a1x_adv ] && [ -d $CM/v12/a1y_drylog ]"
 chk "1b: XOA jar r4u + r4u2 (md5 r4u2 chi o LOG); GIU r4u_final (md5 trong script), r4u3, r4t" "[ $RC = 0 ] && ! jar r4u && ! jar r4u2 && jar r4u_final && jar r4u3 && jar r4t && echo \"\$OUT\" | grep -q 'GIU (r4u thua nhung md5'"
 chk "1b: jar cu khac van theo luat cu (r4j cu 20 ngay, md5 khong ai tro => xoa)" "! jar r4j"
 chk "1d: wt_r4u sach => git worktree remove (ca target/); wt_r4u_final chi PrivateConfig => --force; wt_r4u3 GIU" "[ ! -d $CM/v12/wt_r4u ] && [ ! -d $CM/v12/wt_r4u_final ] && [ -d $CM/v12/wt_r4u3 ] && echo \"\$OUT\" | grep -q 'DA worktree remove --force v12/wt_r4u_final'"
 chk "1d: wt_r4u2 commit khong thuoc nhanh nao => BO QUA (khong mat lich su)" "[ -d $CM/v12/wt_r4u2 ] && echo \"\$OUT\" | grep -q 'khong thuoc nhanh nao'"
 chk "1e: XOA a1r4s_fake (11-06, >24 h); GIU a1pq_gates (ten), a1r4n_fake (truoc 11-05), a1sw_log (file < 24 h)" "[ ! -d $CM/v12/a1r4s_fake ] && [ -d $CM/v12/a1pq_gates ] && [ -d $CM/v12/a1r4n_fake ] && [ -d $CM/v12/a1sw_log ]"
 pf_ok() { local p D; for p in parity_v11w parity_v12w; do D=$CM/$p/d/2026-11-01
-  [ ! -f $D/work/closes_cache.pkl ] && [ ! -f $D/runs/holes.csv ] && [ ! -f $D/runs/fund_NEW2.csv.gz ] && [ -f $D/work/s1v_rows.csv.gz ] \
+  [ ! -f $D/work/closes_cache.pkl ] && [ ! -f $D/runs/holes.csv ] && [ -f $D/runs/fund_NEW2.csv.gz ] && [ -f $D/work/s1v_rows.csv.gz ] \
   && [ -f $D/runs/fund_BT.csv.gz ] && [ -f $D/live/feat45_live.csv.gz ] && [ -f $D/work/join_fund.csv.gz ] && [ -f $D/work/net_live_all.csv.gz ] \
   && [ -f $D/work/kprime_20261101.json ] && [ -f $D/report_daily.txt ] && [ -f $D/run_day.log ] && [ -f $D/WATCH_DONE ] || return 1; done; }
-chk "1f: ngay DONE > 3 ngay: XOA closes_cache/holes/fund_NEW2 (ca 2 parity); GIU s1v_rows, fund_BT, feat45, join_fund, net_live_all, kprime, day_report, run_day.log, WATCH_DONE" "pf_ok"
+chk "1f: ngay DONE > 3 ngay: XOA closes_cache/holes (ca 2 parity); GIU fund_NEW2 (A1 MIN-2), s1v_rows, fund_BT, feat45, join_fund, net_live_all, kprime, day_report, run_day.log, WATCH_DONE" "pf_ok"
 chk "1f: ngay hom nay (DONE < 3 ngay) va ngay chua DONE => GIU; symlink holes.csv tro ra ngoai => khong theo, file ngoai con" "[ -f $CM/parity_v11w/d/$(date +%F)/work/closes_cache.pkl ] && [ -f $CM/parity_v11w/d/2026-10-30/work/closes_cache.pkl ] && grep -qx bimat $W/outside/holes.csv"
 # fail-closed: CAM DUNG van ap dung (1d tro vao duong dan bi cam qua symlink)
 mk; rm -rf $CM/v12/wt_r4u; mkdir -p $H/vz_e1/raw; ln -s $H/vz_e1/raw $CM/v12/wt_r4u

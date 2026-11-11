@@ -14,15 +14,20 @@
 #   d) [v2] worktree build r4u thua v12/wt_r4u, wt_r4u_final, wt_r4u2 (ca target/): worktree phu that; commit HEAD phai thuoc >=1
 #      nhanh (khong mat lich su); sach => 'git worktree remove'; CHI con PrivateConfig chua commit => 'git worktree remove --force';
 #      con file khac => BO QUA. GIU wt_r4u3 (jar dang chay), a1_r4u (A1 con duyet r4u3).
-#   e) [v2] scratch A1 tu 11-05 trong v12/: a1*_fake* a1*_log a1*_adv a1*_drylog (KHONG *_gates, *_parity), khong git,
-#      file moi nhat >= 2026-11-05 va cu hon 24 h (khong dang dung).
-#   f) [v2] file trung gian parity (parity_v11w, parity_v12w) cua ngay d/YYYY-MM-DD DA co WATCH_DONE/DONE va cu hon 3 ngay, CHI 3 ten
-#      (doc code harness: duoc dung lai khi thieu / khong la dau vao bat buoc):
-#        closes_cache.pkl (day_s1v: thieu => build_closes roi pickle lai), holes.csv (VisionCacheBuilder ghi moi lan, khong ai doc),
-#        fund_NEW2.csv.gz (day_harness ghep tu new2_s* moi lan chay; chi so CTL_fund, ket qua da luu cmp_ctl_fund.json).
-#      KHONG xoa (dau vao bat buoc / khong dung lai duoc): feat45_live* (day_prep giai ma tu psym pull242 — co the da het han),
+#   e) [v2; v3 A1 MIN-1] scratch A1 tu 11-05 trong v12/: CHI a1*_fake* (sandbox test gia), khong git, file moi nhat >= 2026-11-05
+#      va cu hon 24 h. KHONG xoa bang chung A1: a1*_adv, a1*_log, a1*_drylog, a1*_gates, a1*_parity.
+#   f) [v2; v3 A1 MIN-2] file trung gian parity (parity_v11w, parity_v12w) cua ngay d/YYYY-MM-DD DA co WATCH_DONE/DONE va cu hon
+#      3 ngay, CHI 2 ten (doc code harness: duoc dung lai khi thieu / khong la dau vao bat buoc):
+#        closes_cache.pkl (day_s1v: thieu => build_closes roi pickle lai), holes.csv (VisionCacheBuilder ghi moi lan, khong ai doc).
+#      KHONG xoa: fund_NEW2 (A1 MIN-2), feat45_live* (day_prep giai ma tu psym pull242 — co the da het han),
 #        s1v_rows, join_fund, net_live_all, fund_BT (day_kpp/day_kprime read_csv truc tiep khi cham lai), fund_D/fund_d1 (nho), 'cache'.
-#      Ngoai le CAM DUNG chi cho dung 3 ten tren trong <parity>/d/<ngay>/; moi duong dan khac van fail-closed.
+#      Ngoai le CAM DUNG chi cho dung 2 ten tren trong <parity>/d/<ngay>/; moi duong dan khac van fail-closed.
+#   g) [v3] thu muc build Maven 'target' duoi ~/claude_master, ~/shadow_c3, ~/shadow_c3b, ~/src*: CHI thu muc ten 'target' co
+#      classes/ hoac maven-status/ ben trong (dung lai bang mvn -o). TRU: wt_r4u3, r3_wt, res1109 va vung du lieu (TG_DENY);
+#      target co process dang mo file / cwd / cmdline ben trong (/proc); target chua jar co md5 trong jars.json/pin/script/
+#      gmicro_target ma KHONG co ban cung md5 trong v12/jar (=> LOAI, khong chep). Ngoai le CAM DUNG chi cho thu muc 'target'.
+#   h) [v3] log shadow_c3 / shadow_c3b (shadow tat 11-03): file trong */app/logs/ cu hon 7 ngay. KHONG dung storage/data, jar.
+#   KHONG dua vao: pull242 cu, kaggle_sim, aerospike-data. Cuoi script IN goi y 'sudo journalctl --vacuum-size=200M' (khong chay).
 # PHA 2 (NEN): WHITELIST CUNG = ~/claude_master/1006 (A1: 0 tham chieu). Thu muc co .git => ABORT.
 #   tar | zstd -T2 -> archive/<ten>.tar.zst, zstd -t + so file thuong, TAT CA trong 1 lan 'flock -w 3600 oracle_heavy.lock nice -n 10'
 #   (khong long); free >= 4000 MB; dia trong >= max(5 GB, kich thuoc thu muc) — khong thi DUNG.
@@ -45,7 +50,29 @@ FORBID=(
   "$CM/res1109" "$CM/r3_wt" "$CM/v12/wt_r4u3" "$CM/v12/a1_r4u"
 )
 PF_ROOTS=("$CM/parity_v11w" "$CM/parity_v12w")   # [v2 f] ngoai le hep
-PF_NAMES="closes_cache.pkl holes.csv fund_NEW2.csv.gz"
+PF_NAMES="closes_cache.pkl holes.csv"   # v3: fund_NEW2 GIU (A1 MIN-2)
+# [v3 g] target/: goc cho phep + vung cam rieng (du lieu / dang chay / bang chung)
+TG_DENY=("$CM/v12/wt_r4u3" "$CM/r3_wt" "$CM/res1109" "$H/aerospike-data" "$H/vz_e1" "$H/kaggle_sim" "$H/.openclaw" "$H/ledger" "$H/collect"
+  "$H/vz/out" "$H/wfo_ds_x1_2021" "$H/java/simulator" "$CM/pull242" "$CM/parity_v12w" "$CM/parity_v11w" "$CM/deploy" "$CM/locks"
+  "$CM/health242" "$CM/ing1030/jar" "$CM/gvz" "$CM/e2e1105" "$H/shadow_c3/app/storage" "$H/shadow_c3b/app/storage")
+guard_tg() {   # $1 thu muc target: ten 'target', co classes/ hoac maven-status/, duoi goc cho phep, khong thuoc TG_DENY, khong symlink
+  local rp f ok=0
+  [ -L "$1" ] && fail "symlink: $1"; rp=$(realpath -e -- "$1") || fail "khong ton tai: $1"; [ -d "$rp" ] || fail "khong phai thu muc: $rp"
+  [ "$(basename -- "$rp")" = target ] || fail "khong phai 'target': $rp"
+  [ -d "$rp/classes" ] || [ -d "$rp/maven-status" ] || fail "target khong co classes/ maven-status/: $rp"
+  case "$rp" in "$CM"/*|"$H"/shadow_c3/*|"$H"/shadow_c3b/*|"$H"/src/*|"$H"/src[_-]*/*) ok=1;; esac
+  [ "$ok" = 1 ] || fail "target ngoai goc cho phep: $rp"
+  for f in "${TG_DENY[@]}"; do
+    case "$rp" in "$f"|"$f"/*) fail "CAM DUNG (target): $rp (thuoc $f)";; esac
+    case "$f" in "$rp"/*) fail "CAM DUNG (target): $rp chua $f";; esac
+  done
+  for f in "${FORBID[@]}"; do case "$f" in "$rp"/*) fail "CAM DUNG: $rp chua $f";; esac; done
+}
+guard_sl() {   # [v3 h] $1 file log shadow: file thuong trong $H/shadow_c3{,b}/app/logs/
+  local rp; [ -L "$1" ] && fail "symlink: $1"; rp=$(realpath -e -- "$1") || fail "khong ton tai: $1"; [ -f "$rp" ] || fail "khong phai file: $rp"
+  case "$rp" in "$H"/shadow_c3/app/logs/*|"$H"/shadow_c3b/app/logs/*) ;; *) fail "ngoai app/logs shadow: $rp";; esac
+  case "$rp" in *.jar|*/storage/*) fail "jar/storage: $rp";; esac
+}
 TS=$(date +%Y%m%d_%H%M%S); SUF=""; if [ "$APPLY" = 0 ]; then SUF=_dry; fi
 LOG=$CM/deploy/cleanup_oracle_disk_${TS}${SUF}.log
 exec > >(tee -a "$LOG") 2>&1
@@ -74,7 +101,7 @@ guard_pf() {   # [v2 f] $1 file: PHAI la file thuong (khong symlink), ten trong 
     case "$rp" in "$f"|"$f"/*) fail "CAM DUNG: $rp (thuoc $f)";; esac
   done
 }
-say "=== cleanup_oracle_disk v2 APPLY=$APPLY (cam dung: ${#FORBID[@]} muc) ==="
+say "=== cleanup_oracle_disk v3 APPLY=$APPLY (cam dung: ${#FORBID[@]} muc) ==="
 say "df TRUOC: $(df -h / | tail -1)"
 P1=0; P2=0; declare -A G=()
 add() { G[$1]=$(( ${G[$1]:-0} + $2 )); P1=$((P1 + $2)); }
@@ -156,10 +183,10 @@ for d in "$CM/v12/wt_r4u" "$CM/v12/wt_r4u_final" "$CM/v12/wt_r4u2"; do
   else say "  SE git worktree remove $FS${d#$CM/} ($(gb "$s"), commit ${head:0:8} thuoc $nb nhanh${FS:+, chi PrivateConfig chua commit})"; fi
 done
 # ================================================================ PHA 1e: scratch A1 tu 11-05
-say "--- PHA 1e: scratch A1 tu 11-05 trong v12/ (a1*_fake* a1*_log a1*_adv a1*_drylog; khong git; cu hon 24 h)"
+say "--- PHA 1e: scratch A1 tu 11-05 trong v12/ (CHI a1*_fake*; khong git; cu hon 24 h; GIU bang chung _adv/_log/_drylog/_gates/_parity)"
 while IFS= read -r -d '' d; do
   b=$(basename -- "$d")
-  case "$b" in a1*_gates|a1*_parity|a1_*) say "  BO QUA (ten giu) $b"; continue;; esac
+  case "$b" in a1*_gates*|a1*_parity*|a1*_adv*|a1*_log*|a1*_drylog*|a1_*) say "  BO QUA (bang chung A1 / ten giu) $b"; continue;; esac
   guard "$d"
   if git -C "$d" rev-parse --is-inside-work-tree >/dev/null 2>&1 || [ -n "$(find "$d" -name .git -print -quit)" ]; then say "  BO QUA (co git) $b"; continue; fi
   newest=$(find "$d" -type f -printf '%TY-%Tm-%Td\n' 2>/dev/null | sort | tail -1)
@@ -169,7 +196,7 @@ while IFS= read -r -d '' d; do
   s=$(dsz "$d"); add 1e "$s"
   if [ "$APPLY" = 1 ]; then rm -rf -- "$(realpath -e -- "$d")" || fail "rm $d"; say "  DA xoa $b ($(gb "$s"))"
   else say "  SE xoa $b ($(gb "$s"), moi nhat $newest)"; fi
-done < <(find "$CM/v12" -mindepth 1 -maxdepth 1 -type d \( -name 'a1*_fake*' -o -name 'a1*_log' -o -name 'a1*_adv' -o -name 'a1*_drylog' \) -print0 | sort -z)
+done < <(find "$CM/v12" -mindepth 1 -maxdepth 1 -type d -name 'a1*_fake*' -print0 | sort -z)
 # ================================================================ PHA 1f: file trung gian parity
 say "--- PHA 1f: file trung gian parity ($PF_NAMES) cua ngay da DONE va cu hon 3 ngay"
 LIM=$(date -d "@$((NOW_S - 3 * 86400))" +%F)
@@ -185,11 +212,44 @@ for r in "${PF_ROOTS[@]}"; do
     while IFS= read -r -d '' f; do
       guard_pf "$f"; s=$(stat -c %s -- "$f"); s0=$((s0 + s)); nf=$((nf + 1)); add 1f "$s"
       if [ "$APPLY" = 1 ]; then rm -f -- "$(realpath -e -- "$f")" || fail "rm $f"; fi
-    done < <(find "$dd" -type f \( -name closes_cache.pkl -o -name holes.csv -o -name fund_NEW2.csv.gz \) -print0 | sort -z)
+    done < <(find "$dd" -type f \( -name closes_cache.pkl -o -name holes.csv \) -print0 | sort -z)
     [ "$nf" = 0 ] || say "  $([ "$APPLY" = 1 ] && echo DA || echo SE) xoa ${dd#$CM/}: $nf file ($(gb "$s0"))"
   done
 done
-say "=== PHA 1: $([ "$APPLY" = 1 ] && echo 'da giai phong' || echo 'du kien') $(gb "$P1") | $(for k in 1a 1b 1c 1d 1e 1f; do printf '%s=%s ' "$k" "$(gb "${G[$k]:-0}")"; done)"
+# ================================================================ PHA 1g: target/ build Maven
+say "--- PHA 1g: thu muc build Maven 'target' (classes/ hoac maven-status/) duoi claude_master, shadow_c3, shadow_c3b, src*"
+JARMD5=$(find "$CM/v12/jar" -maxdepth 1 -type f -name 'binance-java-sdk-*' -print0 2>/dev/null | xargs -0 -r md5sum | cut -c1-32 | sort -u)
+OPEN=$(for p in /proc/[0-9]*; do readlink "$p/cwd" 2>/dev/null; ls -l "$p/fd" 2>/dev/null | sed -n 's/.* -> //p'; tr '\0' '\n' < "$p/cmdline" 2>/dev/null; done | grep '/target' | sort -u)
+TGROOTS=("$CM"); for r in "$H/shadow_c3" "$H/shadow_c3b" "$H"/src "$H"/src[_-]*; do [ -d "$r" ] && TGROOTS+=("$r"); done
+while IFS= read -r -d '' t; do
+  rt=$(realpath -e -- "$t" 2>/dev/null) || continue
+  case "$rt" in "$CM"/v12/wt_r4u/*|"$CM"/v12/wt_r4u_final/*|"$CM"/v12/wt_r4u2/*) say "  BO QUA (da tinh trong 1d) ${rt#$H/}"; continue;; esac
+  [ -d "$rt/classes" ] || [ -d "$rt/maven-status" ] || { say "  BO QUA (khong co classes/ maven-status/ — co the la du lieu) ${rt#$H/}"; continue; }
+  den=""; for f in "${TG_DENY[@]}"; do case "$rt" in "$f"|"$f"/*) den=$f;; esac; done
+  [ -z "$den" ] || { say "  BO QUA (vung giu ${den#$H/}) ${rt#$H/}"; continue; }
+  if grep -qF -- "$rt" <<< "$OPEN"; then say "  BO QUA (process dang dung file trong) ${rt#$H/}"; continue; fi
+  ref=""; while IFS= read -r -d '' j; do
+    m=$(md5sum < "$j" | cut -c1-32)
+    if grep -qx "$m" <<< "$KEEPS"$'\n'"$KEEPMD5" && ! grep -qx "$m" <<< "$JARMD5"; then ref="$(basename -- "$j") ${m:0:8}"; break; fi
+  done < <(find "$rt" -maxdepth 1 -type f -name '*.jar' -print0 2>/dev/null)
+  [ -z "$ref" ] || { say "  BO QUA (jar $ref duoc tham chieu, KHONG co ban trong v12/jar) ${rt#$H/}"; continue; }
+  guard_tg "$rt"
+  s=$(dsz "$rt"); add 1g "$s"
+  if [ "$APPLY" = 1 ]; then rm -rf -- "$rt" || fail "rm $rt"; say "  DA xoa ${rt#$H/} ($(gb "$s"))"
+  else say "  SE xoa ${rt#$H/} ($(gb "$s"))"; fi
+done < <(find "${TGROOTS[@]}" -maxdepth 6 -type d -name target -not -path '*/node_modules/*' -prune -print0 2>/dev/null | sort -z)
+# ================================================================ PHA 1h: log shadow cu
+say "--- PHA 1h: log shadow_c3 / shadow_c3b (app/logs) cu hon 7 ngay"
+for sd in "$H/shadow_c3/app/logs" "$H/shadow_c3b/app/logs"; do
+  [ -d "$sd" ] || { say "  BO QUA (khong co) ${sd#$H/}"; continue; }
+  s0=0; nf=0
+  while IFS= read -r -d '' f; do
+    guard_sl "$f"; s=$(stat -c %s -- "$f"); s0=$((s0 + s)); nf=$((nf + 1)); add 1h "$s"
+    if [ "$APPLY" = 1 ]; then rm -f -- "$(realpath -e -- "$f")" || fail "rm $f"; fi
+  done < <(find "$sd" -type f ! -name '*.jar' -mtime +7 -print0 2>/dev/null | sort -z)
+  say "  $([ "$APPLY" = 1 ] && echo DA || echo SE) xoa ${sd#$H/}: $nf file log > 7 ngay ($(gb "$s0"))"
+done
+say "=== PHA 1: $([ "$APPLY" = 1 ] && echo 'da giai phong' || echo 'du kien') $(gb "$P1") | $(for k in 1a 1b 1c 1d 1e 1f 1g 1h; do printf '%s=%s ' "$k" "$(gb "${G[$k]:-0}")"; done)"
 # ================================================================ PHA 2: whitelist cung
 say "--- PHA 2: nen WHITELIST cung (1006)"
 for d in "$CM/1006"; do
@@ -216,4 +276,5 @@ for d in "$CM/1006"; do
 done
 say "=== PHA 2: $([ "$APPLY" = 1 ] && echo 'da giai phong' || echo 'du kien (truoc nen)') $(gb "$P2")"
 say "df SAU: $(df -h / | tail -1)"
+say "Goi y (owner tu chay, can sudo; script KHONG chay): sudo journalctl --vacuum-size=200M   (journal hien: $(journalctl --disk-usage 2>/dev/null | grep -oE '[0-9.]+[KMGT]' | tail -1))"
 say "Log: $LOG"
