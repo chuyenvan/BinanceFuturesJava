@@ -29,6 +29,11 @@
 #      /proc khong co process mo file/cwd/cmdline trong do (khong doc duoc /proc cua chinh user => ABORT); jar co md5 duoc tham
 #      chieu ma khong co ban trong v12/jar => LOAI. Worktree build cu vong 3c..r4s: khong con worktree nao (da kiem 11-11).
 #   h) [v3] log shadow_c3 / shadow_c3b (shadow tat 11-03): file trong */app/logs/ cu hon 7 ngay. KHONG dung storage/data, jar.
+#   i) [v5] ban sao nghien cuu trong res1109 (vung CAM DUNG — ngoai le DUNG tung duong dan; ket qua da commit vz_e1_wt a5ff7c9f,
+#      nguon con tren Kaggle): r1_s1/{a2_bins,a3_bins,g015x26}, r3_gate/{jar,jar_m,jar_q,jar_s,asdump,ds_as,ds_as2,pred},
+#      r3_gate/orch_m2r/ds_sim-jar-*, r5_quality/sig_*.npz. CHI xoa file .bin/.jar/.npz/.gz/.gzdat trong do; GIU json/md/py/log/
+#      sh/txt/properties/sha256. GIU tuyet doi: r1_s1/kl, r3_wt, 1004/gqd/cand_base.npz, file .sh co key/token (khong bao gio khop).
+#      Van kiem: grep script/crontab tham chieu (loi => ABORT), /proc mo file.
 #   KHONG dua vao: pull242 cu, kaggle_sim, aerospike-data. Cuoi script IN goi y 'sudo journalctl --vacuum-size=200M' (khong chay).
 # PHA 2 (NEN): WHITELIST CUNG = ~/claude_master/1006 (A1: 0 tham chieu). Thu muc co .git => ABORT.
 #   tar | zstd -T2 -> archive/<ten>.tar.zst, zstd -t + so file thuong, TAT CA trong 1 lan 'flock -w 3600 oracle_heavy.lock nice -n 10'
@@ -103,7 +108,7 @@ guard_pf() {   # [v2 f] $1 file: PHAI la file thuong (khong symlink), ten trong 
     case "$rp" in "$f"|"$f"/*) fail "CAM DUNG: $rp (thuoc $f)";; esac
   done
 }
-say "=== cleanup_oracle_disk v4 APPLY=$APPLY (cam dung: ${#FORBID[@]} muc) ==="
+say "=== cleanup_oracle_disk v5 APPLY=$APPLY (cam dung: ${#FORBID[@]} muc) ==="
 say "df TRUOC: $(df -h / | tail -1)"
 P1=0; P2=0; declare -A G=(); D_PLAN=()   # D_PLAN: worktree 1c/1d se go ca thu muc (1g bo qua de khong tinh 2 lan)
 add() { G[$1]=$(( ${G[$1]:-0} + $2 )); P1=$((P1 + $2)); }
@@ -284,7 +289,48 @@ for sd in "$H/shadow_c3/app/logs" "$H/shadow_c3b/app/logs"; do
   done < <(find "$sd" -type f ! -name '*.jar' -mtime +7 -print0 2>/dev/null | sort -z)
   say "  $([ "$APPLY" = 1 ] && echo DA || echo SE) xoa ${sd#$H/}: $nf file log > 7 ngay ($(gb "$s0"))"
 done
-say "=== PHA 1: $([ "$APPLY" = 1 ] && echo 'da giai phong' || echo 'du kien') $(gb "$P1") | $(for k in 1a 1b 1c 1d 1e 1f 1g 1h; do printf '%s=%s ' "$k" "$(gb "${G[$k]:-0}")"; done)"
+# ================================================================ PHA 1i: ban sao nghien cuu res1109 (WHITELIST cung tung duong dan)
+say "--- PHA 1i: ban sao nghien cuu res1109 (ket qua da commit vz_e1_wt a5ff7c9f; nguon con tren Kaggle — R3 xac nhan)"
+RS=$CM/res1109
+RS_WL=("$RS/r1_s1/a2_bins" "$RS/r1_s1/a3_bins" "$RS/r1_s1/g015x26" "$RS/r3_gate/jar" "$RS/r3_gate/jar_m" "$RS/r3_gate/jar_q" "$RS/r3_gate/jar_s"
+       "$RS/r3_gate/asdump" "$RS/r3_gate/ds_as" "$RS/r3_gate/ds_as2" "$RS/r3_gate/pred")
+for w in "$RS"/r3_gate/orch_m2r/ds_sim-jar-*; do [ -d "$w" ] && [ ! -L "$w" ] && RS_WL+=("$w"); done
+RS_EXT='bin|jar|npz|gz|gzdat'   # CHI xoa file nhi phan; GIU json/md/py/log/sh/txt/properties/sha256/... (moi thu khac)
+RS_KEEP=("$RS/r1_s1/kl" "$CM/1004/gqd/cand_base.npz" "$CM/r3_wt")
+guard_rs() {   # $1 file: file thuong, khong symlink, duoi trong RS_EXT, nam trong DUNG 1 muc RS_WL hoac la $RS/r5_quality/sig_*.npz
+  local rp ok=0 w f
+  [ -L "$1" ] && fail "symlink: $1"; rp=$(realpath -e -- "$1") || fail "khong ton tai: $1"; [ -f "$rp" ] || fail "khong phai file: $rp"
+  [[ "$(basename -- "$rp")" =~ \.($RS_EXT)$ ]] || fail "duoi khong cho phep: $rp"
+  for w in "${RS_WL[@]}"; do case "$rp" in "$w"/*) ok=1;; esac; done
+  [[ "$rp" =~ ^"$RS"/r5_quality/sig_[^/]*\.npz$ ]] && ok=1
+  [ "$ok" = 1 ] || fail "ngoai whitelist 1i: $rp"
+  for f in "${RS_KEEP[@]}"; do case "$rp" in "$f"|"$f"/*) fail "GIU tuyet doi: $rp";; esac; done
+  for f in "${FORBID[@]}"; do [ "$f" = "$RS" ] && continue; case "$rp" in "$f"|"$f"/*) fail "CAM DUNG: $rp (thuoc $f)";; esac; done
+}
+PATF2=$(mktemp); { for w in "${RS_WL[@]}"; do echo "${w#$CM/}"; done; echo "res1109/r5_quality/sig_"; } > "$PATF2"
+set +e
+grep -rhoF --include='*.sh' --include='*.py' --exclude=cleanup_oracle_disk.sh --exclude=test_cleanup_oracle_disk.sh -f "$PATF2" "${GD[@]}" > "$PATF2.hit" 2>"$PATF2.err"; grc=$?
+set -e
+if [ "$grc" -gt 1 ]; then say "  grep loi: $(head -3 "$PATF2.err" | tr '\n' ' ')"; rm -f "$PATF2" "$PATF2.hit" "$PATF2.err"; fail "grep tham chieu 1i loi (rc=$grc) — fail-closed"; fi
+grep -oF -f "$PATF2" <<< "$CT" >> "$PATF2.hit" || true
+rs_one() {   # $1 nhan (duong dan tuong doi $CM), $2.. file
+  local rel=$1; shift; local s0=0 nf=0 f s
+  if grep -qxF -- "$rel" "$PATF2.hit"; then say "  BO QUA (co script/crontab tham chieu '$rel')"; return 0; fi
+  if grep -qF -- "$CM/$rel" "$OPENF"; then say "  BO QUA (process dang dung file trong $rel)"; return 0; fi
+  for f in "$@"; do guard_rs "$f"; s=$(stat -c %s -- "$f"); s0=$((s0 + s)); nf=$((nf + 1)); add 1i "$s"
+    if [ "$APPLY" = 1 ]; then rm -f -- "$(realpath -e -- "$f")" || fail "rm $f"; fi; done
+  [ "$nf" = 0 ] || say "  $([ "$APPLY" = 1 ] && echo DA || echo SE) xoa $rel: $nf file nhi phan ($(gb "$s0")); giu json/md/log/..."
+}
+for w in "${RS_WL[@]}"; do
+  [ -d "$w" ] || { say "  BO QUA (khong co) ${w#$CM/}"; continue; }
+  [ -L "$w" ] && fail "whitelist la symlink: $w"
+  mapfile -d '' FL < <(find "$w" -type f -regextype posix-extended -regex ".*\.($RS_EXT)$" -print0 | sort -z)
+  rs_one "${w#$CM/}" "${FL[@]}"
+done
+mapfile -d '' FL < <(find "$RS/r5_quality" -maxdepth 1 -type f -name 'sig_*.npz' -print0 2>/dev/null | sort -z)
+[ "${#FL[@]}" = 0 ] || rs_one "res1109/r5_quality/sig_" "${FL[@]}"
+rm -f "$PATF2" "$PATF2.hit" "$PATF2.err"
+say "=== PHA 1: $([ "$APPLY" = 1 ] && echo 'da giai phong' || echo 'du kien') $(gb "$P1") | $(for k in 1a 1b 1c 1d 1e 1f 1g 1h 1i; do printf '%s=%s ' "$k" "$(gb "${G[$k]:-0}")"; done)"
 # ================================================================ PHA 2: whitelist cung
 say "--- PHA 2: nen WHITELIST cung (1006)"
 for d in "$CM/1006"; do

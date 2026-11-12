@@ -47,6 +47,15 @@ mk() {
   mtg $CM/v12/wt_t2c/target; mkdir -p $CM/v12/wt_t2c/target/test-classes; echo c > $CM/v12/wt_t2c/target/test-classes/ExitReplayDevMain.class
   mtg $H/src_wt_bcd/target; head -c 4000 /dev/urandom > $H/src_wt_bcd/target/binance-java-sdk-1.2.4.jar
   mtg $CM/v12/old_wt/target; mtg $H/shadow_c3/app/target; mtg $CM/v12/wt_r4u3/target; mtg $CM/r3_wt/target; mtg $CM/res1109/r1/target
+  # [v5 i] ban sao nghien cuu res1109
+  RS=$CM/res1109; mkdir -p $RS/r1_s1/a2_bins $RS/r1_s1/kl $RS/r3_gate/jar_q $RS/r3_gate/pred $RS/r3_gate/orch_m2r/ds_sim-jar-r3x $RS/r5_quality $RS/r4u $CM/1004/gqd
+  head -c 7000 /dev/urandom > $RS/r1_s1/a2_bins/predict_wf_1.bin; echo '{}' > $RS/r1_s1/a2_bins/a2_report.json; echo '{}' > $RS/r1_s1/a2_bins/dataset-metadata.json
+  head -c 5000 /dev/urandom > $RS/r1_s1/kl/kline1m-2022-01.parquet; echo 'export KEY_X=1' > $RS/r1_s1/r1_env242.sh
+  head -c 6000 /dev/urandom > $RS/r3_gate/jar_q/sim.jar; echo t > $RS/r3_gate/jar_q/sha.txt
+  head -c 6000 /dev/urandom > $RS/r3_gate/pred/pred_s1.bin; echo "x=\$R/res1109/r3_gate/pred/pred_s1.bin" > $CM/tools_x/use_pred.py   # pred co script tham chieu => GIU
+  head -c 6000 /dev/urandom > $RS/r3_gate/orch_m2r/ds_sim-jar-r3x/sim.jar; echo '{}' > $RS/r3_gate/orch_m2r/ds_sim-jar-r3x/dataset-metadata.json; echo '{}' > $RS/r3_gate/orch_m2r/loop_state.json
+  head -c 6000 /dev/urandom > $RS/r5_quality/sig_S1.npz; echo '{}' > $RS/r5_quality/confirm.json; head -c 6000 /dev/urandom > $RS/r5_quality/other.npz
+  echo b > $RS/r4u/build_r4u.log; head -c 3000 /dev/urandom > $CM/1004/gqd/cand_base.npz
   # [v3 h] log shadow
   mkdir -p $H/shadow_c3/app/logs $H/shadow_c3/app/storage/data $H/shadow_c3b/app/logs
   echo cu > $H/shadow_c3/app/logs/full.log.1; touch -d '2026-10-20' $H/shadow_c3/app/logs/full.log.1
@@ -67,6 +76,8 @@ kill $BUSY 2>/dev/null
 echo "$OUT" | grep -E 'ABORT|PHA 1:' | head -3
 chk "1g whitelist: XOA a1_r4i/target (khong ai dung), a1_wt2/target (jar tham chieu nhung co ban v12/jar); GIU a1_r4j (script tham chieu), a1_soak (process mo file), a1_wt3 (jar tham chieu khong co ban), a1_pq ('target' du lieu)" "[ $RC = 0 ] && [ ! -d $CM/v12/a1_r4i/target ] && [ ! -d $CM/ing1030/a1_wt2/target ] && [ -d $CM/v12/a1_r4j/target ] && [ -d $CM/v12/a1_soak/target ] && [ -f $CM/ing1030/a1_wt3/target/app.jar ] && [ -f $CM/v12/a1_pq/target/d/x.csv ] && echo \"\$OUT\" | grep -q 'co script/crontab tham chieu' && echo \"\$OUT\" | grep -q 'process dang dung file' && echo \"\$OUT\" | grep -q 'KHONG co ban trong v12/jar'"
 chk "1g A1 MAJ: ngoai whitelist GIU nguyen: wt_t2c/target (test-classes ExitReplayDevMain), src_wt_bcd/target (sim.jar), old_wt, shadow_c3, wt_r4u3, r3_wt, res1109" "[ -f $CM/v12/wt_t2c/target/test-classes/ExitReplayDevMain.class ] && [ -f $H/src_wt_bcd/target/binance-java-sdk-1.2.4.jar ] && [ -d $CM/v12/old_wt/target ] && [ -d $H/shadow_c3/app/target ] && [ -d $CM/v12/wt_r4u3/target ] && [ -d $CM/r3_wt/target ] && [ -d $CM/res1109/r1/target ]"
+RS=$CM/res1109
+chk "1i: XOA .bin a2_bins, .jar jar_q + ds_sim-jar-*, sig_*.npz; GIU json/txt/metadata, pred (script tham chieu), kl, r1_env242.sh, r4u log, other.npz, 1004 cand_base.npz, loop_state.json" "[ ! -f $RS/r1_s1/a2_bins/predict_wf_1.bin ] && [ -f $RS/r1_s1/a2_bins/a2_report.json ] && [ -f $RS/r1_s1/a2_bins/dataset-metadata.json ] && [ ! -f $RS/r3_gate/jar_q/sim.jar ] && [ -f $RS/r3_gate/jar_q/sha.txt ] && [ ! -f $RS/r3_gate/orch_m2r/ds_sim-jar-r3x/sim.jar ] && [ -f $RS/r3_gate/orch_m2r/ds_sim-jar-r3x/dataset-metadata.json ] && [ -f $RS/r3_gate/orch_m2r/loop_state.json ] && [ ! -f $RS/r5_quality/sig_S1.npz ] && [ -f $RS/r5_quality/other.npz ] && [ -f $RS/r5_quality/confirm.json ] && [ -f $RS/r3_gate/pred/pred_s1.bin ] && [ -f $RS/r1_s1/kl/kline1m-2022-01.parquet ] && [ -f $RS/r1_s1/r1_env242.sh ] && [ -f $RS/r4u/build_r4u.log ] && [ -f $CM/1004/gqd/cand_base.npz ] && echo \"\$OUT\" | grep -q \"tham chieu 'res1109/r3_gate/pred'\""
 chk "1h: XOA log shadow_c3/shadow_c3b > 7 ngay; GIU log moi, storage/data, jar" "[ ! -f $H/shadow_c3/app/logs/full.log.1 ] && [ ! -f $H/shadow_c3b/app/logs/b.log ] && [ -f $H/shadow_c3/app/logs/full.log ] && [ -f $H/shadow_c3/app/storage/data/x.dat ] && [ -f $H/shadow_c3/app/logs/old.jar ]"
 chk "1e A1 MIN-1: GIU bang chung a1x_adv, a1y_drylog (du 11-06, > 24 h)" "[ -d $CM/v12/a1x_adv ] && [ -d $CM/v12/a1y_drylog ]"
 chk "1b: XOA jar r4u + r4u2 (md5 r4u2 chi o LOG); GIU r4u_final (md5 trong script), r4u3, r4t" "[ $RC = 0 ] && ! jar r4u && ! jar r4u2 && jar r4u_final && jar r4u3 && jar r4t && echo \"\$OUT\" | grep -q 'GIU (r4u thua nhung md5'"
