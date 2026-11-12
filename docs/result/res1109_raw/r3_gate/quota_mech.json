@@ -1,0 +1,102 @@
+{
+ "S42": {
+  "A0": {
+   "nominal": 2280.1,
+   "pass_real": 2621,
+   "pass_q_incl_hour": 2368,
+   "conc": {
+    "hours_with_pass": 267,
+    "pass_per_hour_med": 4.0,
+    "share_in_hours_ge10": 0.8291
+   },
+   "by_year": {
+    "2022": 513,
+    "2023": 706,
+    "2024": 761,
+    "2025": 641
+   }
+  },
+  "MEAN15": {
+   "nominal": 2280.1,
+   "pass_real": 4433,
+   "pass_q_incl_hour": 2896,
+   "conc": {
+    "hours_with_pass": 205,
+    "pass_per_hour_med": 8.0,
+    "share_in_hours_ge10": 0.9132
+   },
+   "by_year": {
+    "2022": 700,
+    "2023": 951,
+    "2024": 1819,
+    "2025": 963
+   }
+  },
+  "MEAN60": {
+   "nominal": 2280.1,
+   "pass_real": 4760,
+   "pass_q_incl_hour": 3094,
+   "conc": {
+    "hours_with_pass": 173,
+    "pass_per_hour_med": 11.0,
+    "share_in_hours_ge10": 0.9414
+   },
+   "by_year": {
+    "2022": 885,
+    "2023": 1361,
+    "2024": 1653,
+    "2025": 861
+   }
+  }
+ },
+ "S7": {
+  "A0": {
+   "nominal": 2276.5,
+   "pass_real": 2622,
+   "pass_q_incl_hour": 2372,
+   "conc": {
+    "hours_with_pass": 254,
+    "pass_per_hour_med": 4.0,
+    "share_in_hours_ge10": 0.8345
+   },
+   "by_year": {
+    "2022": 486,
+    "2023": 709,
+    "2024": 805,
+    "2025": 622
+   }
+  },
+  "MEAN15": {
+   "nominal": 2276.5,
+   "pass_real": 4154,
+   "pass_q_incl_hour": 2844,
+   "conc": {
+    "hours_with_pass": 195,
+    "pass_per_hour_med": 8.0,
+    "share_in_hours_ge10": 0.909
+   },
+   "by_year": {
+    "2022": 685,
+    "2023": 958,
+    "2024": 1598,
+    "2025": 913
+   }
+  },
+  "MEAN60": {
+   "nominal": 2276.5,
+   "pass_real": 3982,
+   "pass_q_incl_hour": 2716,
+   "conc": {
+    "hours_with_pass": 154,
+    "pass_per_hour_med": 11.0,
+    "share_in_hours_ge10": 0.934
+   },
+   "by_year": {
+    "2022": 761,
+    "2023": 1097,
+    "2024": 1274,
+    "2025": 850
+   }
+  }
+ }
+}

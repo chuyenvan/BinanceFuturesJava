@@ -1,0 +1,18 @@
+{
+ "g3": "STOP_FUTILITY",
+ "b2": "STOP_FUTILITY",
+ "pushed": [
+  "r3g0s-a1",
+  "r3b2-a1",
+  "r3b2-s7",
+  "r3b2-s21",
+  "r3b2-s99",
+  "r3-mtm-b2a"
+ ],
+ "b2_a": [
+  "r3b2-a1",
+  "r3b2-s7",
+  "r3b2-s21",
+  "r3b2-s99"
+ ]
+}

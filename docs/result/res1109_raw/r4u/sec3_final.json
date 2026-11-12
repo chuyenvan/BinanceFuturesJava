@@ -1,0 +1,19 @@
+{
+ "jar": "/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4u3",
+ "privateconfig_runs_ge20": 5,
+ "privateconfig_runs_ge20_jvm_names": [
+  "Lcom/binance/chuyennd/config/PrivateConfig;",
+  "com/binance/chuyennd/config/PrivateConfig"
+ ],
+ "privateconfig_runs_ge20_other": 3,
+ "privateconfig_max_run_len": 65,
+ "classes_scanned": 7832,
+ "com_binance_classes_with_64alnum": [
+  "com/binance/chuyennd/client/BinanceFuturesClientSingleton.class",
+  "com/binance/chuyennd/client/ClientSingleton.class",
+  "com/binance/chuyennd/config/PrivateConfig.class"
+ ],
+ "lib_classes_with_64alnum_gnu_crypto": 8,
+ "lib_classes_with_64alnum_other": [],
+ "ok": false
+}

@@ -1,0 +1,50 @@
+{
+ "disc_MAX15": {
+  "n_ep": 12.125,
+  "var_b_pp": 12.07,
+  "raw_matched_pp": 4.04,
+  "diff_pp": 8.02
+ },
+ "disc_MEAN240": {
+  "n_ep": 2.875,
+  "var_b_pp": 13.36,
+  "raw_matched_pp": -0.34,
+  "diff_pp": 13.7
+ },
+ "conf_MAX15": {
+  "n_ep": 8.25,
+  "var_b_pp": 13.38,
+  "raw_matched_pp": 5.94,
+  "diff_pp": 7.44
+ },
+ "conf_MEAN240": {
+  "n_ep": 1.125,
+  "var_b_pp": 13.87,
+  "raw_matched_pp": -6.89,
+  "diff_pp": 20.77
+ },
+ "2024_MAX15": {
+  "n_ep": 5.75,
+  "var_b_pp": 16.21,
+  "raw_matched_pp": 8.27,
+  "diff_pp": 7.94
+ },
+ "2024_MEAN240": {
+  "n_ep": 2.0,
+  "var_b_pp": 6.34,
+  "raw_matched_pp": -3.69,
+  "diff_pp": 10.02
+ },
+ "2025_MAX15": {
+  "n_ep": 2.5,
+  "var_b_pp": 10.1,
+  "raw_matched_pp": -4.01,
+  "diff_pp": 14.12
+ },
+ "2025_MEAN240": {
+  "n_ep": 1.0,
+  "var_b_pp": 21.98,
+  "raw_matched_pp": -6.76,
+  "diff_pp": 28.73
+ }
+}

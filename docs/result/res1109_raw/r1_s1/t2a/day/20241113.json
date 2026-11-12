@@ -1,0 +1,3 @@
+[
+{"date":"20241113","legs":16,"legs_skipped":0,"minutes":31680,"symbols":16,"decision_events":93,"decision_mismatch_symbols":0,"arms":16,"sl_moves":77,"time_stops":0,"defers":0,"trail_exit_both":16,"trail_exit_same_minute":16,"trail_exit_later":0,"trail_exit_only_paper":0,"trail_exit_only_live":0,"mean_exit_px_diff_rel":-0.00636544,"open_end_paper":0,"open_end_live":0,"open_state_diff":0,"mismatches":[]}
+]

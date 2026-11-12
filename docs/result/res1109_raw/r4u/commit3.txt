@@ -1,0 +1,18 @@
+v1.2(c3-live) 4u2 C3_EXCLUDE_LEGACY_HELD: c3 loai LEGACY chi khi co BAT (mac dinh = r4t)
+
+A1 r4u L-1: live loai coin LEGACY (tk chinh) khi chon/vao lenh c3, sim chi loai coin c3 dang giu.
+Tu ADD4 c3 o TAI KHOAN CON => khong con netting one-way voi LEGACY.
+
+- LegacySymbols: key C3_EXCLUDE_LEGACY_HELD (mac dinh true; chi false/0 moi tat), blocksC3(symbol)
+  = co && isLegacySymbol. Moi duong VAO LENH c3 dung blocksC3: vong selector PREDICT (LEGACY dem hang
+  khong vao), skip-LEGACY sau gate (PREDICT), so giay (moi leg), shadowHandleOrder, C3LiveEntry.legacy
+  (that, moi leg ke ca DCA), TsMktExt legacy-guard (so c3).
+- Leg market-signal (BIG_DOWN/SMALL_*): BigDownSelect.lockedFor — BAT: vi the that tk chinh HOP so c3;
+  TAT: chi so c3.
+- reconcile LEGACY: TAT => LEGACY = TOAN BO vi the that tk chinh (khong tru so giay/so c3), de luat
+  DONG cua LEGACY (armRateFor/deadzone/timeStopApplies) khong doi khi c3 cung giu symbol.
+- 1 dong log [C3-LEGACY] luc khoi dong. Luat dong LEGACY, gate, size, exit c3: khong doi.
+- Test C3ExcludeLegacyHeldTest (ca hai gia tri).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KcMsGREpUAoabx788AKSqW

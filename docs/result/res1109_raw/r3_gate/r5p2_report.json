@@ -1,0 +1,298 @@
+{
+ "r3m1-a1": {
+  "ok": true,
+  "jar": true,
+  "ov_ok": true,
+  "as_check": "mapper=863 funding=831/2394587 as_calls=0",
+  "legs_year": {
+   "2022": 491,
+   "2023": 525,
+   "2024": 552,
+   "2025": 497
+  },
+  "legs_year_a0": {
+   "2022": 547,
+   "2023": 706,
+   "2024": 761,
+   "2025": 641
+  },
+  "gate": {
+   "seen": 61695000,
+   "pass_": 2721,
+   "skipFull": 0
+  },
+  "gate_a0": {
+   "seen": 60994789,
+   "pass_": 3584,
+   "skipFull": 14
+  },
+  "skipfull_share": 0.0,
+  "skipfull_share_a0": 0.0039,
+  "lag": {
+   "eps_a0": 194,
+   "captured": 0.706,
+   "lag_med": 1.0,
+   "lag_p25": 0.0,
+   "lag_p75": 6.0
+  }
+ },
+ "r3m0-a1": {
+  "ok": true,
+  "jar": true,
+  "ov_ok": true,
+  "as_check": "mapper=863 funding=831/2394587 as_calls=0",
+  "legs_year": {
+   "2022": 552,
+   "2023": 710,
+   "2024": 769,
+   "2025": 650
+  },
+  "legs_year_a0": {
+   "2022": 547,
+   "2023": 706,
+   "2024": 761,
+   "2025": 641
+  },
+  "gate": {
+   "seen": 60995458,
+   "pass_": 3573,
+   "skipFull": 14
+  },
+  "gate_a0": {
+   "seen": 60994789,
+   "pass_": 3584,
+   "skipFull": 14
+  },
+  "skipfull_share": 0.0039,
+  "skipfull_share_a0": 0.0039,
+  "lag": {
+   "eps_a0": 194,
+   "captured": 1.0,
+   "lag_med": 0.0,
+   "lag_p25": 0.0,
+   "lag_p75": 0.0
+  }
+ },
+ "r3m1-s7": {
+  "ok": true,
+  "jar": true,
+  "ov_ok": true,
+  "as_check": "mapper=863 funding=831/2394587 as_calls=0",
+  "legs_year": {
+   "2022": 359,
+   "2023": 433,
+   "2024": 581,
+   "2025": 493
+  },
+  "legs_year_a0": {
+   "2022": 539,
+   "2023": 709,
+   "2024": 805,
+   "2025": 622
+  },
+  "gate": {
+   "seen": 62072709,
+   "pass_": 2471,
+   "skipFull": 0
+  },
+  "gate_a0": {
+   "seen": 60809459,
+   "pass_": 3686,
+   "skipFull": 147
+  },
+  "skipfull_share": 0.0,
+  "skipfull_share_a0": 0.0384,
+  "lag": {
+   "eps_a0": 197,
+   "captured": 0.599,
+   "lag_med": 2.0,
+   "lag_p25": 0.0,
+   "lag_p75": 9.0
+  }
+ },
+ "r3m0-s7": {
+  "ok": true,
+  "jar": true,
+  "ov_ok": true,
+  "as_check": "mapper=863 funding=831/2394587 as_calls=0",
+  "legs_year": {
+   "2022": 541,
+   "2023": 713,
+   "2024": 816,
+   "2025": 628
+  },
+  "legs_year_a0": {
+   "2022": 539,
+   "2023": 709,
+   "2024": 805,
+   "2025": 622
+  },
+  "gate": {
+   "seen": 60758280,
+   "pass_": 3712,
+   "skipFull": 147
+  },
+  "gate_a0": {
+   "seen": 60809459,
+   "pass_": 3686,
+   "skipFull": 147
+  },
+  "skipfull_share": 0.0381,
+  "skipfull_share_a0": 0.0384,
+  "lag": {
+   "eps_a0": 197,
+   "captured": 1.0,
+   "lag_med": 0.0,
+   "lag_p25": 0.0,
+   "lag_p75": 0.0
+  }
+ },
+ "r3m1-s21": {
+  "ok": true,
+  "jar": true,
+  "ov_ok": true,
+  "as_check": "mapper=863 funding=831/2394587 as_calls=0",
+  "legs_year": {
+   "2022": 467,
+   "2023": 537,
+   "2024": 553,
+   "2025": 509
+  },
+  "legs_year_a0": {
+   "2022": 567,
+   "2023": 711,
+   "2024": 766,
+   "2025": 618
+  },
+  "gate": {
+   "seen": 61763394,
+   "pass_": 2758,
+   "skipFull": 0
+  },
+  "gate_a0": {
+   "seen": 60845632,
+   "pass_": 3675,
+   "skipFull": 942
+  },
+  "skipfull_share": 0.0,
+  "skipfull_share_a0": 0.204,
+  "lag": {
+   "eps_a0": 187,
+   "captured": 0.701,
+   "lag_med": 1.0,
+   "lag_p25": 0.0,
+   "lag_p75": 7.0
+  }
+ },
+ "r3m0-s21": {
+  "ok": true,
+  "jar": true,
+  "ov_ok": true,
+  "as_check": "mapper=863 funding=831/2394587 as_calls=0",
+  "legs_year": {
+   "2022": 568,
+   "2023": 716,
+   "2024": 777,
+   "2025": 634
+  },
+  "legs_year_a0": {
+   "2022": 567,
+   "2023": 711,
+   "2024": 766,
+   "2025": 618
+  },
+  "gate": {
+   "seen": 60811733,
+   "pass_": 3707,
+   "skipFull": 942
+  },
+  "gate_a0": {
+   "seen": 60845632,
+   "pass_": 3675,
+   "skipFull": 942
+  },
+  "skipfull_share": 0.2026,
+  "skipfull_share_a0": 0.204,
+  "lag": {
+   "eps_a0": 187,
+   "captured": 1.0,
+   "lag_med": 0.0,
+   "lag_p25": 0.0,
+   "lag_p75": 0.0
+  }
+ },
+ "r3m1-s99": {
+  "ok": true,
+  "jar": true,
+  "ov_ok": true,
+  "as_check": "mapper=863 funding=831/2394587 as_calls=0",
+  "legs_year": {
+   "2022": 407,
+   "2023": 494,
+   "2024": 532,
+   "2025": 503
+  },
+  "legs_year_a0": {
+   "2022": 578,
+   "2023": 705,
+   "2024": 791,
+   "2025": 692
+  },
+  "gate": {
+   "seen": 61846325,
+   "pass_": 2627,
+   "skipFull": 0
+  },
+  "gate_a0": {
+   "seen": 60810375,
+   "pass_": 3766,
+   "skipFull": 14
+  },
+  "skipfull_share": 0.0,
+  "skipfull_share_a0": 0.0037,
+  "lag": {
+   "eps_a0": 200,
+   "captured": 0.665,
+   "lag_med": 2.0,
+   "lag_p25": 0.0,
+   "lag_p75": 9.0
+  }
+ },
+ "r3m0-s99": {
+  "ok": true,
+  "jar": true,
+  "ov_ok": true,
+  "as_check": "mapper=863 funding=831/2394587 as_calls=0",
+  "legs_year": {
+   "2022": 582,
+   "2023": 711,
+   "2024": 792,
+   "2025": 693
+  },
+  "legs_year_a0": {
+   "2022": 578,
+   "2023": 705,
+   "2024": 791,
+   "2025": 692
+  },
+  "gate": {
+   "seen": 60781238,
+   "pass_": 3780,
+   "skipFull": 14
+  },
+  "gate_a0": {
+   "seen": 60810375,
+   "pass_": 3766,
+   "skipFull": 14
+  },
+  "skipfull_share": 0.0037,
+  "skipfull_share_a0": 0.0037,
+  "lag": {
+   "eps_a0": 200,
+   "captured": 0.995,
+   "lag_med": 0.0,
+   "lag_p25": 0.0,
+   "lag_p75": 0.0
+  }
+ }
+}

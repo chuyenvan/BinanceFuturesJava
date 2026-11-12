@@ -1,0 +1,20 @@
+{
+ "id": "chuyendinh/r5q-fwd",
+ "title": "r5q-fwd",
+ "code_file": "run.py",
+ "language": "python",
+ "kernel_type": "script",
+ "is_private": true,
+ "enable_gpu": false,
+ "enable_internet": false,
+ "dataset_sources": [
+  "chuyendinh/r5q-basket",
+  "chuyendinh/vz-kline1m-2022",
+  "chuyendinh/vz-kline1m-2023",
+  "chuyendinh/vz-kline1m-2024",
+  "chuyendinh/vz-kline1m-2025",
+  "chuyendinh/vz-kline1m-2026"
+ ],
+ "competition_sources": [],
+ "kernel_sources": []
+}

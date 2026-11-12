@@ -1,0 +1,3 @@
+[
+{"date":"20231109","legs":34,"legs_skipped":0,"minutes":31680,"symbols":24,"decision_events":119,"decision_mismatch_symbols":1,"arms":29,"sl_moves":87,"time_stops":3,"defers":0,"trail_exit_both":21,"trail_exit_same_minute":20,"trail_exit_later":0,"trail_exit_only_paper":0,"trail_exit_only_live":0,"mean_exit_px_diff_rel":-0.00433519,"open_end_paper":0,"open_end_live":0,"open_state_diff":0,"mismatches":["CAKEUSDT paper=[ARM@1699546920000=1.927848, ARM@1699549440000=1.9595073] live=[ARM@1699546920000=1.927848]","CAKEUSDT live thoat TRUOC giay TRAIL_EXIT@1699547760000=1.9156 vs TRAIL_EXIT@1699552980000=1.9595073"]}
+]

@@ -1,0 +1,21 @@
+v1.2(c3-live) 4u BIG_DOWN-SEL: leg market-signal c3 chon coin theo DUNG sim (bins S1-map)
+
+Truoc: leg BIG_DOWN/SMALL_* live lay top-n theo tier1Score (Funding/net015-raw,
+loc maxThres), trong khi sim/B0 lay top-n theo symbolPred S1-map
+(Simulator:368-380, getTopSymbolArray). Do tren DEV 2024-07..2025-12: ~90 % leg
+BIG_DOWN sim la coin live khong chon (res1109/r1_s1/r1_bd_tick.log).
+
+- BigDownSelect (moi): thu tu (symbolPred S1-map tang, symbol tang), bo dang giu,
+  bo thieu ticker, KHONG loc maxThres (sim khong loc), chep nguyen vong lap sim
+  (ke ca n<=0). Khac sim: trung symbolPred thi live giu ca hai (sim TreeMap mat 1).
+- DetectEntrySignal2TradeNormal: profile c3 BAT => bigDownSelectS1 (dang giu =
+  vi the that HOP so c3 theo GatePreFilter, nhu PREDICT); chua co S1/map => 0 leg
+  (fail-closed). Pool S1 cua tick tinh 1 lan, vong selector dung lai (scoreAll /
+  S1-dump van 1 lan/tick). buildValueMap tach phan tinh thuan computeValueMap.
+  Dong log [BIG_DOWN-SEL] top + diem cho parity. Profile TAT => duong cu nguyen van.
+- Khong doi PREDICT, gate, size, exit.
+- BigDownSelectTest: live == sim (getTopSymbolArray) tren 2000 ca ngau nhien +
+  bien: thieu S1, NaN/null, < n ung vien, n=1/n=0, trung diem (lech da ghi).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KcMsGREpUAoabx788AKSqW

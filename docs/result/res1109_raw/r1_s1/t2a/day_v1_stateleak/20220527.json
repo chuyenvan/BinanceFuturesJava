@@ -1,0 +1,3 @@
+[
+{"date":"20220527","legs":1,"legs_skipped":0,"minutes":886,"symbols":2,"decision_events":886,"decision_mismatch_symbols":1,"arms":0,"sl_moves":0,"time_stops":0,"defers":886,"trail_exit_both":0,"trail_exit_same_minute":0,"trail_exit_later":0,"trail_exit_only_paper":0,"trail_exit_only_live":0,"mean_exit_px_diff_rel":0.00000,"open_end_paper":2,"open_end_live":1,"open_state_diff":1,"mismatches":["ANCUSDT paper=[DEFER@1653589860000=NaN, DEFER@1653589920000=NaN, DEFER@1653589980000=NaN, DEFER@1653590040000=NaN, DEFER@1653590100000=NaN, DEFER@1653590160000=NaN]...(886) live=[]"]}
+]

@@ -1,0 +1,11 @@
+{
+ "tag": "r3g0s-a1",
+ "ok": true,
+ "jar": true,
+ "pd": "d03d320df57796205f0c2c7d47fdf476",
+ "pd_ref": "d03d320df57796205f0c2c7d47fdf476",
+ "es_same": true,
+ "as_check": "mapper=863 funding=831/2394587 as_calls=0",
+ "preflight_tcp": false,
+ "PASS": true
+}

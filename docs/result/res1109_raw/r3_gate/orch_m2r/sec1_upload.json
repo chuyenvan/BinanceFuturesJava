@@ -1,0 +1,15 @@
+{
+ "jar": "/home/ubuntu/claude_master/res1109/r3_gate/orch_m2r/ds_sim-jar-r5q/sim.jar",
+ "privateconfig_runs_ge20": 2,
+ "privateconfig_runs_ge20_jvm_names": [
+  "Lcom/binance/chuyennd/config/PrivateConfig;",
+  "com/binance/chuyennd/config/PrivateConfig"
+ ],
+ "privateconfig_runs_ge20_other": 0,
+ "privateconfig_max_run_len": 44,
+ "classes_scanned": 7572,
+ "com_binance_classes_with_64alnum": [],
+ "lib_classes_with_64alnum_gnu_crypto": 8,
+ "lib_classes_with_64alnum_other": [],
+ "ok": true
+}

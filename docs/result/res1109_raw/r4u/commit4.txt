@@ -1,0 +1,12 @@
+v1.2(c3-live) 4u3 C3-EXCL-FORCE: adapter=live + key khong phai keys_sub.env => ep C3_EXCLUDE_LEGACY_HELD=true
+
+A1 r4u2 C-1: C3_EXCLUDE_LEGACY_HELD=false cung tk chinh => vi the c3 that bi tinh la LEGACY,
+LEGACY va C3LiveRuntime cung quan ly 1 vi the. Defense in depth trong jar:
+- LegacySymbols.excludeLegacyHeld(): neu env=false VA LIVE_ADAPTER=live VA LIVE_C3_KEYS_FILE vang
+  / ten file chinh tac (realpath, theo symlink) != keys_sub.env => ep true + WARN [C3-EXCL-FORCE]
+  1 lan (ly do). Khong doc noi dung key. Adapter dry/off => giu dung env.
+- forceReason/effectiveExclude thuan + C3ExclForceTest (dry/live x true/false/vang x
+  keys.env/keys_sub.env/thieu + symlink keys_sub.env -> keys.env).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KcMsGREpUAoabx788AKSqW

@@ -1,0 +1,16 @@
+{
+ "/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4u_final": {
+  "ok": false,
+  "n_hits": 2,
+  "hits": [
+   [
+    "com/binance/chuyennd/client/P2PTelegramNotifier.class",
+    "4f49bded9d"
+   ],
+   [
+    "com/binance/chuyennd/utils/Utils.class",
+    "4f49bded9d"
+   ]
+  ]
+ }
+}

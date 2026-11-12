@@ -1,0 +1,11 @@
+v1.2(c3-live) 4u BIG_DOWN-GATE: leg BIG_DOWN cua c3 khong qua gate p15 (nhu sim)
+
+Sim (Simulator createOrder: `else if (!levelChange.equals(BIG_DOWN))`) khong goi
+entryGate cho leg BIG_DOWN; live c3 truoc day cho leg nay qua entryGate voi sp=null
+=> nguong phang SIM_MIN_MOMENTUM_15M 0.008. Nay profile c3 BAT + level BIG_DOWN =>
+bo gate; chi giu guard fail-closed seed buffer gate hong (nhu entryGate ap moi leg).
+SMALL_UP/SMALL_DOWN_15M van qua gate nhu sim. Profile TAT => y nguyen.
+Test: bypassGate dung cho moi MarketLevelChange (chi BIG_DOWN), guard seed.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KcMsGREpUAoabx788AKSqW

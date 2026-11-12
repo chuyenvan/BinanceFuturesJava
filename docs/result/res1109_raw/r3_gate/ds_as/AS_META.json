@@ -1,0 +1,19 @@
+{
+ "ns": "test",
+ "mapper_gen": 2,
+ "mapper_n": 863,
+ "funding_records": 831,
+ "funding_gen_hist": {
+  "1": 829,
+  "2": 2
+ },
+ "at_utc": "2026-11-11T01:27:11Z",
+ "mapper_file": "mapper_1111.tsv.gz",
+ "mapper_sha256": "d822822009ccc0dd196c8849de3516ebaf71e44406b3eaa6235c3869e03c764f",
+ "funding_file": "funding_1111.tsv.gz",
+ "funding_sha256": "5de23d42737ec1a9829d7614bc4e9d44853b9714d8f10c264e26bd191540b27c",
+ "funding_symbols": 831,
+ "funding_rows": 2394587,
+ "source": "Aerospike Oracle 127.0.0.1:3222 ns=test (chi doc), tool SimDataFiles dump (jar d10bdbae)",
+ "verify": "SimDataFiles verify: mapper_equal=true funding_mismatch=0; gen truoc/sau dump khong doi"
+}
