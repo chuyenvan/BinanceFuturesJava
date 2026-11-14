@@ -14,8 +14,8 @@
 # Rollback sau nay: bash ~/claude_master/deploy/rollback_ingest_fin.sh <TS>  (NEU v_t_m da la jar fin-guard: rollback v_t_m TRUOC
 #   hoac dat LIVE_FIN_GUARD=0, neu khong v_t_m fail-closed moi phut vi record khong con bin fin).
 set -uo pipefail
-JAR_SRC=/home/ubuntu/claude_master/fin1114/jar/binance-java-sdk-1.2.4.jar_ingfin_7e70a142
-JAR_MD5=c38e476cfb67f8ccb705f54936344aef
+JAR_SRC=/home/ubuntu/claude_master/fin1114/jar/binance-java-sdk-1.2.4.jar_ingfin_1e8f26e4   # [FIN vong 2] truoc: _7e70a142 c38e476c
+JAR_MD5=5e78ac0663b4a765551eac1c362bf194
 OLD_MD5=15f47509d9b9331b340337215e671198
 TG_SHA8=${TG_SHA8:-4f49bded}   # sha8 token Telegram ky vong (set_telegram_env_242.sh)
 # INGQF_SSH / INGQF_SCP chi de TEST (test_pause_trap.sh); prod de mac dinh
@@ -88,7 +88,9 @@ grep -q '^export INGEST_SCHEDULED_RESTART_HOURS=0' conf/env.sh && echo "OK env_r
 grep -q 'secrets/telegram.env' conf/env.sh && echo "OK env_source_telegram" || echo "FAIL env_chua_source_telegram (owner chay set_telegram_env_242.sh truoc)"
 TGS=$(bash -c '. conf/env.sh >/dev/null 2>&1; printf %s "$TELEGRAM_BOT_TOKEN"' | sha256sum | cut -c1-8)
 [ "$TGS" = "$TG8" ] && echo "OK telegram_env_sha8=$TGS" || echo "FAIL telegram_env_sha8=$TGS (ky vong $TG8)"
-grep -q '^export KLINE_FIN_BIN=0' conf/env.sh && echo "FAIL env_KLINE_FIN_BIN=0 (tat bin fin)" || echo "OK env_khong_tat_fin"
+# [A1-M5] co tat = 0/false/no/off (moi kieu hoa) - KHOP KlineIngestCore.flagOn; doc gia tri SAU KHI source env.sh (chi in gia tri co)
+KFB=$(bash -c '. conf/env.sh >/dev/null 2>&1; printf %s "${KLINE_FIN_BIN-}"')
+case "$(printf %s "$KFB" | tr -d " \t\"'" | tr 'A-Z' 'a-z')" in 0|false|no|off) echo "FAIL env_KLINE_FIN_BIN=$KFB (tat bin fin)";; *) echo "OK env_khong_tat_fin";; esac
 F=$(df -BM --output=avail / | tail -1 | tr -dc 0-9); [ "$F" -ge 2000 ] && echo "OK dia_trong=${F}MB" || echo "FAIL dia_trong=${F}MB"
 MA=$(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo); [ "$MA" -ge 1000 ] && echo "OK mem_avail=${MA}MB" || echo "FAIL mem_avail=${MA}MB"
 echo "INFO rss_ingest_MB=$(awk '/VmRSS/{print int($2/1024)}' /proc/$P/status)"
