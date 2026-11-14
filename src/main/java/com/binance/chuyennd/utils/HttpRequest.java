@@ -67,6 +67,16 @@ public class HttpRequest {
      * @param ex exception bắt được khi gọi/đọc HTTP.
      * @return nhãn ngắn gọn loại lỗi.
      */
+    /**
+     * [SEC 2026-11-14, port tu v1.2 2b] Che bi mat trong chuoi LOG (URL / thong diep exception): token Telegram
+     * {@code api.telegram.org/bot<token>} va dang {@code bot<so>:<chuoi>}. Chi dung cho log (KHONG doi request). null => "null".
+     */
+    public static String redactSecrets(String s) {
+        if (s == null) return "null";
+        String r = s.replaceAll("(?i)(api\\.telegram\\.org/bot)[^/\\s?&]+", "$1***");
+        return r.replaceAll("bot[0-9]{5,}:[A-Za-z0-9_-]{10,}", "bot***");
+    }
+
     private static String classifyError(Exception ex) {
         if (ex instanceof java.net.SocketTimeoutException) return "TIMEOUT";
         if (ex instanceof java.net.UnknownHostException) return "DNS";
@@ -147,7 +157,7 @@ public class HttpRequest {
             return conn;
         } catch (Exception e1) {
             // TASK-028 #3: trước trả null câm → downstream chỉ thấy NPE (CONN_NULL), mất cause thật.
-            LOG.debug("HttpRequest.connect lỗi [{}] url={}: {}", classifyError(e1), url_, e1.getMessage());
+            LOG.debug("HttpRequest.connect lỗi [{}] url={}: {}", classifyError(e1), redactSecrets(String.valueOf(url_)), redactSecrets(e1.getMessage()));
             return null;
         }
     }
@@ -188,7 +198,7 @@ public class HttpRequest {
             return conn;
         } catch (Exception e1) {
             // TASK-028 #3: trước trả null câm → downstream chỉ thấy NPE (CONN_NULL), mất cause thật.
-            LOG.debug("HttpRequest.connect lỗi [{}] url={}: {}", classifyError(e1), url_, e1.getMessage());
+            LOG.debug("HttpRequest.connect lỗi [{}] url={}: {}", classifyError(e1), redactSecrets(String.valueOf(url_)), redactSecrets(e1.getMessage()));
             return null;
         }
     }
@@ -238,7 +248,7 @@ public class HttpRequest {
         try {
             return getContentFromUrl(url, new HashMap<>(), timeout);
         } catch (Exception e) {
-            LOG.warn("getContentFromUrl(timeout) lỗi [{}] url={}: {}", classifyError(e), url, e.getMessage());
+            LOG.warn("getContentFromUrl(timeout) lỗi [{}] url={}: {}", classifyError(e), redactSecrets(url), redactSecrets(e.getMessage()));
         }
         return "";
     }
@@ -246,7 +256,7 @@ public class HttpRequest {
         try {
             return getContentFromUrl(url, new HashMap<>());
         } catch (Exception e) {
-            LOG.warn("getContentFromUrl lỗi [{}] url={}: {}", classifyError(e), url, e.getMessage());
+            LOG.warn("getContentFromUrl lỗi [{}] url={}: {}", classifyError(e), redactSecrets(url), redactSecrets(e.getMessage()));
         }
         return "";
     }
@@ -361,11 +371,11 @@ public class HttpRequest {
                 // không ai biết. Giữ hành vi trả null ở lần cuối nhưng để LẠI VẾT có phân loại.
                 if (i == NUM_RETRY_CONNECTION - 1) {
                     LOG.warn("HttpRequest GET fail [{}] url={} sau {} lần thử: {}",
-                            classifyError(ex), url, NUM_RETRY_CONNECTION, ex.getMessage());
+                            classifyError(ex), redactSecrets(url), NUM_RETRY_CONNECTION, redactSecrets(ex.getMessage()));
                     return null;
                 }
                 LOG.debug("HttpRequest GET retry {}/{} [{}] url={}: {}",
-                        i + 1, NUM_RETRY_CONNECTION, classifyError(ex), url, ex.getMessage());
+                        i + 1, NUM_RETRY_CONNECTION, classifyError(ex), redactSecrets(url), redactSecrets(ex.getMessage()));
             }
         }
         return content;
@@ -437,11 +447,11 @@ public class HttpRequest {
                 // không ai biết. Giữ hành vi trả null ở lần cuối nhưng để LẠI VẾT có phân loại.
                 if (i == NUM_RETRY_CONNECTION - 1) {
                     LOG.warn("HttpRequest GET fail [{}] url={} sau {} lần thử: {}",
-                            classifyError(ex), url, NUM_RETRY_CONNECTION, ex.getMessage());
+                            classifyError(ex), redactSecrets(url), NUM_RETRY_CONNECTION, redactSecrets(ex.getMessage()));
                     return null;
                 }
                 LOG.debug("HttpRequest GET retry {}/{} [{}] url={}: {}",
-                        i + 1, NUM_RETRY_CONNECTION, classifyError(ex), url, ex.getMessage());
+                        i + 1, NUM_RETRY_CONNECTION, classifyError(ex), redactSecrets(url), redactSecrets(ex.getMessage()));
             }
         }
         return content;

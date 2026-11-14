@@ -212,6 +212,54 @@ public class DataManagerAerospikeFloatSim {
         }
     }
 
+    /**
+     * [FIN 2026-11-14] Nhu {@link #writeMinuteBatch} nhung cap nhat THEM bin {@link MinuteFin#BIN} trong CUNG 1 put (nguyen tu,
+     * trong khoa stripe cua phut): fin_moi = fin_cu - (symbol trong newTickers KHONG thuoc finalSyms) + (finalSyms co nen trong
+     * data). Record chua co + newTickers rong =&gt; khong ghi (khong tao record chi co fin). newTickers rong + fin khong doi =&gt;
+     * khong ghi. Bin fin hong =&gt; coi nhu rong (WARN). Ten symbol = ten ngan (key map data).
+     */
+    public static void writeMinuteBatchFin(long timestamp, Map<String, KlineObjectOptimized> newTickers, java.util.Set<String> finalSyms) {
+        if (!Live242WriteGuard.allowed("kline_1m_opt")) return;   // [FIX_NO_WRITE_242] shadow host => khong ghi 242
+        try {
+            SimpleDateFormat fmt = new SimpleDateFormat("yyyyMMdd-HHmm");
+            String keyString = fmt.format(new Date(timestamp));
+            Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER, keyString);
+            Object lock = MINUTE_WRITE_LOCKS[(keyString.hashCode() & 0x7fffffff) % MINUTE_WRITE_STRIPES];
+            synchronized (lock) {
+                Record record = getClient242().get(null, key);
+                Map<String, KlineObjectOptimized> finalMap = new HashMap<>();
+                java.util.Set<String> finOld = null;
+                if (record != null) {
+                    try {   // nhu getExistingTickersMap: data hong => coi nhu rong (ghi de lanh)
+                        byte[] data = (byte[]) record.getValue("data");
+                        if (data != null) finalMap.putAll(MinuteDataFinal.parseFrom(Snappy.uncompress(data)).getTickersMap());
+                    } catch (Exception e) {
+                        LOG.warn("[KLINE-FIN] data phut {} hong, ghi de: {}", keyString, e.toString());
+                    }
+                    try {
+                        finOld = MinuteFin.decode((byte[]) record.getValue(MinuteFin.BIN));
+                    } catch (Exception e) {
+                        LOG.warn("[KLINE-FIN] bin fin phut {} hong, coi nhu rong: {}", keyString, e.toString());
+                    }
+                }
+                boolean hasNew = newTickers != null && !newTickers.isEmpty();
+                if (record == null && !hasNew) return;
+                if (hasNew) finalMap.putAll(newTickers);
+                java.util.Set<String> fin = MinuteFin.merge(finOld, hasNew ? newTickers.keySet() : null, finalSyms, finalMap.keySet());
+                Bin finBin = new Bin(MinuteFin.BIN, MinuteFin.encode(fin));
+                if (!hasNew) {
+                    if (fin.equals(finOld)) return;   // khong doi gi
+                    getClient242().put(writePolicy, key, finBin);
+                    return;
+                }
+                byte[] compressed = Snappy.compress(MinuteDataFinal.newBuilder().putAllTickers(finalMap).build().toByteArray());
+                getClient242().put(writePolicy, key, new Bin("data", compressed), finBin);
+            }
+        } catch (Exception e) {
+            LOG.error("[KLINE-FIN] loi ghi phut {}: {}", timestamp, e.toString());
+        }
+    }
+
     public static void writePriceRealtime(Map<String, Float> priceMap) {
         if (!Live242WriteGuard.allowed("price_realtime")) return;   // [FIX_NO_WRITE_242] shadow host => khong ghi 242
         if (priceMap == null || priceMap.isEmpty()) return;

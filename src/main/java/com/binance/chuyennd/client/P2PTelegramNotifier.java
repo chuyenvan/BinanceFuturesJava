@@ -27,7 +27,7 @@ public class P2PTelegramNotifier {
     // ⚙️ CẤU HÌNH TELEGRAM API (CHÍNH CHỦ - KHÔNG BAO GIỜ CHẾT)
     // =====================================================================
     // 1. Điền Token lấy từ @BotFather
-    private static final String TELEGRAM_BOT_TOKEN = "6158571844:AAHgemRZAWCFARpkyiZkpc9iTT4hEKMtUvw";
+    // [SEC 2026-11-14] token bot: env TELEGRAM_BOT_TOKEN qua Utils.telegramToken() (khong hard-code)
 
     // 2. Điền ID lấy từ @userinfobot
     private static final String TELEGRAM_CHAT_ID = "6548680563";
@@ -152,8 +152,10 @@ public class P2PTelegramNotifier {
             String encodedMessage = URLEncoder.encode(message, StandardCharsets.UTF_8.toString());
 
             // API Telegram chính chủ, parse_mode=Markdown để nhận diện in đậm/nghiêng
+            String token = com.binance.chuyennd.utils.Utils.telegramToken();
+            if (token == null) return;   // thieu env => TAT gui (da ERROR 1 lan)
             String url = String.format("https://api.telegram.org/bot%s/sendMessage?chat_id=%s&text=%s&parse_mode=Markdown",
-                    TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, encodedMessage);
+                    token, TELEGRAM_CHAT_ID, encodedMessage);
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))

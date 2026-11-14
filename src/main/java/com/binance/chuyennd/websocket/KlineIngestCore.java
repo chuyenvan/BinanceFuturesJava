@@ -6,6 +6,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +45,15 @@ public final class KlineIngestCore {
         Map<String, KlineObjectOptimized> read(long minute);
 
         void write(long minute, Map<String, KlineObjectOptimized> candles);
+
+        /**
+         * [FIN 2026-11-14] Ghi nen DA DONG + cap nhat bin fin (nguyen tu): {@code finalSyms} (ten ngan) = ban CHOT (WS final /
+         * REST settle); symbol con lai trong {@code candles} = chua chot (go khoi fin). {@code candles} rong + {@code finalSyms}
+         * rong = "dong dau" phut (ingestor moi, 0 nen chot). Mac dinh (store test cu): chi ghi data nhu {@link #write}.
+         */
+        default void writeFinal(long minute, Map<String, KlineObjectOptimized> candles, Set<String> finalSyms) {
+            if (candles != null && !candles.isEmpty()) write(minute, candles);
+        }
     }
 
     /** REST {@code fapi/v1/klines?interval=1m&limit=N} (nến mới nhất) cho symbol đầy đủ (BTCUSDT). Lỗi ⇒ ném exception. */
@@ -130,11 +141,23 @@ public final class KlineIngestCore {
     }
 
     /** Ghi nến ĐÃ ĐÓNG của phút {@code minute} (merge theo symbol trong store) và đánh dấu phút đã chốt. */
-    void writeClosed(long minute, Map<String, KlineObjectOptimized> candles) {
-        if (candles == null || candles.isEmpty()) return;
+    /* [FIN] finalSyms (ten ngan) = symbol co ban CHOT sau lan ghi (WS final / REST settle) => vao bin fin; symbol trong candles
+     * ngoai finalSyms (REST som) => go khoi fin. candles rong + finalSyms khac rong = chi danh dau fin (settle "same"). */
+    void writeClosed(long minute, Map<String, KlineObjectOptimized> candles, Set<String> finalSyms) {
+        boolean hasC = candles != null && !candles.isEmpty();
+        boolean hasF = finalSyms != null && !finalSyms.isEmpty();
+        if (!hasC && !hasF) return;
         synchronized (writeLock) {
-            if (minute > finalizedThrough) finalizedThrough = minute;
-            store.write(minute, new HashMap<>(candles));
+            if (hasC && minute > finalizedThrough) finalizedThrough = minute;
+            store.writeFinal(minute, hasC ? new HashMap<>(candles) : Collections.<String, KlineObjectOptimized>emptyMap(),
+                    hasF ? new HashSet<>(finalSyms) : Collections.<String>emptySet());
+        }
+    }
+
+    /** [FIN] Phut khong co WS final nao luc flush: dong dau bin fin rong (record da co) de live phan biet voi ingestor cu. */
+    void stampFin(long minute) {
+        synchronized (writeLock) {
+            store.writeFinal(minute, Collections.<String, KlineObjectOptimized>emptyMap(), Collections.<String>emptySet());
         }
     }
 
@@ -167,8 +190,11 @@ public final class KlineIngestCore {
     public int flushWsFinals(long minute) {
         wsFlushed.add(minute);
         ConcurrentHashMap<String, KlineObjectOptimized> m = wsPending.remove(minute);
-        if (m == null || m.isEmpty()) return 0;
-        writeClosed(minute, m);
+        if (m == null || m.isEmpty()) {
+            stampFin(minute);   // [FIN] 0 WS final luc flush: fin = {} (khong doi data)
+            return 0;
+        }
+        writeClosed(minute, m, m.keySet());   // [FIN] WS final = ban chot
         return m.size();
     }
 
@@ -179,7 +205,7 @@ public final class KlineIngestCore {
             if (!wsFlushed.contains(minute)) continue;
             ConcurrentHashMap<String, KlineObjectOptimized> m = wsPending.remove(minute);
             if (m == null || m.isEmpty()) continue;
-            writeClosed(minute, m);
+            writeClosed(minute, m, m.keySet());   // [FIN] WS final toi muon = ban chot (fin lon dan)
             cWsLate.addAndGet(m.size());
             n += m.size();
         }
@@ -290,7 +316,7 @@ public final class KlineIngestCore {
         // WS final đã tới trong lúc fetch thì KHÔNG đè bằng REST sớm (WS final là bản cuối của sàn).
         Set<String> seen = wsSeen.get(minute);
         if (seen != null) r.closed.keySet().removeAll(seen);
-        writeClosed(minute, r.closed);
+        writeClosed(minute, r.closed, Collections.<String>emptySet());   // [FIN] REST som co the CHUA settle => KHONG vao fin
         cEarlyFetched.addAndGet(got.size() - r.failed.size());
         cEarlyFailed.addAndGet(r.failed.size());
         if (!r.failed.isEmpty()) {
@@ -343,7 +369,8 @@ public final class KlineIngestCore {
                     res.same++;
                 }
             }
-            if (!diff.isEmpty()) writeClosed(minute, diff);
+            // [FIN] moi nen trong e (diff + thieu + same) da settle (>= settleMinAge) va sau lan ghi nay = store => ban chot
+            writeClosed(minute, diff, e.getValue().keySet());
             res.diffByMinute.put(minute, nd);
         }
         cSettleFetched.addAndGet(res.fetched);

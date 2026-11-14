@@ -43,6 +43,9 @@ public class TickerIngestor2AerospikeNew {
     static final String MODE_LEGACY = "legacy", MODE_REST = "rest_settle", MODE_WS = "ws_settle";
     static final String MODE = normMode(com.binance.chuyennd.tradecore.Cfg.getOr("KLINE_INGEST_MODE", MODE_WS));
     static final long WS_FLUSH_MS = cfgLong("KLINE_WS_FLUSH_MS", 1500);
+    /** [FIN 2026-11-14] ghi bin "fin" (tap symbol co nen DA CHOT) cung record phut; "0"/"false" = tat (rollback, live can LIVE_FIN_GUARD=0). */
+    static final boolean FIN_BIN = !("0".equals(com.binance.chuyennd.tradecore.Cfg.getOr("KLINE_FIN_BIN", "1").trim())
+            || "false".equalsIgnoreCase(com.binance.chuyennd.tradecore.Cfg.getOr("KLINE_FIN_BIN", "1").trim()));
     /** REST som cho symbol THIEU WS final. Do 2026-10-10 (/market, 30 sym x 8 phut): x=true toi p50 0,52 s nhung ~22% symbol
      *  (it giao dich) toi o ~3,04 s moi phut, 0 sau 3,5 s => ws_settle mac dinh 4 s (WS suy giam >50% thieu o giay 2 => REST ngay);
      *  rest_settle mac dinh 2 s (nhu V8.1). Ca hai xong truoc khi live doc o giay 6. */
@@ -121,6 +124,16 @@ public class TickerIngestor2AerospikeNew {
         public void write(long minute, Map<String, KlineObjectOptimized> candles) {
             DataManagerAerospikeFloatSim.writeMinuteBatch(minute, candles);
         }
+
+        /** [FIN] KLINE_FIN_BIN=1 (mac dinh): data + bin fin nguyen tu; =0 (rollback): chi data nhu cu. */
+        @Override
+        public void writeFinal(long minute, Map<String, KlineObjectOptimized> candles, Set<String> finalSyms) {
+            if (FIN_BIN) {
+                DataManagerAerospikeFloatSim.writeMinuteBatchFin(minute, candles, finalSyms);
+            } else if (candles != null && !candles.isEmpty()) {
+                DataManagerAerospikeFloatSim.writeMinuteBatch(minute, candles);
+            }
+        }
     }
 
     public void start() {
@@ -128,6 +141,8 @@ public class TickerIngestor2AerospikeNew {
                 + "wsFlushMs={} earlyRestSec={} settleSec={} settleMinAgeSec={} settleLimit={} startupLimit={} retry={} streamsPerConn={}",
                 MODE, WS_FLUSH_MS, EARLY_REST_SEC, SETTLE_SEC, SETTLE_MIN_AGE_SEC, SETTLE_LIMIT, SETTLE_LIMIT_STARTUP, REST_RETRY, WS_STREAMS_PER_CONN);
 
+        LOG.info("[KLINE-FIN] bin fin {} (KLINE_FIN_BIN) - tap symbol co nen DA CHOT (WS final / REST settle) ghi nguyen tu cung bin data",
+                FIN_BIN ? "BAT" : "TAT");
         List<String> symbols = collectSymbolsFromRedis();
         globalSubscribedSymbols.addAll(symbols);
 

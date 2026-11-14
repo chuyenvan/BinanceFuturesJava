@@ -118,11 +118,30 @@ public class Utils {
     }
 
 
+    /** [SEC 2026-11-14] Ten bien env DUY NHAT chua token bot Telegram (ca collectData lan v_t_m). */
+    public static final String TELEGRAM_TOKEN_ENV = "TELEGRAM_BOT_TOKEN";
+    private static final java.util.concurrent.atomic.AtomicBoolean TELEGRAM_TOKEN_MISSING_LOGGED = new java.util.concurrent.atomic.AtomicBoolean();
+
+    /** Token bot tu env (qua Cfg, key ha tang); vang/rong => ERROR 1 lan + null (TAT gui Telegram). KHONG co gia tri mac dinh. */
+    public static String telegramToken() {
+        String t = com.binance.chuyennd.tradecore.Cfg.get(TELEGRAM_TOKEN_ENV);
+        t = t == null ? null : t.trim();
+        if (t == null || t.isEmpty()) {
+            if (TELEGRAM_TOKEN_MISSING_LOGGED.compareAndSet(false, true)) {
+                LOG.error("[TELEGRAM] thieu env {} => TAT gui Telegram (khong co token mac dinh trong jar)", TELEGRAM_TOKEN_ENV);
+            }
+            return null;
+        }
+        return t;
+    }
+
     public static boolean sendSms2Telegram(String text) {
         String urlString = "https://api.telegram.org/bot%s/sendMessage?chat_id=%s&text=%s&parse_mode=HTML";
 
         //Add Telegram token (given Token is fake)
-        String apiToken = "6158571844:AAHgemRZAWCFARpkyiZkpc9iTT4hEKMtUvw";
+        // [SEC 2026-11-14] token CHI tu env TELEGRAM_BOT_TOKEN (khong hard-code, khong fallback); vang => TAT gui (ERROR 1 lan)
+        String apiToken = telegramToken();
+        if (apiToken == null) return true;   // giu hop dong cu (luon tra true)
 
         //Add chatId (given chatId is fake)
         String chatId = "6548680563";
@@ -132,7 +151,8 @@ public class Utils {
         try {
             LOG.info("Telegram respon: {}", HttpRequest.getContentFromUrl(urlString));
         } catch (Exception e) {
-            e.printStackTrace();
+            // [SEC] KHONG printStackTrace / log URL (chua token): chi thong diep loi da che token
+            LOG.warn("Telegram gui loi: {}", HttpRequest.redactSecrets(String.valueOf(e)));
         }
         return true;
     }

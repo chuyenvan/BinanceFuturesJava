@@ -59,6 +59,8 @@ public final class Cfg {
             // [INGEST-QF 2026-10-30] ngan sach REST + watchdog collectData (ha tang)
             "INGEST_REST_WEIGHT_CAP", "INGEST_HDR_SOFT", "INGEST_HDR_HARD", "INGEST_SCHEDULED_RESTART_HOURS",
             "INGEST_PRICE_DIFF_TG_MIN", "KLINE_RECON_SAMPLE", "KLINE_EARLY_DEGRADED_RULE",
+            // [FIN / SEC 2026-11-14] bin fin cua ingestor + token bot Telegram (bi mat ha tang, CHI env)
+            "KLINE_FIN_BIN", "TELEGRAM_BOT_TOKEN",
             // [INGEST-QF2 2026-10-31]
             "INGEST_FDATA_REQ_CAP", "KLINE_EARLY_REST_MAX", "KLINE_WS_STALE_MS", "KLINE_WS_WATCHDOG_MS");
 
