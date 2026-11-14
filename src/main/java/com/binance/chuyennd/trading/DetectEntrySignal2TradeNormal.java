@@ -136,6 +136,13 @@ public class DetectEntrySignal2TradeNormal {
                 com.binance.chuyennd.aerospike.MinuteCompletenessGuard.RATIO_PCT,
                 com.binance.chuyennd.aerospike.MinuteCompletenessGuard.LOOKBACK_MIN,
                 com.binance.chuyennd.aerospike.MinuteCompletenessGuard.DEADLINE_AFTER_CLOSE_MS / 1000L);
+        LOG.info("[MINUTE-FIN] {} - phut DU theo dem con phai co >= {}% universe (A1, bo died) nam trong bin fin (nen DA CHOT) cua"
+                        + " ingestor; thieu => doc lai toi giay +{} roi fail-closed; record khong co bin fin => fail-closed (rollback: {}=0)",
+                com.binance.chuyennd.aerospike.MinuteCompletenessGuard.enabled()
+                        && com.binance.chuyennd.aerospike.MinuteCompletenessGuard.finEnabled() ? "BAT" : "TAT",
+                com.binance.chuyennd.aerospike.MinuteCompletenessGuard.FIN_RATIO_PCT,
+                com.binance.chuyennd.aerospike.MinuteCompletenessGuard.FIN_DEADLINE_AFTER_CLOSE_MS / 1000L,
+                com.binance.chuyennd.aerospike.MinuteCompletenessGuard.KEY_FIN);
         initData();
         startThreadDetectMarketLevel2Trader();
     }
@@ -220,8 +227,20 @@ public class DetectEntrySignal2TradeNormal {
             if (com.binance.chuyennd.aerospike.MinuteCompletenessGuard.enabled()) {
                 com.binance.chuyennd.aerospike.MinuteCompletenessGuard.Verdict mg =
                         com.binance.chuyennd.aerospike.MinuteCompletenessGuard.check(tickerWindow, tickerWindow.lastEndMinute());
-                if (mg.waited) symbol2LastTickers = tickerWindow.read(System.currentTimeMillis(), 1000);   // cache da bu sau khi cho
+                boolean rereadWindow = mg.waited;   // cache da bu sau khi cho
                 minuteIncomplete = !mg.complete;
+                // [FIN 2026-11-14, phuong an A] phut DU theo dem => kiem them bin fin (nen DA CHOT) cua ingestor tren universe dang dung
+                //   (A1, bo died): >= 99 % => quyet dinh tren nen da chot; thieu => doc lai toi giay +45, van thieu => fail-closed.
+                if (mg.complete && com.binance.chuyennd.aerospike.MinuteCompletenessGuard.finEnabled()) {
+                    final long finNow = System.currentTimeMillis();
+                    com.binance.chuyennd.aerospike.MinuteCompletenessGuard.FinVerdict fv =
+                            com.binance.chuyennd.aerospike.MinuteCompletenessGuard.checkFin(tickerWindow, tickerWindow.lastEndMinute(),
+                                    sym -> !Constants.diedSymbol.contains(sym)
+                                            && !com.binance.chuyennd.tradecore.selector.UniverseA1Filter.isExcluded(sym, finNow));
+                    rereadWindow |= fv.waited || fv.changed;   // cache da duoc thay ban chot
+                    minuteIncomplete = !fv.complete;
+                }
+                if (rereadWindow) symbol2LastTickers = tickerWindow.read(System.currentTimeMillis(), 1000);
             }
             // [V12 R4d UNIVERSE-A1] diem loc phia live: ngay sau tickerWindow.read => symbol2FinalTicker, market level/breadth,
             //   cascadeUniverse, predictAllCandidates (funding/OI), getTopSymbol (S1), DCA deu tu MOT tap. Co tat => cung map.

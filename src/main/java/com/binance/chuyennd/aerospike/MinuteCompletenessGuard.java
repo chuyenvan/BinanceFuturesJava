@@ -11,6 +11,7 @@ import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /**
@@ -90,6 +91,10 @@ public final class MinuteCompletenessGuard {
         /** [R4t] symbol da thay o phut DU (+ mam tu cache), dinh — WS rot keo dai khong lam mat symbol khoi tap nay. */
         final Set<String> knownSyms = new HashSet<>();
         long lastSanityWarnMinute = Long.MIN_VALUE;
+        /** [FIN] da thay bin fin (ingestor moi) trong JVM nay; FIN_NOBIN_RESET phut lien tiep khong co bin =&gt; false. */
+        boolean finSeen = false;
+        int finNoBinStreak = 0;
+        long lastNoBinWarnMinute = Long.MIN_VALUE;
 
         State(Consumer<String> alertSink) {
             this(() -> null, alertSink);
@@ -153,16 +158,21 @@ public final class MinuteCompletenessGuard {
         }
 
         void onIncomplete(Verdict v) {
+            onIncomplete(v.minute, v.line());
+        }
+
+        /** [FIN] dung chung cho MI dem va MI fin: dem lien tiep / 60' + KHAN Telegram (chong spam). */
+        void onIncomplete(long minute, String line) {
             consecutive++;
-            miMinutes.addLast(v.minute);
-            while (!miMinutes.isEmpty() && miMinutes.peekFirst() <= v.minute - LOOKBACK_MIN * Utils.TIME_MINUTE) miMinutes.pollFirst();
+            miMinutes.addLast(minute);
+            while (!miMinutes.isEmpty() && miMinutes.peekFirst() <= minute - LOOKBACK_MIN * Utils.TIME_MINUTE) miMinutes.pollFirst();
             int n60 = miMinutes.size();
             if (consecutive < ALERT_CONSEC && n60 < ALERT_N60) return;
-            if (lastAlertMinute != Long.MIN_VALUE && v.minute - lastAlertMinute < ALERT_COOLDOWN_MIN * Utils.TIME_MINUTE) return;
-            lastAlertMinute = v.minute;
+            if (lastAlertMinute != Long.MIN_VALUE && minute - lastAlertMinute < ALERT_COOLDOWN_MIN * Utils.TIME_MINUTE) return;
+            lastAlertMinute = minute;
             long na = N_ALERTS.incrementAndGet();
             String msg = "[MINUTE-GUARD] KHAN: du lieu nen 1m THIEU — " + consecutive + " phut lien tiep, " + n60
-                    + " phut/60' fail-closed (KHONG mo lenh moi; vi the/trailing/stop giu nguyen). " + v.line()
+                    + " phut/60' fail-closed (KHONG mo lenh moi; vi the/trailing/stop giu nguyen). " + line
                     + ". Kiem ingestor collectData/WS. (toi da 1 tin/" + ALERT_COOLDOWN_MIN + "', tin thu " + na + ")";
             LOG.warn("{}", msg);
             try {
@@ -218,6 +228,151 @@ public final class MinuteCompletenessGuard {
     /** need = ceil(RATIO_PCT/100 x median) tinh bang so nguyen tren 2 x median. */
     static int need(int median2) {
         return (RATIO_PCT * median2 + 199) / 200;
+    }
+
+    // ===================== [FIN 2026-11-14, phuong an A] guard theo bin "fin" cua ingestor =====================
+    /**
+     * Co rollback (Cfg.get, doc 1 lan/JVM): "0"/"false" =&gt; TAT kiem fin (hanh vi r4u3: chi dem so symbol co nen).
+     * Vang/khac =&gt; BAT. Chi dung khi buoc phai chay jar nay voi ingestor CU (khong ghi bin fin).
+     */
+    public static final String KEY_FIN = "LIVE_FIN_GUARD";
+    /** Nguong = khai niem guard dem: phut DA CHOT khi so symbol (fin giao U) &gt;= ceil(99 % x |U|); U = universe dang dung. */
+    public static final int FIN_RATIO_PCT = RATIO_PCT;
+    /** Han doc lai fin: giay +45 sau khi phut dong (WS final tre ve +4..+30 s; REST settle tu +20..+30 s). */
+    public static final long FIN_DEADLINE_AFTER_CLOSE_MS = 45_000L;
+    /** So phut lien tiep record khong co bin fin =&gt; coi ingestor la CU: khong cho doc lai nua (fail-closed ngay). */
+    public static final int FIN_NOBIN_RESET = 3;
+    public static final AtomicLong N_FIN_INCOMPLETE = new AtomicLong();
+    public static final AtomicLong N_FIN_NOBIN = new AtomicLong();
+    public static final AtomicLong N_FIN_WAITED = new AtomicLong();
+    public static final AtomicLong N_FIN_RECOVERED = new AtomicLong();
+    private static volatile Boolean finOn = null;
+
+    static boolean parseFinFlag(String v) {
+        if (v == null) return true;
+        String s = v.trim();
+        return !("0".equals(s) || "false".equalsIgnoreCase(s));
+    }
+
+    public static boolean finEnabled() {
+        Boolean b = finOn;
+        if (b == null) {
+            b = parseFinFlag(com.binance.chuyennd.tradecore.Cfg.get(KEY_FIN));
+            finOn = b;
+        }
+        return b;
+    }
+
+    /** need = ceil(FIN_RATIO_PCT/100 x |U|). */
+    static int finNeed(int universe) {
+        return (FIN_RATIO_PCT * universe + 99) / 100;
+    }
+
+    /** Ket qua kiem fin 1 phut. reason: DU | DU_SAU_CHO | FIN_THIEU | FIN_KHONG_BIN. */
+    public static final class FinVerdict {
+        public final long minute;
+        public final boolean complete, waited, changed, binPresent;
+        public final int have, universe, need, polls;
+        public final long waitedMs;
+        public final String reason;
+
+        FinVerdict(long minute, boolean complete, boolean waited, boolean changed, boolean binPresent, int have, int universe,
+                   int need, int polls, long waitedMs, String reason) {
+            this.minute = minute;
+            this.complete = complete;
+            this.waited = waited;
+            this.changed = changed;
+            this.binPresent = binPresent;
+            this.have = have;
+            this.universe = universe;
+            this.need = need;
+            this.polls = polls;
+            this.waitedMs = waitedMs;
+            this.reason = reason;
+        }
+
+        public String line() {
+            return "phut=" + Utils.normalizeDateYYYYMMDDHHmm(minute) + " fin=" + have + "/" + universe + " can=" + need
+                    + " bin_fin=" + (binPresent ? 1 : 0) + " cho=" + waitedMs + "ms doc_lai=" + polls;
+        }
+    }
+
+    /** {co, |U|, bin_fin} - U = symbol co nen phut m trong cache (sau merge) va thuoc universe; co = |U giao fin|. */
+    static int[] finCount(LiveTickerWindow w, long m, MinuteFin.Read r, Predicate<String> inUniverse) {
+        java.util.Set<String> fin = r == null ? null : r.fin;
+        int have = 0, u = 0;
+        for (String sym : w.symbolsAt(m)) {
+            if (inUniverse != null && !inUniverse.test(sym)) continue;
+            u++;
+            if (fin != null && fin.contains(sym)) have++;
+        }
+        return new int[]{have, u, fin != null ? 1 : 0};
+    }
+
+    public static FinVerdict checkFin(LiveTickerWindow w, long endMinute, Predicate<String> inUniverse) {
+        return checkFin(LIVE, w, endMinute, inUniverse, System::currentTimeMillis, Thread::sleep);
+    }
+
+    /**
+     * [FIN] Goi SAU guard dem (phut da DU theo dem). Doc nguyen tu data+fin phut {@code endMinute}, merge vao cache; du =&gt; tra ngay.
+     * Thieu =&gt; doc lai moi {@link #POLL_MS} toi khi du hoac toi giay +{@link #FIN_DEADLINE_AFTER_CLOSE_MS}/1000 sau khi phut dong.
+     * Van thieu =&gt; fail-closed (nhu MINUTE-INCOMPLETE). Record khong co bin fin va chua tung thay bin =&gt; fail-closed NGAY.
+     */
+    static FinVerdict checkFin(State s, LiveTickerWindow w, long endMinute, Predicate<String> inUniverse, LongSupplier clock,
+                               LiveTickerWindow.Sleeper sleeper) {
+        long t0 = clock.getAsLong();
+        MinuteFin.Read r = w.readFinal(endMinute);
+        boolean changed = r.overwritten > 0;
+        int[] c = finCount(w, endMinute, r, inUniverse);
+        if (c[2] == 1) s.finSeen = true;
+        boolean noWait = c[2] == 0 && r.found && !s.finSeen;   // ingestor cu: tranh chan tick toi +45 s moi phut
+        long deadline = endMinute + Utils.TIME_MINUTE + FIN_DEADLINE_AFTER_CLOSE_MS;
+        int polls = 0;
+        while (!noWait && !(c[2] == 1 && c[0] >= finNeed(c[1]))) {
+            long now = clock.getAsLong();
+            if (now >= deadline) break;
+            try {
+                sleeper.sleep(Math.max(1L, Math.min(POLL_MS, deadline - now)));
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+            r = w.readFinal(endMinute);
+            polls++;
+            if (r.overwritten > 0) changed = true;
+            c = finCount(w, endMinute, r, inUniverse);
+            if (c[2] == 1) s.finSeen = true;
+        }
+        boolean bin = c[2] == 1;
+        boolean ok = bin && c[0] >= finNeed(c[1]);
+        if (bin) {
+            s.finNoBinStreak = 0;
+        } else if (++s.finNoBinStreak >= FIN_NOBIN_RESET) {
+            s.finSeen = false;
+        }
+        String reason = ok ? (polls > 0 ? "DU_SAU_CHO" : "DU") : (bin ? "FIN_THIEU" : "FIN_KHONG_BIN");
+        FinVerdict v = new FinVerdict(endMinute, ok, polls > 0, changed, bin, c[0], c[1], finNeed(c[1]), polls,
+                clock.getAsLong() - t0, reason);
+        if (polls > 0) N_FIN_WAITED.incrementAndGet();
+        if (ok) {
+            if (polls > 0) {
+                N_FIN_RECOVERED.incrementAndGet();
+                LOG.warn("[MINUTE-FIN-WAIT] {} => DU sau khi cho (tong_cho={} du_sau_cho={} thieu={})", v.line(), N_FIN_WAITED.get(),
+                        N_FIN_RECOVERED.get(), N_FIN_INCOMPLETE.get());
+            }
+            return v;
+        }
+        long n = N_FIN_INCOMPLETE.incrementAndGet();
+        if (!bin) N_FIN_NOBIN.incrementAndGet();
+        LOG.warn("[MINUTE-INCOMPLETE] {} ly_do={} => KHONG mo lenh moi phut nay (quan ly vi the/trailing/stop giu nguyen)"
+                + " | tong_fin_thieu={} tong_khong_bin={} lien_tiep={}", v.line(), reason, n, N_FIN_NOBIN.get(), s.consecutive + 1);
+        if (!bin && (s.lastNoBinWarnMinute == Long.MIN_VALUE || endMinute - s.lastNoBinWarnMinute >= LOOKBACK_MIN * Utils.TIME_MINUTE)) {
+            s.lastNoBinWarnMinute = endMinute;
+            LOG.error("[MINUTE-FIN] record phut KHONG co bin fin (ingestor cu / KLINE_FIN_BIN=0?) => fail-closed moi phut. Deploy"
+                    + " ingestor fin TRUOC; tam ve hanh vi cu: {}=0 (dong nay toi da 1 lan/{}')", KEY_FIN, LOOKBACK_MIN);
+        }
+        s.onIncomplete(endMinute, v.line() + " ly_do=" + reason);
+        return v;
     }
 
     public static Verdict check(LiveTickerWindow w, long endMinute) {

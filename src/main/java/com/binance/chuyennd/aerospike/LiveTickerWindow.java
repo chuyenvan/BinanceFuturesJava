@@ -40,12 +40,18 @@ public final class LiveTickerWindow {
         TreeMap<Long, Map<String, KlineObjectSimple>> read(long fromMinute, int count);
     }
 
+    /** [FIN 2026-11-14] Doc NGUYEN TU data+fin cua 1 phut (prod: DataManagerAerospikeFloatSim.readMinuteWithFin) - tiem cho test. */
+    interface FinReader {
+        MinuteFin.Read read(long minute);
+    }
+
     /** symbol -> (phút căn chỉnh ms -> nến 1m). TreeMap cho thứ tự tăng dần + cắt headMap O(1). */
     private final Map<String, TreeMap<Long, KlineObjectSimple>> bySymbol = new HashMap<>();
     /** Phút cuối đã nạp (inclusive, căn phút). Long.MIN_VALUE = cold. */
     private long loadedThroughMinute = Long.MIN_VALUE;
     private int windowMinutes = 0;
     private final MinuteReader reader;
+    private final FinReader finReader;
     private final int rereadMinutes;
     private final LiveKlineAudit audit = new LiveKlineAudit();
     private long lastStatsMinute = Long.MIN_VALUE;
@@ -56,12 +62,18 @@ public final class LiveTickerWindow {
     private long lastEndMinute = Long.MIN_VALUE;
 
     public LiveTickerWindow() {
-        this(DataManagerAerospikeFloatSim::readDataFromAerospikeCustom, rereadFromEnv());
+        this(DataManagerAerospikeFloatSim::readDataFromAerospikeCustom, rereadFromEnv(), DataManagerAerospikeFloatSim::readMinuteWithFin);
     }
 
+    /** Test cu: khong co nguon fin (readFinal tra record vang). */
     LiveTickerWindow(MinuteReader reader, int rereadMinutes) {
+        this(reader, rereadMinutes, m -> MinuteFin.Read.missing());
+    }
+
+    LiveTickerWindow(MinuteReader reader, int rereadMinutes, FinReader finReader) {
         this.reader = reader;
         this.rereadMinutes = Math.max(0, rereadMinutes);
+        this.finReader = finReader;
     }
 
     static int rereadFromEnv() {
@@ -251,6 +263,36 @@ public final class LiveTickerWindow {
         long to = fromMinute + (long) n * Utils.TIME_MINUTE;
         for (Map.Entry<String, TreeMap<Long, KlineObjectSimple>> e : bySymbol.entrySet()) {
             if (!e.getValue().subMap(fromMinute, true, to, false).isEmpty()) out.add(e.getKey());
+        }
+        return out;
+    }
+
+    /**
+     * [FIN 2026-11-14] Doc nguyen tu record phut {@code minute} (data + fin) ROI merge data vao cache (nhu doc lai KFIX-B).
+     * Ghi de &gt; 0 va phut dang la phut quyet dinh =&gt; chup lai anh quyet dinh cua thuoc LIVE-KLINE (du lieu that dung de quyet).
+     * Doc Aerospike NGOAI khoa; merge trong khoa.
+     */
+    MinuteFin.Read readFinal(long minute) {
+        MinuteFin.Read r = finReader.read(minute);
+        if (r == null) return MinuteFin.Read.failed();
+        if (r.data != null && !r.data.isEmpty()) {
+            TreeMap<Long, Map<String, KlineObjectSimple>> one = new TreeMap<>();
+            one.put(minute, r.data);
+            synchronized (this) {
+                int n = mergeReread(one);
+                audit.countOverwrite(n);
+                r.overwritten = n;
+                if (n > 0 && audit.tracking(minute)) audit.onDecisionRead(minute, minuteSnapshot(minute));
+            }
+        }
+        return r;
+    }
+
+    /** [FIN] tap symbol (ten day du) co nen o phut {@code minute} trong cache. */
+    synchronized java.util.Set<String> symbolsAt(long minute) {
+        java.util.Set<String> out = new java.util.HashSet<>();
+        for (Map.Entry<String, TreeMap<Long, KlineObjectSimple>> e : bySymbol.entrySet()) {
+            if (e.getValue().containsKey(minute)) out.add(e.getKey());
         }
         return out;
     }

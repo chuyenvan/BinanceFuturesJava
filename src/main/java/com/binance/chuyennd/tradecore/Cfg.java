@@ -57,7 +57,9 @@ public final class Cfg {
             // [MAPAUD 2026-10-11] symbol_mapper: chinh sach id trung khi nap + xac nhan tool sua (ha tang)
             "SYMBOL_MAPPER_DUP_POLICY", "MAPPER_REPAIR_CONFIRM",
             // [UNIVERSE-A1 / V12 R4d] duong dan raw exchangeInfo = ha tang; co UNIVERSE_A1 = tham so giao dich
-            "UNIVERSE_A1_EXCHANGE_INFO");
+            "UNIVERSE_A1_EXCHANGE_INFO",
+            // [SEC 2026-11-14] token bot Telegram (bi mat ha tang, CHI env) - ca collectData lan v_t_m
+            "TELEGRAM_BOT_TOKEN");
 
     /** Tien to cua bien env DUOC COI LA THAM SO GIAO DICH — cam dat khi da co profile. */
     private static final List<String> TRADING_PREFIXES = Arrays.asList(

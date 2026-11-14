@@ -111,8 +111,9 @@ public final class LegacySymbols {
                     boolean live = com.binance.chuyennd.c3live.adapter.GatewayFactory.Mode.parse(
                             Cfg.get(com.binance.chuyennd.c3live.adapter.GatewayFactory.KEY_ADAPTER))
                             == com.binance.chuyennd.c3live.adapter.GatewayFactory.Mode.LIVE;
-                    String kf = System.getenv(KEY_KEYS_FILE);   // cung nguon C3LiveClientConfig.fromEnv
-                    if (kf == null) kf = System.getProperty(KEY_KEYS_FILE);
+                    // [A1 r4u3 MIN-1, 2026-11-14] CUNG nguon voi client live (C3LiveRuntime: GatewayFactory.create(mode, Cfg::get, ..)
+                    //   => C3LiveClientConfig.fromEnv(Cfg::get)); bo fallback System.getProperty (client khong doc).
+                    String kf = Cfg.get(KEY_KEYS_FILE);
                     String why = forceReason(env, live, kf, LegacySymbols::canonical);
                     if (why != null) {
                         LOG.warn("[C3-EXCL-FORCE] C3_EXCLUDE_LEGACY_HELD=false bi EP ve true: {}", why);

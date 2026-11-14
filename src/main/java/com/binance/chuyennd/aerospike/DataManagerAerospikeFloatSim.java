@@ -1286,6 +1286,54 @@ public class DataManagerAerospikeFloatSim {
      * @param totalMinutes Số lượng phút (records) cần lấy
      * @return TreeMap<Long, Map < String, KlineObjectSimple>>
      */
+    /**
+     * [FIN 2026-11-14] Doc NGUYEN TU 1 record phut (bin "data" + "fin", 1 lenh get) - client doc (getReadClient), key GMT+7 nhu
+     * {@link #readDataFromAerospikeCustom}. Record vang =&gt; Read.missing(); loi doc (3 lan) / hong =&gt; Read.failed();
+     * bin fin vang =&gt; fin null (ingestor cu). Ten symbol tra ve = ten DAY DU (them USDT).
+     */
+    public static MinuteFin.Read readMinuteWithFin(long minute) {
+        SimpleDateFormat f = new SimpleDateFormat("yyyyMMdd-HHmm");
+        f.setTimeZone(java.util.TimeZone.getTimeZone("GMT+7"));
+        Key key = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_TICKER, f.format(new Date(minute)));
+        Record r = null;
+        Exception last = null;
+        for (int i = 0; i < 3; i++) {
+            try {
+                r = getReadClient().get(null, key, "data", MinuteFin.BIN);
+                last = null;
+                break;
+            } catch (Exception e) {
+                last = e;
+                try {
+                    Thread.sleep(200L * (i + 1));
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        }
+        if (last != null) {
+            LOG.warn("[MINUTE-FIN] doc phut {} loi: {}", Utils.normalizeDateYYYYMMDDHHmm(minute), last.getClass().getSimpleName());
+            return MinuteFin.Read.failed();
+        }
+        if (r == null) return MinuteFin.Read.missing();
+        try {
+            Map<String, KlineObjectSimple> data = null;
+            byte[] d = (byte[]) r.getValue("data");
+            if (d != null) data = convertProtoMapToJavaMap(MinuteDataFinal.parseFrom(Snappy.uncompress(d)).getTickersMap(), minute);
+            Set<String> fs = MinuteFin.decode((byte[]) r.getValue(MinuteFin.BIN));
+            Set<String> fin = null;
+            if (fs != null) {
+                fin = new HashSet<>(fs.size() * 2);
+                for (String s : fs) fin.add(MinuteFin.fullSym(s));
+            }
+            return new MinuteFin.Read(data, fin, true, false);
+        } catch (Exception e) {
+            LOG.warn("[MINUTE-FIN] giai ma phut {} loi: {}", Utils.normalizeDateYYYYMMDDHHmm(minute), e.getClass().getSimpleName());
+            return MinuteFin.Read.failed();
+        }
+    }
+
     public static TreeMap<Long, Map<String, KlineObjectSimple>> readDataFromAerospikeCustom(long startTime, int totalMinutes) {
         TreeMap<Long, Map<String, KlineObjectSimple>> results = new TreeMap<>();
 
