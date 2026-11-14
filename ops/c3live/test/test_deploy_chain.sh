@@ -197,6 +197,67 @@ echo "x ERROR [main] x: loi CU truoc buoc" >> $W/vtm/logs/full.log; rm -f $W/che
 echo YES | U bash $CH swap_r4u3 >/dev/null 2>&1; waitjob; kill $LAP 2>/dev/null
 chk "chain: buoc da XONG tu truoc => moc = luc bat dau hau kiem: ERROR cu (sau dong khoi dong JVM, truoc moc) KHONG lam FAIL" "JL | grep -q 'XONG CA CHUOI' && ! JL | grep -q 'FAIL vtm_ERROR' && [ \"\$(head -1 $W/check_args)\" -ge $T1 ]"
 rm -f $W/OLD_SPIKE
+echo "== [A1-M7 FIN 2026-11-14] preset fin_pair: ingestor fin (deploy_ingest_fin) TRUOC, r4u3fin SAU; hau kiem [MINUTE-FIN] BAT / FIN_KHONG_BIN; lenh rollback"
+python3 - "$W/vtm_fin.jar" <<'PYEOF'
+import sys, zipfile
+with zipfile.ZipFile(sys.argv[1], 'w', zipfile.ZIP_STORED) as z:
+    z.writestr('com/binance/chuyennd/trading/DetectEntrySignal2TradeNormal.class', b'vtm-r4u3fin LOG.info("[BIG_DOWN-SEL] {}") [MINUTE-FIN]')
+PYEOF
+RF=$(md5sum < $W/vtm_fin.jar | cut -c1-32); printf 'ing-fin' > $W/ing_fin.jar; QF=$(md5sum < $W/ing_fin.jar | cut -c1-32)
+cat > $W/fin_ing.sh <<EOF
+#!/usr/bin/env bash
+JAR_MD5=$QF
+read -r A; [ "\$A" = YES ] || exit 1
+echo fin_ing >> $W/calls
+[ -f $W/FIN_ING_FAIL ] && { echo "rollback"; exit 1; }
+. $W/lib.sh
+ing_start $W/ing_fin.jar; { echo "XONG. collectData chay jar $QF"; echo "Rollback 1 lenh: bash $W/d/rollback_ingest_fin.sh TSF"; } >> $W/d/deploy_ingest_fin_x.log; exit 0
+EOF
+cat > $W/swapfin.sh <<EOF
+#!/usr/bin/env bash
+NJ=\${NJ:-$W/vtm_fin.jar}
+NJ_MD5=\${NJ_MD5:-$RF}   # jar r4u3fin
+OLD_TAG=\${OLD_TAG:-r4u3}
+NEW_TAG=\${NEW_TAG:-r4u3fin}
+if [ "\${DRY:-0}" = 1 ]; then echo "OK jar moi"; echo "DRY PASS"; exit 0; fi
+read -r A; [ "\$A" = YES ] || exit 1
+echo swapfin >> $W/calls
+. $W/lib.sh
+vtm_start $W/vtm_fin.jar; echo "x INFO [main] x: [MINUTE-FIN] BAT - gia" >> $W/vtm/logs/full.log
+echo "x INFO [pool-3-thread-1] x: [LEGACY] managed 44: A,B" >> $W/vtm/logs/full.log
+[ -f $W/FIN_NOBIN_AFTER ] && echo "x WARN [x] x: [MINUTE-INCOMPLETE] phut=x fin=0/0 ly_do=FIN_KHONG_BIN => KHONG mo lenh" >> $W/vtm/logs/full.log
+exit 0
+EOF
+resetf() { reset; vtm_start $W/vtm_r4u.jar; echo "x INFO [pool-3-thread-1] x: [LEGACY] managed 44: A,B" >> $W/vtm/logs/full.log
+  rm -f $W/calls $W/FIN_ING_FAIL $W/FIN_NOBIN_AFTER $W/d/deploy_ingest_fin_*.log
+  echo '{"target_jar": "r4u3fin", "target_md5": "'$RF'", "smoke_start_ms": null}' > $W/gmf.json; rm -f $W/gmf.json.bak_*; }
+FP() { env FIN_ING_SH=$W/fin_ing.sh PIN_FIN_ING_SH=$(md5sum < $W/fin_ing.sh | cut -c1-32) FIN_ING_PAT="fakefin_job_$TAG" \
+  FIN_SWAP_SH=$W/swapfin.sh PIN_SWAP_FIN=$(md5sum < $W/swapfin.sh | cut -c1-32) GMICRO_TARGET=$W/gmf.json JARS_JSON=$W/jars_none.json "$@"; }
+resetf
+OUT=$(FP DRY=1 bash $CH fin_pair 2>&1); RC=$?
+chk "fin_pair DRY=1: ke hoach qf4 (deploy_ingest_fin) + r4u3fin CHUA, [BIG_DOWN-SEL] OK, DRY PASS, khong doi gi" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'qf4 : $W/fin_ing.sh (jar collectData $QF)' && echo \"\$OUT\" | grep -q 'qf4: CHUA' && echo \"\$OUT\" | grep -q 'r4u3fin: CHUA' && echo \"\$OUT\" | grep -q 'OK code \[BIG_DOWN-SEL\]' && echo \"\$OUT\" | grep -q 'DRY PASS' && [ ! -f $W/calls ]"
+echo YES | FP bash $CH fin_pair >/dev/null 2>&1; waitjob
+chk "fin_pair XONG: ingestor fin TRUOC roi swap r4u3fin (dung thu tu, 1 lan moi buoc), md5 ca 2, OK MINUTE-FIN_BAT + 0_FIN_KHONG_BIN, gmicro r4u3fin, XONG ca chuoi" "[ \"\$(tr '\n' ' ' < $W/calls)\" = 'fin_ing swapfin ' ] && [ \$(ingmd5) = $QF ] && [ \$(vtmmd5) = $RF ] && JL | grep -q 'OK MINUTE-FIN_BAT' && JL | grep -q 'OK 0_FIN_KHONG_BIN' && JL | grep -q 'XONG CA CHUOI fin_pair' && grep -q 'gmicro_target.json: r4u3fin OK smoke_start_ms=' $W/tg.txt"
+rm -f $W/calls $W/tg.txt
+( for i in $(seq 1 40); do sleep 1; echo "x INFO [pool-3-thread-1] x: [LEGACY] managed 44: A,B" >> $W/vtm/logs/full.log; done ) & LAPF=$!   # LEGACY log moi phut (that) sau moc
+echo YES | FP bash $CH fin_pair >/dev/null 2>&1; waitjob; kill $LAPF 2>/dev/null
+chk "fin_pair idempotent: ca 2 DA XONG => khong goi script, [MINUTE-FIN] BAT doc tu khoi dong JVM (truoc moc) van OK, XONG" "[ ! -f $W/calls ] && JL | grep -q 'qf4: DA XONG tu truoc' && JL | grep -q 'r4u3fin: DA XONG tu truoc' && JL | grep -q 'OK MINUTE-FIN_BAT' && JL | grep -q 'XONG CA CHUOI'"
+resetf; touch $W/FIN_ING_FAIL
+echo YES | FP bash $CH fin_pair >/dev/null 2>&1; waitjob
+chk "fin_pair: ingestor fin FAIL/rollback => DUNG CA CHUOI + KHAN, KHONG swap r4u3fin" "! grep -q swapfin $W/calls && JL | grep -q 'DUNG CHUOI: qf4: script rc=1' && grep -q KHAN $W/tg.txt && [ \$(vtmmd5) = $RU ]"
+resetf; touch $W/FIN_NOBIN_AFTER
+echo YES | FP bash $CH fin_pair >/dev/null 2>&1; waitjob
+chk "fin_pair: sau swap co ly_do=FIN_KHONG_BIN => r4u3fin hau kiem FAIL + KHAN kem lenh rollback ve r4u3 (NEED_FIN=0)" "JL | grep -q 'r4u3fin: hau kiem FAIL' && JL | grep -q 'FAIL FIN_KHONG_BIN=1' && grep -q 'OLD_TAG=r4u3fin NEW_TAG=r4u3' $W/tg.txt && grep -q 'NEED_FIN=0' $W/tg.txt && grep -q 'NJ_MD5=b1f12c3eeaeed72cb17afbe5b4da06cf' $W/tg.txt"
+resetf
+echo YES | FP STABLE_S=40 bash $CH fin_pair >/dev/null 2>&1
+for i in $(seq 1 60); do JL 2>/dev/null | grep -q 'qf4: hau kiem on dinh' && break; sleep 1; done
+bash $CH stop >/dev/null; waitjob
+chk "fin_pair: stop GIUA hau kiem ingestor => KHAN + lenh rollback_ingest_fin.sh (log deploy_ingest_fin), KHONG swap" "grep -q 'KHAN.*STOP giua hau kiem' $W/tg.txt && grep -q 'rollback_ingest_fin.sh TSF' $W/tg.txt && ! grep -q swapfin $W/calls"
+resetf; echo '# sua sau duyet' >> $W/fin_ing.sh
+OUT=$(echo YES | env FIN_ING_SH=$W/fin_ing.sh PIN_FIN_ING_SH=00000000000000000000000000000000 FIN_ING_PAT="fakefin_job_$TAG" FIN_SWAP_SH=$W/swapfin.sh PIN_SWAP_FIN=$(md5sum < $W/swapfin.sh | cut -c1-32) bash $CH fin_pair 2>&1); RC=$?
+chk "fin_pair: script ingestor LECH pin => TU CHOI, khong goi gi" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'LECH deploy_ingest_qf4.sh' && echo \"\$OUT\" | grep -q 'TU CHOI' && [ ! -f $W/calls ]"
+OUT=$(FP FIN_SWAP_SH=$W/swapu.sh PIN_SWAP_FIN=$(md5sum < $W/swapu.sh | cut -c1-32) bash $CH fin_pair 2>&1 < /dev/null); RC=$?
+chk "fin_pair voi swap mac dinh NEW_TAG=r4u3 (khong phai r4u3fin) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'can swap NEW_TAG=r4u3fin'"
 pkill -f "$TAG" 2>/dev/null
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]

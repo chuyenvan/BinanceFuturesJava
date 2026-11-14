@@ -74,7 +74,7 @@ case "$1" in
           echo "$D INFO [main] x: [MINUTE-GUARD] $MGS — phut du <=> so symbol >= 99% trung vi 60' truoc [CHI live]"
         fi
         if grep -q MINUTE-FIN target/binance-java-sdk-1.2.4.jar 2>/dev/null; then   # [FIN] jar gia fin => dong [MINUTE-FIN] nhu start()
-          FNS=BAT; [ "${LIVE_FIN_GUARD:-1}" = 0 ] && FNS=TAT
+          FNS=BAT; case "$(printf %s "${LIVE_FIN_GUARD:-1}" | tr -d ' ' | tr 'A-Z' 'a-z')" in 0|false|no|off) FNS=TAT;; esac
           echo "$D INFO [main] x: [MINUTE-FIN] $FNS - phut DU theo dem con phai co >= 99% universe nam trong bin fin"
           [ -f FAKE_FINNOBIN ] && echo "$D WARN [x] x: [MINUTE-INCOMPLETE] phut=x fin=0/500 can=495 bin_fin=0 cho=0ms doc_lai=0 ly_do=FIN_KHONG_BIN => KHONG mo lenh moi"
           [ -z "${TELEGRAM_BOT_TOKEN:-}" ] && echo "$D ERROR [x] x: [TELEGRAM] thieu env TELEGRAM_BOT_TOKEN => TAT gui Telegram"
@@ -1774,6 +1774,15 @@ echo 'export KLINE_FIN_BIN=0' >> $W/ingfake/conf/env.sh
 OUT=$(swf DRY=1 bash "$SW" 2>&1); RC=$?
 chk "fin swap: ingestor env KLINE_FIN_BIN=0 => DUNG" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL ingestor_env_KLINE_FIN_BIN=0'"
 sed -i '/KLINE_FIN_BIN=0/d' $W/ingfake/conf/env.sh
+# [A1-M5] co tat dang khac (Off / no) cung bi nhan dien (khop code parseFinFlag / KlineIngestCore.flagOn)
+echo 'export KLINE_FIN_BIN=Off' >> $W/ingfake/conf/env.sh
+OUT=$(swf DRY=1 bash "$SW" 2>&1); RC=$?
+chk "A1-M5 fin swap: ingestor env KLINE_FIN_BIN=Off => DUNG" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL ingestor_env_KLINE_FIN_BIN=Off'"
+sed -i '/KLINE_FIN_BIN=Off/d' $W/ingfake/conf/env.sh
+echo 'export LIVE_FIN_GUARD=no' >> $F4/conf/env.sh
+OUT=$(swf DRY=1 bash "$SW" 2>&1); RC=$?
+chk "A1-M5 fin swap: v_t_m env.sh LIVE_FIN_GUARD=no => DUNG" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL env.sh_LIVE_FIN_GUARD=no'"
+sed -i '/LIVE_FIN_GUARD=no/d' $F4/conf/env.sh
 OUT=$(swf DRY=1 bash "$SW" 2>&1); RC=$?
 chk "fin swap DRY=1: ingestor fin + env token sha8 dung => DRY PASS, khong doi jar, khong lo token" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q 'OK telegram_env_sha8=$TGF' && ! echo \"\$OUT\" | grep -q fake242tok && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWR ]"
 touch $F4/FAKE_FINNOBIN

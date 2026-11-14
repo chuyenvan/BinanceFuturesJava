@@ -184,10 +184,10 @@ case "$PRESET" in
   swap_r4u3) STEPS="r4u3"; WANT_TAG=r4u3;;
   fin_pair)   # [FIN] ingestor fin TRUOC, v_t_m fin-guard SAU; buoc ingestor dung lai may "qf4" voi script/pin/log rieng
     STEPS="qf4 r4u3fin"; WANT_TAG=r4u3fin
-    QF4_SH=${FIN_ING_SH:-$D/deploy_ingest_fin.sh}; PIN_QF4_SH=${PIN_FIN_ING_SH:-b937463d267506a4b9db505becf2442b}
+    QF4_SH=${FIN_ING_SH:-$D/deploy_ingest_fin.sh}; PIN_QF4_SH=${PIN_FIN_ING_SH:-f2e6cf9605784c3c30666d17433ad0e2}
     QF4_PAT=${FIN_ING_PAT:-deploy_ingest_fin.sh}; QF4_LOGPFX=deploy_ingest_fin; QF4_RB_SH=rollback_ingest_fin.sh
     SWAP_SH=${FIN_SWAP_SH:-$(dirname "$SELF")/swap_v12_dry_jar.sh}   # swap CUNG nhanh voi chain nay (v1.2/fin-guard)
-    PIN_SWAP_SH=${PIN_SWAP_FIN:-888bc0f3c1cef5cb75d0f06b9c2dd7f7};;
+    PIN_SWAP_SH=${PIN_SWAP_FIN:-1012cdb6c316208c52186257e403020e};;
   *) echo "Dung: $0 <preset>|status|stop - preset: fin_pair | swap_r4u3 | qf4_then_r4t (cu)"; exit 1;;
 esac
 JD=""
@@ -370,8 +370,11 @@ grep -q '"latch":"NONE"' run/killsw_latch.json 2>/dev/null && echo "OK latch_NON
 if [ "$S" = r4t ] || [ "$S" = r4u3 ] || [ "$S" = r4u3fin ]; then tail -n +$B logs/full.log | grep -a -q '\[MINUTE-GUARD\] TAT' && echo "FAIL MINUTE-GUARD_TAT"; fi
 if [ "$S" = r4u3fin ]; then   # [FIN] guard bin fin BAT, record co bin fin (FIN_THIEU = fail-closed hop le, chi dem)
   tail -n +$B logs/full.log | grep -a -q '\[MINUTE-FIN\] TAT' && echo "FAIL MINUTE-FIN_TAT"
+  # [A1-M7] [MINUTE-FIN] BAT phai co tu dong khoi dong JVM moi nhat (buoc da XONG tu truoc: dong BAT nam truoc moc B)
+  JS=$(grep -a -n 'MainClass: com.binance.chuyennd.trading.BinanceOrderTradingManager' logs/full.log 2>/dev/null | tail -1 | cut -d: -f1)
+  [ "$(tail -n +${JS:-1} logs/full.log 2>/dev/null | grep -a -c '\[MINUTE-FIN\] BAT')" -ge 1 ] && echo "OK MINUTE-FIN_BAT" || echo "WAIT MINUTE-FIN_BAT_chua_thay"
   NB=$(tail -n +$B logs/full.log 2>/dev/null | grep -a -c 'ly_do=FIN_KHONG_BIN'); [ "${NB:-0}" = 0 ] && echo "OK 0_FIN_KHONG_BIN" || echo "FAIL FIN_KHONG_BIN=$NB (record khong co bin fin)"
-  echo "INFO FIN_THIEU=$(tail -n +$B logs/full.log 2>/dev/null | grep -a -c 'ly_do=FIN_THIEU') FIN_WAIT=$(tail -n +$B logs/full.log 2>/dev/null | grep -a -c 'MINUTE-FIN-WAIT')"
+  echo "INFO FIN_THIEU=$(tail -n +$B logs/full.log 2>/dev/null | grep -a -c 'ly_do=FIN_THIEU') FIN_WAIT=$(tail -n +$B logs/full.log 2>/dev/null | grep -a -c 'MINUTE-FIN-WAIT') FIN_EXCL_PHUT=$(tail -n +$B logs/full.log 2>/dev/null | grep -a -c '\[MINUTE-FIN-EXCL\] phut=')"
 fi
 if [ "$S" = r4u3 ] || [ "$S" = r4u3fin ]; then   # [R4u] 0 KHAN, RAM, LEGACY = chup truoc swap
   K=$(tail -n +$B logs/full.log 2>/dev/null | grep -a 'KHAN' | grep -av 'DRY tren tai khoan chinh' | head -1 | cut -c1-160)

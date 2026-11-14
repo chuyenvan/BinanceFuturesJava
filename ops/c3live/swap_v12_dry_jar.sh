@@ -49,8 +49,8 @@ RHOST=${RHOST-"root@103.157.218.242:"}
 A=${APP_DIR:-/home/chuyennd/java/v_t_m}
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}
 OLD_MD5=${OLD_MD5:-b1f12c3eeaeed72cb17afbe5b4da06cf}   # jar dry DANG chay (r4u3) - khac => TU CHOI
-NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4u3fin}
-NJ_MD5=${NJ_MD5:-39d998fa6fde882de26d9b046a6288a6}   # [FIN] jar r4u3fin (v1.2/fin-guard); truoc: r4u3 b1f12c3e, r4t 694b29b2, r4q 8c81e6b5
+NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4u3fin2}
+NJ_MD5=${NJ_MD5:-641803565297d4065d90245e04a00f11}   # [FIN vong 2] jar r4u3fin2 (v1.2/fin-guard 5e10325b; vong 1 39d998fa); truoc: r4u3 b1f12c3e, r4t 694b29b2, r4q 8c81e6b5
 OLD_TAG=${OLD_TAG:-r4u3}
 NEW_TAG=${NEW_TAG:-r4u3fin}
 NEED_BIGDOWN=${NEED_BIGDOWN:-1}   # [R4u] jar moi phai co code [BIG_DOWN-SEL]
@@ -64,7 +64,7 @@ GMICRO_TARGET=${GMICRO_TARGET:-/home/ubuntu/claude_master/parity_v12w/gmicro_tar
 NEED_MGUARD=${NEED_MGUARD:-1}   # [R4r] jar moi co guard do du phut => hau kiem [MINUTE-GUARD] BAT
 case "$NEW_TAG" in *fin*) DEF_FIN=1;; *) DEF_FIN=0;; esac
 NEED_FIN=${NEED_FIN:-$DEF_FIN}   # [FIN] jar moi co guard bin fin + token env => kiem ingestor fin TRUOC + env token + hau kiem MINUTE-FIN
-ING_FIN_MD5=${ING_FIN_MD5:-c38e476cfb67f8ccb705f54936344aef}   # [FIN] jar collectData qf/fin-bin phai DANG chay truoc khi swap
+ING_FIN_MD5=${ING_FIN_MD5:-5e78ac0663b4a765551eac1c362bf194}   # [FIN] jar collectData qf/fin-bin phai DANG chay truoc khi swap
 TG_SHA8=${TG_SHA8:-4f49bded}   # [FIN] sha8 token Telegram ky vong
 ING_DIR=${ING_DIR:-/home/chuyennd/java/collectData}   # [FIN] thu muc collectData (kiem env KLINE_FIN_BIN)
 WD_PAUSE=${WD_PAUSE:-/var/lib/h242_watchdog/PAUSE}
@@ -194,12 +194,19 @@ grep -q '^export LIVE_ADAPTER=dry' conf/env.sh && echo "OK env.sh_dry" || echo "
 grep -q '^export LIVE_ADAPTER=live' conf/env.sh && echo "FAIL env.sh_LIVE_ADAPTER=live"
 [ "$MG" = 1 ] && grep -q '^export LIVE_MINUTE_GUARD=0' conf/env.sh && echo "FAIL env.sh_LIVE_MINUTE_GUARD=0 (jar moi can guard BAT)"
 if [ "$FN" = 1 ]; then   # [FIN] ingestor fin TRUOC + token env (KHONG in token)
-  grep -q '^export LIVE_FIN_GUARD=0' conf/env.sh && echo "FAIL env.sh_LIVE_FIN_GUARD=0 (jar fin can guard BAT)"
+  # [A1-M5] co tat = 0/false/no/off (moi kieu hoa, bo nhay/khoang trang) - KHOP code (parseFinFlag / KlineIngestCore.flagOn);
+  #   doc gia tri SAU KHI source env.sh (khong grep 1 dang) + env process ingestor dang chay. KHONG in gi ngoai gia tri co.
+  offv() { case "$(printf %s "$1" | tr -d " \t\"'" | tr 'A-Z' 'a-z')" in 0|false|no|off) return 0;; esac; return 1; }
+  LFG=$(bash -c '. conf/env.sh >/dev/null 2>&1; printf %s "${LIVE_FIN_GUARD-}"')
+  offv "$LFG" && echo "FAIL env.sh_LIVE_FIN_GUARD=$LFG (tat; jar fin can guard BAT)"
   IP=$(pgrep -f 'websocket.BinanceDataIngestor' | head -1); IFD=$(find /proc/$IP/fd -lname '*binance-java-sdk*.jar*' 2>/dev/null | head -1)
   IJ=$( [ -n "$IFD" ] && md5sum < "$IFD" 2>/dev/null | cut -c1-32)
   [ -n "$IJ" ] && [ "$IJ" = "$IFM" ] && echo "OK ingestor_jar_fin=$IJ" || echo "FAIL ingestor_jar=${IJ:-?} khac fin $IFM (deploy ingestor fin TRUOC)"
-  grep -q '^export KLINE_FIN_BIN=0' "$IGD/conf/env.sh" 2>/dev/null \
-    && echo "FAIL ingestor_env_KLINE_FIN_BIN=0 (tat bin fin)" || echo "OK ingestor_khong_tat_fin"
+  KFB=$(cd "$IGD" 2>/dev/null && bash -c '. conf/env.sh >/dev/null 2>&1; printf %s "${KLINE_FIN_BIN-}"')
+  PKF=$( [ -n "$IP" ] && tr '\0' '\n' < /proc/$IP/environ 2>/dev/null | sed -n 's/^KLINE_FIN_BIN=//p' | head -1)
+  if offv "$KFB"; then echo "FAIL ingestor_env_KLINE_FIN_BIN=$KFB (tat bin fin)"
+  elif offv "$PKF"; then echo "FAIL ingestor_process_KLINE_FIN_BIN=$PKF (process dang chay tat bin fin)"
+  else echo "OK ingestor_khong_tat_fin"; fi
   grep -q 'secrets/telegram.env' conf/env.sh && echo "OK env_source_telegram" || echo "FAIL env_chua_source_telegram (owner chay set_telegram_env_242.sh truoc)"
   TGS=$(bash -c '. conf/env.sh >/dev/null 2>&1; printf %s "$TELEGRAM_BOT_TOKEN"' | sha256sum | cut -c1-8)
   [ "$TGS" = "$TG8" ] && echo "OK telegram_env_sha8=$TGS" || echo "FAIL telegram_env_sha8=$TGS (ky vong $TG8)"
