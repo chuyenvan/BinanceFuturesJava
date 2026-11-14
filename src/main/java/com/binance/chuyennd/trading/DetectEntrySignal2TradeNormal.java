@@ -84,6 +84,8 @@ public class DetectEntrySignal2TradeNormal {
     private final LiveTickerWindow tickerWindow = new LiveTickerWindow();
     /** [V12 R4r] phut quyet dinh hien tai THIEU du lieu (sau cho toi +20 s) => khong mo lenh moi trong tick nay. */
     private volatile boolean minuteIncomplete = false;
+    /** [FIN A1-M2] tap fin (nen DA CHOT, ten day du) cua phut quyet dinh; null = guard fin khong chay => khong loc theo coin. */
+    private volatile java.util.Set<String> finAllowedTick = null;
     // [V11 2026-10-20] docs/plan/V11_COLLECTOR_SETTLE.md — LIVE_FEAT_INPUT=snapshot: feature gate tinh tren snapshot
     //   DAY DU phut M nhu replayToCsv (+ cho du symbol, sua tai cho khi doc lai). null = legacy (byte-identical).
     private com.binance.chuyennd.ai_ml.features.export.entry.LiveFeaturePipeline featPipeline = null;
@@ -224,6 +226,7 @@ public class DetectEntrySignal2TradeNormal {
             // [V12 R4r] guard DO DU phut vua chot (CHI live): du => khong doc them, khong doi gi; thieu => doc lai toi giay +20,
             //   van thieu => fail-closed: tick van chay (quan ly vi the/trailing/stop) nhung KHONG mo lenh moi.
             minuteIncomplete = false;
+            finAllowedTick = null;
             if (com.binance.chuyennd.aerospike.MinuteCompletenessGuard.enabled()) {
                 com.binance.chuyennd.aerospike.MinuteCompletenessGuard.Verdict mg =
                         com.binance.chuyennd.aerospike.MinuteCompletenessGuard.check(tickerWindow, tickerWindow.lastEndMinute());
@@ -239,6 +242,8 @@ public class DetectEntrySignal2TradeNormal {
                                             && !com.binance.chuyennd.tradecore.selector.UniverseA1Filter.isExcluded(sym, finNow));
                     rereadWindow |= fv.waited || fv.changed;   // cache da duoc thay ban chot
                     minuteIncomplete = !fv.complete;
+                    // [A1-M2] phut DU nhung <= 1 % universe chua chot => chan leg THEO COIN (createOrderBuyRequest0)
+                    finAllowedTick = fv.complete ? fv.finSyms : null;
                 }
                 if (rereadWindow) symbol2LastTickers = tickerWindow.read(System.currentTimeMillis(), 1000);
             }
@@ -1337,6 +1342,15 @@ public class DetectEntrySignal2TradeNormal {
                 && com.binance.chuyennd.tradecore.selector.LiveProfileC3.on()
                 && com.binance.chuyennd.tradecore.selector.LegacySymbols.blocksC3(symbol)) {   // [V12 R4u2]
             LOG.info("[SHADOW] skip-LEGACY {} (sau gate: da nap r nhu sim, khong vao)", symbol);
+            return;
+        }
+        // [FIN A1-M2 2026-11-14] coin KHONG nam trong bin fin (nen chua chot) o phut quyet dinh => KHONG vao/DCA coin nay phut nay
+        //   (moi leg: selector/BIG_DOWN/DCA/grid; so giay + that). Selector: coin van dem hang + qua gate (nap r p15 nhu sim, giong
+        //   LEGACY) roi moi chan; KHONG lay coin hang K+1 thay. Guard fin tat => finAllowedTick null => y nguyen r4u3.
+        if (!com.binance.chuyennd.aerospike.MinuteCompletenessGuard.finAllows(finAllowedTick, symbol)) {
+            long nx = com.binance.chuyennd.aerospike.MinuteCompletenessGuard.N_FIN_EXCL_LEGS.incrementAndGet();
+            LOG.warn("[MINUTE-FIN-EXCL] chan leg {} {} (phut {} nen CHUA chot) | tong_chan_leg={}", levelChange, symbol,
+                    ticker == null ? "-" : Utils.normalizeDateYYYYMMDDHHmm(ticker.startTime), nx);
             return;
         }
 

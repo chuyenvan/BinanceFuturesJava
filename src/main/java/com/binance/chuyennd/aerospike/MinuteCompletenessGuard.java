@@ -246,12 +246,19 @@ public final class MinuteCompletenessGuard {
     public static final AtomicLong N_FIN_NOBIN = new AtomicLong();
     public static final AtomicLong N_FIN_WAITED = new AtomicLong();
     public static final AtomicLong N_FIN_RECOVERED = new AtomicLong();
+    /** [A1-M2] so phut DU co >= 1 coin universe chua chot (bi loai theo coin); tong so coin bi loai; so leg bi chan theo coin. */
+    public static final AtomicLong N_FIN_EXCL_MINUTES = new AtomicLong();
+    public static final AtomicLong N_FIN_EXCL_SYMS = new AtomicLong();
+    public static final AtomicLong N_FIN_EXCL_LEGS = new AtomicLong();
+    /** [A1-M2] so ten coin toi da in trong dong [MINUTE-FIN-EXCL] (so dem luon day du). */
+    static final int EXCL_LOG_MAX = 30;
     private static volatile Boolean finOn = null;
 
+    /** [A1-M5] co tat: "0"/"false"/"no"/"off" (khong phan biet hoa thuong, bo khoang trang) - KHOP script deploy/swap. */
     static boolean parseFinFlag(String v) {
         if (v == null) return true;
-        String s = v.trim();
-        return !("0".equals(s) || "false".equalsIgnoreCase(s));
+        String s = v.trim().toLowerCase(java.util.Locale.ROOT);
+        return !("0".equals(s) || "false".equals(s) || "no".equals(s) || "off".equals(s));
     }
 
     public static boolean finEnabled() {
@@ -275,9 +282,22 @@ public final class MinuteCompletenessGuard {
         public final int have, universe, need, polls;
         public final long waitedMs;
         public final String reason;
+        /** [A1-M3] tre quyet dinh so voi luc phut dong (ms, = luc guard xong - (phut + 60 s)); binh thuong ~+6 s, cho toi ~+45 s. */
+        public final long lateMs;
+        /** [A1-M2] tap fin (ten day du) cua phut khi DU; null khi khong DU. Leg cua coin ngoai tap nay bi chan (finAllows). */
+        public final java.util.Set<String> finSyms;
+        /** [A1-M2] coin universe co nen phut nay nhung CHUA chot (sap xep); rong khi khong DU. */
+        public final java.util.List<String> excluded;
 
         FinVerdict(long minute, boolean complete, boolean waited, boolean changed, boolean binPresent, int have, int universe,
                    int need, int polls, long waitedMs, String reason) {
+            this(minute, complete, waited, changed, binPresent, have, universe, need, polls, waitedMs, reason, -1L, null,
+                    java.util.Collections.<String>emptyList());
+        }
+
+        FinVerdict(long minute, boolean complete, boolean waited, boolean changed, boolean binPresent, int have, int universe,
+                   int need, int polls, long waitedMs, String reason, long lateMs, java.util.Set<String> finSyms,
+                   java.util.List<String> excluded) {
             this.minute = minute;
             this.complete = complete;
             this.waited = waited;
@@ -289,12 +309,35 @@ public final class MinuteCompletenessGuard {
             this.polls = polls;
             this.waitedMs = waitedMs;
             this.reason = reason;
+            this.lateMs = lateMs;
+            this.finSyms = finSyms;
+            this.excluded = excluded == null ? java.util.Collections.<String>emptyList() : excluded;
         }
 
         public String line() {
             return "phut=" + Utils.normalizeDateYYYYMMDDHHmm(minute) + " fin=" + have + "/" + universe + " can=" + need
-                    + " bin_fin=" + (binPresent ? 1 : 0) + " cho=" + waitedMs + "ms doc_lai=" + polls;
+                    + " bin_fin=" + (binPresent ? 1 : 0) + " cho=" + waitedMs + "ms doc_lai=" + polls
+                    + " tre_sau_dong=" + lateMs + "ms loai_coin=" + excluded.size();
         }
+    }
+
+    /**
+     * [A1-M2 2026-11-14] Fail-closed THEO COIN: coin khong nam trong bin fin o phut quyet dinh =&gt; khong vao/DCA coin do phut do.
+     * {@code finSyms} null = guard fin khong chay (tat / LIVE_MINUTE_GUARD=0) =&gt; khong loc (y nguyen r4u3).
+     */
+    public static boolean finAllows(java.util.Set<String> finSyms, String symbol) {
+        return finSyms == null || (symbol != null && finSyms.contains(symbol));
+    }
+
+    /** [A1-M2] coin universe co nen phut {@code m} trong cache nhung KHONG nam trong fin (sap xep tang dan). */
+    static java.util.List<String> finMissing(LiveTickerWindow w, long m, java.util.Set<String> fin, Predicate<String> inUniverse) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (String sym : w.symbolsAt(m)) {
+            if (inUniverse != null && !inUniverse.test(sym)) continue;
+            if (fin == null || !fin.contains(sym)) out.add(sym);
+        }
+        java.util.Collections.sort(out);
+        return out;
     }
 
     /** {co, |U|, bin_fin} - U = symbol co nen phut m trong cache (sau merge) va thuoc universe; co = |U giao fin|. */
@@ -351,14 +394,27 @@ public final class MinuteCompletenessGuard {
             s.finSeen = false;
         }
         String reason = ok ? (polls > 0 ? "DU_SAU_CHO" : "DU") : (bin ? "FIN_THIEU" : "FIN_KHONG_BIN");
+        long tEnd = clock.getAsLong();
+        java.util.List<String> excl = ok ? finMissing(w, endMinute, r.fin, inUniverse) : java.util.Collections.<String>emptyList();
+        java.util.Set<String> finSyms = ok ? java.util.Collections.unmodifiableSet(new HashSet<>(r.fin)) : null;
         FinVerdict v = new FinVerdict(endMinute, ok, polls > 0, changed, bin, c[0], c[1], finNeed(c[1]), polls,
-                clock.getAsLong() - t0, reason);
+                tEnd - t0, reason, tEnd - (endMinute + Utils.TIME_MINUTE), finSyms, excl);
         if (polls > 0) N_FIN_WAITED.incrementAndGet();
         if (ok) {
             if (polls > 0) {
                 N_FIN_RECOVERED.incrementAndGet();
+                // [A1-M3] dong nay co tre_sau_dong (ms sau khi phut dong) => addendum do K5 + do tre RIENG cho phut phai cho
                 LOG.warn("[MINUTE-FIN-WAIT] {} => DU sau khi cho (tong_cho={} du_sau_cho={} thieu={})", v.line(), N_FIN_WAITED.get(),
                         N_FIN_RECOVERED.get(), N_FIN_INCOMPLETE.get());
+            }
+            if (!excl.isEmpty()) {
+                long nm = N_FIN_EXCL_MINUTES.incrementAndGet();
+                long ns = N_FIN_EXCL_SYMS.addAndGet(excl.size());
+                String ds = excl.size() <= EXCL_LOG_MAX ? String.join(",", excl)
+                        : String.join(",", excl.subList(0, EXCL_LOG_MAX)) + ",...(+" + (excl.size() - EXCL_LOG_MAX) + ")";
+                LOG.warn("[MINUTE-FIN-EXCL] phut={} loai={} universe={} fin={} ds={} => KHONG vao/DCA cac coin nay phut nay (van tinh"
+                                + " market/feature/p15) | tong_phut={} tong_coin={}", Utils.normalizeDateYYYYMMDDHHmm(endMinute),
+                        excl.size(), c[1], c[0], ds, nm, ns);
             }
             return v;
         }

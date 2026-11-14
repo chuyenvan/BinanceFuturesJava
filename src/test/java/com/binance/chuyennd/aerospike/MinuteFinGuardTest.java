@@ -236,5 +236,66 @@ public class MinuteFinGuardTest {
         assertTrue(MinuteCompletenessGuard.parseFinFlag("1"));
         assertFalse(MinuteCompletenessGuard.parseFinFlag("0"));
         assertFalse(MinuteCompletenessGuard.parseFinFlag(" FALSE "));
+        // [A1-M5] khop script: no/off (moi kieu hoa) cung la TAT
+        assertFalse(MinuteCompletenessGuard.parseFinFlag("no"));
+        assertFalse(MinuteCompletenessGuard.parseFinFlag("Off"));
+        assertFalse(MinuteCompletenessGuard.parseFinFlag(" NO "));
+        assertTrue(MinuteCompletenessGuard.parseFinFlag("on"));
+    }
+
+    /** [A1-M2] phut DU (>= 99 %) nhung 5 coin chua chot: 5 coin bi loai THEO COIN (finAllows false), coin chot van duoc. */
+    @Test
+    public void perCoinExclusion_unfinalCoinsBlockedEvenWhenTotalPasses() {
+        MinuteCompletenessGuard.N_FIN_EXCL_MINUTES.set(0);
+        MinuteCompletenessGuard.N_FIN_EXCL_SYMS.set(0);
+        st.finAt.put(T, ms -> FULL - 5);   // S747..S751 khong bao gio chot; 747 >= 745 => DU ngay
+        MinuteCompletenessGuard.FinVerdict v = tick(T, null);
+        assertTrue(v.complete);
+        assertEquals("DU", v.reason);
+        assertEquals(Arrays.asList("S747USDT", "S748USDT", "S749USDT", "S750USDT", "S751USDT"), v.excluded);
+        assertNotNull(v.finSyms);
+        assertEquals(FULL - 5, v.finSyms.size());
+        for (int s = 747; s < FULL; s++) assertFalse(MinuteCompletenessGuard.finAllows(v.finSyms, "S" + s + "USDT"));
+        assertTrue(MinuteCompletenessGuard.finAllows(v.finSyms, "S0USDT"));
+        assertTrue(MinuteCompletenessGuard.finAllows(v.finSyms, "S746USDT"));
+        assertFalse("coin khong co nen phut nay cung khong co trong fin", MinuteCompletenessGuard.finAllows(v.finSyms, "NEWUSDT"));
+        assertEquals(1, MinuteCompletenessGuard.N_FIN_EXCL_MINUTES.get());
+        assertEquals(5, MinuteCompletenessGuard.N_FIN_EXCL_SYMS.get());
+        assertTrue(v.line().contains("loai_coin=5"));
+        // phut sau du het => khong loai coin nao
+        MinuteCompletenessGuard.FinVerdict v2 = tick(T + MIN, null);
+        assertTrue(v2.excluded.isEmpty());
+        assertTrue(MinuteCompletenessGuard.finAllows(v2.finSyms, "S751USDT"));
+        assertEquals(1, MinuteCompletenessGuard.N_FIN_EXCL_MINUTES.get());
+    }
+
+    /** [A1-M2] coin ngoai universe khong tinh vao danh sach loai; guard fin tat (finSyms null) => khong loc. */
+    @Test
+    public void perCoinExclusion_universeOnly_andNullMeansNoFilter() {
+        st.finAt.put(T, ms -> 600);
+        Predicate<String> u = s -> Integer.parseInt(s.substring(1, s.length() - 4)) < 600;
+        MinuteCompletenessGuard.FinVerdict v = tick(T, u);
+        assertTrue(v.complete);
+        assertTrue(v.excluded.isEmpty());
+        assertTrue(MinuteCompletenessGuard.finAllows(null, "S700USDT"));
+        assertFalse(MinuteCompletenessGuard.finAllows(Collections.<String>emptySet(), "S0USDT"));
+    }
+
+    /** [A1-M3] tre quyet dinh: DU ngay ~+6 s; phai cho => tre_sau_dong = luc DU; fail-closed => khong co finSyms. */
+    @Test
+    public void lateMs_recorded() {
+        MinuteCompletenessGuard.FinVerdict v = tick(T, null);
+        assertEquals(6_000L, v.lateMs);
+        st.finAt.put(T + MIN, ms -> ms < 14_000L ? 397 : FULL);
+        MinuteCompletenessGuard.FinVerdict v2 = tick(T + MIN, null);
+        assertEquals("DU_SAU_CHO", v2.reason);
+        assertEquals(14_000L, v2.lateMs);
+        assertTrue(v2.line().contains("tre_sau_dong=14000ms"));
+        st.finAt.put(T + 2 * MIN, ms -> 397);
+        MinuteCompletenessGuard.FinVerdict v3 = tick(T + 2 * MIN, null);
+        assertFalse(v3.complete);
+        assertEquals(45_000L, v3.lateMs);
+        assertNull(v3.finSyms);
+        assertTrue(v3.excluded.isEmpty());
     }
 }
