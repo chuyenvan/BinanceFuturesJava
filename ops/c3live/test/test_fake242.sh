@@ -73,6 +73,12 @@ case "$1" in
           MGS=BAT; { [ -f FAKE_MGTAT ] || [ "${LIVE_MINUTE_GUARD:-1}" = 0 ]; } && MGS="TAT (LIVE_MINUTE_GUARD=0)"
           echo "$D INFO [main] x: [MINUTE-GUARD] $MGS — phut du <=> so symbol >= 99% trung vi 60' truoc [CHI live]"
         fi
+        if grep -q MINUTE-FIN target/binance-java-sdk-1.2.4.jar 2>/dev/null; then   # [FIN] jar gia fin => dong [MINUTE-FIN] nhu start()
+          FNS=BAT; [ "${LIVE_FIN_GUARD:-1}" = 0 ] && FNS=TAT
+          echo "$D INFO [main] x: [MINUTE-FIN] $FNS - phut DU theo dem con phai co >= 99% universe nam trong bin fin"
+          [ -f FAKE_FINNOBIN ] && echo "$D WARN [x] x: [MINUTE-INCOMPLETE] phut=x fin=0/500 can=495 bin_fin=0 cho=0ms doc_lai=0 ly_do=FIN_KHONG_BIN => KHONG mo lenh moi"
+          [ -z "${TELEGRAM_BOT_TOKEN:-}" ] && echo "$D ERROR [x] x: [TELEGRAM] thieu env TELEGRAM_BOT_TOKEN => TAT gui Telegram"
+        fi
         # [R4q] nhu LiveProfileC3.forceNoPush moi 10 s: KILL_SWITCH bi go => log "PUSH doi trang thai -> ON"
         if [ "$PUSHV" = OFF ] && [ "${SHADOW_NO_PUSH:-}" = false ] && [ "${LIVE_ENTRY_ENABLED:-}" = true ] && [ ! -f FAKE_NOPUSHON ]; then
           nohup bash -c 'for i in $(seq 1 300); do sleep 1; [ -e run/KILL_SWITCH ] || { echo "$(TZ=Asia/Ho_Chi_Minh date "+%d/%m/%Y %H:%M:%S.000") WARN [x] x: [C3-LIVE] PUSH doi trang thai -> ON (SHADOW_NO_PUSH=false LIVE_ENTRY_ENABLED=true killSwitch=run/KILL_SWITCH exists=false)" >> logs/full.log; exit 0; }; done' >/dev/null 2>&1 &
@@ -1711,7 +1717,7 @@ for p, body in ((sys.argv[1], b'fake-new-jar-v12r4q-r4r-r4s-r4t-r4u3 LOG.info("[
         z.writestr('com/binance/chuyennd/trading/DetectEntrySignal2TradeNormal.class', body)
 PYEOF
 NEWU=$(md5sum < $W/new_r4u.jar | cut -c1-32); NEWUB=$(md5sum < $W/new_r4u_bad.jar | cut -c1-32)
-swu() { env APP_DIR=$F4 OLD_MD5=$NEWR NJ=$W/new_r4u.jar NJ_MD5=$NEWU DEPLOY_TG_SINK=$W/tg_sw.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 REG_JAR_SH=$W/fake_register.sh "$@"; }
+swu() { env OLD_TAG=r4t NEW_TAG=r4u3 APP_DIR=$F4 OLD_MD5=$NEWR NJ=$W/new_r4u.jar NJ_MD5=$NEWU DEPLOY_TG_SINK=$W/tg_sw.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 REG_JAR_SH=$W/fake_register.sh "$@"; }
 # 242 gia ve trang thai dry THUAN nhu truoc go-live (§35 de lai dong env LIVE_ADAPTER=live + doi ten latch .dry_/.live_)
 sed -i '/^export LIVE_ADAPTER=live$/d' $F4/conf/env.sh; echo '{"latch":"NONE"}' > $F4/run/killsw_latch.json
 rm -f $W/reg_calls.txt $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_* $F4/run/KILL_SWITCH; sleep 2
@@ -1742,6 +1748,42 @@ OUT=$(rs NJ_MD5=$NEWR C3_ACCOUNT=MAIN DRY=1 SEED=none bash "$RSH" 2>&1); RC=$?
 OUT2=$(rs NJ_MD5=$NEWR C3_ACCOUNT=SUB DRY=1 SEED=none bash "$RSH" 2>&1)
 chk "A1 r4u2 C-1 restart_reseed: C3_ACCOUNT=MAIN + env.sh C3_EXCLUDE_LEGACY_HELD=false => TU CHOI (SUB thi khong)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'C3_ACCOUNT=MAIN di voi C3_EXCLUDE_LEGACY_HELD=false' && ! echo \"\$OUT2\" | grep -q 'C3_ACCOUNT=MAIN di voi'"
 echo "$OUT" | grep -q 'C3_ACCOUNT=MAIN di voi' || echo "$OUT" | tail -5
+echo "== 37. [FIN 2026-11-14] swap r4u3 -> r4u3fin: ingestor fin TRUOC, env token (sha8), hau kiem [MINUTE-FIN] BAT / FIN_KHONG_BIN"
+python3 - "$W/new_fin.jar" <<'ZIPEOF'
+import sys, zipfile
+with zipfile.ZipFile(sys.argv[1], 'w', zipfile.ZIP_STORED) as z:
+    z.writestr('META-INF/MANIFEST.MF', 'Manifest-Version: 1.0\n')
+    z.writestr('com/binance/chuyennd/trading/DetectEntrySignal2TradeNormal.class', b'fake-new-jar-v12r4q-r4r-r4s-r4t-r4u3fin LOG.info("[BIG_DOWN-SEL] {}") [MINUTE-FIN]')
+ZIPEOF
+NEWF=$(md5sum < $W/new_fin.jar | cut -c1-32)
+printf 'ing-fin-fake' > $W/ing_fin.jar; INGF=$(md5sum < $W/ing_fin.jar | cut -c1-32); printf 'ing-old-fake' > $W/ing_old.jar
+mkdir -p $W/ingfake/conf; echo 'export KLINE_INGEST_MODE=ws_settle' > $W/ingfake/conf/env.sh
+TGF=$(printf %s fake242tok | sha256sum | cut -c1-8)
+ingf() { pkill -f 'websocket.BinanceDataIngestor fake242fin' 2>/dev/null; sleep 0.3; mkdir -p $W/ingfake/target; cp -f $1 $W/ingfake/target/binance-java-sdk-1.2.4.jar
+  setsid bash -c "exec 3<$W/ingfake/target/binance-java-sdk-1.2.4.jar; exec -a 'java websocket.BinanceDataIngestor fake242fin' sleep 900" >/dev/null 2>&1 < /dev/null & sleep 0.5; }
+swf() { env APP_DIR=$F4 OLD_TAG=r4t NEW_TAG=r4u3fin OLD_MD5=$NEWR NJ=$W/new_fin.jar NJ_MD5=$NEWF ING_FIN_MD5=$INGF ING_DIR=$W/ingfake TG_SHA8=$TGF DEPLOY_TG_SINK=$W/tg_sw.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 REG_JAR_SH=$W/fake_register.sh "$@"; }
+sed -i '/fake242tok/d' $F4/conf/env.sh; rm -f $F4/FAKE_FINNOBIN $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_*; sleep 1
+ingf $W/ing_old.jar
+OUT=$(swf DRY=1 bash "$SW" 2>&1); RC=$?
+chk "fin swap: ingestor CHUA chay jar fin => DUNG truoc moi thao tac 242" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL ingestor_jar=' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWR ]"
+ingf $W/ing_fin.jar
+OUT=$(swf DRY=1 bash "$SW" 2>&1); RC=$?
+chk "fin swap: env.sh CHUA source telegram.env => DUNG (owner chay set_telegram_env_242.sh truoc)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL env_chua_source_telegram'"
+echo 'export TELEGRAM_BOT_TOKEN=fake242tok   # gia lap dong source secrets/telegram.env' >> $F4/conf/env.sh
+echo 'export KLINE_FIN_BIN=0' >> $W/ingfake/conf/env.sh
+OUT=$(swf DRY=1 bash "$SW" 2>&1); RC=$?
+chk "fin swap: ingestor env KLINE_FIN_BIN=0 => DUNG" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL ingestor_env_KLINE_FIN_BIN=0'"
+sed -i '/KLINE_FIN_BIN=0/d' $W/ingfake/conf/env.sh
+OUT=$(swf DRY=1 bash "$SW" 2>&1); RC=$?
+chk "fin swap DRY=1: ingestor fin + env token sha8 dung => DRY PASS, khong doi jar, khong lo token" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q 'OK telegram_env_sha8=$TGF' && ! echo \"\$OUT\" | grep -q fake242tok && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWR ]"
+touch $F4/FAKE_FINNOBIN
+OUT=$(echo YES | swf bash "$SW" 2>&1); RC=$?
+rm -f $F4/FAKE_FINNOBIN $F4/target/binance-java-sdk-1.2.4.jar.bak_swap_*; sleep 2
+chk "fin swap: log co ly_do=FIN_KHONG_BIN => hau kiem FAIL => ROLLBACK ve jar cu" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL FIN_KHONG_BIN' && echo \"\$OUT\" | grep -q 'ROLLBACK' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWR ]"
+OUT=$(echo YES | swf bash "$SW" 2>&1); RC=$?
+chk "fin swap XONG: jar r4u3fin, [MINUTE-FIN] BAT, process env token sha8 dung, token KHONG lo trong log/Telegram" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: dry chay r4u3fin' && echo \"\$OUT\" | grep -q 'OK MINUTE-FIN_BAT' && echo \"\$OUT\" | grep -q 'OK process_env_telegram_sha8=$TGF' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWF ] && ! grep -q fake242tok $W/tg_sw.txt && ! echo \"\$OUT\" | grep -q fake242tok"
+echo "$OUT" | grep -q 'XONG: dry chay r4u3fin' || echo "$OUT" | grep -E 'FAIL|WAIT|DUNG' | head -8 | sed 's/fake242tok/[CHE]/g'
+pkill -f 'websocket.BinanceDataIngestor fake242fin' 2>/dev/null
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN)) SKIP=$SKIPN (tong PASS+FAIL+SKIP=$((PASS+FAILN+SKIPN)) co dinh)"
 [ $FAILN = 0 ]

@@ -11,6 +11,12 @@
 #   (vd ve r4t) => GO dong; hau kiem env process dung gia tri / khong con. Rollback tu dong => env.sh backup (khong co dong).
 #   [A1 r4u2 C-1] C3_ACCOUNT=MAIN + EXCL_HELD=false => TU CHOI; SUB: hau kiem log KHONG co [C3-EXCL-FORCE] (jar r4u3 ep true khi
 #   live + key khong phai keys_sub.env => env key sai).
+#   [FIN 2026-11-14] mac dinh r4u3 -> r4u3fin (jar v1.2/fin-guard: guard bin fin + token Telegram tu env). NEED_FIN=1 (mac dinh khi
+#   NEW_TAG chua "fin"): TRUOC khi dung bot kiem ingestor dang chay jar fin ING_FIN_MD5 + log [KLINE-FIN] bin fin BAT (ingestor
+#   TRUOC), env.sh co LIVE_FIN_GUARD=0 => TU CHOI, env.sh source secrets/telegram.env voi sha8 = TG_SHA8 (set_telegram_env_242.sh);
+#   hau kiem [MINUTE-FIN] BAT, 0 ly_do=FIN_KHONG_BIN, 0 [TELEGRAM] thieu env, process env TELEGRAM_BOT_TOKEN sha8 = TG_SHA8.
+#   Rollback ve r4u3: OLD_TAG=r4u3fin NEW_TAG=r4u3 OLD_MD5=<fin> NJ=<jar r4u3> NJ_MD5=b1f12c3e... NEED_FIN=0 bash swap_v12_dry_jar.sh
+#   (r4u3 cu doc bin data, khong can bin fin => rollback v_t_m an toan voi ca 2 ingestor).
 #   [ADD19] hau kiem DAT => in + luu START_MS JVM moi (~/claude_master/deploy/swap_start_<tag>_<TS>.txt), dang ky register_jar.sh,
 #   ghi smoke_start_ms vao parity_v12w/gmicro_target.json KHI file tro dung target_jar=<NEW_TAG> + target_md5=<NJ_MD5> (khac => WARN).
 #   Them C11 (LIVE_SEED_EXCLUDE_DECISION_MIN=1) neu env.sh chua co. Khong doi gi khac (adapter/profile/push giu nguyen = dry).
@@ -42,11 +48,11 @@ SCP_242=${SCP_242:-"scp -P 2222 -o BatchMode=yes -o ConnectTimeout=20 -i /home/u
 RHOST=${RHOST-"root@103.157.218.242:"}
 A=${APP_DIR:-/home/chuyennd/java/v_t_m}
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}
-OLD_MD5=${OLD_MD5:-694b29b2e5be32b537ca6c38557e64db}   # jar dry DANG chay (r4t, ROUND4T) — khac => TU CHOI
-NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4u3}
-NJ_MD5=${NJ_MD5:-b1f12c3eeaeed72cb17afbe5b4da06cf}   # jar r4u3 (BIG_DOWN-SEL + BIG_DOWN-GATE, ADD18/19); truoc: r4t 694b29b2, r4q 8c81e6b5
-OLD_TAG=${OLD_TAG:-r4t}
-NEW_TAG=${NEW_TAG:-r4u3}
+OLD_MD5=${OLD_MD5:-b1f12c3eeaeed72cb17afbe5b4da06cf}   # jar dry DANG chay (r4u3) - khac => TU CHOI
+NJ=${NJ:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4u3fin}
+NJ_MD5=${NJ_MD5:-39d998fa6fde882de26d9b046a6288a6}   # [FIN] jar r4u3fin (v1.2/fin-guard); truoc: r4u3 b1f12c3e, r4t 694b29b2, r4q 8c81e6b5
+OLD_TAG=${OLD_TAG:-r4u3}
+NEW_TAG=${NEW_TAG:-r4u3fin}
 NEED_BIGDOWN=${NEED_BIGDOWN:-1}   # [R4u] jar moi phai co code [BIG_DOWN-SEL]
 C3_ACCOUNT=${C3_ACCOUNT:-SUB}     # [R4u2] SUB (mac dinh, ADD4) | MAIN — quyet dinh C3_EXCLUDE_LEGACY_HELD
 case "$C3_ACCOUNT" in SUB|MAIN) ;; *) echo "C3_ACCOUNT=$C3_ACCOUNT khong hop le (SUB | MAIN)"; exit 1;; esac
@@ -56,6 +62,11 @@ EXCL_HELD=${EXCL_HELD-$DEF_EXCL}   # [R4u2] export C3_EXCLUDE_LEGACY_HELD=<gia t
 if [ "$C3_ACCOUNT" = MAIN ] && [ "$EXCL_HELD" = false ]; then echo "DUNG: C3_ACCOUNT=MAIN di voi C3_EXCLUDE_LEGACY_HELD=false — TU CHOI (A1 r4u2 C-1: vi the c3 that bi tinh la LEGACY)"; exit 1; fi
 GMICRO_TARGET=${GMICRO_TARGET:-/home/ubuntu/claude_master/parity_v12w/gmicro_target.json}   # [ADD19] smoke_start_ms
 NEED_MGUARD=${NEED_MGUARD:-1}   # [R4r] jar moi co guard do du phut => hau kiem [MINUTE-GUARD] BAT
+case "$NEW_TAG" in *fin*) DEF_FIN=1;; *) DEF_FIN=0;; esac
+NEED_FIN=${NEED_FIN:-$DEF_FIN}   # [FIN] jar moi co guard bin fin + token env => kiem ingestor fin TRUOC + env token + hau kiem MINUTE-FIN
+ING_FIN_MD5=${ING_FIN_MD5:-c38e476cfb67f8ccb705f54936344aef}   # [FIN] jar collectData qf/fin-bin phai DANG chay truoc khi swap
+TG_SHA8=${TG_SHA8:-4f49bded}   # [FIN] sha8 token Telegram ky vong
+ING_DIR=${ING_DIR:-/home/chuyennd/java/collectData}   # [FIN] thu muc collectData (kiem env KLINE_FIN_BIN)
 WD_PAUSE=${WD_PAUSE:-/var/lib/h242_watchdog/PAUSE}
 WD_PAUSE_MAX_S=${WD_PAUSE_MAX_S:-1800}
 POST_WAIT_S=${POST_WAIT_S:-60}
@@ -171,8 +182,8 @@ fi
 
 # ---------------------------------------------------------------- 1. kiem 242 CHI DOC
 pre242() {
-  s242in "PP='$PROC_PAT' bash -s -- $A $OLD_MD5 $NJ_MD5 $WD_PAUSE $MIN_MEM_MB $NEED_MGUARD" <<'EOF'
-A=$1; OJM=$2; NJM=$3; PAUSE=$4; MINMEM=$5; MG=${6:-0}; cd "$A" || { echo "FAIL cd"; echo END_PRE; exit 0; }
+  s242in "PP='$PROC_PAT' bash -s -- $A $OLD_MD5 $NJ_MD5 $WD_PAUSE $MIN_MEM_MB $NEED_MGUARD $NEED_FIN $ING_FIN_MD5 $TG_SHA8 $ING_DIR" <<'EOF'
+A=$1; OJM=$2; NJM=$3; PAUSE=$4; MINMEM=$5; MG=${6:-0}; FN=${7:-0}; IFM=${8:-}; TG8=${9:-}; IGD=${10:-/home/chuyennd/java/collectData}; cd "$A" || { echo "FAIL cd"; echo END_PRE; exit 0; }
 N=$(pgrep -fc "$PP"); [ "$N" = 1 ] && echo "OK so_process=1" || echo "FAIL so_process=$N"
 P=$(pgrep -f "$PP" | head -1)
 J=$(md5sum < target/binance-java-sdk-1.2.4.jar | cut -c1-32)
@@ -182,6 +193,17 @@ for k in LIVE_PROFILE=c3_live LIVE_ADAPTER=dry SHADOW_NO_PUSH=true; do echo "$E"
 grep -q '^export LIVE_ADAPTER=dry' conf/env.sh && echo "OK env.sh_dry" || echo "FAIL env.sh_khong_phai_dry"
 grep -q '^export LIVE_ADAPTER=live' conf/env.sh && echo "FAIL env.sh_LIVE_ADAPTER=live"
 [ "$MG" = 1 ] && grep -q '^export LIVE_MINUTE_GUARD=0' conf/env.sh && echo "FAIL env.sh_LIVE_MINUTE_GUARD=0 (jar moi can guard BAT)"
+if [ "$FN" = 1 ]; then   # [FIN] ingestor fin TRUOC + token env (KHONG in token)
+  grep -q '^export LIVE_FIN_GUARD=0' conf/env.sh && echo "FAIL env.sh_LIVE_FIN_GUARD=0 (jar fin can guard BAT)"
+  IP=$(pgrep -f 'websocket.BinanceDataIngestor' | head -1); IFD=$(find /proc/$IP/fd -lname '*binance-java-sdk*.jar*' 2>/dev/null | head -1)
+  IJ=$( [ -n "$IFD" ] && md5sum < "$IFD" 2>/dev/null | cut -c1-32)
+  [ -n "$IJ" ] && [ "$IJ" = "$IFM" ] && echo "OK ingestor_jar_fin=$IJ" || echo "FAIL ingestor_jar=${IJ:-?} khac fin $IFM (deploy ingestor fin TRUOC)"
+  grep -q '^export KLINE_FIN_BIN=0' "$IGD/conf/env.sh" 2>/dev/null \
+    && echo "FAIL ingestor_env_KLINE_FIN_BIN=0 (tat bin fin)" || echo "OK ingestor_khong_tat_fin"
+  grep -q 'secrets/telegram.env' conf/env.sh && echo "OK env_source_telegram" || echo "FAIL env_chua_source_telegram (owner chay set_telegram_env_242.sh truoc)"
+  TGS=$(bash -c '. conf/env.sh >/dev/null 2>&1; printf %s "$TELEGRAM_BOT_TOKEN"' | sha256sum | cut -c1-8)
+  [ "$TGS" = "$TG8" ] && echo "OK telegram_env_sha8=$TGS" || echo "FAIL telegram_env_sha8=$TGS (ky vong $TG8)"
+fi
 HC=$(grep -c '^export LIVE_SEED_EXCLUDE_DECISION_MIN=1' conf/env.sh); HS=$(grep -c '^export GATE_BUFFER_SEED=' conf/env.sh)
 echo "INFO HAS_C11=$HC HAS_SEED_ENV=$HS"
 # khong seed: env co GATE_BUFFER_SEED ma CHUA co marker .seeded => restart se NAP seed => TU CHOI
@@ -370,8 +392,8 @@ if [ -n "$LB" ]; then [ "$LB" != "${L0:-}" ] && say "INFO LEGACY truoc stop=$LB 
 
 # ---------------------------------------------------------------- 4. hau kiem
 CHK() {
-  s242in "PP='$PROC_PAT' bash -s -- $A $SL $NJ_MD5 ${L0:-0} $NEED_MGUARD ${EXCL_HELD:--} $C3_ACCOUNT" <<'EOF'
-A=$1; SL=$2; NJM=$3; L0=$4; MG=${5:-0}; EX=${6:--}; ACC=${7:-SUB}; cd "$A"; L=logs/full.log
+  s242in "PP='$PROC_PAT' bash -s -- $A $SL $NJ_MD5 ${L0:-0} $NEED_MGUARD ${EXCL_HELD:--} $C3_ACCOUNT $NEED_FIN $TG_SHA8" <<'EOF'
+A=$1; SL=$2; NJM=$3; L0=$4; MG=${5:-0}; EX=${6:--}; ACC=${7:-SUB}; FN=${8:-0}; TG8=${9:-}; cd "$A"; L=logs/full.log
 T() { tail -n +$SL $L 2>/dev/null | grep -a -c "$1"; }
 P=$(pgrep -f "$PP" | head -1)
 [ "$(pgrep -fc "$PP")" = 1 ] && echo "OK 1_process" || echo "FAIL so_process"
@@ -397,6 +419,14 @@ if [ -z "$LN" ]; then echo "WAIT LEGACY_chua_co"; elif [ "$LN" = "$L0" ]; then e
 if [ "$MG" = 1 ]; then   # [R4r] guard do du phut
   if [ "$(T '\[MINUTE-GUARD\] TAT')" -ge 1 ]; then echo "FAIL MINUTE-GUARD_TAT"
   elif [ "$(T '\[MINUTE-GUARD\] BAT')" -ge 1 ]; then echo "OK MINUTE-GUARD_BAT"; else echo "WAIT MINUTE-GUARD_BAT"; fi
+fi
+if [ "$FN" = 1 ]; then   # [FIN] guard bin fin + token env (KHONG in token)
+  if [ "$(T '\[MINUTE-FIN\] TAT')" -ge 1 ]; then echo "FAIL MINUTE-FIN_TAT"
+  elif [ "$(T '\[MINUTE-FIN\] BAT')" -ge 1 ]; then echo "OK MINUTE-FIN_BAT"; else echo "WAIT MINUTE-FIN_BAT"; fi
+  [ "$(T 'ly_do=FIN_KHONG_BIN')" = 0 ] && echo "OK 0_FIN_KHONG_BIN" || echo "FAIL FIN_KHONG_BIN (record khong co bin fin)"
+  [ "$(T '\[TELEGRAM\] thieu env')" = 0 ] && echo "OK 0_TELEGRAM_thieu_env" || echo "FAIL TELEGRAM_thieu_env"
+  S8=$(echo "$E" | sed -n 's/^TELEGRAM_BOT_TOKEN=//p' | tr -d '\n' | sha256sum | cut -c1-8)
+  [ "$S8" = "$TG8" ] && echo "OK process_env_telegram_sha8=$S8" || echo "FAIL process_env_telegram_sha8=$S8"
 fi
 [ "$(T '\[GATE\] scale')" -ge 1 ] && echo "OK GATE_tick_chay" || echo "WAIT GATE_tick_chua_co"
 echo END_CHK
