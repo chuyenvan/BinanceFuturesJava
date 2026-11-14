@@ -141,4 +141,31 @@ public class KlineIngestFinTest {
         assertTrue(store.finOf(M).isEmpty());
         assertEquals("dong dau khong doi data", 3, store.read(M).size());
     }
+
+    /** [A1-M1] repair khoi dong / tool ghi de nen REST: chua settle => GO khoi fin; da settle => vao fin; phut mo => khong vao. */
+    @Test
+    public void outOfBandRepair_unsettledRemovesFromFin_settledAdds() {
+        nan();
+        core.onWsFinal("BTCUSDT", M, FINAL);
+        core.onWsFinal("ETHUSDT", M, FINAL);
+        core.flushWsFinals(M);
+        assertEquals(set("BTC", "ETH"), store.finOf(M));
+        KlineIngestCore.writeRestOutOfBand(store, M, Collections.singletonMap("BTC", UNSETTLED), M + MIN + 5_000L, AGE);
+        assertEquals("REST 5 s sau dong (chua settle) ghi de => BTC roi fin", set("ETH"), store.finOf(M));
+        assertTrue(KlineIngestCore.sameBits(UNSETTLED, store.read(M).get("BTC")));
+        KlineIngestCore.writeRestOutOfBand(store, M, Collections.singletonMap("BTC", FINAL), M + MIN + AGE, AGE);
+        assertEquals("REST du tuoi settle => BTC vao lai fin", set("BTC", "ETH"), store.finOf(M));
+        KlineIngestCore.writeRestOutOfBand(store, M + MIN, Collections.singletonMap("SOL", OPEN), M + MIN + 10_000L, AGE);
+        assertFalse("phut dang mo khong vao fin", store.finOf(M + MIN) != null && store.finOf(M + MIN).contains("SOL"));
+        assertTrue(KlineIngestCore.restFinalSyms(Collections.singleton("X"), M, M + MIN + AGE - 1, AGE).isEmpty());
+        assertEquals(set("X"), KlineIngestCore.restFinalSyms(Collections.singleton("X"), M, M + MIN + AGE, AGE));
+    }
+
+    @Test
+    public void flagOn_offForms() {
+        assertTrue(KlineIngestCore.flagOn(null));
+        assertTrue(KlineIngestCore.flagOn("1"));
+        assertTrue(KlineIngestCore.flagOn(""));
+        for (String v : new String[]{"0", "false", "FALSE", " no ", "Off", "OFF"}) assertFalse(v, KlineIngestCore.flagOn(v));
+    }
 }

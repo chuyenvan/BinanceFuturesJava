@@ -154,6 +154,31 @@ public final class KlineIngestCore {
         }
     }
 
+    /**
+     * [FIN A1-M1 2026-11-14] Nen REST ghi NGOAI luong chinh (repair khoi dong repairBatchOptimized / TickerGapRepairTool):
+     * nen da settle ({@code openTime + 1' <= nowMs - settleMinAgeMs}, cung luat {@link #settle}) =&gt; ban CHOT (vao fin);
+     * con lai (dong chua du tuoi / phut dang mo) =&gt; GO khoi fin. Truoc day repair chi ghi bin data =&gt; fin co the van noi
+     * "chot" cho nen REST chua settle vua ghi de.
+     */
+    public static Set<String> restFinalSyms(Collection<String> shortSyms, long openTime, long nowMs, long settleMinAgeMs) {
+        if (shortSyms == null || shortSyms.isEmpty() || openTime + MIN > nowMs - settleMinAgeMs) return Collections.emptySet();
+        return new HashSet<>(shortSyms);
+    }
+
+    /** [FIN A1-M1] ghi nen REST ngoai luong qua {@link MinuteStore#writeFinal} (data + fin nguyen tu; store tu ton trong KLINE_FIN_BIN). */
+    public static void writeRestOutOfBand(MinuteStore store, long openTime, Map<String, KlineObjectOptimized> candles, long nowMs,
+                                          long settleMinAgeMs) {
+        if (candles == null || candles.isEmpty()) return;
+        store.writeFinal(openTime, candles, restFinalSyms(candles.keySet(), openTime, nowMs, settleMinAgeMs));
+    }
+
+    /** [A1-M5] co tat: "0"/"false"/"no"/"off" (khong phan biet hoa thuong, bo khoang trang) =&gt; TAT; vang/khac =&gt; BAT. Khop script. */
+    public static boolean flagOn(String v) {
+        if (v == null) return true;
+        String s = v.trim().toLowerCase(java.util.Locale.ROOT);
+        return !("0".equals(s) || "false".equals(s) || "no".equals(s) || "off".equals(s));
+    }
+
     /** [FIN] Phut khong co WS final nao luc flush: dong dau bin fin rong (record da co) de live phan biet voi ingestor cu. */
     void stampFin(long minute) {
         synchronized (writeLock) {

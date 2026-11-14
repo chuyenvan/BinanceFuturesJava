@@ -60,6 +60,12 @@ public class TickerGapRepairTool {
 
     // --- CÁC HÀM HỖ TRỢ BÊN DƯỚI DỰA TRÊN CODE TICKERINGESTOR CỦA BÁC ---
 
+    /** [FIN A1-M1] cung co / tuoi settle voi ingestor (KLINE_FIN_BIN, KLINE_SETTLE_MIN_AGE_SEC). */
+    static final boolean FIN_BIN = com.binance.chuyennd.websocket.KlineIngestCore.flagOn(
+            com.binance.chuyennd.tradecore.Cfg.getOr("KLINE_FIN_BIN", "1"));
+    static final long SETTLE_MIN_AGE_MS = 1000L * Long.parseLong(
+            com.binance.chuyennd.tradecore.Cfg.getOr("KLINE_SETTLE_MIN_AGE_SEC", "20").trim());
+
     private static void repairBatch(List<String> symbols, long batchStartTime, int limit) {
         for (String s : symbols) {
             try {
@@ -81,7 +87,15 @@ public class TickerGapRepairTool {
                         map.put(shortS, convertToProto(c));
 
                         // Hàm Write của bác trong DataManagerAerospike
-                        DataManagerAerospikeFloatSim.writeMinuteBatch(ts, map);
+                        // [FIN A1-M1] KLINE_FIN_BIN bat (mac dinh): ghi data + fin nguyen tu - nen da settle => vao fin,
+                        //   chua settle => GO khoi fin (khong de fin noi "chot" cho nen REST chua settle). Tat => chi data nhu cu.
+                        if (FIN_BIN) {
+                            DataManagerAerospikeFloatSim.writeMinuteBatchFin(ts, map,
+                                    com.binance.chuyennd.websocket.KlineIngestCore.restFinalSyms(map.keySet(), ts,
+                                            System.currentTimeMillis(), SETTLE_MIN_AGE_MS));
+                        } else {
+                            DataManagerAerospikeFloatSim.writeMinuteBatch(ts, map);
+                        }
                     }
                 }
 

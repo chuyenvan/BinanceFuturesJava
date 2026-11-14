@@ -44,8 +44,7 @@ public class TickerIngestor2AerospikeNew {
     static final String MODE = normMode(com.binance.chuyennd.tradecore.Cfg.getOr("KLINE_INGEST_MODE", MODE_WS));
     static final long WS_FLUSH_MS = cfgLong("KLINE_WS_FLUSH_MS", 1500);
     /** [FIN 2026-11-14] ghi bin "fin" (tap symbol co nen DA CHOT) cung record phut; "0"/"false" = tat (rollback, live can LIVE_FIN_GUARD=0). */
-    static final boolean FIN_BIN = !("0".equals(com.binance.chuyennd.tradecore.Cfg.getOr("KLINE_FIN_BIN", "1").trim())
-            || "false".equalsIgnoreCase(com.binance.chuyennd.tradecore.Cfg.getOr("KLINE_FIN_BIN", "1").trim()));
+    static final boolean FIN_BIN = KlineIngestCore.flagOn(com.binance.chuyennd.tradecore.Cfg.getOr("KLINE_FIN_BIN", "1"));   // [A1-M5] 0/false/no/off
     /** REST som cho symbol THIEU WS final. Do 2026-10-10 (/market, 30 sym x 8 phut): x=true toi p50 0,52 s nhung ~22% symbol
      *  (it giao dich) toi o ~3,04 s moi phut, 0 sau 3,5 s => ws_settle mac dinh 4 s (WS suy giam >50% thieu o giay 2 => REST ngay);
      *  rest_settle mac dinh 2 s (nhu V8.1). Ca hai xong truoc khi live doc o giay 6. */
@@ -716,6 +715,9 @@ public class TickerIngestor2AerospikeNew {
         });
     }
 
+    /** [FIN A1-M1] store cho repair (cung AerospikeMinuteStore cua core: KLINE_FIN_BIN=0 => chi data nhu cu). */
+    private static final AerospikeMinuteStore REPAIR_STORE = new AerospikeMinuteStore();
+
     private void repairBatchOptimized(List<String> symbols, long batchStartTime, int limit) {
         int idx = 0;
         for (String s : symbols) {
@@ -736,7 +738,8 @@ public class TickerIngestor2AerospikeNew {
                     if (ts >= batchStartTime && ts < batchStartTime + (long) limit * Utils.TIME_MINUTE) {
                         Map<String, KlineObjectOptimized> map = new HashMap<>();
                         map.put(shortS, convertToProto(c));
-                        DataManagerAerospikeFloatSim.writeMinuteBatch(ts, map);
+                        // [FIN A1-M1] ghi de qua writeFinal: nen da settle => vao fin; chua settle / phut mo => GO khoi fin
+                        KlineIngestCore.writeRestOutOfBand(REPAIR_STORE, ts, map, System.currentTimeMillis(), SETTLE_MIN_AGE_SEC * 1000L);
                     }
                 }
 
