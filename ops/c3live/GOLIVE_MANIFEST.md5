@@ -8,3 +8,4 @@ e3573f10deb21256b9517f5c9b348776  golive_rebase_equity.sh
 d8ccecdf45cd2a69d75a63b07e2abc9f  install_cron_golive_monitor.sh
 f0d11daf16aef9c016a45fa71d3cff8c  golive_monitor.sh
 1a88e2dbc482377463eddb2cd2728933  golive_lib.sh
+5a2514c751c0ff90c214a88701e5889e  dry_prep_micro_restart.sh
