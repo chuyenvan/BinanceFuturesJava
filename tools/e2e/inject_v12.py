@@ -10,6 +10,8 @@ Sua 1 diem tren BAN SAO trong RAM (hoac thu muc tam cho file REF), chay lai ham 
   [ERRATA2 E7] T7 X1: cum co nhan ARM_CUNG_NEN (REF-nhip): stopPrice jar +3 tick (S-TS) => X1 FAIL
   T8 X1: doi nhan - bo nhan REF-nhip cua cum co nhan (S-TS) => X1 FAIL;  T9: gan nhan cho 1 cum TRAIL khong nhan => X1 FAIL
   [ERRATA3] T10 S1 U sai nhat quan voi budget (R0); T11 S1 eq_at cache cu nhat quan (R0); T12 D1 S-DCA U sai nhat quan;
+  [MASTER N14/N15] T18 eq_at lech moc gia tri dung => KHONG FAIL; T19 gia tri eq x(1+1e-5) => FAIL; T20 LEGACY-11-05
+  nguon thieu so dong => FAIL; T21 doi chung co bang chung => chap nhan.
   T13-T16 E2 file nhan (ngoai tap / LEGACY thieu nguon / header sai / thieu file) bi tu choi; T17 E2 R-OLD khong E9 => FAIL.
   (E11a: tools/e2e/test_ref_e11a.py; khoa: tools/e2e/test_official_lock.sh)
 argv: --runs DIR --ref DIR --fx DIR --env FILE
@@ -192,6 +194,20 @@ def main():
     r = C.s1(L2, env, meta, C.e_rows(L2, rf("R0"), fxo))
     o = oldres(lambda: old.s1(L2, env, meta, old.e_rows(L2, rf("R0"), fxo))[0]) if old else "-"
     rec("T11 S1 eq_at cache cu -60 s, eq nhat quan %s" % best[0], bs, r[0], "E_bad=%d checker_cu=%s" % (r[1]["E"]["n_bad(>1e-6)"], o))
+    # [MASTER N14] T18 S1: eq_at jar lech MOC (-1500 ms) nhung GIA TRI eq dung => KHONG FAIL, chi bao cao lech moc
+    L2 = copy.deepcopy(L0)
+    x0 = next(x for x in L2["legs"] if x["cid"] == subs[0]["cid"])
+    x0["eq_at"] = str(int(x0["eq_at"]) - 1500)
+    r = C.s1(L2, env, meta, C.e_rows(L2, rf("R0"), fxo))
+    mo = r[1]["E"]["eq_at_lech_moc(BAO CAO, N14)"]
+    res.append(("T18 S1 eq_at lech moc -1500 ms, gia tri dung %s" % x0["cid"], bs, r[0], r[0] == bs and r[0] != C.FAIL
+                and mo["n_submit_lech_moc"] >= 1, "KY VONG KHONG FAIL; lech_moc n=%d max=%d ms" % (mo["n_submit_lech_moc"], mo["max_abs_lech_ms"])))
+    # [MASTER N14] T19 S1: GIA TRI eq lech 1e-5 (moc dung) => FAIL
+    L2 = copy.deepcopy(L0)
+    x0 = next(x for x in L2["legs"] if x["cid"] == subs[0]["cid"])
+    x0["eq"] = repr(float(x0["eq"]) * (1 + 1e-5))
+    r = C.s1(L2, env, meta, C.e_rows(L2, rf("R0"), fxo))
+    rec("T19 S1 gia tri eq x(1+1e-5) %s" % x0["cid"], bs, r[0], "E_bad=%d" % r[1]["E"]["n_bad(>1e-6)"])
     # T12 D1 S-DCA: leg DCA U sai nhat quan
     L2 = copy.deepcopy(Ld)
     x0 = next(x for x in L2["legs"] if x["cid"] == dl[0]["cid"])
@@ -206,6 +222,7 @@ def main():
     ok0 = C.labels_check(os.path.join(os.path.dirname(os.path.abspath(__file__)), "labels_1105.csv"))
     for tag, body in (("T13 E2 nhan ngoai tap khai truoc", "symbol,label,nguon\nAIOUSDT,LEGACY-MOI,x\n"),
                       ("T14 E2 LEGACY-11-05 thieu nguon dong log", "symbol,label,nguon\nAIOUSDT,LEGACY-11-05,\n"),
+                      ("T20 E2 LEGACY-11-05 nguon khong co so dong", "symbol,label,nguon\nAIOUSDT,LEGACY-11-05,pull242/x/full.log.gz\n"),
                       ("T15 E2 header sai (them nhan sau, khong cot nguon)", "symbol,label\nAIOUSDT,EXCHANGEINFO\n"),
                       ("T16 E2 file nhan khong ton tai", None)):
         pth = tmp + "/lab.csv"
@@ -215,6 +232,10 @@ def main():
             open(pth, "w").write(body)
         ok, _, det = C.labels_check(pth)
         res.append((tag, "PASS" if ok0[0] else "FAIL", "FAIL" if not ok else "PASS", not ok, "; ".join(det["loi"])[:90]))
+    # [MASTER N15] T21 doi chung: LEGACY-11-05 CO bang chung '<log>:<dong>' => file nhan duoc CHAP NHAN (ky vong KHONG tu choi)
+    open(tmp + "/lab.csv", "w").write("symbol,label,nguon\nAIOUSDT,LEGACY-11-05,pull242/2026-11-05/logs/full.log@x.gz:12345\n")
+    ok, _, det = C.labels_check(tmp + "/lab.csv")
+    res.append(("T21 E2 doi chung LEGACY-11-05 co bang chung log:dong", "-", "PASS" if ok else "FAIL", ok, "; ".join(det["loi"])[:90]))
     # T17 E2: R-OLD khong chay voi C3_EXCLUDE_LEGACY_HELD=true (manifest gia START=11-05, KHONG du lieu 11-05)
     open(tmp + "/manifest.json", "w").write(json.dumps({"START": C.T1105}))
     Lo = C.lane(a.runs, "R-OLD")
@@ -227,7 +248,7 @@ def main():
     print("%-52s %-22s %-8s %s" % ("tiem", "goc", "sau", "FAIL dung?"))
     for n, b, af, ok, note in res:
         print("%-52s %-22s %-8s %s %s" % (n, b, af, "OK" if ok else "KHONG", note))
-    print("TONG: %d/%d tiem bi bat (FAIL)" % (sum(1 for z in res if z[3]), len(res)))
+    print("TONG: %d/%d tiem DUNG ky vong (FAIL; rieng T18/T21 ky vong KHONG FAIL)" % (sum(1 for z in res if z[3]), len(res)))
 
 
 if __name__ == "__main__":

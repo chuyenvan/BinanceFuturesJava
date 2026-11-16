@@ -199,7 +199,7 @@ def u_check(E):
 
 
 def e_check(E):
-    bad, worst, lag = [], 0.0, collections.Counter()
+    bad, worst, lag, moc = [], 0.0, collections.Counter(), []
     for cid, e in E.items():
         lag[(e["at"] - e["dec"]) // 1000 if e["at"] > 0 else None] += 1
         if e["eq"] is None or e["e_ref"] is None:
@@ -209,17 +209,18 @@ def e_check(E):
         worst = max(worst, rel)
         if rel > 1e-6:
             bad.append({"leg": cid, "E_replay": e["eq"], "E_REF(eq_at_REF)": e["e_ref"], "rel": rel})
-        # [ERRATA3 E10] eq_at jar (thoi diem cache equity jar dung khi size) == eq_at REF (mo hinh cache doc lap)
+        # [ERRATA3 E10 + MASTER N14] tieu chi tren GIA TRI (rel <= 1e-6 o tren); moc thoi gian eq_at jar vs REF CHI BAO CAO
         if e["at"] != e["at_ref"]:
-            bad.append({"leg": cid, "loi": "eq_at jar != eq_at REF", "eq_at_jar": e["at"], "eq_at_REF": e["at_ref"]})
-    return bad, worst, dict(lag)
+            moc.append({"leg": cid, "eq_at_jar": e["at"], "eq_at_REF": e["at_ref"], "lech_ms": e["at"] - e["at_ref"]})
+    return bad, worst, dict(lag), {"n_submit_lech_moc": len(moc), "max_abs_lech_ms": max((abs(z["lech_ms"]) for z in moc), default=0),
+                                   "vi_du": moc[:10]}
 
 
 def s1(L, env, meta, E, flags="on"):
     bad, n, worst = [], 0, 0.0
     first3 = []
     C3 = c3cap(L)
-    ebad, eworst, lag = e_check(E)
+    ebad, eworst, lag, emoc = e_check(E)
     ubad, uworst = u_check(E)
     for x in L["legs"]:
         if x["outcome"] != "SUBMITTED":
@@ -245,7 +246,7 @@ def s1(L, env, meta, E, flags="on"):
     det = {"n_submit": n, "worst_rel_budget": worst, "bad": bad[:20], "n_bad": len(bad), "hand_values_ref": hv, "hand_ok": hv_ok,
            "first3_replay(b,used_REF,margin_before_jar)": first3, "C3_CAPITAL": C3,
            "U(E10)": {"worst_abs": uworst, "n_bad(>1e-6)": len(ubad), "bad": ubad[:10]},
-           "E": {"worst_rel": eworst, "n_bad(>1e-6)": len(ebad), "bad": ebad[:10], "eq_at_minus_decision_s": lag,
+           "E": {"worst_rel": eworst, "n_bad(>1e-6)": len(ebad), "bad": ebad[:10], "eq_at_minus_decision_s": lag, "eq_at_lech_moc(BAO CAO, N14)": emoc,
                  "C_eff_min": min((e["ceff"] for e in E.values() if e["ceff"] is not None), default=None)}}
     if n == 0:
         return NA, det
@@ -430,8 +431,8 @@ def dca_leg_checks(x, mref, env, E, C3):
     erel = abs(e["e_ref"] - e["eq"]) / abs(e["e_ref"]) if e.get("eq") is not None and e.get("e_ref") is not None else 1.0
     return {"b": b, "sym": x["symbol"], "legIdx": int(x["leg_idx"]), "dieu_kien_tt": cond, "p15_ok": p15ok,
             "tt": None if not r else {"big": r["big_a1"], "alt": r["alt_a1"], "p15": r["p15"], "dip": r["dip"]},
-            "budget_rel": brel, "E_rel": erel, "U_abs": uabs, "eq_at_khop": e.get("at") == e.get("at_ref"),
-            "ok": cond and p15ok and brel <= 1e-5 and erel <= 1e-6 and uabs <= 1e-6 and e.get("at") == e.get("at_ref")}
+            "budget_rel": brel, "E_rel": erel, "U_abs": uabs, "eq_at_khop(BAO CAO, N14)": e.get("at") == e.get("at_ref"),
+            "ok": cond and p15ok and brel <= 1e-5 and erel <= 1e-6 and uabs <= 1e-6}
 
 
 def d1_natural(L, refdir, env, E):
@@ -589,6 +590,12 @@ E2_LABELS = ("LEGACY-11-05", "JAR-R4Q-FIN2-BIGDOWN-SEL", "JAR-R4Q-FIN2-UNIVERSE-
 LABELS_HEADER = ["symbol", "label", "nguon"]
 
 
+def legacy_evidence_ok(src):
+    """[MASTER N15] bang chung nhan LEGACY-11-05 = '<duong dan log>:<so dong>' (duong dan khong rong, so dong nguyen > 0)."""
+    path, _, line = (src or "").strip().rpartition(":")
+    return bool(path.strip()) and line.strip().isdigit() and int(line) > 0
+
+
 def labels_check(path):
     """[ERRATA3 E9] tools/e2e/labels_1105.csv: header DUNG symbol,label,nguon; moi nhan thuoc E2_LABELS; LEGACY-11-05 phai co
     nguon (dong log chi ra danh sach LEGACY doi trong ngay); symbol khong trung. File thieu / sai => TU CHOI.
@@ -615,8 +622,8 @@ def labels_check(path):
             det["loi"].append("dong %d: thieu symbol" % i)
         if lab not in E2_LABELS:
             det["loi"].append("dong %d: nhan '%s' KHONG thuoc tap khai truoc %s" % (i, lab, list(E2_LABELS)))
-        if lab == "LEGACY-11-05" and not src:
-            det["loi"].append("dong %d: LEGACY-11-05 thieu nguon (dong log)" % i)
+        if lab == "LEGACY-11-05" and not legacy_evidence_ok(src):
+            det["loi"].append("dong %d: LEGACY-11-05 thieu bang chung '<duong_dan_log>:<so_dong>' (nguon='%s')" % (i, src))
         if sym in labels:
             det["loi"].append("dong %d: symbol %s trung" % (i, sym))
         labels[sym] = lab

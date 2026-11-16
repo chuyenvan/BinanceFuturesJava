@@ -319,3 +319,14 @@ Mục này bổ sung §6 (chỗ mâu thuẫn thì §7 thắng). Vẫn CHỈ fixt
   doi trong cua so (legacy_E9.json `doi_trong_cua_so`) thi replay KHONG theo kip => lech phai gan nhan LEGACY-11-05 kem dong log
   (dung ERRATA3 E9). Ngay START 11-05 log `pull242/2026-11-05` phu toi 11-06 08:23 => doi sau moc do khong thay duoc (khong anh huong
   23 SUBMIT 22:51-22:53).
+
+### Phan xu MASTER N14/N15 (vong 5, 16-11) - ap vao bo cham
+- **N14 (E10):** tieu chi tren GIA TRI: E_jar (cot `eq`) vs E_REF tai `eq_at` REF sai so tuong doi <= 1e-6 (GIU, FAIL neu vuot) va
+  |U_REF - U_jar| <= 1e-6 (GIU). So khop MOC thoi gian `eq_at` jar == `eq_at` REF tung ms chat hon errata => CHI BAO CAO (S1:
+  `E."eq_at_lech_moc(BAO CAO, N14)"` = so SUBMIT lech moc + |lech| lon nhat ms + vi du; D1: `eq_at_khop(BAO CAO, N14)`), KHONG lam FAIL.
+  Moi kiem khac giu nguyen. Code: `check_v12.py` `e_check` (lech moc -> bao cao), `dca_leg_checks` (bo dieu kien moc khoi `ok`).
+- **N15 (E9/E2):** danh sach LEGACY cua R-OLD nap MOT LAN luc khoi dong (`run/legacy_symbols.csv`, tu dong `[LEGACY] managed` gan nhat
+  truoc START). Neu log ngay fixture cho thay danh sach DOI trong ngay (`legacy_E9.json` `doi_trong_cua_so`) thi phan lech o E2 do doi
+  do phai gan nhan `LEGACY-11-05` (nhan da khai trong prereg) KEM dong log lam bang chung. Bo cham CHI chap nhan nhan nay khi cot `nguon`
+  = `<duong dan log>:<so dong>` (duong dan khong rong, so dong nguyen > 0) - `check_v12.legacy_evidence_ok`; thieu/sai => TU CHOI file
+  nhan (E2 FAIL). Khong doi code cham E2 nao khac.

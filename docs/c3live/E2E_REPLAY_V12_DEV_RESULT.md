@@ -104,3 +104,16 @@ test_ref_e11a.py + test_official_lock.sh, tat ca trong 1 flock oracle_heavy.
   cu 1302fd81 cho PASS = lo hong B2/eq_at da va; T13-T16 file nhan bi tu choi; T17 E2 R-OLD thieu E9). E11a tong hop: REF moi vao
   lai AGTUSDT ngay quyet dinh b = 1793306940000, REF cu coi dang giu (DUNG). Khoa: 12/12 ca dung ky vong.
 - NGHI VAN moi: N14 (dien giai dung sai eq_at), N15 (danh sach LEGACY tinh, khong theo kip doi trong ngay) - SPEC muc 8.
+
+## Vong 5 (phan xu MASTER N14/N15) - CHI fixture DEV 10-30; 11-05 CHUA dung/chay
+
+Out: `~/claude_master/e2e_v12/out_v5` (lenh `/tmp/e2e5_run.sh` = /tmp/e2e4_run.sh doi out). Sua bo cham (SPEC muc 8 "Phan xu MASTER"):
+- N14: `check_v12.e_check` - lech MOC eq_at jar vs REF chi BAO CAO (`eq_at_lech_moc(BAO CAO, N14)`); gia tri E rel <= 1e-6 va U <= 1e-6
+  giu nguyen; `dca_leg_checks` bo dieu kien moc khoi `ok` (giu cot bao cao).
+- N15: `check_v12.legacy_evidence_ok` - nhan LEGACY-11-05 chi hop le khi `nguon` = `<log>:<so dong>`.
+
+Ket qua 8 luot 10-30: bang tieu chi TRUNG vong 4 (head 25 dong check_v12.txt giong het out_v4): C1, E1x2, S1x4, D1 S-DCA, X1 S-TS, F1,
+K1x2 PASS; D1 tu nhien KHONG XAY RA; X1 R0 KHONG DU MAU; E2 CHUA AP DUNG; ket luan (iii) dev FAIL (dung thiet ke fixture dev).
+eq_at lech moc: 0 SUBMIT o ca 4 S1 (max 0 ms). Thu tiem **21/21 dung ky vong**: 17 cu + T18 (eq_at lech moc -1500 ms, gia tri dung =>
+S1 PASS, bao cao n=1 max 1500 ms), T19 (eq x(1+1e-5) => FAIL), T20 (LEGACY-11-05 nguon khong so dong => tu choi), T21 doi chung (co
+`log:dong` => chap nhan). T11 (cache cu -60 s) van FAIL qua GIA TRI. E11a DUNG; khoa 12/12.
