@@ -49,13 +49,54 @@ gl_init golive_micro_on
 say "tai khoan c3: C3_ACCOUNT=$C3_ACCOUNT — $ACCT_TXT, file key $KEYS_FILE"
 G=$GATE_DIR/GOLIVE_GATE_MICRO.ok
 GR=$(gl_gate "$G" 1); echo "$GR"; echo "$GR" | grep -q '^OK' || die "chua co cong G-MICRO hop le (MASTER tao $G bang golive_make_gate.sh: jar_md5=$NJ_MD5, ingestor_md5, han 48 h, G-MICRO DAT, prereg)"
-# [WAVE1b M4] gate co OVERRIDE (truong ADD22 §3 thieu bang chung, MASTER chiu trach nhiem) => CANH BAO TO, ghi vao cau hoi YES + Telegram
+# [WAVE1c F-M4 + m2] TU KIEM gate SAU gl_gate (khong dua vao lib): toan ven (body_sha256 dong cuoi, sha256 tung file bang chung + report),
+#   prereg_commit la commit THAT trong PREREG_REPO (git cat-file) co prereg_file + replay_prereg, limits = NGUYEN muc 7 PREREG_E2E_REPLAY_V12
+#   tai commit do, 6 truong ADD22 3 khop ^DAT( |$) (chan "DATX"); OVERRIDE CHI o sizing_iv + override_fields = "sizing_iv" + replay_iii DAT
+#   + override_why >= 10 ky tu + override_by co ten nguoi. Sai bat ky => TU CHOI (DRY cung kiem).
+PREREG_REPO=${PREREG_REPO:-/home/ubuntu/claude_master/vz_e1_wt}
+gm_val() { sed -n "s/^$1=//p" "$G" | head -1; }   # gia tri NGUYEN (giu khoang trang, khac gl_gate_val)
+gm_lim7() { git -C "$PREREG_REPO" show "$1:$2" 2>/dev/null | tr -d '\r' | awk '/^## *7[. ]/{p=1;next} /^## /{if(p)exit} p && NF {sub(/[ \t]+$/,""); a=a (a==""?"":" | ") $0} END{print a}'; }
+GW=""; NOV=0
+GBL=$(tail -n 1 "$G")
+if ! [[ "$GBL" =~ ^body_sha256=[0-9a-f]{64}$ ]] || [ "$(grep -c '^body_sha256=' "$G")" != 1 ]; then GW="$GW thieu_body_sha256_dong_cuoi"
+elif [ "$(sed '$d' "$G" | sha256sum | cut -c1-64)" != "${GBL#body_sha256=}" ]; then GW="$GW body_sha256_LECH(gate_bi_sua_tay)"; fi
+for x in gmicro_i gmicro_ii smoke replay_iii sizing_iv script_v; do
+  r=$(gm_val "$x")
+  if [[ "$r" =~ ^DAT( |$) ]]; then
+    ev=$(printf '%s' "$r" | grep -oE '(^| )ev=[^ ]+' | head -1 | sed 's/^ *ev=//'); es=$(printf '%s' "$r" | grep -oE '(^| )ev_sha256=[0-9a-f]{64}' | head -1 | sed 's/^ *ev_sha256=//')
+    if [ -z "$ev" ] || ! [ -f "$ev" ] || ! [ -r "$ev" ]; then GW="$GW ${x}_file_bang_chung_MAT(${ev:-khong_co_ev})"
+    elif [ -z "$es" ]; then GW="$GW ${x}_thieu_ev_sha256"
+    elif [ "$(sha256sum < "$ev" | cut -c1-64)" != "$es" ]; then GW="$GW ${x}_bang_chung_BI_DOI($ev)"; fi
+  elif [ "$x" = sizing_iv ] && [[ "$r" =~ ^OVERRIDE( |$) ]]; then NOV=1
+  else GW="$GW ${x}_khong_DAT($(printf '%s' "${r%% *}" | tr -c 'A-Za-z0-9_' '_' | cut -c1-20))"; fi
+done
+GOB=$(gm_val override_by); GOW=$(gm_val override_why); GOF=$(gm_val override_fields)
+if [ "$NOV" = 1 ]; then
+  [ "$GOF" = sizing_iv ] || GW="$GW override_fields='$GOF'_khac_sizing_iv"
+  [[ "$(gm_val replay_iii)" =~ ^DAT( |$) ]] || GW="$GW OVERRIDE_sizing_iv_ma_replay_iii_khong_DAT"
+  [ "${#GOW}" -ge 10 ] || GW="$GW override_why_duoi_10_ky_tu"
+  [[ "$GOB" =~ [A-Za-z].*[A-Za-z] ]] || GW="$GW override_by_khong_co_ten_nguoi"
+elif grep -q '^override_' "$G"; then GW="$GW co_dong_override_nhung_sizing_iv_khong_OVERRIDE"; fi
+GRP=$(gm_val report); GRS=$(gm_val report_sha256)
+if [ -z "$GRP" ] || ! [ -f "$GRP" ]; then GW="$GW report_G-MICRO_MAT(${GRP:-khong_co})"
+elif [ "$(sha256sum < "$GRP" | cut -c1-64)" != "$GRS" ]; then GW="$GW report_G-MICRO_BI_DOI"; fi
+GPC=$(gm_val prereg_commit); GPF=$(gm_val prereg_file); GRPP=$(gm_val replay_prereg); LIM=$(gm_val limits)
+if ! [[ "$GPC" =~ ^[0-9a-f]{7,40}$ ]] || ! git -C "$PREREG_REPO" cat-file -e "$GPC^{commit}" 2>/dev/null; then GW="$GW prereg_commit_${GPC:-rong}_KHONG_co_trong_$PREREG_REPO"
+else
+  { [ -n "$GPF" ] && git -C "$PREREG_REPO" cat-file -e "$GPC:$GPF" 2>/dev/null; } || GW="$GW prereg_file_khong_co_tai_commit"
+  { [ -n "$GRPP" ] && git -C "$PREREG_REPO" cat-file -e "$GPC:$GRPP" 2>/dev/null; } || GW="$GW replay_prereg_khong_co_tai_commit"
+  if [ -z "$LIM" ]; then GW="$GW thieu_limits(muc_7_PREREG_E2E_REPLAY_V12)"
+  elif [ "$LIM" != "$(gm_lim7 "$GPC" "$GRPP")" ]; then GW="$GW limits_KHAC_muc_7_prereg_tai_commit"; fi
+fi
+[ -z "$GW" ] || die "gate G-MICRO KHONG hop le (tu kiem WAVE1c F-M4/m2):$GW"
+say "OK gate tu kiem: body_sha256 + sha256 bang chung + report khop, prereg $GPC co that, limits = muc 7 prereg, pham vi OVERRIDE dung"
+say "GIOI HAN DA BIET (PREREG_E2E_REPLAY_V12 muc 7 - KHONG duoc coi la da kiem): $LIM"
 GOV=""
-if grep -q '^override_by=' "$G"; then
-  GOV="GATE CO OVERRIDE by=$(gl_gate_val "$G" override_by) truong=$(sed -n 's/^override_fields=//p' "$G" | head -1)"
+if [ "$NOV" = 1 ]; then
+  GOV="GATE CO OVERRIDE by=$GOB truong=$GOF"
   say "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-  say "!!! CANH BAO: $GOV — THIEU BANG CHUNG G-MICRO (ADD22 §3)"
-  say "!!! ly do: $(sed -n 's/^override_why=//p' "$G" | head -1)"
+  say "!!! CANH BAO: $GOV - sizing_iv THIEU BANG CHUNG (ADD22 3 iv; replay_iii DAT la bang chung duy nhat)"
+  say "!!! ly do: $GOW"
   say "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 fi
 gl_read_state
@@ -123,7 +164,7 @@ fi
 [ "$C3_ACCOUNT" = SUB ] && [ "$DRY" = 1 ] && { gl_mon_repin || say "!! installer cron (DRY) loi"; }
 [ "$DRY" = 1 ] && { say "DRY=1: dung o day, KHONG ghi gi len 242. (DRY PASS)"; exit 0; }
 gl_time
-gl_yes "BAT MICRO-LIVE: lenh THAT tren $ACCT_TXT (C3_CAPITAL=$MICRO_CAPITAL). LEGACY (cung JVM) ngung quan ly ~30-60 s luc restart.${GOV:+ !!! $GOV !!!}"
+gl_yes "BAT MICRO-LIVE: lenh THAT tren $ACCT_TXT (C3_CAPITAL=$MICRO_CAPITAL). LEGACY (cung JVM) ngung quan ly ~30-60 s luc restart.${GOV:+ !!! $GOV !!!} GIOI HAN DA BIET (muc 7 PREREG_E2E_REPLAY_V12, KHONG coi la da kiem): $LIM."
 [ -n "$GOV" ] && tg "[golive] CANH BAO TS=$TS micro_on: owner go YES voi $GOV"
 gl_time   # [WAVE1 B-16] kiem LAI khung gio sau YES
 # [R4q MAJ-1] chup san TRUOC (chi doc): khong doc duoc => khong doi gi

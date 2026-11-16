@@ -19,10 +19,14 @@
 #   sizing_iv  : SIZING_RESULT co dong "sizing_iv: DAT" + jar NJ_MD5 + "smoke_start_ms=<..>" (ev). "KHONG DO DUOC" khong phai DAT
 #                => chi qua bang override (ghi ro, ADD22 §3 iv).
 #   script_v   : tu kiem: manifest go-live khop (M5) + md5(monitor+lib) co trong A1_APPROVED_MONITOR.md5 (ev = file A1)
-# OVERRIDE (chi cho cac truong tren, KHONG cho (a)/(b)): GATE_OVERRIDE_BY="<ten nguoi>" GATE_OVERRIDE_WHY="<ly do >= 10 ky tu>" =>
-#   truong thieu ghi "<truong>=OVERRIDE ly_do_thieu=..." + override_by / override_why / override_fields trong gate; micro_on in CANH BAO TO.
+# [WAVE1c F-M4] OVERRIDE CHI cho truong sizing_iv va CHI khi replay_iii = DAT (ADD22 3(iv): "(iii) la bang chung duy nhat"):
+#   GATE_OVERRIDE_BY="<ten nguoi>" GATE_OVERRIDE_WHY="<ly do >= 10 ky tu>" => sizing_iv=OVERRIDE + override_by/why/fields=sizing_iv.
+#   5 truong con lai (gmicro_i gmicro_ii smoke replay_iii script_v) thieu / khong DAT => TU CHOI CUNG, KHONG co duong override.
+# [WAVE1c m2] toan ven: moi truong DAT ghi ev=<file> ev_sha256=<sha256 file>; replay_prereg=<file prereg replay>; limits=<nguyen danh
+#   sach Gioi han da biet muc 7 PREREG_E2E_REPLAY_V12 tai prereg_commit, cac dong noi bang " | "> (khong co / rong => TU CHOI);
+#   dong CUOI body_sha256=<sha256 moi dong phia tren>. golive_micro_on.sh tinh lai TAT CA (sha ev/report/body, git prereg, limits, ^DAT( |$)).
 # Ghi (umask 077, ban cu => .bak_<ts>): jar_md5, ingestor_md5, created_ms, expires_ms (= created + 48 h), 6 truong tren, prereg_commit,
-#   prereg_file, report + report_sha256, by. golive_micro_on.sh kiem DU cac dong + han + ev ton tai (gl_gate strict).
+#   prereg_file, replay_prereg, limits, report + report_sha256, by, body_sha256. golive_micro_on.sh kiem DU (gl_gate strict + tu kiem).
 # Ma thoat: 0 da ghi (hoac DRY in) | 1 TU CHOI.
 # =============================================================================
 set -uo pipefail
@@ -75,11 +79,13 @@ echo "OK 242: 1 process, jar $NJ_MD5, ingestor $ING_FIN_MD5 (dang chay); prereg 
 WHYS=""; OVF=""
 declare -A V
 fld() {   # fld <truong> <ly do thieu | rong = DAT> <ev> [them]
-  if [ -z "$2" ]; then V[$1]="DAT ev=$3${4:+ $4}"; echo "  OK    $1: DAT (ev $3)"
+  if [ -z "$2" ]; then V[$1]="DAT ev=$3 ev_sha256=$(sha256sum < "$3" | cut -c1-64)${4:+ $4}"; echo "  OK    $1: DAT (ev $3)"
   else WHYS="$WHYS
   - $1: $2"; OVF="$OVF $1"; V[$1]="OVERRIDE ly_do_thieu=$(printf '%s' "$2" | tr -c 'A-Za-z0-9_.:=/+-' '_' | cut -c1-120)"; echo "  THIEU $1: $2"; fi
 }
 has() { grep -aqE "$2" "$1" 2>/dev/null; }
+# [WAVE1c m2] muc 7 "Gioi han da biet" cua prereg replay tai commit: moi dong khac rong (bo khoang trang cuoi) noi " | " (micro_on dung CUNG cach)
+lim7() { git -C "$1" show "$2:$3" 2>/dev/null | tr -d '\r' | awk '/^## *7[. ]/{p=1;next} /^## /{if(p)exit} p && NF {sub(/[ \t]+$/,""); a=a (a==""?"":" | ") $0} END{print a}'; }
 ev_ok() { [ -n "$1" ] && [ -s "$1" ] && [ -r "$1" ]; }
 git_clean() { local d; d=$(cd "$(dirname "$1")" && pwd) || return 1; git -C "$d" ls-files --error-unmatch "$d/$(basename "$1")" >/dev/null 2>&1 && git -C "$d" diff --quiet HEAD -- "$d/$(basename "$1")" 2>/dev/null; }
 echo "--- truong ADD22 §3 (bang chung):"
@@ -113,18 +119,25 @@ else fld sizing_iv "" "$SIZING_RESULT"; fi
 # script_v (manifest da kiem o dau script)
 if gl_mon_approved; then fld script_v "" "$A1_APPROVED_FILE" "monitor_lib=$(gl_mon_m12) manifest=$(md5sum < "$GL_HERE/GOLIVE_MANIFEST.md5" | cut -c1-12)"
 else fld script_v "md5(monitor+lib) $(gl_mon_m12) chua co trong $A1_APPROVED_FILE" ""; fi
-OVL=""
+OVL=""; OVF=$(echo $OVF)
 if [ -n "$OVF" ]; then
-  if [ -z "$OVB" ] || [ "${#OVW}" -lt 10 ]; then
-    no "thieu bang chung ADD22 §3:$WHYS
-  (override CHI khi MASTER chiu trach nhiem: GATE_OVERRIDE_BY=<ten> GATE_OVERRIDE_WHY=<ly do >= 10 ky tu>)"
+  # [WAVE1c F-M4] CHI sizing_iv duoc OVERRIDE, CHI khi replay_iii = DAT; truong khac thieu => TU CHOI CUNG (khong co duong override)
+  [ "$OVF" = sizing_iv ] || no "thieu bang chung ADD22 3:$WHYS
+  (CHI truong sizing_iv duoc OVERRIDE va chi khi replay_iii = DAT - truong '$OVF' thieu => TU CHOI CUNG, KHONG override duoc; GATE_OVERRIDE_* bi bo qua)"
+  [[ "${V[replay_iii]}" =~ ^DAT( |$) ]] || no "sizing_iv OVERRIDE chi khi replay_iii = DAT (ADD22 3 iv)"
+  if [ -z "$OVB" ] || ! [[ "$OVB" =~ [A-Za-z].*[A-Za-z] ]] || [ "${#OVW}" -lt 10 ]; then
+    no "thieu bang chung ADD22 3:$WHYS
+  (sizing_iv chi qua OVERRIDE khi MASTER chiu trach nhiem: GATE_OVERRIDE_BY=<ten nguoi> GATE_OVERRIDE_WHY=<ly do >= 10 ky tu>)"
   fi
-  echo "!!! OVERRIDE boi '$OVB' (ly do: $OVW) cho:$OVF"
+  echo "!!! OVERRIDE boi '$OVB' (ly do: $OVW) cho: $OVF (replay_iii DAT)"
   OVL="
 override_by=$(printf '%s' "$OVB" | tr -d '\n\r' | cut -c1-80)
 override_why=$(printf '%s' "$OVW" | tr -d '\n\r' | cut -c1-300)
-override_fields=$(echo $OVF)"
+override_fields=$OVF"
 fi
+# [WAVE1c m2] gioi han da biet muc 7 PREREG_E2E_REPLAY_V12 (phai ghi vao gate file; KHONG duoc coi la da kiem)
+LIM=$(lim7 "$PREREG_REPO" "$PRC" "$RPP")
+[ -n "$LIM" ] || no "khong doc duoc muc 7 'Gioi han da biet' trong $RPP tai $PRC (gate phai chep nguyen danh sach)"
 NOW=$(( $(date +%s) * 1000 )); EXP=$(( NOW + GATE_MAX_AGE_S * 1000 ))
 BODY="# G-MICRO gate — golive_make_gate.sh $(TZ=Asia/Ho_Chi_Minh date '+%F %T') (+07)
 jar_md5=$NJ_MD5
@@ -139,13 +152,17 @@ sizing_iv=${V[sizing_iv]}
 script_v=${V[script_v]}
 prereg_commit=$PRCF
 prereg_file=$PREREG_FILE
+replay_prereg=$RPP
+limits=$LIM
 report=$REP
 report_sha256=$(sha256sum < "$REP" | cut -c1-64)$OVL
 by=MASTER golive_make_gate.sh"
+BODY="$BODY
+body_sha256=$(printf '%s\n' "$BODY" | sha256sum | cut -c1-64)"   # [WAVE1c m2] dong CUOI: sha256 moi dong phia tren
 echo "$BODY"
 [ "${DRY:-0}" = 1 ] && { echo "DRY=1: KHONG ghi $G"; exit 0; }
 mkdir -p "$GATE_DIR" || no "khong tao duoc $GATE_DIR"
 [ -f "$G" ] && cp -p "$G" "$G.bak_$(date +%s)"
 ( umask 077; printf '%s\n' "$BODY" > "$G.tmp" ) && mv -f "$G.tmp" "$G" || no "khong ghi duoc $G"
 R=$(gl_gate "$G" 1); echo "$R"; echo "$R" | grep -q '^OK' || no "gate vua ghi KHONG qua gl_gate strict (loi script)"
-echo "=== XONG: $G (het han sau $((GATE_MAX_AGE_S / 3600)) h)$([ -n "$OVF" ] && echo " — CO OVERRIDE:$OVF")"
+echo "=== XONG: $G (het han sau $((GATE_MAX_AGE_S / 3600)) h)$([ -n "$OVF" ] && echo " - CO OVERRIDE: $OVF")"
