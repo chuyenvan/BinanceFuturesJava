@@ -17,6 +17,7 @@
 # =============================================================================
 set -uo pipefail
 . "$(cd "$(dirname "$0")" && pwd)/golive_lib.sh"
+gl_manifest_check "$0" || exit 1   # [WAVE1b M5] script + lib + manifest khop md5 da commit, lech => TU CHOI truoc moi viec
 MODE=${MODE:-}
 DRY_CAPITAL=${DRY_CAPITAL:-10000}
 gl_init golive_live_off

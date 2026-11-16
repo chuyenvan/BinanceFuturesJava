@@ -34,12 +34,22 @@
 # =============================================================================
 set -uo pipefail
 . "$(cd "$(dirname "$0")" && pwd)/golive_lib.sh"
+gl_manifest_check "$0" || exit 1   # [WAVE1b M5] script + lib + manifest khop md5 da commit, lech => TU CHOI truoc moi viec
 MICRO_CAPITAL=${MICRO_CAPITAL:-1000}
 gl_init golive_micro_on
 [ "$C3_ACCOUNT" = SUB ] && ACCT_TXT="tai khoan CON (ADD4)" || ACCT_TXT="tai khoan CHINH (ADD1)"
 say "tai khoan c3: C3_ACCOUNT=$C3_ACCOUNT — $ACCT_TXT, file key $KEYS_FILE"
 G=$GATE_DIR/GOLIVE_GATE_MICRO.ok
 GR=$(gl_gate "$G" 1); echo "$GR"; echo "$GR" | grep -q '^OK' || die "chua co cong G-MICRO hop le (MASTER tao $G bang golive_make_gate.sh: jar_md5=$NJ_MD5, ingestor_md5, han 48 h, G-MICRO DAT, prereg)"
+# [WAVE1b M4] gate co OVERRIDE (truong ADD22 §3 thieu bang chung, MASTER chiu trach nhiem) => CANH BAO TO, ghi vao cau hoi YES + Telegram
+GOV=""
+if grep -q '^override_by=' "$G"; then
+  GOV="GATE CO OVERRIDE by=$(gl_gate_val "$G" override_by) truong=$(sed -n 's/^override_fields=//p' "$G" | head -1)"
+  say "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+  say "!!! CANH BAO: $GOV — THIEU BANG CHUNG G-MICRO (ADD22 §3)"
+  say "!!! ly do: $(sed -n 's/^override_why=//p' "$G" | head -1)"
+  say "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+fi
 gl_read_state
 gl_excl_guard
 echo "$ST" | grep -v '^END_STATE$' | sed 's/^/   242: /'
@@ -105,7 +115,8 @@ fi
 [ "$C3_ACCOUNT" = SUB ] && [ "$DRY" = 1 ] && { gl_mon_repin || say "!! installer cron (DRY) loi"; }
 [ "$DRY" = 1 ] && { say "DRY=1: dung o day, KHONG ghi gi len 242. (DRY PASS)"; exit 0; }
 gl_time
-gl_yes "BAT MICRO-LIVE: lenh THAT tren $ACCT_TXT (C3_CAPITAL=$MICRO_CAPITAL). LEGACY (cung JVM) ngung quan ly ~30-60 s luc restart."
+gl_yes "BAT MICRO-LIVE: lenh THAT tren $ACCT_TXT (C3_CAPITAL=$MICRO_CAPITAL). LEGACY (cung JVM) ngung quan ly ~30-60 s luc restart.${GOV:+ !!! $GOV !!!}"
+[ -n "$GOV" ] && tg "[golive] CANH BAO TS=$TS micro_on: owner go YES voi $GOV"
 gl_time   # [WAVE1 B-16] kiem LAI khung gio sau YES
 # [R4q MAJ-1] chup san TRUOC (chi doc): khong doc duoc => khong doi gi
 if [ "$C3_ACCOUNT" = SUB ]; then
@@ -196,9 +207,15 @@ if ! echo "$RS" | grep -q '^FAIL' && gl_postloop CHK && mon_hb_ok; then
       tg "[golive] MICRO-LIVE BAT TS=$TS C3_ACCOUNT=$C3_ACCOUNT C3_CAPITAL=$MICRO_CAPITAL. Log $LOG"
       exit 0
     fi
-    s242 "cd $A && echo 'golive_micro_on $TS push_khong_ON' > run/KILL_SWITCH" && say "DAT LAI run/KILL_SWITCH"
+    # [WAVE1b M1] noi dung bao theo KET QUA THAT cua ssh dat lai KILL_SWITCH (kiem file ton tai), khong noi "da dat" khi ssh loi
+    if s242 "cd $A && echo 'golive_micro_on $TS push_khong_ON' > run/KILL_SWITCH && [ -e run/KILL_SWITCH ]"; then
+      say "DAT LAI run/KILL_SWITCH (da xac nhan file ton tai)"
+      M="hau kiem DAT nhung KHONG thay 'PUSH doi trang thai -> ON' sau khi go KILL_SWITCH => DA DAT LAI KILL_SWITCH (xac nhan; an toan, khong mo moi). Owner/MASTER kiem golive_monitor.sh"
+    else
+      say "!! KHONG DAT LAI DUOC run/KILL_SWITCH (ssh loi / khong xac nhan)"
+      M="hau kiem DAT nhung KHONG thay 'PUSH doi trang thai -> ON' sau khi go KILL_SWITCH; DAT LAI KILL_SWITCH THAT BAI (ssh?) => bot LIVE, KILL_SWITCH DA GO, CO THE MO LENH MOI. KHAN: owner chay NGAY MODE=drain bash $(cd "$(dirname "$0")" && pwd)/golive_live_off.sh roi kiem golive_monitor.sh"
+    fi
     gl_pause_clear >/dev/null 2>&1
-    M="hau kiem DAT nhung KHONG thay 'PUSH doi trang thai -> ON' sau khi go KILL_SWITCH => DAT LAI KILL_SWITCH (an toan, khong mo moi). Owner/MASTER kiem golive_monitor.sh"
   else
     gl_pause_clear >/dev/null 2>&1
     M="hau kiem DAT nhung KHONG go duoc run/KILL_SWITCH (ssh/token) => bot live NHUNG khong mo moi (an toan). Kiem golive_monitor.sh; go: MODE=undrain golive_live_off.sh"

@@ -24,6 +24,9 @@
 #     bo dem loi TANG TRUOC khi ssh (bi giet giua chung van dem), dau luot: bo dem >= MON_FAIL_MAX => Telegram KHAN NGAY (truoc ssh).
 #   B-14 (KHAN, KHONG dat KILL_SWITCH; co micro/pilot BAT hoac adapter=live): process v_t_m != 1, latch != NONE, dong lenh bi tu choi /
 #     loi dong lenh trong log tu luot truoc, POS_C3_MISMATCH > 0 hai luot lien tiep.
+#   [WAVE1b M6] so process != 1 KHONG KHAN khi PAUSE watchdog con han (restart co chu dich); dong "tu choi" CHI tinh dong nhan [C3-LIVE*]
+#     (ma -2010/-2019/-4164 cua LEGACY khong tinh). [WAVE1b M7] cron: ngan sach ssh 1 luot (MON_READ_BUDGET_S 45 / MON_SSH_BUDGET_S 58)
+#     + Telegram -m 10 => luot xau nhat ~83 s < "timeout 100" (242 mat mang van chay toi KHAN + heartbeat).
 #   A-03 (KHAN + KILL_SWITCH): adapter=live ma LIVE_C3_KEYS_FILE != file key tk con, key doc san != SUB_KEY_SHA8, log co [C3-EXCL-FORCE].
 #   Ma thoat: 0 | 2 KHAN.
 # =============================================================================
@@ -41,6 +44,10 @@ if [ "$MON_CRON" = 1 ]; then
   exec >> "$CL" 2>&1
   MON_TAIL=${MON_TAIL:-4000000}
   export GL_SSH_TRIES=${GL_SSH_TRIES:-1} GL_SSH_TIMEOUT_S=${GL_SSH_TIMEOUT_S:-25}   # [WAVE1 B-05]
+  # [WAVE1b M7] ngan sach thoi gian 1 luot (cron "timeout 100"): ssh DOC dung truoc T0+MON_READ_BUDGET_S, ssh dat KILL_SWITCH truoc
+  #   T0+MON_SSH_BUDGET_S (+5 s kill) ; Telegram -m GL_TG_TIMEOUT_S. Xau nhat 58 + 5 + 2 x 10 = 83 s < 100 => luat N luot loi => KHAN chay het.
+  MON_T0=$(date +%s); MON_READ_BUDGET_S=${MON_READ_BUDGET_S:-45}; MON_SSH_BUDGET_S=${MON_SSH_BUDGET_S:-58}
+  export GL_TG_TIMEOUT_S=${GL_TG_TIMEOUT_S:-10} GL_SSH_DEADLINE=$(( MON_T0 + MON_READ_BUDGET_S ))
 fi
 MON_TAIL=${MON_TAIL:-15000000}
 . "$(cd "$(dirname "$0")" && pwd)/golive_lib.sh"
@@ -89,7 +96,8 @@ echo "== rate 1h: 429=$(cnt1h 'HTTP 429\|http=429\| 429 ') 418=$(cnt1h 'HTTP 418
 echo "== KHAN 1h=$(cnt1h 'KHAN') ERROR 1h=$(cnt1h ' ERROR ') | KHAN cuoi: $(last 'KHAN' 200)"
 echo "== exinfo: tuoi=$(( $(date +%s) - $(stat -c %Y run/c3live_exchangeInfo.json 2>/dev/null || echo 0) ))s $(tr '\n' ' ' < run/c3live_exinfo_refresh.state 2>/dev/null | cut -c1-80)"
 # [WAVE1 B-14] lenh bi tu choi / loi dong lenh tu luot truoc (theo gio log +07); [A-03] C3-EXCL-FORCE trong cua so doc
-RJ=$(echo "$H" | awk -v s="$SINCE" '{split($1,a,"/"); split($2,b,"[:.]"); k=a[3]a[2]a[1]b[1]b[2]b[3]; if (k>=s) print}' | grep -aE ' ERROR .*\[C3-LIVE-(EXEC|FILL|PROTECT|TRAIL)\]|\[C3-LIVE-ORDER\].*status=(ERROR|REJECTED|EXPIRED)|\[C3-LIVE-EXEC\].*KHONG khop|"code":-20(10|19)|code=-20(10|19)|-4164')
+# [WAVE1b M6] CHI dong co nhan c3 ([C3-LIVE] / [C3-LIVE-EXEC|FILL|PROTECT|TRAIL|ORDER]) — ma loi -2010/-2019/-4164 cua LEGACY KHONG tinh
+RJ=$(echo "$H" | awk -v s="$SINCE" '{split($1,a,"/"); split($2,b,"[:.]"); k=a[3]a[2]a[1]b[1]b[2]b[3]; if (k>=s) print}' | grep -aE '\[C3-LIVE(-(EXEC|FILL|PROTECT|TRAIL|ORDER))?\]' | grep -aE ' ERROR .*\[C3-LIVE-(EXEC|FILL|PROTECT|TRAIL)\]|\[C3-LIVE-ORDER\].*status=(ERROR|REJECTED|EXPIRED)|\[C3-LIVE-EXEC\].*KHONG khop|"code":-20(10|19)|code=-20(10|19)|-4164')
 echo "== REJECT_SINCE=$(printf '%s' "$RJ" | grep -ac .) | $(printf '%s' "$RJ" | tail -1 | cut -c1-200)"
 # [WAVE1 A-03] chi dem [C3-EXCL-FORCE] TU lan khoi dong JVM CUOI (dong MainClass) - dong cua lan khoi dong cu (da rollback) khong KHAN lai
 echo "== EXCL_FORCE=$(echo "$H" | awk '/MainClass: com.binance.chuyennd.trading.BinanceOrderTradingManager/{n=0} /\[C3-EXCL-FORCE\]/{n++} END{print n+0}')"
@@ -171,6 +179,7 @@ if [ "$C3_ACCOUNT" = SUB ]; then
     RC=2
     KT=$(echo "$KH" | tr -cd 'A-Za-z0-9_=:.,+ -' | sed 's/^ *//' | tr ' ' '_' | cut -c1-160)
     say "KHAN (ADD4 tk con):$KH — CHAN mo moi (run/KILL_SWITCH), KHONG tu dong vi the; owner/MASTER xu ly"
+    [ "$MON_CRON" = 1 ] && GL_SSH_DEADLINE=$(( MON_T0 + MON_SSH_BUDGET_S ))   # [WAVE1b M7] phan ngan sach danh rieng cho dat KILL_SWITCH
     if [ "$DRY" = 1 ]; then say "DRY=1: KHONG dat run/KILL_SWITCH"
     elif s242 "cd $A && { [ -e run/KILL_SWITCH ] || echo 'golive_monitor $TS KHAN $KT' > run/KILL_SWITCH; } && [ -e run/KILL_SWITCH ]"; then
       say "run/KILL_SWITCH DANG DAT (dung mo moi; vi the c3 van duoc quan ly). Go sau khi xu ly: MODE=undrain golive_live_off.sh"
@@ -191,7 +200,13 @@ fi
 KA=""
 if [ -f "$GL_MON_FLAG" ] || [ "$(sv ENV_LIVE_ADAPTER)" = live ]; then
   if [ "$READOK" = 1 ]; then
-    [ "$(sv NPROC)" = 1 ] || KA="$KA so_process_v_t_m=$(sv NPROC)"
+    # [WAVE1b M6] restart CO CHU DICH (PAUSE watchdog con han <= WD_PAUSE_MAX_S: golive_*/dry_enable/swap dat truoc stop) => khong KHAN so process
+    PSA=$(sv PAUSE_AGE)
+    if [ "$(sv NPROC)" != 1 ] && [ "$(sv PAUSE | cut -c1)" = 1 ] && [[ "$PSA" =~ ^[0-9]+$ ]] && [ "$PSA" -le "$WD_PAUSE_MAX_S" ]; then
+      say "INFO so_process_v_t_m=$(sv NPROC) trong luc PAUSE co chu dich ($(sv PAUSE | cut -c3-62), ${PSA}s <= ${WD_PAUSE_MAX_S}s) — KHONG KHAN"
+    else
+      [ "$(sv NPROC)" = 1 ] || KA="$KA so_process_v_t_m=$(sv NPROC)"
+    fi
     case "$(sv LATCH)" in NONE|NOFILE) ;; *) KA="$KA latch=$(sv LATCH)";; esac
   else
     NF=${NF:-$NF0}

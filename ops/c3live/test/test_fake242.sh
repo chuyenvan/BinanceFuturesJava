@@ -51,6 +51,8 @@ case "$1" in
   start)
     set -a; . conf/env.sh; set +a
     [ -f FAKE_FORCE_LIVE ] && export LIVE_ADAPTER=live   # [WAVE1 B-02] gia lap rollback ma JVM van len LIVE
+    [ -f FAKE_CAP_ONCE ] && { export C3_CAPITAL=$(cat FAKE_CAP_ONCE); rm -f FAKE_CAP_ONCE; }   # [WAVE1b M2] 1 lan start: von process doi
+    [ -f FAKE_TG_ONCE ] && { export TELEGRAM_BOT_TOKEN=khac_tok_gia; rm -f FAKE_TG_ONCE; }        # [WAVE1b M2] 1 lan start: token process doi
     if [ -f FAKE_SLOWSTART ]; then   # [R4q] JVM len CHAM (1 lan): process xuat hien sau 12 s
       rm -f FAKE_SLOWSTART
       nohup bash -c 'sleep 12; N=BinanceOrderTradingManager; exec -a "$N fake242" sleep 900' >/dev/null 2>&1 & echo $! > run/slow.pid
@@ -1262,8 +1264,11 @@ api openOrders '[]'; api openAlgoOrders '[]'
 printf 'ing-w1-fake' > $W/binance-java-sdk-1.2.4.jar_ingw1; INGW=$(md5sum < $W/binance-java-sdk-1.2.4.jar_ingw1 | cut -c1-32)
 setsid bash -c "exec 3<$W/binance-java-sdk-1.2.4.jar_ingw1; exec -a 'java websocket.BinanceDataIngestor fake242w1' sleep 3000" >/dev/null 2>&1 < /dev/null & sleep 0.3
 IGP='websocket.BinanceDataIngestor fake242w1'
-mkgm() { local c=${2:-$(( $(date +%s) * 1000 ))}
-  printf 'G-MICRO test\njar_md5=%s\ningestor_md5=%s\ncreated_ms=%s\nexpires_ms=%s\ngmicro_i=DAT n_sach=7\ngmicro_ii=DAT\nsmoke=DAT smoke_start_ms=1\nprereg_commit=abc1234\n' "$1" "$INGW" "$c" "$(( c + 172800000 ))" | grep -v "^${3:-KHONGBO}=" > $GD/GOLIVE_GATE_MICRO.ok; }
+echo 'bang chung gia (test)' > $W/ev_test.txt   # [WAVE1b M4] truong DAT phai tro file ev ton tai
+mkgm() { local c=${2:-$(( $(date +%s) * 1000 ))} r3="DAT ev=$W/ev_test.txt"   # mkgm <jar_md5> [created_ms] [bo dong] [ov: replay_iii OVERRIDE + override_*]
+  [ "${4:-}" = ov ] && r3="OVERRIDE ly_do_thieu=chua_co_replay"
+  { printf 'G-MICRO test\njar_md5=%s\ningestor_md5=%s\ncreated_ms=%s\nexpires_ms=%s\ngmicro_i=DAT ev=%s n_sach=7\ngmicro_ii=DAT ev=%s\nsmoke=DAT ev=%s smoke_start_ms=1\nreplay_iii=%s\nsizing_iv=DAT ev=%s\nscript_v=DAT ev=%s\nprereg_commit=abc1234\n' "$1" "$INGW" "$c" "$(( c + 172800000 ))" $W/ev_test.txt $W/ev_test.txt $W/ev_test.txt "$r3" $W/ev_test.txt $W/ev_test.txt
+    [ "${4:-}" = ov ] && printf 'override_by=MASTER_test\noverride_why=thu nghiem override replay chua co\noverride_fields=replay_iii\n'; } | grep -v "^${3:-KHONGBO}=" > $GD/GOLIVE_GATE_MICRO.ok; }
 GL() { env ING_FIN_MD5=$INGW ING_PAT="$IGP" C3_ACCOUNT=MAIN CANARY_PAT=canary_early_fake242_NONE APP_DIR=$F4 NJ_MD5=$NEW4 GATE_DIR=$GD KEYS_FILE=$W/keys_c3.env PY242=$W/c3py_t/python/bin/python3 CURL242=$W/fakecurl.sh \
   DEPLOY_TG_SINK=$W/tg_gl.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 "$@"; }
 penv() { tr '\0' '\n' < /proc/$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)/environ; }
@@ -1589,6 +1594,14 @@ mkgm $NEWR '' prereg_commit; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1
 chk "WAVE1 B-08 micro_on: gate thieu prereg_commit => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL gate .*thieu_prereg_commit'"
 mkgm $NEWR '' gmicro_ii; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "WAVE1 B-08 micro_on: gate thieu gmicro_ii => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'gmicro_ii_khong_DAT'"
+mkgm $NEWR '' replay_iii; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "WAVE1b M4 micro_on: gate thieu replay_iii (ADD22 §3) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'replay_iii_khong_DAT'"
+mkgm $NEWR; sed -i "s#^sizing_iv=DAT ev=.*#sizing_iv=DAT ev=$W/khong_co_ev.txt#" $GD/GOLIVE_GATE_MICRO.ok; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "WAVE1b M4 micro_on: truong DAT tro file bang chung KHONG ton tai => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'sizing_iv_DAT_thieu_file_bang_chung'"
+mkgm $NEWR '' override_by ov; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "WAVE1b M4 micro_on: truong OVERRIDE ma gate KHONG co override_by => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'replay_iii_khong_DAT'"
+mkgm $NEWR '' '' ov; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "WAVE1b M4 micro_on: gate CO OVERRIDE (ten + ly do) => qua gate nhung in CANH BAO TO (by + truong + ly do)" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q '!!! CANH BAO: GATE CO OVERRIDE by=MASTER_test truong=replay_iii' && echo \"\$OUT\" | grep -q '!!! ly do: thu nghiem override'"
 cp $W/gm_ok.bak $GD/GOLIVE_GATE_MICRO.ok
 OUT=$(GS ING_FIN_MD5=00000000000000000000000000000000 DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "WAVE1 B-08 micro_on: ingestor dang chay KHAC pin (gate cung khong khop) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL gate .*ingestor_md5'"
@@ -1644,6 +1657,24 @@ rm -f $F4/FAKE_APIHOOK
 rm -rf $W/monsrc2; mkdir -p $W/monsrc2; cp $HERE/golive_monitor.sh $HERE/golive_lib.sh $W/monsrc2/; echo '# ban cu (test)' >> $W/monsrc2/golive_monitor.sh
 IC MON_SRC=$W/monsrc2 bash "$HERE/install_cron_golive_monitor.sh" > /dev/null 2>&1
 ( while sleep 1; do [ -f $W/deploylog/golive_monitor.on ] && { mkdir -p $W/deploylog/run; touch $W/deploylog/run/monitor_heartbeat; }; done ) > /dev/null 2>&1 & HBW=$!
+# [WAVE1b M1] hau kiem DAT, go KS, KHONG thay PUSH ON (FAKE_NOPUSHON) => dat lai KS: noi dung theo ket qua ssh THAT
+cat > $W/sshks.sh <<'EOF'
+#!/bin/bash
+# ssh GIA [WAVE1b M1]: lenh dat lai KILL_SWITCH (push_khong_ON) => rc 255 KHONG chay; lenh khac chay that (exec lai: argv khong chua mau pgrep)
+[ -z "${SKS_CMD+x}" ] && { export SKS_CMD=$1; exec bash "$0"; }
+case "$SKS_CMD" in *push_khong_ON*) cat > /dev/null; exit 255;; esac
+exec bash -c "$SKS_CMD"
+EOF
+m1clean() { local t f; t=$(echo "$1" | grep -o 'TS=[0-9_]*' | head -1 | cut -d= -f2); [ -f $F4/conf/env.sh.bak_golive_micro_on_$t ] && cp $F4/conf/env.sh.bak_golive_micro_on_$t $F4/conf/env.sh
+  for f in $F4/run/*.dry_$t; do [ -e "$f" ] && mv -f "$f" "${f%.dry_$t}"; done   # so/trang thai dry tra lai (nhu rollback)
+  (cd $F4 && bin/daemon.sh stop >/dev/null 2>&1; bin/daemon.sh start >/dev/null 2>&1); rm -f $F4/run/KILL_SWITCH $F4/FAKE_NOPUSHON $W/PAUSE $W/deploylog/golive_monitor.on; sleep 1; }
+touch $F4/FAKE_NOPUSHON
+OUT=$(echo YES | GS SSH_242="bash $W/sshks.sh" SSH_RETRY_S=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "WAVE1b M1 micro_on: khong thay PUSH ON + ssh dat lai KILL_SWITCH THAT BAI => KHONG noi 'DA DAT LAI', bao KS DA GO + lenh drain, KHAN exit 2" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'KHONG DAT LAI DUOC run/KILL_SWITCH' && echo \"\$OUT\" | grep -q 'DAT LAI KILL_SWITCH THAT BAI' && echo \"\$OUT\" | grep -q 'MODE=drain' && ! echo \"\$OUT\" | grep -q 'DA DAT LAI KILL_SWITCH' && [ ! -e $F4/run/KILL_SWITCH ] && grep -q 'DAT LAI KILL_SWITCH THAT BAI' $W/tg_sub.txt"
+m1clean "$OUT"; touch $F4/FAKE_NOPUSHON
+OUT=$(echo YES | GS bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "WAVE1b M1 micro_on: khong thay PUSH ON + ssh dat lai KILL_SWITCH OK => 'DA DAT LAI KILL_SWITCH (xac nhan', file KS co, KHAN exit 2" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'DA DAT LAI KILL_SWITCH (xac nhan' && grep -q 'push_khong_ON' $F4/run/KILL_SWITCH"
+m1clean "$OUT"
 OUT=$(echo YES | GS bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "add4 micro_on SUB XONG: live/1000/push, process doc key keys_sub.env, scope tk con 0, LEGACY 44 chi INFO, KILL_SWITCH go, PUSH ON" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: MICRO-LIVE c3 tai khoan CON' && penv | grep -qx LIVE_ADAPTER=live && penv | grep -qx C3_CAPITAL=1000 && penv | grep -qx LIVE_C3_KEYS_FILE=$W/keys_sub.env && echo \"\$OUT\" | grep -q 'OK env LIVE_C3_KEYS_FILE=' && echo \"\$OUT\" | grep -q 'OK scope_tk_con_0_vi_the_ngoai_c3' && echo \"\$OUT\" | grep -q 'INFO LEGACY_managed=44' && [ ! -e $F4/run/KILL_SWITCH ] && nosec \"\$OUT\""
 chk "errata2 micro_on tu PIN lai monitor (cron dang chay ban khac repo) => cron tro ban pin repo, in md5" "grep -qF '$PIN1/golive_monitor.sh' $W/oracron.txt && echo \"\$OUT\" | grep -q 'OK cron golive_monitor chay ban pin md5=${PIN1##*_}'"
@@ -1874,7 +1905,7 @@ OUT=$(echo YES | swf bash "$SW" 2>&1); RC=$?
 chk "fin swap XONG: jar r4u3fin, [MINUTE-FIN] BAT, process env token sha8 dung, token KHONG lo trong log/Telegram" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: dry chay r4u3fin' && echo \"\$OUT\" | grep -q 'OK MINUTE-FIN_BAT' && echo \"\$OUT\" | grep -q 'OK process_env_telegram_sha8=$TGF' && [ \"\$(md5sum < $F4/target/binance-java-sdk-1.2.4.jar | cut -c1-32)\" = $NEWF ] && ! grep -q fake242tok $W/tg_sw.txt && ! echo \"\$OUT\" | grep -q fake242tok"
 echo "$OUT" | grep -q 'XONG: dry chay r4u3fin' || echo "$OUT" | grep -E 'FAIL|WAIT|DUNG' | head -8 | sed 's/fake242tok/[CHE]/g'
 echo "== 38. [WAVE1 16/11] dry_enable_grid_sizing (D-01) / B-02 ssh 255 / B-05 + B-14 monitor / B-12 rollback_v12 / make_gate / install_golive_ops"
-DE() { env APP_DIR=$F4 NJ_MD5=$NEWF ING_FIN_MD5=$INGF DEPLOY_TG_SINK=$W/tg_de.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 GMICRO_TARGET=$W/gm_de.json RB_LOG_WAIT_S=4 RB_LOG_POLL_S=1 "$@"; }
+DE() { env APP_DIR=$F4 NJ_MD5=$NEWF ING_FIN_MD5=$INGF TG_SHA8=$TGF DEPLOY_TG_SINK=$W/tg_de.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 GMICRO_TARGET=$W/gm_de.json RB_LOG_WAIT_S=4 RB_LOG_POLL_S=1 "$@"; }
 DS=$HERE/dry_enable_grid_sizing.sh
 rstd() { (cd $F4 && bin/daemon.sh stop >/dev/null 2>&1; bin/daemon.sh start >/dev/null 2>&1); sleep 1; }
 sed -i '/^export LIVE_APPLY_GRID_RATIO=/d; /^export LIVE_DCA_GRID_ENABLED=/d; /^export C3_CAPITAL=/d; /^export LIVE_ADAPTER=live$/d' $F4/conf/env.sh; echo 'export C3_CAPITAL=10000' >> $F4/conf/env.sh
@@ -1899,6 +1930,23 @@ touch $F4/FAKE_NOGRIDLOG $W/s255
 OUT=$(echo YES | DE SSH_242="bash $W/ssh255.sh" SSH255_ONCE=$W/s255 SSH255_MARK='PH=run/.golive_' bash "$DS" 2>&1); RC=$?; rm -f $F4/FAKE_NOGRIDLOG
 TSD=$(echo "$OUT" | grep -o 'TS=[0-9_]*' | head -1 | cut -d= -f2)
 chk "B-02 dry_enable: ssh 255 SAU restart => doc that + chay lai idempotent; backup env GOC (khong co 2 co); TRUOT => rollback ve env goc" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'INFO pha_da_xong_truoc' && [ \"\$(md5sum < $F4/conf/env.sh.bak_dry_enable_grid_sizing_$TSD)\" = \"$E8\" ] && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E8\" ] && ! penv | grep -q '^LIVE_DCA_GRID_ENABLED='"
+# ---------------------------------------------------------------- [WAVE1b M2/M3] dry_enable: von + token khong doi; LEGACY giam = WARN, tang = FAIL
+OUT=$(DE TG_SHA8=00000000 DRY=1 bash "$DS" 2>&1); RC=$?
+chk "WAVE1b M2 dry_enable: token Telegram sha8 (process/env.sh) != TG_SHA8 => TU CHOI truoc restart, KHONG in token" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q \"FAIL token Telegram sha8: process $TGF + env.sh $TGF = 00000000\" && ! echo \"\$OUT\" | grep -q fake242tok && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E8\" ]"
+echo 'export C3_CAPITAL=20000' >> $F4/conf/env.sh
+OUT=$(DE DRY=1 bash "$DS" 2>&1); RC=$?; sed -i '$d' $F4/conf/env.sh
+chk "WAVE1b M2 dry_enable: C3_CAPITAL env.sh (20000) != process (10000) => TU CHOI (restart se doi von)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL C3_CAPITAL process (10000) = env.sh (20000)'"
+echo 20000 > $F4/FAKE_CAP_ONCE; touch $F4/FAKE_TG_ONCE
+OUT=$(echo YES | DE bash "$DS" 2>&1); RC=$?; rm -f $F4/FAKE_CAP_ONCE $F4/FAKE_TG_ONCE
+chk "WAVE1b M2 dry_enable: JVM moi co C3_CAPITAL khac + token khac => hau kiem FAIL (envk C3_CAPITAL=10000, telegram sha8) => ROLLBACK, von 10000, KHONG in token" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL env C3_CAPITAL=10000 (co: C3_CAPITAL=20000)' && echo \"\$OUT\" | grep -q 'FAIL process_env_telegram_sha8=' && echo \"\$OUT\" | grep -q 'Da ROLLBACK xong' && penv | grep -qx C3_CAPITAL=10000 && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E8\" ] && ! echo \"\$OUT\" | grep -q 'fake242tok\|khac_tok_gia'"
+LGN0=$(cat $F4/FAKE_LEGACY_N 2>/dev/null || echo 44)
+echo $((LGN0 + 2)) > $F4/FAKE_LEGACY_N
+OUT=$(echo YES | DE bash "$DS" 2>&1); RC=$?
+chk "WAVE1b M3 dry_enable: LEGACY managed TANG sau restart => FAIL => ROLLBACK" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q \"FAIL LEGACY_managed=$((LGN0 + 2)) > truoc stop $LGN0\" && echo \"\$OUT\" | grep -q 'Da ROLLBACK xong' && [ \"\$(md5sum < $F4/conf/env.sh)\" = \"$E8\" ]"
+echo $LGN0 > $F4/FAKE_LEGACY_N; rstd; echo $((LGN0 - 2)) > $F4/FAKE_LEGACY_N; rm -f $W/tg_de.txt
+OUT=$(echo YES | DE bash "$DS" 2>&1); RC=$?
+chk "WAVE1b M3 dry_enable: LEGACY managed GIAM (tu dong vi the) => WARN ghi so truoc/sau, KHONG rollback, XONG + Telegram co WARN" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q \"WARN LEGACY_managed_giam truoc=$LGN0 sau=$((LGN0 - 2))\" && echo \"\$OUT\" | grep -q '=== XONG: v_t_m dry BAT' && ! echo \"\$OUT\" | grep -q 'ROLLBACK' && penv | grep -qx LIVE_APPLY_GRID_RATIO=true && grep -q 'WARN LEGACY_managed_giam' $W/tg_de.txt && echo \"\$OUT\" | grep -q \"OK process_env_telegram_sha8=$TGF\" && echo \"\$OUT\" | grep -q 'OK env C3_CAPITAL=10000'"
+echo $LGN0 > $F4/FAKE_LEGACY_N; sed -i '/^export LIVE_APPLY_GRID_RATIO=/d; /^export LIVE_DCA_GRID_ENABLED=/d; /dry_enable_grid_sizing/d' $F4/conf/env.sh; rstd
 # ---------------------------------------------------------------- B-05 / B-14 monitor (MAIN: khong goi san)
 GM8() { env C3_ACCOUNT=MAIN APP_DIR=$F4 KEYS_FILE=$W/keys_c3.env DEPLOY_TG_SINK=$W/tg_mon8.txt "$@"; }
 printf 'C3_ACCOUNT=MAIN\nKEYS_FILE=%s\nby=test TS=1\ndry_ts=\n' $W/keys_c3.env > $W/deploylog/golive_monitor.on; rm -f $W/deploylog/c3sub_monitor_fail.txt $W/deploylog/c3_monitor_khan_alert.txt
@@ -1924,6 +1972,29 @@ GM8 MONITOR_CRON=1 MON_CRON_LOG=$W/mon8cron.log GL_SSH_TIMEOUT_S=2 SSH_242="bash
 chk "B-05 cron monitor: bo dem >= MON_FAIL_MAX => Telegram KHAN NGAY dau luot (truoc ssh) du luot bi giet giua chung" "grep -q 'KHAN monitor: 3 luot lien tiep loi' $W/tg_mon8.txt && grep -qx 'n=4' $W/deploylog/c3sub_monitor_fail.txt"
 OUT=$(GM8 bash "$HERE/golive_monitor.sh" 2>&1)
 chk "B-05 monitor doc lai duoc => bo dem ve 0" "grep -qx 'n=0' $W/deploylog/c3sub_monitor_fail.txt"
+# ---------------------------------------------------------------- [WAVE1b M6] khong bao dong gia: restart co chu dich (PAUSE) + ma loi LEGACY
+echo "C3GOLIVE_golive_micro_on TS=1 pid=1 t=$(date +%s)" > $W/PAUSE; (cd $F4 && bin/daemon.sh stop >/dev/null 2>&1)
+OUT=$(GM8 bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "WAVE1b M6 monitor: process v_t_m = 0 trong luc PAUSE co chu dich (con han) => INFO, KHONG KHAN so_process" "echo \"\$OUT\" | grep -q 'INFO so_process_v_t_m=0 trong luc PAUSE co chu dich' && ! echo \"\$OUT\" | grep -q 'KHAN.*so_process_v_t_m'"
+touch -d '40 min ago' $W/PAUSE
+OUT=$(GM8 bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "WAVE1b M6 monitor: PAUSE CU (> WD_PAUSE_MAX_S) + process = 0 => VAN KHAN so_process" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'KHAN (canh bao.*so_process_v_t_m=0'"
+rm -f $W/PAUSE; rstd
+printf 'ts=%s TS=x rc=0\n' $(( $(date +%s) - 1 )) > $W/hb_m6.txt; DM6=$(TZ=Asia/Ho_Chi_Minh date '+%d/%m/%Y %H:%M:%S.000')
+echo "$DM6 ERROR [pool-2-thread-1] x: [LEGACY] dat lenh DCA BTCUSDT loi {\"code\":-2019,\"msg\":\"Margin is insufficient.\"} -4164" >> $F4/logs/full.log
+OUT=$(GM8 MON_HB_FILE=$W/hb_m6.txt bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "WAVE1b M6 monitor: dong LEGACY co ma -2019/-4164 (khong nhan C3-LIVE) => KHONG tinh tu choi (REJECT_SINCE=0)" "echo \"\$OUT\" | grep -q '^== REJECT_SINCE=0 ' && ! echo \"\$OUT\" | grep -q 'lenh_tu_choi_hoac_loi_dong'"
+echo "$DM6 WARN [C3LIVE-OPS] x: [C3-LIVE-EXEC] cid=c3-M6USDT-1-1 dat lenh loi {\"code\":-2019,\"msg\":\"Margin is insufficient.\"}" >> $F4/logs/full.log
+OUT=$(GM8 MON_HB_FILE=$W/hb_m6.txt bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "WAVE1b M6 monitor: dong [C3-LIVE-EXEC] co ma -2019 => VAN tinh (REJECT_SINCE=1, KHAN canh bao)" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q '^== REJECT_SINCE=1 ' && echo \"\$OUT\" | grep -q 'lenh_tu_choi_hoac_loi_dong=1_tu_luot_truoc'"
+# ---------------------------------------------------------------- [WAVE1b M7] cron: tong ssh 1 luot < timeout cron du 242 TREO
+printf 'C3_ACCOUNT=SUB\nKEYS_FILE=%s\nby=test TS=1\ndry_ts=\n' $W/keys_c3.env > $W/deploylog/golive_monitor.on; rm -f $W/deploylog/c3sub_monitor_fail.txt $W/m7hb $W/m7cron.log; T0=$(date +%s)
+GM8 MONITOR_CRON=1 MON_CRON_LOG=$W/m7cron.log SSH_242="bash $W/sshhang.sh" MON_FAIL_MAX=1 MON_READ_BUDGET_S=6 MON_SSH_BUDGET_S=10 MON_HB_FILE=$W/m7hb timeout -k 2 40 bash "$HERE/golive_monitor.sh" >/dev/null 2>&1; RC=$?
+T1=$(date +%s)
+chk "WAVE1b M7 cron monitor SUB, ssh 242 TREO (30 s/lenh, timeout/lenh 25 s): ngan sach luot => xong trong ~ngan sach (< 20 s), KHONG bi timeout giet, ssh sau han BO QUA" "[ \$(( T1 - T0 )) -lt 20 ] && [ $RC = 2 ] && [ -s $W/m7hb ] && grep -q 'BO QUA: het ngan sach' $W/m7cron.log"
+chk "WAVE1b M7 cron monitor 242 TREO: luat N luot loi => KHAN van chay toi cuoi (thu dat KILL_SWITCH trong phan ngan sach rieng, bao that bai, Telegram)" "grep -q 'doc_san_loi_1_luot_lien_tiep' $W/m7cron.log && grep -q 'KHONG dat / xac nhan duoc run/KILL_SWITCH' $W/m7cron.log && grep -q 'KHAN tk con TS=.*doc_san_loi_1' $W/tg_mon8.txt"
+chk "WAVE1b M7 mac dinh: MON_SSH_BUDGET_S + 5 (kill) + 2 x GL_TG_TIMEOUT_S < MON_TIMEOUT_S cua cron" "B=\$(grep -o 'MON_SSH_BUDGET_S:-[0-9]*' $HERE/golive_monitor.sh | head -1 | cut -d- -f2); G=\$(grep -o 'GL_TG_TIMEOUT_S:-[0-9]*' $HERE/golive_monitor.sh | head -1 | cut -d- -f2); C=\$(grep -o 'MON_TIMEOUT_S:-[0-9]*' $HERE/install_cron_golive_monitor.sh | head -1 | cut -d- -f2); [ -n \"\$B\" ] && [ -n \"\$G\" ] && [ -n \"\$C\" ] && [ \$(( B + 5 + 2 * G )) -lt \$C ]"
+printf 'C3_ACCOUNT=MAIN\nKEYS_FILE=%s\nby=test TS=1\ndry_ts=\n' $W/keys_c3.env > $W/deploylog/golive_monitor.on; rm -f $W/deploylog/c3sub_monitor_fail.txt $F4/run/KILL_SWITCH
 # ---------------------------------------------------------------- B-12 rollback_v12 / rollback_vtm_r4u3
 OUT=$(APP_DIR=$F4 FORCE_TIME=1 DRY=1 bash "$HERE/rollback_v12.sh" 20261116_0000 2>&1); RC=$?
 chk "B-12 rollback_v12: co co micro/pilot => TU CHOI, tro lenh dung" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'rollback_v12 TU CHOI' && echo \"\$OUT\" | grep -q 'rollback_vtm_r4u3.sh'"
@@ -1942,29 +2013,87 @@ chk "B-01 rollback_vtm_r4u3: co co micro/pilot => TU CHOI (dung golive_live_off)
 # ---------------------------------------------------------------- B-08 golive_make_gate.sh
 PWG=$W/pw8; mkdir -p $PWG $W/gates8; printf '{"target_jar":"r4u3fin","target_md5":"%s","smoke_start_ms":1794676225000,"prereg":"ADD21"}' $NEWF > $PWG/gmicro_target.json
 echo "G-MICRO: CHUA DU (i=False 5/7, ii=False) sach= ['2026-11-07']" > $PWG/report_2026-11-15.out
-MG() { env PARITY_W=$PWG GMICRO_TARGET=$PWG/gmicro_target.json GATE_DIR=$W/gates8 NJ_MD5=$NEWF ING_FIN_MD5=$INGF "$@"; }   # [WAVE1] GMICRO_TARGET tuong minh (bien test D-01 truoc do con export)
-OUT=$(MG bash "$HERE/golive_make_gate.sh" abc1234 2>&1); RC=$?
+# [WAVE1b M4] repo prereg GIA (git): ADD22 + PREREG_E2E_REPLAY_V12 + bien ban GMICRO_MANUAL (commit); ingestor fin GIA chay lai (fd jar INGF)
+PRR=$W/prereg8; mkdir -p $PRR/docs/prereg $PRR/docs/result; git -C $PRR init -q
+gc8() { git -C $PRR -c user.name=t -c user.email=t@t add -A && git -C $PRR -c user.name=t -c user.email=t@t commit -qm "$1" && git -C $PRR rev-parse --short HEAD; }
+echo add21 > $PRR/docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM21_FIN.md; PRC21=$(gc8 add21)
+echo add22 > $PRR/docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM22_GRID.md; PRC22=$(gc8 add22)
+echo replay > $PRR/docs/prereg/PREREG_E2E_REPLAY_V12.md
+printf '# bien ban G-MICRO tay (test)\njar %s smoke_start_ms=1794676225000\ngmicro_ii: DAT (1 ngay SACH 2 co bat)\nsmoke: DAT\n' $NEWF > $PRR/docs/result/GMICRO_MANUAL_20261118.md; PRCR=$(gc8 replay)
+printf 'jar %s\nreplay_iii: DAT ngay 2026-10-10\n' $NEWF > $W/replay8.txt; printf 'jar %s smoke_start_ms=1794676225000\nsizing_iv: DAT 12/12 SUBMIT trong +-2%%\n' $NEWF > $W/sizing8.txt
+ingf $W/ing_fin.jar; rm -f $W/gates8/A1_APPROVED_MONITOR.md5
+MG() { env PARITY_W=$PWG GMICRO_TARGET=$PWG/gmicro_target.json GATE_DIR=$W/gates8 NJ_MD5=$NEWF ING_FIN_MD5=$INGF ING_PAT='websocket.BinanceDataIngestor fake242fin' APP_DIR=$F4 PREREG_REPO=$PRR \
+  GMICRO_MANUAL=$PRR/docs/result/GMICRO_MANUAL_20261118.md REPLAY_RESULT=$W/replay8.txt SIZING_RESULT=$W/sizing8.txt "$@"; }   # [WAVE1] GMICRO_TARGET tuong minh (bien test D-01 truoc do con export)
+OUT=$(MG bash "$HERE/golive_make_gate.sh" $PRCR 2>&1); RC=$?
 chk "B-08 make_gate: G-MICRO CHUA DU => TU CHOI, khong ghi gate" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'G-MICRO chua DAT' && [ ! -e $W/gates8/GOLIVE_GATE_MICRO.ok ]"
 touch -d '2 min ago' $PWG/report_2026-11-15.out; echo "G-MICRO: DAT sach= ['2026-11-07', '2026-11-08', '2026-11-09', '2026-11-11', '2026-11-12', '2026-11-16', '2026-11-17']" > $PWG/report_2026-11-18.out
 OUT=$(MG bash "$HERE/golive_make_gate.sh" xyz 2>&1); RC=$?
 chk "B-08 make_gate: prereg_commit khong phai hex => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'prereg_commit'"
-OUT=$(MG NJ_MD5=00000000000000000000000000000000 bash "$HERE/golive_make_gate.sh" abc1234 2>&1); RC=$?
-chk "B-08 make_gate: gmicro_target target_md5 != jar pin => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'target_md5'"
 OUT=$(MG bash "$HERE/golive_make_gate.sh" abc1234 2>&1); RC=$?
-chk "B-08 make_gate DAT: ghi gate du dong (jar/ingestor/created/expires/gmicro_i/ii/smoke/prereg/report_sha256), quyen 600, qua gl_gate strict" "[ $RC = 0 ] && ( for k in jar_md5 ingestor_md5 created_ms expires_ms gmicro_i gmicro_ii smoke prereg_commit report_sha256; do grep -q \"^\$k=\" $W/gates8/GOLIVE_GATE_MICRO.ok || exit 1; done ) && [ \"\$(stat -c %a $W/gates8/GOLIVE_GATE_MICRO.ok)\" = 600 ] && echo \"\$OUT\" | grep -q '^OK gate'"
+chk "WAVE1b M4 make_gate: prereg_commit KHONG ton tai trong repo prereg => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'KHONG phai commit trong'"
+OUT=$(MG bash "$HERE/golive_make_gate.sh" $PRC21 2>&1); RC=$?
+chk "WAVE1b M4 make_gate: prereg_commit chua co ADD22 => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'khong co docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM22_GRID.md'"
+OUT=$(MG NJ_MD5=00000000000000000000000000000000 bash "$HERE/golive_make_gate.sh" $PRCR 2>&1); RC=$?
+chk "B-08 make_gate: gmicro_target target_md5 != jar pin => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'target_md5'"
+OUT=$(MG ING_FIN_MD5=00000000000000000000000000000000 bash "$HERE/golive_make_gate.sh" $PRCR 2>&1); RC=$?
+chk "WAVE1b M4 make_gate: ingestor DANG chay tren 242 != pin => TU CHOI (khong override)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q '242: ingestor DANG chay' && [ ! -e $W/gates8/GOLIVE_GATE_MICRO.ok ]"
+printf '{"target_jar":"r4u3fin","target_md5":"%s","smoke_start_ms":1794676225000,"prereg":"ADD21"}' $NEWR > $PWG/gm_r.json
+OUT=$(MG NJ_MD5=$NEWR GMICRO_TARGET=$PWG/gm_r.json GATE_OVERRIDE_BY=x GATE_OVERRIDE_WHY=xxxxxxxxxxxxxx bash "$HERE/golive_make_gate.sh" $PRCR 2>&1); RC=$?
+chk "WAVE1b M4 make_gate: jar DANG chay tren 242 != pin => TU CHOI (override KHONG bo qua duoc)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q '242: jar DANG chay'"
+OUT=$(MG REPLAY_RESULT= bash "$HERE/golive_make_gate.sh" $PRCR 2>&1); RC=$?
+chk "WAVE1b M4 make_gate: thieu file ket qua replay (iii) + md5(monitor+lib) chua qua A1 (v) => TU CHOI liet ke tung truong" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q -- '- replay_iii: thieu file ket qua replay' && echo \"\$OUT\" | grep -q -- '- script_v: md5(monitor+lib)' && [ ! -e $W/gates8/GOLIVE_GATE_MICRO.ok ]"
+echo "$(cat $HERE/golive_monitor.sh $HERE/golive_lib.sh | md5sum | cut -c1-12)  # test A1" > $W/gates8/A1_APPROVED_MONITOR.md5
+echo 'sua chua commit' >> $PRR/docs/result/GMICRO_MANUAL_20261118.md
+OUT=$(MG bash "$HERE/golive_make_gate.sh" $PRCR 2>&1); RC=$?; git -C $PRR checkout -q -- docs/result/GMICRO_MANUAL_20261118.md
+chk "WAVE1b M4 make_gate: bien ban GMICRO_MANUAL co sua CHUA commit (ADD22 §2.5) => gmicro_ii + smoke THIEU => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q -- '- gmicro_ii: bien ban CHUA commit' && echo \"\$OUT\" | grep -q -- '- smoke: bien ban CHUA commit'"
+sed -i 's/^sizing_iv: DAT/sizing_iv: KHONG DO DUOC/' $W/sizing8.txt
+OUT=$(MG bash "$HERE/golive_make_gate.sh" $PRCR 2>&1); RC=$?
+chk "WAVE1b M4 make_gate: sizing (iv) 'KHONG DO DUOC' khong phai DAT => TU CHOI (chi qua override)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q -- \"- sizing_iv: ket qua sizing khong co dong 'sizing_iv: DAT'\""
+OUT=$(MG GATE_OVERRIDE_BY=MASTER_chuyennd GATE_OVERRIDE_WHY='ADD22 3(iv) gate dong ca cua so, iii la bang chung duy nhat' bash "$HERE/golive_make_gate.sh" $PRCR 2>&1); RC=$?
+chk "WAVE1b M4 make_gate OVERRIDE (ten + ly do): ghi gate co sizing_iv=OVERRIDE + override_by/why/fields, qua gl_gate strict (in OVERRIDE)" "[ $RC = 0 ] && grep -q '^sizing_iv=OVERRIDE ' $W/gates8/GOLIVE_GATE_MICRO.ok && grep -qx 'override_by=MASTER_chuyennd' $W/gates8/GOLIVE_GATE_MICRO.ok && grep -qx 'override_fields=sizing_iv' $W/gates8/GOLIVE_GATE_MICRO.ok && grep -q '^override_why=ADD22' $W/gates8/GOLIVE_GATE_MICRO.ok && echo \"\$OUT\" | grep -q '^OK gate.*OVERRIDE by=MASTER_chuyennd fields=sizing_iv' && echo \"\$OUT\" | grep -q 'CO OVERRIDE: sizing_iv'"
+sed -i 's/^sizing_iv: KHONG DO DUOC/sizing_iv: DAT/' $W/sizing8.txt; rm -f $W/gates8/GOLIVE_GATE_MICRO.ok*
+echo add23 > $PRR/docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM23_X.md; PRC23=$(gc8 add23)
+OUT=$(MG bash "$HERE/golive_make_gate.sh" $PRC23 2>&1); RC=$?
+chk "WAVE1b M4 make_gate: tai prereg_commit da co ADD23 (ADD22 khong con moi nhat) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'KHONG phai addendum PREREG_PARITY_V12_DRY moi nhat' && [ ! -e $W/gates8/GOLIVE_GATE_MICRO.ok ]"
+OUT=$(MG bash "$HERE/golive_make_gate.sh" $PRCR 2>&1); RC=$?
+chk "WAVE1b M4 make_gate: prereg_commit cu (ADD22) nhung HEAD repo prereg da co ADD23 => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'HEAD co addendum PREREG_PARITY_V12_DRY moi hon (ADD23 > ADD22)'"
+git -C $PRR rm -q docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM23_X.md; gc8 rm23 > /dev/null
+OUT=$(MG bash "$HERE/golive_make_gate.sh" $PRCR 2>&1); RC=$?
+chk "B-08 make_gate DAT: ghi gate du dong (jar/ingestor/created/expires/6 truong ADD22 §3 DAT + ev/prereg/report_sha256), quyen 600, qua gl_gate strict, KHONG override" "[ $RC = 0 ] && ( for k in jar_md5 ingestor_md5 created_ms expires_ms gmicro_i gmicro_ii smoke replay_iii sizing_iv script_v prereg_commit prereg_file report_sha256; do grep -q \"^\$k=\" $W/gates8/GOLIVE_GATE_MICRO.ok || exit 1; done ) && [ \"\$(grep -cE '^(gmicro_i|gmicro_ii|smoke|replay_iii|sizing_iv|script_v)=DAT ev=/' $W/gates8/GOLIVE_GATE_MICRO.ok)\" = 6 ] && ! grep -q '^override_' $W/gates8/GOLIVE_GATE_MICRO.ok && grep -q '^replay_iii=DAT ev=$W/replay8.txt prereg=docs/prereg/PREREG_E2E_REPLAY_V12.md' $W/gates8/GOLIVE_GATE_MICRO.ok && [ \"\$(stat -c %a $W/gates8/GOLIVE_GATE_MICRO.ok)\" = 600 ] && echo \"\$OUT\" | grep -q '^OK gate'"
 # ---------------------------------------------------------------- B-13 install_golive_ops.sh
 mkdir -p $W/depl8; cp $HERE/ingfin_check_remote.sh $W/depl8/; printf 'cu\n' > $W/depl8/deploy_chain.sh
 OUT=$(DEPLOY_DIR=$W/depl8 DRY=1 bash "$HERE/install_golive_ops.sh" 2>&1); RC=$?
 chk "B-13 install_golive_ops DRY: liet ke LECH/GIONG, KHONG ghi" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'LECH   deploy_chain.sh' && echo \"\$OUT\" | grep -q 'GIONG  ingfin_check_remote.sh' && grep -qx cu $W/depl8/deploy_chain.sh"
 OUT=$(echo YES | DEPLOY_DIR=$W/depl8 bash "$HERE/install_golive_ops.sh" 2>&1); RC=$?
 chk "B-13 install_golive_ops YES: chep (ban cu .bak_wave1_), md5 = repo; lan 2 KHONG DOI" "[ $RC = 0 ] && cmp -s $HERE/deploy_chain.sh $W/depl8/deploy_chain.sh && ls $W/depl8/deploy_chain.sh.bak_wave1_* >/dev/null && DEPLOY_DIR=$W/depl8 bash $HERE/install_golive_ops.sh 2>&1 < /dev/null | grep 'KHONG DOI' >/dev/null"
-mkdir -p $W/ig8; cp -p $HERE/install_golive_ops.sh $HERE/deploy_chain.sh $HERE/ingfin_check_remote.sh $HERE/set_telegram_env_242.sh $HERE/deploy_ingest_fin.sh $W/ig8/; echo '# sua ngoai quy trinh' >> $W/ig8/deploy_chain.sh
+mkdir -p $W/ig8; cp -p $HERE/*.sh $HERE/GOLIVE_MANIFEST.md5 $W/ig8/; echo '# sua ngoai quy trinh' >> $W/ig8/deploy_chain.sh   # [WAVE1b M5] ban sao du manifest
 OUT=$(echo YES | DEPLOY_DIR=$W/depl8 bash $W/ig8/install_golive_ops.sh 2>&1); RC=$?
 chk "B-13 install_golive_ops: file repo KHAC pin md5 => TU CHOI, khong chep" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'PIN!   deploy_chain.sh' && cmp -s $HERE/deploy_chain.sh $W/depl8/deploy_chain.sh"
 OUT=$(DEPLOY_DIR=$W/depl8 DRY=1 bash "$HERE/install_golive_ops.sh" 2>&1); RC=$?
 chk "B-13 install_golive_ops: md5 monitor+lib CHUA qua A1 => GIU cron cu, in huong dan A1 (khong goi installer cron)" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'CHUA co trong $W/depl8/gates/A1_APPROVED_MONITOR.md5 => GIU cron/pin cu' && ! echo \"\$OUT\" | grep -q 'cron|'"
 chk "B-13 pin: ops/c3live khong con mac dinh token cu 4f49bded (tru chu thich)" "! grep -rn '4f49bded' $HERE/*.sh | grep -v 'truoc 4f49bded\|truoc: 4f49bded\|CON pin token cu\|grep -ln' | grep -q ."
 chk "B-10 SSH_242 golive_lib co ServerAliveInterval/CountMax" "grep -q 'ServerAliveInterval=10 -o ServerAliveCountMax=6' $HERE/golive_lib.sh"
+echo "== 39. [WAVE1b M5] manifest md5 go-live: script owner TU CHOI khi ban than / lib / file trong manifest bi sua"
+M5F="dry_enable_grid_sizing.sh golive_micro_on.sh golive_pilot_on.sh golive_live_off.sh golive_rebase_equity.sh golive_make_gate.sh install_golive_ops.sh install_cron_golive_monitor.sh golive_monitor.sh golive_lib.sh"
+chk "WAVE1b M5 manifest da commit KHOP repo (md5sum -c) va co du 10 file go-live" "(cd $HERE && md5sum -c --quiet --strict GOLIVE_MANIFEST.md5) && for f in $M5F; do grep -qxE \"[0-9a-f]{32}  \$f\" $HERE/GOLIVE_MANIFEST.md5 || exit 1; done"
+chk "WAVE1b M5 7 script owner (dry_enable micro_on pilot_on live_off rebase make_gate install) kiem manifest NGAY dau (truoc gl_init)" "for f in dry_enable_grid_sizing.sh golive_micro_on.sh golive_pilot_on.sh golive_live_off.sh golive_rebase_equity.sh golive_make_gate.sh; do a=\$(grep -n '^gl_manifest_check \"\$0\" || exit 1' $HERE/\$f | head -1 | cut -d: -f1); b=\$(grep -n '^gl_init \|^PW=' $HERE/\$f | head -1 | cut -d: -f1); [ -n \"\$a\" ] && [ -n \"\$b\" ] && [ \"\$a\" -lt \"\$b\" ] || exit 1; done && grep -q 'md5sum -c --quiet --strict \"\$MF\"' $HERE/install_golive_ops.sh"
+m5cp() { rm -rf $W/m5; mkdir -p $W/m5; cp -p $HERE/*.sh $HERE/GOLIVE_MANIFEST.md5 $W/m5/; }
+m5cp; rstd
+OUT=$(DE DRY=1 bash $W/m5/dry_enable_grid_sizing.sh 2>&1); RC=$?
+chk "WAVE1b M5 ban sao NGUYEN (khop manifest) => qua kiem manifest, chay tiep (DRY PASS)" "[ $RC = 0 ] && ! echo \"\$OUT\" | grep -q 'TU CHOI \[M5\]' && echo \"\$OUT\" | grep -q 'DRY PASS'"
+echo '# sua sau audit' >> $W/m5/dry_enable_grid_sizing.sh; NL0=$(ls $W/deploylog | wc -l)
+OUT=$(DE DRY=1 bash $W/m5/dry_enable_grid_sizing.sh 2>&1); RC=$?
+chk "WAVE1b M5 dry_enable bi sua sau audit (DRY cung kiem) => TU CHOI [M5] exit 1 TRUOC gl_init (khong log, khong doc 242)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'TU CHOI \[M5\].*dry_enable_grid_sizing.sh: FAILED' && ! echo \"\$OUT\" | grep -q '=== dry_enable_grid_sizing TS=' && [ \$(ls $W/deploylog | wc -l) = $NL0 ]"
+m5cp; echo '# lib sua' >> $W/m5/golive_lib.sh
+R5=""; for s in golive_micro_on.sh golive_pilot_on.sh golive_live_off.sh golive_rebase_equity.sh golive_make_gate.sh install_golive_ops.sh dry_enable_grid_sizing.sh; do o=$(DRY=1 bash $W/m5/$s abc1234 2>&1 < /dev/null); r=$?; { [ $r = 1 ] && echo "$o" | grep -q 'TU CHOI \[M5\].*golive_lib.sh: FAILED'; } || R5="$R5 $s:$r"; done
+chk "WAVE1b M5 golive_lib.sh bi sua => CA 7 script owner TU CHOI [M5] exit 1 (${R5:-0 loi})" "[ -z '$R5' ]"
+m5cp; echo '# monitor sua' >> $W/m5/golive_monitor.sh
+OUT=$(DE DRY=1 bash $W/m5/dry_enable_grid_sizing.sh 2>&1); RC=$?
+chk "WAVE1b M5 file khac trong manifest (golive_monitor.sh) bi sua => script owner TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'golive_monitor.sh: FAILED'"
+m5cp; rm -f $W/m5/GOLIVE_MANIFEST.md5
+OUT=$(DE DRY=1 bash $W/m5/golive_micro_on.sh 2>&1); RC=$?
+chk "WAVE1b M5 thieu manifest => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'TU CHOI \[M5\]: thieu manifest'"
+rm -rf $W/m5
 pkill -f 'websocket.BinanceDataIngestor fake242fin' 2>/dev/null
 pkill -f 'BinanceOrderTradingManager fake242'
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN)) SKIP=$SKIPN (tong PASS+FAIL+SKIP=$((PASS+FAILN+SKIPN)) co dinh)"

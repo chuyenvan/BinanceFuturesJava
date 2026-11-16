@@ -21,6 +21,7 @@
 # =============================================================================
 set -uo pipefail
 . "$(cd "$(dirname "$0")" && pwd)/golive_lib.sh"
+gl_manifest_check "$0" || exit 1   # [WAVE1b M5] script + lib + manifest khop md5 da commit, lech => TU CHOI truoc moi viec
 LEGACY_OK_MAX_AGE_S=${LEGACY_OK_MAX_AGE_S:-86400}
 gl_init golive_pilot_on
 [ "$C3_ACCOUNT" = MAIN ] && { gl_read_state; gl_excl_guard; }   # [A1 r4u2 C-1]

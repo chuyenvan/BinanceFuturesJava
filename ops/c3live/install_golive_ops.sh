@@ -15,6 +15,11 @@
 # =============================================================================
 set -uo pipefail
 H=$(cd "$(dirname "$0")" && pwd)
+# [WAVE1b M5] nhu gl_manifest_check (golive_lib): script nay + lib + moi file manifest khop md5 da commit, lech => TU CHOI truoc moi viec
+MF=$H/GOLIVE_MANIFEST.md5
+{ [ -s "$MF" ] && grep -qxE "[0-9a-f]{32}  install_golive_ops.sh" "$MF" && grep -qxE "[0-9a-f]{32}  golive_lib.sh" "$MF" \
+  && (cd "$H" && md5sum -c --quiet --strict "$MF" >/dev/null 2>&1); } \
+  || { echo "TU CHOI [M5]: file go-live KHAC manifest da commit ($MF): $(cd "$H" && md5sum -c --strict "$MF" 2>&1 | grep -v ': OK$' | head -5 | tr '\n' ' ') — KHONG lam gi."; exit 1; }
 D=${DEPLOY_DIR:-/home/ubuntu/claude_master/deploy}
 A1F=${A1_APPROVED_FILE:-$D/gates/A1_APPROVED_MONITOR.md5}
 DRY=${DRY:-0}

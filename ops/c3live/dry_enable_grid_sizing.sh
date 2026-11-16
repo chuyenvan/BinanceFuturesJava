@@ -12,7 +12,9 @@
 #   LEGACY (43 vi the THAT tk chinh, cung JVM) ngung quan ly ~30-60 s luc restart.
 # Hau kiem (POST_ROUNDS x POST_WAIT_S): 1 process, md5 jar KHONG doi (= NJ_MD5 pin), process env 2 co =true + LIVE_ADAPTER=dry,
 #   log JVM moi: "khoi dong adapter=DRY", [MINUTE-FIN] BAT, [LIVE-SIZING] LIVE_APPLY_GRID_RATIO=true, [LIVE-DCA-GRID] ...=true profileC3=true
-#   ... applyRatio=true, recon khoi dong ok, latch NONE, 0 KHAN, 0 dong " ERROR ", LEGACY managed KHONG giam (so voi ngay truoc stop).
+#   ... applyRatio=true, recon khoi dong ok, latch NONE, 0 KHAN, 0 dong " ERROR ", LEGACY managed TANG = FAIL / GIAM = WARN ghi so truoc-sau
+#   (LEGACY tu dong vi the, KHONG rollback) [WAVE1b M3]; [WAVE1b M2] process env C3_CAPITAL = truoc restart + token Telegram sha8 = TG_SHA8
+#   (kiem ca TRUOC: process + env.sh; chi sha8, KHONG in token).
 #   DAT => go PAUSE, luu START_MS JVM moi (~/claude_master/deploy/dry_grid_start_<TS>.txt), ghi smoke_start_ms vao
 #   parity_v12w/gmicro_target.json (CHI khi file tro target_jar=r4u3fin + target_md5=NJ_MD5, nhu swap_v12_dry_jar.sh), REG_NAME=<ten>
 #   => goi register_jar.sh (mac dinh KHONG: jar khong doi; in lenh cho MASTER). Ngay hom nay = XAM (doi cau hinh sizing).
@@ -22,11 +24,13 @@
 # =============================================================================
 set -uo pipefail
 . "$(cd "$(dirname "$0")" && pwd)/golive_lib.sh"
+gl_manifest_check "$0" || exit 1   # [WAVE1b M5] script + lib + manifest khop md5 da commit, lech => TU CHOI truoc moi viec
 GMICRO_TARGET=${GMICRO_TARGET:-/home/ubuntu/claude_master/parity_v12w/gmicro_target.json}
 REG_JAR_SH=${REG_JAR_SH:-/home/ubuntu/claude_master/vz_e1_wt/research/parity_v12/sh/register_jar.sh}
 NJ_PATH=${NJ_PATH:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4u3fin2}
 TARGET_TAG=${TARGET_TAG:-r4u3fin}
 REG_NAME=${REG_NAME:-}
+TG_SHA8=${TG_SHA8:-bdee1480}   # [WAVE1b M2] sha8 token Telegram ky vong (= swap_v12_dry_jar / set_telegram_env_242)
 gl_init dry_enable_grid_sizing
 gl_read_state
 echo "$ST" | grep -v '^END_STATE$' | grep -v '^KEYS_' | sed 's/^/   242: /'
@@ -44,6 +48,11 @@ L0=$(sv LEGACY_N)
 chk "LEGACY managed doc duoc ($L0), moi ($(sv LEGACY_AGE) s <= 600)" "[ -n '$L0' ] && [ '$(sv LEGACY_AGE)' -ge 0 ] && [ '$(sv LEGACY_AGE)' -le 600 ] 2>/dev/null"
 say "INFO ingestor md5=$(sv ING_MD5) (FIN pin $ING_FIN_MD5) — chi ghi log"
 CAP=$(sv ENV_C3_CAPITAL); CAP=${CAP:-$(sv ENVSH_C3_CAPITAL)}
+# [WAVE1b M2] restart KHONG duoc doi von: C3_CAPITAL process = env.sh (neu ca 2 co); token Telegram process + env.sh = TG_SHA8 (chi sha8)
+chk "C3_CAPITAL process ($(sv ENV_C3_CAPITAL)) = env.sh ($(sv ENVSH_C3_CAPITAL)) — restart KHONG doi von" "[ -z '$(sv ENV_C3_CAPITAL)' ] || [ -z '$(sv ENVSH_C3_CAPITAL)' ] || [ '$(sv ENV_C3_CAPITAL)' = '$(sv ENVSH_C3_CAPITAL)' ]"
+TGS=$(s242 "cd $A && P=\$(pgrep -f '$(gl_rx "$PROC_PAT")' | head -1); echo TGP=\$(tr '\0' '\n' < /proc/\$P/environ 2>/dev/null | sed -n 's/^TELEGRAM_BOT_TOKEN=//p' | tail -1 | tr -d '\n' | sha256sum | cut -c1-8); echo TGE=\$(bash -c '. conf/env.sh >/dev/null 2>&1; printf %s \"\$TELEGRAM_BOT_TOKEN\"' | sha256sum | cut -c1-8)")
+TGP=$(echo "$TGS" | sed -n 's/^TGP=//p' | head -1); TGE=$(echo "$TGS" | sed -n 's/^TGE=//p' | head -1)
+chk "token Telegram sha8: process $TGP + env.sh $TGE = $TG_SHA8 (khong in token)" "[ '$TGP' = '$TG_SHA8' ] && [ '$TGE' = '$TG_SHA8' ]"
 if [ "$(sv ENVSH_LIVE_APPLY_GRID_RATIO)" = true ] && [ "$(sv ENVSH_LIVE_DCA_GRID_ENABLED)" = true ] \
    && [ "$(sv ENV_LIVE_APPLY_GRID_RATIO)" = true ] && [ "$(sv ENV_LIVE_DCA_GRID_ENABLED)" = true ]; then
   say "=== DA BAT tu truoc (env.sh + process env co 2 co = true) — KHONG doi gi."; exit 0
@@ -75,6 +84,15 @@ if echo "$RS" | grep -q '^FAIL' && ! echo "$RS" | grep -q '^OK da_stop'; then
   say "DUNG: buoc env/stop FAIL TRUOC khi dung bot: $(echo "$RS" | grep '^FAIL' | head -2 | tr '\n' ' ')"
   say "KET QUA: TU_CHOI — env.sh da tra ve backup goc, bot dry KHONG bi dung. Log: $LOG"; exit 1
 fi
+# [WAVE1b M2] C3_CAPITAL KHONG doi so voi truoc restart + token Telegram process = TG_SHA8 (chi sha8, KHONG in token)
+if [ -n "$CAP" ]; then CAP_CHK='
+envk C3_CAPITAL='"$CAP"
+else CAP_CHK='
+echo "$E" | grep -q "^C3_CAPITAL=" && echo "FAIL C3_CAPITAL_xuat_hien_sau_restart (truoc: khong dat)" || echo "OK C3_CAPITAL_van_khong_dat"'
+fi
+TG_CHK='
+S8=$(echo "$E" | sed -n "s/^TELEGRAM_BOT_TOKEN=//p" | tail -1 | tr -d "\n" | sha256sum | cut -c1-8); [ "$S8" = "'"$TG_SHA8"'" ] && echo "OK process_env_telegram_sha8=$S8" || echo "FAIL process_env_telegram_sha8=$S8 (ky vong '"$TG_SHA8"')"
+'
 XCHK='
 envk LIVE_ADAPTER=dry
 [ "$(md5sum < target/binance-java-sdk-1.2.4.jar | cut -c1-32)" = "'"$NJ_MD5"'" ] && echo "OK jar_khong_doi" || echo "FAIL jar_md5_doi"
@@ -84,8 +102,8 @@ envk LIVE_ADAPTER=dry
 [ "$(T "\[MINUTE-FIN\] TAT")" = 0 ] || echo "FAIL MINUTE-FIN_TAT"
 NE=$(tail -n +$SL $L 2>/dev/null | grep -ac " ERROR "); [ "$NE" = 0 ] && echo "OK 0_ERROR" || echo "FAIL ${NE}_dong_ERROR: $(tail -n +$SL $L | grep -a " ERROR " | head -1 | cut -c1-140)"
 LN2=$(tail -n +$SL $L 2>/dev/null | grep -a "\[LEGACY\] managed" | tail -1 | grep -aoE "managed [0-9]+" | awk "{print \$2}")
-[ -n "$LN2" ] && [ "$LN2" -lt "$L0" ] 2>/dev/null && echo "FAIL LEGACY_managed_giam=$LN2<$L0"
-'"$GL_D01_CHK"
+[ -n "$LN2" ] && [ "$LN2" -lt "$L0" ] 2>/dev/null && echo "WARN LEGACY_managed_giam truoc=$L0 sau=$LN2 (LEGACY tu dong vi the; KHONG rollback - WAVE1b M3)"
+'"$CAP_CHK$TG_CHK$GL_D01_CHK"
 CHK() { gl_chk_common "$SL" "$L0" "$XCHK"; }
 if gl_postloop CHK; then
   trap - INT TERM HUP
@@ -124,8 +142,10 @@ PYEOF
   else
     say "WARN khong lay duoc START_MS ('$STMS') — MASTER dien smoke_start_ms tay"; tg "[dry grid] WARN TS=$TS: thieu START_MS"
   fi
+  LW=$(echo "$RESULT" | grep '^WARN LEGACY_managed_giam' | head -1 | cut -c6-90)   # [WAVE1b M3] LEGACY giam = WARN (ghi so), khong rollback
+  [ -n "$LW" ] && say "WARN $LW — MASTER doi chieu LEGACY_SYMS (truoc: $(sv LEGACY_SYMS | cut -c1-200))"
   say "=== XONG: v_t_m dry BAT LIVE_APPLY_GRID_RATIO + LIVE_DCA_GRID_ENABLED (jar $NJ_MD5 khong doi). Ngay hom nay = XAM (doi cau hinh). Log: $LOG"
-  tg "[dry grid] XONG TS=$TS: v_t_m dry +LIVE_APPLY_GRID_RATIO +LIVE_DCA_GRID_ENABLED (jar khong doi). Log $LOG"
+  tg "[dry grid] XONG TS=$TS: v_t_m dry +LIVE_APPLY_GRID_RATIO +LIVE_DCA_GRID_ENABLED (jar khong doi).${LW:+ WARN $LW.} Log $LOG"
   exit 0
 fi
 WHY=$(echo "${RESULT:-$RS}" | grep '^FAIL\|^WAIT' | tr '\n' ' ' | cut -c1-240)

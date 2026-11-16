@@ -15,6 +15,7 @@ ING_FIN_MD5=${ING_FIN_MD5:-5e78ac0663b4a765551eac1c362bf194}   # [WAVE1 B-08] ja
 ING_PAT=${ING_PAT:-websocket.BinanceDataIngestor}
 SUB_KEY_SHA8=${SUB_KEY_SHA8:-43820b5b}   # [WAVE1 A-03] sha256(key tk con)[:8] da dang ky (KEY_CHECK_SUB 11-09) — key doc san PHAI = gia tri nay
 GATE_MAX_AGE_S=${GATE_MAX_AGE_S:-172800}  # [WAVE1 B-08] gate G-MICRO het han 48 h
+GL_GATE_FIELDS="gmicro_i gmicro_ii smoke replay_iii sizing_iv script_v"   # [WAVE1b M4] truong ADD22 §3 bat buoc trong gate G-MICRO (khong doi qua env)
 GL_SSH_TRIES=${GL_SSH_TRIES:-3}            # [WAVE1 B-05] so lan thu ssh CHI DOC (cron monitor: 1)
 GL_SSH_TIMEOUT_S=${GL_SSH_TIMEOUT_S:-0}    # [WAVE1 B-05] >0 => moi lenh ssh boc timeout (cron monitor: 25 s)
 RB_LOG_WAIT_S=${RB_LOG_WAIT_S:-180}        # [WAVE1 B-02] rollback: cho dong "khoi dong adapter=" cua JVM moi toi da (s)
@@ -43,6 +44,22 @@ MAIN_KEY_SHA8=${MAIN_KEY_SHA8:-3ef771e0}   # sha256(key tk chinh)[:8] — key tk
 SUB_DD_LIMIT=${SUB_DD_LIMIT:-0.40}         # ADD4 §5: A40/C6 -40 % (nguong giu nguyen) — lop ops tren totalMarginBalance tk con
 SUB_PEAK_FILE=${SUB_PEAK_FILE:-$LOGDIR/c3sub_tmb_peak.txt}   # dinh tmb tk con (Oracle; golive_monitor ghi; SUB_PEAK_RESET=1 dat lai)
 GL_HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# [WAVE1b M5] manifest md5 da commit (GOLIVE_MANIFEST.md5 canh lib, dinh dang md5sum): script owner goi gl_manifest_check "$0" NGAY sau
+#   khi source lib (truoc gl_init / doc 242 / ghi gi) — script + lib + moi file trong manifest phai khop md5; lech / thieu => TU CHOI exit 1.
+#   KHONG co bien bo qua. Sua file nao trong manifest => cap nhat manifest CUNG commit (A1 duyet).
+gl_manifest_check() {
+  local mf=$GL_HERE/GOLIVE_MANIFEST.md5 self bad
+  self=$(basename "$1")
+  [ "$(cd "$(dirname "$1")" && pwd)" = "$GL_HERE" ] || { echo "TU CHOI [M5]: $1 khong cung thu muc voi golive_lib.sh ($GL_HERE)"; return 1; }
+  [ -s "$mf" ] || { echo "TU CHOI [M5]: thieu manifest $mf — khong chay ban chua duoc pin"; return 1; }
+  grep -qxE "[0-9a-f]{32}  $self" "$mf" && grep -qxE "[0-9a-f]{32}  golive_lib.sh" "$mf" \
+    || { echo "TU CHOI [M5]: $self / golive_lib.sh KHONG co trong manifest $mf"; return 1; }
+  bad=$(cd "$GL_HERE" && md5sum -c --strict "$mf" 2>&1 | grep -v ': OK$' | head -5 | tr '\n' ' ')
+  if [ -n "$bad" ] || ! (cd "$GL_HERE" && md5sum -c --quiet --strict "$mf" >/dev/null 2>&1); then
+    echo "TU CHOI [M5]: file go-live KHAC manifest da commit ($mf): ${bad:-loi md5sum} — sua ngoai quy trinh? KHONG lam gi."; return 1
+  fi
+  return 0
+}
 # [A1 ADD4 C-1] co micro/pilot dang bat (Oracle): micro_on/pilot_on/undrain tao, live_off MODE=dry + rollback micro_on xoa;
 #   cron golive_monitor (install_cron_golive_monitor.sh) KHONG co co => thoat ngay, 0 call
 GL_MON_FLAG=${GL_MON_FLAG:-$LOGDIR/golive_monitor.on}
@@ -144,13 +161,23 @@ tg() {
   tok=$(sed -nE 's/^[[:space:]]*(export[[:space:]]+)?(TG_TOKEN=|tele-token:[[:space:]]*)//p' "$DEPLOY_TG_ENV" | head -1 | tr -d '\r"')
   chat=$(sed -nE 's/^[[:space:]]*(export[[:space:]]+)?(TG_CHAT=|tele-chat-id:[[:space:]]*)//p' "$DEPLOY_TG_ENV" | head -1 | tr -d '\r"')
   [ -n "$tok" ] && [ -n "$chat" ] || return 1
-  code=$(printf 'url = "https://api.telegram.org/bot%s/sendMessage"\n' "$tok" | curl -s -m 15 -o /dev/null -w '%{http_code}' -K - \
+  code=$(printf 'url = "https://api.telegram.org/bot%s/sendMessage"\n' "$tok" | curl -s -m "${GL_TG_TIMEOUT_S:-15}" -o /dev/null -w '%{http_code}' -K - \
     --data-urlencode "chat_id=$chat" --data-urlencode "text=$msg" 2>/dev/null)
   tok=""; [ "$code" = 200 ]
 }
 die() { say "DUNG: $*"; say "KET QUA: TU_CHOI (khong doi gi). Log: $LOG"; exit 1; }
 # [WAVE1 B-05] _ssh: boc timeout khi GL_SSH_TIMEOUT_S > 0 (cron monitor) — ssh treo khong an het "timeout 100" cua cron
-_ssh() { if [ "${GL_SSH_TIMEOUT_S:-0}" -gt 0 ] 2>/dev/null; then timeout -k 5 "$GL_SSH_TIMEOUT_S" $SSH_242 "$@"; else $SSH_242 "$@"; fi; }
+# [WAVE1b M7] GL_SSH_DEADLINE (epoch, cron monitor dat): timeout moi lenh = min(GL_SSH_TIMEOUT_S, con lai); con < 3 s => KHONG ssh, rc 255
+#   => TONG thoi gian ssh 1 luot <= ngan sach (+5 s kill), < "timeout 100" cua cron du 242 mat mang
+_ssh() {
+  local t=${GL_SSH_TIMEOUT_S:-0} rem
+  if [ "${GL_SSH_DEADLINE:-0}" -gt 0 ] 2>/dev/null; then
+    rem=$(( GL_SSH_DEADLINE - $(date +%s) ))
+    [ "$rem" -ge 3 ] || { echo "[ssh 242 BO QUA: het ngan sach thoi gian luot (GL_SSH_DEADLINE)]" >&2; return 255; }
+    { [ "$t" -gt 0 ] 2>/dev/null && [ "$t" -le "$rem" ]; } || t=$rem
+  fi
+  if [ "$t" -gt 0 ] 2>/dev/null; then timeout -k 5 "$t" $SSH_242 "$@"; else $SSH_242 "$@"; fi
+}
 # s242 / s242in : CHI cho lenh CHI DOC hoac IDEMPOTENT (dat KILL_SWITCH neu chua co, doc log...) — thu lai GL_SSH_TRIES lan khi rc=255
 s242() {
   local i rc=255
@@ -208,10 +235,20 @@ gl_gate() {
     elif [ $(( c - now )) -gt 300000 ]; then why="$why created_ms_o_tuong_lai"; fi
     if ! [[ "$e" =~ ^[0-9]{13}$ ]]; then why="$why thieu_expires_ms"
     elif [ "$e" -le "$now" ]; then why="$why expires_ms_da_qua(het_han)"; fi
-    for x in gmicro_i gmicro_ii smoke; do [[ "$(gl_gate_val "$f" $x)" =~ ^DAT ]] || why="$why ${x}_khong_DAT"; done
+    # [WAVE1b M4] 6 truong ADD22 §3: DAT + ev=<file ton tai> | OVERRIDE (chi khi gate co override_by + override_why)
+    local ovb ovw evf raw
+    ovb=$(sed -n 's/^override_by=//p' "$f" | head -1); ovw=$(sed -n 's/^override_why=//p' "$f" | head -1)
+    for x in $GL_GATE_FIELDS; do
+      raw=$(sed -n "s/^$x=//p" "$f" | head -1)
+      if [[ "$raw" =~ ^DAT ]]; then
+        evf=$(printf '%s' "$raw" | grep -oE '(^| )ev=[^ ]+' | head -1 | sed 's/^ *ev=//')
+        [ -n "$evf" ] && [ -s "$evf" ] || why="$why ${x}_DAT_thieu_file_bang_chung(${evf:-khong_co_ev})"
+      elif [[ "$raw" =~ ^OVERRIDE ]] && [ -n "$ovb" ] && [ -n "$ovw" ]; then :
+      else why="$why ${x}_khong_DAT"; fi
+    done
     [[ "$(gl_gate_val "$f" prereg_commit)" =~ ^[0-9a-f]{7,40}$ ]] || why="$why thieu_prereg_commit"
     [ -z "$why" ] || { echo "FAIL gate $f:$why"; return 1; }
-    echo "OK gate $f (jar_md5=$NJ_MD5 ingestor_md5=$ING_FIN_MD5 tuoi=$(( (now - c) / 1000 ))s het_han_sau=$(( (e - now) / 1000 ))s $(gl_gate_val "$f" gmicro_i | cut -c1-40) prereg=$(gl_gate_val "$f" prereg_commit))"
+    echo "OK gate $f (jar_md5=$NJ_MD5 ingestor_md5=$ING_FIN_MD5 tuoi=$(( (now - c) / 1000 ))s het_han_sau=$(( (e - now) / 1000 ))s $(gl_gate_val "$f" gmicro_i | cut -c1-40) prereg=$(gl_gate_val "$f" prereg_commit))$([ -n "$ovb" ] && echo " OVERRIDE by=$ovb fields=$(sed -n 's/^override_fields=//p' "$f" | head -1)")"
     return 0
   fi
   echo "OK gate $f (jar_md5=$NJ_MD5)"
@@ -239,6 +276,7 @@ IP=$(pgrep -f "${IPAT:-websocket.BinanceDataIngestor}" | head -1); IFD=$(find /p
 echo "ING_MD5=$( [ -n "$IP" ] && [ -n "$IFD" ] && md5sum < "$IFD" 2>/dev/null | cut -c1-32)"
 L=$(sed -n 's/.*"latch":"\([A-Z_]*\)".*/\1/p' run/killsw_latch.json 2>/dev/null | head -1); echo "LATCH=${L:-NOFILE}"
 [ -e "$PAUSE" ] && echo "PAUSE=1 $(head -c 60 "$PAUSE" 2>/dev/null | tr '\n' ' ')" || echo "PAUSE=0"
+[ -e "$PAUSE" ] && echo "PAUSE_AGE=$(( $(date +%s) - $(stat -c %Y "$PAUSE" 2>/dev/null || echo 0) ))" || echo "PAUSE_AGE=-1"   # [WAVE1b M6]
 echo "CANARY_SOAK=$(pgrep -fc 'C3LiveCanary|UserStreamSoak')"
 echo "MEM=$(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo)"
 echo "DISK_K=$(df -Pk . | awk 'NR==2{print $4}')"

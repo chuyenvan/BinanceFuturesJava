@@ -14,6 +14,7 @@
 # =============================================================================
 set -uo pipefail
 . "$(cd "$(dirname "$0")" && pwd)/golive_lib.sh"
+gl_manifest_check "$0" || exit 1   # [WAVE1b M5] script + lib + manifest khop md5 da commit, lech => TU CHOI truoc moi viec
 DELTA=${1:-}; REASON=${2:-${REASON:-}}
 REBASE_TOL=${REBASE_TOL:-0.02}
 REBASE_MAX_AGE_S=${REBASE_MAX_AGE_S:-86400}
