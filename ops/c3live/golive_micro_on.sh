@@ -58,11 +58,33 @@ GR=$(gl_gate "$G" 1); echo "$GR"; echo "$GR" | grep -q '^OK' || die "chua co con
 #   [n3] gate chep NGUYEN VAN limits_file tai prereg_commit (moi dong "limits|<dong>") + limits_sha256 (= sha256 git show) => tinh lai + so,
 #   in TOAN BO trong cau hoi YES. 6 truong ADD22 3 khop ^DAT( |$) (chan "DATX"); OVERRIDE CHI o sizing_iv + override_fields = "sizing_iv"
 #   + replay_iii DAT + override_why >= 10 ky tu + override_by co ten nguoi. Sai bat ky => TU CHOI (DRY cung kiem).
+# [OPS-MICRO4 n1b/n1c/n3b] LUAT prereg (GIONG HET o golive_make_gate.sh va golive_micro_on.sh):
+#   - addendum PARITY_V12_DRY = docs/prereg/PREREG_PARITY_V12_DRY_ADD<n>*.md HOAC ..._ADDENDUM<n>*.md (regex ADD(ENDUM)?[0-9]+, sau so la
+#     ky tu KHAC so hoac ".md"); "moi nhat" so theo GIA TRI SO (bo 0 dau): ADD24.md > ADDENDUM23_X.md.
+#   - prereg_file GHIM = file mang so LON NHAT; NHIEU file cung so => duong dan NGAN NHAT (bang nhau => thu tu byte, LC_ALL=C).
+#   - TAP RANG BUOC = MOI file addendum mang so lon nhat + MOI docs/prereg/PREREG_E2E_REPLAY_V12*.md + docs/prereg/GATE_LIMITS_MICRO.md
+#     (blob truc tiep trong docs/prereg/). Gate ghi moi file 1 dong "prereg_set|<duong dan> <sha256 tai prereg_commit>" (LC_ALL=C sort);
+#     tap tinh lai tai prereg_commit phai = gate, tap tai HEAD repo prereg phai GIONG HET (file MOI khop mau / bi DOI / bi XOA => TU CHOI).
+#   - ERRATA: moi file trong tap co "errata" trong ten (khong phan biet hoa thuong) => TEN FILE (basename, vd PREREG_E2E_REPLAY_V12_ERRATA1.md)
+#     phai co NGUYEN VAN (phan biet hoa thuong, ca ".md") trong GATE_LIMITS_MICRO.md tai prereg_commit; thieu => TU CHOI.
+#   GATE_LIMITS_MICRO.md (MASTER): khong rong, chi LF (khong CR), liet ke ten tung file errata + moi gioi han da biet.
 PREREG_REPO=${PREREG_REPO:-/home/ubuntu/claude_master/vz_e1_wt}
-GM_PF_RX='^docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM[0-9]+[^/]*\.md$'; GM_RP=docs/prereg/PREREG_E2E_REPLAY_V12.md; GM_LF=docs/prereg/GATE_LIMITS_MICRO.md
+GM_PF_RX='^docs/prereg/PREREG_PARITY_V12_DRY_ADD(ENDUM)?[0-9]+[^/]*\.md$'; GM_RP=docs/prereg/PREREG_E2E_REPLAY_V12.md; GM_LF=docs/prereg/GATE_LIMITS_MICRO.md
 gm_val() { sed -n "s/^$1=//p" "$G" | head -1; }   # gia tri NGUYEN (giu khoang trang, khac gl_gate_val)
-gm_addmax() { git -C "$PREREG_REPO" ls-tree --name-only "$1" docs/prereg/ 2>/dev/null | sed -n 's#^docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM\([0-9][0-9]*\)[^/]*\.md$#\1#p' | sort -n | tail -1; }
+# [OPS-MICRO4 n1b/n1c/n3b] helper LUAT prereg (GIONG HET golive_micro_on.sh / golive_make_gate.sh; can GM_LF + PREREG_REPO):
+gm_list() { git -C "$PREREG_REPO" ls-tree -z "$1" docs/prereg/ 2>/dev/null | tr '\0' '\n' | sed -n 's/^[0-7]* blob [0-9a-f]*\t//p'; }
+gm_pnum() { local n; [[ "$1" =~ ^docs/prereg/PREREG_PARITY_V12_DRY_ADD(ENDUM)?([0-9]+)([^0-9/][^/]*)?\.md$ ]] || return 1; n=${BASH_REMATCH[2]}; n=${n#"${n%%[!0]*}"}; echo "${n:-0}"; }
+gm_addmax() { local f; gm_list "$1" | while IFS= read -r f; do gm_pnum "$f" || :; done | sort -n | tail -1; }
+gm_pin() { local m f; m=$(gm_addmax "$1"); [ -n "$m" ] || return 0
+  gm_list "$1" | while IFS= read -r f; do [ "$(gm_pnum "$f")" = "$m" ] && printf '%s %s\n' "${#f}" "$f"; :; done | LC_ALL=C sort -k1,1n -k2 | head -1 | cut -d' ' -f2-; }
+gm_set() { local m f; m=$(gm_addmax "$1"); gm_list "$1" | while IFS= read -r f; do
+    if { [ -n "$m" ] && [ "$(gm_pnum "$f")" = "$m" ]; } || [[ "$f" =~ ^docs/prereg/PREREG_E2E_REPLAY_V12[^/]*\.md$ ]] || [ "$f" = "$GM_LF" ]; then
+      printf '%s %s\n' "$f" "$(git -C "$PREREG_REPO" cat-file blob "$1:$f" | sha256sum | cut -c1-64)"; fi; done | LC_ALL=C sort; }
+gm_setdiff() { diff <(printf '%s\n' "$1") <(printf '%s\n' "$2") | sed -n 's/^[<>] \([^ ]*\) .*/\1/p' | LC_ALL=C sort -u | tr '\n' ' ' | cut -c1-240; }
+gm_errata_miss() { local f h b L; L=$(git -C "$PREREG_REPO" cat-file blob "$1:$GM_LF" 2>/dev/null); printf '%s\n' "$2" | while read -r f h; do
+    [ -n "$f" ] || continue; b=${f##*/}; printf '%s' "$b" | grep -qi errata || continue; printf '%s\n' "$L" | grep -qF -- "$b" || printf '%s ' "$b"; done; }
 gm_tag() { printf '%s' "$1" | tr -c 'A-Za-z0-9_./-' '_' | cut -c1-80; }
+gm_tagl() { printf '%s' "$1" | tr -c 'A-Za-z0-9_./-' ',' | cut -c1-240; }
 GW=""; NOV=0
 GBL=$(tail -n 1 "$G")
 if ! [[ "$GBL" =~ ^body_sha256=[0-9a-f]{64}$ ]] || [ "$(grep -c '^body_sha256=' "$G")" != 1 ]; then GW="$GW thieu_body_sha256_dong_cuoi"
@@ -101,8 +123,17 @@ else
     if [ -z "$(printf '%s' "$LIM" | tr -d '[:space:]')" ]; then GW="$GW thieu_limits(dong_limits|_rong)"
     elif [ "$(grep '^limits|' "$G")" != "$(git -C "$PREREG_REPO" show "$GPC:$GLF" | sed 's/^/limits|/')" ]; then GW="$GW limits_KHAC_nguyen_van_limits_file_tai_commit"; fi
   else GW="$GW limits_file_khong_co_tai_commit($(gm_tag "$GLF"))"; fi
-  PN=$(printf '%s' "$GPF" | sed -n 's#^docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM\([0-9][0-9]*\).*#\1#p'); PMC=$(gm_addmax "$GPC"); PMH=$(gm_addmax HEAD)
+  PN=$(gm_pnum "$GPF"); PMC=$(gm_addmax "$GPC"); PMH=$(gm_addmax HEAD)   # [OPS-MICRO4 n1b] ADD<n> + ADDENDUM<n>, so theo gia tri so
   { [ -n "$PN" ] && [ "$PN" = "$PMC" ] && [ "$PN" = "$PMH" ]; } || GW="$GW prereg_file_ADD${PN:-?}_khong_phai_addendum_moi_nhat(commit_ADD${PMC:-?}_HEAD_ADD${PMH:-?})"
+  # [OPS-MICRO4 n1c] file ghim (so lon nhat, duong dan ngan nhat) + TAP file prereg rang buoc (gate = tai commit = tai HEAD)
+  GPN=$(gm_pin "$GPC"); GPH=$(gm_pin HEAD)
+  { [ -n "$GPN" ] && [ "$GPF" = "$GPN" ] && [ "$GPF" = "$GPH" ]; } || GW="$GW prereg_file_KHAC_file_ghim(commit:$(gm_tag "${GPN##*/}")_HEAD:$(gm_tag "${GPH##*/}"))"
+  PSC=$(gm_set "$GPC"); PSH=$(gm_set HEAD); PSG=$(sed -n 's/^prereg_set|//p' "$G")
+  if [ -z "$PSG" ]; then GW="$GW thieu_prereg_set"
+  elif [ "$PSG" != "$PSC" ]; then GW="$GW prereg_set_KHAC_tap_file_tai_commit($(gm_tagl "$(gm_setdiff "$PSG" "$PSC")"))"; fi
+  [ "$PSH" = "$PSC" ] || GW="$GW prereg_set_DOI_tu_commit_toi_HEAD($(gm_tagl "$(gm_setdiff "$PSC" "$PSH")"))"
+  # [OPS-MICRO4 n3b] file ERRATA trong tap => ten file nguyen van trong GATE_LIMITS_MICRO.md tai commit
+  EM=$(gm_errata_miss "$GPC" "$PSC"); [ -z "$EM" ] || GW="$GW ERRATA_chua_liet_ke_trong_GATE_LIMITS_MICRO.md($(gm_tagl "$EM"))"
   if ! git -C "$PREREG_REPO" merge-base --is-ancestor "$GPC" HEAD 2>/dev/null; then GW="$GW prereg_commit_KHONG_tren_lich_su_HEAD_repo_prereg"
   elif ! git -C "$PREREG_REPO" diff --quiet "$GPC" HEAD -- "$GPF" "$GM_LF" 'docs/prereg/PREREG_E2E_REPLAY_V12*.md' 2>/dev/null; then
     GW="$GW prereg_DOI_sau_prereg_commit($(git -C "$PREREG_REPO" diff --name-only "$GPC" HEAD -- "$GPF" "$GM_LF" 'docs/prereg/PREREG_E2E_REPLAY_V12*.md' 2>/dev/null | tr '\n' ',' | cut -c1-160))"
@@ -113,6 +144,8 @@ say "OK gate tu kiem: body_sha256 + sha256 bang chung + report khop, prereg $GPC
 LIMP=$(printf '%s\n' "$LIM" | sed 's/^/   | /')
 say "GIOI HAN DA BIET ($GM_LF @ prereg ${GPC:0:12}, sha256 ${GLS:0:12} - KHONG duoc coi la da kiem):"
 printf '%s\n' "$LIMP"
+say "TAP FILE PREREG RANG BUOC (@ prereg ${GPC:0:12}; khong doi toi HEAD; moi ERRATA co ten trong $GM_LF):"   # [OPS-MICRO4 n1c]
+printf '%s\n' "$PSC" | sed 's/^/   = /'
 GOV=""
 if [ "$NOV" = 1 ]; then
   GOV="GATE CO OVERRIDE by=$GOB truong=$GOF"

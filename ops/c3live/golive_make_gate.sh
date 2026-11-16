@@ -29,8 +29,18 @@
 #   limits_sha256 (sha256 git show). prereg_commit phai la HEAD repo prereg hoac to tien ma tu do KHONG commit nao doi addendum /
 #   PREREG_E2E_REPLAY_V12*.md (ke ca ERRATA moi) / limits_file. golive_micro_on.sh tinh lai TAT CA (sha ev/report/body, git prereg,
 #   ten ghim, limits, ^DAT( |$)) va in TOAN BO gioi han trong cau hoi YES.
+# [OPS-MICRO4 n1b/n1c/n3b] LUAT prereg (GIONG HET o golive_make_gate.sh va golive_micro_on.sh):
+#   - addendum PARITY_V12_DRY = docs/prereg/PREREG_PARITY_V12_DRY_ADD<n>*.md HOAC ..._ADDENDUM<n>*.md (regex ADD(ENDUM)?[0-9]+, sau so la
+#     ky tu KHAC so hoac ".md"); "moi nhat" so theo GIA TRI SO (bo 0 dau): ADD24.md > ADDENDUM23_X.md.
+#   - prereg_file GHIM = file mang so LON NHAT; NHIEU file cung so => duong dan NGAN NHAT (bang nhau => thu tu byte, LC_ALL=C).
+#   - TAP RANG BUOC = MOI file addendum mang so lon nhat + MOI docs/prereg/PREREG_E2E_REPLAY_V12*.md + docs/prereg/GATE_LIMITS_MICRO.md
+#     (blob truc tiep trong docs/prereg/). Gate ghi moi file 1 dong "prereg_set|<duong dan> <sha256 tai prereg_commit>" (LC_ALL=C sort);
+#     tap tinh lai tai prereg_commit phai = gate, tap tai HEAD repo prereg phai GIONG HET (file MOI khop mau / bi DOI / bi XOA => TU CHOI).
+#   - ERRATA: moi file trong tap co "errata" trong ten (khong phan biet hoa thuong) => TEN FILE (basename, vd PREREG_E2E_REPLAY_V12_ERRATA1.md)
+#     phai co NGUYEN VAN (phan biet hoa thuong, ca ".md") trong GATE_LIMITS_MICRO.md tai prereg_commit; thieu => TU CHOI.
+#   GATE_LIMITS_MICRO.md (MASTER): khong rong, chi LF (khong CR), liet ke ten tung file errata + moi gioi han da biet.
 # Ghi (umask 077, ban cu => .bak_<ts>): jar_md5, ingestor_md5, created_ms, expires_ms (= created + 48 h), 6 truong tren, prereg_commit,
-#   prereg_file, replay_prereg, limits_file, limits_sha256, limits|..., report + report_sha256, by, body_sha256.
+#   prereg_file, prereg_set|... [OPS-MICRO4], replay_prereg, limits_file, limits_sha256, limits|..., report + report_sha256, by, body_sha256.
 # Ma thoat: 0 da ghi (hoac DRY in) | 1 TU CHOI.
 # =============================================================================
 set -uo pipefail
@@ -47,10 +57,22 @@ PW=${PARITY_W:-/home/ubuntu/claude_master/parity_v12w}
 GMICRO_TARGET=${GMICRO_TARGET:-$PW/gmicro_target.json}
 PREREG_REPO=${PREREG_REPO:-/home/ubuntu/claude_master/vz_e1_wt}
 PREREG_FILE=${PREREG_FILE:-docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM22_GRID.md}
-# [OPS-MICRO3 n1] TEN GHIM CUNG (micro_on kiem lai): prereg_file = docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM<n>*.md (moi nhat),
-#   replay_prereg = docs/prereg/PREREG_E2E_REPLAY_V12.md, limits_file = docs/prereg/GATE_LIMITS_MICRO.md
-GM_RP=docs/prereg/PREREG_E2E_REPLAY_V12.md; LIMF=docs/prereg/GATE_LIMITS_MICRO.md
-[[ "$PREREG_FILE" =~ ^docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM[0-9]+[^/]*\.md$ ]] || { echo "TU CHOI: PREREG_FILE=$PREREG_FILE khong theo ten ghim docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM<n>*.md"; exit 1; }
+# [OPS-MICRO3 n1 + OPS-MICRO4 n1b] TEN GHIM CUNG (micro_on kiem lai): prereg_file = docs/prereg/PREREG_PARITY_V12_DRY_ADD(ENDUM)?<n>*.md
+#   (file ghim cua so moi nhat), replay_prereg = docs/prereg/PREREG_E2E_REPLAY_V12.md, limits_file = docs/prereg/GATE_LIMITS_MICRO.md
+GM_RP=docs/prereg/PREREG_E2E_REPLAY_V12.md; LIMF=docs/prereg/GATE_LIMITS_MICRO.md; GM_LF=$LIMF
+[[ "$PREREG_FILE" =~ ^docs/prereg/PREREG_PARITY_V12_DRY_ADD(ENDUM)?[0-9]+[^/]*\.md$ ]] || { echo "TU CHOI: PREREG_FILE=$PREREG_FILE khong theo ten ghim docs/prereg/PREREG_PARITY_V12_DRY_ADD(ENDUM)?<n>*.md"; exit 1; }
+# [OPS-MICRO4 n1b/n1c/n3b] helper LUAT prereg (GIONG HET golive_micro_on.sh / golive_make_gate.sh; can GM_LF + PREREG_REPO):
+gm_list() { git -C "$PREREG_REPO" ls-tree -z "$1" docs/prereg/ 2>/dev/null | tr '\0' '\n' | sed -n 's/^[0-7]* blob [0-9a-f]*\t//p'; }
+gm_pnum() { local n; [[ "$1" =~ ^docs/prereg/PREREG_PARITY_V12_DRY_ADD(ENDUM)?([0-9]+)([^0-9/][^/]*)?\.md$ ]] || return 1; n=${BASH_REMATCH[2]}; n=${n#"${n%%[!0]*}"}; echo "${n:-0}"; }
+gm_addmax() { local f; gm_list "$1" | while IFS= read -r f; do gm_pnum "$f" || :; done | sort -n | tail -1; }
+gm_pin() { local m f; m=$(gm_addmax "$1"); [ -n "$m" ] || return 0
+  gm_list "$1" | while IFS= read -r f; do [ "$(gm_pnum "$f")" = "$m" ] && printf '%s %s\n' "${#f}" "$f"; :; done | LC_ALL=C sort -k1,1n -k2 | head -1 | cut -d' ' -f2-; }
+gm_set() { local m f; m=$(gm_addmax "$1"); gm_list "$1" | while IFS= read -r f; do
+    if { [ -n "$m" ] && [ "$(gm_pnum "$f")" = "$m" ]; } || [[ "$f" =~ ^docs/prereg/PREREG_E2E_REPLAY_V12[^/]*\.md$ ]] || [ "$f" = "$GM_LF" ]; then
+      printf '%s %s\n' "$f" "$(git -C "$PREREG_REPO" cat-file blob "$1:$f" | sha256sum | cut -c1-64)"; fi; done | LC_ALL=C sort; }
+gm_setdiff() { diff <(printf '%s\n' "$1") <(printf '%s\n' "$2") | sed -n 's/^[<>] \([^ ]*\) .*/\1/p' | LC_ALL=C sort -u | tr '\n' ' ' | cut -c1-240; }
+gm_errata_miss() { local f h b L; L=$(git -C "$PREREG_REPO" cat-file blob "$1:$GM_LF" 2>/dev/null); printf '%s\n' "$2" | while read -r f h; do
+    [ -n "$f" ] || continue; b=${f##*/}; printf '%s' "$b" | grep -qi errata || continue; printf '%s\n' "$L" | grep -qF -- "$b" || printf '%s ' "$b"; done; }
 GMICRO_MANUAL=${GMICRO_MANUAL:-}; REPLAY_RESULT=${REPLAY_RESULT:-}; SIZING_RESULT=${SIZING_RESULT:-}
 OVB=${GATE_OVERRIDE_BY:-}; OVW=${GATE_OVERRIDE_WHY:-}
 PRC=${1:-}; REP=${2:-$(ls -t "$PW"/report_*.out 2>/dev/null | head -1)}
@@ -60,10 +82,11 @@ no() { echo "TU CHOI: $*"; exit 1; }
 [[ "$PRC" =~ ^[0-9a-f]{7,40}$ ]] || no "prereg_commit '$PRC' khong hop le (hex 7-40). Dung: bash $_OPS/golive_make_gate.sh <prereg_commit> [report]"
 git -C "$PREREG_REPO" cat-file -e "$PRC^{commit}" 2>/dev/null || no "prereg_commit $PRC KHONG phai commit trong $PREREG_REPO"
 git -C "$PREREG_REPO" cat-file -e "$PRC:$PREREG_FILE" 2>/dev/null || no "prereg_commit $PRC khong co $PREREG_FILE (ADD22)"
-PN=$(basename "$PREREG_FILE" | sed -n 's/^PREREG_PARITY_V12_DRY_ADDENDUM\([0-9]*\).*/\1/p')
-PMAX=$(git -C "$PREREG_REPO" ls-tree --name-only "$PRC" "$(dirname "$PREREG_FILE")/" 2>/dev/null | sed -n 's/.*PREREG_PARITY_V12_DRY_ADDENDUM\([0-9]*\).*/\1/p' | sort -n | tail -1)
+PN=$(gm_pnum "$PREREG_FILE"); PMAX=$(gm_addmax "$PRC")   # [OPS-MICRO4 n1b] ADD<n> + ADDENDUM<n>, so theo gia tri so
 [ -n "$PN" ] && [ "$PN" = "$PMAX" ] || no "prereg $PREREG_FILE (ADD$PN) KHONG phai addendum PREREG_PARITY_V12_DRY moi nhat tai $PRC (moi nhat ADD$PMAX)"
-PHEAD=$(git -C "$PREREG_REPO" ls-tree --name-only HEAD "$(dirname "$PREREG_FILE")/" 2>/dev/null | sed -n 's/.*PREREG_PARITY_V12_DRY_ADDENDUM\([0-9]*\).*/\1/p' | sort -n | tail -1)
+PPIN=$(gm_pin "$PRC")   # [OPS-MICRO4 n1c] nhieu file cung so => file ghim = duong dan ngan nhat
+[ "$PREREG_FILE" = "$PPIN" ] || no "PREREG_FILE=$PREREG_FILE KHONG phai file GHIM cua ADD$PMAX tai $PRC (luat: so lon nhat, duong dan ngan nhat) - file ghim: $PPIN"
+PHEAD=$(gm_addmax HEAD)
 [ "$PHEAD" = "$PN" ] || no "repo prereg HEAD co addendum PREREG_PARITY_V12_DRY moi hon (ADD$PHEAD > ADD$PN) — gate phai theo prereg moi nhat"
 git -C "$PREREG_REPO" merge-base --is-ancestor "$PRC" HEAD 2>/dev/null || no "prereg_commit $PRC KHONG nam tren lich su HEAD cua $PREREG_REPO"
 # [OPS-MICRO3 n3] limits_file GHIM CUNG phai co tai prereg_commit (MASTER viet + commit), khong rong, chi LF
@@ -73,6 +96,13 @@ git -C "$PREREG_REPO" cat-file -e "$PRC:$LIMF" 2>/dev/null || no "prereg_commit 
 # [OPS-MICRO3 n2] tu prereg_commit toi HEAD KHONG commit nao doi addendum / PREREG_E2E_REPLAY_V12*.md (ke ca ERRATA moi) / limits_file
 PCHG=$(git -C "$PREREG_REPO" diff --name-only "$PRC" HEAD -- "$PREREG_FILE" "$LIMF" 'docs/prereg/PREREG_E2E_REPLAY_V12*.md' 2>&1) && [ -z "$PCHG" ] \
   || no "tu prereg_commit $PRC toi HEAD $PREREG_REPO co thay doi prereg/limits: $(echo "$PCHG" | tr '\n' ' ' | cut -c1-200)- gate phai dua tren prereg_commit MOI (HEAD)"
+# [OPS-MICRO4 n1c] TAP file prereg rang buoc tai prereg_commit = tai HEAD (file moi khop mau / doi / xoa => TU CHOI)
+PSC=$(gm_set "$PRC"); PSH=$(gm_set HEAD)
+[ -n "$PSC" ] && [ "$PSC" = "$PSH" ] || no "tap file prereg rang buoc KHAC giua prereg_commit $PRC va HEAD $PREREG_REPO: $(gm_setdiff "$PSC" "$PSH")- gate phai dua tren prereg_commit MOI (HEAD)"
+# [OPS-MICRO4 n3b] moi file ERRATA trong tap => TEN file phai co nguyen van trong $LIMF tai prereg_commit
+EMISS=$(gm_errata_miss "$PRC" "$PSC")
+[ -z "$EMISS" ] || no "file ERRATA CHUA duoc liet ke (ten file nguyen van) trong $LIMF tai $PRC: ${EMISS}- MASTER them TEN tung file errata vao $LIMF, commit, tao gate lai"
+PSB=$(printf '%s\n' "$PSC" | sed 's/^/prereg_set|/')
 PRCF=$(git -C "$PREREG_REPO" rev-parse "$PRC^{commit}")
 # ---- report + gmicro_target
 [ -s "$REP" ] || no "khong co report G-MICRO ($REP)"
@@ -166,6 +196,7 @@ sizing_iv=${V[sizing_iv]}
 script_v=${V[script_v]}
 prereg_commit=$PRCF
 prereg_file=$PREREG_FILE
+$PSB
 replay_prereg=$RPP
 limits_file=$LIMF
 limits_sha256=$LIMS
