@@ -1273,9 +1273,11 @@ echo 'bang chung gia (test)' > $W/ev_test.txt   # [WAVE1b M4] truong DAT phai tr
 PRG=$W/prereg_gm; mkdir -p $PRG/docs/prereg; git -C $PRG init -q
 echo add22 > $PRG/docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM22_GRID.md
 printf '# E2E replay (test)\n## 7. Gioi han da biet (test)\n- gioi han A (test)\n  dong noi A  \n\n- gioi han B\n## 8. Quy trinh\nx\n' > $PRG/docs/prereg/PREREG_E2E_REPLAY_V12.md
+echo add21 > $PRG/docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM21_FIN.md; echo 'prereg khac (test n1)' > $PRG/docs/prereg/PREREG_2X_HALFSIZE.md   # [OPS-MICRO3 n1]
+printf '# GATE_LIMITS_MICRO (test)\n- gioi han A (test)\n  dong noi A  \n\n- N5 ERRATA1 arm cung nen (test)\n' > $PRG/docs/prereg/GATE_LIMITS_MICRO.md   # [OPS-MICRO3 n3]
 git -C $PRG -c user.name=t -c user.email=t@t add -A; git -C $PRG -c user.name=t -c user.email=t@t commit -qm gm; PRGC=$(git -C $PRG rev-parse HEAD)
 export PREREG_REPO=$PRG
-LIMT='- gioi han A (test) |   dong noi A | - gioi han B'
+LIMF=docs/prereg/GATE_LIMITS_MICRO.md; LIMSH=$(git -C $PRG show $PRGC:$LIMF | sha256sum | cut -c1-64); LIMB=$(git -C $PRG show $PRGC:$LIMF | sed 's/^/limits|/')   # [OPS-MICRO3 n3] gate chep nguyen van
 EVS=$(sha256sum < $W/ev_test.txt | cut -c1-64)
 gmbody() { local g=$GD/GOLIVE_GATE_MICRO.ok; sed -i '/^body_sha256=/d' $g; echo "body_sha256=$(sha256sum < $g | cut -c1-64)" >> $g; }   # tinh lai body (gate sua tay NHAT QUAN)
 mkgm() { local c=${2:-$(( $(date +%s) * 1000 ))} d="DAT ev=$W/ev_test.txt ev_sha256=$EVS" r3 r4 ov=""   # mkgm <jar_md5> [created_ms] [bo dong] [ov|ovr|ovall|ovshort|ovnoname]
@@ -1287,8 +1289,8 @@ mkgm() { local c=${2:-$(( $(date +%s) * 1000 ))} d="DAT ev=$W/ev_test.txt ev_sha
     ovshort)  r4="OVERRIDE x"; ov='override_by=MASTER_test\noverride_why=ngan\noverride_fields=sizing_iv\n';;
     ovnoname) r4="OVERRIDE x"; ov='override_by=_\noverride_why=ly do du dai muoi ky tu\noverride_fields=sizing_iv\n';;
   esac
-  { printf 'G-MICRO test\njar_md5=%s\ningestor_md5=%s\ncreated_ms=%s\nexpires_ms=%s\ngmicro_i=%s n_sach=7\ngmicro_ii=%s\nsmoke=%s smoke_start_ms=1\nreplay_iii=%s\nsizing_iv=%s\nscript_v=%s\nprereg_commit=%s\nprereg_file=docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM22_GRID.md\nreplay_prereg=docs/prereg/PREREG_E2E_REPLAY_V12.md\nlimits=%s\nreport=%s\nreport_sha256=%s\n' \
-      "$1" "$INGW" "$c" "$(( c + 172800000 ))" "$d" "$d" "$d" "$r3" "$r4" "$d" "$PRGC" "$LIMT" $W/ev_test.txt "$EVS"
+  { printf 'G-MICRO test\njar_md5=%s\ningestor_md5=%s\ncreated_ms=%s\nexpires_ms=%s\ngmicro_i=%s n_sach=7\ngmicro_ii=%s\nsmoke=%s smoke_start_ms=1\nreplay_iii=%s\nsizing_iv=%s\nscript_v=%s\nprereg_commit=%s\nprereg_file=docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM22_GRID.md\nreplay_prereg=docs/prereg/PREREG_E2E_REPLAY_V12.md\nlimits_file=docs/prereg/GATE_LIMITS_MICRO.md\nlimits_sha256=%s\n%s\nreport=%s\nreport_sha256=%s\n' \
+      "$1" "$INGW" "$c" "$(( c + 172800000 ))" "$d" "$d" "$d" "$r3" "$r4" "$d" "$PRGC" "$LIMSH" "$LIMB" $W/ev_test.txt "$EVS"
     printf "$ov"; } | grep -v "^${3:-KHONGBO}=" > $GD/GOLIVE_GATE_MICRO.ok; gmbody; }
 GL() { env ING_FIN_MD5=$INGW ING_PAT="$IGP" C3_ACCOUNT=MAIN CANARY_PAT=canary_early_fake242_NONE APP_DIR=$F4 NJ_MD5=$NEW4 GATE_DIR=$GD KEYS_FILE=$W/keys_c3.env PY242=$W/c3py_t/python/bin/python3 CURL242=$W/fakecurl.sh \
   DEPLOY_TG_SINK=$W/tg_gl.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 "$@"; }
@@ -1622,8 +1624,8 @@ chk "WAVE1b M4 micro_on: truong DAT tro file bang chung KHONG ton tai => TU CHOI
 mkgm $NEWR '' override_by ov; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "WAVE1b M4 micro_on: truong OVERRIDE ma gate KHONG co override_by => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'sizing_iv_khong_DAT'"
 mkgm $NEWR '' '' ov; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
-chk "WAVE1c F-M4 micro_on: OVERRIDE CHI sizing_iv (fields=sizing_iv, replay_iii DAT, ten + ly do) => qua, in CANH BAO TO + GIOI HAN muc 7" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q '!!! CANH BAO: GATE CO OVERRIDE by=MASTER_test truong=sizing_iv' && echo \"\$OUT\" | grep -q '!!! ly do: ADD22 3(iv)' && echo \"\$OUT\" | grep -qF 'GIOI HAN DA BIET (PREREG_E2E_REPLAY_V12 muc 7 - KHONG duoc coi la da kiem): $LIMT'"
-chk "WAVE1c m2 micro_on: cau hoi YES chua GIOI HAN DA BIET (\$LIM)" "grep -q 'gl_yes \"BAT MICRO-LIVE.*GIOI HAN DA BIET.*\$LIM' $HERE/golive_micro_on.sh"
+chk "WAVE1c F-M4 micro_on: OVERRIDE CHI sizing_iv (fields=sizing_iv, replay_iii DAT, ten + ly do) => qua, in CANH BAO TO + GIOI HAN (GATE_LIMITS_MICRO.md)" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q '!!! CANH BAO: GATE CO OVERRIDE by=MASTER_test truong=sizing_iv' && echo \"\$OUT\" | grep -q '!!! ly do: ADD22 3(iv)' && echo \"\$OUT\" | grep -qF 'GIOI HAN DA BIET (docs/prereg/GATE_LIMITS_MICRO.md @ prereg' && echo \"\$OUT\" | grep -qxF '   | - N5 ERRATA1 arm cung nen (test)'"
+chk "OPS-MICRO3 n3 micro_on: cau hoi YES in TOAN BO gioi han (\$LIMP = moi dong limits_file)" "grep -q 'gl_yes \"BAT MICRO-LIVE.*GIOI HAN DA BIET' $HERE/golive_micro_on.sh && grep -qx '\$LIMP' $HERE/golive_micro_on.sh"
 mkgm $NEWR '' '' ovr; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "WAVE1c F-M4 micro_on: OVERRIDE replay_iii (gl_gate lib cho qua) => TU CHOI tu kiem" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'replay_iii_khong_DAT(OVERRIDE)' && ! echo \"\$OUT\" | grep -q 'DRY PASS'"
 mkgm $NEWR '' '' ovall; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
@@ -1642,10 +1644,51 @@ mkgm $NEWR; sed -i 's/^gmicro_ii=DAT /gmicro_ii=DATX /' $GD/GOLIVE_GATE_MICRO.ok
 chk "WAVE1c m2 micro_on: gia tri 'DATX' (body nhat quan) => TU CHOI (^DAT( |\$))" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'gmicro_ii_khong_DAT(DATX)'"
 mkgm $NEWR; sed -i 's/^prereg_commit=.*/prereg_commit=deadbeefdeadbeef/' $GD/GOLIVE_GATE_MICRO.ok; gmbody; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "WAVE1c m2 micro_on: prereg_commit GIA (khong co trong repo prereg, body nhat quan) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'prereg_commit_deadbeefdeadbeef_KHONG_co_trong'"
-mkgm $NEWR '' limits; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
-chk "WAVE1c m2 micro_on: gate thieu limits= (muc 7 PREREG_E2E_REPLAY_V12) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'thieu_limits'"
-mkgm $NEWR; sed -i 's/gioi han B/gioi han C/' $GD/GOLIVE_GATE_MICRO.ok; gmbody; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
-chk "WAVE1c m2 micro_on: limits KHAC muc 7 prereg tai commit => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'limits_KHAC_muc_7'"
+mkgm $NEWR '' limits_file; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "OPS-MICRO3 n1 micro_on: gate thieu limits_file= => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'limits_file_KHAC_ten_ghim'"
+mkgm $NEWR; sed -i '/^limits|/d' $GD/GOLIVE_GATE_MICRO.ok; gmbody; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "OPS-MICRO3 n3 micro_on: gate KHONG chep noi dung limits_file (body nhat quan) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'thieu_limits'"
+mkgm $NEWR; sed -i 's/^limits|- N5 ERRATA1 arm cung nen (test)$/limits|- N5 da xu ly/' $GD/GOLIVE_GATE_MICRO.ok; gmbody; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "OPS-MICRO3 n3 micro_on: noi dung gioi han KHAC limits_file tai commit (body nhat quan) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'limits_KHAC_nguyen_van'"
+mkgm $NEWR; sed -i '/^limits|- N5 ERRATA1/d' $GD/GOLIVE_GATE_MICRO.ok; gmbody; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "OPS-MICRO3 n3 micro_on: gate bo 1 dong gioi han (N5 ERRATA1) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'limits_KHAC_nguyen_van'"
+mkgm $NEWR; sed -i "s/^limits_sha256=.*/limits_sha256=$(printf '%064d' 0)/" $GD/GOLIVE_GATE_MICRO.ok; gmbody; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "OPS-MICRO3 n3 micro_on: limits_sha256 sai => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'limits_sha256_KHAC'"
+mkgm $NEWR; sed -i 's#^replay_prereg=.*#replay_prereg=docs/prereg/PREREG_2X_HALFSIZE.md#' $GD/GOLIVE_GATE_MICRO.ok; gmbody; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "OPS-MICRO3 n1 micro_on: replay_prereg tro file KHAC ten ghim (co tai commit, body dung) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'replay_prereg_KHAC_ten_ghim' && ! echo \"\$OUT\" | grep -q 'DRY PASS'"
+mkgm $NEWR; sed -i 's#^prereg_file=.*#prereg_file=docs/prereg/PREREG_2X_HALFSIZE.md#' $GD/GOLIVE_GATE_MICRO.ok; gmbody; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "OPS-MICRO3 n1 micro_on: prereg_file KHAC ten ghim (body dung) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'prereg_file_KHAC_ten_ghim'"
+mkgm $NEWR; sed -i 's#^prereg_file=.*#prereg_file=docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM21_FIN.md#' $GD/GOLIVE_GATE_MICRO.ok; gmbody; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "OPS-MICRO3 n1 micro_on: prereg_file = ADD21 (khong phai addendum moi nhat) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'prereg_file_ADD21_khong_phai_addendum_moi_nhat'"
+mkgm $NEWR; HX=$(git -C $PRG show $PRGC:docs/prereg/PREREG_2X_HALFSIZE.md | sha256sum | cut -c1-64); sed -i "/^limits|/d; s#^limits_file=.*#limits_file=docs/prereg/PREREG_2X_HALFSIZE.md#; s#^limits_sha256=.*#limits_sha256=$HX\nlimits|prereg khac (test n1)#" $GD/GOLIVE_GATE_MICRO.ok; gmbody; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "OPS-MICRO3 n1 micro_on: limits_file KHAC ten ghim (sha + noi dung khop file do, body dung) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'limits_file_KHAC_ten_ghim' && ! echo \"\$OUT\" | grep -q 'limits_KHAC_nguyen_van\|limits_sha256_KHAC'"
+# [OPS-MICRO3 n2] prereg_commit = HEAD hoac to tien KHONG doi file prereg/limits toi HEAD
+gpr() { git -C $PRG -c user.name=t -c user.email=t@t add -A && git -C $PRG -c user.name=t -c user.email=t@t commit -qm "$1"; }
+mkgmc() { mkgm $NEWR; sed -i "s/^prereg_commit=.*/prereg_commit=$1/" $GD/GOLIVE_GATE_MICRO.ok; gmbody; }
+echo 'khong lien quan' > $PRG/docs/khac.txt; gpr khac
+mkgm $NEWR; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "OPS-MICRO3 n2 micro_on: prereg_commit = to tien HEAD, sau do chi doi file KHONG lien quan => qua (DRY PASS)" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS'"
+echo 'errata3 (test)' > $PRG/docs/prereg/PREREG_E2E_REPLAY_V12_ERRATA3.md; gpr errata3
+mkgm $NEWR; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "OPS-MICRO3 n2 micro_on: prereg_commit CU (truoc ERRATA3 moi o HEAD) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'prereg_DOI_sau_prereg_commit(docs/prereg/PREREG_E2E_REPLAY_V12_ERRATA3.md'"
+mkgmc $(git -C $PRG rev-parse HEAD); OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "OPS-MICRO3 n2 micro_on: prereg_commit = HEAD (co ERRATA3) => qua (DRY PASS)" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS'"
+echo '- them gioi han (test)' >> $PRG/docs/prereg/GATE_LIMITS_MICRO.md; gpr lim2; PH=$(git -C $PRG rev-parse HEAD~1)
+mkgmc $PH; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "OPS-MICRO3 n2 micro_on: GATE_LIMITS_MICRO.md doi sau prereg_commit => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'prereg_DOI_sau_prereg_commit(docs/prereg/GATE_LIMITS_MICRO.md'"
+echo add23 > $PRG/docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM23_X.md; gpr add23
+mkgmc $PH; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "OPS-MICRO3 n1/n2 micro_on: HEAD repo prereg co ADD23 (gate ghi ADD22) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -qF 'prereg_file_ADD22_khong_phai_addendum_moi_nhat(commit_ADD22_HEAD_ADD23)'"
+SIDE=$(git -C $PRG -c user.name=t -c user.email=t@t commit-tree "$PRGC^{tree}" -p $PRGC -m side)
+git -C $PRG reset -q --hard $PRGC
+mkgmc $SIDE; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "OPS-MICRO3 n2 micro_on: prereg_commit KHONG tren lich su HEAD (nhanh phu, cung noi dung) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'prereg_commit_KHONG_tren_lich_su_HEAD'"
+git -C $PRG rm -q docs/prereg/GATE_LIMITS_MICRO.md; gpr rmlim
+mkgmc $(git -C $PRG rev-parse HEAD); OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "OPS-MICRO3 n3 micro_on: prereg_commit KHONG co GATE_LIMITS_MICRO.md => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'limits_file_khong_co_tai_commit'"
+git -C $PRG reset -q --hard $PRGC
+mkgm $NEWR; OUT=$(GS DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
+chk "OPS-MICRO3 n3 micro_on: gate chuan qua (DRY PASS), in GIOI HAN nguyen van TUNG dong limits_file" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -qxF '   | - gioi han A (test)' && echo \"\$OUT\" | grep -qxF '   |   dong noi A  ' && echo \"\$OUT\" | grep -qxF '   | - N5 ERRATA1 arm cung nen (test)'"
 cp $W/gm_ok.bak $GD/GOLIVE_GATE_MICRO.ok
 OUT=$(GS ING_FIN_MD5=00000000000000000000000000000000 DRY=1 bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "WAVE1 B-08 micro_on: ingestor dang chay KHAC pin (gate cung khong khop) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL gate .*ingestor_md5'"
@@ -2070,6 +2113,7 @@ gc8() { git -C $PRR -c user.name=t -c user.email=t@t add -A && git -C $PRR -c us
 echo add21 > $PRR/docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM21_FIN.md; PRC21=$(gc8 add21)
 echo add22 > $PRR/docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM22_GRID.md; PRC22=$(gc8 add22)
 printf '# replay (test)\n## 7. Gioi han da biet\n- gioi han A\n  noi A\n- gioi han B\n## 8. x\n' > $PRR/docs/prereg/PREREG_E2E_REPLAY_V12.md
+printf '# GATE_LIMITS_MICRO (test)\n- gioi han A\n  noi A\n- N5 arm cung nen\n' > $PRR/docs/prereg/GATE_LIMITS_MICRO.md   # [OPS-MICRO3 n3]
 printf '# bien ban G-MICRO tay (test)\njar %s smoke_start_ms=1794676225000\ngmicro_ii: DAT (1 ngay SACH 2 co bat)\nsmoke: DAT\n' $NEWF > $PRR/docs/result/GMICRO_MANUAL_20261118.md; PRCR=$(gc8 replay)
 printf 'jar %s\nreplay_iii: DAT ngay 2026-10-10\n' $NEWF > $W/replay8.txt; printf 'jar %s smoke_start_ms=1794676225000\nsizing_iv: DAT 12/12 SUBMIT trong +-2%%\n' $NEWF > $W/sizing8.txt
 ingf $W/ing_fin.jar; rm -f $W/gates8/A1_APPROVED_MONITOR.md5
@@ -2110,7 +2154,7 @@ OUT=$(MG GATE_OVERRIDE_BY='_' GATE_OVERRIDE_WHY='ly do du dai muoi ky tu' bash "
 chk "WAVE1c F-M4 make_gate: OVERRIDE sizing_iv khong co ten nguoi => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'sizing_iv chi qua OVERRIDE khi MASTER chiu trach nhiem' && [ ! -e $W/gates8/GOLIVE_GATE_MICRO.ok ]"
 OUT=$(MG GATE_OVERRIDE_BY=MASTER_chuyennd GATE_OVERRIDE_WHY='ADD22 3(iv) gate dong ca cua so, iii la bang chung duy nhat' bash "$HERE/golive_make_gate.sh" $PRCR 2>&1); RC=$?
 chk "WAVE1b M4 make_gate OVERRIDE (ten + ly do): ghi gate co sizing_iv=OVERRIDE + override_by/why/fields, qua gl_gate strict (in OVERRIDE)" "[ $RC = 0 ] && grep -q '^sizing_iv=OVERRIDE ' $W/gates8/GOLIVE_GATE_MICRO.ok && grep -qx 'override_by=MASTER_chuyennd' $W/gates8/GOLIVE_GATE_MICRO.ok && grep -qx 'override_fields=sizing_iv' $W/gates8/GOLIVE_GATE_MICRO.ok && grep -q '^override_why=ADD22' $W/gates8/GOLIVE_GATE_MICRO.ok && echo \"\$OUT\" | grep -q '^OK gate.*OVERRIDE by=MASTER_chuyennd fields=sizing_iv' && echo \"\$OUT\" | grep -q 'CO OVERRIDE: sizing_iv'"
-chk "WAVE1c m2 make_gate OVERRIDE: limits = muc 7 prereg (nguyen van, noi ' | '), replay_prereg, body_sha256 dong cuoi khop" "grep -qxF 'limits=- gioi han A |   noi A | - gioi han B' $W/gates8/GOLIVE_GATE_MICRO.ok && grep -qx 'replay_prereg=docs/prereg/PREREG_E2E_REPLAY_V12.md' $W/gates8/GOLIVE_GATE_MICRO.ok && [ \"\$(tail -1 $W/gates8/GOLIVE_GATE_MICRO.ok)\" = \"body_sha256=\$(sed '\$d' $W/gates8/GOLIVE_GATE_MICRO.ok | sha256sum | cut -c1-64)\" ]"
+chk "WAVE1c m2 make_gate OVERRIDE: limits = NGUYEN VAN GATE_LIMITS_MICRO.md + limits_sha256, replay_prereg, body_sha256 dong cuoi khop" "[ \"\$(grep '^limits|' $W/gates8/GOLIVE_GATE_MICRO.ok)\" = \"\$(git -C $PRR show $PRCR:docs/prereg/GATE_LIMITS_MICRO.md | sed 's/^/limits|/')\" ] && grep -qx \"limits_sha256=\$(git -C $PRR show $PRCR:docs/prereg/GATE_LIMITS_MICRO.md | sha256sum | cut -c1-64)\" $W/gates8/GOLIVE_GATE_MICRO.ok && grep -qx 'limits_file=docs/prereg/GATE_LIMITS_MICRO.md' $W/gates8/GOLIVE_GATE_MICRO.ok && grep -qx 'replay_prereg=docs/prereg/PREREG_E2E_REPLAY_V12.md' $W/gates8/GOLIVE_GATE_MICRO.ok && [ \"\$(tail -1 $W/gates8/GOLIVE_GATE_MICRO.ok)\" = \"body_sha256=\$(sed '\$d' $W/gates8/GOLIVE_GATE_MICRO.ok | sha256sum | cut -c1-64)\" ]"
 sed -i 's/^sizing_iv: KHONG DO DUOC/sizing_iv: DAT/' $W/sizing8.txt; rm -f $W/gates8/GOLIVE_GATE_MICRO.ok*
 echo add23 > $PRR/docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM23_X.md; PRC23=$(gc8 add23)
 OUT=$(MG bash "$HERE/golive_make_gate.sh" $PRC23 2>&1); RC=$?
@@ -2120,7 +2164,23 @@ chk "WAVE1b M4 make_gate: prereg_commit cu (ADD22) nhung HEAD repo prereg da co 
 git -C $PRR rm -q docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM23_X.md; gc8 rm23 > /dev/null
 OUT=$(MG bash "$HERE/golive_make_gate.sh" $PRCR 2>&1); RC=$?
 chk "B-08 make_gate DAT: ghi gate du dong (jar/ingestor/created/expires/6 truong ADD22 §3 DAT + ev/prereg/report_sha256), quyen 600, qua gl_gate strict, KHONG override" "[ $RC = 0 ] && ( for k in jar_md5 ingestor_md5 created_ms expires_ms gmicro_i gmicro_ii smoke replay_iii sizing_iv script_v prereg_commit prereg_file report_sha256; do grep -q \"^\$k=\" $W/gates8/GOLIVE_GATE_MICRO.ok || exit 1; done ) && [ \"\$(grep -cE '^(gmicro_i|gmicro_ii|smoke|replay_iii|sizing_iv|script_v)=DAT ev=/' $W/gates8/GOLIVE_GATE_MICRO.ok)\" = 6 ] && ! grep -q '^override_' $W/gates8/GOLIVE_GATE_MICRO.ok && grep -q '^replay_iii=DAT ev=$W/replay8.txt ev_sha256=[0-9a-f]\{64\} prereg=docs/prereg/PREREG_E2E_REPLAY_V12.md' $W/gates8/GOLIVE_GATE_MICRO.ok && [ \"\$(stat -c %a $W/gates8/GOLIVE_GATE_MICRO.ok)\" = 600 ] && echo \"\$OUT\" | grep -q '^OK gate'"
-chk "WAVE1c m2 make_gate DAT: 6 truong co ev_sha256 = sha256 file bang chung, report_sha256, limits, body_sha256 dong cuoi khop" "for x in gmicro_i gmicro_ii smoke replay_iii sizing_iv script_v; do r=\$(sed -n \"s/^\$x=//p\" $W/gates8/GOLIVE_GATE_MICRO.ok); e=\$(echo \"\$r\" | grep -oE '(^| )ev=[^ ]+' | sed 's/^ *ev=//'); h=\$(echo \"\$r\" | grep -oE 'ev_sha256=[0-9a-f]{64}' | cut -d= -f2); [ -n \"\$h\" ] && [ \"\$(sha256sum < \$e | cut -c1-64)\" = \"\$h\" ] || exit 1; done && grep -qxF 'limits=- gioi han A |   noi A | - gioi han B' $W/gates8/GOLIVE_GATE_MICRO.ok && [ \"\$(tail -1 $W/gates8/GOLIVE_GATE_MICRO.ok)\" = \"body_sha256=\$(sed '\$d' $W/gates8/GOLIVE_GATE_MICRO.ok | sha256sum | cut -c1-64)\" ]"
+chk "WAVE1c m2 make_gate DAT: 6 truong co ev_sha256 = sha256 file bang chung, report_sha256, limits nguyen van + sha, body_sha256 dong cuoi khop" "for x in gmicro_i gmicro_ii smoke replay_iii sizing_iv script_v; do r=\$(sed -n \"s/^\$x=//p\" $W/gates8/GOLIVE_GATE_MICRO.ok); e=\$(echo \"\$r\" | grep -oE '(^| )ev=[^ ]+' | sed 's/^ *ev=//'); h=\$(echo \"\$r\" | grep -oE 'ev_sha256=[0-9a-f]{64}' | cut -d= -f2); [ -n \"\$h\" ] && [ \"\$(sha256sum < \$e | cut -c1-64)\" = \"\$h\" ] || exit 1; done && [ \"\$(grep '^limits|' $W/gates8/GOLIVE_GATE_MICRO.ok)\" = \"\$(git -C $PRR show $PRCR:docs/prereg/GATE_LIMITS_MICRO.md | sed 's/^/limits|/')\" ] && grep -qx \"limits_sha256=\$(git -C $PRR show $PRCR:docs/prereg/GATE_LIMITS_MICRO.md | sha256sum | cut -c1-64)\" $W/gates8/GOLIVE_GATE_MICRO.ok && grep -qx 'limits_file=docs/prereg/GATE_LIMITS_MICRO.md' $W/gates8/GOLIVE_GATE_MICRO.ok && [ \"\$(tail -1 $W/gates8/GOLIVE_GATE_MICRO.ok)\" = \"body_sha256=\$(sed '\$d' $W/gates8/GOLIVE_GATE_MICRO.ok | sha256sum | cut -c1-64)\" ]"
+OUT=$(MG bash "$HERE/golive_make_gate.sh" $PRC22 2>&1); RC=$?
+chk "OPS-MICRO3 n3 make_gate: prereg_commit KHONG co GATE_LIMITS_MICRO.md => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'KHONG co docs/prereg/GATE_LIMITS_MICRO.md'"
+OUT=$(MG PREREG_FILE=docs/khac/PREREG_PARITY_V12_DRY_ADDENDUM22_GRID.md bash "$HERE/golive_make_gate.sh" $PRCR 2>&1); RC=$?
+chk "OPS-MICRO3 n1 make_gate: PREREG_FILE ngoai ten ghim => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'khong theo ten ghim'"
+cp -p $W/gates8/GOLIVE_GATE_MICRO.ok $W/gates8_ok.bak
+echo 'errata3 (test)' > $PRR/docs/prereg/PREREG_E2E_REPLAY_V12_ERRATA3.md; PRCE=$(gc8 errata3)
+OUT=$(MG bash "$HERE/golive_make_gate.sh" $PRCR 2>&1); RC=$?
+chk "OPS-MICRO3 n2 make_gate: prereg_commit CU, HEAD co ERRATA3 moi => TU CHOI, gate cu giu nguyen" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'co thay doi prereg/limits: docs/prereg/PREREG_E2E_REPLAY_V12_ERRATA3.md' && cmp -s $W/gates8/GOLIVE_GATE_MICRO.ok $W/gates8_ok.bak"
+printf '\n' > $PRR/docs/prereg/GATE_LIMITS_MICRO.md; PRCB=$(gc8 limrong)
+OUT=$(MG bash "$HERE/golive_make_gate.sh" $PRCB 2>&1); RC=$?
+chk "OPS-MICRO3 n3 make_gate: GATE_LIMITS_MICRO.md RONG => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'GATE_LIMITS_MICRO.md tai .* RONG'"
+printf '# GATE_LIMITS_MICRO (test 2)\n- gioi han A\n- N5 arm cung nen\n- E8 N7-N10 (test)\n' > $PRR/docs/prereg/GATE_LIMITS_MICRO.md; PRCL=$(gc8 lim2)
+OUT=$(MG bash "$HERE/golive_make_gate.sh" $PRCE 2>&1); RC=$?
+chk "OPS-MICRO3 n2 make_gate: GATE_LIMITS_MICRO.md doi sau prereg_commit => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'co thay doi prereg/limits: docs/prereg/GATE_LIMITS_MICRO.md'"
+OUT=$(MG bash "$HERE/golive_make_gate.sh" $PRCL 2>&1); RC=$?
+chk "OPS-MICRO3 n3 make_gate: prereg_commit = HEAD moi (ERRATA3 + limits moi) => ghi gate, limits = nguyen van file moi + sha, body khop" "[ $RC = 0 ] && [ \"\$(grep '^limits|' $W/gates8/GOLIVE_GATE_MICRO.ok)\" = \"\$(git -C $PRR show $PRCL:docs/prereg/GATE_LIMITS_MICRO.md | sed 's/^/limits|/')\" ] && grep -qx 'limits|- E8 N7-N10 (test)' $W/gates8/GOLIVE_GATE_MICRO.ok && grep -qx \"limits_sha256=\$(git -C $PRR show $PRCL:docs/prereg/GATE_LIMITS_MICRO.md | sha256sum | cut -c1-64)\" $W/gates8/GOLIVE_GATE_MICRO.ok && grep -qx 'replay_prereg=docs/prereg/PREREG_E2E_REPLAY_V12.md' $W/gates8/GOLIVE_GATE_MICRO.ok && [ \"\$(tail -1 $W/gates8/GOLIVE_GATE_MICRO.ok)\" = \"body_sha256=\$(sed '\$d' $W/gates8/GOLIVE_GATE_MICRO.ok | sha256sum | cut -c1-64)\" ]"
 # ---------------------------------------------------------------- B-13 install_golive_ops.sh
 mkdir -p $W/depl8; cp $HERE/ingfin_check_remote.sh $W/depl8/; printf 'cu\n' > $W/depl8/deploy_chain.sh
 OUT=$(DEPLOY_DIR=$W/depl8 DRY=1 bash "$HERE/install_golive_ops.sh" 2>&1); RC=$?
@@ -2136,9 +2196,10 @@ chk "B-13 install_golive_ops: md5 monitor+lib CHUA qua A1 => GIU cron cu, in huo
 chk "B-13 pin: ops/c3live khong con mac dinh token cu 4f49bded (tru chu thich)" "! grep -rn '4f49bded' $HERE/*.sh | grep -v 'truoc 4f49bded\|truoc: 4f49bded\|CON pin token cu\|grep -ln' | grep -q ."
 chk "B-10 SSH_242 golive_lib co ServerAliveInterval/CountMax" "grep -q 'ServerAliveInterval=10 -o ServerAliveCountMax=6' $HERE/golive_lib.sh"
 echo "== 39. [WAVE1b M5] manifest md5 go-live: script owner TU CHOI khi ban than / lib / file trong manifest bi sua"
-M5F="dry_enable_grid_sizing.sh golive_micro_on.sh golive_pilot_on.sh golive_live_off.sh golive_rebase_equity.sh golive_make_gate.sh install_golive_ops.sh install_cron_golive_monitor.sh golive_monitor.sh golive_lib.sh"
-chk "WAVE1b M5 manifest da commit KHOP repo (md5sum -c) va co du 10 file go-live" "(cd $HERE && md5sum -c --quiet --strict GOLIVE_MANIFEST.md5) && for f in $M5F; do grep -qxE \"[0-9a-f]{32}  \$f\" $HERE/GOLIVE_MANIFEST.md5 || exit 1; done"
+M5F="dry_enable_grid_sizing.sh golive_micro_on.sh golive_pilot_on.sh golive_live_off.sh golive_rebase_equity.sh golive_make_gate.sh install_golive_ops.sh install_cron_golive_monitor.sh golive_monitor.sh golive_lib.sh golive_use_sub_key.sh golive_check_key.sh golive_legacy_verify.sh"
+chk "WAVE1b M5 manifest da commit KHOP repo (md5sum -c) va co du 13 file go-live" "(cd $HERE && md5sum -c --quiet --strict GOLIVE_MANIFEST.md5) && for f in $M5F; do grep -qxE \"[0-9a-f]{32}  \$f\" $HERE/GOLIVE_MANIFEST.md5 || exit 1; done"
 chk "WAVE1b M5 6 script owner (dry_enable micro_on pilot_on rebase make_gate install; live_off fail-open: muc 41) kiem manifest NGAY dau (truoc gl_init)" "for f in dry_enable_grid_sizing.sh golive_micro_on.sh golive_pilot_on.sh golive_rebase_equity.sh golive_make_gate.sh; do a=\$(grep -n '^gl_manifest_check \"\$0\" || exit 1' $HERE/\$f | head -1 | cut -d: -f1); b=\$(grep -n '^gl_init \|^PW=' $HERE/\$f | head -1 | cut -d: -f1); [ -n \"\$a\" ] && [ -n \"\$b\" ] && [ \"\$a\" -lt \"\$b\" ] || exit 1; done && grep -q 'md5sum -c --quiet --strict \"\$MF\"' $HERE/install_golive_ops.sh"
+chk "OPS-MICRO3 n4: use_sub_key / check_key / legacy_verify kiem manifest NGAY sau source lib (truoc gl_init); install_cron kiem manifest inline" "for f in golive_use_sub_key.sh golive_check_key.sh golive_legacy_verify.sh; do a=\$(grep -n '^gl_manifest_check \"\$0\" || exit 1' $HERE/\$f | head -1 | cut -d: -f1); b=\$(grep -n '^gl_init ' $HERE/\$f | head -1 | cut -d: -f1); [ -n \"\$a\" ] && [ -n \"\$b\" ] && [ \"\$a\" -lt \"\$b\" ] || exit 1; done && grep -q 'md5sum -c --quiet --strict \"\$MF\"' $HERE/install_cron_golive_monitor.sh"
 m5cp() { rm -rf $W/m5; mkdir -p $W/m5; cp -p $HERE/*.sh $HERE/GOLIVE_MANIFEST.md5 $W/m5/; gitpin $W/m5 m5; }   # [WAVE1c m1] repo git + HEAD duyet
 m5cp; rstd
 OUT=$(DE DRY=1 bash $W/m5/dry_enable_grid_sizing.sh 2>&1); RC=$?
@@ -2147,8 +2208,8 @@ echo '# sua sau audit' >> $W/m5/dry_enable_grid_sizing.sh; gitpin $W/m5 sua; NL0
 OUT=$(DE DRY=1 bash $W/m5/dry_enable_grid_sizing.sh 2>&1); RC=$?
 chk "WAVE1b M5 dry_enable bi sua sau audit (DRY cung kiem) => TU CHOI [M5] exit 1 TRUOC gl_init (khong log, khong doc 242)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'TU CHOI \[M5\].*dry_enable_grid_sizing.sh: FAILED' && ! echo \"\$OUT\" | grep -q '=== dry_enable_grid_sizing TS=' && [ \$(ls $W/deploylog | wc -l) = $NL0 ]"
 m5cp; echo '# lib sua' >> $W/m5/golive_lib.sh; gitpin $W/m5 sua
-R5=""; for s in golive_micro_on.sh golive_pilot_on.sh golive_rebase_equity.sh golive_make_gate.sh install_golive_ops.sh dry_enable_grid_sizing.sh; do o=$(DRY=1 bash $W/m5/$s abc1234 2>&1 < /dev/null); r=$?; { [ $r = 1 ] && echo "$o" | grep -q 'TU CHOI \[M5\].*golive_lib.sh: FAILED'; } || R5="$R5 $s:$r"; done
-chk "WAVE1b M5 golive_lib.sh bi sua => CA 6 script owner (tru live_off fail-open) TU CHOI [M5] exit 1 (${R5:-0 loi})" "[ -z '$R5' ]"
+R5=""; for s in golive_micro_on.sh golive_pilot_on.sh golive_rebase_equity.sh golive_make_gate.sh install_golive_ops.sh dry_enable_grid_sizing.sh golive_use_sub_key.sh golive_check_key.sh golive_legacy_verify.sh install_cron_golive_monitor.sh; do o=$(DRY=1 bash $W/m5/$s abc1234 2>&1 < /dev/null); r=$?; { [ $r = 1 ] && echo "$o" | grep -q 'TU CHOI \[M5\].*golive_lib.sh: FAILED'; } || R5="$R5 $s:$r"; done
+chk "WAVE1b M5 golive_lib.sh bi sua => CA 10 script owner (tru live_off fail-open) TU CHOI [M5] exit 1 (${R5:-0 loi})" "[ -z '$R5' ]"
 m5cp; echo '# monitor sua' >> $W/m5/golive_monitor.sh; gitpin $W/m5 sua
 OUT=$(DE DRY=1 bash $W/m5/dry_enable_grid_sizing.sh 2>&1); RC=$?
 chk "WAVE1b M5 file khac trong manifest (golive_monitor.sh) bi sua => script owner TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'golive_monitor.sh: FAILED'"
@@ -2160,8 +2221,8 @@ m5cp; echo '# sua chua commit' >> $W/m5/golive_micro_on.sh
 OUT=$(DE DRY=1 bash $W/m5/golive_micro_on.sh 2>&1); RC=$?
 chk "WAVE1c m1: sua CHUA commit trong thu muc script => TU CHOI [m1] exit 1" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'TU CHOI \[m1\]: .*co sua CHUA commit'"
 m5cp; echo '# lib sua, commit KHONG duoc duyet' >> $W/m5/golive_lib.sh; git -C $W/m5 -c user.name=t -c user.email=t@t commit -qam x
-R1=""; for s in golive_micro_on.sh golive_pilot_on.sh golive_rebase_equity.sh golive_make_gate.sh install_golive_ops.sh dry_enable_grid_sizing.sh; do o=$(DE DRY=1 bash $W/m5/$s abc1234 2>&1 < /dev/null); r=$?; { [ $r = 1 ] && echo "$o" | grep -q 'TU CHOI \[m1\]: HEAD [0-9a-f]* CHUA duoc A1 duyet'; } || R1="$R1 $s"; done
-chk "WAVE1c m1: HEAD lech pin (commit chua co trong A1_APPROVED_OPS) => CA 6 script owner (tru live_off fail-open) TU CHOI [m1] (${R1:-0 loi})" "[ -z '$R1' ]"
+R1=""; for s in golive_micro_on.sh golive_pilot_on.sh golive_rebase_equity.sh golive_make_gate.sh install_golive_ops.sh dry_enable_grid_sizing.sh golive_use_sub_key.sh golive_check_key.sh golive_legacy_verify.sh install_cron_golive_monitor.sh; do o=$(DE DRY=1 bash $W/m5/$s abc1234 2>&1 < /dev/null); r=$?; { [ $r = 1 ] && echo "$o" | grep -q 'TU CHOI \[m1\]: HEAD [0-9a-f]* CHUA duoc A1 duyet'; } || R1="$R1 $s"; done
+chk "WAVE1c m1: HEAD lech pin (commit chua co trong A1_APPROVED_OPS) => CA 10 script owner (tru live_off fail-open) TU CHOI [m1] (${R1:-0 loi})" "[ -z '$R1' ]"
 m5cp; OUT=$(DE A1_APPROVED_OPS=$W/khong_co_file.commit DRY=1 bash $W/m5/golive_pilot_on.sh 2>&1); RC=$?
 chk "WAVE1c m1: thieu file A1_APPROVED_OPS => TU CHOI [m1]" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'TU CHOI \[m1\]: HEAD .* CHUA duoc A1 duyet'"
 rm -rf $W/m5x; mkdir -p $W/m5x; cp -p $HERE/*.sh $HERE/GOLIVE_MANIFEST.md5 $W/m5x/
@@ -2170,6 +2231,8 @@ chk "WAVE1c m1: ban sao NGOAI repo git => TU CHOI [m1] (micro_on)" "[ $RC = 1 ] 
 chk "WAVE1c m1: 6 script owner (tru live_off fail-open) kiem pin commit TRUOC khi source golive_lib.sh / doc manifest" "for f in golive_micro_on.sh golive_pilot_on.sh golive_rebase_equity.sh golive_make_gate.sh install_golive_ops.sh dry_enable_grid_sizing.sh; do a=\$(grep -n '^\[ -z \"\$_PW\" \] || { echo \"TU CHOI \[m1\]' $HERE/\$f | head -1 | cut -d: -f1); b=\$(grep -n '^\. \"\$(cd \"\$(dirname \"\$0\")\" && pwd)/golive_lib.sh\"\|^MF=' $HERE/\$f | head -1 | cut -d: -f1); [ -n \"\$a\" ] && [ -n \"\$b\" ] && [ \"\$a\" -lt \"\$b\" ] || exit 1; done && ! grep -q 'A1_APPROVED_OPS.*>' $HERE/golive_lib.sh"
 chk "WAVE1c m4 micro_on: nhanh khong go duoc KILL_SWITCH noi 'KHONG XAC NHAN DUOC - co the da go KILL_SWITCH' + MODE=drain, khong con '(an toan)'" "grep -q 'KHONG XAC NHAN DUOC - co the da go KILL_SWITCH' $HERE/golive_micro_on.sh && ! grep -q 'khong mo moi (an toan)' $HERE/golive_micro_on.sh"
 chk "WAVE1c m5: header script khong gan cung c3_fin / v12/c3live" "! grep -n 'fin1114/c3_fin/ops\|v12/c3live/ops' $HERE/golive_*.sh $HERE/install_golive_ops.sh $HERE/install_cron_golive_monitor.sh $HERE/dry_enable_grid_sizing.sh | grep -q ."
+chk "OPS-MICRO3 n4: use_sub_key / check_key / legacy_verify / install_cron kiem pin m1 TRUOC khi source lib / doc manifest" "for f in golive_use_sub_key.sh golive_check_key.sh golive_legacy_verify.sh install_cron_golive_monitor.sh; do a=\$(grep -n '^\[ -z \"\$_PW\" \] || { echo \"TU CHOI \[m1\]' $HERE/\$f | head -1 | cut -d: -f1); b=\$(grep -n 'golive_lib.sh\"\$\|^MF=' $HERE/\$f | grep -v '^[0-9]*:#' | head -1 | cut -d: -f1); [ -n \"\$a\" ] && [ -n \"\$b\" ] && [ \"\$a\" -lt \"\$b\" ] || exit 1; done"
+chk "OPS-MICRO3 n6: script ops/c3live (tru golive_monitor.sh + golive_lib.sh - KHONG duoc doi) khong nhac worktree cu c3_fin / c3_w1b / c3_w1c" "! grep -l 'c3_fin\|c3_w1b\|c3_w1c' $HERE/*.sh | grep -v '/golive_monitor.sh\$\|/golive_lib.sh\$' | grep -q ."
 echo "== 41. [OPS-MICRO] golive_live_off FAIL-OPEN (quyet dinh MASTER): lech pin / manifest / thieu pin / Telegram loi / lib hong => KILL_SWITCH VAN dat (buoc 1)"
 KSF=$F4/run/KILL_SWITCH; ksrm() { rm -f $KSF $F4/run/KILL_SWITCH.prev_* $F4/run/KILL_SWITCH.tmp_*; }
 ksok() { head -1 $KSF 2>/dev/null | grep -q '^golive_live_off drain [0-9_]*$'; }
@@ -2191,7 +2254,7 @@ OUT=$(DE MODE=drain bash $W/m5x/golive_live_off.sh 2>&1 < /dev/null); RC=$?
 chk "OPS-MICRO live_off drain: ban sao NGOAI repo git => CANH BAO [m1] + VAN dat KILL_SWITCH" "[ $RC = 0 ] && ksok && echo \"\$OUT\" | grep -q 'CANH BAO \[m1\].*khong phai repo git'"
 m5cp; echo 'exit 7   # lib HONG (test)' >> $W/m5/golive_lib.sh; gitnoapp; ksrm
 OUT=$(DE MODE=drain bash $W/m5/golive_live_off.sh 2>&1 < /dev/null); RC=$?
-chk "OPS-MICRO live_off drain: lib HONG (thoat khi source) => KILL_SWITCH DA dat TRUOC khi source lib" "[ $RC = 7 ] && ksok && echo \"\$OUT\" | grep -q 'BUOC 1 XONG: run/KILL_SWITCH DA DAT'"
+chk "OPS-MICRO live_off drain: lib HONG (thoat khi source) => KILL_SWITCH DA dat TRUOC khi source lib; n5: KET QUA ro, rc 0" "[ $RC = 0 ] && ksok && echo \"\$OUT\" | grep -q 'BUOC 1 XONG: run/KILL_SWITCH DA DAT' && echo \"\$OUT\" | grep -q 'KET QUA: DA DAT run/KILL_SWITCH (xac nhan'"
 ksrm; echo 'golive_micro_on 20261116_101500 hau_kiem: dung mo moi toi khi hau kiem DAT' > $KSF
 OUT=$(DE MODE=drain bash $HERE/golive_live_off.sh 2>&1 < /dev/null); RC=$?
 chk "OPS-MICRO live_off drain: KILL_SWITCH token micro_on => GHI DE token drain (micro_on khong tu go duoc), ban cu .prev_" "[ $RC = 0 ] && ksok && grep -q '^golive_micro_on 20261116_101500 ' $F4/run/KILL_SWITCH.prev_* && ! echo \"\$OUT\" | grep -q 'CANH BAO'"
@@ -2200,11 +2263,56 @@ chk "OPS-MICRO live_off drain lan 2 (da drain) => idempotent, giu token, rc 0" "
 ksrm; OUT=$(DE SSH_242=false MODE=drain bash $HERE/golive_live_off.sh 2>&1 < /dev/null); RC=$?
 chk "OPS-MICRO live_off drain: ssh 242 LOI => KHAN exit 2 (khong bao XONG gia)" "[ $RC = 2 ] && [ ! -e $KSF ] && echo \"\$OUT\" | grep -q 'KHAN: KHONG dat duoc run/KILL_SWITCH' && ! echo \"\$OUT\" | grep -q 'XONG: run/KILL_SWITCH'"
 m5cp; echo '#x' >> $W/m5/c3live_status.sh; gitnoapp; ksrm; RL=""
-for md in drain undrain dry; do o=$(DE MODE=$md DRY=1 bash $W/m5/golive_live_off.sh 2>&1 < /dev/null); { echo "$o" | grep -q 'CANH BAO \[m1\]' && echo "$o" | grep -q '=== golive_live_off TS=' && ! echo "$o" | grep -q 'TU CHOI \[m1\]' && [ ! -e $KSF ]; } || RL="$RL $md"; done
-chk "OPS-MICRO live_off MOI MODE (DRY=1) lech pin => CANH BAO + VAN chay toi kiem (DRY khong ghi KILL_SWITCH) (${RL:-0 loi})" "[ -z '$RL' ]"
+for md in drain undrain dry; do o=$(DE MODE=$md DRY=1 bash $W/m5/golive_live_off.sh 2>&1 < /dev/null); r=$?; { [ $r = 1 ] && echo "$o" | grep -q 'TU CHOI \[m1\]' && ! echo "$o" | grep -q '=== golive_live_off TS=' && [ ! -e $KSF ]; } || RL="$RL $md:$r"; done
+chk "OPS-MICRO3 F1 live_off DRY=1 (MOI MODE) lech pin => TU CHOI [m1] exit 1, khong log, khong KILL_SWITCH (${RL:-0 loi})" "[ -z '$RL' ]"
 R6=""; for s in golive_micro_on.sh golive_pilot_on.sh golive_rebase_equity.sh golive_make_gate.sh install_golive_ops.sh dry_enable_grid_sizing.sh; do o=$(DE DRY=1 bash $W/m5/$s abc1234 2>&1 < /dev/null); r=$?; { [ $r = 1 ] && echo "$o" | grep -q 'TU CHOI \[m1\]'; } || R6="$R6 $s"; done
 chk "OPS-MICRO script owner KHAC van TU CHOI [m1] khi lech pin (${R6:-0 loi})" "[ -z '$R6' ]"
-chk "OPS-MICRO live_off: buoc dat KILL_SWITCH dung TRUOC source lib / manifest / gl_init; SSH_242 + APP_DIR mac dinh = golive_lib" "a=\$(grep -n '_KO=\$(timeout' $HERE/golive_live_off.sh | head -1 | cut -d: -f1); b=\$(grep -n '^\. \"\$(cd' $HERE/golive_live_off.sh | head -1 | cut -d: -f1); c=\$(grep -n 'gl_manifest_check \"\$0\"' $HERE/golive_live_off.sh | head -1 | cut -d: -f1); d=\$(grep -n '^gl_init ' $HERE/golive_live_off.sh | head -1 | cut -d: -f1); [ -n \"\$a\" ] && [ \"\$a\" -lt \"\$b\" ] && [ \"\$b\" -lt \"\$c\" ] && [ \"\$c\" -lt \"\$d\" ] && s=\$(sed -n 's/^SSH_242=\\\${SSH_242:-\(.*\)}\$/\1/p' $HERE/golive_lib.sh) && [ -n \"\$s\" ] && grep -qF \"_KSSH=\\\${SSH_242:-\$s}\" $HERE/golive_live_off.sh && grep -qF '_KA=\${APP_DIR:-/home/chuyennd/java/v_t_m}' $HERE/golive_live_off.sh && grep -qF 'A=\${APP_DIR:-/home/chuyennd/java/v_t_m}' $HERE/golive_lib.sh"
+chk "OPS-MICRO live_off: buoc dat KILL_SWITCH dung TRUOC source lib / manifest / gl_init; SSH_242 + APP_DIR mac dinh = golive_lib" "a=\$(grep -n '_KO=\$(timeout' $HERE/golive_live_off.sh | head -1 | cut -d: -f1); b=\$(grep -n '^if ! \. \"\$_OPS/golive_lib.sh\"' $HERE/golive_live_off.sh | head -1 | cut -d: -f1); c=\$(grep -n 'gl_manifest_check \"\$0\"' $HERE/golive_live_off.sh | head -1 | cut -d: -f1); d=\$(grep -n '^gl_init ' $HERE/golive_live_off.sh | head -1 | cut -d: -f1); [ -n \"\$a\" ] && [ \"\$a\" -lt \"\$b\" ] && [ \"\$b\" -lt \"\$c\" ] && [ \"\$c\" -lt \"\$d\" ] && s=\$(sed -n 's/^SSH_242=\\\${SSH_242:-\(.*\)}\$/\1/p' $HERE/golive_lib.sh) && [ -n \"\$s\" ] && grep -qF \"_KSSH=\\\${SSH_242:-\$s}\" $HERE/golive_live_off.sh && grep -qF '_KA=\${APP_DIR:-/home/chuyennd/java/v_t_m}' $HERE/golive_live_off.sh && grep -qF 'A=\${APP_DIR:-/home/chuyennd/java/v_t_m}' $HERE/golive_lib.sh"
+echo "== 42. [OPS-MICRO3] F1 fail-open CHI drain that (undrain / dry / MODE khac lech => TU CHOI CUNG); n5 KET QUA KILL_SWITCH khi lib hong; n7 DRY drain mo phong buoc 1; n4"
+ksput() { echo 'golive_live_off drain 20261116_000000' > $KSF; }
+pidb() { pgrep -f 'BinanceOrderTradingManager fake242' | head -1; }
+f1neg() {   # f1neg <mode> <mo ta> <mau TU CHOI> [env...] : YES + chay THAT => rc 1, KILL_SWITCH con nguyen, env.sh + JVM khong doi
+  local md=$1 ds=$2 pat=$3 e0 p0 k0; shift 3
+  ksput; e0=$(md5sum < $F4/conf/env.sh); p0=$(pidb); k0=$(cat $KSF)
+  OUT=$(echo YES | DE "$@" MODE=$md bash $W/m5/golive_live_off.sh 2>&1); RC=$?
+  chk "OPS-MICRO3 F1 live_off MODE=$md + $ds + YES (khong DRY) => TU CHOI rc 1, KILL_SWITCH CON, env.sh + JVM khong doi" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q '$pat' && [ \"\$(cat $KSF)\" = '$k0' ] && [ \"\$(md5sum < $F4/conf/env.sh)\" = '$e0' ] && [ \"\$(pidb)\" = '$p0' ] && ! echo \"\$OUT\" | grep -q 'XONG\|push mo lai\|Go .YES\|BUOC 1'"
+}
+for md in undrain dry; do
+  m5cp; f1neg $md "THIEU file pin" 'TU CHOI \[m1\]: HEAD .* CHUA duoc A1 duyet' A1_APPROVED_OPS=$W/khong_co_pin.commit
+  m5cp; echo '# lib sua CHUA commit' >> $W/m5/golive_lib.sh; f1neg $md "golive_lib.sh sua CHUA commit" 'TU CHOI \[m1\]: .*co sua CHUA commit'
+  m5cp; echo '# lib sua, commit + pin duyet, manifest CU' >> $W/m5/golive_lib.sh; gitpin $W/m5 sua; f1neg $md "manifest lech (lib sua, pin duyet)" 'TU CHOI \[M5\].*golive_lib.sh: FAILED'
+  m5cp; echo '#x' >> $W/m5/c3live_status.sh; gitnoapp; f1neg $md "HEAD lech pin" 'TU CHOI \[m1\]: HEAD .* CHUA duoc A1 duyet'
+done
+m5cp; f1neg khac "MODE sai + thieu pin" 'TU CHOI \[m1\]' A1_APPROVED_OPS=$W/khong_co_pin.commit
+m5cp; ksrm; OUT=$(DE DRY=1 MODE=drain A1_APPROVED_OPS=$W/khong_co_pin.commit bash $W/m5/golive_live_off.sh 2>&1 < /dev/null); RC=$?
+chk "OPS-MICRO3 F1 live_off DRY=1 MODE=drain + thieu pin => TU CHOI [m1] (nhac drain THAT van fail-open), khong KILL_SWITCH" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'TU CHOI \[m1\]' && echo \"\$OUT\" | grep -q 'MODE=drain THAT - khong DRY=1 - van dat run/KILL_SWITCH' && [ ! -e $KSF ]"
+# n5: lib hong SAU buoc 1 => KET QUA ro + rc 0 (KS xac nhan) | 2 (khong xac nhan)
+m5cp; rm -f $W/m5/golive_lib.sh; gitnoapp; ksrm
+OUT=$(DE MODE=drain bash $W/m5/golive_live_off.sh 2>&1 < /dev/null); RC=$?
+chk "OPS-MICRO3 n5 live_off drain: golive_lib.sh BI XOA => KILL_SWITCH dat, 'KET QUA: DA DAT run/KILL_SWITCH (xac nhan' rc 0, khong 'unbound variable' / 'command not found'" "[ $RC = 0 ] && ksok && echo \"\$OUT\" | grep -q 'KET QUA: DA DAT run/KILL_SWITCH (xac nhan' && ! echo \"\$OUT\" | grep -q 'unbound variable\|command not found'"
+m5cp; echo 'if then (' >> $W/m5/golive_lib.sh; gitnoapp; ksrm
+OUT=$(DE MODE=drain bash $W/m5/golive_live_off.sh 2>&1 < /dev/null); RC=$?
+chk "OPS-MICRO3 n5 live_off drain: golive_lib.sh LOI CU PHAP => KILL_SWITCH dat, KET QUA xac nhan, rc 0" "[ $RC = 0 ] && ksok && echo \"\$OUT\" | grep -q 'KET QUA: DA DAT run/KILL_SWITCH (xac nhan'"
+m5cp; echo 'echo "$KHONG_CO_BIEN_OPS3_X"' >> $W/m5/golive_lib.sh; gitnoapp; ksrm
+OUT=$(DE MODE=drain bash $W/m5/golive_live_off.sh 2>&1 < /dev/null); RC=$?
+chk "OPS-MICRO3 n5 live_off drain: golive_lib.sh chet vi unbound variable => trap in KET QUA xac nhan, rc 0 (khong rc 1 mo ho)" "[ $RC = 0 ] && ksok && echo \"\$OUT\" | grep -q 'KET QUA: DA DAT run/KILL_SWITCH (xac nhan'"
+m5cp; rm -f $W/m5/golive_lib.sh; gitnoapp; ksrm
+OUT=$(DE SSH_242=false SSH_RETRY_S=1 MODE=drain bash $W/m5/golive_live_off.sh 2>&1 < /dev/null); RC=$?
+chk "OPS-MICRO3 n5 live_off drain: lib BI XOA + ssh 242 LOI => 'KET QUA: KHONG xac nhan duoc run/KILL_SWITCH' + KHAN rc 2" "[ $RC = 2 ] && [ ! -e $KSF ] && echo \"\$OUT\" | grep -q 'KET QUA: KHONG xac nhan duoc run/KILL_SWITCH' && echo \"\$OUT\" | grep -q 'MODE=drain bash $W/m5/golive_live_off.sh'"
+# n7: DRY=1 MODE=drain mo phong buoc 1
+ksrm; OUT=$(DE DRY=1 MODE=drain bash $HERE/golive_live_off.sh 2>&1 < /dev/null); RC=$?
+chk "OPS-MICRO3 n7 live_off DRY=1 MODE=drain: mo phong buoc 1 (in lenh ssh + token drain <TS>, ssh CHI DOC run/), DRY PASS rc 0, KHONG tao KILL_SWITCH" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'MO PHONG buoc 1' && echo \"\$OUT\" | grep -q 'timeout -k 5 60 bash -c .*golive_live_off drain <TS>' && echo \"\$OUT\" | grep -q 'drain that: TAO run/KILL_SWITCH' && echo \"\$OUT\" | grep -q 'DRY PASS' && [ ! -e $KSF ]"
+echo 'golive_micro_on 20261116_101500 x' > $KSF; OUT=$(DE DRY=1 MODE=drain bash $HERE/golive_live_off.sh 2>&1 < /dev/null); RC=$?
+chk "OPS-MICRO3 n7 DRY drain: KILL_SWITCH cua micro_on => bao se GHI DE (luu .prev_), KHONG doi file" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'KS_CO=golive_micro_on 20261116_101500' && echo \"\$OUT\" | grep -q 'GHI DE token' && grep -qx 'golive_micro_on 20261116_101500 x' $KSF"
+ksrm; OUT=$(DE SSH_242=false DRY=1 MODE=drain bash $HERE/golive_live_off.sh 2>&1 < /dev/null); RC=$?
+chk "OPS-MICRO3 n7 DRY drain: ssh 242 loi => bao drain that se KHAN, rc 2, khong ghi" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'drain that se THU 3 lan roi KHAN' && [ ! -e $KSF ]"
+# n4
+chk "OPS-MICRO3 n4: live_off KHONG goi check_key / legacy_verify / use_sub_key / install_cron / gl_mon_repin (drain khong phu thuoc)" "! grep -v '^[[:space:]]*#' $HERE/golive_live_off.sh | grep -q 'check_key\|legacy_verify\|use_sub_key\|install_cron\|gl_mon_repin'"
+R4=""; for s in golive_use_sub_key.sh golive_check_key.sh golive_legacy_verify.sh install_cron_golive_monitor.sh; do
+  m5cp; o=$(DE A1_APPROVED_OPS=$W/khong_co_pin.commit DRY=1 bash $W/m5/$s 2>&1 < /dev/null); r=$?; { [ $r = 1 ] && echo "$o" | grep -q 'TU CHOI \[m1\]'; } || R4="$R4 $s:$r"
+  m5cp; echo '# sua' >> $W/m5/$s; o=$(DE DRY=1 bash $W/m5/$s 2>&1 < /dev/null); r=$?; { [ $r = 1 ] && echo "$o" | grep -q 'TU CHOI \[m1\]: .*co sua CHUA commit'; } || R4="$R4 $s(sua):$r"
+done
+chk "OPS-MICRO3 n4: use_sub_key / check_key / legacy_verify / install_cron: thieu pin / sua chua commit => TU CHOI [m1] (ke ca script CHI DOC) (${R4:-0 loi})" "[ -z '$R4' ]"
 ksrm
 rm -rf $W/m5 $W/m5x
 pkill -f 'websocket.BinanceDataIngestor fake242fin' 2>/dev/null
