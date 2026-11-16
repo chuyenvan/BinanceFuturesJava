@@ -19,7 +19,7 @@ import ref_v12 as R  # noqa: E402  (chi dung ham DAC TA budget/load_env/load_exi
 
 PASS, FAIL, NA, NS, NAPPLY = "PASS", "FAIL", "KHONG XAY RA", "KHONG DU MAU", "CHUA AP DUNG"
 FLAG_ON_LANES = ["R0", "R0-DRY", "S-DCA", "FIN-INJ", "R-1000", "R-4000"]
-T1105 = 1794268800000   # 2026-11-05 07:00 +07
+T1105 = 1793836800000   # 2026-11-05 07:00 +07
 
 
 def rd(path):
