@@ -91,6 +91,7 @@ final class CrashDayRig {
     // [ERRATA1 E5] S-DCA tong hop dieu kien thi truong + p15 (= ref_v12.py SDCA_DIP_OFFS / SDCA_P15_ZERO_OFF; SPEC ?R7b)
     static final long[] SDCA_DIP_OFFS = {2L, 3L, 12L, 22L};
     static final long SDCA_P15_ZERO_OFF = 2L;
+    static final long SDCA_MKT_WIN = 30L;
 
     static double parseD(String v, double def) {
         if (v == null || v.trim().isEmpty()) return def;
@@ -686,7 +687,8 @@ final class CrashDayRig {
         for (long x : SDCA_DIP_OFFS) if (off == x) dip = true;
         final float p15 = off == SDCA_P15_ZERO_OFF ? 0f : rows.get(0).p15;
         // [ERRATA1 N6] dieu kien thi truong cua phut = vong live DetectEntrySignal2TradeNormal:280-356 (ham production)
-        MarketReplay.State mk = MarketReplay.at(d, b, (s, bb) -> o.a1 && a1Excluded(s, bb), this::sdcaFactor, dip);
+        long synthSt = off >= 0 && off < SDCA_MKT_WIN ? sdcaSt : -1L;
+        MarketReplay.State mk = MarketReplay.at(d, b, (s, bb) -> o.a1 && a1Excluded(s, bb), this::sdcaFactor, dip, synthSt);
         if (mk == null) nMktNull++;
         else {
             if (mk.level != null) nMktBig++;
@@ -1155,6 +1157,7 @@ final class CrashDayRig {
         inj.put("sdca_dip_offs_min", SDCA_DIP_OFFS);
         inj.put("sdca_dip", MarketReplay.DIP);
         inj.put("sdca_p15_zero_off_min", SDCA_P15_ZERO_OFF);
+        inj.put("sdca_mkt_win_min", SDCA_MKT_WIN);
         inj.put("flat_ext", d.flatExt);
         inj.put("fin_inj_at", o.finInjAt);
         inj.put("fin_inj_symbol", finInjSym);

@@ -78,10 +78,25 @@ final class MarketReplay {
         return k;
     }
 
-    /** null = khong co BTC o b (live: BO vong entry phut nay => khong DCA). */
-    static State at(ReplayData d, long b, Excl a1x, Fct fct, boolean dip) {
+    /** [S-DCA R7b] nen TONG HOP trong cua so: phang P = close GOC nen st-1' (qv giu nen goc o b); dip: c'=P*0.98, l'=min(P,c'). */
+    static float[] synthBar(ReplayData d, int i, long b, long st, boolean dip) {
+        float[] x0 = d.mkt(i, b);
+        float[] p0 = d.mkt(i, st - ReplayData.MIN);
+        if (x0 == null || p0 == null) return null;
+        float p = p0[3];
+        float[] x = {p, p, p, p, x0[4]};
+        if (dip) {
+            float c2 = (float) (p * DIP);
+            x[3] = c2;
+            x[2] = Math.min(p, c2);
+        }
+        return x;
+    }
+
+    /** null = khong co BTC o b (live: BO vong entry phut nay => khong DCA). synthSt >= 0: cua so tong hop S-DCA (moc st). */
+    static State at(ReplayData d, long b, Excl a1x, Fct fct, boolean dip, long synthSt) {
         Integer bi = d.mIdx.get(Constants.SYMBOL_PAIR_BTC);
-        float[] bx = bi == null ? null : bar(d, bi, b, fct, dip);
+        float[] bx = bi == null ? null : (synthSt >= 0 ? synthBar(d, bi, b, synthSt, dip) : bar(d, bi, b, fct, false));
         if (bx == null) return null;
         KlineObjectSimple btc = k(b, bx);
         Float btcRate = Utils.rateOf2Double(btc.priceClose, btc.priceOpen);
@@ -91,7 +106,7 @@ final class MarketReplay {
             String s = d.mSym[i];
             if (Constants.diedSymbol.contains(s)) continue;
             if (a1x.test(s, b)) continue;
-            float[] x = bar(d, i, b, fct, dip);
+            float[] x = synthSt >= 0 ? synthBar(d, i, b, synthSt, dip) : bar(d, i, b, fct, false);
             if (x == null) continue;
             KlineObjectSimple t = k(b, x);
             if (!Utils.isTickerAvailable(t)) continue;
@@ -101,10 +116,10 @@ final class MarketReplay {
             dn.put(rate, s);
             up.put(-rate, s);
             n++;
-            Float pmax = null;
-            int cnt = 0;
+            Float pmax = synthSt >= 0 ? x[1] : null;   // cua so tong hop: moi ban ghi phang P => max = P
+            int cnt = synthSt >= 0 ? Configs.NUMBER_TICKER_CAL_RATE_CHANGE : 0;
             for (long tt = b; cnt < Configs.NUMBER_TICKER_CAL_RATE_CHANGE && tt >= d.mT0; tt -= ReplayData.MIN) {
-                float[] y = bar(d, i, tt, fct, dip && tt == b);
+                float[] y = bar(d, i, tt, fct, false);
                 if (y == null) continue;
                 cnt++;
                 if (pmax == null || pmax < y[1]) pmax = y[1];

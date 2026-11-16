@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """E2E_REPLAY_V12 - REF DOC LAP (numpy/python) viet tu DAC TA docs/c3live/E2E_REPLAY_V12_SPEC.md (prereg
-PREREG_E2E_REPLAY_V12 ?3 + ERRATA1). KHONG import / goi Java. Doc: fixture + env 242 + tham so luot; va (CHI khi --fills)
+PREREG_E2E_REPLAY_V12 §3 + ERRATA1). KHONG import / goi Java. Doc: fixture + env 242 + tham so luot; va (CHI khi --fills)
 file khop cua SAN (fills.csv = su that san, ERRATA1 E1/N4: "REF tinh E doc lap tu fills + gia mark cua fixture") - khong
 doc quyet dinh / sizing / outcome nao cua replay.
 
-Mo phong vong kin theo phut (spec ?R0). Thu tu tang quyet dinh = production (DetectEntrySignal2TradeNormal:433-516 /
+Mo phong vong kin theo phut (spec §R0). Thu tu tang quyet dinh = production (DetectEntrySignal2TradeNormal:433-516 /
 sim Simulator:340-420): BIG_DOWN -> DCA grid nhanh "level" (chi khi BIG_DOWN) -> DCA grid nhanh "dcaAlt" (chi khi isDcaAlt)
--> selector PREDICT. Dieu kien thi truong (?R8) tu nen 1m (mkt.csv.gz) theo cong thuc SIM. Sizing ?R3 voi
-C_eff = min(C3_CAPITAL, E) (?R9). Thoat ?R6.
+-> selector PREDICT. Dieu kien thi truong (§R8) tu nen 1m (mkt.csv.gz) theo cong thuc SIM. Sizing §R3 voi
+C_eff = min(C3_CAPITAL, E) (§R9). Thoat §R6.
 
 argv: --fx DIR --env FILE --out DIR --venue FAKE|DRY --capital C --flags on|off [--sdca-at MS --sdca-n N]
       [--fin-inj-at MS] [--end MS] [--fills FILE] [--flat-ext]
@@ -30,20 +30,21 @@ import grr_lib  # noqa: E402  (doc file buffer gate_ratio_live.bin - python thua
 
 F = np.float32
 MIN, H, DAY = 60000, 3600000, 86400000
-# Hang so EntryGate (spec ?R2; = docs/c3live/E2E_REPLAY.md / check_ref.py 11-05)
+# Hang so EntryGate (spec §R2; = docs/c3live/E2E_REPLAY.md / check_ref.py 11-05)
 DYN_MIN, SCORE_BASE, DYN_MULT = F(0.26787), F(0.15), F(1.28760)
-# Spec cung (prereg ?3; khong co trong env 242 => gia tri dac ta)
+# Spec cung (prereg §3; khong co trong env 242 => gia tri dac ta)
 U_MAX_DEF = 0.6
 LEVELS = [F(-0.50), F(-0.75), F(-0.90)]
 SIZE_CAP = 0.045
 MIN_BUDGET = 5.0
 SDCA_FACTORS = [0.40, 0.20, 0.07]
 SDCA_PHASE = 10 * MIN
-# [ERRATA1 E5] S-DCA tong hop DIEU KIEN THI TRUONG + p15 (spec ?R7b): tinh tren nen quyet dinh b, moc st = phut chon cum
-SDCA_DIP_OFFS = (2, 3, 12, 22)   # phut b - st co "dip": moi symbol KHA DUNG o b: c' = o*0.98, l' = min(l, c') (CHI dau vao thi truong)
+# [ERRATA1 E5] S-DCA tong hop DIEU KIEN THI TRUONG + p15 (spec §R7b): tinh tren nen quyet dinh b, moc st = phut chon cum
+SDCA_DIP_OFFS = (2, 3, 12, 22)   # phut b - st co "dip" (trong cua so tong hop): c' = P*0.98, l' = min(P, c') (CHI dau vao thi truong)
 SDCA_P15_ZERO_OFF = 2            # phut b - st: p15 thi truong := 0 (duoi MIN_MOMENTUM_15M) cho CA phut
 SDCA_DIP = 0.98
-# ?R8 nguong thi truong: SIM_MS_DOWN_BIG_AVG / _DCA khong dat o 242 va profile A3 => mac dinh sim Configs:511,515
+SDCA_MKT_WIN = 30                # phut b - st in [0, 30): dau vao thi truong TONG HOP (moi symbol phang = close nen st-1'; dip o tren)
+# §R8 nguong thi truong: SIM_MS_DOWN_BIG_AVG / _DCA khong dat o 242 va profile A3 => mac dinh sim Configs:511,515
 MS_DEF = -0.03157
 TF_UNDERLYING = {"EQUITY", "HK_EQUITY", "KR_EQUITY", "CN_EQUITY", "COMMODITY", "FX"}
 
@@ -75,7 +76,7 @@ def params(env, capital, flags):
 
 
 def budget(P, used, leg_idx):
-    """?R3: b = C*F_BASE*(1-U/U_MAX)/sum(w) [* w[leg]*SCALE neu APPLY]; None = U >= U_MAX (float32 nhu sim).
+    """§R3: b = C*F_BASE*(1-U/U_MAX)/sum(w) [* w[leg]*SCALE neu APPLY]; None = U >= U_MAX (float32 nhu sim).
     C = C_eff = min(C3_CAPITAL, E) (ERRATA1 N4) - nguoi goi dat P["C"]."""
     C = F(P["C"])
     u = F(F(used) / C)
@@ -93,7 +94,7 @@ def budget(P, used, leg_idx):
 
 
 def hand_values():
-    """prereg ?3: C=10000, 3 leg PREDICT lien tiep cung phut, bo lam tron qty, co BAT: 225,00 / 216,56 / 208,44."""
+    """prereg §3: C=10000, 3 leg PREDICT lien tiep cung phut, bo lam tron qty, co BAT: 225,00 / 216,56 / 208,44."""
     P = dict(C=10000.0, F_BASE=F(0.015), U_MAX=F(0.6), W=[F(1)] * 4, SCALE=F(6.0), APPLY=True)
     used, out = 0.0, []
     for _ in range(3):
@@ -104,7 +105,7 @@ def hand_values():
 
 
 def trail(P, rate):
-    """?R6 trailRate: gap = min(rate*RATIO, GAP) (GAP_WEAK = GAP o env 242 => khong phu thuoc symbolPred);
+    """§R6 trailRate: gap = min(rate*RATIO, GAP) (GAP_WEAK = GAP o env 242 => khong phu thuoc symbolPred);
     sl = round((rate-gap)/0.005)*0.005 (float32, Math.round = floor(x+0.5))."""
     gap = min(F(rate * P["RATIO"]), P["GAP"])
     r = F(rate - gap)
@@ -132,7 +133,7 @@ def load_exinfo(path):
         tick = Decimal(f.get("PRICE_FILTER", {}).get("tickSize", "0") or "0")
         ct = (s.get("contractType") or "").upper()
         ut = (s.get("underlyingType") or "").upper()
-        # ?R1 universe A1 (dinh nghia A1 cong bo: TRADFI = contractType chua TRADIFI/TRADFI hoac underlyingType thuoc
+        # §R1 universe A1 (dinh nghia A1 cong bo: TRADFI = contractType chua TRADIFI/TRADFI hoac underlyingType thuoc
         #   TF_UNDERLYING; + INDEX + PREMARKET). Symbol khong co trong exinfo => loai neu phut > serverTime (fail-closed).
         a1x = ("TRADIFI" in ct or "TRADFI" in ct or ut in TF_UNDERLYING or ut in ("INDEX", "PREMARKET"))
         meta[s["symbol"]] = dict(step=step, minq=minq, mn=mn, tick=tick, status=s.get("status"), a1x=a1x)
@@ -154,11 +155,11 @@ def avg_keys(keys):
 
 
 class Market:
-    """?R8 dieu kien thi truong theo phut, cong thuc SIM (ExportMarketData2File:96-147 + MarketBigChangeDetector:48-95,
+    """§R8 dieu kien thi truong theo phut, cong thuc SIM (ExportMarketData2File:96-147 + MarketBigChangeDetector:48-95,
     149-201): rate = (c-o)/o float32 moi symbol CO NEN o b (tru died); bo (btc>-0.004 & rate<-0.15) va rate>0.3;
     rateDownAvg = avg(khoa rate); rateDown15MAvg = avg(khoa (c - max15)/max15) voi max15 = max HIGH 15 nen KHA DUNG gan
     nhat (Utils.isTickerAvailable: h != l hoac qv != 0) va chi symbol KHA DUNG o b. BIG_DOWN <=> down < MS;
-    isDcaAlt <=> down15 < MSD hoac down < MSD/3 (float32). Bien the 'a1' (REF chinh) = them loc universe A1 (?R1, live
+    isDcaAlt <=> down15 < MSD hoac down < MSD/3 (float32). Bien the 'a1' (REF chinh) = them loc universe A1 (§R1, live
     UniverseA1Filter); bien the 'all' (= sim A3 khong loc A1, AUDIT_GOLIVE_1116_D #23) chi bao cao."""
 
     def __init__(self, path, died, meta, server_time, ms, msd):
@@ -197,34 +198,47 @@ class Market:
         self.MS, self.MSD = F(ms), F(msd)
         self.MSD3 = F(self.MSD / F(3))
 
-    def state(self, b, sdca, fct, dip):
-        """sdca: {sym: st} (cum S-DCA bi ep gia), fct(s, t) -> he so; dip: phut b la phut dip S-DCA (?R7b)."""
+    def synth_p(self, st):
+        """R7b gia phang P_s = close GOC nen st - 1' cua moi symbol (NaN = khong co nen)."""
+        j = (st - MIN - self.T0) // MIN
+        return self.C[:, j].copy() if 0 <= j < self.n else np.full(len(self.syms), np.nan, np.float32)
+
+    def state(self, b, sdca, fct, dip, synth=None):
+        """sdca: {sym: st} (cum S-DCA bi ep gia), fct(s, t) -> he so; synth: P_s (cua so tong hop S-DCA R7b) hoac None;
+        dip: phut dip trong cua so tong hop."""
         j = (b - self.T0) // MIN
         if j < 0 or j >= self.n:
             return None
-        o, h, l, c = self.O[:, j].copy(), self.Hh[:, j].copy(), self.L[:, j].copy(), self.C[:, j].copy()
-        mx = self.max15[:, j].copy()
-        for s in sdca:
-            r = self.idx.get(s)
-            if r is None:
-                continue
-            f = fct(s, b)
-            if f != 1.0 and self.present[r, j]:
-                o[r], h[r], l[r], c[r] = (F(float(v) * f) for v in (o[r], h[r], l[r], c[r]))
-            if self.avail[r, j]:
-                ix = np.nonzero(self.avail[r, :j + 1])[0][-15:]
-                mx[r] = max(F(float(self.Hh[r, k]) * fct(s, self.T0 + int(k) * MIN)) for k in ix)
-        av = self.avail[:, j]
-        if dip:
-            c2 = (o.astype(np.float64) * SDCA_DIP).astype(np.float32)
-            c = np.where(av, c2, c)
-            l = np.where(av, np.minimum(l, c2), l)
+        if synth is not None:
+            pres = self.present[:, j] & ~np.isnan(synth)
+            P = np.where(pres, synth, np.float32(np.nan)).astype(np.float32)
+            o, h, l, c = P.copy(), P.copy(), P.copy(), P.copy()
+            if dip:
+                c = (P.astype(np.float64) * SDCA_DIP).astype(np.float32)
+                l = np.minimum(P, c)
+            av = pres & ((h != l) | (self.Q[:, j] != F(0)))
+            mx = np.where(av, P, np.float32(np.nan)).astype(np.float32)
+        else:
+            pres = self.present[:, j]
+            o, h, l, c = self.O[:, j].copy(), self.Hh[:, j].copy(), self.L[:, j].copy(), self.C[:, j].copy()
+            mx = self.max15[:, j].copy()
+            for s in sdca:
+                r = self.idx.get(s)
+                if r is None:
+                    continue
+                f = fct(s, b)
+                if f != 1.0 and self.present[r, j]:
+                    o[r], h[r], l[r], c[r] = (F(float(v) * f) for v in (o[r], h[r], l[r], c[r]))
+                if self.avail[r, j]:
+                    ix = np.nonzero(self.avail[r, :j + 1])[0][-15:]
+                    mx[r] = max(F(float(self.Hh[r, k]) * fct(s, self.T0 + int(k) * MIN)) for k in ix)
+            av = self.avail[:, j]
         with np.errstate(all="ignore"):
             rate = ((c - o) / o).astype(np.float32)
             r15 = ((c - mx) / mx).astype(np.float32)
-        btcr = float(rate[self.btc]) if self.btc >= 0 and self.present[self.btc, j] else 0.0
+        btcr = float(rate[self.btc]) if self.btc >= 0 and pres[self.btc] else 0.0
         r64 = rate.astype(np.float64)
-        univ = self.present[:, j] & ~self.died
+        univ = pres & ~self.died
         a1m = ~(self.a1x | (~self.inx & (b > self.server_time)))
         out = {}
         for name, um in (("a1", univ & a1m), ("all", univ)):
@@ -249,7 +263,7 @@ def load_fills(path):
 
 
 def equity_at(fills, t, mark, C3):
-    """?R9 E(t) = C3_CAPITAL + sum rp - sum phi + UPL(mark) tu khop SAN co ms <= t (rp TU TINH = q*(px - gia vao TB);
+    """§R9 E(t) = C3_CAPITAL + sum rp - sum phi + UPL(mark) tu khop SAN co ms <= t (rp TU TINH = q*(px - gia vao TB);
     phi = cot fee cua san; gia vao TB = VWAP lenh MUA tu luc vi the 0; mark = gia nhip cua fixture tai t - mark(s, t)).
     = C3MainEquity.c3Equity:122-152 (funding = 0: san gia khong co funding)."""
     pos, cost = collections.defaultdict(float), collections.defaultdict(float)
@@ -277,7 +291,7 @@ def equity_at(fills, t, mark, C3):
 
 
 def make_mark(raw_bar, fct):
-    """?R9 mark(s, t) = gia nhip cua fixture tai t (= rig applyPrices: k=0 O; nen giam k1 H k2 L; nen tang k1 L k2 H; k=3 C;
+    """§R9 mark(s, t) = gia nhip cua fixture tai t (= rig applyPrices: k=0 O; nen giam k1 H k2 L; nen tang k1 L k2 H; k=3 C;
     k = (t - phut)//15 s) x he so S-DCA; khong co nen o phut t => close cua nen gan nhat truoc do."""
     def mark(s, t):
         tm = t // MIN * MIN
@@ -420,13 +434,14 @@ def main():
     last_tick = {}
     fin_inj = {"symbol": None, "bar": None}
     qrows, mrows = [], []
-    sd = {"st": None, "dip": [], "p15_zero": []}
+    sd = {"st": None, "dip": [], "p15_zero": [], "win": SDCA_MKT_WIN, "dip_offs": SDCA_DIP_OFFS}
+    synthP = {}
 
     def used():
         return sum(c.cost for c in book.values())
 
     def process_bar(c, t):
-        """?R6 mot nen t cho cum c (sim A3). Tra (reason, price, at_open) hoac None."""
+        """§R6 mot nen t cho cum c (sim A3). Tra (reason, price, at_open) hoac None."""
         x = bar(c.sym, t)
         if x is None:
             return None
@@ -456,7 +471,7 @@ def main():
         return None
 
     def leg(b, s, level, leg_idx, rank, Pm, tag=""):
-        """?R3 sizing (C = C_eff cua phut) + ?R4 khop. Tra outcome."""
+        """§R3 sizing (C = C_eff cua phut) + §R4 khop. Tra outcome."""
         x = bars.get(s, {}).get(b)
         ce, er = Pm["C"], Pm.get("E", "")
         if x is None or s not in last_tick:
@@ -491,7 +506,7 @@ def main():
         return "SUBMITTED"
 
     def dca_pass(b, p15, tag, new_syms, Pm):
-        """?R5 DCA grid (sim DcaProcessor.getDCA nhanh DCA_GRID_ENABLED) + cong p15 phang (N2): chi goi o phut co dieu kien."""
+        """§R5 DCA grid (sim DcaProcessor.getDCA nhanh DCA_GRID_ENABLED) + cong p15 phang (N2): chi goi o phut co dieu kien."""
         for s in sorted(book.keys()):
             c = book[s]
             if s in new_syms or c.exit is not None:
@@ -511,7 +526,7 @@ def main():
             leg(b, s, "DCA_LEVEL1", n, -1, Pm, tag)
 
     for tm in range(START, END, MIN):
-        # S-DCA chon cum (?R7) truoc khi xu ly nen tm
+        # S-DCA chon cum (§R7) truoc khi xu ly nen tm
         if a.sdca_at >= 0 and not sdca_start and tm >= a.sdca_at:
             cand = [c for c in book.values() if c.legs == 1 and not c.armed]
             if len(cand) >= a.sdca_n:
@@ -547,7 +562,12 @@ def main():
             dip = off in SDCA_DIP_OFFS
             if dip:
                 sd["dip"].append(b)
-            ms = mkt.state(b, sdca_start, fct, dip)
+            syn = None
+            if off is not None and off < SDCA_MKT_WIN:
+                if st not in synthP:
+                    synthP[st] = mkt.synth_p(st)
+                syn = synthP[st]
+            ms = mkt.state(b, sdca_start, fct, dip, syn)
             mA = ms["a1"] if ms else None
             Pm = dict(P)
             if fills is not None:
