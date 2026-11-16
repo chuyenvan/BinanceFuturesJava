@@ -28,6 +28,9 @@ set -uo pipefail
 #       Lech pin m1 / thieu file pin / khong phai repo git / lech manifest M5 => CANH BAO TO (+ Telegram neu duoc) + VAN chay phan thong tin.
 #       [OPS-MICRO3 n5] golive_lib thieu/hong/thoat som => KET QUA KILL_SWITCH van in RO (trap EXIT): "DA DAT run/KILL_SWITCH (xac nhan)"
 #       exit 0 | "KHONG xac nhan duoc" exit 2.
+#       [OPS-MICRO4 m3a] 3 lan dat khong thay KS_OK (vd ssh rc 255 - co the SAU khi lenh dat DA chay) => DOC LAI xac nhan (toi da 2 lan,
+#       grep token drain trong run/KILL_SWITCH): thay => "DA DAT (xac nhan bang doc lai)" rc 0; doc duoc ma khong co token => "CHUA DAT" rc 2;
+#       khong doc duoc => "KHONG XAC NHAN DUOC - co the DA dat hoac chua; chay lai lenh (idempotent)" rc 2. KHONG bao "khong dat" khi chua biet.
 #   (2) MODE=undrain (go KILL_SWITCH = MO LAI lenh that), MODE=dry (sua env.sh + restart JVM), DRY=1 (moi MODE) va MODE khac:
 #       lech pin m1 / thieu file pin / lech manifest M5 / lib hong => TU CHOI CUNG exit 1 nhu cac script owner khac
 #       (KHONG go KILL_SWITCH, KHONG doi env, KHONG restart).
@@ -35,7 +38,7 @@ _OPS=$(cd "$(dirname "$0")" && pwd); _APO=${A1_APPROVED_OPS:-/home/ubuntu/claude
 _HC=$(git -C "$_OPS" rev-parse --verify -q HEAD 2>/dev/null) || _PW="$_OPS khong phai repo git"
 [ -n "$_PW" ] || { [ -f "$_APO" ] && grep -qE "^$_HC([[:space:]]|\$)" "$_APO"; } || _PW="HEAD $_HC CHUA duoc A1 duyet (khong co trong $_APO)"
 [ -n "$_PW" ] || git -C "$_OPS" diff --quiet HEAD -- . 2>/dev/null || _PW="$_OPS co sua CHUA commit (git diff HEAD)"
-_LO_TS=$(TZ=Asia/Ho_Chi_Minh date +%Y%m%d_%H%M%S); _KS=""; _KO=""; _LO_DONE=0; _LO_ME="$_OPS/golive_live_off.sh"
+_LO_TS=$(TZ=Asia/Ho_Chi_Minh date +%Y%m%d_%H%M%S); _KS=""; _KO=""; _KSC=""; _LO_DONE=0; _LO_ME="$_OPS/golive_live_off.sh"
 _KSSH=${SSH_242:-"ssh -p 2222 -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=10 -o ServerAliveCountMax=6 -i /home/ubuntu/.ssh/id_rsa_chuyennd root@103.157.218.242"}
 _KA=${APP_DIR:-/home/chuyennd/java/v_t_m}
 _KC="cd $_KA && { grep -q '^golive_live_off drain ' run/KILL_SWITCH 2>/dev/null || { { [ ! -e run/KILL_SWITCH ] || cp -p run/KILL_SWITCH run/KILL_SWITCH.prev_$_LO_TS; } && echo 'golive_live_off drain $_LO_TS' > run/KILL_SWITCH.tmp_$_LO_TS && mv -f run/KILL_SWITCH.tmp_$_LO_TS run/KILL_SWITCH; }; } && [ -e run/KILL_SWITCH ] && echo KS_OK"
@@ -46,8 +49,19 @@ if [ "$_LO_FO" = 1 ]; then
     echo "$_KO" | grep -qx KS_OK && { _KS=OK; break; }
     [ "$_i" -lt 3 ] && sleep "${SSH_RETRY_S:-10}"
   done
-  if [ "$_KS" = OK ]; then echo "[golive_live_off $_LO_TS] BUOC 1 XONG: run/KILL_SWITCH DA DAT tren 242 (truoc moi kiem) - c3 DUNG MO MOI"
-  else echo "!!!!!!!!!! [golive_live_off $_LO_TS] KHONG DAT DUOC run/KILL_SWITCH (3 lan): $(echo "$_KO" | tail -2 | tr '\n' ' ' | cut -c1-200)"; fi
+  if [ "$_KS" != OK ]; then   # [OPS-MICRO4 m3a] loi ssh co the xay ra SAU khi lenh dat da chay => doc lai xac nhan, khong doan
+    _KSC=UNK
+    for _i in 1 2; do
+      _KR=$(timeout -k 5 "${LO_KS_TIMEOUT_S:-60}" $_KSSH "cd $_KA && if grep -q '^golive_live_off drain ' run/KILL_SWITCH 2>/dev/null; then echo KS_DOC_CO; else echo KS_DOC_KHONG; fi" < /dev/null 2>&1)
+      if echo "$_KR" | grep -qx KS_DOC_CO; then _KS=OK; _KSC=YES; break; fi
+      echo "$_KR" | grep -qx KS_DOC_KHONG && { _KSC=NO; break; }
+      [ "$_i" -lt 2 ] && sleep "${SSH_RETRY_S:-10}"
+    done
+  fi
+  if [ "$_KSC" = YES ]; then echo "[golive_live_off $_LO_TS] BUOC 1 XONG: run/KILL_SWITCH DA DAT tren 242 (xac nhan bang doc lai sau loi ssh: $(echo "$_KO" | tail -1 | cut -c1-120)) - c3 DUNG MO MOI"
+  elif [ "$_KS" = OK ]; then echo "[golive_live_off $_LO_TS] BUOC 1 XONG: run/KILL_SWITCH DA DAT tren 242 (truoc moi kiem) - c3 DUNG MO MOI"
+  elif [ "$_KSC" = NO ]; then echo "!!!!!!!!!! [golive_live_off $_LO_TS] CHUA DAT run/KILL_SWITCH (doc lai 242: KHONG co token drain; 3 lan dat: $(echo "$_KO" | tail -2 | tr '\n' ' ' | cut -c1-200)) - chay lai lenh (idempotent)"
+  else echo "!!!!!!!!!! [golive_live_off $_LO_TS] KHONG XAC NHAN DUOC run/KILL_SWITCH - co the DA dat hoac chua (3 lan dat + 2 lan doc lai loi: $(echo "$_KO" | tail -2 | tr '\n' ' ' | cut -c1-200)); chay lai lenh (idempotent)"; fi
   # [OPS-MICRO3 n5] moi duong thoat chua bao ket qua (lib hong / unbound / die / tin hieu) => in KET QUA KILL_SWITCH + ma thoat co nghia
   _lo_exit() {
     local rc=$?
@@ -94,8 +108,10 @@ case "$MODE" in drain|undrain|dry) ;; *) die "MODE phai la drain | undrain | dry
 # [OPS-MICRO] drain that: KILL_SWITCH DA dat o buoc 1 => phan con lai CHI thong tin (khong die truoc khi bao ket qua)
 if [ "$MODE" = drain ] && [ "$DRY" != 1 ]; then
   if [ "$_KS" != OK ]; then
-    say "KHAN: KHONG dat duoc run/KILL_SWITCH tren 242 (ssh?) - c3 CO THE VAN MO MOI. Chay lai NGAY: MODE=drain bash $_LO_ME"
-    tg "[golive] KHAN live_off drain TS=$TS: KHONG dat duoc run/KILL_SWITCH (ssh 242?). Log $LOG" || say "!! Telegram KHONG gui duoc"
+    if [ "$_KSC" = NO ]; then _KM="CHUA DAT run/KILL_SWITCH (doc lai 242: khong co token drain)"
+    else _KM="KHONG XAC NHAN DUOC run/KILL_SWITCH - co the DA dat hoac chua (ssh 242?)"; fi   # [OPS-MICRO4 m3a]
+    say "KHAN: $_KM - c3 CO THE VAN MO MOI. Chay lai NGAY (idempotent): MODE=drain bash $_LO_ME"
+    tg "[golive] KHAN live_off drain TS=$TS: $_KM. Chay lai MODE=drain (idempotent). Log $LOG" || say "!! Telegram KHONG gui duoc"
     _LO_DONE=1; exit 2
   fi
   say "XONG: run/KILL_SWITCH DA DAT (buoc 1, truoc moi kiem): c3 dung mo moi (lan entry ke tiep), vi the c3 van duoc quan ly. KHONG restart."
