@@ -92,14 +92,23 @@ def qty_ok(b, px, step, qty):
     return want == Decimal(qty), str(want)
 
 
+def c3cap(L):
+    """C = C3_CAPITAL cua luot (prereg §3: U = marginUsed/C, b = 0,0225*C*...) - KHONG dung von 'capital' code tra ve."""
+    return float(L["res"]["cfg_effective"]["rig.CAPITAL"]) if L["res"] else None
+
+
 def s1(L, env, meta, flags="on"):
     bad, n, worst = [], 0, 0.0
     first3 = []
+    capdiff = []
+    C = c3cap(L)
     for x in L["legs"]:
         if x["outcome"] != "SUBMITTED":
             continue
         n += 1
-        cap, used, b = float(x["capital"]), float(x["margin_before"]), float(x["budget"])
+        cap, used, b = C, float(x["margin_before"]), float(x["budget"])
+        if abs(float(x["capital"]) - C) > 1e-9:
+            capdiff.append((x["cid"], float(x["capital"])))   # NGHI VAN N4: code dung min(C3_CAPITAL, equity c3, ...)
         li = int(x["leg_idx"]) if x["leg_idx"] not in ("", None) else 0
         P = p_for(env, cap, flags)
         bref = R.budget(P, used, li)
@@ -115,7 +124,7 @@ def s1(L, env, meta, flags="on"):
     hv = R.hand_values()
     hv_ok = all(abs(a - e) <= 0.005 * e for a, e in zip(hv, [225.00, 216.56, 208.44]))
     det = {"n_submit": n, "worst_rel": worst, "bad": bad[:20], "n_bad": len(bad), "hand_values_ref": hv, "hand_ok": hv_ok,
-           "first3_replay(b,used)": first3}
+           "first3_replay(b,used)": first3, "C3_CAPITAL": C, "leg_capital_khac_C(N4)": capdiff[:20], "n_capital_khac_C": len(capdiff)}
     if n == 0:
         return NA, det
     return (PASS if not bad and hv_ok else FAIL), det
@@ -239,9 +248,12 @@ def d1_sdca(L, refdir, env, meta):
         idx = [int(x["leg_idx"]) for x in dl]
         mins = [int(x["decision_ts"]) for x in dl]
         rmins = [int(x["decision_ts"]) for x in reflegs if x["symbol"] == s and x["level"] == "DCA_LEVEL1" and x["outcome"] == "SUBMITTED"]
-        P = p_for(env, float(dl[0]["capital"]) if dl else 10000.0, "on")
+        P = p_for(env, c3cap(L), "on")
         bud_ok = all(abs(float(x["budget"]) - float(R.budget(P, float(x["margin_before"]), int(x["leg_idx"])))) / float(x["budget"]) <= 1e-5
                      for x in dl)
+        # chi bao cao: cung cong thuc nhung C = 'capital' code tra ve (min(C3_CAPITAL, equity c3, ...)) - NGHI VAN N4
+        bud_ok_code_cap = all(abs(float(x["budget"]) - float(R.budget(p_for(env, float(x["capital"]), "on"), float(x["margin_before"]),
+                                                                       int(x["leg_idx"])))) / float(x["budget"]) <= 1e-5 for x in dl)
         pre = []
         for x in dl:
             li = int(x["leg_idx"])
@@ -253,7 +265,9 @@ def d1_sdca(L, refdir, env, meta):
                    and int(x["leg_idx"]) >= 4]) == 0
         c_ok = idx == [1, 2, 3] and mins == rmins and bud_ok and not pre and no5
         full += c_ok
-        det["clusters"][s] = {"leg_idx": idx, "minutes": mins, "ref_minutes": rmins, "budget_ok": bud_ok, "leg_before_level": pre,
+        det["clusters"][s] = {"leg_idx": idx, "minutes": mins, "ref_minutes": rmins, "budget_ok": bud_ok,
+                              "budget_ok_neu_C=capital_code(N4,bao cao)": bud_ok_code_cap,
+                              "capital_code": [float(x["capital"]) for x in dl], "leg_before_level": pre,
                               "no_5th": no5, "ok": c_ok}
     ok = ok and full >= 2
     return (PASS if ok else FAIL), det
@@ -300,7 +314,10 @@ def e2(Lold, fx, dry_csv, labels_csv):
     man = json.load(open(fx + "/manifest.json"))
     if man["START"] != T1105:
         return NAPPLY, {"ly_do": "chi ap dung fixture 11-05 (fixture hien tai START=%s)" % man["START"]}
-    real = rd(dry_csv)
+    # prereg §5 E2: "log dry that ngay 11-05, 23 SUBMIT 22:52-22:53" => chi SUBMIT co phut quyet dinh < 11-06 07:00 +07
+    real = [x for x in rd(dry_csv) if int(x["decision_ts"]) < T1105 + 86400000]
+    if not real:
+        return FAIL, {"loi": "khong co SUBMIT dry that 11-05 trong %s" % dry_csv}
     labels = {x["symbol"]: x["label"] for x in rd(labels_csv)}
     allowed = {"LEGACY-11-05", "JAR-R4Q-FIN2-BIGDOWN-SEL", "JAR-R4Q-FIN2-UNIVERSE-A1", "EXCHANGEINFO"}
     rep = {(x["symbol"], int(x["decision_ts"])): x for x in Lold["legs"] if x["outcome"] == "SUBMITTED"}
@@ -374,7 +391,7 @@ def main():
     out["F1[FIN-INJ]"] = f1(Ls["FIN-INJ"], Ls["R0"], os.path.join(a.ref, "FIN-INJ"))
     out["E2[R-OLD]"] = e2(Ls["R-OLD"], a.fx, a.dry_1105, a.labels_1105)
     out["R-OLD banners (ky vong TAT)"] = ("BAO CAO", {k: bool(re.search(p, Ls["R-OLD"]["log"])) for k, p in BANNERS.items()})
-    out["§6 von micro"] = ("BAO CAO", micro(Ls["R0"], env, meta, Ls["R-1000"], Ls["R-4000"]))
+    out["VON_MICRO_6"] = ("BAO CAO", micro(Ls["R0"], env, meta, Ls["R-1000"], Ls["R-4000"]))
     keys = ["C1", "E1[R0]", "E1[R0-DRY]", "S1[R0]", "S1[R0-DRY]", "D1[S-DCA]", "X1[R0]", "F1[FIN-INJ]", "K1[R0]", "K1[R0-DRY]", "E2[R-OLD]"]
     concl = PASS if all(out[k][0] == PASS for k in keys) else FAIL
     out["KET LUAN (iii)"] = (concl, "PASS <=> moi tieu chi PASS (KHONG XAY RA / KHONG DU MAU / CHUA AP DUNG != PASS)")

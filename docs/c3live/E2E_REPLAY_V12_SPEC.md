@@ -85,7 +85,16 @@ cùng U; ≥ 90 % đặt được ⇒ micro = 1 000, ngược lại 4 000; kèm 
   này. REF theo comment production "sim gọi entryGate cho mọi leg trừ BIG_DOWN" — cần MASTER xác nhận đây là đặc tả A3.
 - **N3 X14:** env 242 `LIVE_TS_MKT_EXT=1` nhưng replay phải đặt 0 (TsMktExt khởi chạy đọc ALT_EW Aerospike); prereg §7 đã ghi X14 không đủ dữ liệu,
   nhưng override này KHÔNG có trong danh sách override khai trước ⇒ báo MASTER.
-- (cập nhật sau khi chạy thử 10-30 — xem `docs/c3live/E2E_REPLAY_V12_DEV_RESULT.md`).
+- **N4 vốn sizing:** prereg §3 dùng `C = C3_CAPITAL` cố định cho cả U và b; code dùng `capital = C3MainEquity.capital()` =
+  min(C3_CAPITAL, equity c3 (gồm lỗ chưa chốt), available + margin) cho cả U và b. Thấy trên S-DCA 10-30: capital 9 723 / 9 557 / 9 267 ⇒
+  budget DCA thấp hơn công thức prereg 4,8–14,1 % (khớp 1e-5 nếu thay C bằng capital code). Bộ chấm giữ C = C3_CAPITAL (không nới);
+  kết quả theo capital code chỉ ghi "báo cáo". Ở 11-05, mọi leg vào khi equity < 10 000 (sau lỗ) sẽ FAIL S1 theo prereg.
+- **N5 phút thoát trailing:** A3 (`BLOCK_INTRABAR_LOOKAHEAD=true`) arm trong nến t thì KHÔNG khớp trong nến t; TrailingStopManager arm ở nhịp
+  15 s rồi stop có thể kích ngay các nhịp sau CÙNG nến ⇒ thoát sớm 1 phút. 10-30: 18/22 cùng phút (82 %), 4/22 lệch −1' (SL trùng REF tới 1e-9).
+  Tiêu chí X1 "≥ 98 % cùng phút" khó đạt ở 11-05 nếu tỉ lệ này lặp lại — cần MASTER quyết (không nới tiêu chí ở đây).
+- E2 (11-05): bộ chấm chỉ lấy SUBMIT dry thật có phút quyết định < 11-06 07:00 +07 (prereg "23 SUBMIT 22:52–22:53"); nhãn lệch phải nằm trong
+  `tools/e2e/labels_1105.csv` (symbol,label), tạo + commit TRƯỚC lượt chính thức (run_official kiểm worktree sạch + HEAD = commit A1 duyệt).
+- (kết quả chạy thử 10-30: `docs/c3live/E2E_REPLAY_V12_DEV_RESULT.md`).
 
 ## 5. Giới hạn rig so với production (ngoài prereg §7)
 Vòng main `DetectEntrySignal2TradeNormal` không chạy (createOrderBuyRequest0 guard, cầu dao mật độ, sổ giấy twin, `liveBookFull` đọc U sổ giấy —

@@ -30,6 +30,6 @@ ref R0-DRY  --venue DRY  --capital 10000 --flags on
 ref S-DCA   --venue FAKE --capital 10000 --flags on --sdca-at "$SDCA_AT"
 ref FIN-INJ --venue FAKE --capital 10000 --flags on --fin-inj-at "$FIN_INJ_AT"
 python3 "$T/check_v12.py" --runs "$E2E_OUT" --ref "$REF" --fx "$E2E_FX_DIR" --env "$E2E_ENV242" --out "$E2E_OUT/check_v12.json" \
-  --dry-1105 "$E2E_FX_DIR/dry_submits.csv" --labels-1105 "$E2E_FX_DIR/labels_1105.csv" > "$E2E_OUT/check_v12.txt" 2>&1
+  --dry-1105 "$E2E_FX_DIR/dry_submits.csv" --labels-1105 "${LABELS_1105:-$T/labels_1105.csv}" > "$E2E_OUT/check_v12.txt" 2>&1
 echo "CHECK rc=$?" | tee -a "$E2E_OUT/run_all.txt"
 head -15 "$E2E_OUT/check_v12.txt"

@@ -125,7 +125,8 @@ def main():
                     parts = m.group(4).split("-")
                     dec = int(parts[-2]) * 60000 if len(parts) >= 4 and parts[-2].isdigit() and int(parts[-2]) > 20_000_000 \
                         else (t // 60000 - 1) * 60000
-                    if START <= t < END:
+                    if START <= t < END and m.group(4) not in seenb:   # file log xoay lap lai dong cu => bo trung theo cid
+                        seenb.add(m.group(4))
                         sub.append([m.group(2), dec, m.group(3), m.group(4), m.group(5), m.group(6), t])
     bd.sort()
     with open(out + "/bigdown.csv", "w") as fh:

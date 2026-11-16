@@ -2,7 +2,7 @@
 # E2E_REPLAY_V12 - LUOT CHINH THUC fixture 11-05 (prereg §2, §8 buoc 4). CHI chay khi A1 DA DUYET harness + REF.
 # usage (A1/MASTER):  A1_APPROVED=<commit da duyet> tools/e2e/run_official_1105.sh
 # 1 lenh: dung fixture 11-05 (khong ghi de neu da co) -> moi luot §4 + REF + bo cham, qua lock Oracle (1 flock, khong long).
-# Truoc khi chay: tao (neu can) $FX/labels_1105.csv (symbol,label) cho cac SUBMIT dry that duoc phep lech theo nhan KHAI TRUOC
+# Truoc khi chay: tao (neu can) tools/e2e/labels_1105.csv (symbol,label) cho cac SUBMIT dry that duoc phep lech theo nhan KHAI TRUOC
 #   {LEGACY-11-05, JAR-R4Q-FIN2-BIGDOWN-SEL, JAR-R4Q-FIN2-UNIVERSE-A1, EXCHANGEINFO} — PHAI commit truoc khi chay.
 set -u
 [ -n "${A1_APPROVED:-}" ] || { echo "TU CHOI: thieu A1_APPROVED=<commit> (A1 chua duyet harness + REF)"; exit 2; }
