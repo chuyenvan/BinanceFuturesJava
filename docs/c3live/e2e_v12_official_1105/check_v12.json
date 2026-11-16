@@ -1,0 +1,1697 @@
+{
+ "C1": [
+  "PASS",
+  {
+   "R0": [
+    "PASS",
+    {
+     "jar_md5": "641803565297d4065d90245e04a00f11",
+     "jar_ok": true,
+     "classes_from_jar": 10,
+     "banners": {
+      "LIVE-SIZING": true,
+      "LIVE-DCA-GRID": true,
+      "MINUTE-FIN": true,
+      "GATE-RATIO": true
+     },
+     "missing_names": [],
+     "differ": {},
+     "overrides": {
+      "C3_CAPITAL": "10000",
+      "C3_EXCLUDE_LEGACY_HELD": "false",
+      "LIVE_ADAPTER": "dry",
+      "LIVE_APPLY_GRID_RATIO": "true",
+      "LIVE_DCA_GRID_ENABLED": "true",
+      "LIVE_GATE_ROLLING_FILE": "/home/ubuntu/claude_master/e2e_v12/out1105_1117_0132/R0/run/gate_ratio_live.bin",
+      "LIVE_IS_SHADOW_HOST": "true",
+      "LIVE_TS_MKT_EXT": "0"
+     },
+     "config_properties_replay(E5)": {
+      "AEROSPIKE_READ_CLUSTER": "[HA_TANG] 226",
+      "TICKER_SOURCE": "[HA_TANG] aerospike",
+      "AEROSPIKE_HOST": "[HA_TANG] 127.0.0.1",
+      "AEROSPIKE_PORT": "[HA_TANG] 3999",
+      "AEROSPIKE_NAMESPACE": "[HA_TANG] e2e_none",
+      "AEROSPIKE_HOST_226": "[HA_TANG] 127.0.0.1",
+      "AEROSPIKE_PORT_226": "[HA_TANG] 3999",
+      "AEROSPIKE_NAMESPACE_242": "[HA_TANG] e2e_none",
+      "TIME_RUN": "[HA_TANG] 20210101",
+      "FILE_AI_PREDICTIONS": "[HA_TANG] /nonexistent/e2e_none",
+      "NUMBER_THREAD_ORDER_MANAGER": "[HA_TANG] 2",
+      "DIED_SYMBOLS": "[CHIEN_LUOC_242] BTCDOM,USDC",
+      "SPECIAL_SYMBOLS": "[KHONG_AI_DOC] "
+     },
+     "Cfg_khong_dat_env_mac_dinh_JAR(E5)": [
+      "BD_SEL_MODE",
+      "BD_SEL_TOPK",
+      "BD_SIZE_ADAPT",
+      "BD_SIZE_ADAPT_N",
+      "CONC_CAP_AGG_DCA_ENABLED",
+      "CONC_CAP_AGG_DCA_PCT",
+      "CONC_CAP_BD_PER_HOUR",
+      "CONC_CAP_BD_RATE_ENABLED",
+      "DCA_GRID_ENABLED",
+      "DCA_GRID_L1",
+      "DCA_GRID_LEGS",
+      "DCA_GRID_LEVELS",
+      "DCA_GRID_SCALAR",
+      "DCA_GRID_STEP",
+      "DCA_GRID_W_RATIO",
+      "DCA_RANK_MODE",
+      "DCA_ROUND_CAP_ENABLED",
+      "DCA_ROUND_CAP_PCT",
+      "GATE_BUFFER_SEED",
+      "GATE_BUFFER_SEED_MAX_LAG_H",
+      "GATE_BUFFER_SEED_MD5",
+      "LIVE_C3_ALLOW_NONASCII",
+      "LIVE_C3_IP_WEIGHT_CAP",
+      "LIVE_C3_KEYS_FILE",
+      "LIVE_C3_PILOT_CAPITAL",
+      "LIVE_ENTRY_ENABLED",
+      "LIVE_FIN_GUARD",
+      "LIVE_KILLSW_AUTORELEASE_MIN",
+      "LIVE_KILLSW_C2_COUNT",
+      "LIVE_KILLSW_C2_SLIP",
+      "LIVE_KILLSW_C2_WARN",
+      "LIVE_KILLSW_C2_WINDOW_H",
+      "LIVE_KILLSW_LATCH_FILE",
+      "LIVE_KILLSW_RESET_FILE",
+      "LIVE_KILL_SWITCH_FILE",
+      "LIVE_LEGACY_FILE",
+      "NSEL_ADD_ENABLED",
+      "NSEL_ADD_F1_MIN_BARRET",
+      "NSEL_ADD_TOPK",
+      "NSEL_CORE_ADD_MAX_PER_CLUSTER",
+      "NUMBER_ORDER_BUDGET",
+      "SELECTOR_LEG_CUT",
+      "SIM_AI_DYNAMIC_MAX",
+      "SIM_APPLY_FUNDING",
+      "SIM_BD_FRACTION",
+      "SIM_COND_EXIT_HOURS",
+      "SIM_COND_EXIT_MIN_FAV",
+      "SIM_CRASH_ENTRY_PENALTY",
+      "SIM_DCA_SIGNAL_BASE_RATIO",
+      "SIM_DCA_SIGNAL_COOLDOWN_MIN",
+      "SIM_DCA_SIGNAL_GATE",
+      "SIM_DCA_SIGNAL_LOSS",
+      "SIM_ENTRY_COST_C1",
+      "SIM_ENTRY_COST_C2",
+      "SIM_ENTRY_COST_C4",
+      "SIM_ENTRY_COST_MODE",
+      "SIM_ENTRY_COST_NC",
+      "SIM_ENTRY_SAMPLE_MIN",
+      "SIM_ENTRY_UNIVERSE_DUMP",
+      "SIM_FAIL_FAST_ON_DATA_ERROR",
+      "SIM_FILTER_D3D4",
+      "SIM_FUNDING_MARK",
+      "SIM_FUNDING_SCALE",
+      "SIM_GATE_COUNT_ONLY",
+      "SIM_GATE_P15_Q",
+      "SIM_GATE_REGIME_ADAPTIVE",
+      "SIM_MS_DOWN_BIG_AVG",
+      "SIM_MS_DOWN_BIG_AVG_DCA",
+      "SIM_NSEL_CORE_ADD",
+      "SIM_PREDICT_SYMBOL_RATE_MAX",
+      "SIM_PRE_ARM_SL",
+      "SIM_REGIME_FILE",
+      "SIM_REGIME_FORCE",
+      "SIM_REGIME_GATE_VALUE_COL",
+      "SIM_REGIME_SCALE_UP",
+      "SIM_SL_ADAPT_ARM",
+      "SIM_SL_ADAPT_ARM_STRONG",
+      "SIM_SL_ADAPT_ARM_WEAK",
+      "SIM_SL_ADAPT_HARDSL",
+      "SIM_SL_ADAPT_HARDSL_STRONG",
+      "SIM_SL_ADAPT_HARDSL_WEAK",
+      "SIM_SL_ADAPT_RANK_N",
+      "SIM_SL_ADAPT_TSTOP",
+      "SIM_SL_ADAPT_TSTOP_STRONG_H",
+      "SIM_SL_ADAPT_TSTOP_WEAK_H",
+      "SIM_TAKE_PROFIT_ONLY",
+      "SIM_TAKE_PROFIT_RATE",
+      "SIM_TICKLOG",
+      "SIM_TICKLOG_DIR",
+      "SIM_TICKLOG_POOL",
+      "SIM_TICKLOG_POS_EVERY_MIN",
+      "SIM_TICKLOG_TAG",
+      "SIM_TICK_BLOCK_DROP1M",
+      "SIM_TICK_BLOCK_IND",
+      "SIM_TICK_BLOCK_MIN_SAMPLES",
+      "SIM_TICK_BLOCK_PCT",
+      "SIM_TICK_BLOCK_WIN_DAYS",
+      "SIM_TRAIL_TRACE",
+      "SIM_TS_PNOPUMP_WEAK_THR",
+      "SIM_U_MAX",
+      "SIZE_PACING_MODE",
+      "SIZE_VOL_TARGET_MODE",
+      "TS_CAP_STRONG_RANK",
+      "TS_LADDER",
+      "TS_LADDER_GAPS",
+      "TS_LADDER_LO",
+      "TS_PEAK_MODE",
+      "TS_PNOPUMP_WEAK_THR",
+      "UNIVERSE_CRYPTO_UNDERLYING_TYPES",
+      "UNIVERSE_EXCLUDE",
+      "UNIVERSE_MAX_STALE_MS",
+      "UNIVERSE_TRADFI_LIST",
+      "UNIVERSE_TRADFI_SUBTYPES",
+      "WFO_DISABLE_DCA",
+      "WFO_FUNDING_PRED_DIR",
+      "WFO_LOG_ENTRIES"
+     ],
+     "died_symbols_jar": [
+      "BTCDOMUSDT",
+      "USDCUSDT"
+     ],
+     "override_set_ok": true
+    }
+   ],
+   "R0-DRY": [
+    "PASS",
+    {
+     "jar_md5": "641803565297d4065d90245e04a00f11",
+     "jar_ok": true,
+     "classes_from_jar": 10,
+     "banners": {
+      "LIVE-SIZING": true,
+      "LIVE-DCA-GRID": true,
+      "MINUTE-FIN": true,
+      "GATE-RATIO": true
+     },
+     "missing_names": [],
+     "differ": {},
+     "overrides": {
+      "C3_CAPITAL": "10000",
+      "C3_EXCLUDE_LEGACY_HELD": "false",
+      "LIVE_ADAPTER": "dry",
+      "LIVE_APPLY_GRID_RATIO": "true",
+      "LIVE_DCA_GRID_ENABLED": "true",
+      "LIVE_GATE_ROLLING_FILE": "/home/ubuntu/claude_master/e2e_v12/out1105_1117_0132/R0-DRY/run/gate_ratio_live.bin",
+      "LIVE_IS_SHADOW_HOST": "true",
+      "LIVE_TS_MKT_EXT": "0"
+     },
+     "config_properties_replay(E5)": {
+      "AEROSPIKE_READ_CLUSTER": "[HA_TANG] 226",
+      "TICKER_SOURCE": "[HA_TANG] aerospike",
+      "AEROSPIKE_HOST": "[HA_TANG] 127.0.0.1",
+      "AEROSPIKE_PORT": "[HA_TANG] 3999",
+      "AEROSPIKE_NAMESPACE": "[HA_TANG] e2e_none",
+      "AEROSPIKE_HOST_226": "[HA_TANG] 127.0.0.1",
+      "AEROSPIKE_PORT_226": "[HA_TANG] 3999",
+      "AEROSPIKE_NAMESPACE_242": "[HA_TANG] e2e_none",
+      "TIME_RUN": "[HA_TANG] 20210101",
+      "FILE_AI_PREDICTIONS": "[HA_TANG] /nonexistent/e2e_none",
+      "NUMBER_THREAD_ORDER_MANAGER": "[HA_TANG] 2",
+      "DIED_SYMBOLS": "[CHIEN_LUOC_242] BTCDOM,USDC",
+      "SPECIAL_SYMBOLS": "[KHONG_AI_DOC] "
+     },
+     "Cfg_khong_dat_env_mac_dinh_JAR(E5)": [
+      "BD_SEL_MODE",
+      "BD_SEL_TOPK",
+      "BD_SIZE_ADAPT",
+      "BD_SIZE_ADAPT_N",
+      "CONC_CAP_AGG_DCA_ENABLED",
+      "CONC_CAP_AGG_DCA_PCT",
+      "CONC_CAP_BD_PER_HOUR",
+      "CONC_CAP_BD_RATE_ENABLED",
+      "DCA_GRID_ENABLED",
+      "DCA_GRID_L1",
+      "DCA_GRID_LEGS",
+      "DCA_GRID_LEVELS",
+      "DCA_GRID_SCALAR",
+      "DCA_GRID_STEP",
+      "DCA_GRID_W_RATIO",
+      "DCA_RANK_MODE",
+      "DCA_ROUND_CAP_ENABLED",
+      "DCA_ROUND_CAP_PCT",
+      "GATE_BUFFER_SEED",
+      "GATE_BUFFER_SEED_MAX_LAG_H",
+      "GATE_BUFFER_SEED_MD5",
+      "LIVE_C3_ALLOW_NONASCII",
+      "LIVE_C3_IP_WEIGHT_CAP",
+      "LIVE_C3_KEYS_FILE",
+      "LIVE_C3_PILOT_CAPITAL",
+      "LIVE_ENTRY_ENABLED",
+      "LIVE_FIN_GUARD",
+      "LIVE_KILLSW_AUTORELEASE_MIN",
+      "LIVE_KILLSW_C2_COUNT",
+      "LIVE_KILLSW_C2_SLIP",
+      "LIVE_KILLSW_C2_WARN",
+      "LIVE_KILLSW_C2_WINDOW_H",
+      "LIVE_KILLSW_LATCH_FILE",
+      "LIVE_KILLSW_RESET_FILE",
+      "LIVE_KILL_SWITCH_FILE",
+      "LIVE_LEGACY_FILE",
+      "NSEL_ADD_ENABLED",
+      "NSEL_ADD_F1_MIN_BARRET",
+      "NSEL_ADD_TOPK",
+      "NSEL_CORE_ADD_MAX_PER_CLUSTER",
+      "NUMBER_ORDER_BUDGET",
+      "SELECTOR_LEG_CUT",
+      "SIM_AI_DYNAMIC_MAX",
+      "SIM_APPLY_FUNDING",
+      "SIM_BD_FRACTION",
+      "SIM_COND_EXIT_HOURS",
+      "SIM_COND_EXIT_MIN_FAV",
+      "SIM_CRASH_ENTRY_PENALTY",
+      "SIM_DCA_SIGNAL_BASE_RATIO",
+      "SIM_DCA_SIGNAL_COOLDOWN_MIN",
+      "SIM_DCA_SIGNAL_GATE",
+      "SIM_DCA_SIGNAL_LOSS",
+      "SIM_ENTRY_COST_C1",
+      "SIM_ENTRY_COST_C2",
+      "SIM_ENTRY_COST_C4",
+      "SIM_ENTRY_COST_MODE",
+      "SIM_ENTRY_COST_NC",
+      "SIM_ENTRY_SAMPLE_MIN",
+      "SIM_ENTRY_UNIVERSE_DUMP",
+      "SIM_FAIL_FAST_ON_DATA_ERROR",
+      "SIM_FILTER_D3D4",
+      "SIM_FUNDING_MARK",
+      "SIM_FUNDING_SCALE",
+      "SIM_GATE_COUNT_ONLY",
+      "SIM_GATE_P15_Q",
+      "SIM_GATE_REGIME_ADAPTIVE",
+      "SIM_MS_DOWN_BIG_AVG",
+      "SIM_MS_DOWN_BIG_AVG_DCA",
+      "SIM_NSEL_CORE_ADD",
+      "SIM_PREDICT_SYMBOL_RATE_MAX",
+      "SIM_PRE_ARM_SL",
+      "SIM_REGIME_FILE",
+      "SIM_REGIME_FORCE",
+      "SIM_REGIME_GATE_VALUE_COL",
+      "SIM_REGIME_SCALE_UP",
+      "SIM_SL_ADAPT_ARM",
+      "SIM_SL_ADAPT_ARM_STRONG",
+      "SIM_SL_ADAPT_ARM_WEAK",
+      "SIM_SL_ADAPT_HARDSL",
+      "SIM_SL_ADAPT_HARDSL_STRONG",
+      "SIM_SL_ADAPT_HARDSL_WEAK",
+      "SIM_SL_ADAPT_RANK_N",
+      "SIM_SL_ADAPT_TSTOP",
+      "SIM_SL_ADAPT_TSTOP_STRONG_H",
+      "SIM_SL_ADAPT_TSTOP_WEAK_H",
+      "SIM_TAKE_PROFIT_ONLY",
+      "SIM_TAKE_PROFIT_RATE",
+      "SIM_TICKLOG",
+      "SIM_TICKLOG_DIR",
+      "SIM_TICKLOG_POOL",
+      "SIM_TICKLOG_POS_EVERY_MIN",
+      "SIM_TICKLOG_TAG",
+      "SIM_TICK_BLOCK_DROP1M",
+      "SIM_TICK_BLOCK_IND",
+      "SIM_TICK_BLOCK_MIN_SAMPLES",
+      "SIM_TICK_BLOCK_PCT",
+      "SIM_TICK_BLOCK_WIN_DAYS",
+      "SIM_TRAIL_TRACE",
+      "SIM_TS_PNOPUMP_WEAK_THR",
+      "SIM_U_MAX",
+      "SIZE_PACING_MODE",
+      "SIZE_VOL_TARGET_MODE",
+      "TS_CAP_STRONG_RANK",
+      "TS_LADDER",
+      "TS_LADDER_GAPS",
+      "TS_LADDER_LO",
+      "TS_PEAK_MODE",
+      "TS_PNOPUMP_WEAK_THR",
+      "UNIVERSE_CRYPTO_UNDERLYING_TYPES",
+      "UNIVERSE_EXCLUDE",
+      "UNIVERSE_MAX_STALE_MS",
+      "UNIVERSE_TRADFI_LIST",
+      "UNIVERSE_TRADFI_SUBTYPES",
+      "WFO_DISABLE_DCA",
+      "WFO_FUNDING_PRED_DIR",
+      "WFO_LOG_ENTRIES"
+     ],
+     "died_symbols_jar": [
+      "BTCDOMUSDT",
+      "USDCUSDT"
+     ],
+     "override_set_ok": true
+    }
+   ],
+   "S-DCA": [
+    "PASS",
+    {
+     "jar_md5": "641803565297d4065d90245e04a00f11",
+     "jar_ok": true,
+     "classes_from_jar": 10,
+     "banners": {
+      "LIVE-SIZING": true,
+      "LIVE-DCA-GRID": true,
+      "MINUTE-FIN": true,
+      "GATE-RATIO": true
+     },
+     "missing_names": [],
+     "differ": {},
+     "overrides": {
+      "C3_CAPITAL": "10000",
+      "C3_EXCLUDE_LEGACY_HELD": "false",
+      "LIVE_ADAPTER": "dry",
+      "LIVE_APPLY_GRID_RATIO": "true",
+      "LIVE_DCA_GRID_ENABLED": "true",
+      "LIVE_GATE_ROLLING_FILE": "/home/ubuntu/claude_master/e2e_v12/out1105_1117_0132/S-DCA/run/gate_ratio_live.bin",
+      "LIVE_IS_SHADOW_HOST": "true",
+      "LIVE_TS_MKT_EXT": "0"
+     },
+     "config_properties_replay(E5)": {
+      "AEROSPIKE_READ_CLUSTER": "[HA_TANG] 226",
+      "TICKER_SOURCE": "[HA_TANG] aerospike",
+      "AEROSPIKE_HOST": "[HA_TANG] 127.0.0.1",
+      "AEROSPIKE_PORT": "[HA_TANG] 3999",
+      "AEROSPIKE_NAMESPACE": "[HA_TANG] e2e_none",
+      "AEROSPIKE_HOST_226": "[HA_TANG] 127.0.0.1",
+      "AEROSPIKE_PORT_226": "[HA_TANG] 3999",
+      "AEROSPIKE_NAMESPACE_242": "[HA_TANG] e2e_none",
+      "TIME_RUN": "[HA_TANG] 20210101",
+      "FILE_AI_PREDICTIONS": "[HA_TANG] /nonexistent/e2e_none",
+      "NUMBER_THREAD_ORDER_MANAGER": "[HA_TANG] 2",
+      "DIED_SYMBOLS": "[CHIEN_LUOC_242] BTCDOM,USDC",
+      "SPECIAL_SYMBOLS": "[KHONG_AI_DOC] "
+     },
+     "Cfg_khong_dat_env_mac_dinh_JAR(E5)": [
+      "BD_SEL_MODE",
+      "BD_SEL_TOPK",
+      "BD_SIZE_ADAPT",
+      "BD_SIZE_ADAPT_N",
+      "CONC_CAP_AGG_DCA_ENABLED",
+      "CONC_CAP_AGG_DCA_PCT",
+      "CONC_CAP_BD_PER_HOUR",
+      "CONC_CAP_BD_RATE_ENABLED",
+      "DCA_GRID_ENABLED",
+      "DCA_GRID_L1",
+      "DCA_GRID_LEGS",
+      "DCA_GRID_LEVELS",
+      "DCA_GRID_SCALAR",
+      "DCA_GRID_STEP",
+      "DCA_GRID_W_RATIO",
+      "DCA_RANK_MODE",
+      "DCA_ROUND_CAP_ENABLED",
+      "DCA_ROUND_CAP_PCT",
+      "GATE_BUFFER_SEED",
+      "GATE_BUFFER_SEED_MAX_LAG_H",
+      "GATE_BUFFER_SEED_MD5",
+      "LIVE_C3_ALLOW_NONASCII",
+      "LIVE_C3_IP_WEIGHT_CAP",
+      "LIVE_C3_KEYS_FILE",
+      "LIVE_C3_PILOT_CAPITAL",
+      "LIVE_ENTRY_ENABLED",
+      "LIVE_FIN_GUARD",
+      "LIVE_KILLSW_AUTORELEASE_MIN",
+      "LIVE_KILLSW_C2_COUNT",
+      "LIVE_KILLSW_C2_SLIP",
+      "LIVE_KILLSW_C2_WARN",
+      "LIVE_KILLSW_C2_WINDOW_H",
+      "LIVE_KILLSW_LATCH_FILE",
+      "LIVE_KILLSW_RESET_FILE",
+      "LIVE_KILL_SWITCH_FILE",
+      "LIVE_LEGACY_FILE",
+      "NSEL_ADD_ENABLED",
+      "NSEL_ADD_F1_MIN_BARRET",
+      "NSEL_ADD_TOPK",
+      "NSEL_CORE_ADD_MAX_PER_CLUSTER",
+      "NUMBER_ORDER_BUDGET",
+      "SELECTOR_LEG_CUT",
+      "SIM_AI_DYNAMIC_MAX",
+      "SIM_APPLY_FUNDING",
+      "SIM_BD_FRACTION",
+      "SIM_COND_EXIT_HOURS",
+      "SIM_COND_EXIT_MIN_FAV",
+      "SIM_CRASH_ENTRY_PENALTY",
+      "SIM_DCA_SIGNAL_BASE_RATIO",
+      "SIM_DCA_SIGNAL_COOLDOWN_MIN",
+      "SIM_DCA_SIGNAL_GATE",
+      "SIM_DCA_SIGNAL_LOSS",
+      "SIM_ENTRY_COST_C1",
+      "SIM_ENTRY_COST_C2",
+      "SIM_ENTRY_COST_C4",
+      "SIM_ENTRY_COST_MODE",
+      "SIM_ENTRY_COST_NC",
+      "SIM_ENTRY_SAMPLE_MIN",
+      "SIM_ENTRY_UNIVERSE_DUMP",
+      "SIM_FAIL_FAST_ON_DATA_ERROR",
+      "SIM_FILTER_D3D4",
+      "SIM_FUNDING_MARK",
+      "SIM_FUNDING_SCALE",
+      "SIM_GATE_COUNT_ONLY",
+      "SIM_GATE_P15_Q",
+      "SIM_GATE_REGIME_ADAPTIVE",
+      "SIM_MS_DOWN_BIG_AVG",
+      "SIM_MS_DOWN_BIG_AVG_DCA",
+      "SIM_NSEL_CORE_ADD",
+      "SIM_PREDICT_SYMBOL_RATE_MAX",
+      "SIM_PRE_ARM_SL",
+      "SIM_REGIME_FILE",
+      "SIM_REGIME_FORCE",
+      "SIM_REGIME_GATE_VALUE_COL",
+      "SIM_REGIME_SCALE_UP",
+      "SIM_SL_ADAPT_ARM",
+      "SIM_SL_ADAPT_ARM_STRONG",
+      "SIM_SL_ADAPT_ARM_WEAK",
+      "SIM_SL_ADAPT_HARDSL",
+      "SIM_SL_ADAPT_HARDSL_STRONG",
+      "SIM_SL_ADAPT_HARDSL_WEAK",
+      "SIM_SL_ADAPT_RANK_N",
+      "SIM_SL_ADAPT_TSTOP",
+      "SIM_SL_ADAPT_TSTOP_STRONG_H",
+      "SIM_SL_ADAPT_TSTOP_WEAK_H",
+      "SIM_TAKE_PROFIT_ONLY",
+      "SIM_TAKE_PROFIT_RATE",
+      "SIM_TICKLOG",
+      "SIM_TICKLOG_DIR",
+      "SIM_TICKLOG_POOL",
+      "SIM_TICKLOG_POS_EVERY_MIN",
+      "SIM_TICKLOG_TAG",
+      "SIM_TICK_BLOCK_DROP1M",
+      "SIM_TICK_BLOCK_IND",
+      "SIM_TICK_BLOCK_MIN_SAMPLES",
+      "SIM_TICK_BLOCK_PCT",
+      "SIM_TICK_BLOCK_WIN_DAYS",
+      "SIM_TRAIL_TRACE",
+      "SIM_TS_PNOPUMP_WEAK_THR",
+      "SIM_U_MAX",
+      "SIZE_PACING_MODE",
+      "SIZE_VOL_TARGET_MODE",
+      "TS_CAP_STRONG_RANK",
+      "TS_LADDER",
+      "TS_LADDER_GAPS",
+      "TS_LADDER_LO",
+      "TS_PEAK_MODE",
+      "TS_PNOPUMP_WEAK_THR",
+      "UNIVERSE_CRYPTO_UNDERLYING_TYPES",
+      "UNIVERSE_EXCLUDE",
+      "UNIVERSE_MAX_STALE_MS",
+      "UNIVERSE_TRADFI_LIST",
+      "UNIVERSE_TRADFI_SUBTYPES",
+      "WFO_DISABLE_DCA",
+      "WFO_FUNDING_PRED_DIR",
+      "WFO_LOG_ENTRIES"
+     ],
+     "died_symbols_jar": [
+      "BTCDOMUSDT",
+      "USDCUSDT"
+     ],
+     "override_set_ok": true
+    }
+   ],
+   "FIN-INJ": [
+    "PASS",
+    {
+     "jar_md5": "641803565297d4065d90245e04a00f11",
+     "jar_ok": true,
+     "classes_from_jar": 10,
+     "banners": {
+      "LIVE-SIZING": true,
+      "LIVE-DCA-GRID": true,
+      "MINUTE-FIN": true,
+      "GATE-RATIO": true
+     },
+     "missing_names": [],
+     "differ": {},
+     "overrides": {
+      "C3_CAPITAL": "10000",
+      "C3_EXCLUDE_LEGACY_HELD": "false",
+      "LIVE_ADAPTER": "dry",
+      "LIVE_APPLY_GRID_RATIO": "true",
+      "LIVE_DCA_GRID_ENABLED": "true",
+      "LIVE_GATE_ROLLING_FILE": "/home/ubuntu/claude_master/e2e_v12/out1105_1117_0132/FIN-INJ/run/gate_ratio_live.bin",
+      "LIVE_IS_SHADOW_HOST": "true",
+      "LIVE_TS_MKT_EXT": "0"
+     },
+     "config_properties_replay(E5)": {
+      "AEROSPIKE_READ_CLUSTER": "[HA_TANG] 226",
+      "TICKER_SOURCE": "[HA_TANG] aerospike",
+      "AEROSPIKE_HOST": "[HA_TANG] 127.0.0.1",
+      "AEROSPIKE_PORT": "[HA_TANG] 3999",
+      "AEROSPIKE_NAMESPACE": "[HA_TANG] e2e_none",
+      "AEROSPIKE_HOST_226": "[HA_TANG] 127.0.0.1",
+      "AEROSPIKE_PORT_226": "[HA_TANG] 3999",
+      "AEROSPIKE_NAMESPACE_242": "[HA_TANG] e2e_none",
+      "TIME_RUN": "[HA_TANG] 20210101",
+      "FILE_AI_PREDICTIONS": "[HA_TANG] /nonexistent/e2e_none",
+      "NUMBER_THREAD_ORDER_MANAGER": "[HA_TANG] 2",
+      "DIED_SYMBOLS": "[CHIEN_LUOC_242] BTCDOM,USDC",
+      "SPECIAL_SYMBOLS": "[KHONG_AI_DOC] "
+     },
+     "Cfg_khong_dat_env_mac_dinh_JAR(E5)": [
+      "BD_SEL_MODE",
+      "BD_SEL_TOPK",
+      "BD_SIZE_ADAPT",
+      "BD_SIZE_ADAPT_N",
+      "CONC_CAP_AGG_DCA_ENABLED",
+      "CONC_CAP_AGG_DCA_PCT",
+      "CONC_CAP_BD_PER_HOUR",
+      "CONC_CAP_BD_RATE_ENABLED",
+      "DCA_GRID_ENABLED",
+      "DCA_GRID_L1",
+      "DCA_GRID_LEGS",
+      "DCA_GRID_LEVELS",
+      "DCA_GRID_SCALAR",
+      "DCA_GRID_STEP",
+      "DCA_GRID_W_RATIO",
+      "DCA_RANK_MODE",
+      "DCA_ROUND_CAP_ENABLED",
+      "DCA_ROUND_CAP_PCT",
+      "GATE_BUFFER_SEED",
+      "GATE_BUFFER_SEED_MAX_LAG_H",
+      "GATE_BUFFER_SEED_MD5",
+      "LIVE_C3_ALLOW_NONASCII",
+      "LIVE_C3_IP_WEIGHT_CAP",
+      "LIVE_C3_KEYS_FILE",
+      "LIVE_C3_PILOT_CAPITAL",
+      "LIVE_ENTRY_ENABLED",
+      "LIVE_FIN_GUARD",
+      "LIVE_KILLSW_AUTORELEASE_MIN",
+      "LIVE_KILLSW_C2_COUNT",
+      "LIVE_KILLSW_C2_SLIP",
+      "LIVE_KILLSW_C2_WARN",
+      "LIVE_KILLSW_C2_WINDOW_H",
+      "LIVE_KILLSW_LATCH_FILE",
+      "LIVE_KILLSW_RESET_FILE",
+      "LIVE_KILL_SWITCH_FILE",
+      "LIVE_LEGACY_FILE",
+      "NSEL_ADD_ENABLED",
+      "NSEL_ADD_F1_MIN_BARRET",
+      "NSEL_ADD_TOPK",
+      "NSEL_CORE_ADD_MAX_PER_CLUSTER",
+      "NUMBER_ORDER_BUDGET",
+      "SELECTOR_LEG_CUT",
+      "SIM_AI_DYNAMIC_MAX",
+      "SIM_APPLY_FUNDING",
+      "SIM_BD_FRACTION",
+      "SIM_COND_EXIT_HOURS",
+      "SIM_COND_EXIT_MIN_FAV",
+      "SIM_CRASH_ENTRY_PENALTY",
+      "SIM_DCA_SIGNAL_BASE_RATIO",
+      "SIM_DCA_SIGNAL_COOLDOWN_MIN",
+      "SIM_DCA_SIGNAL_GATE",
+      "SIM_DCA_SIGNAL_LOSS",
+      "SIM_ENTRY_COST_C1",
+      "SIM_ENTRY_COST_C2",
+      "SIM_ENTRY_COST_C4",
+      "SIM_ENTRY_COST_MODE",
+      "SIM_ENTRY_COST_NC",
+      "SIM_ENTRY_SAMPLE_MIN",
+      "SIM_ENTRY_UNIVERSE_DUMP",
+      "SIM_FAIL_FAST_ON_DATA_ERROR",
+      "SIM_FILTER_D3D4",
+      "SIM_FUNDING_MARK",
+      "SIM_FUNDING_SCALE",
+      "SIM_GATE_COUNT_ONLY",
+      "SIM_GATE_P15_Q",
+      "SIM_GATE_REGIME_ADAPTIVE",
+      "SIM_MS_DOWN_BIG_AVG",
+      "SIM_MS_DOWN_BIG_AVG_DCA",
+      "SIM_NSEL_CORE_ADD",
+      "SIM_PREDICT_SYMBOL_RATE_MAX",
+      "SIM_PRE_ARM_SL",
+      "SIM_REGIME_FILE",
+      "SIM_REGIME_FORCE",
+      "SIM_REGIME_GATE_VALUE_COL",
+      "SIM_REGIME_SCALE_UP",
+      "SIM_SL_ADAPT_ARM",
+      "SIM_SL_ADAPT_ARM_STRONG",
+      "SIM_SL_ADAPT_ARM_WEAK",
+      "SIM_SL_ADAPT_HARDSL",
+      "SIM_SL_ADAPT_HARDSL_STRONG",
+      "SIM_SL_ADAPT_HARDSL_WEAK",
+      "SIM_SL_ADAPT_RANK_N",
+      "SIM_SL_ADAPT_TSTOP",
+      "SIM_SL_ADAPT_TSTOP_STRONG_H",
+      "SIM_SL_ADAPT_TSTOP_WEAK_H",
+      "SIM_TAKE_PROFIT_ONLY",
+      "SIM_TAKE_PROFIT_RATE",
+      "SIM_TICKLOG",
+      "SIM_TICKLOG_DIR",
+      "SIM_TICKLOG_POOL",
+      "SIM_TICKLOG_POS_EVERY_MIN",
+      "SIM_TICKLOG_TAG",
+      "SIM_TICK_BLOCK_DROP1M",
+      "SIM_TICK_BLOCK_IND",
+      "SIM_TICK_BLOCK_MIN_SAMPLES",
+      "SIM_TICK_BLOCK_PCT",
+      "SIM_TICK_BLOCK_WIN_DAYS",
+      "SIM_TRAIL_TRACE",
+      "SIM_TS_PNOPUMP_WEAK_THR",
+      "SIM_U_MAX",
+      "SIZE_PACING_MODE",
+      "SIZE_VOL_TARGET_MODE",
+      "TS_CAP_STRONG_RANK",
+      "TS_LADDER",
+      "TS_LADDER_GAPS",
+      "TS_LADDER_LO",
+      "TS_PEAK_MODE",
+      "TS_PNOPUMP_WEAK_THR",
+      "UNIVERSE_CRYPTO_UNDERLYING_TYPES",
+      "UNIVERSE_EXCLUDE",
+      "UNIVERSE_MAX_STALE_MS",
+      "UNIVERSE_TRADFI_LIST",
+      "UNIVERSE_TRADFI_SUBTYPES",
+      "WFO_DISABLE_DCA",
+      "WFO_FUNDING_PRED_DIR",
+      "WFO_LOG_ENTRIES"
+     ],
+     "died_symbols_jar": [
+      "BTCDOMUSDT",
+      "USDCUSDT"
+     ],
+     "override_set_ok": true
+    }
+   ],
+   "R-1000": [
+    "PASS",
+    {
+     "jar_md5": "641803565297d4065d90245e04a00f11",
+     "jar_ok": true,
+     "classes_from_jar": 10,
+     "banners": {
+      "LIVE-SIZING": true,
+      "LIVE-DCA-GRID": true,
+      "MINUTE-FIN": true,
+      "GATE-RATIO": true
+     },
+     "missing_names": [],
+     "differ": {},
+     "overrides": {
+      "C3_CAPITAL": "1000",
+      "C3_EXCLUDE_LEGACY_HELD": "false",
+      "LIVE_ADAPTER": "dry",
+      "LIVE_APPLY_GRID_RATIO": "true",
+      "LIVE_DCA_GRID_ENABLED": "true",
+      "LIVE_GATE_ROLLING_FILE": "/home/ubuntu/claude_master/e2e_v12/out1105_1117_0132/R-1000/run/gate_ratio_live.bin",
+      "LIVE_IS_SHADOW_HOST": "true",
+      "LIVE_TS_MKT_EXT": "0"
+     },
+     "config_properties_replay(E5)": {
+      "AEROSPIKE_READ_CLUSTER": "[HA_TANG] 226",
+      "TICKER_SOURCE": "[HA_TANG] aerospike",
+      "AEROSPIKE_HOST": "[HA_TANG] 127.0.0.1",
+      "AEROSPIKE_PORT": "[HA_TANG] 3999",
+      "AEROSPIKE_NAMESPACE": "[HA_TANG] e2e_none",
+      "AEROSPIKE_HOST_226": "[HA_TANG] 127.0.0.1",
+      "AEROSPIKE_PORT_226": "[HA_TANG] 3999",
+      "AEROSPIKE_NAMESPACE_242": "[HA_TANG] e2e_none",
+      "TIME_RUN": "[HA_TANG] 20210101",
+      "FILE_AI_PREDICTIONS": "[HA_TANG] /nonexistent/e2e_none",
+      "NUMBER_THREAD_ORDER_MANAGER": "[HA_TANG] 2",
+      "DIED_SYMBOLS": "[CHIEN_LUOC_242] BTCDOM,USDC",
+      "SPECIAL_SYMBOLS": "[KHONG_AI_DOC] "
+     },
+     "Cfg_khong_dat_env_mac_dinh_JAR(E5)": [
+      "BD_SEL_MODE",
+      "BD_SEL_TOPK",
+      "BD_SIZE_ADAPT",
+      "BD_SIZE_ADAPT_N",
+      "CONC_CAP_AGG_DCA_ENABLED",
+      "CONC_CAP_AGG_DCA_PCT",
+      "CONC_CAP_BD_PER_HOUR",
+      "CONC_CAP_BD_RATE_ENABLED",
+      "DCA_GRID_ENABLED",
+      "DCA_GRID_L1",
+      "DCA_GRID_LEGS",
+      "DCA_GRID_LEVELS",
+      "DCA_GRID_SCALAR",
+      "DCA_GRID_STEP",
+      "DCA_GRID_W_RATIO",
+      "DCA_RANK_MODE",
+      "DCA_ROUND_CAP_ENABLED",
+      "DCA_ROUND_CAP_PCT",
+      "GATE_BUFFER_SEED",
+      "GATE_BUFFER_SEED_MAX_LAG_H",
+      "GATE_BUFFER_SEED_MD5",
+      "LIVE_C3_ALLOW_NONASCII",
+      "LIVE_C3_IP_WEIGHT_CAP",
+      "LIVE_C3_KEYS_FILE",
+      "LIVE_C3_PILOT_CAPITAL",
+      "LIVE_ENTRY_ENABLED",
+      "LIVE_FIN_GUARD",
+      "LIVE_KILLSW_AUTORELEASE_MIN",
+      "LIVE_KILLSW_C2_COUNT",
+      "LIVE_KILLSW_C2_SLIP",
+      "LIVE_KILLSW_C2_WARN",
+      "LIVE_KILLSW_C2_WINDOW_H",
+      "LIVE_KILLSW_LATCH_FILE",
+      "LIVE_KILLSW_RESET_FILE",
+      "LIVE_KILL_SWITCH_FILE",
+      "LIVE_LEGACY_FILE",
+      "NSEL_ADD_ENABLED",
+      "NSEL_ADD_F1_MIN_BARRET",
+      "NSEL_ADD_TOPK",
+      "NSEL_CORE_ADD_MAX_PER_CLUSTER",
+      "NUMBER_ORDER_BUDGET",
+      "SELECTOR_LEG_CUT",
+      "SIM_AI_DYNAMIC_MAX",
+      "SIM_APPLY_FUNDING",
+      "SIM_BD_FRACTION",
+      "SIM_COND_EXIT_HOURS",
+      "SIM_COND_EXIT_MIN_FAV",
+      "SIM_CRASH_ENTRY_PENALTY",
+      "SIM_DCA_SIGNAL_BASE_RATIO",
+      "SIM_DCA_SIGNAL_COOLDOWN_MIN",
+      "SIM_DCA_SIGNAL_GATE",
+      "SIM_DCA_SIGNAL_LOSS",
+      "SIM_ENTRY_COST_C1",
+      "SIM_ENTRY_COST_C2",
+      "SIM_ENTRY_COST_C4",
+      "SIM_ENTRY_COST_MODE",
+      "SIM_ENTRY_COST_NC",
+      "SIM_ENTRY_SAMPLE_MIN",
+      "SIM_ENTRY_UNIVERSE_DUMP",
+      "SIM_FAIL_FAST_ON_DATA_ERROR",
+      "SIM_FILTER_D3D4",
+      "SIM_FUNDING_MARK",
+      "SIM_FUNDING_SCALE",
+      "SIM_GATE_COUNT_ONLY",
+      "SIM_GATE_P15_Q",
+      "SIM_GATE_REGIME_ADAPTIVE",
+      "SIM_MS_DOWN_BIG_AVG",
+      "SIM_MS_DOWN_BIG_AVG_DCA",
+      "SIM_NSEL_CORE_ADD",
+      "SIM_PREDICT_SYMBOL_RATE_MAX",
+      "SIM_PRE_ARM_SL",
+      "SIM_REGIME_FILE",
+      "SIM_REGIME_FORCE",
+      "SIM_REGIME_GATE_VALUE_COL",
+      "SIM_REGIME_SCALE_UP",
+      "SIM_SL_ADAPT_ARM",
+      "SIM_SL_ADAPT_ARM_STRONG",
+      "SIM_SL_ADAPT_ARM_WEAK",
+      "SIM_SL_ADAPT_HARDSL",
+      "SIM_SL_ADAPT_HARDSL_STRONG",
+      "SIM_SL_ADAPT_HARDSL_WEAK",
+      "SIM_SL_ADAPT_RANK_N",
+      "SIM_SL_ADAPT_TSTOP",
+      "SIM_SL_ADAPT_TSTOP_STRONG_H",
+      "SIM_SL_ADAPT_TSTOP_WEAK_H",
+      "SIM_TAKE_PROFIT_ONLY",
+      "SIM_TAKE_PROFIT_RATE",
+      "SIM_TICKLOG",
+      "SIM_TICKLOG_DIR",
+      "SIM_TICKLOG_POOL",
+      "SIM_TICKLOG_POS_EVERY_MIN",
+      "SIM_TICKLOG_TAG",
+      "SIM_TICK_BLOCK_DROP1M",
+      "SIM_TICK_BLOCK_IND",
+      "SIM_TICK_BLOCK_MIN_SAMPLES",
+      "SIM_TICK_BLOCK_PCT",
+      "SIM_TICK_BLOCK_WIN_DAYS",
+      "SIM_TRAIL_TRACE",
+      "SIM_TS_PNOPUMP_WEAK_THR",
+      "SIM_U_MAX",
+      "SIZE_PACING_MODE",
+      "SIZE_VOL_TARGET_MODE",
+      "TS_CAP_STRONG_RANK",
+      "TS_LADDER",
+      "TS_LADDER_GAPS",
+      "TS_LADDER_LO",
+      "TS_PEAK_MODE",
+      "TS_PNOPUMP_WEAK_THR",
+      "UNIVERSE_CRYPTO_UNDERLYING_TYPES",
+      "UNIVERSE_EXCLUDE",
+      "UNIVERSE_MAX_STALE_MS",
+      "UNIVERSE_TRADFI_LIST",
+      "UNIVERSE_TRADFI_SUBTYPES",
+      "WFO_DISABLE_DCA",
+      "WFO_FUNDING_PRED_DIR",
+      "WFO_LOG_ENTRIES"
+     ],
+     "died_symbols_jar": [
+      "BTCDOMUSDT",
+      "USDCUSDT"
+     ],
+     "override_set_ok": true
+    }
+   ],
+   "R-4000": [
+    "PASS",
+    {
+     "jar_md5": "641803565297d4065d90245e04a00f11",
+     "jar_ok": true,
+     "classes_from_jar": 10,
+     "banners": {
+      "LIVE-SIZING": true,
+      "LIVE-DCA-GRID": true,
+      "MINUTE-FIN": true,
+      "GATE-RATIO": true
+     },
+     "missing_names": [],
+     "differ": {},
+     "overrides": {
+      "C3_CAPITAL": "4000",
+      "C3_EXCLUDE_LEGACY_HELD": "false",
+      "LIVE_ADAPTER": "dry",
+      "LIVE_APPLY_GRID_RATIO": "true",
+      "LIVE_DCA_GRID_ENABLED": "true",
+      "LIVE_GATE_ROLLING_FILE": "/home/ubuntu/claude_master/e2e_v12/out1105_1117_0132/R-4000/run/gate_ratio_live.bin",
+      "LIVE_IS_SHADOW_HOST": "true",
+      "LIVE_TS_MKT_EXT": "0"
+     },
+     "config_properties_replay(E5)": {
+      "AEROSPIKE_READ_CLUSTER": "[HA_TANG] 226",
+      "TICKER_SOURCE": "[HA_TANG] aerospike",
+      "AEROSPIKE_HOST": "[HA_TANG] 127.0.0.1",
+      "AEROSPIKE_PORT": "[HA_TANG] 3999",
+      "AEROSPIKE_NAMESPACE": "[HA_TANG] e2e_none",
+      "AEROSPIKE_HOST_226": "[HA_TANG] 127.0.0.1",
+      "AEROSPIKE_PORT_226": "[HA_TANG] 3999",
+      "AEROSPIKE_NAMESPACE_242": "[HA_TANG] e2e_none",
+      "TIME_RUN": "[HA_TANG] 20210101",
+      "FILE_AI_PREDICTIONS": "[HA_TANG] /nonexistent/e2e_none",
+      "NUMBER_THREAD_ORDER_MANAGER": "[HA_TANG] 2",
+      "DIED_SYMBOLS": "[CHIEN_LUOC_242] BTCDOM,USDC",
+      "SPECIAL_SYMBOLS": "[KHONG_AI_DOC] "
+     },
+     "Cfg_khong_dat_env_mac_dinh_JAR(E5)": [
+      "BD_SEL_MODE",
+      "BD_SEL_TOPK",
+      "BD_SIZE_ADAPT",
+      "BD_SIZE_ADAPT_N",
+      "CONC_CAP_AGG_DCA_ENABLED",
+      "CONC_CAP_AGG_DCA_PCT",
+      "CONC_CAP_BD_PER_HOUR",
+      "CONC_CAP_BD_RATE_ENABLED",
+      "DCA_GRID_ENABLED",
+      "DCA_GRID_L1",
+      "DCA_GRID_LEGS",
+      "DCA_GRID_LEVELS",
+      "DCA_GRID_SCALAR",
+      "DCA_GRID_STEP",
+      "DCA_GRID_W_RATIO",
+      "DCA_RANK_MODE",
+      "DCA_ROUND_CAP_ENABLED",
+      "DCA_ROUND_CAP_PCT",
+      "GATE_BUFFER_SEED",
+      "GATE_BUFFER_SEED_MAX_LAG_H",
+      "GATE_BUFFER_SEED_MD5",
+      "LIVE_C3_ALLOW_NONASCII",
+      "LIVE_C3_IP_WEIGHT_CAP",
+      "LIVE_C3_KEYS_FILE",
+      "LIVE_C3_PILOT_CAPITAL",
+      "LIVE_ENTRY_ENABLED",
+      "LIVE_FIN_GUARD",
+      "LIVE_KILLSW_AUTORELEASE_MIN",
+      "LIVE_KILLSW_C2_COUNT",
+      "LIVE_KILLSW_C2_SLIP",
+      "LIVE_KILLSW_C2_WARN",
+      "LIVE_KILLSW_C2_WINDOW_H",
+      "LIVE_KILLSW_LATCH_FILE",
+      "LIVE_KILLSW_RESET_FILE",
+      "LIVE_KILL_SWITCH_FILE",
+      "LIVE_LEGACY_FILE",
+      "NSEL_ADD_ENABLED",
+      "NSEL_ADD_F1_MIN_BARRET",
+      "NSEL_ADD_TOPK",
+      "NSEL_CORE_ADD_MAX_PER_CLUSTER",
+      "NUMBER_ORDER_BUDGET",
+      "SELECTOR_LEG_CUT",
+      "SIM_AI_DYNAMIC_MAX",
+      "SIM_APPLY_FUNDING",
+      "SIM_BD_FRACTION",
+      "SIM_COND_EXIT_HOURS",
+      "SIM_COND_EXIT_MIN_FAV",
+      "SIM_CRASH_ENTRY_PENALTY",
+      "SIM_DCA_SIGNAL_BASE_RATIO",
+      "SIM_DCA_SIGNAL_COOLDOWN_MIN",
+      "SIM_DCA_SIGNAL_GATE",
+      "SIM_DCA_SIGNAL_LOSS",
+      "SIM_ENTRY_COST_C1",
+      "SIM_ENTRY_COST_C2",
+      "SIM_ENTRY_COST_C4",
+      "SIM_ENTRY_COST_MODE",
+      "SIM_ENTRY_COST_NC",
+      "SIM_ENTRY_SAMPLE_MIN",
+      "SIM_ENTRY_UNIVERSE_DUMP",
+      "SIM_FAIL_FAST_ON_DATA_ERROR",
+      "SIM_FILTER_D3D4",
+      "SIM_FUNDING_MARK",
+      "SIM_FUNDING_SCALE",
+      "SIM_GATE_COUNT_ONLY",
+      "SIM_GATE_P15_Q",
+      "SIM_GATE_REGIME_ADAPTIVE",
+      "SIM_MS_DOWN_BIG_AVG",
+      "SIM_MS_DOWN_BIG_AVG_DCA",
+      "SIM_NSEL_CORE_ADD",
+      "SIM_PREDICT_SYMBOL_RATE_MAX",
+      "SIM_PRE_ARM_SL",
+      "SIM_REGIME_FILE",
+      "SIM_REGIME_FORCE",
+      "SIM_REGIME_GATE_VALUE_COL",
+      "SIM_REGIME_SCALE_UP",
+      "SIM_SL_ADAPT_ARM",
+      "SIM_SL_ADAPT_ARM_STRONG",
+      "SIM_SL_ADAPT_ARM_WEAK",
+      "SIM_SL_ADAPT_HARDSL",
+      "SIM_SL_ADAPT_HARDSL_STRONG",
+      "SIM_SL_ADAPT_HARDSL_WEAK",
+      "SIM_SL_ADAPT_RANK_N",
+      "SIM_SL_ADAPT_TSTOP",
+      "SIM_SL_ADAPT_TSTOP_STRONG_H",
+      "SIM_SL_ADAPT_TSTOP_WEAK_H",
+      "SIM_TAKE_PROFIT_ONLY",
+      "SIM_TAKE_PROFIT_RATE",
+      "SIM_TICKLOG",
+      "SIM_TICKLOG_DIR",
+      "SIM_TICKLOG_POOL",
+      "SIM_TICKLOG_POS_EVERY_MIN",
+      "SIM_TICKLOG_TAG",
+      "SIM_TICK_BLOCK_DROP1M",
+      "SIM_TICK_BLOCK_IND",
+      "SIM_TICK_BLOCK_MIN_SAMPLES",
+      "SIM_TICK_BLOCK_PCT",
+      "SIM_TICK_BLOCK_WIN_DAYS",
+      "SIM_TRAIL_TRACE",
+      "SIM_TS_PNOPUMP_WEAK_THR",
+      "SIM_U_MAX",
+      "SIZE_PACING_MODE",
+      "SIZE_VOL_TARGET_MODE",
+      "TS_CAP_STRONG_RANK",
+      "TS_LADDER",
+      "TS_LADDER_GAPS",
+      "TS_LADDER_LO",
+      "TS_PEAK_MODE",
+      "TS_PNOPUMP_WEAK_THR",
+      "UNIVERSE_CRYPTO_UNDERLYING_TYPES",
+      "UNIVERSE_EXCLUDE",
+      "UNIVERSE_MAX_STALE_MS",
+      "UNIVERSE_TRADFI_LIST",
+      "UNIVERSE_TRADFI_SUBTYPES",
+      "WFO_DISABLE_DCA",
+      "WFO_FUNDING_PRED_DIR",
+      "WFO_LOG_ENTRIES"
+     ],
+     "died_symbols_jar": [
+      "BTCDOMUSDT",
+      "USDCUSDT"
+     ],
+     "override_set_ok": true
+    }
+   ]
+  }
+ ],
+ "E1[R0]": [
+  "PASS",
+  {
+   "n_replay": 24,
+   "n_ref": 24
+  }
+ ],
+ "S1[R0]": [
+  "PASS",
+  {
+   "n_submit": 24,
+   "worst_rel_budget": 0.0,
+   "bad": [],
+   "n_bad": 0,
+   "hand_values_ref": [
+    225.0,
+    216.5625,
+    208.44140625
+   ],
+   "hand_ok": true,
+   "first3_replay(b,used_REF,margin_before_jar)": [
+    [
+     225.0,
+     0.0,
+     0.0
+    ],
+    [
+     216.56466674804688,
+     224.9424,
+     224.9424
+    ],
+    [
+     208.4436492919922,
+     441.502878,
+     441.502878
+    ]
+   ],
+   "C3_CAPITAL": 10000.0,
+   "U(E10)": {
+    "worst_abs": 1.1102230246251565e-16,
+    "n_bad(>1e-6)": 0,
+    "bad": []
+   },
+   "E": {
+    "worst_rel": 0.0,
+    "n_bad(>1e-6)": 0,
+    "bad": [],
+    "eq_at_minus_decision_s": {
+     "60": 24
+    },
+    "eq_at_lech_moc(BAO CAO, N14)": {
+     "n_submit_lech_moc": 0,
+     "max_abs_lech_ms": 0,
+     "vi_du": []
+    },
+    "C_eff_min": 9990.917161181
+   }
+  }
+ ],
+ "K1[R0]": [
+  "PASS",
+  {
+   "error_lines": 0,
+   "error_sample": [],
+   "latch": [],
+   "khan": []
+  }
+ ],
+ "E1[R0-DRY]": [
+  "PASS",
+  {
+   "n_replay": 24,
+   "n_ref": 24
+  }
+ ],
+ "S1[R0-DRY]": [
+  "PASS",
+  {
+   "n_submit": 24,
+   "worst_rel_budget": 0.0,
+   "bad": [],
+   "n_bad": 0,
+   "hand_values_ref": [
+    225.0,
+    216.5625,
+    208.44140625
+   ],
+   "hand_ok": true,
+   "first3_replay(b,used_REF,margin_before_jar)": [
+    [
+     225.0,
+     0.0,
+     0.0
+    ],
+    [
+     216.56466674804688,
+     224.94239258766174,
+     224.94239258766174
+    ],
+    [
+     208.44210815429688,
+     441.5436448659748,
+     441.5436448659748
+    ]
+   ],
+   "C3_CAPITAL": 10000.0,
+   "U(E10)": {
+    "worst_abs": 5.551115123125783e-17,
+    "n_bad(>1e-6)": 0,
+    "bad": []
+   },
+   "E": {
+    "worst_rel": 0.0,
+    "n_bad(>1e-6)": 0,
+    "bad": [],
+    "eq_at_minus_decision_s": {
+     "60": 24
+    },
+    "eq_at_lech_moc(BAO CAO, N14)": {
+     "n_submit_lech_moc": 0,
+     "max_abs_lech_ms": 0,
+     "vi_du": []
+    },
+    "C_eff_min": 9990.801675651755
+   }
+  }
+ ],
+ "K1[R0-DRY]": [
+  "PASS",
+  {
+   "error_lines": 0,
+   "error_sample": [],
+   "latch": [],
+   "khan": []
+  }
+ ],
+ "D1[tu nhien R0]": [
+  "KHONG XAY RA",
+  {
+   "replay": [],
+   "ref": [],
+   "leg_checks": []
+  }
+ ],
+ "D1[S-DCA]": [
+  "PASS",
+  {
+   "sdca_replay": {
+    "HUMAUSDT": 1793894400000,
+    "IDOLUSDT": 1793894400000
+   },
+   "sdca_ref": {
+    "HUMAUSDT": 1793894400000,
+    "IDOLUSDT": 1793894400000
+   },
+   "st": 1793894400000,
+   "thiet_ke_phut_DCA(st+3,+12,+22)": [
+    1793894580000,
+    1793895120000,
+    1793895720000
+   ],
+   "dip_ref": [
+    1793894520000,
+    1793894580000,
+    1793895120000,
+    1793895720000
+   ],
+   "p15_zero_ref": [
+    1793894520000
+   ],
+   "clusters": {
+    "HUMAUSDT": {
+     "leg_idx": [
+      1,
+      2,
+      3
+     ],
+     "minutes": [
+      1793894580000,
+      1793895120000,
+      1793895720000
+     ],
+     "ref_minutes": [
+      1793894580000,
+      1793895120000,
+      1793895720000
+     ],
+     "khop_thiet_ke": true,
+     "leg_checks": [
+      {
+       "b": 1793894580000,
+       "sym": "HUMAUSDT",
+       "legIdx": 1,
+       "dieu_kien_tt": true,
+       "p15_ok": true,
+       "tt": {
+        "big": "0",
+        "alt": "1",
+        "p15": "0.015099847689270973",
+        "dip": "1"
+       },
+       "budget_rel": 0.0,
+       "E_rel": 0.0,
+       "U_abs": 1.1102230246251565e-16,
+       "eq_at_khop(BAO CAO, N14)": true,
+       "ok": true
+      },
+      {
+       "b": 1793895120000,
+       "sym": "HUMAUSDT",
+       "legIdx": 2,
+       "dieu_kien_tt": true,
+       "p15_ok": true,
+       "tt": {
+        "big": "0",
+        "alt": "1",
+        "p15": "0.010108580812811852",
+        "dip": "1"
+       },
+       "budget_rel": 0.0,
+       "E_rel": 0.0,
+       "U_abs": 1.6653345369377348e-16,
+       "eq_at_khop(BAO CAO, N14)": true,
+       "ok": true
+      },
+      {
+       "b": 1793895720000,
+       "sym": "HUMAUSDT",
+       "legIdx": 3,
+       "dieu_kien_tt": true,
+       "p15_ok": true,
+       "tt": {
+        "big": "0",
+        "alt": "1",
+        "p15": "0.00957070104777813",
+        "dip": "1"
+       },
+       "budget_rel": 0.0,
+       "E_rel": 0.0,
+       "U_abs": 1.6653345369377348e-16,
+       "eq_at_khop(BAO CAO, N14)": true,
+       "ok": true
+      }
+     ],
+     "leg_before_level": [],
+     "no_5th": true,
+     "ok": true
+    },
+    "IDOLUSDT": {
+     "leg_idx": [
+      1,
+      2,
+      3
+     ],
+     "minutes": [
+      1793894580000,
+      1793895120000,
+      1793895720000
+     ],
+     "ref_minutes": [
+      1793894580000,
+      1793895120000,
+      1793895720000
+     ],
+     "khop_thiet_ke": true,
+     "leg_checks": [
+      {
+       "b": 1793894580000,
+       "sym": "IDOLUSDT",
+       "legIdx": 1,
+       "dieu_kien_tt": true,
+       "p15_ok": true,
+       "tt": {
+        "big": "0",
+        "alt": "1",
+        "p15": "0.015099847689270973",
+        "dip": "1"
+       },
+       "budget_rel": 0.0,
+       "E_rel": 0.0,
+       "U_abs": 1.1102230246251565e-16,
+       "eq_at_khop(BAO CAO, N14)": true,
+       "ok": true
+      },
+      {
+       "b": 1793895120000,
+       "sym": "IDOLUSDT",
+       "legIdx": 2,
+       "dieu_kien_tt": true,
+       "p15_ok": true,
+       "tt": {
+        "big": "0",
+        "alt": "1",
+        "p15": "0.010108580812811852",
+        "dip": "1"
+       },
+       "budget_rel": 0.0,
+       "E_rel": 0.0,
+       "U_abs": 5.551115123125783e-17,
+       "eq_at_khop(BAO CAO, N14)": true,
+       "ok": true
+      },
+      {
+       "b": 1793895720000,
+       "sym": "IDOLUSDT",
+       "legIdx": 3,
+       "dieu_kien_tt": true,
+       "p15_ok": true,
+       "tt": {
+        "big": "0",
+        "alt": "1",
+        "p15": "0.00957070104777813",
+        "dip": "1"
+       },
+       "budget_rel": 0.0,
+       "E_rel": 0.0,
+       "U_abs": 1.1102230246251565e-16,
+       "eq_at_khop(BAO CAO, N14)": true,
+       "ok": true
+      }
+     ],
+     "leg_before_level": [],
+     "no_5th": true,
+     "ok": true
+    }
+   }
+  }
+ ],
+ "X1[R0]": [
+  "PASS",
+  {
+   "n_danh_gia": 24,
+   "kinds_replay": {
+    "TRAIL": 21,
+    "TIME_STOP": 3
+   },
+   "n_TIME_STOP": 3,
+   "n_ARM_CUNG_NEN(REF-nhip)": 3,
+   "n_ARM_CUNG_NEN_jar": 3,
+   "ARM_CUNG_NEN_bao_cao_rieng": [
+    {
+     "cum": [
+      "JCTUSDT",
+      1793893920000
+     ],
+     "dmin_jar_vs_nhip": 0,
+     "dmin_jar_vs_nen": -4,
+     "nhip_vs_nen": {
+      "dphut": -4,
+      "dsl_tick": 0.0,
+      "dsl_pct": 0.0
+     },
+     "dstop_tick_vs_nhip": -0.5199973285201568,
+     "dfill": -0.000489135172042981,
+     "ev": "2:ARM"
+    },
+    {
+     "cum": [
+      "UAIUSDT",
+      1793893860000
+     ],
+     "dmin_jar_vs_nhip": 0,
+     "dmin_jar_vs_nen": -1,
+     "nhip_vs_nen": {
+      "dphut": -1,
+      "dsl_tick": 0.0,
+      "dsl_pct": 0.0
+     },
+     "dstop_tick_vs_nhip": -0.8800002932549122,
+     "dfill": 0.0,
+     "ev": "3:ARM"
+    },
+    {
+     "cum": [
+      "CAPUSDT",
+      1793893920000
+     ],
+     "dmin_jar_vs_nhip": 0,
+     "dmin_jar_vs_nen": 0,
+     "nhip_vs_nen": {
+      "dphut": 0,
+      "dsl_tick": 53.94994854927004,
+      "dsl_pct": 0.004672892738538068
+     },
+     "dstop_tick_vs_nhip": -0.24995176494124746,
+     "dfill": -0.0162230520786383,
+     "ev": "2:SL"
+    }
+   ],
+   "nhan_lech(jar vs REF-nhip)": [],
+   "khong_nhan_nhip_khac_phut_nen(bao cao)": 0,
+   "n_X14_HOAN": 0,
+   "con_lai_cung_phut": 18,
+   "con_lai_n": 18,
+   "dmin_lech": [
+    [
+     [
+      "JCTUSDT",
+      1793893920000
+     ],
+     -4
+    ],
+    [
+     [
+      "UAIUSDT",
+      1793893860000
+     ],
+     -1
+    ]
+   ],
+   "px_bad": [],
+   "dstop_tick_max": 0.9749582782388189,
+   "gia_khop_san_gia_BAO_CAO": {
+    "mean": -0.005349868950248686,
+    "min": -0.0205823310834128
+   },
+   "mismatch": [],
+   "ref_exited_not_replay": [],
+   "reason_diff_1leg": [],
+   "open_end_replay": 0,
+   "ok_reason": true,
+   "ok_phut": true,
+   "ok_gia": true,
+   "ok_nhan": true
+  }
+ ],
+ "S1[S-DCA]": [
+  "PASS",
+  {
+   "n_submit": 30,
+   "worst_rel_budget": 0.0,
+   "bad": [],
+   "n_bad": 0,
+   "hand_values_ref": [
+    225.0,
+    216.5625,
+    208.44140625
+   ],
+   "hand_ok": true,
+   "first3_replay(b,used_REF,margin_before_jar)": [
+    [
+     225.0,
+     0.0,
+     0.0
+    ],
+    [
+     216.56466674804688,
+     224.9424,
+     224.9424
+    ],
+    [
+     208.4436492919922,
+     441.502878,
+     441.502878
+    ]
+   ],
+   "C3_CAPITAL": 10000.0,
+   "U(E10)": {
+    "worst_abs": 1.6653345369377348e-16,
+    "n_bad(>1e-6)": 0,
+    "bad": []
+   },
+   "E": {
+    "worst_rel": 0.0,
+    "n_bad(>1e-6)": 0,
+    "bad": [],
+    "eq_at_minus_decision_s": {
+     "60": 30
+    },
+    "eq_at_lech_moc(BAO CAO, N14)": {
+     "n_submit_lech_moc": 0,
+     "max_abs_lech_ms": 0,
+     "vi_du": []
+    },
+    "C_eff_min": 9482.8333401101
+   }
+  }
+ ],
+ "F1[FIN-INJ]": [
+  "PASS",
+  {
+   "symbol": "UAIUSDT",
+   "bar": 1793893860000,
+   "submitted": 0,
+   "fin_excl_outcome": 1,
+   "log_line": true,
+   "others_fininj": [
+    [
+     "HUMAUSDT",
+     "SUBMITTED"
+    ],
+    [
+     "IDOLUSDT",
+     "SUBMITTED"
+    ]
+   ],
+   "others_r0": [
+    [
+     "HUMAUSDT",
+     "SUBMITTED"
+    ],
+    [
+     "IDOLUSDT",
+     "SUBMITTED"
+    ]
+   ],
+   "symbol_had_leg_in_r0": true,
+   "ref_fin_inj": {
+    "symbol": "UAIUSDT",
+    "bar": 1793893860000
+   }
+  }
+ ],
+ "E2[R-OLD]": [
+  "FAIL",
+  {
+   "n_real": 23,
+   "match": 22,
+   "unlabeled": [
+    [
+     "thieu/lech",
+     [
+      "AINUSDT",
+      1793893920000
+     ]
+    ]
+   ],
+   "nhan": {
+    "file": "/home/ubuntu/claude_master/fin1114/c3_e2e/tools/e2e/labels_1105.csv",
+    "md5": "7af0c00e2e7e7fd072c8565acb7ed703",
+    "loi": [],
+    "n": 0
+   },
+   "legacy_E9": {
+    "jar_n": 44,
+    "jar_excludeLegacyHeld": true,
+    "jar_file_md5": "05573adddecb7e48d76cac4d81f362dd",
+    "nguon": {
+     "source": "/home/ubuntu/claude_master/pull242/2026-11-05/logs/full.log@1793928180_135437659.gz",
+     "source_md5": "74952c2272a05b6bb75804dcaf3de485",
+     "line": 708191.0,
+     "line_ms": 1793836750951.0,
+     "n": 44.0,
+     "n_doi_trong_cua_so": 1.0,
+     "doi_trong_cua_so": [
+      {
+       "ms": 1793895131172.0,
+       "file": "full.log@1793928180_135437659.gz",
+       "dong": 737699.0,
+       "n": 43.0,
+       "them": [],
+       "bot": [
+        "SOXSUSDT"
+       ]
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "MKT[R0] rig vs REF": [
+  "BAO CAO",
+  {
+   "phut_so": 12959,
+   "phut_lech_co": 0,
+   "rig_big": 0,
+   "rig_alt": 31,
+   "ref_big": 0,
+   "ref_alt": 31,
+   "lech": []
+  }
+ ],
+ "N7 REF universe A1 vs khong loc": [
+  "BAO CAO",
+  {
+   "R0": {
+    "minutes": 12959,
+    "big_a1": 0,
+    "alt_a1": 31,
+    "big_all": 0,
+    "alt_all": 92,
+    "flag_a1_ne_all": 61
+   },
+   "S-DCA": {
+    "minutes": 12959,
+    "big_a1": 0,
+    "alt_a1": 35,
+    "big_all": 0,
+    "alt_all": 96,
+    "flag_a1_ne_all": 61
+   }
+  }
+ ],
+ "N8 key config khong mac dinh JAR": [
+  "BAO CAO",
+  {
+   "keys": {
+    "AEROSPIKE_READ_CLUSTER": "[HA_TANG] 226",
+    "TICKER_SOURCE": "[HA_TANG] aerospike",
+    "AEROSPIKE_HOST": "[HA_TANG] 127.0.0.1",
+    "AEROSPIKE_PORT": "[HA_TANG] 3999",
+    "AEROSPIKE_NAMESPACE": "[HA_TANG] e2e_none",
+    "AEROSPIKE_HOST_226": "[HA_TANG] 127.0.0.1",
+    "AEROSPIKE_PORT_226": "[HA_TANG] 3999",
+    "AEROSPIKE_NAMESPACE_242": "[HA_TANG] e2e_none",
+    "TIME_RUN": "[HA_TANG] 20210101",
+    "FILE_AI_PREDICTIONS": "[HA_TANG] /nonexistent/e2e_none",
+    "NUMBER_THREAD_ORDER_MANAGER": "[HA_TANG] 2",
+    "DIED_SYMBOLS": "[CHIEN_LUOC_242] BTCDOM,USDC",
+    "SPECIAL_SYMBOLS": "[KHONG_AI_DOC] "
+   },
+   "n": 13,
+   "nhan": {
+    "[HA_TANG]": 11,
+    "[CHIEN_LUOC_242]": 1,
+    "[KHONG_AI_DOC]": 1
+   },
+   "DIED_SYMBOLS": "[CHIEN_LUOC_242] BTCDOM,USDC",
+   "died_symbols_jar": [
+    "BTCDOMUSDT",
+    "USDCUSDT"
+   ],
+   "ghi_chu": "DIED_SYMBOLS khong co trong danh sach trang env 242 (key config.properties, khong phai env) => gia tri 242 theo AUDIT_GOLIVE_1116_D #24; A1 xac nhan"
+  }
+ ],
+ "N10 eq_at REF(cache 60 s) vs jar": [
+  "BAO CAO",
+  {
+   "R0": {
+    "leg_so": 24,
+    "eq_at_trung": 24,
+    "lech": []
+   },
+   "S-DCA": {
+    "leg_so": 30,
+    "eq_at_trung": 30,
+    "lech": []
+   }
+  }
+ ],
+ "R-OLD banners (ky vong TAT)": [
+  "BAO CAO",
+  {
+   "LIVE-SIZING": false,
+   "LIVE-DCA-GRID": false,
+   "MINUTE-FIN": true,
+   "GATE-RATIO": true
+  }
+ ],
+ "VON_MICRO_6": [
+  "BAO CAO",
+  {
+   "R0_legs": 24,
+   "fail_at_1000(BUDGET_SMALL|min_notional)": 0,
+   "frac_ok_1000": 1.0,
+   "quyet_dinh": "micro = 1 000",
+   "R-1000_outcomes": {
+    "SUBMITTED": 24
+   },
+   "R-4000_outcomes": {
+    "SUBMITTED": 24
+   }
+  }
+ ],
+ "INPUT md5 (ERRATA3 E11)": [
+  "BAO CAO",
+  {
+   "env242_file": "/home/ubuntu/claude_master/e2e_v12/env242_whitelist.raw",
+   "env242_md5": "8956befdffb7949676b1de392c82ddc7",
+   "labels_1105": "/home/ubuntu/claude_master/fin1114/c3_e2e/tools/e2e/labels_1105.csv",
+   "labels_1105_md5": "7af0c00e2e7e7fd072c8565acb7ed703",
+   "result_json_env242_md5": {
+    "R0": "8956befdffb7949676b1de392c82ddc7",
+    "R0-DRY": "8956befdffb7949676b1de392c82ddc7",
+    "R-OLD": "8956befdffb7949676b1de392c82ddc7",
+    "S-DCA": "8956befdffb7949676b1de392c82ddc7",
+    "FIN-INJ": "8956befdffb7949676b1de392c82ddc7",
+    "R-1000": "8956befdffb7949676b1de392c82ddc7",
+    "R-4000": "8956befdffb7949676b1de392c82ddc7",
+    "S-TS": null
+   },
+   "result_json_labels_md5": {
+    "R0": "7af0c00e2e7e7fd072c8565acb7ed703",
+    "R0-DRY": "7af0c00e2e7e7fd072c8565acb7ed703",
+    "R-OLD": "7af0c00e2e7e7fd072c8565acb7ed703",
+    "S-DCA": "7af0c00e2e7e7fd072c8565acb7ed703",
+    "FIN-INJ": "7af0c00e2e7e7fd072c8565acb7ed703",
+    "R-1000": "7af0c00e2e7e7fd072c8565acb7ed703",
+    "R-4000": "7af0c00e2e7e7fd072c8565acb7ed703",
+    "S-TS": null
+   }
+  }
+ ],
+ "errata/khoa": [
+  "BAO CAO",
+  {
+   "R0": {
+    "errata_mo_lai": "",
+    "official_lock": "/home/ubuntu/claude_master/e2e_v12/OFFICIAL_1105.lock"
+   }
+  }
+ ],
+ "KET LUAN (iii)": [
+  "FAIL",
+  "PASS <=> moi tieu chi PASS + D1 tu nhien PASS/KHONG XAY RA (KHONG DU MAU / CHUA AP DUNG != PASS)"
+ ]
+}

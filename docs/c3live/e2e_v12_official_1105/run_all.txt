@@ -1,0 +1,21 @@
+fx=/home/ubuntu/claude_master/e2e_v12/fx1105 out=/home/ubuntu/claude_master/e2e_v12/out1105_1117_0132 START=1793836800000 SDCA_AT=1793894400000 FIN_INJ_AT=1793836800000 errata=
+luot=R0 venue=FAKE C3_CAPITAL=10000 flags=on fx=/home/ubuntu/claude_master/e2e_v12/fx1105 out=/home/ubuntu/claude_master/e2e_v12/out1105_1117_0132/R0
+RC=0 log=/home/ubuntu/claude_master/e2e_v12/out1105_1117_0132/R0/run.log
+luot=R0-DRY venue=DRY C3_CAPITAL=10000 flags=on fx=/home/ubuntu/claude_master/e2e_v12/fx1105 out=/home/ubuntu/claude_master/e2e_v12/out1105_1117_0132/R0-DRY
+RC=0 log=/home/ubuntu/claude_master/e2e_v12/out1105_1117_0132/R0-DRY/run.log
+LEGACY day=2026-11-05 n=44 nguon=/home/ubuntu/claude_master/pull242/2026-11-05/logs/full.log@1793928180_135437659.gz dong=708191 doi_trong_cua_so=1
+luot=R-OLD venue=DRY C3_CAPITAL=10000 flags=off fx=/home/ubuntu/claude_master/e2e_v12/fx1105 out=/home/ubuntu/claude_master/e2e_v12/out1105_1117_0132/R-OLD
+RC=0 log=/home/ubuntu/claude_master/e2e_v12/out1105_1117_0132/R-OLD/run.log
+luot=S-DCA venue=FAKE C3_CAPITAL=10000 flags=on fx=/home/ubuntu/claude_master/e2e_v12/fx1105 out=/home/ubuntu/claude_master/e2e_v12/out1105_1117_0132/S-DCA
+RC=0 log=/home/ubuntu/claude_master/e2e_v12/out1105_1117_0132/S-DCA/run.log
+luot=FIN-INJ venue=FAKE C3_CAPITAL=10000 flags=on fx=/home/ubuntu/claude_master/e2e_v12/fx1105 out=/home/ubuntu/claude_master/e2e_v12/out1105_1117_0132/FIN-INJ
+RC=0 log=/home/ubuntu/claude_master/e2e_v12/out1105_1117_0132/FIN-INJ/run.log
+luot=R-1000 venue=DRY C3_CAPITAL=1000 flags=on fx=/home/ubuntu/claude_master/e2e_v12/fx1105 out=/home/ubuntu/claude_master/e2e_v12/out1105_1117_0132/R-1000
+RC=0 log=/home/ubuntu/claude_master/e2e_v12/out1105_1117_0132/R-1000/run.log
+luot=R-4000 venue=DRY C3_CAPITAL=4000 flags=on fx=/home/ubuntu/claude_master/e2e_v12/fx1105 out=/home/ubuntu/claude_master/e2e_v12/out1105_1117_0132/R-4000
+RC=0 log=/home/ubuntu/claude_master/e2e_v12/out1105_1117_0132/R-4000/run.log
+REF R0 rc=0
+REF R0-DRY rc=0
+REF S-DCA rc=0
+REF FIN-INJ rc=0
+CHECK rc=0
