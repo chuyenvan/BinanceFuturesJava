@@ -12,6 +12,14 @@ C_eff = min(C3_CAPITAL, E) (§R9). Thoat §R6.
 argv: --fx DIR --env FILE --out DIR --venue FAKE|DRY --capital C --flags on|off [--sdca-at MS --sdca-n N]
       [--fin-inj-at MS] [--end MS] [--fills FILE] [--flat-ext]
 Ra: <out>/ref_legs.csv, ref_clusters.csv, ref_q.csv, ref_market.csv, ref_summary.json
+
+[ERRATA2 E7] REF-nhip: lop phu DOC LAP tren CUNG cum / VWAP cua REF-nen: ap dung luat trailing §R6 (arm rate > ARM, ratchet
+rate >= ARM & SL' > SL & SL' > P, trail(), time-stop khong doi) len CHUOI GIA NHIP trong nen dung nhu rig duoc cap (dung lai tu
+klines 1m cua fixture: nhip k=0..3 o +0/+15/+30/+45 s; nen giam O,H,L,C; nen tang/phang O,L,H,C; x he so S-DCA). Trong moi nhip:
+san kiem STOP da dat truoc (gia nhip <= SL => khop), roi buoc trailing voi gia nhip. Cot nhip_* trong ref_clusters.csv; nhan
+ARM_CUNG_NEN (nhip_label) = REF-nhip co ARM hoac doi SL trong chinh phut thoat cua no. KHONG doc output/su kien replay.
+[ERRATA2 E8/N10] E dung cache 60 s (C3MainEquity:57,96,124,148-149): goi c3Equity moi nhip ops cua rig (15 s) + luc quyet dinh;
+lam moi khi now - eq_at >= 60 s => cot eq_at trong ref_legs.csv.
 """
 import argparse
 import collections
@@ -43,6 +51,11 @@ SDCA_PHASE = 10 * MIN
 SDCA_DIP_OFFS = (2, 3, 12, 22)   # phut b - st co "dip" (trong cua so tong hop): c' = P*0.98, l' = min(P, c') (CHI dau vao thi truong)
 SDCA_P15_ZERO_OFF = 2            # phut b - st: p15 thi truong := 0 (duoi MIN_MOMENTUM_15M) cho CA phut
 SDCA_DIP = 0.98
+# [ERRATA2 E8/N10] cache equity c3: ttl = min(MAX_TTL_MS=60000 (C3MainEquity.java:57), LIVE_C3_EQUITY_TTL_MS mac dinh 60000
+#   (C3LiveRuntime.java:253-254, kep :96)); dung cache neu now - eqAtMs < ttl (:124), lam moi eqAtMs = now (:148-149).
+#   Lich goi (SPEC §1 rig): moi nhip ops +0/+15/+30/+45 s (CrashDayRig ops -> ks.onPaper) + capital() luc quyet dinh +6 s.
+EQ_TTL = 60000
+TICK_MS = 15000
 SDCA_MKT_WIN = 30                # phut b - st in [0, 30): dau vao thi truong TONG HOP (moi symbol phang = close nen st-1'; dip o tren)
 # §R8 nguong thi truong: SIM_MS_DOWN_BIG_AVG / _DCA khong dat o 242 va profile A3 => mac dinh sim Configs:511,515
 MS_DEF = -0.03157
@@ -322,6 +335,14 @@ def load_bars(fx):
     return bars
 
 
+def tick_seq(x, f):
+    """[ERRATA2 E7] chuoi gia nhip k=0..3 (+0/+15/+30/+45 s) cua nen x=(O,H,L,C) GOC: nen giam (float32 C < O) => O,H,L,C;
+    con lai => O,L,H,C (= quy tac thu tu H/L khai trong SPEC §6 ERRATA2); x he so S-DCA f."""
+    O, Hh, L, C = x
+    seq = (O, Hh, L, C) if F(C) < F(O) else (O, L, Hh, C)
+    return seq if f == 1.0 else tuple(v * f for v in seq)
+
+
 def sdca_fct(sdca_start):
     def fct(s, t):
         st = sdca_start.get(s)
@@ -338,6 +359,8 @@ class Cluster:
         self.sl, self.minp, self.armed = None, math.inf, False
         self.rank = rank
         self.exit = None   # (bar, reason, price, at_open)
+        # [ERRATA2 E7] trang thai REF-nhip (lop phu doc lap): SL, da arm, su kien (phut, nhip, ARM|SL), thoat
+        self.tsl, self.tarmed, self.tev, self.texit = None, False, [], None   # texit = (bar, reason, px, k, sl)
 
     @property
     def vwap(self):
@@ -429,6 +452,8 @@ def main():
         return m["a1x"]
 
     book = collections.OrderedDict()   # sym -> Cluster (dang mo)
+    allc = []   # [ERRATA2 E7] moi cum (REF-nhip chay tiep ca khi REF-nen da dong cum)
+    eqc = {"at": None}   # [ERRATA2 N10] cache equity: thoi diem lam moi gan nhat
     done = []
     legs = []
     last_tick = {}
@@ -439,6 +464,40 @@ def main():
 
     def used():
         return sum(c.cost for c in book.values())
+
+    def eq_call(now):
+        """[ERRATA2 N10] 1 lan goi c3Equity luc now: lam moi neu chua co hoac now - at >= EQ_TTL; tra thoi diem cache."""
+        if eqc["at"] is None or now - eqc["at"] >= EQ_TTL:
+            eqc["at"] = now
+        return eqc["at"]
+
+    def tick_step(c, t, k):
+        """[ERRATA2 E7] REF-nhip: nhip k cua nen t cho cum c (san kiem STOP truoc, roi trailing §R6 voi gia nhip)."""
+        if c.texit is not None:
+            return
+        x = raw_bar(c.sym, t)
+        if x is None:
+            return
+        seq = tick_seq(x, fct(c.sym, t))
+        P_ = c.vwap
+        if k == 0 and not c.tarmed and t - c.b0 > P["TSTOP_H"] * H:   # time-stop khong doi (§R6.1)
+            c.texit = (t, "TIME_STOP", min(seq[0], seq[3]), 0, None)
+            return
+        p = seq[k]
+        if c.tarmed and p <= c.tsl:   # stop da dat (tu nhip truoc) kich o gia nhip
+            c.texit = (t, "TRAIL" if c.tsl > P_ else "TRAIL_LOSS", p, k, c.tsl)
+            return
+        rate = F((p - P_) / P_)
+        if not c.tarmed:
+            if rate > P["ARM"]:
+                c.tsl = P_ * (1 + float(trail(P, rate)))
+                c.tarmed = True
+                c.tev.append((t, k, "ARM"))
+        elif rate >= P["ARM"]:
+            nsl = P_ * (1 + float(trail(P, rate)))
+            if nsl > c.tsl and nsl > P_:
+                c.tsl = nsl
+                c.tev.append((t, k, "SL"))
 
     def process_bar(c, t):
         """§R6 mot nen t cho cum c (sim A3). Tra (reason, price, at_open) hoac None."""
@@ -474,35 +533,37 @@ def main():
         """§R3 sizing (C = C_eff cua phut) + §R4 khop. Tra outcome."""
         x = bars.get(s, {}).get(b)
         ce, er = Pm["C"], Pm.get("E", "")
+        ea = Pm.get("eq_at", "")
         if x is None or s not in last_tick:
-            legs.append([b, s, level, "NO_BAR", leg_idx, "", "", "", "", "", ce, er, tag])
+            legs.append([b, s, level, "NO_BAR", leg_idx, "", "", "", "", "", ce, er, tag, ea])
             return "NO_BAR"
         ref = x[3] * fct(s, b)
         szpx = last_tick[s]
         u0 = used()
         bud = budget(Pm, u0, leg_idx)
         if bud is None:
-            legs.append([b, s, level, "U_MAX", leg_idx, u0 / ce, "", "", szpx, "", ce, er, tag])
+            legs.append([b, s, level, "U_MAX", leg_idx, u0 / ce, "", "", szpx, "", ce, er, tag, ea])
             return "U_MAX"
         if float(bud) < MIN_BUDGET:
-            legs.append([b, s, level, "BUDGET_SMALL", leg_idx, u0 / ce, float(bud), "", szpx, "", ce, er, tag])
+            legs.append([b, s, level, "BUDGET_SMALL", leg_idx, u0 / ce, float(bud), "", szpx, "", ce, er, tag, ea])
             return "BUDGET_SMALL"
         m = meta.get(s)
         qty = floor_to(float(bud) / szpx, m["step"]) if m else Decimal(0)
         notional = float(qty) * szpx
         if m is None or qty <= 0 or qty < m["minq"] or Decimal(repr(notional)) < m["mn"]:
-            legs.append([b, s, level, "SIZING", leg_idx, u0 / ce, float(bud), str(qty), szpx, "", ce, er, tag])
+            legs.append([b, s, level, "SIZING", leg_idx, u0 / ce, float(bud), str(qty), szpx, "", ce, er, tag, ea])
             return "SIZING"
         fill = szpx if a.venue == "FAKE" else ref
         q = float(qty)
         if leg_idx == 0:
             book[s] = Cluster(s, b, fill, q, rank)
+            allc.append(book[s])
         else:
             c = book[s]
             c.qty += q
             c.cost += q * fill
             c.legs += 1
-        legs.append([b, s, level, "SUBMITTED", leg_idx, u0 / ce, float(bud), str(qty), szpx, fill, ce, er, tag])
+        legs.append([b, s, level, "SUBMITTED", leg_idx, u0 / ce, float(bud), str(qty), szpx, fill, ce, er, tag, ea])
         return "SUBMITTED"
 
     def dca_pass(b, p15, tag, new_syms, Pm):
@@ -521,7 +582,7 @@ def main():
             if drop > LEVELS[n - 1]:
                 continue
             if p15 < P["MOM"]:   # gate DCA: thr = MIN_MOMENTUM_15M (sp null) - sim createOrder:2286-2301
-                legs.append([b, s, "DCA_LEVEL1", "GATE_REJECT", n, "", "", "", "", "", Pm["C"], Pm.get("E", ""), tag])
+                legs.append([b, s, "DCA_LEVEL1", "GATE_REJECT", n, "", "", "", "", "", Pm["C"], Pm.get("E", ""), tag, Pm.get("eq_at", "")])
                 continue
             leg(b, s, "DCA_LEVEL1", n, -1, Pm, tag)
 
@@ -538,6 +599,10 @@ def main():
             x = bar(s, tm)
             if x is not None:
                 last_tick[s] = x[0]
+        # [ERRATA2] nhip 0 (+0 s): ops -> c3Equity; REF-nhip nhip 0 cho moi cum da co (truoc quyet dinh)
+        eq_call(tm)
+        for c in allc:
+            tick_step(c, tm, 0)
         pending_free = []
         for s in list(book.keys()):
             c = book[s]
@@ -571,8 +636,10 @@ def main():
             mA = ms["a1"] if ms else None
             Pm = dict(P)
             if fills is not None:
-                E = equity_at(fills, tm, mark, P["C3"])
+                at = eq_call(tm + 6000)   # capital() luc quyet dinh +6 s (cache 60 s)
+                E = equity_at(fills, at, mark, P["C3"])
                 Pm["E"] = E
+                Pm["eq_at"] = at
                 Pm["C"] = min(P["C3"], E)
             mrows.append([b, float(p15), int(dip)] + ([float(mA["down"]), float(mA["down15"]), int(mA["big"]), int(mA["alt"]),
                                                         mA["n"], float(ms["all"]["down"]), float(ms["all"]["down15"]),
@@ -585,7 +652,7 @@ def main():
                 if bars.get(s, {}).get(b) is None:
                     continue
                 if s in book:
-                    legs.append([b, s, "BIG_DOWN", "HOLDING", 0, "", "", "", "", "", Pm["C"], Pm.get("E", ""), ""])
+                    legs.append([b, s, "BIG_DOWN", "HOLDING", 0, "", "", "", "", "", Pm["C"], Pm.get("E", ""), "", Pm.get("eq_at", "")])
                     continue
                 if leg(b, s, "BIG_DOWN", 0, -1, Pm) == "SUBMITTED":
                     new_syms.add(s)
@@ -634,10 +701,10 @@ def main():
                     continue
                 if a.fin_inj_at >= 0 and fin_inj["symbol"] is None and b >= a.fin_inj_at:
                     fin_inj.update(symbol=s, bar=b)
-                    legs.append([b, s, "PREDICT_SYMBOL_TRADE", "FIN_EXCL", 0, "", "", "", "", "", Pm["C"], Pm.get("E", ""), ""])
+                    legs.append([b, s, "PREDICT_SYMBOL_TRADE", "FIN_EXCL", 0, "", "", "", "", "", Pm["C"], Pm.get("E", ""), "", Pm.get("eq_at", "")])
                     continue
                 if bars.get(s, {}).get(b) is None:
-                    legs.append([b, s, "PREDICT_SYMBOL_TRADE", "FIN_EXCL", 0, "", "", "", "", "", Pm["C"], Pm.get("E", ""), ""])
+                    legs.append([b, s, "PREDICT_SYMBOL_TRADE", "FIN_EXCL", 0, "", "", "", "", "", Pm["C"], Pm.get("E", ""), "", Pm.get("eq_at", "")])
                     continue
                 oc = leg(b, s, "PREDICT_SYMBOL_TRADE", 0, rank, Pm)
                 if oc == "SUBMITTED":
@@ -653,17 +720,27 @@ def main():
             if ex is not None and ex[0] != "TIME_STOP":
                 c.exit = (tm,) + ex
                 done.append(book.pop(s))
+        # [ERRATA2] nhip 1..3 (+15/+30/+45 s): REF-nhip (ca cum vua mo, VWAP sau leg cua phut) + ops -> c3Equity
+        for k in (1, 2, 3):
+            eq_call(tm + k * TICK_MS)
+            for c in allc:
+                tick_step(c, tm, k)
     with open(a.out + "/ref_legs.csv", "w") as fh:
         w = csv.writer(fh, lineterminator="\n")
         w.writerow(["decision_ts", "symbol", "level", "outcome", "leg_idx", "u_before", "budget", "qty", "sizing_px", "fill_px",
-                    "c_eff", "e_ref", "dca_tag"])
+                    "c_eff", "e_ref", "dca_tag", "eq_at"])
         w.writerows(legs)
     with open(a.out + "/ref_clusters.csv", "w") as fh:
         w = csv.writer(fh, lineterminator="\n")
-        w.writerow(["symbol", "b0", "first", "vwap", "legs", "qty", "exit_bar", "reason", "exit_px", "at_open", "sl"])
+        w.writerow(["symbol", "b0", "first", "vwap", "legs", "qty", "exit_bar", "reason", "exit_px", "at_open", "sl",
+                    "nhip_exit_bar", "nhip_reason", "nhip_exit_px", "nhip_k", "nhip_sl", "nhip_label", "nhip_ev_phut_thoat"])
         for c in done + list(book.values()):
             e = c.exit or ("", "OPEN", "", "")
-            w.writerow([c.sym, c.b0, c.first, c.vwap, c.legs, c.qty, e[0], e[1], e[2], e[3], c.sl if c.sl else ""])
+            te = c.texit or ("", "OPEN", "", "", None)
+            evx = [z for z in c.tev if c.texit is not None and z[0] == c.texit[0]]
+            lab = int(bool(evx) and te[1] != "TIME_STOP")
+            w.writerow([c.sym, c.b0, c.first, c.vwap, c.legs, c.qty, e[0], e[1], e[2], e[3], c.sl if c.sl else "",
+                        te[0], te[1], te[2], te[3], te[4] if te[4] else "", lab, ";".join("%d:%s" % (z[1], z[2]) for z in evx)])
     with open(a.out + "/ref_q.csv", "w") as fh:
         w = csv.writer(fh, lineterminator="\n")
         w.writerow(["hour", "q", "q_bits"])
@@ -685,6 +762,11 @@ def main():
                        "big_all": sum(r[10] for r in mk), "alt_all": sum(r[11] for r in mk),
                        "flag_a1_ne_all": sum(1 for r in mk if (r[5], r[6]) != (r[10], r[11]))},
             "fills_used": a.fills or None, "flat_ext": a.flat_ext,
+            "nhip": {"exited": sum(1 for c in allc if c.texit is not None),
+                     "label_ARM_CUNG_NEN": [(c.sym, c.b0) for c in allc if c.texit is not None and c.texit[1] != "TIME_STOP"
+                                            and any(z[0] == c.texit[0] for z in c.tev)],
+                     "khac_phut_ref_nen": sum(1 for c in allc if c.texit is not None and c.exit is not None
+                                              and c.texit[0] != c.exit[0])},
             "c_eff_min": min((x[10] for x in legs if x[3] == "SUBMITTED"), default=None)}
     json.dump(summ, open(a.out + "/ref_summary.json", "w"), indent=1, default=str)
     print(json.dumps({k: v for k, v in summ.items() if k != "params"}, default=str))

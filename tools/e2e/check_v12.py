@@ -3,6 +3,8 @@
 (<ref>/<LUOT>/ref_*.csv, do ref_v12.py sinh DOC LAP) + fixture. In PASS / FAIL / KHONG XAY RA / KHONG DU MAU / CHUA AP DUNG
 cho C1, E1, S1, D1, X1, F1, K1, E2 + bang §6. "KHONG XAY RA" / "KHONG DU MAU" KHONG tinh la PASS.
 
+ERRATA2 (593e7f45) E7: X1 nhan ARM_CUNG_NEN do REF-nhip quyet dinh (xem x1). E8: bao cao N7 (A1 vs khong loc), N8 (key config
+khong mac dinh JAR trong result.json), N10 (eq_at REF cache 60 s vs eq_at jar).
 ERRATA1 (33633d41): E (|E_REF - E_replay|/E <= 1e-6, C_eff = min(C3_CAPITAL, E) trong S1/D1), D1 tu nhien vao ket luan + dieu
 kien thi truong / p15 cho moi leg DCA, X1 moi (TIME_STOP 0 lech phut + gia trong [L,H]; ARM_CUNG_NEN; stopPrice jar dat vs SL REF
 <= 2 tick; gia khop san gia chi bao cao; X14_HOAN loai khoi X1), C1 kiem dung danh sach override khai bao (+LIVE_TS_MKT_EXT=0).
@@ -260,9 +262,12 @@ def utc_day(ms):
 
 
 def x1(L, refdir, meta, fxo):
-    """ERRATA1 X1: ly do cum 1 leg == REF; TIME_STOP: phut == REF (0 lech) + gia khop trong [L,H] nen do; ARM_CUNG_NEN (ARM hoac
-    doi SL trong CHINH phut thoat): duoc lech dung -1 phut; con lai >= 98 % cung phut, du <= +-1; stop/trailing: stopPrice jar DAT
-    (lenh stop da khop) vs SL REF <= 2 tick; X14_HOAN (TIME_STOP o ngay X14 that = ON) loai khoi X1. Gia khop san gia: BAO CAO."""
+    """ERRATA1 X1 + ERRATA2 E7: ly do cum 1 leg == REF; TIME_STOP: phut == REF (0 lech) + gia khop trong [L,H] nen do;
+    nhan ARM_CUNG_NEN do REF-NHIP quyet dinh (cot nhip_label cua ref_clusters.csv): cum co nhan => |stopPrice jar DAT - SL REF-nhip|
+    <= 2 tick VA phut thoat == phut thoat REF-nhip; cum khong nhan => nhu ERRATA1 E4 so voi REF-nen (>= 98 % cung phut, du <= +-1,
+    stopPrice <= 2 tick); jar thoat kieu arm-cung-nen (TRAIL_ARM/TRAIL_SL cua symbol trong CHINH phut thoat jar) ma REF-nhip khong
+    gan nhan (hoac nguoc lai) => FAIL; X14_HOAN loai khoi X1. Gia khop san gia: BAO CAO. Bao cao rieng cum co nhan: dGia, dPhut
+    REF-nhip so voi REF-nen."""
     rep, rep_open = clusters_replay(L, meta)
     ref = {(x["symbol"], int(x["b0"])): x for x in rd(refdir + "/ref_clusters.csv")}
     fct, flat = lane_fct_flat(L, refdir)
@@ -283,6 +288,9 @@ def x1(L, refdir, meta, fxo):
         if f is None or f["reason"] == "OPEN":
             mism.append({"cum": k, "replay": c["reason"], "ref": None if f is None else "OPEN"})
             continue
+        if "nhip_label" not in f:
+            mism.append({"cum": k, "loi": "ref_clusters.csv thieu cot nhip_* (REF cu, truoc ERRATA2)"})
+            continue
         em = c["exit_ms"] // 60000 * 60000
         dm = (em - int(f["exit_bar"])) // 60000
         rr = "TRAIL" if f["reason"].startswith("TRAIL") else f["reason"]
@@ -290,14 +298,23 @@ def x1(L, refdir, meta, fxo):
         is_ts = rr == "TIME_STOP" or c["reason"] == "TIME_STOP"
         flag = fxo.x14_flag(utc_day(int(f["exit_bar"]))) if is_ts else None
         x14 = is_ts and flag == "ON"
-        arm_same = any(em <= t < em + 60000 and t >= c["first_ms"] for t in armsl[c["symbol"]])
+        jar_arm = any(em <= t < em + 60000 and t >= c["first_ms"] for t in armsl[c["symbol"]]) and not is_ts
+        lab = f["nhip_label"] == "1"
+        nb = int(f["nhip_exit_bar"]) if f["nhip_exit_bar"] not in ("", None) else None
+        nsl, slnen = fnum(f["nhip_sl"]), fnum(f["sl"])
         dfill = (c["exit_px"] - float(f["exit_px"])) / float(f["exit_px"])
         row = {"cum": k, "legs": c["legs"], "reason": (c["reason"], rr), "dmin": dm, "dfill_bao_cao": dfill, "x14_flag": flag,
-               "X14_HOAN": x14, "ARM_CUNG_NEN": arm_same and not is_ts}
+               "X14_HOAN": x14, "ARM_CUNG_NEN": lab, "ARM_CUNG_NEN_jar": jar_arm, "nhan_khop": lab == jar_arm,
+               "nhip": {"exit_bar": nb, "reason": f["nhip_reason"], "k": f["nhip_k"], "sl": nsl, "ev": f.get("nhip_ev_phut_thoat")}}
+        if lab:
+            row["dmin_vs_nhip"] = (em - nb) // 60000 if nb is not None else None
+            row["nhip_vs_nen"] = {"dphut": (nb - int(f["exit_bar"])) // 60000 if nb is not None else None,
+                                  "dsl_tick": (nsl - slnen) / tick if (nsl is not None and slnen is not None and tick > 0) else None,
+                                  "dsl_pct": (nsl - slnen) / slnen if (nsl is not None and slnen) else None}
         if c["reason"] == "TRAIL":
             sp = stop_px.get(c["exit_cid"])
-            sl = fnum(f["sl"])
-            row["stop_dat"], row["sl_ref"], row["tick"] = sp, sl, tick
+            sl = nsl if lab else slnen
+            row["stop_dat"], row["sl_ref"], row["sl_ref_nguon"], row["tick"] = sp, sl, ("REF-nhip" if lab else "REF-nen"), tick
             row["px_ok"] = sp is not None and sl is not None and abs(sp - sl) <= 2 * tick + 1e-12
             row["dstop_tick"] = (sp - sl) / tick if (sp is not None and sl is not None and tick > 0) else None
         elif c["reason"] == "TIME_STOP":
@@ -315,19 +332,27 @@ def x1(L, refdir, meta, fxo):
     ref_exited_not_rep = [k for k, f in ref.items() if f["reason"] != "OPEN" and not any((c["symbol"], c["b0"]) == k for c in rep)]
     ev = [r for r in rows if not r["X14_HOAN"]]
     ts = [r for r in ev if "TIME_STOP" in r["reason"]]
-    arm = [r for r in ev if r["ARM_CUNG_NEN"]]
+    arm = [r for r in ev if r["ARM_CUNG_NEN"] and r not in ts]
     oth = [r for r in ev if r not in ts and r not in arm]
     same = sum(1 for r in oth if r["dmin"] == 0)
     one = [r for r in ev if r["legs"] == 1]
+    lab_bad = [r for r in ev if not r["nhan_khop"]]
     reason_ok = all(r["reason"][0] == r["reason"][1] for r in one) and not mism and not ref_exited_not_rep
-    ok_min = (all(r["dmin"] == 0 for r in ts) and all(r["dmin"] in (0, -1) for r in arm)
+    ok_min = (all(r["dmin"] == 0 for r in ts) and all(r.get("dmin_vs_nhip") == 0 for r in arm)
               and (not oth or same >= 0.98 * len(oth)) and all(abs(r["dmin"]) <= 1 for r in oth))
     ok_px = all(r["px_ok"] for r in ev)
+    ok_lab = not lab_bad
     kinds = collections.Counter(r["reason"][0] for r in ev)
     dl = [r["dfill_bao_cao"] for r in ev if "TIME_STOP" not in r["reason"]]
-    det = {"n_danh_gia": len(ev), "kinds_replay": dict(kinds), "n_TIME_STOP": len(ts), "n_ARM_CUNG_NEN": len(arm),
-           "ARM_CUNG_NEN": [{"cum": r["cum"], "dmin": r["dmin"], "dfill": r["dfill_bao_cao"], "dstop_tick": r.get("dstop_tick")}
-                            for r in arm],
+    det = {"n_danh_gia": len(ev), "kinds_replay": dict(kinds), "n_TIME_STOP": len(ts),
+           "n_ARM_CUNG_NEN(REF-nhip)": len(arm), "n_ARM_CUNG_NEN_jar": sum(1 for r in ev if r["ARM_CUNG_NEN_jar"]),
+           "ARM_CUNG_NEN_bao_cao_rieng": [{"cum": r["cum"], "dmin_jar_vs_nhip": r.get("dmin_vs_nhip"), "dmin_jar_vs_nen": r["dmin"],
+                                           "nhip_vs_nen": r.get("nhip_vs_nen"), "dstop_tick_vs_nhip": r.get("dstop_tick"),
+                                           "dfill": r["dfill_bao_cao"], "ev": r["nhip"]["ev"]} for r in arm],
+           "nhan_lech(jar vs REF-nhip)": [{"cum": r["cum"], "jar": r["ARM_CUNG_NEN_jar"], "ref_nhip": r["ARM_CUNG_NEN"],
+                                          "dmin": r["dmin"], "nhip": r["nhip"]} for r in lab_bad][:20],
+           "khong_nhan_nhip_khac_phut_nen(bao cao)": sum(1 for r in oth if r["nhip"]["exit_bar"] is not None
+                                                          and r["nhip"]["exit_bar"] != int(ref[r["cum"]]["exit_bar"])),
            "n_X14_HOAN": len(rows) - len(ev), "con_lai_cung_phut": same, "con_lai_n": len(oth),
            "dmin_lech": [(r["cum"], r["dmin"]) for r in ev if r["dmin"] != 0][:20],
            "px_bad": [r for r in ev if not r["px_ok"]][:20], "dstop_tick_max": max((abs(r["dstop_tick"]) for r in ev
@@ -335,8 +360,8 @@ def x1(L, refdir, meta, fxo):
            "gia_khop_san_gia_BAO_CAO": {"mean": sum(dl) / len(dl) if dl else None, "min": min(dl) if dl else None},
            "mismatch": mism[:20], "ref_exited_not_replay": ref_exited_not_rep[:20],
            "reason_diff_1leg": [r for r in one if r["reason"][0] != r["reason"][1]][:20], "open_end_replay": len(rep_open),
-           "ok_reason": reason_ok, "ok_phut": ok_min, "ok_gia": ok_px}
-    good = reason_ok and ok_min and ok_px and len(ev) > 0
+           "ok_reason": reason_ok, "ok_phut": ok_min, "ok_gia": ok_px, "ok_nhan": ok_lab}
+    good = reason_ok and ok_min and ok_px and ok_lab and len(ev) > 0
     if len(ev) < 10 or kinds.get("TIME_STOP", 0) < 1 or kinds.get("TRAIL", 0) < 1:
         det["danh_gia_tam"] = good
         return NS, det
@@ -451,6 +476,36 @@ def mkt_compare(L, refdir):
             "rig_alt": sum(1 for x in L["market"] if x["alt"] == "1"),
             "ref_big": sum(1 for r in mref.values() if r["big_a1"] == "1"), "ref_alt": sum(1 for r in mref.values() if r["alt_a1"] == "1"),
             "lech": diff}
+
+
+def n8_report(L):
+    """ERRATA2 E8/N8: liet ke key config.properties replay (khong co mac dinh JAR) tu result.json + nguon gia tri."""
+    res = L["res"] or {}
+    cp = res.get("config_properties_replay") or {}
+    return {"keys": cp, "n": len(cp), "nhan": dict(collections.Counter(v.split("]")[0] + "]" for v in cp.values())),
+            "DIED_SYMBOLS": cp.get("DIED_SYMBOLS"), "died_symbols_jar": (res.get("market") or {}).get("died_symbols_jar"),
+            "ghi_chu": "DIED_SYMBOLS khong co trong danh sach trang env 242 (key config.properties, khong phai env) => gia tri 242 "
+                       "theo AUDIT_GOLIVE_1116_D #24; A1 xac nhan"}
+
+
+def n10_report(L, refdir):
+    """ERRATA2 E8/N10: eq_at REF (mo hinh cache 60 s, ref_legs.csv) vs eq_at jar (legs.csv) cho leg SUBMITTED cung (phut, symbol, legIdx)."""
+    ref = {(x["decision_ts"], x["symbol"], x["leg_idx"]): x.get("eq_at", "") for x in rd(refdir + "/ref_legs.csv")
+           if x["outcome"] == "SUBMITTED"}
+    n = same = 0
+    diff = []
+    for x in L["legs"]:
+        if x["outcome"] != "SUBMITTED":
+            continue
+        r = ref.get((x["decision_ts"], x["symbol"], x["leg_idx"] or "0"))
+        if r is None:
+            continue
+        n += 1
+        if str(r) == str(x.get("eq_at", "")):
+            same += 1
+        elif len(diff) < 10:
+            diff.append((x["decision_ts"], x["symbol"], r, x.get("eq_at")))
+    return {"leg_so": n, "eq_at_trung": same, "lech": diff}
 
 
 # ------------------------------------------------------------------ F1
@@ -589,6 +644,10 @@ def run_checks(runs, refroot, fx, envf, dry_1105="", labels_1105=""):
     out["F1[FIN-INJ]"] = f1(Ls["FIN-INJ"], Ls["R0"], rf("FIN-INJ"))
     out["E2[R-OLD]"] = e2(Ls["R-OLD"], fx, dry_1105, labels_1105)
     out["MKT[R0] rig vs REF"] = ("BAO CAO", mkt_compare(Ls["R0"], rf("R0")))
+    out["N7 REF universe A1 vs khong loc"] = ("BAO CAO", {n: (ref_summary(rf(n)).get("market") or {}) for n in ("R0", "S-DCA")})
+    out["N8 key config khong mac dinh JAR"] = ("BAO CAO", n8_report(Ls["R0"]))
+    out["N10 eq_at REF(cache 60 s) vs jar"] = ("BAO CAO", {n: n10_report(Ls[n], rf(n)) for n in ("R0", "S-DCA", "S-TS")
+                                                           if Ls[n]["res"] is not None})
     out["R-OLD banners (ky vong TAT)"] = ("BAO CAO", {k: bool(re.search(p, Ls["R-OLD"]["log"])) for k, p in BANNERS.items()})
     out["VON_MICRO_6"] = ("BAO CAO", micro(Ls["R0"], env, meta, Ls["R-1000"], Ls["R-4000"]))
     out["errata/khoa"] = ("BAO CAO", {n: {"errata_mo_lai": (Ls[n]["res"] or {}).get("errata_mo_lai"),

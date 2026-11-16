@@ -7,6 +7,8 @@ Sua 1 diem tren BAN SAO trong RAM (hoac thu muc tam cho file REF), chay lai ham 
   T4 D1: REF market: bo co BIG_DOWN/isDcaAlt o 1 phut co leg DCA (giu phut) (S-DCA) => D1 FAIL (chi do dieu kien thi truong)
   T5 D1: REF market: p15 < MIN_MOMENTUM_15M o 1 phut co leg DCA             (S-DCA) => D1 FAIL (chi do cong p15)
   T6 S1/E: E_replay cua 1 leg x (1 + 2e-6)                                  (R0)    => S1 FAIL
+  [ERRATA2 E7] T7 X1: cum co nhan ARM_CUNG_NEN (REF-nhip): stopPrice jar +3 tick (S-TS) => X1 FAIL
+  T8 X1: doi nhan - bo nhan REF-nhip cua cum co nhan (S-TS) => X1 FAIL;  T9: gan nhan cho 1 cum TRAIL khong nhan => X1 FAIL
 argv: --runs DIR --ref DIR --fx DIR --env FILE
 """
 import argparse
@@ -63,6 +65,39 @@ def main():
                 f["ms"] = str(int(f["ms"]) + 60000)
         r = C.x1(L2, rf("S-TS"), meta, fxo)
         rec("T2 X1 TIME_STOP +1 phut (%s)" % c0["symbol"], base, r[0], "ok_phut=%s" % r[1]["ok_phut"])
+    # ---- [ERRATA2 E7] T7..T9 (S-TS, cum co nhan ARM_CUNG_NEN do REF-nhip)
+    lab = [r for r in b1[1].get("ARM_CUNG_NEN_bao_cao_rieng", [])]
+    if lab:
+        sym, b0 = lab[0]["cum"]
+        c0 = next(c for c in rep if (c["symbol"], c["b0"]) == (sym, b0))
+        tick = float(meta[sym]["tick"])
+        L2 = copy.deepcopy(Ls)
+        for e in L2["events"]:
+            if e["type"] == "TRAIL_STOP_PLACED" and ("cid=" + c0["exit_cid"]) in e["detail"]:
+                e["value"] = repr(float(e["value"]) + 3 * tick)
+        r = C.x1(L2, rf("S-TS"), meta, fxo)
+        rec("T7 X1 cum co nhan stopPrice +3 tick (%s)" % sym, base, r[0], "px_bad=%d" % len(r[1]["px_bad"]))
+        for tag, newlab in (("T8 X1 REF-nhip bo nhan cum co nhan", "0"), ("T9 X1 REF-nhip gan nhan cum khong nhan", "1")):
+            tmp = tempfile.mkdtemp(prefix="e2e3_inj_")
+            shutil.copytree(rf("S-TS"), tmp + "/S-TS")
+            pth = tmp + "/S-TS/ref_clusters.csv"
+            rows = list(csv.DictReader(open(pth)))
+            tgt = None
+            for row in rows:
+                if newlab == "0" and (row["symbol"], int(row["b0"])) == (sym, b0):
+                    tgt = row
+                elif newlab == "1" and tgt is None and row["nhip_label"] == "0" and row["reason"].startswith("TRAIL"):
+                    tgt = row
+            tgt["nhip_label"] = newlab
+            with open(pth, "w") as fh:
+                w = csv.DictWriter(fh, fieldnames=list(rows[0].keys()), lineterminator="\n")
+                w.writeheader()
+                w.writerows(rows)
+            r = C.x1(Ls, tmp + "/S-TS", meta, fxo)
+            rec(tag + " (%s)" % tgt["symbol"], base, r[0], "nhan_lech=%d" % len(r[1]["nhan_lech(jar vs REF-nhip)"]))
+            shutil.rmtree(tmp)
+    else:
+        rec("T7-T9 KHONG CO cum co nhan o S-TS", base, "-", "")
     # ---- T3..T5 (S-DCA)
     Ld = L["S-DCA"]
     Ed = C.e_rows(Ld, rf("S-DCA"), fxo)
