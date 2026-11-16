@@ -23,3 +23,22 @@
 
 Kết luận dev: harness + REF chạy được, cấu hình đi đúng đường production. Hai điểm sẽ quyết định lượt 11-05 là N4 (vốn sizing) và N5 (phút
 thoát) — cần MASTER quyết trước lượt chính thức (không nới tiêu chí trong nhánh này). Chi tiết đặc tả/NGHI VẤN: `E2E_REPLAY_V12_SPEC.md`.
+
+## Vòng 2 (ERRATA1, HEAD sau 5f7dbf82) — fixture PHÁT TRIỂN 10-30 (`~/claude_master/e2e_v12/fx1030`), KHÔNG phải kết quả chấm
+Lệnh: `tools/e2e/build_v12.sh; flock -w 3600 ~/claude_master/locks/oracle_heavy.lock nice -n 10 env E2E_OUT=~/claude_master/e2e_v12/out_v2 tools/e2e/run_all.sh`
+→ `~/claude_master/e2e_v12/out_v2/check_v12.{txt,json}`; thử tiêm: `python3 tools/e2e/inject_v12.py --runs …/out_v2 --ref …/out_v2/_ref --fx …/fx1030 --env …`.
+
+| Tiêu chí | 10-30 (dev) | Ghi chú |
+|---|---|---|
+| C1 (8 lượt cờ bật + S-TS) | PASS | tập override = khai báo + `LIVE_TS_MKT_EXT=0`; config replay có nhãn; died jar = {BTCDOMUSDT, USDCUSDT} |
+| E1 R0 / R0-DRY | PASS / PASS | 26 leg PREDICT, legs R0 trùng byte (phút, symbol, outcome, budget) với `fa9b4cac` |
+| S1 R0 / R0-DRY (+E) | PASS / PASS | budget rel 0; E rel ≤ 1,8e-16; `eq_at − b` = 60 s ở 100 % leg |
+| S1 S-DCA (+E) | PASS | C_eff min 9 238,22 (E < C3_CAPITAL) — budget khớp 0 với C_eff_REF |
+| D1 tự nhiên R0 | KHÔNG XẢY RA | 0 DCA đến hạn trong R0 |
+| D1 S-DCA | PASS | AIN + JCT: legIdx 1,2,3 ở st+3 / st+12 / st+22 = thiết kế = REF; st+2 GATE_REJECT (p15 = 0); mỗi leg có isDcaAlt (dip) + p15 ok |
+| X1 R0 | KHÔNG ĐỦ MẪU | 22 TRAIL, 0 TIME_STOP; tạm: phút OK (17/17 cùng phút + 5 ARM_CUNG_NEN, 4 lệch −1′), giá FAIL 1 cụm (N11) |
+| X1 S-TS (tổng hợp dev) | FAIL | 26 cụm (22 TRAIL + 4 TIME_STOP); TIME_STOP 4/4 đúng phút REF (b0 + 168 h + 1′, jar cắt ở +75 s) + giá ∈ [L,H]; lý do OK; giá: QUSDT#2 +244 tick (N11) |
+| F1 / K1 | PASS / PASS | |
+| Điều kiện thị trường rig vs REF (R0) | 0/4 319 phút lệch | BIG_DOWN 1 phút (= phút BIG_DOWN của log live), isDcaAlt 33; REF `all` (không lọc A1) lệch `a1` ở 14 phút (N7) |
+| §6 vốn micro | micro = 1 000 | 26/26 leg R0 đặt được ở 1 000 (dev) |
+| Thử tiêm | 6/6 FAIL | stopPrice +3 tick (S-TS gốc đã FAIL do N11: px_bad 1→2); TIME_STOP +1′ (ok_phut True→False); DCA dời sang phút không điều kiện; REF bỏ cờ thị trường; REF p15 < 0,008; E × (1+2e-6) |
