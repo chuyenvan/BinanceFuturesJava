@@ -198,3 +198,58 @@ Mục này THAY các chỗ tương ứng ở §1–§5 (chỗ nào mâu thuẫn 
   MASTER quyết: miễn 2 tick cho cụm `ARM_CUNG_NEN` (báo riêng như E3) hay giữ FAIL.
 - **N10 E thời điểm cache:** equity c3 cache 60 s; trên rig cache làm mới ở nhịp open (`eq_at = tm`) — bộ chấm báo phân bố `eq_at − b` (giây).
   Ở live nhịp làm mới phụ thuộc lịch gọi thật; sai khác chỉ ảnh hưởng mức mark của UPL.
+
+## 7. ERRATA 2 (vòng 3, `PREREG_E2E_REPLAY_V12_ERRATA2.md` 593e7f45) — REF-nhịp (E7) + xử lý tạm N7–N10 (E8)
+Mục này bổ sung §6 (chỗ mâu thuẫn thì §7 thắng). Vẫn CHỈ fixture phát triển **10-30**; 11-05 chưa dựng, chưa chạy.
+
+- **§R6n REF-nhịp (E7)** — lớp phủ ĐỘC LẬP trong `ref_v12.py` (numpy/python, không Java, không đọc output/sự kiện replay), chạy trên
+  CÙNG cụm (symbol, b0, leg, VWAP theo thời gian) của REF-nến vòng kín; không đổi quyết định/sizing/U của REF (REF-nến vẫn là sổ
+  vòng kín cho E1/S1/D1).
+  1. **Chuỗi giá nhịp** (dựng lại từ ĐẦU VÀO fixture `klines.csv.gz`, đúng nhịp rig được cấp — `CrashDayRig.run`/`applyPrices`):
+     phút `t` có 4 nhịp `k = 0..3` ở `t + 0 / 15 / 30 / 45 s`. **Quy tắc thứ tự H/L:** nến giảm (float32 `C < O`) ⇒ `O, H, L, C`;
+     còn lại (tăng hoặc phẳng `C ≥ O`) ⇒ `O, L, H, C`. Giá × hệ số S-DCA của symbol ở phút `t`; S-TS sau END: nến phẳng (= rig `ReplayData.bar`).
+     (Ghi chú: lời giao việc ghi "+15/30/45/60 s"; rig thật đặt O ở +0 s và C ở +45 s — REF theo rig; giá nhịp đứng yên giữa các nhịp
+     nên +45 s ≡ "trước +60 s".)
+  2. **Thứ tự trong 1 nhịp** (= rig: `applyPrices` → sàn giả kích STOP → `ops()` → `TrailingStopManager.step`): (a) sàn: cụm đã arm và
+     giá nhịp ≤ SL ⇒ thoát TRAIL (TRAIL_LOSS nếu SL ≤ P), ghi SL tại lúc thoát; (b) trailing với giá nhịp `p`: `rate = (p − P)/P` (float32);
+     chưa arm và `rate > 0,07` ⇒ arm, `SL = P·(1 + trail(rate))`; đã arm và `rate ≥ 0,07` ⇒ `SL' = P·(1+trail(rate))`, nhận nếu `SL' > SL ∧ SL' > P`.
+     Stop đặt/dời ở nhịp `k` chỉ kích từ nhịp `k+1` (kể cả nhịp 0 phút sau = gap tại open). `trail()`, ngưỡng, P = VWAP: y §R6.
+  3. **Time-stop không đổi** (§R6.1): nhịp 0 của nến `t`, chưa arm, `t − b0 > 168 h` ⇒ TIME_STOP, giá `min(O_t, C_t)`.
+  4. **Lịch**: nhịp 0 xử lý TRƯỚC quyết định của phút (VWAP cũ); nhịp 1–3 SAU quyết định (VWAP đã gồm leg vừa khớp ở +6 s, kể cả cụm vừa
+     mở). Khác REF-nến: REF-nến chỉ áp VWAP mới từ nến sau (chỉ ảnh hưởng cụm có DCA).
+  5. **Nhịp live** (không mô phỏng riêng vì giá rig chỉ đổi ở 4 nhịp): live `C3LiveRuntime` ops 5 s (`:75` `OPS_PERIOD_MS`), exit 10 s
+     (`:78` `EXIT_EVERY_MS` — KHÔNG phải 15 s như lời giao việc), equity/book 15 s (`:77`); rig chạy `ops()` (gồm trailing) ngay sau mỗi
+     nhịp giá 15 s ⇒ mọi lịch ≤ 15 s nhìn cùng 4 giá ⇒ tương đương trên rig. Live thật: giá trong nến liên tục, thứ tự H/L thật không biết
+     ⇒ REF-nhịp là QUY ƯỚC đo mức lệch live↔sim, không phải mô hình đúng của live.
+  6. **Đầu ra** `ref_clusters.csv` thêm: `nhip_exit_bar, nhip_reason, nhip_exit_px, nhip_k, nhip_sl, nhip_label, nhip_ev_phut_thoat`;
+     `nhip_label = 1` ⇔ REF-nhịp có ARM hoặc dời SL ở một nhịp TRONG chính phút thoát của nó (= nhãn `ARM_CUNG_NEN`, TIME_STOP luôn 0).
+     `ref_summary.nhip` = số cụm thoát, danh sách nhãn, số cụm có phút thoát nhịp ≠ nến.
+
+- **X1 (E7, thay phần ARM_CUNG_NEN của §6):** nhãn `ARM_CUNG_NEN` lấy từ `nhip_label` của REF (KHÔNG từ sự kiện replay).
+  Cụm có nhãn: `|stopPrice jar ĐẶT − nhip_sl| ≤ 2 tick` VÀ phút thoát jar ≡ `nhip_exit_bar`. Cụm không nhãn: như ERRATA 1 E4 (REF-nến:
+  ≥ 98 % cùng phút, dư ≤ ±1′; stopPrice vs SL REF-nến ≤ 2 tick; TIME_STOP 0 lệch + giá ∈ [L, H]). Bộ chấm vẫn tính "arm-cùng-nến của jar"
+  (TRAIL_ARM/TRAIL_SL của symbol trong CHÍNH phút thoát jar, trừ TIME_STOP) CHỈ để đối chiếu: khác nhãn REF-nhịp (hai chiều) ⇒ X1 FAIL
+  (`ok_nhan`, danh sách `nhan_lech`). Báo riêng `ARM_CUNG_NEN_bao_cao_rieng`: mỗi cụm có nhãn — Δphút jar↔nhịp, Δphút nhịp↔nến,
+  ΔSL nhịp↔nến (tick, %), Δstop jar↔nhịp (tick).
+- **Thử tiêm mới** (`inject_v12.py`, S-TS): T7 stopPrice jar +3 tick ở cụm có nhãn ⇒ FAIL; T8 bỏ nhãn REF-nhịp của cụm có nhãn ⇒ FAIL;
+  T9 gắn nhãn cho 1 cụm TRAIL không nhãn ⇒ FAIL.
+
+- **E8 (xử lý tạm, CHỜ A1):**
+  - **N7:** REF chính dùng universe A1 (§R8 bản `a1`); bộ chấm báo `N7 REF universe A1 vs khong loc` = số phút cờ (BIG_DOWN, isDcaAlt)
+    của `a1` ≠ `all` (`ref_summary.market.flag_a1_ne_all`).
+  - **N8:** key `config.properties` không có mặc định trong JAR: liệt kê trong `result.json.config_properties_replay` (key → [nhãn] giá trị)
+    và in lại ở bộ chấm (`N8 key config khong mac dinh JAR`). `DIED_SYMBOLS` KHÔNG có trong danh sách trắng env 242 (là key
+    config.properties, không phải env) ⇒ giá trị 242 theo AUDIT_GOLIVE_1116_D #24 (BTCDOM,USDC; jar đọc ra {BTCDOMUSDT, USDCUSDT}); A1 xác nhận.
+  - **N9:** giữ thứ tự production (§R0'); A1 đối chiếu sim.
+  - **N10 cache equity 60 s — REF mô hình như đặc tả:** nguồn `C3MainEquity.java:57` (`MAX_TTL_MS = 60_000`), `:96` (ttl = min(MAX_TTL, ttl)),
+    `:124` (dùng cache nếu `now − eqAtMs < ttl`), `:148-149` (làm mới `eqAtMs = now`), `:163-164` (`capital()` gọi `c3Equity()`);
+    `C3LiveRuntime.java:253-254` (ttl = env `LIVE_C3_EQUITY_TTL_MS`, mặc định 60 000), `:77`/`:520-521` (live gọi `c3Equity()` mỗi 15 s);
+    `C3LiveEntry.java:254` (`capital.capital()` lúc vào lệnh). REF: gọi ở mỗi nhịp ops của rig (+0/15/30/45 s) và lúc quyết định (+6 s),
+    làm mới khi `now − at ≥ 60 s` ⇒ `eq_at` (cột mới `ref_legs.csv`), E = `equity_at(fills, eq_at)`. Bộ chấm báo `N10 eq_at REF vs jar`.
+    **Chưa chắc là chủ đích:** ở live pha làm mới (so với phút) phụ thuộc lúc vòng ops khởi động ⇒ tuổi E lúc quyết định ∈ [0, 60) s
+    (rig/REF: 6 s); không thấy tài liệu nói cache 60 s là thiết kế cho sizing ⇒ **A1 phân xử**; A1 bác ⇒ ghi "LỆCH-CHƯA-GHI", báo owner.
+
+### NGHI VẤN mới (vòng 3)
+- **N12 nhịp exit live 10 s** (`C3LiveRuntime:78`) ≠ "15 s" trong lời giao việc/ERRATA2; không ảnh hưởng rig (giá đổi mỗi 15 s) nhưng
+  mức lệch live↔sim đo bằng REF-nhịp chỉ đúng dưới quy ước 4 nhịp O→H/L→C.
+- **N13 VWAP sau DCA:** REF-nhịp áp VWAP mới từ nhịp 1 của phút khớp DCA, REF-nến từ nến sau; chỉ chạm cụm có DCA đã arm — 10-30 không có.
