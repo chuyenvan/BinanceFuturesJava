@@ -545,16 +545,48 @@ def k1(L):
 
 
 # ------------------------------------------------------------------ E2
-def e2(Lold, fx, dry_csv, labels_csv):
-    man = json.load(open(fx + "/manifest.json"))
-    if man["START"] != T1105:
-        return NAPPLY, {"ly_do": "chi ap dung fixture 11-05 (fixture hien tai START=%s)" % man["START"]}
-    # prereg §5 E2: "log dry that ngay 11-05, 23 SUBMIT 22:52-22:53" => chi SUBMIT co phut quyet dinh < 11-06 07:00 +07
-    real = [x for x in rd(dry_csv) if int(x["decision_ts"]) < T1105 + 86400000]
-    if not real:
-        return FAIL, {"loi": "khong co SUBMIT dry that 11-05 trong %s" % dry_csv}
-    labels = {x["symbol"]: x["label"] for x in rd(labels_csv)}
-    allowed = {"LEGACY-11-05", "JAR-R4Q-FIN2-BIGDOWN-SEL", "JAR-R4Q-FIN2-UNIVERSE-A1", "EXCHANGEINFO"}
+# Tap nhan KHAI TRUOC (prereg muc 5 E2 + ERRATA1 / ERRATA3 E9). Nhan ngoai tap => TU CHOI file nhan (E2 FAIL).
+E2_LABELS = ("LEGACY-11-05", "JAR-R4Q-FIN2-BIGDOWN-SEL", "JAR-R4Q-FIN2-UNIVERSE-A1", "EXCHANGEINFO")
+LABELS_HEADER = ["symbol", "label", "nguon"]
+
+
+def labels_check(path):
+    """[ERRATA3 E9] tools/e2e/labels_1105.csv: header DUNG symbol,label,nguon; moi nhan thuoc E2_LABELS; LEGACY-11-05 phai co
+    nguon (dong log chi ra danh sach LEGACY doi trong ngay); symbol khong trung. File thieu / sai => TU CHOI.
+    Tra (ok, {symbol: label}, chi_tiet)."""
+    import hashlib
+    det = {"file": path, "md5": None, "loi": []}
+    if not path or not os.path.isfile(path):
+        det["loi"].append("khong co file nhan (phai commit TRUOC luot chinh thuc, co the rong)")
+        return False, {}, det
+    det["md5"] = hashlib.md5(open(path, "rb").read()).hexdigest()
+    with open(path) as fh:
+        r = csv.reader(fh)
+        head = next(r, None)
+        rows = [x for x in r if any(z.strip() for z in x)]
+    if head != LABELS_HEADER:
+        det["loi"].append("header %s != %s" % (head, LABELS_HEADER))
+    labels = {}
+    for i, x in enumerate(rows, 2):
+        if len(x) != 3:
+            det["loi"].append("dong %d: %d cot" % (i, len(x)))
+            continue
+        sym, lab, src = (z.strip() for z in x)
+        if not sym:
+            det["loi"].append("dong %d: thieu symbol" % i)
+        if lab not in E2_LABELS:
+            det["loi"].append("dong %d: nhan '%s' KHONG thuoc tap khai truoc %s" % (i, lab, list(E2_LABELS)))
+        if lab == "LEGACY-11-05" and not src:
+            det["loi"].append("dong %d: LEGACY-11-05 thieu nguon (dong log)" % i)
+        if sym in labels:
+            det["loi"].append("dong %d: symbol %s trung" % (i, sym))
+        labels[sym] = lab
+    det["n"] = len(rows)
+    return not det["loi"], labels, det
+
+
+def e2_core(Lold, real, labels):
+    """So SUBMIT R-OLD voi SUBMIT dry that (real); nhan da qua labels_check."""
     rep = {(x["symbol"], int(x["decision_ts"])): x for x in Lold["legs"] if x["outcome"] == "SUBMITTED"}
     match, unl = 0, []
     for x in real:
@@ -562,15 +594,40 @@ def e2(Lold, fx, dry_csv, labels_csv):
         y = rep.get(k)
         if y is not None and abs(float(y["budget"]) - float(x["budget"])) / float(x["budget"]) <= 1e-4:
             match += 1
-        elif labels.get(x["symbol"]) not in allowed:
+        elif labels.get(x["symbol"]) not in E2_LABELS:
             unl.append(("thieu/lech", k))
     realk = {(x["symbol"], int(x["decision_ts"])) for x in real}
     lo, hi = min(k[1] for k in realk), max(k[1] for k in realk)
     for k in rep:
-        if lo <= k[1] <= hi and k not in realk and labels.get(k[0]) not in allowed:
+        if lo <= k[1] <= hi and k not in realk and labels.get(k[0]) not in E2_LABELS:
             unl.append(("thua", k))
     det = {"n_real": len(real), "match": match, "unlabeled": unl[:30]}
     return (PASS if match >= 20 and not unl else FAIL), det
+
+
+def e2(Lold, fx, dry_csv, labels_csv):
+    lok, labels, ldet = labels_check(labels_csv)
+    man = json.load(open(fx + "/manifest.json"))
+    leg = (Lold.get("res") or {}).get("legacy_E9") or {}
+    legs = {"jar_n": leg.get("jar_n"), "jar_excludeLegacyHeld": leg.get("jar_excludeLegacyHeld"),
+            "jar_file_md5": leg.get("jar_file_md5"),
+            "nguon": {k: (leg.get("nguon") or {}).get(k) for k in ("source", "source_md5", "line", "line_ms", "n",
+                                                                   "n_doi_trong_cua_so", "doi_trong_cua_so")}}
+    if man["START"] != T1105:
+        return NAPPLY, {"ly_do": "chi ap dung fixture 11-05 (fixture hien tai START=%s)" % man["START"], "nhan": ldet,
+                        "nhan_ok": lok, "legacy_E9": legs}
+    if not lok:
+        return FAIL, {"loi": "file nhan bi TU CHOI (ERRATA3 E9)", "nhan": ldet}
+    if not leg.get("jar_excludeLegacyHeld") or not leg.get("jar_n"):
+        return FAIL, {"loi": "R-OLD khong chay voi C3_EXCLUDE_LEGACY_HELD=true + danh sach LEGACY (ERRATA3 E9)", "legacy_E9": legs}
+    # prereg muc 5 E2: "log dry that ngay 11-05, 23 SUBMIT 22:52-22:53" => chi SUBMIT co phut quyet dinh < 11-06 07:00 +07
+    real = [x for x in rd(dry_csv) if int(x["decision_ts"]) < T1105 + 86400000]
+    if not real:
+        return FAIL, {"loi": "khong co SUBMIT dry that 11-05 trong %s" % dry_csv}
+    st, det = e2_core(Lold, real, labels)
+    det["nhan"] = ldet
+    det["legacy_E9"] = legs
+    return st, det
 
 
 # ------------------------------------------------------------------ §6

@@ -22,6 +22,21 @@ fi
 D=$OUT/$NAME; mkdir -p "$D"; rm -rf "$D/wd" "$D/run"; mkdir -p "$D/wd"
 # [ERRATA1 E5] KHONG chep config.properties worktree: dung file khai bao tools/e2e/config_replay.properties (nhan tung key)
 cp "$W/tools/e2e/config_replay.properties" "$D/wd/config.properties"
+# [ERRATA3 E9] CHI luot R-OLD: C3_EXCLUDE_LEGACY_HELD=true + danh sach LEGACY cua NGAY fixture (pull242/<ngay START +07>:
+#   run/legacy_symbols.csv neu co, nguoc lai dong log [LEGACY] managed cuoi cung <= START) ghi vao run/legacy_symbols.csv cua
+#   cwd jar (= LegacySymbols.DEFAULT_FILE, duong production). Nguon + md5 => $D/legacy_E9.json -> result.json (legacy_E9).
+#   Cac luot khac: false (prereg muc 1). Khong lap duoc danh sach => TU CHOI (exit 6).
+EXCL=false; LEGMETA=""
+if [ "$NAME" = R-OLD ]; then
+  EXCL=true; LEGMETA="$D/legacy_E9.json"
+  FXS=$(python3 -c "import json;print(json.load(open('$FX/manifest.json'))['START'])")
+  FXE=$(python3 -c "import json;print(json.load(open('$FX/manifest.json'))['END'])")
+  mkdir -p "$D/wd/run"
+  python3 "$W/tools/e2e/legacy_src.py" --start "$FXS" --end "$FXE" --out-csv "$D/wd/run/legacy_symbols.csv" --out-json "$LEGMETA" \
+    > "$D/legacy_E9.log" 2>&1 || { echo "TU CHOI: khong lap duoc danh sach LEGACY (ERRATA3 E9) - xem $D/legacy_E9.log"; exit 6; }
+  cat "$D/legacy_E9.log"
+fi
+LABELS=${LABELS_1105:-$W/tools/e2e/labels_1105.csv}
 WTK=$(grep -oE '^[A-Z0-9_]+=' "$W/config.properties" | tr -d '=' | sort | tr '\n' ',')
 if [ "$FLAGS" = on ]; then AG=true; else AG=false; fi
 OVR="LIVE_ADAPTER,C3_CAPITAL,LIVE_APPLY_GRID_RATIO,LIVE_DCA_GRID_ENABLED,C3_EXCLUDE_LEGACY_HELD,LIVE_IS_SHADOW_HOST,LIVE_GATE_ROLLING_FILE,LIVE_TS_MKT_EXT"
@@ -32,11 +47,12 @@ OVR="LIVE_ADAPTER,C3_CAPITAL,LIVE_APPLY_GRID_RATIO,LIVE_DCA_GRID_ENABLED,C3_EXCL
   echo "export C3_CAPITAL=$CAP"
   echo "export LIVE_APPLY_GRID_RATIO=$AG"
   echo "export LIVE_DCA_GRID_ENABLED=$AG"
-  echo "export C3_EXCLUDE_LEGACY_HELD=false"
+  echo "export C3_EXCLUDE_LEGACY_HELD=$EXCL   # [ERRATA3 E9] true CHI o R-OLD"
   echo "export LIVE_IS_SHADOW_HOST=true"
   echo "export LIVE_GATE_ROLLING_FILE=$D/run/gate_ratio_live.bin"
   echo "export LIVE_TS_MKT_EXT=0   # LECH khai bao: X14 can ALT_EW Aerospike (khong co trong replay) - prereg §7"
   echo "export E2E_WT_CFG_KEYS=$WTK E2E_ERRATA=${E2E_ERRATA:-} E2E_OFFICIAL_LOCK=${E2E_OFFICIAL_LOCK:-}"
+  echo "export E2E_LEGACY_META=$LEGMETA E2E_LABELS_FILE=$LABELS"
   echo "export E2E_RUN=$NAME E2E_VENUE=$VENUE E2E_FX_DIR=$FX E2E_OUT=$OUT E2E_ENV242=$ENV242 E2E_OVERRIDES=$OVR"
   for kv in "$@"; do echo "export $kv"; done
 } > "$D/env_used.sh"

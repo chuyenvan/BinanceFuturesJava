@@ -170,6 +170,32 @@ public final class ReplayMain {
         return m;
     }
 
+    /** md5 file (null neu duong dan rong; "KHONG_CO" neu khong ton tai). */
+    static String fileMd5(String path) throws Exception {
+        if (path == null || path.isEmpty()) return null;
+        File f = new File(path);
+        return f.isFile() ? md5(f) : "KHONG_CO";
+    }
+
+    /** [ERRATA3 E9] json nguon (E2E_LEGACY_META) + trang thai LegacySymbols cua jar (cung ham production blocksC3 doc). */
+    static Map<String, Object> legacyInfo() throws Exception {
+        Map<String, Object> m = new LinkedHashMap<>();
+        String meta = env("E2E_LEGACY_META", "");
+        m.put("meta_file", meta);
+        if (!meta.isEmpty() && new File(meta).isFile()) {
+            m.put("nguon", new com.google.gson.Gson().fromJson(new String(Files.readAllBytes(new File(meta).toPath()),
+                    StandardCharsets.UTF_8), Map.class));
+        }
+        com.binance.chuyennd.tradecore.selector.LegacySymbols ls = com.binance.chuyennd.tradecore.selector.LegacySymbols.getInstance();
+        m.put("jar_excludeLegacyHeld", com.binance.chuyennd.tradecore.selector.LegacySymbols.excludeLegacyHeld());
+        m.put("jar_LiveProfileC3_on", com.binance.chuyennd.tradecore.selector.LiveProfileC3.on());
+        m.put("jar_file", new File(ls.path()).getAbsolutePath());
+        m.put("jar_file_md5", fileMd5(new File(ls.path()).getAbsolutePath()));
+        m.put("jar_n", ls.size());
+        m.put("jar_symbols", ls.all());
+        return m;
+    }
+
     public static void main(String[] args) throws Exception {
         String name = env("E2E_RUN", "R0");
         File fx = new File(env("E2E_FX_DIR", System.getProperty("user.home") + "/claude_master/e2e1105/fx"));
@@ -210,7 +236,13 @@ public final class ReplayMain {
         o.sDcaN = (int) envL("E2E_SDCA_N", 2L);
         o.finInjAt = envL("E2E_FIN_INJ_AT", -1L);
         CrashDayRig r = new CrashDayRig(o, d, outRoot);
-        r.res.put("prereg", "PREREG_E2E_REPLAY_V12 (vz_e1_wt ea6c7a5b) + ERRATA1 (33633d41)");
+        r.res.put("prereg", "PREREG_E2E_REPLAY_V12 (vz_e1_wt ea6c7a5b) + ERRATA1 (33633d41) + ERRATA2 (593e7f45) + ERRATA3 (409e1144)");
+        // [ERRATA3 E11] md5 file gia tri env 242 da dung + md5 labels_1105.csv (khai truoc, commit truoc luot chinh thuc)
+        r.res.put("env242_file_md5", fileMd5(env("E2E_ENV242", "")));
+        r.res.put("labels_1105_file", env("E2E_LABELS_FILE", ""));
+        r.res.put("labels_1105_md5", fileMd5(env("E2E_LABELS_FILE", "")));
+        // [ERRATA3 E9] R-OLD: nguon danh sach LEGACY (legacy_src.py) + tap jar THAT SU nap (LegacySymbols, file run/legacy_symbols.csv)
+        r.res.put("legacy_E9", legacyInfo());
         r.res.put("errata_mo_lai", env("E2E_ERRATA", ""));
         r.res.put("official_lock", env("E2E_OFFICIAL_LOCK", ""));
         r.res.put("config_properties_replay", cfgProps(new File("config.properties")));
