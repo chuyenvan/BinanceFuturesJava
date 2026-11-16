@@ -154,21 +154,48 @@ def lane_fct_flat(L, refdir):
 
 
 def e_rows(L, refdir, fxo):
-    """Moi leg SUBMITTED: E_replay (cot eq = cache C3MainEquity ma capital() vua dung), eq_at, E_REF(eq_at) = ref_v12.equity_at
-    (khop SAN fills.csv + mark fixture, doc lap code jar), C_eff_REF = min(C3_CAPITAL, E_REF)."""
+    """Moi leg SUBMITTED: E_replay (cot eq = cache C3MainEquity ma capital() vua dung) + eq_at jar; [ERRATA3 E10] REF DOC LAP:
+    eq_at_REF = cot eq_at cua ref_market.csv tai phut quyet dinh (mo hinh cache 60 s cua REF, khong doc eq_at jar),
+    E_REF = ref_v12.equity_at(fills.csv, eq_at_REF) (khop SAN + mark fixture), C_eff_REF = min(C3_CAPITAL, E_REF),
+    used_REF = ref_u.csv (gia von vi the dang mo truoc BUY dau cua cid, tu fills.csv), U_REF = used_REF / C_eff_REF;
+    U_jar = margin_before / capital (jar). E_REF_tai_eq_at_jar chi BAO CAO."""
     fills = R.load_fills(L["dir"] + "/fills.csv") if os.path.isfile(L["dir"] + "/fills.csv") else []
     fct, flat = lane_fct_flat(L, refdir)
     mark = R.make_mark(fxo.raw_bar_fn(flat), fct)
     C3 = c3cap(L)
+    eqat = {int(x["b"]): x.get("eq_at", "") for x in rd(refdir + "/ref_market.csv")}
+    ur = {x["cid"]: float(x["used_before_usd"]) for x in rd(refdir + "/ref_u.csv")}
+    isint = lambda v: str(v or "").lstrip("-").isdigit()  # noqa: E731
     out = {}
     for x in L["legs"]:
         if x["outcome"] != "SUBMITTED":
             continue
-        at = int(x.get("eq_at") or -1) if (x.get("eq_at") or "").lstrip("-").isdigit() else -1
-        er = R.equity_at(fills, at, mark, C3) if at > 0 else None
-        out[x["cid"]] = dict(eq=fnum(x.get("eq")), at=at, e_ref=er, ceff=(min(C3, er) if er is not None else None),
-                             dec=int(x["decision_ts"]))
+        dec = int(x["decision_ts"])
+        at = int(x["eq_at"]) if isint(x.get("eq_at")) else -1
+        atr = int(eqat[dec]) if isint(eqat.get(dec)) else -1
+        er = R.equity_at(fills, atr, mark, C3) if atr > 0 else None
+        ceff = min(C3, er) if er is not None else None
+        used = ur.get(x["cid"])
+        cap_j, mb = fnum(x.get("capital")), fnum(x.get("margin_before"))
+        out[x["cid"]] = dict(eq=fnum(x.get("eq")), at=at, at_ref=atr, e_ref=er, ceff=ceff, dec=dec, used_ref=used,
+                             u_ref=(used / ceff if (used is not None and ceff) else None),
+                             u_jar=(mb / cap_j if (mb is not None and cap_j) else None),
+                             e_ref_tai_eq_at_jar_bao_cao=(R.equity_at(fills, at, mark, C3) if at > 0 else None))
     return out
+
+
+def u_check(E):
+    """[ERRATA3 E10] |U_REF - U_jar| <= 1e-6 cho MOI SUBMIT (thieu U_REF / U_jar => loi)."""
+    bad, worst = [], 0.0
+    for cid, e in E.items():
+        if e.get("u_ref") is None or e.get("u_jar") is None:
+            bad.append({"leg": cid, "loi": "thieu U_REF/U_jar", "used_ref": e.get("used_ref")})
+            continue
+        d = abs(e["u_ref"] - e["u_jar"])
+        worst = max(worst, d)
+        if d > 1e-6:
+            bad.append({"leg": cid, "U_REF": e["u_ref"], "U_jar": e["u_jar"], "abs": d})
+    return bad, worst
 
 
 def e_check(E):
@@ -176,12 +203,15 @@ def e_check(E):
     for cid, e in E.items():
         lag[(e["at"] - e["dec"]) // 1000 if e["at"] > 0 else None] += 1
         if e["eq"] is None or e["e_ref"] is None:
-            bad.append({"leg": cid, "loi": "thieu eq/eq_at"})
+            bad.append({"leg": cid, "loi": "thieu eq / eq_at REF"})
             continue
         rel = abs(e["e_ref"] - e["eq"]) / abs(e["e_ref"])
         worst = max(worst, rel)
         if rel > 1e-6:
-            bad.append({"leg": cid, "E_replay": e["eq"], "E_REF": e["e_ref"], "rel": rel})
+            bad.append({"leg": cid, "E_replay": e["eq"], "E_REF(eq_at_REF)": e["e_ref"], "rel": rel})
+        # [ERRATA3 E10] eq_at jar (thoi diem cache equity jar dung khi size) == eq_at REF (mo hinh cache doc lap)
+        if e["at"] != e["at_ref"]:
+            bad.append({"leg": cid, "loi": "eq_at jar != eq_at REF", "eq_at_jar": e["at"], "eq_at_REF": e["at_ref"]})
     return bad, worst, dict(lag)
 
 
@@ -190,15 +220,17 @@ def s1(L, env, meta, E, flags="on"):
     first3 = []
     C3 = c3cap(L)
     ebad, eworst, lag = e_check(E)
+    ubad, uworst = u_check(E)
     for x in L["legs"]:
         if x["outcome"] != "SUBMITTED":
             continue
         n += 1
         e = E.get(x["cid"]) or {}
         cap = e.get("ceff") if e.get("ceff") is not None else C3
-        used, b = float(x["margin_before"]), float(x["budget"])
+        b = float(x["budget"])
+        used = e.get("used_ref")   # [ERRATA3 E10] U DOC LAP (REF tu fills.csv), KHONG dung margin_before cua jar
         li = int(x["leg_idx"]) if x["leg_idx"] not in ("", None) else 0
-        bref = R.budget(p_for(env, cap, flags), used, li)
+        bref = R.budget(p_for(env, cap, flags), used, li) if used is not None else None
         rel = abs(b - float(bref)) / b if bref is not None else 1.0
         worst = max(worst, rel)
         m = meta.get(x["symbol"])
@@ -207,16 +239,17 @@ def s1(L, env, meta, E, flags="on"):
             bad.append({"leg": x["cid"], "b": b, "b_ref": float(bref) if bref is not None else None, "rel": rel, "qty": x["qty"],
                         "qty_ref": want, "C_eff_REF": cap, "capital_code": fnum(x["capital"])})
         if len(first3) < 3:
-            first3.append((b, used))
+            first3.append((b, used, fnum(x["margin_before"])))
     hv = R.hand_values()
     hv_ok = all(abs(a - e) <= 0.005 * e for a, e in zip(hv, [225.00, 216.56, 208.44]))
     det = {"n_submit": n, "worst_rel_budget": worst, "bad": bad[:20], "n_bad": len(bad), "hand_values_ref": hv, "hand_ok": hv_ok,
-           "first3_replay(b,used)": first3, "C3_CAPITAL": C3,
+           "first3_replay(b,used_REF,margin_before_jar)": first3, "C3_CAPITAL": C3,
+           "U(E10)": {"worst_abs": uworst, "n_bad(>1e-6)": len(ubad), "bad": ubad[:10]},
            "E": {"worst_rel": eworst, "n_bad(>1e-6)": len(ebad), "bad": ebad[:10], "eq_at_minus_decision_s": lag,
                  "C_eff_min": min((e["ceff"] for e in E.values() if e["ceff"] is not None), default=None)}}
     if n == 0:
         return NA, det
-    return (PASS if not bad and hv_ok and not ebad else FAIL), det
+    return (PASS if not bad and hv_ok and not ebad and not ubad else FAIL), det
 
 
 # ------------------------------------------------------------------ cum (replay) tu fills + events
@@ -285,6 +318,8 @@ def x1(L, refdir, meta, fxo):
     for c in rep:
         k = (c["symbol"], c["b0"])
         f = ref.get(k)
+        if f is not None and f["reason"] == "OPEN" and f.get("nhip_label") == "1" and f.get("nhip_reason") not in ("", "OPEN", None):
+            f = dict(f, exit_bar=f["nhip_exit_bar"], reason=f["nhip_reason"], exit_px=f["nhip_exit_px"], sl=f["nhip_sl"])
         if f is None or f["reason"] == "OPEN":
             mism.append({"cum": k, "replay": c["reason"], "ref": None if f is None else "OPEN"})
             continue
@@ -329,7 +364,8 @@ def x1(L, refdir, meta, fxo):
         else:
             row["px_ok"] = False
         rows.append(row)
-    ref_exited_not_rep = [k for k, f in ref.items() if f["reason"] != "OPEN" and not any((c["symbol"], c["b0"]) == k for c in rep)]
+    ref_exited_not_rep = [k for k, f in ref.items() if (f["reason"] != "OPEN" or (f.get("nhip_label") == "1" and f.get("nhip_reason") not in ("", "OPEN", None)))
+                          and not any((c["symbol"], c["b0"]) == k for c in rep)]
     ev = [r for r in rows if not r["X14_HOAN"]]
     ts = [r for r in ev if "TIME_STOP" in r["reason"]]
     arm = [r for r in ev if r["ARM_CUNG_NEN"] and r not in ts]
@@ -387,12 +423,15 @@ def dca_leg_checks(x, mref, env, E, C3):
     p15ok = bool(r) and float(r["p15"]) >= float(P["MOM"])
     e = E.get(x["cid"]) or {}
     cap = e.get("ceff") if e.get("ceff") is not None else C3
-    bref = R.budget(p_for(env, cap, "on"), float(x["margin_before"]), int(x["leg_idx"]))
+    used = e.get("used_ref")   # [ERRATA3 E10] U doc lap
+    bref = R.budget(p_for(env, cap, "on"), used, int(x["leg_idx"])) if used is not None else None
     brel = abs(float(x["budget"]) - float(bref)) / float(x["budget"]) if bref is not None else 1.0
+    uabs = abs(e["u_ref"] - e["u_jar"]) if (e.get("u_ref") is not None and e.get("u_jar") is not None) else 1.0
     erel = abs(e["e_ref"] - e["eq"]) / abs(e["e_ref"]) if e.get("eq") is not None and e.get("e_ref") is not None else 1.0
     return {"b": b, "sym": x["symbol"], "legIdx": int(x["leg_idx"]), "dieu_kien_tt": cond, "p15_ok": p15ok,
             "tt": None if not r else {"big": r["big_a1"], "alt": r["alt_a1"], "p15": r["p15"], "dip": r["dip"]},
-            "budget_rel": brel, "E_rel": erel, "ok": cond and p15ok and brel <= 1e-5 and erel <= 1e-6}
+            "budget_rel": brel, "E_rel": erel, "U_abs": uabs, "eq_at_khop": e.get("at") == e.get("at_ref"),
+            "ok": cond and p15ok and brel <= 1e-5 and erel <= 1e-6 and uabs <= 1e-6 and e.get("at") == e.get("at_ref")}
 
 
 def d1_natural(L, refdir, env, E):
@@ -676,6 +715,11 @@ def main():
     print(js[:30000])
 
 
+def _md5(p):
+    import hashlib
+    return hashlib.md5(open(p, "rb").read()).hexdigest() if p and os.path.isfile(p) else None
+
+
 def run_checks(runs, refroot, fx, envf, dry_1105="", labels_1105=""):
     env = R.load_env(envf)
     meta, _ = R.load_exinfo(fx + "/exinfo.json")
@@ -707,6 +751,10 @@ def run_checks(runs, refroot, fx, envf, dry_1105="", labels_1105=""):
                                                            if Ls[n]["res"] is not None})
     out["R-OLD banners (ky vong TAT)"] = ("BAO CAO", {k: bool(re.search(p, Ls["R-OLD"]["log"])) for k, p in BANNERS.items()})
     out["VON_MICRO_6"] = ("BAO CAO", micro(Ls["R0"], env, meta, Ls["R-1000"], Ls["R-4000"]))
+    out["INPUT md5 (ERRATA3 E11)"] = ("BAO CAO", {"env242_file": envf, "env242_md5": _md5(envf),
+                                                  "labels_1105": labels_1105, "labels_1105_md5": _md5(labels_1105),
+                                                  "result_json_env242_md5": {n: (Ls[n]["res"] or {}).get("env242_file_md5") for n in Ls},
+                                                  "result_json_labels_md5": {n: (Ls[n]["res"] or {}).get("labels_1105_md5") for n in Ls}})
     out["errata/khoa"] = ("BAO CAO", {n: {"errata_mo_lai": (Ls[n]["res"] or {}).get("errata_mo_lai"),
                                           "official_lock": (Ls[n]["res"] or {}).get("official_lock")} for n in ("R0",)})
     keys = ["C1", "E1[R0]", "E1[R0-DRY]", "S1[R0]", "S1[R0-DRY]", "D1[S-DCA]", "X1[R0]", "F1[FIN-INJ]", "K1[R0]", "K1[R0-DRY]",

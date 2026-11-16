@@ -3,7 +3,7 @@
 # usage (A1/MASTER):  A1_APPROVED=<commit da duyet> tools/e2e/run_official_1105.sh
 #   mo lai sau khi da chay (CHI khi co errata MOI cua MASTER):  E2E_ERRATA=<ten errata> A1_APPROVED=<commit> tools/e2e/run_official_1105.sh
 # KHOA CHAY 1 LAN (ERRATA1 E5): file khoa CO DINH $LOCK tao NGAY khi bat dau (truoc fixture/build/chay). Da co khoa => TU CHOI,
-#   tru khi E2E_ERRATA dat va CHUA tung dung trong khoa (moi errata mo lai dung 1 lan). Ten errata + khoa ghi vao result.json
+#   tru khi E2E_ERRATA dat va CHUA tung dung trong khoa (moi errata mo lai dung 1 lan; tools/e2e/official_lock.sh, ERRATA3 E11). Ten errata + khoa ghi vao result.json
 #   (errata_mo_lai, official_lock) va check_v12.json.
 # 1 lenh: dung fixture 11-05 (khong ghi de neu da co) -> moi luot ?4 + REF + bo cham, qua lock Oracle (1 flock, khong long).
 # Truoc khi chay: tao (neu can) tools/e2e/labels_1105.csv (symbol,label) cho cac SUBMIT dry that duoc phep lech theo nhan KHAI TRUOC
@@ -16,13 +16,14 @@ HEAD=$(git -C "$W" rev-parse --short HEAD)
 case "$A1_APPROVED" in "$HEAD"*) ;; *) echo "TU CHOI: HEAD $HEAD != commit A1 duyet $A1_APPROVED"; exit 2;; esac
 LOCK=$HOME/claude_master/e2e_v12/OFFICIAL_1105.lock
 ERR=${E2E_ERRATA:-}
-if [ -e "$LOCK" ]; then
-  [ -n "$ERR" ] || { echo "TU CHOI: luot chinh thuc DA chay (khoa $LOCK). Mo lai chi voi E2E_ERRATA=<errata moi cua MASTER>"; cat "$LOCK"; exit 2; }
-  grep -q "errata=$ERR " "$LOCK" && { echo "TU CHOI: errata '$ERR' da dung de mo lai (khoa $LOCK)"; exit 2; }
-fi
-mkdir -p "$(dirname "$LOCK")"
-echo "$(date -Is) head=$HEAD a1=$A1_APPROVED errata=$ERR host=$(hostname)" >> "$LOCK"
-chmod a-w "$LOCK" 2>/dev/null || true
+# [ERRATA3 E9] tien kiem (CHI ls, khong dung fixture o day): labels_1105.csv da commit + hop le; nguon LEGACY 11-05 ton tai
+git -C "$W" ls-files --error-unmatch tools/e2e/labels_1105.csv > /dev/null 2>&1 || { echo "TU CHOI: tools/e2e/labels_1105.csv chua commit"; exit 2; }
+python3 -c "import sys; sys.path.insert(0, '$W/tools/e2e'); import check_v12 as C; ok, _, d = C.labels_check('$W/tools/e2e/labels_1105.csv'); print(d); sys.exit(0 if ok else 1)" \
+  || { echo "TU CHOI: labels_1105.csv bi tu choi (nhan ngoai tap khai truoc)"; exit 2; }
+ls $HOME/claude_master/pull242/2026-11-05/run/legacy_symbols.csv $HOME/claude_master/pull242/2026-11-05/logs/full.log@*.gz 2>/dev/null | grep -q . \
+  || { echo "TU CHOI: khong co nguon LEGACY 11-05 (pull242/2026-11-05)"; exit 2; }
+# [ERRATA3 E11] khoa chay 1 lan: GHI khoa phai thanh cong (doc lai thay dong) moi duoc chay; moi errata mo lai dung 1 lan
+"$W/tools/e2e/official_lock.sh" "$LOCK" "$ERR" "$HEAD" "$A1_APPROVED" || exit 2
 FX=$HOME/claude_master/e2e_v12/fx1105
 OUT=$HOME/claude_master/e2e_v12/out1105_$(date +%m%d_%H%M)
 [ -e "$OUT" ] && { echo "TU CHOI: $OUT da ton tai"; exit 2; }

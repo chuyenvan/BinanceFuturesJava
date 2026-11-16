@@ -179,6 +179,10 @@ final class CrashDayRig {
     String persist;
     long lastResolve = Long.MIN_VALUE / 2, lastHourly, lastBook = Long.MIN_VALUE / 2, lastPeriodic = Long.MIN_VALUE / 2;
     long lastUni = Long.MIN_VALUE / 2;
+    /** [ERRATA3 E11] nhip production C3LiveRuntime:75-78: vong ops 5 s, exitTick (mgr.step) 10 s, onBook (equity) 15 s.
+     *  Gia DAU VAO chi co 4 moc/phut (+0/+15/+30/+45 s = O, cuc 1, cuc 2, C cua nen 1m) - do phan giai du lieu, KHONG phai nhip exit. */
+    static final long OPS_MS = 5_000L, EXIT_MS = 10_000L, PX_MS = 15_000L;
+    long lastExit = Long.MIN_VALUE / 2;
     Set<String> lastLatch = new TreeSet<>();
     long latchFlattenAt = -1;
     int rlOrdersLeft, rlStopsLeft;
@@ -459,26 +463,30 @@ final class CrashDayRig {
             if (o.sDcaAt >= 0 && !sdca0 && tm >= o.sDcaAt && o.exec) chooseSdca(tm);
             applyPrices(tm, 0, true);
             if (o.exec) ops();
+            setTime(tm + OPS_MS);
+            if (o.exec) ops();
             setTime(tm + 6_000L);
             long b = tm - MIN;
             boolean stall = o.c1From >= 0 && b >= o.c1From && b < o.c1To;
             if (b >= ReplayData.START && !stall) decide(b);
-            for (int k = 1; k <= 3; k++) {
-                setTime(tm + 15_000L * k);
-                applyPrices(tm, k, true);
+            // [ERRATA3 E11] ops moi 5 s (+10..+55 s); moc gia dau vao doi o +15/+30/+45 s (truoc ops cung thoi diem)
+            for (long off = 2 * OPS_MS; off < MIN; off += OPS_MS) {
+                setTime(tm + off);
+                if (off % PX_MS == 0) applyPrices(tm, (int) (off / PX_MS), true);
                 if (o.exec) ops();
             }
         }
         if (o.exec) {   // lang 3 phut sau END (gia dung yen) de leg/stop/flatten don xong
-            for (int i = 0; i < 12; i++) {
-                setTime(t() + 15_000L);
+            for (int i = 0; i < 36; i++) {
+                setTime(t() + OPS_MS);
                 ops();
             }
         }
         finish();
     }
 
-    /** Nhip gia k (0..3) cua nen phut tm: O, cuc 1, cuc 2, C (nen giam: O,H,L,C; nen tang: O,L,H,C). */
+    /** Moc gia DAU VAO k (0..3, +15k s) cua nen phut tm: O, cuc 1, cuc 2, C (nen giam: O,H,L,C; nen tang: O,L,H,C).
+     *  [ERRATA3 E11] day la do phan giai dau vao (nen 1m), nhip exit = 10 s (EXIT_MS) doc gia moc gan nhat. */
     void applyPrices(long tm, int k, boolean trigger) {
         Map<String, Float> m = new HashMap<>();
         for (String s0 : d.bars.keySet()) {
@@ -549,8 +557,11 @@ final class CrashDayRig {
                 Float v = lastPx.get(s);
                 if (v != null) px.put(s, v);
             }
-            try (RateGuard.Urgent u = RateGuard.urgent(t() + C3StopProtector.DEADLINE_MS)) {
-                mgr.step(px);
+            if (n - lastExit >= EXIT_MS) {   // [ERRATA3 E11] = C3LiveRuntime:511 exitTick moi EXIT_EVERY_MS 10 s
+                lastExit = n;
+                try (RateGuard.Urgent u = RateGuard.urgent(t() + C3StopProtector.DEADLINE_MS)) {
+                    mgr.step(px);
+                }
             }
             if (n - lastHourly >= H) {
                 rec.hourly();

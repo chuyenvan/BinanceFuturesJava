@@ -253,3 +253,69 @@ Mục này bổ sung §6 (chỗ mâu thuẫn thì §7 thắng). Vẫn CHỈ fixt
 - **N12 nhịp exit live 10 s** (`C3LiveRuntime:78`) ≠ "15 s" trong lời giao việc/ERRATA2; không ảnh hưởng rig (giá đổi mỗi 15 s) nhưng
   mức lệch live↔sim đo bằng REF-nhịp chỉ đúng dưới quy ước 4 nhịp O→H/L→C.
 - **N13 VWAP sau DCA:** REF-nhịp áp VWAP mới từ nhịp 1 của phút khớp DCA, REF-nến từ nến sau; chỉ chạm cụm có DCA đã arm — 10-30 không có.
+
+## 8. ERRATA 3 (vong 4, `PREREG_E2E_REPLAY_V12_ERRATA3.md` 409e1144) - E9/E10/E11 + ghi nhan E12 (van ban ASCII)
+
+- **E9 R-OLD = cau hinh dry that cua NGAY fixture (A1 R2 B1).** CHI luot `R-OLD`: `C3_EXCLUDE_LEGACY_HELD=true` + danh sach LEGACY
+  cua ngay fixture; moi luot khac giu `false` (prereg muc 1). Nguon (`tools/e2e/legacy_src.py`, D = ngay +07 cua START fixture):
+  (1) `pull242/<D>/run/legacy_symbols.csv` neu co; (2) nguoc lai dong log `[LEGACY] managed N: ...` CUOI CUNG co thoi diem <= START
+  trong `pull242/<D>/logs/full.log@*.gz` (gio log +07). Ghi ra `<luot>/wd/run/legacy_symbols.csv` (= `LegacySymbols.DEFAULT_FILE` trong
+  cwd jar - DUNG duong production, jar nap 1 lan; khong goi `reconcile` vi khong co vi the that) + `<luot>/legacy_E9.json`
+  (nguon, md5 nguon, so dong, ms, danh sach, md5 csv, moi lan danh sach DOI trong [START, END) kem file/dong/them/bot, log phu toi dau).
+  `result.json.legacy_E9` = json nguon + tap jar THAT SU nap (`LegacySymbols.getInstance().all()`, `excludeLegacyHeld()`, md5 file).
+  Khong lap duoc danh sach => luot R-OLD TU CHOI (exit 6). 11-05: `pull242/2026-11-05/run/` KHONG co `legacy_symbols.csv` (chi
+  `gate_ratio_live.bin.gz`) => nguon = `pull242/2026-11-05/logs/full.log@1793928180_135437659.gz` (kiem bang `ls`; CHUA chay
+  legacy_src cho 11-05). Dev 10-30 (START 10-29 07:00 => `pull242/2026-10-29`): dong 427867 (10-29 06:59:10), n = 44; trong cua so
+  doi 2 lan (ZECUSDT vao 10-29 11:18, ra 11:21) - chi bao cao.
+  - Nhan E2: `tools/e2e/labels_1105.csv` (commit `0c198ba9`, chi header `symbol,label,nguon`, rong; `*.csv` bi gitignore => `add -f`).
+    Bo cham `labels_check`: header DUNG `symbol,label,nguon`; nhan thuoc tap khai truoc {LEGACY-11-05, JAR-R4Q-FIN2-BIGDOWN-SEL,
+    JAR-R4Q-FIN2-UNIVERSE-A1, EXCHANGEINFO}; `LEGACY-11-05` bat buoc cot `nguon` (dong log chi ra danh sach doi trong ngay); symbol
+    khong trung; file thieu => TU CHOI => E2 FAIL. E2 con FAIL neu R-OLD khong chay voi `excludeLegacyHeld=true` + tap LEGACY khac rong.
+    Nguong E2 GIU NGUYEN. `run_official_1105.sh` tien kiem: labels da commit + hop le, nguon LEGACY 11-05 ton tai (ls).
+- **E10 U va eq_at DOC LAP (A1 R2 B2).** REF (`--fills`) ghi `ref_u.csv`: `used_before_usd` cua moi cid = tong gia von vi the DANG MO
+  (BUY: + qty x gia khop; SELL: - qty x VWAP vi the) tinh tu `fills.csv` theo thoi gian (on dinh trong cung ms = thu tu file) NGAY TRUOC
+  dong BUY dau tien cua cid. Bo cham: `U_REF = used_REF / C_eff_REF`, `U_jar = margin_before / capital` (jar);
+  budget ky vong tinh tu `used_REF` (KHONG con dung `margin_before` cua jar). Them vao S1 va D1: `|U_REF - U_jar| <= 1e-6` cho MOI SUBMIT
+  (thieu U_REF => FAIL). `ref_market.csv` them cot `eq_at` = thoi diem cache equity cua REF tai quyet dinh phut b (mo hinh cache 60 s,
+  doc lap jar); `E_REF = equity_at(fills, eq_at_REF)` (truoc day tinh tai eq_at do JAR bao). S1 (va D1): `|E_REF - E_jar| / E_REF <= 1e-6`
+  VA `eq_at_jar == eq_at_REF` (ms) cho moi SUBMIT. Dien giai: ERRATA3 viet "eq_at (equity jar dung khi tinh size) == eq_at REF (sai so
+  tuong doi <= 1e-6)" - ap 1e-6 cho GIA TRI equity va so khop thoi diem cache CHINH XAC (1e-6 tuong doi cua ms epoch = 30 phut, vo nghia);
+  MASTER xac nhan (NGHI VAN N14).
+- **E11 sua loi harness (khong doi tieu chi).**
+  - (a) REF: cum co nhan `ARM_CUNG_NEN` (REF-nhip thoat va co ARM/doi SL trong chinh phut thoat): trang thai "dang giu" (book: held cho
+    selector, U, DCA, S-DCA) GIAI PHONG tai nhip thoat REF-nhip - nhip j = 0 (truoc quyet dinh) => phut do da trong; j >= 1 => trong tu
+    quyet dinh phut sau (= jar). REF-nen van chay tiep cum do (danh sach `ghosts`) CHI de dien cot `exit_*` bao cao. Cot moi
+    `giai_phong_nhip` (`phut:j`) trong `ref_clusters.csv`; `ref_summary.nhip` them `giai_phong_theo_nhip(E11a)`,
+    `nen_thoat_truoc_nhip_co_nhan` (chieu nguoc - REF-nen thoat TRUOC REF-nhip - khong xu ly, chi dem; ly thuyet = 0 vi REF-nhip min
+    hon). X1: cum co nhan ma REF-nen con OPEN cuoi cua so => cham theo REF-nhip (A1 R2 rui ro 6). Thu: `tools/e2e/test_ref_e11a.py`
+    (fixture tam tu dev 10-30: symbol vao lai top-K ngay phut sau; REF moi vao lai, REF cu 1302fd81 coi dang giu).
+  - (b) Khoa chay 1 lan: `tools/e2e/official_lock.sh` (goi tu `run_official_1105.sh`): kiem + ghi trong flock rieng; khoa da co =>
+    chi errata MOI duoc mo; `chmod u+w` -> ghi dong -> `chmod a-w` -> DOC LAI thay dung dong va errata xuat hien dung 1 lan, sai bat ky
+    buoc nao => TU CHOI (khong chay). Thu: `tools/e2e/test_official_lock.sh` (thu muc tam, 12 ca, gom khoa da `chmod a-w`, thu muc chi
+    doc, khoa la thu muc, flock khong mo duoc).
+  - (c) `result.json`: `env242_file_md5` (md5 file gia tri env 242 da dung), `labels_1105_file`, `labels_1105_md5`; bo cham in lai
+    md5 tu tinh (`INPUT md5 (ERRATA3 E11)`).
+  - (d) NHIP: production `C3LiveRuntime` ops 5 s (`:75`), exit 10 s (`:78` `EXIT_EVERY_MS`, KHONG phai 15 s), onBook/equity 15 s (`:77`).
+    Rig (`CrashDayRig.run/ops`): ops moi 5 s (+0, +5, quyet dinh +6, +10 ... +55 s), `mgr.step` (exit) khi `now - lastExit >= 10 s`
+    (+0/+10/../+50 s), equity 15 s; tail sau END 36 x 5 s (= 3 phut nhu cu). **Gia DAU VAO chi co 4 moc/phut** (+0/+15/+30/+45 s = O,
+    cuc 1, cuc 2, C cua nen 1m; nen giam O,H,L,C, con lai O,L,H,C) - do la DO PHAN GIAI cua du lieu dau vao, KHONG phai nhip exit; nhip
+    exit doc gia moc gan nhat <= thoi diem. REF-nhip: j = 0..5 o +10j s, gia = moc `PIDX[j] = [0,0,1,2,2,3]`; nhip 0 truoc quyet dinh,
+    1..5 sau; equity REF goi +0/+15/+30/+45 s + quyet dinh +6 s (khong doi). Hai nhip doc cung 1 moc khong doi trang thai trailing (kiem
+    stop p <= SL sau arm luon sai; ratchet cung rate khong tang SL) => ket qua thoat chi doi THOI DIEM (ms) khop, khong doi gia/phut,
+    tru khi moc C nam o +50 s thay vi +45 s. Cot `nhip_k` = chi so nhip exit 0..5 (truoc: 0..3).
+- **E12 (ghi nhan phan xu A1 R2, KHONG doi tieu chi):**
+  - N7: dieu kien thi truong live tinh tren universe A1, sim khong loc - khac biet co chu dich da ghi (AUDIT_GOLIVE_1116_D, D7); phan
+    "ticker kha dung" (live bo han ticker khong kha dung + cua so 15 ban ghi, rig n = 512-513 vs sim/REF n = 517) la lech nho chua ghi
+    => THEM vao danh sach gioi han cua gate (10-30: 0/4319 phut khac co).
+  - N8: `DIED_SYMBOLS=BTCDOM,USDC` lay tu `config.properties` (Configs.getString = properties), khop repo va sim.
+  - N9: thu tu BIG_DOWN -> DCA -> selector: live = sim (dung sau ERRATA 1).
+  - N10: cache equity 60 s - thuoc khac biet N4 da ghi; rang buoc bang `eq_at` (E10).
+  - N12, N13: cung ho N5 (xu ly theo nhip trong nen); ghi vao danh sach gioi han cua gate.
+
+### NGHI VAN moi (vong 4)
+- **N14 dien giai "eq_at ... sai so tuong doi <= 1e-6" (E10):** harness ap 1e-6 cho gia tri equity va so khop ms cua thoi diem cache
+  (chat hon neu MASTER muon hieu "eq_at" la thoi diem voi dung sai). MASTER xac nhan.
+- **N15 danh sach LEGACY tinh:** jar nap 1 lan luc khoi dong (nhu production khi khong co vi the that de reconcile); neu danh sach 11-05
+  doi trong cua so (legacy_E9.json `doi_trong_cua_so`) thi replay KHONG theo kip => lech phai gan nhan LEGACY-11-05 kem dong log
+  (dung ERRATA3 E9). Ngay START 11-05 log `pull242/2026-11-05` phu toi 11-06 08:23 => doi sau moc do khong thay duoc (khong anh huong
+  23 SUBMIT 22:51-22:53).

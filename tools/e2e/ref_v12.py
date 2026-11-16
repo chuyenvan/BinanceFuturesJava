@@ -20,6 +20,15 @@ san kiem STOP da dat truoc (gia nhip <= SL => khop), roi buoc trailing voi gia n
 ARM_CUNG_NEN (nhip_label) = REF-nhip co ARM hoac doi SL trong chinh phut thoat cua no. KHONG doc output/su kien replay.
 [ERRATA2 E8/N10] E dung cache 60 s (C3MainEquity:57,96,124,148-149): goi c3Equity moi nhip ops cua rig (15 s) + luc quyet dinh;
 lam moi khi now - eq_at >= 60 s => cot eq_at trong ref_legs.csv.
+
+[ERRATA3 E10] U DOC LAP: ref_u.csv (cid, ms, used_usd) = tong gia von cac vi the DANG MO (BUY cong qty*gia khop; SELL tru
+qty*VWAP) tinh tu fills.csv theo thu tu thoi gian (on dinh trong cung ms = thu tu file) NGAY TRUOC dong BUY dau tien cua cid
+do; bo cham chia cho C_eff_REF. Cot eq_at trong ref_market.csv = thoi diem cache equity REF tai quyet dinh phut b (doc lap jar).
+[ERRATA3 E11] (a) cum co nhan ARM_CUNG_NEN: trang thai "dang giu" (book: held/used/DCA) GIAI PHONG tai nhip thoat REF-nhip
+(nhip j=0 truoc quyet dinh => phut do da trong; j>=1 => trong tu quyet dinh phut sau); REF-nen van chay tiep cum do (bong) chi
+de dien cot exit_* bao cao. (d) nhip exit = production EXIT_EVERY_MS 10 s (C3LiveRuntime:78): j=0..5 o +0/+10/../+50 s; gia
+nhip = moc gia DAU VAO gan nhat <= thoi diem (4 moc/phut +0/+15/+30/+45 s = DO PHAN GIAI DAU VAO nen 1m, khong phai nhip exit)
+=> chi so moc PIDX = [0,0,1,2,2,3]. Equity c3 goi o nhip onBook 15 s (C3LiveRuntime:77) + capital() luc quyet dinh +6 s.
 """
 import argparse
 import collections
@@ -55,7 +64,11 @@ SDCA_DIP = 0.98
 #   (C3LiveRuntime.java:253-254, kep :96)); dung cache neu now - eqAtMs < ttl (:124), lam moi eqAtMs = now (:148-149).
 #   Lich goi (SPEC §1 rig): moi nhip ops +0/+15/+30/+45 s (CrashDayRig ops -> ks.onPaper) + capital() luc quyet dinh +6 s.
 EQ_TTL = 60000
-TICK_MS = 15000
+BOOK_MS = 15000                  # onBook/equity c3 (C3LiveRuntime BOOK_EVERY_MS)
+EXIT_MS = 10000                  # [ERRATA3 E11] nhip exit production (C3LiveRuntime:78 EXIT_EVERY_MS)
+PX_MS = 15000                    # do phan giai DAU VAO gia: 4 moc/phut (+0/+15/+30/+45 s)
+NHIP_J = 60000 // EXIT_MS        # 6 nhip exit / phut
+PIDX = [(j * EXIT_MS) // PX_MS for j in range(NHIP_J)]   # [0,0,1,2,2,3]
 SDCA_MKT_WIN = 30                # phut b - st in [0, 30): dau vao thi truong TONG HOP (moi symbol phang = close nen st-1'; dip o tren)
 # §R8 nguong thi truong: SIM_MS_DOWN_BIG_AVG / _DCA khong dat o 242 va profile A3 => mac dinh sim Configs:511,515
 MS_DEF = -0.03157
@@ -303,6 +316,27 @@ def equity_at(fills, t, mark, C3):
     return C3 + rp - fee + upl
 
 
+def u_before_by_cid(fills):
+    """[ERRATA3 E10] U doc lap (USD): {cid: (ms, used)} - used = tong gia von vi the dang mo ngay truoc dong BUY dau tien
+    cua cid (fills theo load_fills: thoi gian, on dinh). Gia von giam theo VWAP khi ban (= equity_at)."""
+    pos, cost = collections.defaultdict(float), collections.defaultdict(float)
+    out = {}
+    for f in fills:
+        s, q, px = f["symbol"], f["qty"], f["price"]
+        if f["side"] == "BUY":
+            if f["cid"] not in out:
+                out[f["cid"]] = (f["ms"], sum(cost.values()))
+            pos[s] += q
+            cost[s] += q * px
+        elif pos[s] > 0:
+            avg = cost[s] / pos[s]
+            cost[s] -= q * avg
+            pos[s] -= q
+            if pos[s] <= 1e-12:
+                pos[s], cost[s] = 0.0, 0.0
+    return out
+
+
 def make_mark(raw_bar, fct):
     """§R9 mark(s, t) = gia nhip cua fixture tai t (= rig applyPrices: k=0 O; nen giam k1 H k2 L; nen tang k1 L k2 H; k=3 C;
     k = (t - phut)//15 s) x he so S-DCA; khong co nen o phut t => close cua nen gan nhat truoc do."""
@@ -360,7 +394,8 @@ class Cluster:
         self.rank = rank
         self.exit = None   # (bar, reason, price, at_open)
         # [ERRATA2 E7] trang thai REF-nhip (lop phu doc lap): SL, da arm, su kien (phut, nhip, ARM|SL), thoat
-        self.tsl, self.tarmed, self.tev, self.texit = None, False, [], None   # texit = (bar, reason, px, k, sl)
+        self.tsl, self.tarmed, self.tev, self.texit = None, False, [], None   # texit = (bar, reason, px, j, sl)
+        self.rel = None   # [ERRATA3 E11a] (phut, nhip) giai phong "dang giu" theo REF-nhip
 
     @property
     def vwap(self):
@@ -452,6 +487,7 @@ def main():
         return m["a1x"]
 
     book = collections.OrderedDict()   # sym -> Cluster (dang mo)
+    ghosts = []   # [ERRATA3 E11a] cum co nhan da giai phong theo REF-nhip, REF-nen chay tiep chi de bao cao
     allc = []   # [ERRATA2 E7] moi cum (REF-nhip chay tiep ca khi REF-nen da dong cum)
     eqc = {"at": None}   # [ERRATA2 N10] cache equity: thoi diem lam moi gan nhat
     done = []
@@ -483,7 +519,7 @@ def main():
         if k == 0 and not c.tarmed and t - c.b0 > P["TSTOP_H"] * H:   # time-stop khong doi (§R6.1)
             c.texit = (t, "TIME_STOP", min(seq[0], seq[3]), 0, None)
             return
-        p = seq[k]
+        p = seq[PIDX[k]]
         if c.tarmed and p <= c.tsl:   # stop da dat (tu nhip truoc) kich o gia nhip
             c.texit = (t, "TRAIL" if c.tsl > P_ else "TRAIL_LOSS", p, k, c.tsl)
             return
@@ -498,6 +534,20 @@ def main():
             if nsl > c.tsl and nsl > P_:
                 c.tsl = nsl
                 c.tev.append((t, k, "SL"))
+
+    def nhip_lab(c):
+        return c.texit is not None and c.texit[1] != "TIME_STOP" and any(z[0] == c.texit[0] for z in c.tev)
+
+    def nhip_tick(t, j):
+        """REF-nhip nhip j cho moi cum; [ERRATA3 E11a] cum vua thoat REF-nhip CO nhan ARM_CUNG_NEN ma REF-nen con giu => giai
+        phong khoi book ngay (held/used/DCA theo phut thoat REF-nhip), REF-nen chay tiep o ghosts chi de bao cao."""
+        for c in allc:
+            was = c.texit
+            tick_step(c, t, j)
+            if was is None and c.texit is not None and nhip_lab(c) and book.get(c.sym) is c and c.exit is None:
+                book.pop(c.sym)
+                c.rel = (t, j)
+                ghosts.append(c)
 
     def process_bar(c, t):
         """§R6 mot nen t cho cum c (sim A3). Tra (reason, price, at_open) hoac None."""
@@ -601,8 +651,7 @@ def main():
                 last_tick[s] = x[0]
         # [ERRATA2] nhip 0 (+0 s): ops -> c3Equity; REF-nhip nhip 0 cho moi cum da co (truoc quyet dinh)
         eq_call(tm)
-        for c in allc:
-            tick_step(c, tm, 0)
+        nhip_tick(tm, 0)
         pending_free = []
         for s in list(book.keys()):
             c = book[s]
@@ -614,6 +663,12 @@ def main():
                 done.append(book.pop(s))
             else:
                 pending_free.append(s)
+        for g in list(ghosts):   # [ERRATA3 E11a] REF-nen tiep tuc cum da giai phong (chi cot bao cao exit_*)
+            ex = process_bar(g, tm)
+            if ex is not None:
+                g.exit = (tm,) + ex
+                ghosts.remove(g)
+                done.append(g)
         new_syms = set()
         b = tm - MIN
         rows = sel.get(b, [])
@@ -641,7 +696,7 @@ def main():
                 Pm["E"] = E
                 Pm["eq_at"] = at
                 Pm["C"] = min(P["C3"], E)
-            mrows.append([b, float(p15), int(dip)] + ([float(mA["down"]), float(mA["down15"]), int(mA["big"]), int(mA["alt"]),
+            mrows.append([b, float(p15), int(dip), Pm.get("eq_at", "")] + ([float(mA["down"]), float(mA["down15"]), int(mA["big"]), int(mA["alt"]),
                                                         mA["n"], float(ms["all"]["down"]), float(ms["all"]["down15"]),
                                                         int(ms["all"]["big"]), int(ms["all"]["alt"]), ms["all"]["n"]]
                                                        if mA else [""] * 10))
@@ -720,11 +775,12 @@ def main():
             if ex is not None and ex[0] != "TIME_STOP":
                 c.exit = (tm,) + ex
                 done.append(book.pop(s))
-        # [ERRATA2] nhip 1..3 (+15/+30/+45 s): REF-nhip (ca cum vua mo, VWAP sau leg cua phut) + ops -> c3Equity
-        for k in (1, 2, 3):
-            eq_call(tm + k * TICK_MS)
-            for c in allc:
-                tick_step(c, tm, k)
+        # [ERRATA3 E11d] nhip exit 1..5 (+10..+50 s) REF-nhip (ca cum vua mo, VWAP sau leg cua phut) xen ke onBook 15 s -> c3Equity
+        for off in sorted(set(range(EXIT_MS, MIN, EXIT_MS)) | set(range(BOOK_MS, MIN, BOOK_MS))):
+            if off % EXIT_MS == 0:
+                nhip_tick(tm, off // EXIT_MS)
+            if off % BOOK_MS == 0:
+                eq_call(tm + off)
     with open(a.out + "/ref_legs.csv", "w") as fh:
         w = csv.writer(fh, lineterminator="\n")
         w.writerow(["decision_ts", "symbol", "level", "outcome", "leg_idx", "u_before", "budget", "qty", "sizing_px", "fill_px",
@@ -733,24 +789,32 @@ def main():
     with open(a.out + "/ref_clusters.csv", "w") as fh:
         w = csv.writer(fh, lineterminator="\n")
         w.writerow(["symbol", "b0", "first", "vwap", "legs", "qty", "exit_bar", "reason", "exit_px", "at_open", "sl",
-                    "nhip_exit_bar", "nhip_reason", "nhip_exit_px", "nhip_k", "nhip_sl", "nhip_label", "nhip_ev_phut_thoat"])
-        for c in done + list(book.values()):
+                    "nhip_exit_bar", "nhip_reason", "nhip_exit_px", "nhip_k", "nhip_sl", "nhip_label", "nhip_ev_phut_thoat",
+                    "giai_phong_nhip"])
+        for c in done + list(book.values()) + ghosts:
             e = c.exit or ("", "OPEN", "", "")
             te = c.texit or ("", "OPEN", "", "", None)
             evx = [z for z in c.tev if c.texit is not None and z[0] == c.texit[0]]
             lab = int(bool(evx) and te[1] != "TIME_STOP")
             w.writerow([c.sym, c.b0, c.first, c.vwap, c.legs, c.qty, e[0], e[1], e[2], e[3], c.sl if c.sl else "",
-                        te[0], te[1], te[2], te[3], te[4] if te[4] else "", lab, ";".join("%d:%s" % (z[1], z[2]) for z in evx)])
+                        te[0], te[1], te[2], te[3], te[4] if te[4] else "", lab, ";".join("%d:%s" % (z[1], z[2]) for z in evx),
+                        "%d:%d" % c.rel if c.rel else ""])
     with open(a.out + "/ref_q.csv", "w") as fh:
         w = csv.writer(fh, lineterminator="\n")
         w.writerow(["hour", "q", "q_bits"])
         w.writerows(qrows)
     with open(a.out + "/ref_market.csv", "w") as fh:
         w = csv.writer(fh, lineterminator="\n")
-        w.writerow(["b", "p15", "dip", "down_a1", "down15_a1", "big_a1", "alt_a1", "n_a1", "down_all", "down15_all", "big_all",
+        w.writerow(["b", "p15", "dip", "eq_at", "down_a1", "down15_a1", "big_a1", "alt_a1", "n_a1", "down_all", "down15_all", "big_all",
                     "alt_all", "n_all"])
         w.writerows(mrows)
-    mk = [r for r in mrows if r[3] != ""]
+    if fills is not None:   # [ERRATA3 E10] U doc lap tu fills.csv
+        with open(a.out + "/ref_u.csv", "w") as fh:
+            w = csv.writer(fh, lineterminator="\n")
+            w.writerow(["cid", "first_buy_ms", "used_before_usd"])
+            for cid, (ms, u) in u_before_by_cid(fills).items():
+                w.writerow([cid, ms, repr(u)])
+    mk = [r[:3] + r[4:] for r in mrows if r[4] != ""]
     summ = {"params": {k: (float(v) if isinstance(v, np.floating) else ([float(z) for z in v] if isinstance(v, list) else v))
                        for k, v in P.items()},
             "venue": a.venue, "START": START, "END": END, "legs": len(legs),
@@ -766,7 +830,11 @@ def main():
                      "label_ARM_CUNG_NEN": [(c.sym, c.b0) for c in allc if c.texit is not None and c.texit[1] != "TIME_STOP"
                                             and any(z[0] == c.texit[0] for z in c.tev)],
                      "khac_phut_ref_nen": sum(1 for c in allc if c.texit is not None and c.exit is not None
-                                              and c.texit[0] != c.exit[0])},
+                                              and c.texit[0] != c.exit[0]),
+                     "giai_phong_theo_nhip(E11a)": [(c.sym, c.b0, c.rel) for c in allc if c.rel],
+                     "nen_thoat_truoc_nhip_co_nhan": sum(1 for c in allc if nhip_lab(c) and c.exit is not None
+                                                         and c.exit[0] < c.texit[0]),
+                     "nhip_exit_ms": EXIT_MS, "pidx": PIDX},
             "c_eff_min": min((x[10] for x in legs if x[3] == "SUBMITTED"), default=None)}
     json.dump(summ, open(a.out + "/ref_summary.json", "w"), indent=1, default=str)
     print(json.dumps({k: v for k, v in summ.items() if k != "params"}, default=str))
