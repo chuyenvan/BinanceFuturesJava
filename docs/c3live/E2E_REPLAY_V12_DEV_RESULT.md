@@ -42,3 +42,37 @@ Lệnh: `tools/e2e/build_v12.sh; flock -w 3600 ~/claude_master/locks/oracle_heav
 | Điều kiện thị trường rig vs REF (R0) | 0/4 319 phút lệch | BIG_DOWN 1 phút (= phút BIG_DOWN của log live), isDcaAlt 33; REF `all` (không lọc A1) lệch `a1` ở 14 phút (N7) |
 | §6 vốn micro | micro = 1 000 | 26/26 leg R0 đặt được ở 1 000 (dev) |
 | Thử tiêm | 6/6 FAIL | stopPrice +3 tick (S-TS gốc đã FAIL do N11: px_bad 1→2); TIME_STOP +1′ (ok_phut True→False); DCA dời sang phút không điều kiện; REF bỏ cờ thị trường; REF p15 < 0,008; E × (1+2e-6) |
+
+## Vòng 3 (ERRATA2 593e7f45, code 84a7cb6d + SPEC §7 443db31d) — fixture PHÁT TRIỂN 10-30 (`fx1030`), KHÔNG phải kết quả chấm
+Lệnh: `/tmp/e2e3_run.sh` = `tools/e2e/build_v12.sh` (RC=0) + `flock -w 3600 ~/claude_master/locks/oracle_heavy.lock nice -n 10 env
+E2E_OUT=~/claude_master/e2e_v12/out_v3 tools/e2e/run_all.sh` + `inject_v12.py` → `~/claude_master/e2e_v12/out_v3/{check_v12.txt,json, inject_v12.txt}`.
+Rig/jar không đổi (không sửa `src/main`, `src/test`); 8 lượt RC=0; REF 5 lượt rc=0.
+
+| Tiêu chí | 10-30 (dev) | Ghi chú |
+|---|---|---|
+| C1 | PASS | như vòng 2 |
+| E1 R0 / R0-DRY | PASS / PASS | 26 leg PREDICT ≡ REF |
+| S1 R0 / R0-DRY / S-DCA / S-TS (+E) | PASS ×4 | E rel ≤ 2e-16; S-DCA C_eff min < C3 |
+| D1 tự nhiên R0 / S-DCA | KHÔNG XẢY RA / PASS | |
+| X1 R0 | KHÔNG ĐỦ MẪU (tạm: đạt) | 22 TRAIL, 0 TIME_STOP; nhãn REF-nhịp 5 = arm-cùng-nến jar 5 (0 lệch nhãn); 5/5 cụm có nhãn cùng phút REF-nhịp, stop jar − SL REF-nhịp ∈ [−0,70; −0,34] tick; 17/17 cụm không nhãn cùng phút REF-nến; \|Δstop\| max 0,99 tick |
+| **X1 S-TS (tổng hợp dev)** | **PASS** (vòng 2: FAIL) | 26 cụm (22 TRAIL + 4 TIME_STOP 0 lệch phút, giá ∈ [L,H]); ok lý do/phút/giá/nhãn |
+| F1 / K1 | PASS / PASS | |
+| Thử tiêm | 9/9 FAIL | T1 stop +3 tick; T2 TIME_STOP +1′; **T7 cụm có nhãn stop +3 tick; T8 bỏ nhãn REF-nhịp; T9 gắn nhãn cụm không nhãn**; T3–T6 như vòng 2 |
+
+**Báo cáo riêng cụm `ARM_CUNG_NEN` (REF-nhịp so REF-nến = mức lệch live↔sim do nhịp trong nến, dưới quy ước O→H/L→C):**
+
+| Cụm (b0 UTC ms) | sự kiện REF-nhịp trong phút thoát | Δphút nhịp−nến | ΔSL nhịp−nến | stop jar − SL nhịp |
+|---|---|---|---|---|
+| AGTUSDT 1793306760000 | nhịp 1 ARM | −1 | 0 tick | −0,70 tick |
+| IDOLUSDT 1793306760000 | nhịp 2 ARM | −1 | 0 | −0,56 |
+| PARTIUSDT 1793306760000 | nhịp 2 ARM | −1 | 0 | −0,34 |
+| PARTIUSDT 1793319960000 | nhịp 2 ARM | −1 | 0 | −0,49 |
+| **QUSDT 1793319960000** | nhịp 1 dời SL | 0 | **+244,4 tick (+0,45 %)** | −0,35 |
+
+⇒ QUSDT (N11 vòng 2): REF-nhịp viết theo đặc tả tự ra đúng SL jar đặt (−0,35 tick) ⇒ không còn trượt. 4 cụm còn lại: arm trong nến rồi
+thoát ngay cùng nến ⇒ sớm 1′ so sim, SL không đổi.
+
+**E8:** N7 — `a1` ≠ `all` ở 14/4 319 phút (R0 và S-DCA; `alt` a1 33 vs all 47); rig ↔ REF `a1` 0/4 319 phút lệch. N8 — 13 key
+(`[HA_TANG]` 11, `[CHIEN_LUOC_242]` DIED_SYMBOLS = BTCDOM,USDC, `[KHONG_AI_DOC]` SPECIAL_SYMBOLS); DIED_SYMBOLS không thuộc danh sách
+trắng env 242 ⇒ chờ A1. N10 — `eq_at` REF (mô hình cache 60 s) ≡ `eq_at` jar ở 26/26 (R0), 32/32 (S-DCA), 26/26 (S-TS); chủ đích cache
+cho sizing: A1 phân xử. Vốn micro: 1 000 (26/26). Kết luận (iii) dev = FAIL chỉ vì X1 R0 KHÔNG ĐỦ MẪU + E2 CHƯA ÁP DỤNG (đúng thiết kế fixture dev).
