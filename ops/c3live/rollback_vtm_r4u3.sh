@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
 # rollback_vtm_r4u3.sh — [WAVE1 16/11 B-01/B-12] 1 LENH ve jar v_t_m r4u3 (b1f12c3e) tu r4u3fin2 (64180356), CHI khi v_t_m DRY.
-#   DRY=1 bash ~/claude_master/fin1114/c3_fin/ops/c3live/rollback_vtm_r4u3.sh   # chi kiem
-#   bash ~/claude_master/fin1114/c3_fin/ops/c3live/rollback_vtm_r4u3.sh         # go YES (job nen, cho khung gio — nhu swap_v12_dry_jar.sh)
+#   DRY=1 bash $OPS/rollback_vtm_r4u3.sh   # $OPS = thu muc chua script nay   # chi kiem
+#   bash $OPS/rollback_vtm_r4u3.sh         # go YES (job nen, cho khung gio — nhu swap_v12_dry_jar.sh)
 # = swap_v12_dry_jar.sh voi OLD_TAG=r4u3fin NEW_TAG=r4u3 OLD_MD5=<r4u3fin2> NJ=<jar r4u3> NJ_MD5=<r4u3> NEED_FIN=0 (r4u3 doc bin data,
 #   an toan voi ca 2 ingestor). TU CHOI khi: co co micro/pilot (Oracle) hoac v_t_m / env.sh LIVE_ADAPTER=live (dung golive_live_off.sh).
 # Ghi chu: 2 co sizing/DCA (neu da bat) GIU trong env.sh — jar r4u3 cung doc 2 co nay (LiveGridSizing/LiveDcaGridC3 co tu 10-03).

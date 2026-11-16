@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 # golive_legacy_verify.sh — [V12 R4o] CHI DOC: sau khi owner tu dong TOAN BO vi the LEGACY (+ huy lenh/algo LEGACY) tren UI
-#   $OPS = thu muc chua script nay = worktree A1 duyet (HEAD co trong deploy/gates/A1_APPROVED_OPS.commit), vd ~/claude_master/fin1114/c3_w1c/ops/c3live
+#   $OPS = thu muc chua script nay (worktree A1 duyet: HEAD co trong deploy/gates/A1_APPROVED_OPS.commit; MASTER cap duong dan)
 # (GOLIVE_SCENARIO ADD1 §5). Chay tren ORACLE:  bash $OPS/golive_legacy_verify.sh
 #   (DRY=1: kiem nhu that nhung KHONG ghi file ket qua)
 # DAT <=> tren san (key c3, goi ky tu 242): [R4q MAJ-2] so QTY tung symbol: |vi the san| - qty MO c3 (cum mo cua so) = 0 moi symbol
@@ -10,7 +10,15 @@
 # DAT => ghi ~/claude_master/deploy/gates/LEGACY_CUT_VERIFIED.ok (golive_pilot_on.sh doi file nay <= 24 h).
 # =============================================================================
 set -uo pipefail
+# [WAVE1c m1 / OPS-MICRO3 n4] pin NGOAI repo, kiem TRUOC khi source lib (lib khong tu chung nhan): HEAD repo chua script = 1 commit A1/MASTER
+#   duyet trong A1_APPROVED_OPS (deploy/gates/A1_APPROVED_OPS.commit, 1 dong/commit, script CHI DOC) + thu muc script KHONG co sua chua commit.
+_OPS=$(cd "$(dirname "$0")" && pwd); _APO=${A1_APPROVED_OPS:-/home/ubuntu/claude_master/deploy/gates/A1_APPROVED_OPS.commit}; _PW=""
+_HC=$(git -C "$_OPS" rev-parse --verify -q HEAD 2>/dev/null) || _PW="$_OPS khong phai repo git"
+[ -n "$_PW" ] || { [ -f "$_APO" ] && grep -qE "^$_HC([[:space:]]|\$)" "$_APO"; } || _PW="HEAD $_HC CHUA duoc A1 duyet (khong co trong $_APO)"
+[ -n "$_PW" ] || git -C "$_OPS" diff --quiet HEAD -- . 2>/dev/null || _PW="$_OPS co sua CHUA commit (git diff HEAD)"
+[ -z "$_PW" ] || { echo "TU CHOI [m1]: $_PW - KHONG lam gi."; exit 1; }
 . "$(cd "$(dirname "$0")" && pwd)/golive_lib.sh"
+gl_manifest_check "$0" || exit 1   # [WAVE1b M5 / OPS-MICRO3 n4] script + lib + manifest khop md5 da commit, lech => TU CHOI truoc moi viec
 gl_init golive_legacy_verify
 [ "$C3_ACCOUNT" = MAIN ] || die "ADD4 §3: c3 chay tai khoan CON — BO golive_legacy_verify (LEGACY doc lap o tk chinh). Chi dung voi C3_ACCOUNT=MAIN."
 gl_read_state

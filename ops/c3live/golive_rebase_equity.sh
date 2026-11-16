@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 # golive_rebase_equity.sh — [ADD4 ERRATA 2 §5 / A1 MIN-1] OWNER chay tren ORACLE NGAY SAU KHI NAP / RUT von tk con co chu dich:
-#   $OPS = thu muc chua script nay = worktree A1 duyet (HEAD co trong deploy/gates/A1_APPROVED_OPS.commit), vd ~/claude_master/fin1114/c3_w1c/ops/c3live
+#   $OPS = thu muc chua script nay (worktree A1 duyet: HEAD co trong deploy/gates/A1_APPROVED_OPS.commit; MASTER cap duong dan)
 #   bash $OPS/golive_rebase_equity.sh <delta_usdt> "ly do"    # delta > 0 nap, < 0 rut; go YES
 #   DRY=1 bash .../golive_rebase_equity.sh -500 "rut 500"                                       # chi kiem + in
 # Lop phu golive_monitor: eq = C3_CAPITAL + (tmb - tmb0). Rebase THEO SO TIEN: tmb0 += delta, GIU dinh eq (KHONG xoa DD):
@@ -27,8 +27,8 @@ DELTA=${1:-}; REASON=${2:-${REASON:-}}
 REBASE_TOL=${REBASE_TOL:-0.02}
 REBASE_MAX_AGE_S=${REBASE_MAX_AGE_S:-86400}
 gl_init golive_rebase_equity
-[[ "$DELTA" =~ ^-?[0-9]+(\.[0-9]+)?$ ]] && awk -v d="$DELTA" 'BEGIN{exit !(d != 0)}' || die "can so tien delta (USDT, > 0 nap / < 0 rut, khac 0): bash $0 -500 \"rut 500\""
-[ -n "$REASON" ] || die "can ly do: bash $0 $DELTA \"nap/rut ...\""
+[[ "$DELTA" =~ ^-?[0-9]+(\.[0-9]+)?$ ]] && awk -v d="$DELTA" 'BEGIN{exit !(d != 0)}' || die "can so tien delta (USDT, > 0 nap / < 0 rut, khac 0): bash $_OPS/golive_rebase_equity.sh -500 \"rut 500\""
+[ -n "$REASON" ] || die "can ly do: bash $_OPS/golive_rebase_equity.sh $DELTA \"nap/rut ...\""
 [ "$C3_ACCOUNT" = SUB ] || die "chi dung cho C3_ACCOUNT=SUB (ADD4)"
 [ -f "$GL_MON_FLAG" ] || die "khong co co micro/pilot ($GL_MON_FLAG) — khong can rebase"
 KSW=$(s242 "head -c 200 $A/run/KILL_SWITCH 2>/dev/null; true") || die "ssh toi 242 loi (doc run/KILL_SWITCH)"

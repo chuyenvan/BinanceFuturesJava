@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 # golive_micro_on.sh — [V12 R4o/R4q/ADD4] DRY -> MICRO-LIVE. Chay tren ORACLE (owner):
-#   $OPS = thu muc chua script nay = worktree A1 duyet (HEAD co trong deploy/gates/A1_APPROVED_OPS.commit), vd ~/claude_master/fin1114/c3_w1c/ops/c3live
+#   $OPS = thu muc chua script nay (worktree A1 duyet: HEAD co trong deploy/gates/A1_APPROVED_OPS.commit; MASTER cap duong dan)
 #   DRY=1 bash $OPS/golive_micro_on.sh   # chi kiem + in ke hoach, KHONG ghi gi
 #   bash $OPS/golive_micro_on.sh         # go YES (khung :10-:44)
 # C3_ACCOUNT=SUB (mac dinh, ADD4: tk con, key /root/.config/c3live/keys_sub.env) | MAIN (ADD1 tk chinh — chi khi chi dinh ro).
@@ -48,14 +48,21 @@ gl_init golive_micro_on
 [ "$C3_ACCOUNT" = SUB ] && ACCT_TXT="tai khoan CON (ADD4)" || ACCT_TXT="tai khoan CHINH (ADD1)"
 say "tai khoan c3: C3_ACCOUNT=$C3_ACCOUNT — $ACCT_TXT, file key $KEYS_FILE"
 G=$GATE_DIR/GOLIVE_GATE_MICRO.ok
-GR=$(gl_gate "$G" 1); echo "$GR"; echo "$GR" | grep -q '^OK' || die "chua co cong G-MICRO hop le (MASTER tao $G bang golive_make_gate.sh: jar_md5=$NJ_MD5, ingestor_md5, han 48 h, G-MICRO DAT, prereg)"
-# [WAVE1c F-M4 + m2] TU KIEM gate SAU gl_gate (khong dua vao lib): toan ven (body_sha256 dong cuoi, sha256 tung file bang chung + report),
-#   prereg_commit la commit THAT trong PREREG_REPO (git cat-file) co prereg_file + replay_prereg, limits = NGUYEN muc 7 PREREG_E2E_REPLAY_V12
-#   tai commit do, 6 truong ADD22 3 khop ^DAT( |$) (chan "DATX"); OVERRIDE CHI o sizing_iv + override_fields = "sizing_iv" + replay_iii DAT
-#   + override_why >= 10 ky tu + override_by co ten nguoi. Sai bat ky => TU CHOI (DRY cung kiem).
+GR=$(gl_gate "$G" 1); echo "$GR"; echo "$GR" | grep -q '^OK' || die "chua co cong G-MICRO hop le (MASTER tao $G bang bash $GL_HERE/golive_make_gate.sh: jar_md5=$NJ_MD5, ingestor_md5, han 48 h, G-MICRO DAT, prereg)"
+# [WAVE1c F-M4 + m2 + OPS-MICRO3 n1/n2/n3] TU KIEM gate SAU gl_gate (khong dua vao lib): toan ven (body_sha256 dong cuoi, sha256 tung
+#   file bang chung + report), prereg_commit la commit THAT trong PREREG_REPO (git cat-file). TEN GHIM CUNG (ten khac => TU CHOI, KE CA khi
+#   body_sha256 dung): prereg_file = addendum PREREG_PARITY_V12_DRY MOI NHAT (tai prereg_commit VA tai HEAD, luat "ADD moi nhat"),
+#   replay_prereg = docs/prereg/PREREG_E2E_REPLAY_V12.md, limits_file = docs/prereg/GATE_LIMITS_MICRO.md (MASTER viet + commit: MOI gioi han /
+#   khac biet da biet - muc 7 prereg replay + ERRATA + muc audit hoan). [n2] prereg_commit = HEAD repo prereg hoac TO TIEN cua HEAD ma tu do
+#   KHONG commit nao doi addendum moi nhat / PREREG_E2E_REPLAY_V12*.md (ke ca ERRATA moi) / GATE_LIMITS_MICRO.md (git diff --quiet).
+#   [n3] gate chep NGUYEN VAN limits_file tai prereg_commit (moi dong "limits|<dong>") + limits_sha256 (= sha256 git show) => tinh lai + so,
+#   in TOAN BO trong cau hoi YES. 6 truong ADD22 3 khop ^DAT( |$) (chan "DATX"); OVERRIDE CHI o sizing_iv + override_fields = "sizing_iv"
+#   + replay_iii DAT + override_why >= 10 ky tu + override_by co ten nguoi. Sai bat ky => TU CHOI (DRY cung kiem).
 PREREG_REPO=${PREREG_REPO:-/home/ubuntu/claude_master/vz_e1_wt}
+GM_PF_RX='^docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM[0-9]+[^/]*\.md$'; GM_RP=docs/prereg/PREREG_E2E_REPLAY_V12.md; GM_LF=docs/prereg/GATE_LIMITS_MICRO.md
 gm_val() { sed -n "s/^$1=//p" "$G" | head -1; }   # gia tri NGUYEN (giu khoang trang, khac gl_gate_val)
-gm_lim7() { git -C "$PREREG_REPO" show "$1:$2" 2>/dev/null | tr -d '\r' | awk '/^## *7[. ]/{p=1;next} /^## /{if(p)exit} p && NF {sub(/[ \t]+$/,""); a=a (a==""?"":" | ") $0} END{print a}'; }
+gm_addmax() { git -C "$PREREG_REPO" ls-tree --name-only "$1" docs/prereg/ 2>/dev/null | sed -n 's#^docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM\([0-9][0-9]*\)[^/]*\.md$#\1#p' | sort -n | tail -1; }
+gm_tag() { printf '%s' "$1" | tr -c 'A-Za-z0-9_./-' '_' | cut -c1-80; }
 GW=""; NOV=0
 GBL=$(tail -n 1 "$G")
 if ! [[ "$GBL" =~ ^body_sha256=[0-9a-f]{64}$ ]] || [ "$(grep -c '^body_sha256=' "$G")" != 1 ]; then GW="$GW thieu_body_sha256_dong_cuoi"
@@ -80,17 +87,32 @@ elif grep -q '^override_' "$G"; then GW="$GW co_dong_override_nhung_sizing_iv_kh
 GRP=$(gm_val report); GRS=$(gm_val report_sha256)
 if [ -z "$GRP" ] || ! [ -f "$GRP" ]; then GW="$GW report_G-MICRO_MAT(${GRP:-khong_co})"
 elif [ "$(sha256sum < "$GRP" | cut -c1-64)" != "$GRS" ]; then GW="$GW report_G-MICRO_BI_DOI"; fi
-GPC=$(gm_val prereg_commit); GPF=$(gm_val prereg_file); GRPP=$(gm_val replay_prereg); LIM=$(gm_val limits)
+GPC=$(gm_val prereg_commit); GPF=$(gm_val prereg_file); GRPP=$(gm_val replay_prereg); GLF=$(gm_val limits_file); GLS=$(gm_val limits_sha256)
+LIM=$(sed -n 's/^limits|//p' "$G")
+[[ "$GPF" =~ $GM_PF_RX ]] || GW="$GW prereg_file_KHAC_ten_ghim_ADDENDUM_moi_nhat($(gm_tag "$GPF"))"
+[ "$GRPP" = "$GM_RP" ] || GW="$GW replay_prereg_KHAC_ten_ghim_$GM_RP($(gm_tag "$GRPP"))"
+[ "$GLF" = "$GM_LF" ] || GW="$GW limits_file_KHAC_ten_ghim_$GM_LF($(gm_tag "$GLF"))"
 if ! [[ "$GPC" =~ ^[0-9a-f]{7,40}$ ]] || ! git -C "$PREREG_REPO" cat-file -e "$GPC^{commit}" 2>/dev/null; then GW="$GW prereg_commit_${GPC:-rong}_KHONG_co_trong_$PREREG_REPO"
 else
   { [ -n "$GPF" ] && git -C "$PREREG_REPO" cat-file -e "$GPC:$GPF" 2>/dev/null; } || GW="$GW prereg_file_khong_co_tai_commit"
   { [ -n "$GRPP" ] && git -C "$PREREG_REPO" cat-file -e "$GPC:$GRPP" 2>/dev/null; } || GW="$GW replay_prereg_khong_co_tai_commit"
-  if [ -z "$LIM" ]; then GW="$GW thieu_limits(muc_7_PREREG_E2E_REPLAY_V12)"
-  elif [ "$LIM" != "$(gm_lim7 "$GPC" "$GRPP")" ]; then GW="$GW limits_KHAC_muc_7_prereg_tai_commit"; fi
+  if [ -n "$GLF" ] && git -C "$PREREG_REPO" cat-file -e "$GPC:$GLF" 2>/dev/null; then
+    [ "$GLS" = "$(git -C "$PREREG_REPO" show "$GPC:$GLF" | sha256sum | cut -c1-64)" ] || GW="$GW limits_sha256_KHAC_limits_file_tai_commit"
+    if [ -z "$(printf '%s' "$LIM" | tr -d '[:space:]')" ]; then GW="$GW thieu_limits(dong_limits|_rong)"
+    elif [ "$(grep '^limits|' "$G")" != "$(git -C "$PREREG_REPO" show "$GPC:$GLF" | sed 's/^/limits|/')" ]; then GW="$GW limits_KHAC_nguyen_van_limits_file_tai_commit"; fi
+  else GW="$GW limits_file_khong_co_tai_commit($(gm_tag "$GLF"))"; fi
+  PN=$(printf '%s' "$GPF" | sed -n 's#^docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM\([0-9][0-9]*\).*#\1#p'); PMC=$(gm_addmax "$GPC"); PMH=$(gm_addmax HEAD)
+  { [ -n "$PN" ] && [ "$PN" = "$PMC" ] && [ "$PN" = "$PMH" ]; } || GW="$GW prereg_file_ADD${PN:-?}_khong_phai_addendum_moi_nhat(commit_ADD${PMC:-?}_HEAD_ADD${PMH:-?})"
+  if ! git -C "$PREREG_REPO" merge-base --is-ancestor "$GPC" HEAD 2>/dev/null; then GW="$GW prereg_commit_KHONG_tren_lich_su_HEAD_repo_prereg"
+  elif ! git -C "$PREREG_REPO" diff --quiet "$GPC" HEAD -- "$GPF" "$GM_LF" 'docs/prereg/PREREG_E2E_REPLAY_V12*.md' 2>/dev/null; then
+    GW="$GW prereg_DOI_sau_prereg_commit($(git -C "$PREREG_REPO" diff --name-only "$GPC" HEAD -- "$GPF" "$GM_LF" 'docs/prereg/PREREG_E2E_REPLAY_V12*.md' 2>/dev/null | tr '\n' ',' | cut -c1-160))"
+  fi
 fi
-[ -z "$GW" ] || die "gate G-MICRO KHONG hop le (tu kiem WAVE1c F-M4/m2):$GW"
-say "OK gate tu kiem: body_sha256 + sha256 bang chung + report khop, prereg $GPC co that, limits = muc 7 prereg, pham vi OVERRIDE dung"
-say "GIOI HAN DA BIET (PREREG_E2E_REPLAY_V12 muc 7 - KHONG duoc coi la da kiem): $LIM"
+[ -z "$GW" ] || die "gate G-MICRO KHONG hop le (tu kiem WAVE1c F-M4/m2 + OPS-MICRO3 n1/n2/n3):$GW"
+say "OK gate tu kiem: body_sha256 + sha256 bang chung + report khop, prereg $GPC co that (ten ghim, addendum moi nhat, khong doi toi HEAD), gioi han = nguyen van $GM_LF, pham vi OVERRIDE dung"
+LIMP=$(printf '%s\n' "$LIM" | sed 's/^/   | /')
+say "GIOI HAN DA BIET ($GM_LF @ prereg ${GPC:0:12}, sha256 ${GLS:0:12} - KHONG duoc coi la da kiem):"
+printf '%s\n' "$LIMP"
 GOV=""
 if [ "$NOV" = 1 ]; then
   GOV="GATE CO OVERRIDE by=$GOB truong=$GOF"
@@ -110,7 +132,7 @@ chk "dang chay c3_live DRY (env process + env.sh)" "[ '$(sv ENV_LIVE_PROFILE)' =
 chk "LIVE_KILLSW_MODE=act" "[ '$(sv ENV_LIVE_KILLSW_MODE)' = act ]"
 EXW=false; [ "$C3_ACCOUNT" = MAIN ] && EXW=true   # [R4u2] SUB: c3 chi loai coin c3 dang giu; MAIN: loai ca LEGACY
 chk "process env C3_EXCLUDE_LEGACY_HELD=$EXW (C3_ACCOUNT=$C3_ACCOUNT; co: $(sv ENV_C3_EXCLUDE_LEGACY_HELD))" "[ '$(sv ENV_C3_EXCLUDE_LEGACY_HELD)' = $EXW ]"
-chk "latch kill-switch NONE (khac => owner xem + DRY=0 bash ops/killsw_reset.sh truoc)" "[ '$(sv LATCH)' = NONE ] || [ '$(sv LATCH)' = NOFILE ]"
+chk "latch kill-switch NONE (khac => owner xem + DRY=0 bash $GL_HERE/../killsw_reset.sh truoc)" "[ '$(sv LATCH)' = NONE ] || [ '$(sv LATCH)' = NOFILE ]"
 chk "khong co run/KILL_SWITCH (co => xoa co chu dich truoc)" "[ '$(sv KILLSW_FILE)' = 0 ]"
 chk "file key $KEYS_FILE (600, 2 dong)" "[ '$(sv KEYS_OK)' = 1 ]"
 [ "$C3_ACCOUNT" = SUB ] && chk "file key tk con: quyen $(sv KEYS_PERM) = 600, sha8 key $(sv KEYS_FILE_SHA8) = da dang ky $SUB_KEY_SHA8 (A-03)" "[ '$(sv KEYS_PERM)' = 600 ] && [ '$(sv KEYS_FILE_SHA8)' = '$SUB_KEY_SHA8' ]"
@@ -133,7 +155,7 @@ if [ "$C3_ACCOUNT" = SUB ]; then
   chk "tk con SACH + key dat (ADD4 §2 = golive_check_key SUB)${SUBWHY:+ —$SUBWHY}" "[ '$SUBV' = DAT ]"
   chk "A-08 tmb tk con $(av TMB) >= C3_CAPITAL $MICRO_CAPITAL" "awk -v t='$(av TMB)' -v c='$MICRO_CAPITAL' 'BEGIN{exit !(t+0 >= c+0 && t ~ /^[0-9.]+\$/)}'"
   chk "cron golive_monitor da cai, ban pin con nguyen (A1 ADD4 C-1; owner: bash $GL_HERE/install_cron_golive_monitor.sh)" "gl_mon_cron_ok"
-  gl_mon_pin_cur || say "WARN cron golive_monitor chay ban pin KHAC repo hien tai — owner chay lai install_cron_golive_monitor.sh de cap nhat pin"
+  gl_mon_pin_cur || say "WARN cron golive_monitor chay ban pin KHAC repo hien tai — owner chay lai bash $GL_HERE/install_cron_golive_monitor.sh de cap nhat pin"
   chk "md5 monitor+lib $(gl_mon_m12) da qua A1 ($A1_APPROVED_FILE)" "gl_mon_approved"
 else
   L0=$(sv LEGACY_N)
@@ -164,7 +186,9 @@ fi
 [ "$C3_ACCOUNT" = SUB ] && [ "$DRY" = 1 ] && { gl_mon_repin || say "!! installer cron (DRY) loi"; }
 [ "$DRY" = 1 ] && { say "DRY=1: dung o day, KHONG ghi gi len 242. (DRY PASS)"; exit 0; }
 gl_time
-gl_yes "BAT MICRO-LIVE: lenh THAT tren $ACCT_TXT (C3_CAPITAL=$MICRO_CAPITAL). LEGACY (cung JVM) ngung quan ly ~30-60 s luc restart.${GOV:+ !!! $GOV !!!} GIOI HAN DA BIET (muc 7 PREREG_E2E_REPLAY_V12, KHONG coi la da kiem): $LIM."
+gl_yes "BAT MICRO-LIVE: lenh THAT tren $ACCT_TXT (C3_CAPITAL=$MICRO_CAPITAL). LEGACY (cung JVM) ngung quan ly ~30-60 s luc restart.${GOV:+ !!! $GOV !!!} GIOI HAN DA BIET ($GM_LF @ prereg ${GPC:0:12} - KHONG coi la da kiem; doc HET truoc khi go YES):
+$LIMP
+"
 [ -n "$GOV" ] && tg "[golive] CANH BAO TS=$TS micro_on: owner go YES voi $GOV"
 gl_time   # [WAVE1 B-16] kiem LAI khung gio sau YES
 # [R4q MAJ-1] chup san TRUOC (chi doc): khong doc duoc => khong doi gi
@@ -191,7 +215,7 @@ trap 'say "BI DUNG (tin hieu) — kiem: bash $(cd "$(dirname "$0")" && pwd)/goli
 gl_restart "$ENV_ADD" "$GL_STATE_FILES" dry 1
 # [WAVE1 B-02] ket qua restart
 gl_ks_set() { s242 "cd $A && { [ -e run/KILL_SWITCH ] || echo 'golive_micro_on $TS $1' > run/KILL_SWITCH; } && [ -e run/KILL_SWITCH ]" \
-  && say "run/KILL_SWITCH DANG DAT (dung mo moi; vi the c3 neu co van duoc quan ly)" || say "!! KHONG xac nhan duoc run/KILL_SWITCH (ssh?) — owner: MODE=drain golive_live_off.sh"; }
+  && say "run/KILL_SWITCH DANG DAT (dung mo moi; vi the c3 neu co van duoc quan ly)" || say "!! KHONG xac nhan duoc run/KILL_SWITCH (ssh?) — owner: MODE=drain bash $GL_HERE/golive_live_off.sh"; }
 if gl_restart_unknown; then
   gl_ks_set "ssh_restart_khong_ro"
   M="restart: ssh dut, KHONG doc duoc trang thai that tren 242 => KHONG ket luan, GIU co monitor + PAUSE tu het han. Owner/MASTER: bash $(cd "$(dirname "$0")" && pwd)/golive_monitor.sh ; env backup GOC $A/conf/env.sh.bak_golive_micro_on_$TS"
@@ -259,16 +283,16 @@ if ! echo "$RS" | grep -q '^FAIL' && gl_postloop CHK && mon_hb_ok; then
     # [WAVE1b M1] noi dung bao theo KET QUA THAT cua ssh dat lai KILL_SWITCH (kiem file ton tai), khong noi "da dat" khi ssh loi
     if s242 "cd $A && echo 'golive_micro_on $TS push_khong_ON' > run/KILL_SWITCH && [ -e run/KILL_SWITCH ]"; then
       say "DAT LAI run/KILL_SWITCH (da xac nhan file ton tai)"
-      M="hau kiem DAT nhung KHONG thay 'PUSH doi trang thai -> ON' sau khi go KILL_SWITCH => DA DAT LAI KILL_SWITCH (xac nhan; an toan, khong mo moi). Owner/MASTER kiem golive_monitor.sh"
+      M="hau kiem DAT nhung KHONG thay 'PUSH doi trang thai -> ON' sau khi go KILL_SWITCH => DA DAT LAI KILL_SWITCH (xac nhan; an toan, khong mo moi). Owner/MASTER kiem bash $GL_HERE/golive_monitor.sh"
     else
       say "!! KHONG DAT LAI DUOC run/KILL_SWITCH (ssh loi / khong xac nhan)"
-      M="hau kiem DAT nhung KHONG thay 'PUSH doi trang thai -> ON' sau khi go KILL_SWITCH; DAT LAI KILL_SWITCH THAT BAI (ssh?) => bot LIVE, KILL_SWITCH DA GO, CO THE MO LENH MOI. KHAN: owner chay NGAY MODE=drain bash $(cd "$(dirname "$0")" && pwd)/golive_live_off.sh roi kiem golive_monitor.sh"
+      M="hau kiem DAT nhung KHONG thay 'PUSH doi trang thai -> ON' sau khi go KILL_SWITCH; DAT LAI KILL_SWITCH THAT BAI (ssh?) => bot LIVE, KILL_SWITCH DA GO, CO THE MO LENH MOI. KHAN: owner chay NGAY MODE=drain bash $(cd "$(dirname "$0")" && pwd)/golive_live_off.sh roi kiem bash $GL_HERE/golive_monitor.sh"
     fi
     gl_pause_clear >/dev/null 2>&1
   else
     gl_pause_clear >/dev/null 2>&1
     # [WAVE1c m4] mv co the DA chay o 242 du ssh bao loi => trang thai KHONG BIET (khong phai "an toan")
-    M="hau kiem DAT nhung KHONG XAC NHAN DUOC trang thai run/KILL_SWITCH (ssh/token) => KHONG XAC NHAN DUOC - co the da go KILL_SWITCH (bot LIVE co the mo lenh moi). KHAN: owner kiem NGAY ls $A/run/KILL_SWITCH tren 242 / chay MODE=drain bash $(cd "$(dirname "$0")" && pwd)/golive_live_off.sh roi kiem golive_monitor.sh"
+    M="hau kiem DAT nhung KHONG XAC NHAN DUOC trang thai run/KILL_SWITCH (ssh/token) => KHONG XAC NHAN DUOC - co the da go KILL_SWITCH (bot LIVE co the mo lenh moi). KHAN: owner kiem NGAY ls $A/run/KILL_SWITCH tren 242 / chay MODE=drain bash $(cd "$(dirname "$0")" && pwd)/golive_live_off.sh roi kiem bash $GL_HERE/golive_monitor.sh"
   fi
   say "KHAN: $M"; tg "[golive] KHAN TS=$TS micro_on: $M | log $LOG"; exit 2
 fi
@@ -287,10 +311,10 @@ if [ "${V:-UNKNOWN}" = NONE ]; then
     gl_mon_flag_clear; say "Da ROLLBACK xong: dry chay lai nhu truoc (adapter=dry da kiem: process + env.sh + log JVM moi)."; tg "[golive] micro_on FAIL TS=$TS: $WHY => ROLLBACK ve dry XONG (adapter=dry da kiem). Log $LOG"; exit 1
   fi
   gl_ks_set "rollback_loi"
-  M="ROLLBACK LOI / adapter sau rollback KHONG xac nhan = dry ($(echo "$RB" | grep '^FAIL' | head -2 | tr '\n' ' ')) => run/KILL_SWITCH, GIU co monitor (cron monitor van chay). Kiem tay golive_monitor.sh; env backup GOC $A/conf/env.sh.bak_golive_micro_on_$TS"
+  M="ROLLBACK LOI / adapter sau rollback KHONG xac nhan = dry ($(echo "$RB" | grep '^FAIL' | head -2 | tr '\n' ' ')) => run/KILL_SWITCH, GIU co monitor (cron monitor van chay). Kiem tay bash $GL_HERE/golive_monitor.sh; env backup GOC $A/conf/env.sh.bak_golive_micro_on_$TS"
 else
   gl_ks_set "truot"
   gl_pause_clear >/dev/null 2>&1
-  M="c3 CO THE da co lenh / khong chac ($V) => KHONG ve dry, GIU run/KILL_SWITCH. Owner/MASTER xem: golive_monitor.sh; khi c3 phang: MODE=dry golive_live_off.sh"
+  M="c3 CO THE da co lenh / khong chac ($V) => KHONG ve dry, GIU run/KILL_SWITCH. Owner/MASTER xem: bash $GL_HERE/golive_monitor.sh; khi c3 phang: MODE=dry bash $GL_HERE/golive_live_off.sh"
 fi
 say "KHAN: micro_on hau kiem TRUOT ($WHY). $M"; tg "[golive] KHAN TS=$TS micro_on TRUOT ($WHY). $M | log $LOG"; exit 2

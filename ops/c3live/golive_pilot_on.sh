@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 # golive_pilot_on.sh — [V12 R4o/ADD4] MICRO (C3_CAPITAL=1000) -> PILOT (C3_CAPITAL=<size>) (GOLIVE_SCENARIO ADD1 §4 / ADD4).
-#   $OPS = thu muc chua script nay = worktree A1 duyet (HEAD co trong deploy/gates/A1_APPROVED_OPS.commit), vd ~/claude_master/fin1114/c3_w1c/ops/c3live
+#   $OPS = thu muc chua script nay (worktree A1 duyet: HEAD co trong deploy/gates/A1_APPROVED_OPS.commit; MASTER cap duong dan)
 #   DRY=1 bash $OPS/golive_pilot_on.sh   # chi kiem
 #   bash $OPS/golive_pilot_on.sh         # SUB: go 'YES PILOT' | MAIN: 'YES DA CAT LEGACY' (khung :10-:44)
 # C3_ACCOUNT=SUB (mac dinh, ADD4 tk con) | MAIN (ADD1 tk chinh — chi khi chi dinh ro).
@@ -51,8 +51,8 @@ if [ "$C3_ACCOUNT" = SUB ]; then
   say "INFO ADD4 §3: tk con — BO dieu kien LEGACY_CUT_VERIFIED / golive_legacy_verify / LEGACY managed 0"
 else
   LV=$GATE_DIR/LEGACY_CUT_VERIFIED.ok
-  [ -s "$LV" ] && grep -q 'KET QUA: DAT' "$LV" || die "chua co $LV DAT (owner cat LEGACY roi chay golive_legacy_verify.sh)"
-  AGE=$(( $(date +%s) - $(stat -c %Y "$LV") )); [ "$AGE" -le "$LEGACY_OK_MAX_AGE_S" ] || die "$LV cu ${AGE}s > ${LEGACY_OK_MAX_AGE_S}s — chay lai golive_legacy_verify.sh"
+  [ -s "$LV" ] && grep -q 'KET QUA: DAT' "$LV" || die "chua co $LV DAT (owner cat LEGACY roi chay bash $GL_HERE/golive_legacy_verify.sh)"
+  AGE=$(( $(date +%s) - $(stat -c %Y "$LV") )); [ "$AGE" -le "$LEGACY_OK_MAX_AGE_S" ] || die "$LV cu ${AGE}s > ${LEGACY_OK_MAX_AGE_S}s — chay lai bash $GL_HERE/golive_legacy_verify.sh"
   say "OK LEGACY_CUT_VERIFIED ${AGE}s truoc: $(head -1 "$LV")"
 fi
 gl_read_state
@@ -124,11 +124,11 @@ if [ "$C3_ACCOUNT" = SUB ]; then
   awk -v t="$(av TMB)" -v c="$SIZE" 'BEGIN{exit !(t+0 >= c+0)}' || die "A-08 tmb tk con $(av TMB) < size $SIZE ngay truoc khi pilot (owner nap them von truoc)"
   gl_eq_base_set "$(av TMB)" "$SIZE" "$(av KEY_SHA8)" "golive_pilot_on $TS (C3_CAPITAL $C0 -> $SIZE) — RESET dinh eq co chu dich" || die "KHONG ghi duoc moc tmb0 — khong pilot (ADD4 errata 2 §5)"
 fi
-trap 'say "BI DUNG (tin hieu) — kiem golive_monitor.sh"; gl_pause_clear >/dev/null 2>&1; exit 130' INT TERM HUP
+trap 'say "BI DUNG (tin hieu) — kiem bash $GL_HERE/golive_monitor.sh"; gl_pause_clear >/dev/null 2>&1; exit 130' INT TERM HUP
 gl_restart "$ENV_ADD" "" none
 if gl_restart_unknown; then   # [WAVE1 B-02]
   s242 "cd $A && { [ -e run/KILL_SWITCH ] || echo 'golive_pilot_on $TS ssh_restart_khong_ro' > run/KILL_SWITCH; } && [ -e run/KILL_SWITCH ]" && say "run/KILL_SWITCH DANG DAT" || say "!! KHONG dat duoc run/KILL_SWITCH (ssh?)"
-  M="restart pilot: ssh dut, KHONG doc duoc trang thai that tren 242 => KHONG ket luan. Owner/MASTER: golive_monitor.sh; env backup GOC $A/conf/env.sh.bak_golive_pilot_on_$TS"
+  M="restart pilot: ssh dut, KHONG doc duoc trang thai that tren 242 => KHONG ket luan. Owner/MASTER: bash $GL_HERE/golive_monitor.sh; env backup GOC $A/conf/env.sh.bak_golive_pilot_on_$TS"
   say "KHAN: $M"; tg "[golive] KHAN TS=$TS pilot_on: $M | log $LOG"; exit 2
 fi
 if echo "$RS" | grep -q '^FAIL' && ! echo "$RS" | grep -q '^OK da_stop'; then
@@ -150,7 +150,7 @@ envk LIVE_ADAPTER=live; envk C3_CAPITAL='"$SIZE"'; envk SHADOW_NO_PUSH=false; en
 if ! echo "$RS" | grep -q '^FAIL' && gl_postloop CHK; then
   trap - INT TERM HUP
   gl_pause_clear >/dev/null || say "PAUSE con (ssh?) — tu go sau ${WD_PAUSE_MAX_S}s"
-  say "=== XONG: PILOT C3_CAPITAL=$SIZE ($ACCT_TXT). Theo doi: golive_monitor.sh"
+  say "=== XONG: PILOT C3_CAPITAL=$SIZE ($ACCT_TXT). Theo doi: bash $GL_HERE/golive_monitor.sh"
   [ "$C3_ACCOUNT" = SUB ] && say "INFO lop phu monitor: moc tmb0 moi, RESET dinh eq co chu dich (pilot_on)"
   tg "[golive] PILOT BAT TS=$TS C3_ACCOUNT=$C3_ACCOUNT C3_CAPITAL=$SIZE (truoc $C0)$([ "$C3_ACCOUNT" = SUB ] && echo '; lop phu monitor: moc tmb0 moi, RESET dinh eq co chu dich'). Log $LOG"; exit 0
 fi
@@ -161,5 +161,5 @@ if gl_rollback none live "$C0"; then
   say "Da ROLLBACK xong: live C3_CAPITAL=$C0."; tg "[golive] pilot_on FAIL TS=$TS: $WHY => ROLLBACK ve $C0 XONG. Log $LOG"; exit 1
 fi
 s242 "cd $A && { [ -e run/KILL_SWITCH ] || echo 'golive_pilot_on $TS rollback_loi' > run/KILL_SWITCH; } && [ -e run/KILL_SWITCH ]" && say "run/KILL_SWITCH DANG DAT" || say "!! KHONG dat duoc run/KILL_SWITCH (ssh?)"
-M="ROLLBACK LOI / khong xac nhan adapter=live C3_CAPITAL=$C0 ($(echo "$RB" | grep '^FAIL' | head -2 | tr '\n' ' ')) => run/KILL_SWITCH; kiem golive_monitor.sh; env backup GOC $A/conf/env.sh.bak_golive_pilot_on_$TS"
+M="ROLLBACK LOI / khong xac nhan adapter=live C3_CAPITAL=$C0 ($(echo "$RB" | grep '^FAIL' | head -2 | tr '\n' ' ')) => run/KILL_SWITCH; kiem bash $GL_HERE/golive_monitor.sh; env backup GOC $A/conf/env.sh.bak_golive_pilot_on_$TS"
 say "KHAN: $M"; tg "[golive] KHAN TS=$TS pilot_on TRUOT ($WHY) VA $M | log $LOG"; exit 2

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
 # install_golive_ops.sh - [WAVE1 16/11 B-13] OWNER chay tren ORACLE: dong bo ban cai trong ~/claude_master/deploy/ voi repo
-#   $OPS = thu muc chua script nay = worktree A1 duyet (HEAD co trong deploy/gates/A1_APPROVED_OPS.commit), vd ~/claude_master/fin1114/c3_w1c/ops/c3live
-#   (worktree A1 duyet = $OPS, nhanh v1.2/wave1c). KHONG cham 242, KHONG restart.
+#   $OPS = thu muc chua script nay (worktree A1 duyet: HEAD co trong deploy/gates/A1_APPROVED_OPS.commit; MASTER cap duong dan)
+#   (worktree A1 duyet = $OPS, nhanh do MASTER chi dinh - HEAD co trong A1_APPROVED_OPS). KHONG cham 242, KHONG restart.
 #   DRY=1 bash $OPS/install_golive_ops.sh   # chi liet ke file nao lech (md5 cu -> moi), KHONG ghi
 #   bash $OPS/install_golive_ops.sh         # go YES: chep (ban cu => <file>.bak_wave1_<TS>)
 # File dong bo (repo -> deploy/), md5 repo PHAI = PIN ben duoi (repo bi sua ngoai quy trinh => TU CHOI, khong chep gi):

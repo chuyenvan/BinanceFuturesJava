@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 # golive_use_sub_key.sh — [ADD4 §2] OWNER chay 1 LAN tren ORACLE: dua key TAI KHOAN CON vao file rieng tren 242, roi kiem key (CHI DOC san).
-#   $OPS = thu muc chua script nay = worktree A1 duyet (HEAD co trong deploy/gates/A1_APPROVED_OPS.commit), vd ~/claude_master/fin1114/c3_w1c/ops/c3live
+#   $OPS = thu muc chua script nay (worktree A1 duyet: HEAD co trong deploy/gates/A1_APPROVED_OPS.commit; MASTER cap duong dan)
 #   DRY=1 bash $OPS/golive_use_sub_key.sh   # chi kiem nguon / dich / file tk chinh, KHONG ghi
 #   bash $OPS/golive_use_sub_key.sh         # go YES
 # Tren 242 (root): nguon $SUB_SRC (mac dinh keys.env.bak_20261028_050947): sha256(key)[:8] PHAI = $SUB_KEY_SHA8 (43820b5b) va KHAC key
@@ -13,9 +13,17 @@
 # Ma thoat: = ma golive_check_key (0 DAT | 3 TRUOT) | 1 DUNG | 2 KHAN (file tk chinh thay doi).
 # =============================================================================
 set -uo pipefail
+# [WAVE1c m1 / OPS-MICRO3 n4] pin NGOAI repo, kiem TRUOC khi source lib (lib khong tu chung nhan): HEAD repo chua script = 1 commit A1/MASTER
+#   duyet trong A1_APPROVED_OPS (deploy/gates/A1_APPROVED_OPS.commit, 1 dong/commit, script CHI DOC) + thu muc script KHONG co sua chua commit.
+_OPS=$(cd "$(dirname "$0")" && pwd); _APO=${A1_APPROVED_OPS:-/home/ubuntu/claude_master/deploy/gates/A1_APPROVED_OPS.commit}; _PW=""
+_HC=$(git -C "$_OPS" rev-parse --verify -q HEAD 2>/dev/null) || _PW="$_OPS khong phai repo git"
+[ -n "$_PW" ] || { [ -f "$_APO" ] && grep -qE "^$_HC([[:space:]]|\$)" "$_APO"; } || _PW="HEAD $_HC CHUA duoc A1 duyet (khong co trong $_APO)"
+[ -n "$_PW" ] || git -C "$_OPS" diff --quiet HEAD -- . 2>/dev/null || _PW="$_OPS co sua CHUA commit (git diff HEAD)"
+[ -z "$_PW" ] || { echo "TU CHOI [m1]: $_PW - KHONG lam gi."; exit 1; }
 HERE=$(cd "$(dirname "$0")" && pwd)
 export C3_ACCOUNT=SUB
 . "$HERE/golive_lib.sh"
+gl_manifest_check "$0" || exit 1   # [WAVE1b M5 / OPS-MICRO3 n4] script + lib + manifest khop md5 da commit, lech => TU CHOI truoc moi viec
 SUB_SRC=${SUB_SRC:-/root/.config/c3live/keys.env.bak_20261028_050947}
 SUB_KEY_SHA8=${SUB_KEY_SHA8:-43820b5b}
 MAIN_KEYS_FILE=${MAIN_KEYS_FILE:-/root/.config/c3live/keys.env}

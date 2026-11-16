@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 # install_cron_golive_monitor.sh — [A1 ADD4 C-1] OWNER chay tren ORACLE: cai (hoac go) lich chay golive_monitor trong crontab user ubuntu.
-#   $OPS = thu muc chua script nay = worktree A1 duyet (HEAD co trong deploy/gates/A1_APPROVED_OPS.commit), vd ~/claude_master/fin1114/c3_w1c/ops/c3live
+#   $OPS = thu muc chua script nay (worktree A1 duyet: HEAD co trong deploy/gates/A1_APPROVED_OPS.commit; MASTER cap duong dan)
 #   bash $OPS/install_cron_golive_monitor.sh            # cai / cap nhat pin (idempotent)
 #   bash $OPS/install_cron_golive_monitor.sh --remove   # go dong cron (giu cac ban pin)
 #   DRY=1 ...                                                                            # chi in truoc/sau, KHONG ghi
@@ -19,7 +19,20 @@
 # Cac dong cron khac GIU NGUYEN. In crontab truoc / sau. Ma thoat 0 OK | 1 loi.
 # =============================================================================
 set -uo pipefail
+# [WAVE1c m1 / OPS-MICRO3 n4] pin NGOAI repo, kiem TRUOC khi source lib (lib khong tu chung nhan): HEAD repo chua script = 1 commit A1/MASTER
+#   duyet trong A1_APPROVED_OPS (deploy/gates/A1_APPROVED_OPS.commit, 1 dong/commit, script CHI DOC) + thu muc script KHONG co sua chua commit.
+_OPS=$(cd "$(dirname "$0")" && pwd); _APO=${A1_APPROVED_OPS:-/home/ubuntu/claude_master/deploy/gates/A1_APPROVED_OPS.commit}; _PW=""
+_HC=$(git -C "$_OPS" rev-parse --verify -q HEAD 2>/dev/null) || _PW="$_OPS khong phai repo git"
+[ -n "$_PW" ] || { [ -f "$_APO" ] && grep -qE "^$_HC([[:space:]]|\$)" "$_APO"; } || _PW="HEAD $_HC CHUA duoc A1 duyet (khong co trong $_APO)"
+[ -n "$_PW" ] || git -C "$_OPS" diff --quiet HEAD -- . 2>/dev/null || _PW="$_OPS co sua CHUA commit (git diff HEAD)"
+[ -z "$_PW" ] || { echo "TU CHOI [m1]: $_PW - KHONG lam gi."; exit 1; }
 HERE=$(cd "$(dirname "$0")" && pwd)
+# [WAVE1b M5 / OPS-MICRO3 n4] nhu gl_manifest_check (golive_lib; script nay KHONG source lib): script + lib + moi file manifest khop md5
+#   da commit, lech => TU CHOI truoc moi viec
+MF=$HERE/GOLIVE_MANIFEST.md5
+{ [ -s "$MF" ] && grep -qxE "[0-9a-f]{32}  install_cron_golive_monitor.sh" "$MF" && grep -qxE "[0-9a-f]{32}  golive_lib.sh" "$MF" \
+  && (cd "$HERE" && md5sum -c --quiet --strict "$MF" >/dev/null 2>&1); } \
+  || { echo "TU CHOI [M5]: file go-live KHAC manifest da commit ($MF): $(cd "$HERE" && md5sum -c --strict "$MF" 2>&1 | grep -v ': OK$' | head -5 | tr '\n' ' ') - KHONG lam gi."; exit 1; }
 MON_SRC=${MON_SRC:-$HERE}                       # thu muc nguon golive_monitor.sh + golive_lib.sh (test: ban sua)
 ORA_CRONTAB_CMD=${ORA_CRONTAB_CMD:-crontab}
 LOCKF=${MON_LOCK:-/home/ubuntu/claude_master/locks/golive_monitor.lock}
@@ -29,7 +42,7 @@ MON_TIMEOUT_S=${MON_TIMEOUT_S:-100}
 DRY=${DRY:-0}
 TAG='# golive_monitor (ADD4 C-1)'
 MODE=install; [ "${1:-}" = --remove ] && MODE=remove
-[ -z "${1:-}" ] || [ "$1" = --remove ] || { echo "dung: $0 [--remove]"; exit 1; }
+[ -z "${1:-}" ] || [ "$1" = --remove ] || { echo "dung: bash $HERE/install_cron_golive_monitor.sh [--remove]"; exit 1; }
 [[ "$MON_MIN" =~ ^[12]$ ]] || { echo "MON_MIN chi 1 | 2"; exit 1; }
 [[ "$MON_TIMEOUT_S" =~ ^[0-9]+$ ]] && [ "$MON_TIMEOUT_S" -ge 30 ] && [ "$MON_TIMEOUT_S" -le 110 ] || { echo "MON_TIMEOUT_S 30..110"; exit 1; }
 BEFORE=$($ORA_CRONTAB_CMD -l 2>/dev/null) || BEFORE=""

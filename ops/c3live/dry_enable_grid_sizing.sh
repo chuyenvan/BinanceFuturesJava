@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 # dry_enable_grid_sizing.sh — [WAVE1 16/11 D-01] BAT 2 co sizing + DCA grid tren v_t_m DRY (KHONG doi jar, CHI env.sh + 1 restart).
-#   $OPS = thu muc chua script nay = worktree A1 duyet (HEAD co trong deploy/gates/A1_APPROVED_OPS.commit), vd ~/claude_master/fin1114/c3_w1c/ops/c3live
+#   $OPS = thu muc chua script nay (worktree A1 duyet: HEAD co trong deploy/gates/A1_APPROVED_OPS.commit; MASTER cap duong dan)
 #   Owner chay tren ORACLE, 1 lenh:
 #     DRY=1 bash $OPS/dry_enable_grid_sizing.sh   # chi kiem + in ke hoach, KHONG ghi gi
 #     bash $OPS/dry_enable_grid_sizing.sh         # go YES (khung :10-:44, tranh 07/19h, 00:50-01:20, 12:50-13:20)
