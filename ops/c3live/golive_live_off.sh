@@ -98,6 +98,6 @@ if ! echo "$RS" | grep -q '^FAIL' && gl_postloop CHK; then
 fi
 WHY=$(echo "${RESULT:-$RS}" | grep '^FAIL\|^WAIT' | tr '\n' ' ' | cut -c1-200)
 say "hau kiem TRUOT ($WHY) => ROLLBACK ve live (KILL_SWITCH van dat => khong mo moi)"
-if gl_rollback live; then say "Da ROLLBACK xong (live, drain)."; tg "[golive] live_off FAIL TS=$TS: $WHY => ROLLBACK ve live (drain) XONG. Log $LOG"; exit 1; fi
+if gl_rollback live live; then say "Da ROLLBACK xong (live, drain; adapter=live da kiem)."; tg "[golive] live_off FAIL TS=$TS: $WHY => ROLLBACK ve live (drain) XONG. Log $LOG"; exit 1; fi
 M="ROLLBACK LOI — PAUSE còn; kiem golive_monitor.sh; env backup $A/conf/env.sh.bak_golive_live_off_$TS"
 say "KHAN: $M"; tg "[golive] KHAN TS=$TS live_off TRUOT ($WHY) VA $M | log $LOG"; exit 2

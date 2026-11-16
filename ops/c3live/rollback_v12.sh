@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # =============================================================================
-# rollback_v12.sh — quay 242 ve truoc deploy_v12_dry.sh (jar dcae2e2b + env.sh + start.sh cu, c3_shadow)
-# Chay tren ORACLE:  bash ~/claude_master/deploy/rollback_v12.sh <TS>
+# rollback_v12.sh — [DEPRECATED 16/11 WAVE1 B-12] quay 242 ve truoc deploy_v12_dry.sh (jar dcae2e2b v1.1 + env.sh + start.sh cu, c3_shadow)
+#   !! LOI THOI: KHONG dung de rollback v_t_m hien tai (r4u3fin2). Dung:
+#      - ve jar r4u3 (dry):      bash <repo>/ops/c3live/rollback_vtm_r4u3.sh
+#      - dang MICRO/PILOT live:  MODE=drain bash <repo>/ops/c3live/golive_live_off.sh  (roi MODE=dry khi c3 phang)
+#   Script TU CHOI khi: process / env.sh LIVE_ADAPTER=live, co co monitor micro/pilot (Oracle), hoac dich = jar v1.1 dcae2e2b
+#   (mac dinh) ma khong co ALLOW_V11_ROLLBACK=1 (chi MASTER, sau khi xac nhan dry).
+# Chay tren ORACLE:  bash <repo>/ops/c3live/rollback_v12.sh <TS>
 #   <TS> = gia tri TS in o dau log deploy_v12dry (dang 20261118_0915)
 # Thu (chi doc): DRY=1 bash ~/claude_master/deploy/rollback_v12.sh <TS>
 # [2c] Chot gio nhu deploy (khan cap: FORCE_TIME=1). YES_AUTO=1 chi danh cho rollback tu dong cua deploy_v12_dry.sh.
@@ -58,6 +63,17 @@ c242() {
 }
 
 say "=== rollback v1.2 -> dcae2e2b (c3_shadow) TS=$TS DRY=$DRY ==="
+# [WAVE1 B-12] chan dung sai: live / micro-pilot dang bat / dich v1.1
+V11_MD5=dcae2e2bbb1a357bc15703b416d4dccb
+GL_MON_FLAG=${GL_MON_FLAG:-$LOGDIR/golive_monitor.on}
+RBGO="dung: ve r4u3 dry => bash $(cd "$(dirname "$0")" && pwd)/rollback_vtm_r4u3.sh ; dang live => MODE=drain bash $(cd "$(dirname "$0")" && pwd)/golive_live_off.sh"
+if [ -f "$GL_MON_FLAG" ]; then say "DUNG: co co micro/pilot $GL_MON_FLAG (go-live dang bat) — rollback_v12 TU CHOI. $RBGO"; exit 1; fi
+AD=$(s242 "cd $A 2>/dev/null || exit 0; P=\$(pgrep -f '[${PROC_PAT:0:1}]${PROC_PAT:1}' | head -1); echo \"PA=\$(tr '\\0' '\\n' < /proc/\$P/environ 2>/dev/null | sed -n 's/^LIVE_ADAPTER=//p' | tail -1) SA=\$(sed -n 's/^export LIVE_ADAPTER=//p' conf/env.sh | tail -1)\"") || { say "DUNG: ssh 242 loi (khong doc duoc adapter) — khong doi gi"; exit 1; }
+say "adapter 242: $AD"
+case "$AD" in *PA=live*|*SA=live*) say "DUNG: v_t_m dang LIVE ($AD) — rollback_v12 TU CHOI (mo coi vi the c3 live). $RBGO"; exit 1;; esac
+if [ "$OLD_MD5" = "$V11_MD5" ] && [ "${ALLOW_V11_ROLLBACK:-0}" != 1 ] && [ "$YES_AUTO" != 1 ]; then   # YES_AUTO: rollback tu dong NGAY trong deploy_v12_dry*.sh (dich v1.1 hop le)
+  say "DUNG: dich rollback = jar v1.1 dcae2e2b (LOI THOI tu v1.2) — TU CHOI. $RBGO (MASTER co chu dich: ALLOW_V11_ROLLBACK=1)"; exit 1
+fi
 # [2c MIN-12] chot gio nhu deploy (phut :10-:44, tranh 07:xx/19:xx, 00:50-01:20, 12:50-13:20); khan cap: FORCE_TIME=1
 time_ok() {
   H=$(TZ=Asia/Ho_Chi_Minh date +%-H); M=$(TZ=Asia/Ho_Chi_Minh date +%-M)

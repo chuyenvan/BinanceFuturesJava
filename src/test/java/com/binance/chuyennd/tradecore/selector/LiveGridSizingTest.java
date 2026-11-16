@@ -97,6 +97,25 @@ public class LiveGridSizingTest {
         assertNull(LiveGridSizing.legBudget(null, 0, true));
     }
 
+    /**
+     * [WAVE1 D-01 16/11] micro: leg_i = von x 0.015/4 x 6 = 2.25 % von (U=0) cho MOI legIdx 0..3 (luoi 1,1,1,1):
+     * 1000 => 22.5, 4000 => 90, 10000 => 225; U=0.5 (throttle 1/6) @1000 => 3.75 < 5 (C3LiveEntry BUDGET_SMALL).
+     */
+    @Test
+    public void wave1MicroCapitalLegs() {
+        float[][] exp = {{1000f, 22.5f}, {4000f, 90f}, {10000f, 225f}};
+        for (float[] e : exp) {
+            Float mb = TradeUtils.managerBudget(null, 0f, e[0], null);
+            for (int i = 0; i <= 3; i++) {
+                assertEquals("von=" + e[0] + " leg" + i, e[1], LiveGridSizing.legBudget(mb, i, true), 0.001f);
+            }
+            assertEquals(0f, LiveGridSizing.legBudget(mb, 4, true), 0f);
+            assertEquals("co TAT = 1/6", e[1] / 6f, LiveGridSizing.legBudget(mb, 0, false), 0.001f);
+        }
+        Float u05 = TradeUtils.managerBudget(null, 500f, 1000f, null);
+        assertEquals(3.75f, LiveGridSizing.legBudget(u05, 0, true), 0.001f);
+    }
+
     /** Throttle U van ap truoc ratio: U=0.3 => throttle 0.5 => 393.75. */
     @Test
     public void throttleThenRatio() {

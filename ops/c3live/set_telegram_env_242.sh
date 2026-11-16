@@ -20,7 +20,7 @@
 # =============================================================================
 set -uo pipefail
 SRC=${SRC:-/home/ubuntu/.config/health242/tg.env}
-EXPECT_SHA8=${EXPECT_SHA8:-4f49bded}
+EXPECT_SHA8=${EXPECT_SHA8:-bdee1480}   # [WAVE1 B-13] token moi 11-14 (truoc 4f49bded da revoke)
 SSH_242=${SSH_242:-"ssh -p 2222 -o BatchMode=yes -o ConnectTimeout=20 -i /home/ubuntu/.ssh/id_rsa_chuyennd root@103.157.218.242"}
 SECD=${SECD:-/home/chuyennd/java/secrets}
 APPS=${APPS:-"/home/chuyennd/java/collectData /home/chuyennd/java/v_t_m"}

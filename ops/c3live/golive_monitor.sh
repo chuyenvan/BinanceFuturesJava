@@ -20,6 +20,11 @@
 #   key doc san co sha8 = key tk chinh => KHAN. [A1 MIN-1] doc 242/san loi: le => CANH BAO; >= MON_FAIL_MAX (5) luot LIEN TIEP => KHAN +
 #      KILL_SWITCH (neu ssh con dat duoc) + Telegram.
 #   Lop CHINH (jar r4t, khong doi): KillSwitchEngine A40/C6 (FLATTEN) tren C3MainEquity = C3_CAPITAL + PnL c3 (so) — day la lop ops THU HAI.
+#   [WAVE1 16/11] B-05: cron 1 lan thu ssh / lenh + timeout 25 s / lenh (GL_SSH_TRIES=1 GL_SSH_TIMEOUT_S=25) => 1 luot <= ~80 s < "timeout 100";
+#     bo dem loi TANG TRUOC khi ssh (bi giet giua chung van dem), dau luot: bo dem >= MON_FAIL_MAX => Telegram KHAN NGAY (truoc ssh).
+#   B-14 (KHAN, KHONG dat KILL_SWITCH; co micro/pilot BAT hoac adapter=live): process v_t_m != 1, latch != NONE, dong lenh bi tu choi /
+#     loi dong lenh trong log tu luot truoc, POS_C3_MISMATCH > 0 hai luot lien tiep.
+#   A-03 (KHAN + KILL_SWITCH): adapter=live ma LIVE_C3_KEYS_FILE != file key tk con, key doc san != SUB_KEY_SHA8, log co [C3-EXCL-FORCE].
 #   Ma thoat: 0 | 2 KHAN.
 # =============================================================================
 set -uo pipefail
@@ -35,19 +40,32 @@ if [ "$MON_CRON" = 1 ]; then
   [ "$(stat -c %s "$CL" 2>/dev/null || echo 0)" -gt 20000000 ] && mv -f "$CL" "$CL.1"
   exec >> "$CL" 2>&1
   MON_TAIL=${MON_TAIL:-4000000}
+  export GL_SSH_TRIES=${GL_SSH_TRIES:-1} GL_SSH_TIMEOUT_S=${GL_SSH_TIMEOUT_S:-25}   # [WAVE1 B-05]
 fi
 MON_TAIL=${MON_TAIL:-15000000}
 . "$(cd "$(dirname "$0")" && pwd)/golive_lib.sh"
 TS=$(TZ=Asia/Ho_Chi_Minh date +%Y%m%d_%H%M%S)
 say "=== golive_monitor (C3_ACCOUNT=$C3_ACCOUNT$([ "$MON_CRON" = 1 ] && echo ' cron')) ==="
+# [WAVE1 B-05] bo dem luot loi: doc + TANG TRUOC moi ssh (luot bi "timeout 100" giet giua chung van duoc dem); luot thanh cong dat lai 0
+NF0=$(sed -n 's/^n=//p' "$SUB_FAIL_FILE" 2>/dev/null | head -1); [[ "$NF0" =~ ^[0-9]+$ ]] || NF0=0
+MON_LAST_T=$(sed -n 's/^ts=\([0-9]*\) .*/\1/p' "$MON_HB_FILE" 2>/dev/null | head -1); [[ "$MON_LAST_T" =~ ^[0-9]+$ ]] || MON_LAST_T=$(( $(date +%s) - 180 ))
+if [ "$DRY" != 1 ]; then mkdir -p "$(dirname "$SUB_FAIL_FILE")"; printf 'n=%s\nts=%s\npending=1\n' "$((NF0 + 1))" "$TS" > "$SUB_FAIL_FILE"; fi
+if [ "$NF0" -ge "$MON_FAIL_MAX" ]; then
+  say "!! KHAN: $NF0 luot monitor lien tiep KHONG tron ven (ssh/san loi hoac bi timeout giet) — bao NGAY truoc khi thu ssh"
+  KF0=$LOGDIR/c3sub_monitor_khan_fail.txt; OT0=$(sed -n 's/^t=//p' "$KF0" 2>/dev/null | head -1)
+  if [ "$MON_CRON" != 1 ] || [ $(( $(date +%s) - ${OT0:-0} )) -ge 1800 ]; then
+    tg "[golive] KHAN monitor: $NF0 luot lien tiep loi (242 khong doc duoc / ssh treo). Kiem 242 + golive_monitor.sh ngay" && [ "$DRY" != 1 ] && printf 't=%s\n' "$(date +%s)" > "$KF0"
+  fi
+fi
 READOK=1
 ST=$(gl_state242) && echo "$ST" | grep -qx END_STATE && ! echo "$ST" | grep -q '^ERR=' || READOK=0
 if [ "$READOK" = 0 ]; then
   [ "$C3_ACCOUNT" = SUB ] || die "doc trang thai 242 loi (ssh?)"
   say "!! CANH BAO: doc trang thai 242 loi (ssh?)"; ST=""
 fi
-OUT=$(s242in "PP='$PROC_PAT' bash -s -- $A $MON_TAIL" <<'EOF'
-A=$1; TB=$2; cd "$A" || exit 0; L=logs/full.log
+MON_SINCE=$(TZ=Asia/Ho_Chi_Minh date -d @"$MON_LAST_T" +%Y%m%d%H%M%S)
+OUT=$(s242in "PP='$(gl_rx "$PROC_PAT")' bash -s -- $A $MON_TAIL $MON_SINCE" <<'EOF'   # [WAVE1] gl_rx: khong tu dem wrapper
+A=$1; TB=$2; SINCE=$3; cd "$A" || exit 0; L=logs/full.log
 P=$(pgrep -f "$PP" | head -1)
 H=$(tail -c $TB $L 2>/dev/null)
 last() { echo "$H" | grep -a "$1" | tail -1 | cut -c1-${2:-260}; }
@@ -70,6 +88,11 @@ echo "== stream: $(last 'C3-LIVE-STREAM\]' 200)"
 echo "== rate 1h: 429=$(cnt1h 'HTTP 429\|http=429\| 429 ') 418=$(cnt1h 'HTTP 418\|http=418\| 418 ') ban=$(cnt1h '"code":-1003\|code=-1003\|IP banned\|banned until') | $(last 'USED-WEIGHT\|weight=' 200)"
 echo "== KHAN 1h=$(cnt1h 'KHAN') ERROR 1h=$(cnt1h ' ERROR ') | KHAN cuoi: $(last 'KHAN' 200)"
 echo "== exinfo: tuoi=$(( $(date +%s) - $(stat -c %Y run/c3live_exchangeInfo.json 2>/dev/null || echo 0) ))s $(tr '\n' ' ' < run/c3live_exinfo_refresh.state 2>/dev/null | cut -c1-80)"
+# [WAVE1 B-14] lenh bi tu choi / loi dong lenh tu luot truoc (theo gio log +07); [A-03] C3-EXCL-FORCE trong cua so doc
+RJ=$(echo "$H" | awk -v s="$SINCE" '{split($1,a,"/"); split($2,b,"[:.]"); k=a[3]a[2]a[1]b[1]b[2]b[3]; if (k>=s) print}' | grep -aE ' ERROR .*\[C3-LIVE-(EXEC|FILL|PROTECT|TRAIL)\]|\[C3-LIVE-ORDER\].*status=(ERROR|REJECTED|EXPIRED)|\[C3-LIVE-EXEC\].*KHONG khop|"code":-20(10|19)|code=-20(10|19)|-4164')
+echo "== REJECT_SINCE=$(printf '%s' "$RJ" | grep -ac .) | $(printf '%s' "$RJ" | tail -1 | cut -c1-200)"
+# [WAVE1 A-03] chi dem [C3-EXCL-FORCE] TU lan khoi dong JVM CUOI (dong MainClass) - dong cua lan khoi dong cu (da rollback) khong KHAN lai
+echo "== EXCL_FORCE=$(echo "$H" | awk '/MainClass: com.binance.chuyennd.trading.BinanceOrderTradingManager/{n=0} /\[C3-EXCL-FORCE\]/{n++} END{print n+0}')"
 echo "== may: MemAvailable=$(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo)MB swap_free=$(awk '/SwapFree/{print int($2/1024)}' /proc/meminfo)MB dia=$(df -h . | awk 'NR==2{print $4" trong ("$5")"}')"
 EOF
 ) || OUT="(ssh 242 loi)"
@@ -80,7 +103,14 @@ RC=0; SUBSUM=""
 if [ "$C3_ACCOUNT" = SUB ]; then
   # ---------------------------------------------------------------- [ADD4 §4/§5 + A1 MIN-1] tai khoan con: doc san CHI DOC
   KP=$(sv ENV_LIVE_C3_KEYS_FILE)
-  [ "$(sv ENV_LIVE_ADAPTER)" != live ] || [ "$KP" = "$KEYS_FILE" ] || say "!! CANH BAO: bot live dung LIVE_C3_KEYS_FILE='$KP' KHAC $KEYS_FILE (C3_ACCOUNT=$C3_ACCOUNT) — so lieu duoi day la cua $KEYS_FILE"
+  KHK=""   # [WAVE1 A-03] KHAN cung (truoc chi CANH BAO)
+  [ "$(sv ENV_LIVE_ADAPTER)" != live ] || [ "$KP" = "$KEYS_FILE" ] || { say "!! KHAN: bot live dung LIVE_C3_KEYS_FILE='$KP' KHAC $KEYS_FILE (C3_ACCOUNT=$C3_ACCOUNT)"; KHK="$KHK key_file_bot=${KP:-THIEU}_khac_${KEYS_FILE##*/}"; }
+  if [ "$(sv ENV_LIVE_ADAPTER)" = live ]; then
+    EXF=$(echo "$OUT" | sed -n 's/^== EXCL_FORCE=//p' | head -1)
+    [ "${EXF:-0}" = 0 ] || KHK="$KHK log_C3-EXCL-FORCE=$EXF"
+    [ "$(sv KEYS_PERM)" = 600 ] || KHK="$KHK quyen_file_key=$(sv KEYS_PERM)"
+    [ "$(sv KEYS_FILE_SHA8)" = "$SUB_KEY_SHA8" ] || KHK="$KHK sha8_file_key=$(sv KEYS_FILE_SHA8)_khac_${SUB_KEY_SHA8}"
+  fi
   API=$(gl_api242 mon) || API="ERR=ssh_api"
   echo "$API" | grep -E '^(KEY_SHA8|TMB|AVAIL|BAL|MARGIN_ASSETS|BFUSD_|POS_TOTAL|POS_NONC3|POS_PENDING|POS_C3_MISMATCH|ORD_|ALGO_|C3_|W_|API_OK|ERR)' | sed 's/^/== tk con: /'
   say "== BFUSD: so_du=$(av BFUSD_WALLET) index=$(av BFUSD_INDEX) bidRate=$(av BFUSD_BIDRATE) (gia BFUSD lech = nhieu chap nhan, phia an toan; A1 errata2 MIN-4)"
@@ -94,6 +124,8 @@ if [ "$C3_ACCOUNT" = SUB ]; then
   else UNK="$UNK doc_san"; fi
   KS8=$(av KEY_SHA8)
   [ -n "$KS8" ] && [ "$KS8" = "$MAIN_KEY_SHA8" ] && KH="$KH key_doc_san_LA_KEY_TK_CHINH($KS8)"
+  [ -n "$KS8" ] && [ "$KS8" != "$SUB_KEY_SHA8" ] && KH="$KH key_doc_san_${KS8}_KHAC_tk_con_${SUB_KEY_SHA8}"   # [WAVE1 A-03]
+  KH="$KH$KHK"
   # §5 (ADD4 ERRATA 2) eq = C3_CAPITAL + (tmb - tmb0); tmb0 + C3_CAPITAL tu $SUB_BASE_FILE (micro_on / pilot_on / golive_rebase_equity ghi)
   TMB=$(av TMB); DD=""; EQ=""; TB0=""
   FLAGON=0; [ -f "$GL_MON_FLAG" ] && FLAGON=1
@@ -128,7 +160,7 @@ if [ "$C3_ACCOUNT" = SUB ]; then
     UNK="$UNK TMB"
   fi
   # [A1 MIN-1] bo dem luot doc loi LIEN TIEP (Oracle)
-  NF=$(sed -n 's/^n=//p' "$SUB_FAIL_FILE" 2>/dev/null | head -1); [[ "$NF" =~ ^[0-9]+$ ]] || NF=0
+  NF=$NF0   # [WAVE1 B-05] gia tri TRUOC luot nay (file da duoc tang truoc ssh)
   if [ -n "$UNK" ]; then
     NF=$((NF + 1))
     say "!! CANH BAO: doc 242/san tk con KHONG tron ven ($UNK) — luot loi lien tiep $NF/$MON_FAIL_MAX"
@@ -152,9 +184,39 @@ if [ "$C3_ACCOUNT" = SUB ]; then
     else say "(Telegram KHAN nay da gui < 30' truoc — khong gui lai)"; fi
     PUSH=OFF
   fi
+  MIS=$(av POS_C3_MISMATCH | awk '{print $1}')
   SUBSUM=" tk=SUB key=${KS8:-?} tmb=${TMB:-?} dd=${DD:-?} khan=$([ -n "$KH" ] && echo KHAN || { [ -n "$UNK" ] && echo "?(loi $NF/$MON_FAIL_MAX)" || echo 0; }) eq=${EQ:-?} tmb0=${TB0:-?}"
 fi
-say "TOM TAT: adapter=$(sv ENV_LIVE_ADAPTER) C3_CAPITAL=$(sv ENV_C3_CAPITAL) push=$PUSH latch=$(sv LATCH) so_c3=$(sv BOOK_CUM)cum LEGACY=$(sv LEGACY_N) mem=$(sv MEM)MB jar=$(sv JAR_MD5 | cut -c1-8) pause=$(sv PAUSE | cut -c1)$SUBSUM"
+# ---------------------------------------------------------------- [WAVE1 B-14] KHAN canh bao (KHONG dat KILL_SWITCH)
+KA=""
+if [ -f "$GL_MON_FLAG" ] || [ "$(sv ENV_LIVE_ADAPTER)" = live ]; then
+  if [ "$READOK" = 1 ]; then
+    [ "$(sv NPROC)" = 1 ] || KA="$KA so_process_v_t_m=$(sv NPROC)"
+    case "$(sv LATCH)" in NONE|NOFILE) ;; *) KA="$KA latch=$(sv LATCH)";; esac
+  else
+    NF=${NF:-$NF0}
+  fi
+  RJN=$(echo "$OUT" | sed -n 's/^== REJECT_SINCE=\([0-9]*\).*/\1/p' | head -1)
+  [ -n "$RJN" ] && [ "$RJN" != 0 ] && KA="$KA lenh_tu_choi_hoac_loi_dong=${RJN}_tu_luot_truoc"
+  MISF=$LOGDIR/c3sub_mismatch.txt; MP=$(sed -n 's/^n=//p' "$MISF" 2>/dev/null | head -1)
+  if [[ "${MIS:-}" =~ ^[0-9]+$ ]] && [ "$(sv ENV_LIVE_ADAPTER)" = live ]; then
+    [ "$MIS" -gt 0 ] && [ "${MP:-0}" -gt 0 ] 2>/dev/null && KA="$KA so_c3_lech_san(POS_C3_MISMATCH=${MIS})_2_luot"
+    [ "$DRY" = 1 ] || printf 'n=%s\nts=%s\n' "$MIS" "$TS" > "$MISF"
+  fi
+fi
+if [ -n "$KA" ]; then
+  RC=2
+  say "KHAN (canh bao, KHONG dat KILL_SWITCH):$KA — owner/MASTER kiem ngay"
+  SIGA=$(echo "$KA" | sed 's/=[0-9]*_tu_luot_truoc/=N/' | md5sum | cut -c1-12); NOWA=$(date +%s)
+  KFA=$LOGDIR/c3_monitor_khan_alert.txt; OSA=$(sed -n 's/^sig=//p' "$KFA" 2>/dev/null | head -1); OTA=$(sed -n 's/^t=//p' "$KFA" 2>/dev/null | head -1)
+  if [ "$MON_CRON" != 1 ] || [ "$OSA" != "$SIGA" ] || [ $(( NOWA - ${OTA:-0} )) -ge 1800 ]; then
+    tg "[golive] KHAN TS=$TS:$KA (khong dat KILL_SWITCH). Kiem golive_monitor.sh"
+    [ "$DRY" = 1 ] || printf 'sig=%s\nt=%s\n' "$SIGA" "$NOWA" > "$KFA"
+  else say "(Telegram KHAN canh bao nay da gui < 30' truoc — khong gui lai)"; fi
+fi
+# MAIN: khong co nhanh SUB => luot doc thanh cong dat lai bo dem
+if [ "$C3_ACCOUNT" != SUB ] && [ "$DRY" != 1 ]; then printf 'n=%s\nts=%s\n' "$([ "$READOK" = 1 ] && echo 0 || echo $((NF0 + 1)))" "$TS" > "$SUB_FAIL_FILE"; fi
+say "TOM TAT: adapter=$(sv ENV_LIVE_ADAPTER) C3_CAPITAL=$(sv ENV_C3_CAPITAL) push=$PUSH latch=$(sv LATCH) so_c3=$(sv BOOK_CUM)cum LEGACY=$(sv LEGACY_N) mem=$(sv MEM)MB jar=$(sv JAR_MD5 | cut -c1-8) pause=$(sv PAUSE | cut -c1)$SUBSUM khan_canh_bao=${KA:-0}"
 if [ "$MON_CRON" = 1 ]; then
   mkdir -p "$(dirname "$MON_HB_FILE")" && printf 'ts=%s TS=%s rc=%s\n' "$(date +%s)" "$TS" "$RC" > "$MON_HB_FILE.tmp" && mv -f "$MON_HB_FILE.tmp" "$MON_HB_FILE"
 fi

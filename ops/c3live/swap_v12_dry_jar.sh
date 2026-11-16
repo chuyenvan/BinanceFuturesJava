@@ -65,7 +65,7 @@ NEED_MGUARD=${NEED_MGUARD:-1}   # [R4r] jar moi co guard do du phut => hau kiem 
 case "$NEW_TAG" in *fin*) DEF_FIN=1;; *) DEF_FIN=0;; esac
 NEED_FIN=${NEED_FIN:-$DEF_FIN}   # [FIN] jar moi co guard bin fin + token env => kiem ingestor fin TRUOC + env token + hau kiem MINUTE-FIN
 ING_FIN_MD5=${ING_FIN_MD5:-5e78ac0663b4a765551eac1c362bf194}   # [FIN] jar collectData qf/fin-bin phai DANG chay truoc khi swap
-TG_SHA8=${TG_SHA8:-4f49bded}   # [FIN] sha8 token Telegram ky vong
+TG_SHA8=${TG_SHA8:-bdee1480}   # [FIN] sha8 token Telegram ky vong ([WAVE1 B-13] token moi 11-14; truoc 4f49bded da revoke)
 ING_DIR=${ING_DIR:-/home/chuyennd/java/collectData}   # [FIN] thu muc collectData (kiem env KLINE_FIN_BIN)
 WD_PAUSE=${WD_PAUSE:-/var/lib/h242_watchdog/PAUSE}
 WD_PAUSE_MAX_S=${WD_PAUSE_MAX_S:-1800}

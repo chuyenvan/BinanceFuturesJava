@@ -39,7 +39,7 @@ APP_DIR=${APP_DIR:-/home/chuyennd/java/v_t_m}
 ING_DIR=${ING_DIR:-/home/chuyennd/java/collectData}
 QF4_SH=${QF4_SH:-$D/deploy_ingest_qf4.sh}
 SWAP_SH=${SWAP_SH:-$C3/swap_v12_dry_jar.sh}
-CHECK_R=${CHECK_R:-$D/ingqf4_check_remote.sh}
+CHECK_R=${CHECK_R:-$D/ingfin_check_remote.sh}   # [WAVE1 B-13] ban sua FIN (repo ops/c3live/ingfin_check_remote.sh; install_golive_ops.sh chep vao deploy/)
 QF4_PAT=${QF4_PAT:-deploy_ingest_qf4.sh}
 STABLE_S=${STABLE_S:-900}
 STABLE_MAX_S=${STABLE_MAX_S:-3600}
@@ -51,7 +51,7 @@ DRY=${DRY:-0}
 # [A1 CHAIN MAJ-C] pin md5 script con = ban A1 da duyet. Luc YES: chep vao thu muc job + kiem md5; CHI chay ban chep; lech => KHONG chay.
 REG_JAR_SH=${REG_JAR_SH:-/home/ubuntu/claude_master/vz_e1_wt/research/parity_v12/sh/register_jar.sh}
 PIN_QF4_SH=${PIN_QF4_SH:-880531e5a4545950a02b773b83880432}     # deploy_ingest_qf4.sh QF4b (tu pin md5 ingqf_restart/ingqf4_check remote)
-PIN_CHECK_R=${PIN_CHECK_R:-e8d87135085e81f48e8d86aef56bfbdc}   # ingqf4_check_remote.sh
+PIN_CHECK_R=${PIN_CHECK_R:-51ff39620a69efacb84563f311fd15b4}   # [WAVE1 B-13] ingfin_check_remote.sh (truoc: ingqf4 e8d87135)
 PIN_SWAP_SH=${PIN_SWAP_SH:-a04ee5f6a905b4926b3b6e0efcb39e53}   # swap_v12_dry_jar.sh [R4u2] (mac dinh r4t -> r4u3 + C3_EXCLUDE_LEGACY_HELD; truoc 09ae28e8 r4q -> r4t)
 PIN_REG=${PIN_REG:-7d9b2ee0285bdaec05574de86764e73f}           # register_jar.sh (swap goi sau hau kiem DAT)
 R4Q_JAR=${R4Q_JAR:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4q}
@@ -184,10 +184,10 @@ case "$PRESET" in
   swap_r4u3) STEPS="r4u3"; WANT_TAG=r4u3;;
   fin_pair)   # [FIN] ingestor fin TRUOC, v_t_m fin-guard SAU; buoc ingestor dung lai may "qf4" voi script/pin/log rieng
     STEPS="qf4 r4u3fin"; WANT_TAG=r4u3fin
-    QF4_SH=${FIN_ING_SH:-$D/deploy_ingest_fin.sh}; PIN_QF4_SH=${PIN_FIN_ING_SH:-f2e6cf9605784c3c30666d17433ad0e2}
+    QF4_SH=${FIN_ING_SH:-$D/deploy_ingest_fin.sh}; PIN_QF4_SH=${PIN_FIN_ING_SH:-437cdbfb380d97281c21715cdbbb8853}   # [WAVE1 B-13] ban TG_SHA8=bdee1480 + CHECK_R ingfin 51ff3962 (truoc f2e6cf96)
     QF4_PAT=${FIN_ING_PAT:-deploy_ingest_fin.sh}; QF4_LOGPFX=deploy_ingest_fin; QF4_RB_SH=rollback_ingest_fin.sh
     SWAP_SH=${FIN_SWAP_SH:-$(dirname "$SELF")/swap_v12_dry_jar.sh}   # swap CUNG nhanh voi chain nay (v1.2/fin-guard)
-    PIN_SWAP_SH=${PIN_SWAP_FIN:-1012cdb6c316208c52186257e403020e};;
+    PIN_SWAP_SH=${PIN_SWAP_FIN:-429faf316b36b6463ee68b2b475f95f5};;   # [WAVE1 B-13] swap TG_SHA8=bdee1480 (truoc 1012cdb6)
   *) echo "Dung: $0 <preset>|status|stop - preset: fin_pair | swap_r4u3 | qf4_then_r4t (cu)"; exit 1;;
 esac
 JD=""

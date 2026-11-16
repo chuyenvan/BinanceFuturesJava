@@ -5,10 +5,21 @@
 # tu rollback, Telegram (token doc tu file, khong in). Khong in key/secret.
 # Bien (test): SSH_242 SCP_242 RHOST APP_DIR PROC_PAT NJ_MD5 WD_PAUSE WD_PAUSE_MAX_S POST_WAIT_S POST_ROUNDS MIN_MEM_MB LOGDIR GATE_DIR
 #   FORCE_TIME DEPLOY_TG_ENV DEPLOY_TG_SINK SSH_RETRY_S PY242 CURL242 KEYS_FILE C3_ACCOUNT MAIN_KEY_SHA8 SUB_DD_LIMIT SUB_PEAK_FILE
-SSH_242=${SSH_242:-"ssh -p 2222 -o BatchMode=yes -o ConnectTimeout=20 -i /home/ubuntu/.ssh/id_rsa_chuyennd root@103.157.218.242"}
+# [WAVE1 B-10] ServerAlive: ket noi nua mo (NAT rot) => ssh tu thoat <= ~60 s thay vi treo vo han
+SSH_242=${SSH_242:-"ssh -p 2222 -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=10 -o ServerAliveCountMax=6 -i /home/ubuntu/.ssh/id_rsa_chuyennd root@103.157.218.242"}
 A=${APP_DIR:-/home/chuyennd/java/v_t_m}
 PROC_PAT=${PROC_PAT:-BinanceOrderTradingManager}
-NJ_MD5=${NJ_MD5:-b1f12c3eeaeed72cb17afbe5b4da06cf}   # jar v1.2 dang chay (r4u3, ADD19; dua len bang swap_v12_dry_jar.sh; truoc: r4t 694b29b2, r4q 8c81e6b5)
+NJ_MD5=${NJ_MD5:-641803565297d4065d90245e04a00f11}   # [WAVE1 B-01] jar v1.2 dang chay r4u3fin2 (FIN vong 2, swap 15/11 00:10; truoc: r4u3 b1f12c3e, r4t 694b29b2, r4q 8c81e6b5)
+RB_JAR_MD5=${RB_JAR_MD5:-b1f12c3eeaeed72cb17afbe5b4da06cf}   # [WAVE1 B-01] dich rollback v_t_m = r4u3 (rollback_vtm_r4u3.sh)
+ING_FIN_MD5=${ING_FIN_MD5:-5e78ac0663b4a765551eac1c362bf194}   # [WAVE1 B-08] jar ingestor FIN dang chay (gate micro + kiem truoc)
+ING_PAT=${ING_PAT:-websocket.BinanceDataIngestor}
+SUB_KEY_SHA8=${SUB_KEY_SHA8:-43820b5b}   # [WAVE1 A-03] sha256(key tk con)[:8] da dang ky (KEY_CHECK_SUB 11-09) — key doc san PHAI = gia tri nay
+GATE_MAX_AGE_S=${GATE_MAX_AGE_S:-172800}  # [WAVE1 B-08] gate G-MICRO het han 48 h
+GL_SSH_TRIES=${GL_SSH_TRIES:-3}            # [WAVE1 B-05] so lan thu ssh CHI DOC (cron monitor: 1)
+GL_SSH_TIMEOUT_S=${GL_SSH_TIMEOUT_S:-0}    # [WAVE1 B-05] >0 => moi lenh ssh boc timeout (cron monitor: 25 s)
+RB_LOG_WAIT_S=${RB_LOG_WAIT_S:-180}        # [WAVE1 B-02] rollback: cho dong "khoi dong adapter=" cua JVM moi toi da (s)
+RB_LOG_POLL_S=${RB_LOG_POLL_S:-5}
+MIN_LEG_BUDGET=${MIN_LEG_BUDGET:-5}        # [WAVE1 D-01] = C3LiveEntry minBudget 5 (C3LiveEntry:265) va min notional pho bien (516 coin)
 WD_PAUSE=${WD_PAUSE:-/var/lib/h242_watchdog/PAUSE}
 WD_PAUSE_MAX_S=${WD_PAUSE_MAX_S:-1800}
 POST_WAIT_S=${POST_WAIT_S:-60}
@@ -138,25 +149,31 @@ tg() {
   tok=""; [ "$code" = 200 ]
 }
 die() { say "DUNG: $*"; say "KET QUA: TU_CHOI (khong doi gi). Log: $LOG"; exit 1; }
+# [WAVE1 B-05] _ssh: boc timeout khi GL_SSH_TIMEOUT_S > 0 (cron monitor) — ssh treo khong an het "timeout 100" cua cron
+_ssh() { if [ "${GL_SSH_TIMEOUT_S:-0}" -gt 0 ] 2>/dev/null; then timeout -k 5 "$GL_SSH_TIMEOUT_S" $SSH_242 "$@"; else $SSH_242 "$@"; fi; }
+# s242 / s242in : CHI cho lenh CHI DOC hoac IDEMPOTENT (dat KILL_SWITCH neu chua co, doc log...) — thu lai GL_SSH_TRIES lan khi rc=255
 s242() {
   local i rc=255
-  for i in 1 2 3; do
-    $SSH_242 "$@" < /dev/null; rc=$?
+  for i in $(seq 1 "$GL_SSH_TRIES"); do
+    _ssh "$@" < /dev/null; rc=$?
     [ "$rc" != 255 ] && return "$rc"
-    [ "$i" -lt 3 ] && { echo "[ssh 242 loi ket noi — thu lai $i/2 sau ${SSH_RETRY_S}s]" >&2; sleep "$SSH_RETRY_S"; }
+    [ "$i" -lt "$GL_SSH_TRIES" ] && { echo "[ssh 242 loi ket noi — thu lai $i/$((GL_SSH_TRIES - 1)) sau ${SSH_RETRY_S}s]" >&2; sleep "$SSH_RETRY_S"; }
   done
   return "$rc"
 }
 s242in() {
   local in i rc=255
   in=$(cat)
-  for i in 1 2 3; do
-    printf '%s\n' "$in" | $SSH_242 "$@"; rc=$?
+  for i in $(seq 1 "$GL_SSH_TRIES"); do
+    printf '%s\n' "$in" | _ssh "$@"; rc=$?
     [ "$rc" != 255 ] && return "$rc"
-    [ "$i" -lt 3 ] && { echo "[ssh 242 loi ket noi — thu lai $i/2 sau ${SSH_RETRY_S}s]" >&2; sleep "$SSH_RETRY_S"; }
+    [ "$i" -lt "$GL_SSH_TRIES" ] && { echo "[ssh 242 loi ket noi — thu lai $i/$((GL_SSH_TRIES - 1)) sau ${SSH_RETRY_S}s]" >&2; sleep "$SSH_RETRY_S"; }
   done
   return "$rc"
 }
+# [WAVE1 B-02] s242in_once : buoc CO TAC DUNG PHU (restart / rollback) — CHAY DUNG 1 LAN, KHONG tu chay lai khi rc=255.
+#   Nguoi goi phai DOC trang thai that tren 242 (gl_phase242) roi moi quyet chay lai (heredoc idempotent theo marker pha).
+s242in_once() { _ssh "$@"; }
 time_ok() {
   local H M
   H=$(TZ=Asia/Ho_Chi_Minh date +%-H); M=$(TZ=Asia/Ho_Chi_Minh date +%-M)
@@ -174,30 +191,52 @@ gl_yes() {   # $1 = cau hoi; $2 = chuoi phai go (mac dinh YES)
   read -r ans || ans=""
   [ "$ans" = "$want" ] || { say "Huy. Khong doi gi."; exit 0; }
 }
-# gl_gate <file> : file gate MASTER (khong rong) co dong jar_md5=<NJ_MD5>. In "OK"/"FAIL ..."
+# gl_gate <file> [strict] : file gate MASTER (khong rong) co dong jar_md5=<NJ_MD5>. In "OK"/"FAIL ...".
+#   [WAVE1 B-08] strict=1 (G-MICRO): them ingestor_md5=<ING_FIN_MD5>, created_ms (tuoi <= GATE_MAX_AGE_S = 48 h, khong o tuong lai),
+#   expires_ms (> bay gio), gmicro_i=DAT.., gmicro_ii=DAT.., smoke=DAT.., prereg_commit=<hex 7-40>. Thieu / sai / het han => FAIL.
+#   MASTER tao bang golive_make_gate.sh (doc gmicro_target.json + report G-MICRO, tu choi neu chua DAT).
 gl_gate() {
-  local f=$1
+  local f=$1 st=${2:-0} why="" now c e x
   [ -s "$f" ] || { echo "FAIL thieu_file_gate $f"; return 1; }
   grep -qx "jar_md5=$NJ_MD5" "$f" || { echo "FAIL gate_$f khong co dong jar_md5=$NJ_MD5"; return 1; }
+  if [ "$st" = 1 ]; then
+    now=$(( $(date +%s) * 1000 ))
+    grep -qx "ingestor_md5=$ING_FIN_MD5" "$f" || why="$why ingestor_md5!=$ING_FIN_MD5"
+    c=$(gl_gate_val "$f" created_ms); e=$(gl_gate_val "$f" expires_ms)
+    if ! [[ "$c" =~ ^[0-9]{13}$ ]]; then why="$why thieu_created_ms"
+    elif [ $(( now - c )) -gt $(( GATE_MAX_AGE_S * 1000 )) ]; then why="$why gate_cu_$(( (now - c) / 1000 ))s>${GATE_MAX_AGE_S}s(het_han)"
+    elif [ $(( c - now )) -gt 300000 ]; then why="$why created_ms_o_tuong_lai"; fi
+    if ! [[ "$e" =~ ^[0-9]{13}$ ]]; then why="$why thieu_expires_ms"
+    elif [ "$e" -le "$now" ]; then why="$why expires_ms_da_qua(het_han)"; fi
+    for x in gmicro_i gmicro_ii smoke; do [[ "$(gl_gate_val "$f" $x)" =~ ^DAT ]] || why="$why ${x}_khong_DAT"; done
+    [[ "$(gl_gate_val "$f" prereg_commit)" =~ ^[0-9a-f]{7,40}$ ]] || why="$why thieu_prereg_commit"
+    [ -z "$why" ] || { echo "FAIL gate $f:$why"; return 1; }
+    echo "OK gate $f (jar_md5=$NJ_MD5 ingestor_md5=$ING_FIN_MD5 tuoi=$(( (now - c) / 1000 ))s het_han_sau=$(( (e - now) / 1000 ))s $(gl_gate_val "$f" gmicro_i | cut -c1-40) prereg=$(gl_gate_val "$f" prereg_commit))"
+    return 0
+  fi
   echo "OK gate $f (jar_md5=$NJ_MD5)"
 }
 gl_gate_val() { sed -n "s/^$2=//p" "$1" | head -1 | tr -d '\r '; }
 
 # gl_state242 : CHI DOC 242 -> dong KEY=VAL (de script kiem o Oracle). Ket thuc END_STATE.
 gl_state242() {
-  s242in "PP='$PROC_PAT' bash -s -- $A $WD_PAUSE $KEYS_FILE" <<'EOF'
+  # [WAVE1] PP = mau [X]yz (gl_rx): pgrep KHONG dem chinh tien trinh boc lenh (timeout/ssh wrapper co chuoi PP trong cmdline)
+  s242in "PP='$(gl_rx "$PROC_PAT")' IPAT='$ING_PAT' bash -s -- $A $WD_PAUSE $KEYS_FILE" <<'EOF'
 A=$1; PAUSE=$2; KF=$3; cd "$A" || { echo "ERR=cd"; echo END_STATE; exit 0; }
 echo "NPROC=$(pgrep -fc "$PP")"
 P=$(pgrep -f "$PP" | head -1)
 echo "PID=$P"
 echo "JAR_MD5=$(md5sum < target/binance-java-sdk-1.2.4.jar | cut -c1-32)"
 E=$(tr '\0' '\n' < /proc/$P/environ 2>/dev/null)
-for k in LIVE_PROFILE LIVE_ADAPTER C3_CAPITAL SHADOW_NO_PUSH LIVE_ENTRY_ENABLED LIVE_SEED_EXCLUDE_DECISION_MIN LIVE_KILLSW_MODE GATE_BUFFER_SEED LIVE_C3_KEYS_FILE C3_EXCLUDE_LEGACY_HELD; do
+for k in LIVE_PROFILE LIVE_ADAPTER C3_CAPITAL SHADOW_NO_PUSH LIVE_ENTRY_ENABLED LIVE_SEED_EXCLUDE_DECISION_MIN LIVE_KILLSW_MODE GATE_BUFFER_SEED LIVE_C3_KEYS_FILE C3_EXCLUDE_LEGACY_HELD LIVE_APPLY_GRID_RATIO LIVE_DCA_GRID_ENABLED SIM_F_BASE DCA_GRID_WEIGHTS DCA_GRID_SCALE SIM_FIX_B2 SIM_U_MAX; do
   echo "ENV_$k=$(echo "$E" | sed -n "s/^$k=//p" | tail -1)"
 done
-for k in LIVE_ADAPTER C3_CAPITAL LIVE_SEED_EXCLUDE_DECISION_MIN C3_EXCLUDE_LEGACY_HELD; do
+for k in LIVE_ADAPTER C3_CAPITAL LIVE_SEED_EXCLUDE_DECISION_MIN C3_EXCLUDE_LEGACY_HELD LIVE_APPLY_GRID_RATIO LIVE_DCA_GRID_ENABLED SIM_F_BASE DCA_GRID_WEIGHTS DCA_GRID_SCALE DCA_GRID_LEVELS SIM_FIX_B2 SIM_U_MAX LIVE_C3_KEYS_FILE; do
   echo "ENVSH_$k=$(sed -n "s/^export $k=//p" conf/env.sh | tail -1)"
 done
+# [WAVE1 B-08] md5 jar ingestor DANG chay (fd cua process, nhu deploy_chain rstate)
+IP=$(pgrep -f "${IPAT:-websocket.BinanceDataIngestor}" | head -1); IFD=$(find /proc/$IP/fd -lname '*binance-java-sdk*.jar*' 2>/dev/null | head -1)
+echo "ING_MD5=$( [ -n "$IP" ] && [ -n "$IFD" ] && md5sum < "$IFD" 2>/dev/null | cut -c1-32)"
 L=$(sed -n 's/.*"latch":"\([A-Z_]*\)".*/\1/p' run/killsw_latch.json 2>/dev/null | head -1); echo "LATCH=${L:-NOFILE}"
 [ -e "$PAUSE" ] && echo "PAUSE=1 $(head -c 60 "$PAUSE" 2>/dev/null | tr '\n' ' ')" || echo "PAUSE=0"
 echo "CANARY_SOAK=$(pgrep -fc 'C3LiveCanary|UserStreamSoak')"
@@ -212,6 +251,9 @@ T=$(TZ=Asia/Ho_Chi_Minh date -d "$LT" +%s 2>/dev/null) && echo "LEGACY_AGE=$(( $
 B=run/c3live_book.json; [ -f $B ] && echo "BOOK_CUM=$(grep -o '"symbol":"' $B | wc -l)" || echo "BOOK_CUM=0"
 [ -e run/KILL_SWITCH ] && echo "KILLSW_FILE=1" || echo "KILLSW_FILE=0"
 [ -f "$KF" ] && [ "$(stat -c %a "$KF")" = 600 ] && [ "$(grep -c '^C3_LIVE_API_\(KEY\|SECRET\)=' "$KF")" = 2 ] && echo "KEYS_OK=1" || echo "KEYS_OK=0"
+# [WAVE1 A-03] sha8 key trong file (sha256 chuoi key, KHONG in key) + quyen — so voi SUB_KEY_SHA8 da dang ky o Oracle
+[ -f "$KF" ] && echo "KEYS_PERM=$(stat -c %a "$KF")" || echo "KEYS_PERM=thieu"
+[ -f "$KF" ] && echo "KEYS_FILE_SHA8=$(sed -n 's/^C3_LIVE_API_KEY=//p' "$KF" | head -1 | tr -d ' \t\r"' | tr -d '\n' | sha256sum | cut -c1-8)" || echo "KEYS_FILE_SHA8="
 echo END_STATE
 EOF
 }
@@ -228,78 +270,176 @@ gl_excl_guard() {
   fi
 }
 
+# [WAVE1 B-02] gl_phase242 <NM> : CHI DOC — trang thai THAT tren 242 cua lan chay TS nay (marker pha, process, env, KILL_SWITCH, backup).
+#   Goi sau khi ssh rc=255 o buoc co tac dung phu, TRUOC khi quyet chay lai (heredoc restart/rollback idempotent theo marker).
+gl_rx() { printf '[%s]%s' "${1:0:1}" "${1:1}"; }   # mau pgrep KHONG tu khop dong lenh bash -c chua chinh no
+gl_phase242() {
+  local PX; PX=$(gl_rx "$PROC_PAT")
+  s242 "cd $A 2>/dev/null || exit 0; echo PHASE=\$(tr '\n' ' ' < run/.golive_${1}_$TS.phase 2>/dev/null); echo RBPHASE=\$(tr '\n' ' ' < run/.golive_${1}_$TS.rbphase 2>/dev/null); echo NPROC=\$(pgrep -fc '$PX'); P=\$(pgrep -f '$PX' | head -1); echo PADAPTER=\$(tr '\0' '\n' < /proc/\$P/environ 2>/dev/null | sed -n 's/^LIVE_ADAPTER=//p' | tail -1); echo ENVSH_ADAPTER=\$(sed -n 's/^export LIVE_ADAPTER=//p' conf/env.sh | tail -1); echo BAK=\$([ -f conf/env.sh.bak_${1}_$TS ] && echo co || echo khong); echo KS=\$(head -c 80 run/KILL_SWITCH 2>/dev/null | tr '\n' ' '); echo END_PHASE"
+}
+# gl_once_resume <ten buoc> <ham heredoc> <bien ket qua> <marker ket thuc> : chay buoc co tac dung phu 1 lan; rc=255 / thieu marker
+#   => doc trang thai that (gl_phase242) => chay LAI heredoc (idempotent) toi da GL_RESUME_MAX lan; van loi => FAIL ..._trang_thai_khong_ro
+GL_RESUME_MAX=${GL_RESUME_MAX:-2}
+gl_once_resume() {
+  local step=$1 fn=$2 out rc i=0 ph
+  out=$($fn); rc=$?
+  while [ "$rc" = 255 ] || ! printf '%s\n' "$out" | grep -qx "$4"; do
+    i=$((i + 1))
+    say "!! $step: ssh rc=$rc / ket qua khong tron ven (lan $i) — DOC trang thai that tren 242 truoc khi quyet"
+    printf '%s\n' "$out" | sed 's/^/   (lan truoc) /'
+    if [ "$i" -gt "$GL_RESUME_MAX" ]; then
+      out="$out
+FAIL ssh_${step}_loi_trang_thai_khong_ro (rc=$rc sau $GL_RESUME_MAX lan doc lai) — KHONG tu ket luan"
+      break
+    fi
+    sleep "$SSH_RETRY_S"
+    ph=$(gl_phase242 "$GL_NAME"); echo "$ph" | sed 's/^/   242 that: /'
+    printf '%s\n' "$ph" | grep -qx END_PHASE || { rc=255; out="(doc trang thai 242 loi)"; continue; }
+    say "   => chay LAI buoc $step (idempotent theo marker pha — buoc da xong KHONG lam lai, backup env KHONG ghi de)"
+    out=$($fn); rc=$?
+  done
+  printf -v "$3" '%s' "$out"
+}
 # ---------------------------------------------------------------- restart co env moi + doi ten trang thai (tuy chon)
 # gl_restart "<ENV_ADD>" "<files can doi ten>" <hau to> [ks] ; in RS (dong OK/FAIL, START_LINE=)
 #   ks=1 [R4q MAJ-1]: dat run/KILL_SWITCH (token "<ten script> <TS> ", vd "golive_micro_on 20261105_101500 ") TRUOC khi dung bot => JVM moi len KHONG mo lenh moi toi khi
 #   script go (sau hau kiem DAT). FAIL truoc khi dung bot => env + KILL_SWITCH cua minh duoc go lai.
-gl_restart() {
-  local envadd=$1 files=$2 suf=$3 ks=${4:-0} nadd eb
-  nadd=$(echo "$envadd" | wc -l); eb=$(echo "$envadd" | base64 -w0)
-  PAUSE_TOK="C3GOLIVE_${GL_NAME} TS=$TS pid=$$"
-  RS=$(s242in "PP='$PROC_PAT' bash -s -- $A $TS $eb $nadd $WD_PAUSE $WD_PAUSE_MAX_S $$ $GL_NAME ${suf:-none} $ks" <<EOF2
-A=\$1; TS=\$2; EB=\$3; NADD=\$4; PAUSE=\$5; MAXS=\$6; JP=\$7; NM=\$8; SUF=\$9; KS=\${10:-0}; cd "\$A" || { echo "FAIL cd"; exit 0; }
+#   [WAVE1 B-02] IDEMPOTENT: marker pha run/.golive_<NM>_<TS>.phase (env_ok/stopped/moved/START_LINE=/started); backup env tao 1 lan /
+#   TS (KHONG ghi de); chay lai sau ssh dut => buoc da xong KHONG lam lai. Khong bao gio tu chay lai khi rc=255 ma khong doc 242.
+_gl_restart_rx() {
+  s242in_once "PP='$PROC_PAT' bash -s -- $A $TS $GLR_EB $GLR_NADD $WD_PAUSE $WD_PAUSE_MAX_S $$ $GL_NAME ${GLR_SUF:-none} $GLR_KS" <<EOF2
+A=\$1; TS=\$2; EB=\$3; NADD=\$4; PAUSE=\$5; MAXS=\$6; JP=\$7; NM=\$8; SUF=\$9; KS=\${10:-0}; cd "\$A" || { echo "FAIL cd"; echo END_RS; exit 0; }
+PH=run/.golive_\${NM}_\$TS.phase; BK=conf/env.sh.bak_\${NM}_\$TS
+ph() { grep -qx "\$1" "\$PH" 2>/dev/null; }
+mark() { echo "\$1" >> "\$PH"; }
 ksoff() { grep -q "^\${NM} \$TS " run/KILL_SWITCH 2>/dev/null && mv -f run/KILL_SWITCH run/KILL_SWITCH.rb_\$TS; }
-\cp -fp conf/env.sh conf/env.sh.bak_\${NM}_\$TS || { echo "FAIL backup_env"; exit 0; }
-echo "\$EB" | base64 -d >> conf/env.sh
-D=\$(diff conf/env.sh.bak_\${NM}_\$TS conf/env.sh | grep -c '^>')
-[ "\$D" = "\$NADD" ] && echo "OK env_them_\${D}_dong" || { \cp -f conf/env.sh.bak_\${NM}_\$TS conf/env.sh; echo "FAIL env_diff=\$D (da khoi phuc)"; exit 0; }
+restore() { ph stopped || { \cp -f "\$BK" conf/env.sh; sed -i '/^env_ok\$/d' "\$PH" 2>/dev/null; }; }
+if ph started; then
+  echo "INFO pha_da_xong_truoc (chay lai sau ssh dut): KHONG stop/start lai"
+  echo "OK env_them_\${NADD}_dong (pha truoc)"; echo "OK da_stop"; echo "START_LINE=\$(sed -n 's/^START_LINE=//p' "\$PH" | tail -1)"
+  P=\$(pgrep -f "\$PP" | head -1)
+  [ -n "\$P" ] && echo "OK started pid=\$P lstart=\$(ps -o lstart= -p \$P)" || echo "FAIL khong_thay_process_sau_start"
+  echo END_RS; exit 0
+fi
+[ -e "\$BK" ] || \cp -p conf/env.sh "\$BK" || { echo "FAIL backup_env"; echo END_RS; exit 0; }
+if ph env_ok; then echo "OK env_them_\${NADD}_dong (pha truoc)"
+else
+  D=\$(diff "\$BK" conf/env.sh | grep -c '^>')
+  [ "\$D" = 0 ] && { echo "\$EB" | base64 -d >> conf/env.sh; D=\$(diff "\$BK" conf/env.sh | grep -c '^>'); }
+  if [ "\$D" = "\$NADD" ] && [ "\$(tail -n "\$NADD" conf/env.sh | md5sum)" = "\$(echo "\$EB" | base64 -d | md5sum)" ]; then mark env_ok; echo "OK env_them_\${D}_dong"
+  else \cp -f "\$BK" conf/env.sh; echo "FAIL env_diff=\$D (da khoi phuc)"; echo END_RS; exit 0; fi
+fi
 if [ "\$KS" = 1 ]; then
-  echo "\${NM} \$TS hau_kiem: dung mo moi toi khi hau kiem DAT" > run/KILL_SWITCH && grep -q "^\${NM} \$TS " run/KILL_SWITCH \
-    && echo "OK KILL_SWITCH_dat_truoc_start" || { \cp -f conf/env.sh.bak_\${NM}_\$TS conf/env.sh; echo "FAIL khong_dat_duoc_KILL_SWITCH (env khoi phuc, bot KHONG dung)"; exit 0; }
+  { grep -q "^\${NM} \$TS " run/KILL_SWITCH 2>/dev/null || echo "\${NM} \$TS hau_kiem: dung mo moi toi khi hau kiem DAT" > run/KILL_SWITCH; } && grep -q "^\${NM} \$TS " run/KILL_SWITCH \
+    && echo "OK KILL_SWITCH_dat_truoc_start" || { restore; echo "FAIL khong_dat_duoc_KILL_SWITCH (env khoi phuc, bot KHONG dung)"; echo END_RS; exit 0; }
 fi
 TOK="C3GOLIVE_\${NM} TS=\$TS pid=\$JP"
 mkdir -p "\$(dirname "\$PAUSE")" 2>/dev/null; echo "\$TOK t=\$(date +%s)" > "\$PAUSE" && echo "OK watchdog_PAUSE token='\$TOK'" || echo "WARN khong_tao_duoc_PAUSE"
-setsid nohup bash -c "sleep \$MAXS; grep -q '^\$TOK ' '\$PAUSE' 2>/dev/null && rm -f '\$PAUSE'" > /dev/null 2>&1 < /dev/null &
-echo "LEGACY_TRUOC_STOP=\$(tail -c 20000000 logs/full.log 2>/dev/null | grep -a '\[LEGACY\] managed' | tail -1 | grep -aoE 'managed [0-9]+' | awk '{print \$2}')"   # [R4r] chup NGAY truoc stop
-bin/daemon.sh stop
-for i in \$(seq 1 30); do pgrep -f "\$PP" >/dev/null || break; sleep 2; done
-if pgrep -f "\$PP" >/dev/null; then \cp -f conf/env.sh.bak_\${NM}_\$TS conf/env.sh; ksoff; echo "FAIL van_con_process_sau_stop (env khoi phuc)"; exit 0; fi
+if ! ph pause_timer; then
+  setsid nohup bash -c "sleep \$MAXS; grep -q '^\$TOK ' '\$PAUSE' 2>/dev/null && rm -f '\$PAUSE'" > /dev/null 2>&1 < /dev/null &
+  mark pause_timer
+fi
+if ! ph stopped; then
+  echo "LEGACY_TRUOC_STOP=\$(tail -c 20000000 logs/full.log 2>/dev/null | grep -a '\[LEGACY\] managed' | tail -1 | grep -aoE 'managed [0-9]+' | awk '{print \$2}')"   # [R4r] chup NGAY truoc stop
+  bin/daemon.sh stop
+  for i in \$(seq 1 30); do pgrep -f "\$PP" >/dev/null || break; sleep 2; done
+  if pgrep -f "\$PP" >/dev/null; then \cp -f "\$BK" conf/env.sh; sed -i '/^env_ok\$/d' "\$PH"; ksoff; echo "FAIL van_con_process_sau_stop (env khoi phuc)"; echo END_RS; exit 0; fi
+  mark stopped
+fi
 echo "OK da_stop"
-: > run/.golive_\${NM}_\$TS.moved
-if [ "\$SUF" != none ]; then
-  for f in $files; do [ -e "\$f" ] && mv -f "\$f" "\$f.\${SUF}_\$TS" && echo "\$f" >> run/.golive_\${NM}_\$TS.moved; done
+[ -e run/.golive_\${NM}_\$TS.moved ] || : > run/.golive_\${NM}_\$TS.moved
+if [ "\$SUF" != none ] && ! ph moved; then
+  for f in $GLR_FILES; do [ -e "\$f" ] && [ ! -e "\$f.\${SUF}_\$TS" ] && mv -f "\$f" "\$f.\${SUF}_\$TS" && echo "\$f" >> run/.golive_\${NM}_\$TS.moved; done
+  mark moved
   echo "OK doi_ten_trang_thai .\${SUF}_\$TS: \$(tr '\n' ' ' < run/.golive_\${NM}_\$TS.moved)"
 fi
-echo "START_LINE=\$(( \$(wc -l < logs/full.log 2>/dev/null || echo 0) + 1 ))"
-bin/daemon.sh start
+ph "START_LINE=.*" || mark "START_LINE=\$(( \$(wc -l < logs/full.log 2>/dev/null || echo 0) + 1 ))"
+echo "START_LINE=\$(sed -n 's/^START_LINE=//p' "\$PH" | tail -1)"
+pgrep -f "\$PP" >/dev/null || bin/daemon.sh start
+mark started
 sleep 8
 P=\$(pgrep -f "\$PP" | head -1)
 [ -n "\$P" ] && echo "OK started pid=\$P lstart=\$(ps -o lstart= -p \$P)" || echo "FAIL khong_thay_process_sau_start"
+echo END_RS
 EOF2
-) || RS="FAIL ssh_restart_loi"
+}
+gl_restart() {
+  local envadd=$1 suf=$3 ks=${4:-0}
+  GLR_FILES=$2
+  GLR_NADD=$(echo "$envadd" | wc -l); GLR_EB=$(echo "$envadd" | base64 -w0); GLR_SUF=$suf; GLR_KS=$ks
+  PAUSE_TOK="C3GOLIVE_${GL_NAME} TS=$TS pid=$$"
+  gl_once_resume restart _gl_restart_rx RS END_RS
+  RS=$(printf '%s\n' "$RS" | grep -vx END_RS)
   echo "$RS"
-  SL=$(echo "$RS" | sed -n 's/^START_LINE=//p'); SL=${SL:-1}
+  SL=$(echo "$RS" | sed -n 's/^START_LINE=//p' | tail -1); SL=${SL:-1}
   local lb; lb=$(echo "$RS" | sed -n 's/^LEGACY_TRUOC_STOP=\([0-9][0-9]*\)$/\1/p' | tail -1)   # [R4r] so LEGACY NGAY truoc stop
   if [ -n "$lb" ] && [ -n "${L0:-}" ] && [ "${L0:-}" != SKIP ]; then [ "$lb" != "$L0" ] && say "INFO LEGACY truoc stop=$lb (luc kiem truoc: $L0) => hau kiem so voi $lb"; L0=$lb; fi
 }
-# gl_rollback <hau to> : stop, env.sh ve ban backup, trang thai doi ten tra lai (ban moi -> .rbnew_TS), start. In RB.
-gl_rollback() {
-  local suf=${1:-none}
-  RB=$(s242in "PP='$PROC_PAT' bash -s -- $A $TS $WD_PAUSE $GL_NAME $suf" <<'EOF'
-A=$1; TS=$2; PAUSE=$3; NM=$4; SUF=$5; cd "$A" || { echo "FAIL cd"; echo END_RB; exit 0; }
-[ -f conf/env.sh.bak_${NM}_$TS ] || { echo "FAIL thieu_backup_env"; echo END_RB; exit 0; }
-bin/daemon.sh stop
-for i in $(seq 1 30); do pgrep -f "$PP" >/dev/null || break; sleep 2; done
-pgrep -f "$PP" >/dev/null && { echo "FAIL van_con_process"; echo END_RB; exit 0; }
-\cp -f conf/env.sh.bak_${NM}_$TS conf/env.sh && echo "OK env_khoi_phuc"
-grep -q "^${NM} $TS " run/KILL_SWITCH 2>/dev/null && mv -f run/KILL_SWITCH run/KILL_SWITCH.rb_$TS && echo "OK KILL_SWITCH_cua_minh_go"
-if [ "$SUF" != none ] && [ -f run/.golive_${NM}_$TS.moved ]; then
-  for f in run/c3live_book.json run/c3live_dry_state.json run/c3live_ledger.csv run/c3live_merged.txt run/c3live_equity_c3.json run/c3live_lost.txt run/c3live_killsw_peak run/killsw_latch.json; do
-    [ -e "$f" ] && mv -f "$f" "$f.rbnew_$TS"
-  done
-  for f in $(cat run/.golive_${NM}_$TS.moved); do [ -e "$f.${SUF}_$TS" ] && mv -f "$f.${SUF}_$TS" "$f"; done
-  echo "OK trang_thai_tra_lai ($(tr '\n' ' ' < run/.golive_${NM}_$TS.moved))"
+# gl_restart_unknown : [WAVE1 B-02] RS bao trang thai KHONG RO (ssh dut, doc lai khong duoc) => KHONG duoc noi "khong doi gi"
+gl_restart_unknown() { echo "$RS" | grep -q '^FAIL ssh_restart_loi_trang_thai_khong_ro'; }
+# gl_rollback <hau to> [dry|live] [C3_CAPITAL ky vong] : stop, env.sh ve ban backup GOC cua TS, trang thai doi ten tra lai (ban moi ->
+#   .rbnew_TS), start. In RB. [WAVE1 B-02] IDEMPOTENT (marker run/.golive_<NM>_<TS>.rbphase); sau start KIEM THAT: process env
+#   LIVE_ADAPTER + env.sh + dong log "khoi dong adapter=" cua JVM moi (cho toi RB_LOG_WAIT_S) = ky vong (+ C3_CAPITAL neu cho).
+#   Dung => go KILL_SWITCH cua minh (micro: dry). SAI / khong xac nhan duoc => GIU/DAT run/KILL_SWITCH + "FAIL adapter_sau_rollback"
+#   (nguoi goi: KHAN, KHONG go co monitor). Tra 0 chi khi END_RB va khong FAIL.
+_gl_rollback_rx() {
+  s242in_once "PP='$PROC_PAT' bash -s -- $A $TS $WD_PAUSE $GL_NAME $GLB_SUF $GLB_EXP ${GLB_CAP:-none} $RB_LOG_WAIT_S $RB_LOG_POLL_S" <<'EOF'
+A=$1; TS=$2; PAUSE=$3; NM=$4; SUF=$5; EXP=$6; ECAP=$7; LW=$8; LP=$9; cd "$A" || { echo "FAIL cd"; echo END_RB; exit 0; }
+RP=run/.golive_${NM}_$TS.rbphase; BK=conf/env.sh.bak_${NM}_$TS
+ph() { grep -qx "$1" "$RP" 2>/dev/null; }
+mark() { echo "$1" >> "$RP"; }
+[ -f "$BK" ] || { echo "FAIL thieu_backup_env"; echo END_RB; exit 0; }
+if ! ph rb_started; then
+  bin/daemon.sh stop
+  for i in $(seq 1 30); do pgrep -f "$PP" >/dev/null || break; sleep 2; done
+  pgrep -f "$PP" >/dev/null && { echo "FAIL van_con_process"; echo END_RB; exit 0; }
+  \cp -f "$BK" conf/env.sh && echo "OK env_khoi_phuc (backup GOC $BK)"
+  if [ "$SUF" != none ] && [ -f run/.golive_${NM}_$TS.moved ] && ! ph rb_files; then
+    for f in run/c3live_book.json run/c3live_dry_state.json run/c3live_ledger.csv run/c3live_merged.txt run/c3live_equity_c3.json run/c3live_lost.txt run/c3live_killsw_peak run/killsw_latch.json; do
+      [ -e "$f" ] && mv -f "$f" "$f.rbnew_$TS"
+    done
+    for f in $(cat run/.golive_${NM}_$TS.moved); do [ -e "$f.${SUF}_$TS" ] && mv -f "$f.${SUF}_$TS" "$f"; done
+    mark rb_files
+    echo "OK trang_thai_tra_lai ($(tr '\n' ' ' < run/.golive_${NM}_$TS.moved))"
+  fi
+  ph "RB_START_LINE=.*" || mark "RB_START_LINE=$(( $(wc -l < logs/full.log 2>/dev/null || echo 0) + 1 ))"
+  bin/daemon.sh start; mark rb_started; sleep 8
+else
+  echo "INFO rollback da start o lan truoc (chay lai sau ssh dut) — chi KIEM"
+  pgrep -f "$PP" >/dev/null || { bin/daemon.sh start; sleep 8; }
 fi
-bin/daemon.sh start; sleep 8
+SL=$(sed -n 's/^RB_START_LINE=//p' "$RP" | tail -1); SL=${SL:-1}
 P=$(pgrep -f "$PP" | head -1)
 [ -n "$P" ] && echo "OK started pid=$P" || echo "FAIL khong_thay_process"
 E=$(tr '\0' '\n' < /proc/$P/environ 2>/dev/null)
-echo "ENV_LIVE_ADAPTER=$(echo "$E" | sed -n 's/^LIVE_ADAPTER=//p' | tail -1) ENV_C3_CAPITAL=$(echo "$E" | sed -n 's/^C3_CAPITAL=//p' | tail -1)"
+PA=$(echo "$E" | sed -n 's/^LIVE_ADAPTER=//p' | tail -1); PC=$(echo "$E" | sed -n 's/^C3_CAPITAL=//p' | tail -1)
+SA=$(sed -n 's/^export LIVE_ADAPTER=//p' conf/env.sh | tail -1)
+echo "ENV_LIVE_ADAPTER=$PA ENV_C3_CAPITAL=$PC ENVSH_LIVE_ADAPTER=$SA"
+W=0; AL=""
+while :; do
+  AL=$(tail -n +$SL logs/full.log 2>/dev/null | grep -a 'khoi dong adapter=' | tail -1 | grep -aoE 'adapter=(LIVE|DRY)' | cut -d= -f2)
+  [ -n "$AL" ] || [ "$W" -ge "$LW" ] && break
+  sleep "$LP"; W=$((W + LP))
+done
+echo "LOG_ADAPTER=${AL:-chua_thay_sau_${W}s}"
+EU=$(echo "$EXP" | tr 'a-z' 'A-Z'); OKA=1
+[ -n "$P" ] && [ "$PA" = "$EXP" ] && [ "$SA" = "$EXP" ] && [ "$AL" = "$EU" ] || OKA=0
+[ "$ECAP" = none ] || [ "$PC" = "$ECAP" ] || OKA=0
+if [ "$OKA" = 1 ]; then
+  echo "OK adapter_sau_rollback=$EXP (process + env.sh + log JVM moi)"
+  [ "$EXP" = dry ] && grep -q "^${NM} $TS " run/KILL_SWITCH 2>/dev/null && mv -f run/KILL_SWITCH run/KILL_SWITCH.rb_$TS && echo "OK KILL_SWITCH_cua_minh_go"
+else
+  [ -e run/KILL_SWITCH ] || echo "${NM} $TS rollback_adapter_sai: dung mo moi" > run/KILL_SWITCH
+  echo "FAIL adapter_sau_rollback (ky vong $EXP${ECAP:+/$ECAP}: process=$PA cap=$PC env.sh=$SA log=${AL:-?}) — run/KILL_SWITCH $([ -e run/KILL_SWITCH ] && echo DANG_DAT || echo KHONG_DAT_DUOC)"
+fi
 grep -q "^C3GOLIVE_${NM} TS=$TS " "$PAUSE" 2>/dev/null && rm -f "$PAUSE"
 [ -e "$PAUSE" ] && echo "WARN PAUSE_con (token khac)" || echo "OK PAUSE_go"
 echo END_RB
 EOF
-) || RB="FAIL ssh_rollback_loi"
+}
+gl_rollback() {
+  GLB_SUF=${1:-none}; GLB_EXP=${2:-dry}; GLB_CAP=${3:-}
+  gl_once_resume rollback _gl_rollback_rx RB END_RB
   echo "$RB"
   echo "$RB" | grep -qx END_RB && ! echo "$RB" | grep -q '^FAIL'
 }
@@ -539,6 +679,7 @@ gl_sub_eval() {
   [ "$(av enableWithdrawals)" = false ] || _sf "enableWithdrawals=$(av enableWithdrawals)"
   [ "$(av enableFutures)" = true ] || _sf "enableFutures=$(av enableFutures)"
   x=$(av KEY_SHA8); { [ -n "$x" ] && [ "$x" != "$MAIN_KEY_SHA8" ]; } || _sf "key_sha8=${x:-?}_TRUNG_key_tk_chinh_hoac_thieu"
+  [ "$C3_ACCOUNT" != SUB ] || [ "$x" = "$SUB_KEY_SHA8" ] || _sf "key_sha8=${x:-?}_KHAC_key_tk_con_da_dang_ky_${SUB_KEY_SHA8}"   # [WAVE1 A-03]
   [ "$(av DUAL)" = false ] || _sf "dualSidePosition=$(av DUAL)"
   [ "$(av API_OK)" = 1 ] || _sf "doc_san_loi"
   x=$(av BFUSD_WALLET)
@@ -591,3 +732,39 @@ EOF
   elif [ -n "$why" ]; then echo "VERDICT=SEEN${why}"
   else echo "VERDICT=NONE"; fi
 }
+
+# ---------------------------------------------------------------- [WAVE1 D-01] co sizing + DCA grid (LIVE_APPLY_GRID_RATIO / LIVE_DCA_GRID_ENABLED)
+# gl_d01_plan <von C3_CAPITAL> : tu $ST (gl_state242: env.sh, thieu => env process, thieu => mac dinh code Configs) tinh budget TUNG leg
+#   o U=0 dung cong thuc sim/live khi 2 co BAT: leg_i = von x F_BASE / sum(w) x ratio(i), ratio = w[i] x SCALE (FIX_B2) | w[i]/sum(w) x SCALE,
+#   tran 4,5 % von (LiveProfileC3.SIZE_CAP_OF_EQUITY); throttle (1 - U/U_MAX) chi GIAM tiep. In bang D01_LEG<i> + tom tat D01_L0 / D01_MINLEG / D01_MINCAP.
+#   Tra 1 khi leg0 < MIN_LEG_BUDGET (=> C3LiveEntry BUDGET_SMALL: 0 lenh, im lang) — nguoi goi TU CHOI kem von toi thieu.
+gl_d01_v() { local v; v=$(sv "ENVSH_$1"); [ -n "$v" ] || v=$(sv "ENV_$1"); [ -n "$v" ] || v=$2; echo "$v"; }
+gl_d01_plan() {
+  local cap=$1 fb w sc fx lv out rc
+  local um; um=$(gl_d01_v SIM_U_MAX 0.60)
+  fb=$(gl_d01_v SIM_F_BASE 0.03); w=$(gl_d01_v DCA_GRID_WEIGHTS 1,1,3,8); sc=$(gl_d01_v DCA_GRID_SCALE 1.0)
+  fx=$(gl_d01_v SIM_FIX_B2 true); lv=$(gl_d01_v DCA_GRID_LEVELS -0.50,-0.75,-0.90)
+  out=$(awk -v C="$cap" -v FB="$fb" -v W="$w" -v SC="$sc" -v FX="$fx" -v LV="$lv" -v MB="$MIN_LEG_BUDGET" -v UM="$um" 'BEGIN{
+    n=split(W,w,","); m=split(LV,l,","); t=0; for(i=1;i<=n;i++) t+=w[i]; if (t<=0) t=1
+    fixb2=(tolower(FX)!="false"); capamt=0.045*C; mn=1e18
+    printf "D01_THAMSO=von=%s F_BASE=%s weights=%s sum=%s SCALE=%s FIX_B2=%s levels=%s tran_4.5%%=%.2f\n", C, FB, W, t, SC, (fixb2?"true":"false"), LV, capamt
+    for(i=0;i<=m;i++){ wi=(i+1<=n)?w[i+1]:0; r=(wi<=0)?0:(fixb2?wi*SC:wi/t*SC); b=C*FB/t*r; if (b>capamt) b=capamt
+      lvl=(i==0)?"mo_cum":sprintf("DCA%d@%s",i,l[i]); printf "D01_LEG%d=%.2f (%s ratio=%s, U=0)\n", i, b, lvl, r
+      if (i==0) l0=b; if (b>0 && b<mn) mn=b }
+    if (mn==1e18) mn=0
+    ml=(mn>0)?MB/mn*C:0
+    printf "D01_L0=%.2f\nD01_MINLEG=%.2f\nD01_MINCAP=%d\n", l0, mn, int(ml+0.999)
+    printf "D01_UCAO=U_MAX=%s leg0 x (1-U/U_MAX): U=0.30 => %.2f | U=0.45 => %.2f | U=0.55 => %.2f; BUDGET_SMALL (<%s) khi U > %.3f\n", UM, l0*(1-0.30/UM), l0*(1-0.45/UM), l0*(1-0.55/UM), MB, (l0>MB)?UM*(1-MB/l0):0
+    printf "D01_NOTIONAL=U=0, moi leg: >= 5 can von >= %d; >= 20 (ETH/BCH/LTC/ETC/LINK) can >= %d; >= 50 (BTC) can >= %d; throttle (1-U/U_MAX) giam tiep\n", (mn>0)?int(5/mn*C+0.999):0, (mn>0)?int(20/mn*C+0.999):0, (mn>0)?int(50/mn*C+0.999):0
+    exit (l0+1e-9 < MB) ? 1 : 0 }'); rc=$?
+  D01=$out
+  echo "$out"
+  return $rc
+}
+# [WAVE1 D-01] doan hau kiem (chay tren 242 trong gl_chk_common): process env + log khoi dong JVM moi co 2 co BAT (static init
+#   LiveDcaGridC3 chay luc C3LiveRuntime dung entry => in ngay luc start) + khong co canh bao "TAT".
+GL_D01_CHK='envk LIVE_APPLY_GRID_RATIO=true; envk LIVE_DCA_GRID_ENABLED=true
+[ "$(T "\[LIVE-SIZING\] LIVE_APPLY_GRID_RATIO=true")" -ge 1 ] && echo "OK LIVE-SIZING_BAT" || echo "WAIT LIVE-SIZING_BAT (chua thay log [LIVE-SIZING] LIVE_APPLY_GRID_RATIO=true)"
+[ "$(T "\[LIVE-DCA-GRID\] LIVE_DCA_GRID_ENABLED=true profileC3=true .*applyRatio=true")" -ge 1 ] && echo "OK LIVE-DCA-GRID_BAT" || echo "WAIT LIVE-DCA-GRID_BAT (chua thay log [LIVE-DCA-GRID] ...=true profileC3=true ... applyRatio=true)"
+[ "$(T "\[LIVE-DCA-GRID\] LIVE_APPLY_GRID_RATIO TAT")" = 0 ] || echo "FAIL LIVE-DCA-GRID_sizing_TAT"
+[ "$(T "\[LIVE-DCA-GRID\] profile C3 TAT")" = 0 ] || echo "FAIL LIVE-DCA-GRID_profile_C3_TAT"'
