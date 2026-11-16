@@ -76,3 +76,31 @@ thoát ngay cùng nến ⇒ sớm 1′ so sim, SL không đổi.
 (`[HA_TANG]` 11, `[CHIEN_LUOC_242]` DIED_SYMBOLS = BTCDOM,USDC, `[KHONG_AI_DOC]` SPECIAL_SYMBOLS); DIED_SYMBOLS không thuộc danh sách
 trắng env 242 ⇒ chờ A1. N10 — `eq_at` REF (mô hình cache 60 s) ≡ `eq_at` jar ở 26/26 (R0), 32/32 (S-DCA), 26/26 (S-TS); chủ đích cache
 cho sizing: A1 phân xử. Vốn micro: 1 000 (26/26). Kết luận (iii) dev = FAIL chỉ vì X1 R0 KHÔNG ĐỦ MẪU + E2 CHƯA ÁP DỤNG (đúng thiết kế fixture dev).
+
+## Vong 4 (ERRATA3 409e1144: E9-E11 + A1 R2 "nen sua") - CHI fixture DEV 10-30 (fx1030: 10-29 07:00 -> 11-01 07:00 +07); 11-05 CHUA dung/chay
+
+Out: `~/claude_master/e2e_v12/out_v4` (check_v12.txt/json, inject_v12.txt, test_ref_e11a.txt, test_official_lock.txt; REF `_ref/*`).
+Lenh: `/tmp/e2e4_run.sh` = build_v12.sh --no-lock + `E2E_OUT=out_v4 run_all.sh` + inject_v12.py (--old-checker 1302fd81) +
+test_ref_e11a.py + test_official_lock.sh, tat ca trong 1 flock oracle_heavy.
+
+| Tieu chi (fixture DEV 10-30) | Ket qua | Ghi chu |
+|---|---|---|
+| C1 | PASS | override set gom C3_EXCLUDE_LEGACY_HELD (true chi R-OLD) |
+| E1 R0 / R0-DRY | PASS / PASS | 25 leg PREDICT = REF |
+| S1 R0 / R0-DRY / S-TS / S-DCA (+E +U +eq_at) | PASS x4 | n 26/26/26/32; max abs U_REF-U_jar 5.6e-17 / 0 / 5.6e-17 / 1.1e-16; E rel <= 2.0e-16 (E tai eq_at REF); eq_at jar == REF 100 %; budget rel 0 |
+| D1 tu nhien R0 / S-DCA | KHONG XAY RA / PASS | S-DCA AIN, JCT legIdx 1,2,3; U_abs <= 1.1e-16; eq_at khop |
+| X1 R0 | KHONG DU MAU (tam dat) | 22 TRAIL, 0 TIME_STOP |
+| X1 S-TS (tong hop dev) | PASS | 22 TRAIL + 4 TIME_STOP; nhan REF-nhip 5 = jar 5; 17/17 khong nhan cung phut; max dstop 0.99 tick |
+| F1 / K1 R0 / K1 R0-DRY | PASS / PASS / PASS | |
+| E2 R-OLD | CHUA AP DUNG (dung thiet ke dev) | labels_1105.csv hop le (rong, md5 7af0c00e...); R-OLD legacy_E9: excludeLegacyHeld=true, jar nap 44 symbol (md5 f3af1063...) tu pull242/2026-10-29 log dong 427867 |
+| MKT rig vs REF | 0/4319 phut lech | |
+| Ket luan (iii) dev | FAIL | chi vi X1 R0 KHONG DU MAU + E2 CHUA AP DUNG (dung thiet ke fixture dev) |
+
+- E9 tren 10-30: khong symbol LEGACY nao vao leg (R-OLD legs/fills = out_v3 trung 100 %) => co che nap + bao cao da chay, chua thu
+  duoc tac dong chon lenh tren du lieu dev.
+- E11d nhip 10 s: legs + gia/qty khop cua ca 8 luot TRUNG out_v3 (nhip 15 s); ms khop trung, tru 4 dong o S-TS (TIME_STOP sau END).
+- E11c: result.json moi luot env242_file_md5 = 8956befdffb7949676b1de392c82ddc7 (= md5 A1 ghi), labels_1105_md5 = 7af0c00e2e7e7fd072c8565acb7ed703.
+- Thu tiem: **17/17 bi bat** (T1-T9 cu + T10 U sai nhat quan S1, T11 eq_at cache cu S1, T12 U sai nhat quan D1 S-DCA - ca 3 checker
+  cu 1302fd81 cho PASS = lo hong B2/eq_at da va; T13-T16 file nhan bi tu choi; T17 E2 R-OLD thieu E9). E11a tong hop: REF moi vao
+  lai AGTUSDT ngay quyet dinh b = 1793306940000, REF cu coi dang giu (DUNG). Khoa: 12/12 ca dung ky vong.
+- NGHI VAN moi: N14 (dien giai dung sai eq_at), N15 (danh sach LEGACY tinh, khong theo kip doi trong ngay) - SPEC muc 8.
