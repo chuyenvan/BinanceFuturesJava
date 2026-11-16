@@ -28,8 +28,9 @@ import java.util.zip.GZIPInputStream;
 final class ReplayData {
 
     static final long MIN = 60_000L;
-    static final long START = 1_793_232_000_000L;   // 2026-10-29 07:00 +07
-    static final long END = 1_793_491_200_000L;     // 2026-11-01 07:00 +07
+    /** [V12] cua so lay tu manifest.json cua fixture (10-30 dev: 1793232000000..1793491200000). */
+    static long START = 1_793_232_000_000L;   // 2026-10-29 07:00 +07 (mac dinh fixture dev)
+    static long END = 1_793_491_200_000L;     // 2026-11-01 07:00 +07
 
     static final class SelRow {
         final long ts;
@@ -88,6 +89,10 @@ final class ReplayData {
 
     ReplayData(File dir) throws Exception {
         this.dir = dir;
+        com.google.gson.JsonObject man = com.google.gson.JsonParser.parseString(new String(Files.readAllBytes(
+                new File(dir, "manifest.json").toPath()), StandardCharsets.UTF_8)).getAsJsonObject();
+        START = man.get("START").getAsLong();
+        END = man.get("END").getAsLong();
         for (String[] a : csv(new File(dir, "sel.csv.gz"))) {
             long ts = Long.parseLong(a[0]);
             sel.computeIfAbsent(ts, k -> new ArrayList<>()).add(new SelRow(ts, a[1], Float.parseFloat(a[2]),
@@ -105,7 +110,8 @@ final class ReplayData {
         Pattern p = Pattern.compile("^(\\S+ \\S+)\\.\\d+\\s+(open|closed) (\\S+)");
         SimpleDateFormat f = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
         f.setTimeZone(TimeZone.getTimeZone("GMT+7"));
-        for (String ln : Files.readAllLines(new File(dir, "shadow_events.txt").toPath())) {
+        File sev = new File(dir, "shadow_events.txt");
+        for (String ln : sev.isFile() ? Files.readAllLines(sev.toPath()) : Collections.<String>emptyList()) {
             Matcher m = p.matcher(ln);
             if (!m.find()) continue;
             (m.group(2).equals("open") ? shadowOpens : shadowCloses).computeIfAbsent(m.group(3), k -> new ArrayList<>())

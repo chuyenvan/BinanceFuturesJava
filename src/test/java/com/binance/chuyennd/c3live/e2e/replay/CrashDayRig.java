@@ -44,6 +44,7 @@ import com.binance.chuyennd.tradecore.Configs;
 import com.binance.chuyennd.tradecore.DcaUtils;
 import com.binance.chuyennd.tradecore.EntryGate;
 import com.binance.chuyennd.tradecore.TradeUtils;
+import com.binance.chuyennd.tradecore.selector.LegacySymbols;
 import com.binance.chuyennd.tradecore.selector.LiveDcaGridC3;
 import com.binance.chuyennd.tradecore.selector.LiveGridSizing;
 import com.binance.chuyennd.tradecore.selector.LiveProfileC3;
@@ -79,13 +80,19 @@ final class CrashDayRig {
     private static final Logger LOG = LoggerFactory.getLogger(CrashDayRig.class);
     static final long MIN = 60_000L;
     static final long H = 3_600_000L;
-    static final float PCT = 0.999950829f;
-    static final int DAYS = 90;
-    static final int TOPK = 24;
-    static final float GS = 1.55f;
-    static final float MOM15 = 0.008f;
-    static final double CAPITAL = 10_000d;
+    // [E2E_V12] KHONG gan cung tham so chien luoc: moi gia tri doc qua Cfg/env (dat bang env 242 danh sach trang + override
+    //   khai truoc trong tools/e2e/run_lane.sh). Rig cu gan cung PCT/DAYS/GS/MOM15/CAPITAL/dcaGridEnabled(true) => da xoa.
+    static final int TOPK = Integer.parseInt(Cfg.getOr("SELECTOR_RANK_TOPK", "-1").trim());
+    static final double CAPITAL = parseD(Cfg.get("C3_CAPITAL"), parseD(Cfg.get("LIVE_C3_PILOT_CAPITAL"), 10_000d));
     static final long GRACE_MS = 61_000L;
+    // S-DCA: he so gia tong hop theo pha 10' (bac grid -0,50/-0,75/-0,90 tinh tren gia vao leg dau)
+    static final double[] SDCA_FACTORS = {0.40d, 0.20d, 0.07d};
+    static final long SDCA_PHASE_MS = 10 * 60_000L;
+
+    static double parseD(String v, double def) {
+        if (v == null || v.trim().isEmpty()) return def;
+        return Double.parseDouble(v.trim());
+    }
 
     enum Venue { FAKE, DRY }
 
@@ -109,7 +116,9 @@ final class CrashDayRig {
         long ddAt = -1;                                  // F6a
         double ddUsd = 0d;
         long c1From = -1, c1To = -1;                     // F6b
-        long sDcaAt = -1;                                // S-DCA: ep gia symbol c3 dau tien xuong de DCA den bac
+        long sDcaAt = -1;                                // S-DCA: moc chon cum (xem SDCA_FACTORS)
+        int sDcaN = 2;                                   // S-DCA: so cum ep gia (>= 2 theo prereg D1)
+        long finInjAt = -1;                              // FIN-INJ: leg PREDICT PASS dau tien o phut >= moc nay bi bo khoi tap fin
     }
 
     final Opts o;
@@ -169,8 +178,14 @@ final class CrashDayRig {
     Set<String> lastLatch = new TreeSet<>();
     long latchFlattenAt = -1;
     int rlOrdersLeft, rlStopsLeft;
-    boolean rlArmed, merged0, dd0, sdca0;
-    String sdcaSymbol;
+    boolean rlArmed, merged0, dd0, sdca0, finInj0;
+    final Map<String, Long> sdcaStart = new LinkedHashMap<>();     // S-DCA: symbol -> phut bat dau ep gia
+    final Map<String, Long> firstLegBar = new HashMap<>();         // symbol -> phut quyet dinh leg dau cum dang mo (harness)
+    String finInjSym;
+    long finInjBar = -1;
+    int nFinExcl;
+    final List<String> fillRows = new ArrayList<>();                // khop c3 (su that san): ms,symbol,side,qty,price,cid
+    final List<String> finRows = new ArrayList<>();
     final Map<String, Long> gapSince = new HashMap<>();
     final Map<String, Long> orphanPosSince = new HashMap<>();
     final Map<String, Long> orphanStopSince = new HashMap<>();
@@ -213,9 +228,8 @@ final class CrashDayRig {
         deleteTree(run);
         run.mkdirs();
         logCap = LogCapture.attach();
-        EntryGate.GATE_DYN_SCALE = GS;          // = env live SIM_GATE_DYN_SCALE (kiem bang E2a)
-        EntryGate.GATE_REGIME_ADAPTIVE = false;
-        Configs.MIN_MOMENTUM_15M = MOM15;       // = env live SIM_MIN_MOMENTUM_15M
+        // [E2E_V12] KHONG gan EntryGate.GATE_DYN_SCALE / Configs.MIN_MOMENTUM_15M: gia tri = Configs/EntryGate nap tu env
+        //   (ghi vao result.json "cfg_effective" de C1 doi chieu).
         // buffer gate: ban ghi live ts < START
         List<Long> ts0 = new ArrayList<>();
         List<Float> r0 = new ArrayList<>();
@@ -232,9 +246,12 @@ final class CrashDayRig {
             b[i] = r0.get(i);
         }
         persist = new File(run, "gate_ratio_live.bin").getPath();
-        E2eGateSupport.start(PCT, DAYS, persist, a, b, ReplayData.START);
+        Object[] g0 = E2eGateSupport.startProduction(persist, a, b);   // LiveGateRollingRatio.init() THAT (env)
+        res.put("gate_ratio_on", g0[0]);
+        res.put("gate_ratio_file_env", g0[1]);
         res.put("buffer_init_records", a.length);
         res.put("buffer_after_load", E2eGateSupport.size());
+        if (!Boolean.TRUE.equals(g0[0])) throw new IllegalStateException("[E2E_V12] GATE-RATIO live TAT theo env => tu choi");
         gate = new AIRejectFilter();
         uni = new SymbolUniverseLive(SymbolUniverseLive.Config.fromEnv(Cfg::get).strictCoin()
                 .withClassifier(TradFiClassifier.universeA1()), () -> d.exInfo, alerts::add);
@@ -396,10 +413,16 @@ final class CrashDayRig {
                     public boolean allowDca(String s) { return ks.allowDca(s); }
                 })
                 .universe(uni).modeGuard(mg).rules(() -> rules).capital(eq::capital)
-                .legacy(s -> o.legacy.contains(s) || scope.entryBlocked(s, t()))
-                .budgetFn((m, c) -> TradeUtils.managerBudget(null, m, c, null)).legBudgetFn(LiveGridSizing::legBudget)
+                // [E2E_V12] = C3LiveRuntime.buildEntry:417-427 (dong-cho-dong). legacy = LegacySymbols.blocksC3 (env
+                //   C3_EXCLUDE_LEGACY_HELD) || scope; F5 cu giu them o.legacy. dcaGridEnabled = LiveDcaGridC3.active() (env
+                //   LIVE_DCA_GRID_ENABLED); legBudgetFn = LiveGridSizing::legBudget (APPLY doc env LIVE_APPLY_GRID_RATIO).
+                //   pushAllowed: adapter=dry => () -> true (nhu production nhanh dry).
+                .legacy(s -> LegacySymbols.blocksC3(s) || o.legacy.contains(s) || scope.entryBlocked(s, t()))
+                .budgetFn((m, c) -> TradeUtils.managerBudget(null, m, c, null))
+                .legBudgetFn(LiveGridSizing::legBudget)
                 .gridDue((f, px, n) -> DcaUtils.shouldDcaGrid(f, px, n)).executor(ex).audit(audit)
-                .refSink((s, px) -> refs.put(s, BigDecimal.valueOf(px))).pushAllowed(() -> true).dcaGridEnabled(true)
+                .refSink((s, px) -> refs.put(s, BigDecimal.valueOf(px))).pushAllowed(() -> true)
+                .dcaGridEnabled(LiveDcaGridC3.active())
                 .sizeCapOfEquity(LiveProfileC3.SIZE_CAP_OF_EQUITY).reconAllows(rec::allowsEntry).build();
         mg.checkGlobal();
         ex.resolveUnresolved(true);
@@ -425,6 +448,7 @@ final class CrashDayRig {
         init();
         for (long tm = ReplayData.START; tm < o.end; tm += MIN) {
             setTime(tm);
+            if (o.sDcaAt >= 0 && !sdca0 && tm >= o.sDcaAt && o.exec) chooseSdca(tm);
             applyPrices(tm, 0, true);
             if (o.exec) ops();
             setTime(tm + 6_000L);
@@ -462,7 +486,8 @@ final class CrashDayRig {
             }
             BigDecimal px = br.bd(i);
             String s = e.getKey();
-            if (sdca0 && s.equals(sdcaSymbol)) px = px.multiply(new BigDecimal("0.5"));   // S-DCA: gia ep
+            double fct = sdcaFactor(s, tm);
+            if (fct != 1d) px = px.multiply(BigDecimal.valueOf(fct));   // S-DCA: gia ep (nhan he so pha)
             lastPxBd.put(s, px);
             lastPx.put(s, px.floatValue());
             m.put(s, px.floatValue());
@@ -568,16 +593,64 @@ final class CrashDayRig {
                 event("INJECT_DD", s, "FUNDING_FEE -" + o.ddUsd);
             }
         }
-        if (o.sDcaAt >= 0 && !sdca0 && n >= o.sDcaAt) {
-            for (LiveBookC3.ClusterView c : book.clusters()) {
-                if (c.confirmedQty.signum() > 0 && !c.trailArmed() && c.legCount == 1) {
-                    sdcaSymbol = c.symbol;
-                    sdca0 = true;
-                    event("INJECT_SDCA", c.symbol, "gia x0,5 tu day");
-                    break;
-                }
-            }
+    }
+
+    /**
+     * [E2E_V12 S-DCA] Luat (khai truoc, REF ap cung luat tren so cua REF): tai phut tm dau tien &gt;= sDcaAt, chon toi da
+     * sDcaN cum dang mo, da khop (confirmedQty &gt; 0), CHUA arm, legCount == 1, khong dang dong; sap theo (phut quyet dinh
+     * leg dau, symbol). Tu nen tm: moi gia (O/H/L/C, ref, DCA due) cua symbol do nhan SDCA_FACTORS[pha] voi pha =
+     * (t - tm) / 10'. Khong du cum => thu lai o phut sau.
+     */
+    void chooseSdca(long tm) {
+        List<LiveBookC3.ClusterView> cand = new ArrayList<>();
+        for (LiveBookC3.ClusterView c : book.clusters()) {
+            if (c.confirmedQty.signum() > 0 && !c.trailArmed() && c.legCount == 1 && c.closeReason == null
+                    && !c.hasUnresolved && firstLegBar.containsKey(c.symbol)) cand.add(c);
         }
+        if (cand.size() < o.sDcaN) return;
+        cand.sort((x, y) -> {
+            int k = Long.compare(firstLegBar.get(x.symbol), firstLegBar.get(y.symbol));
+            return k != 0 ? k : x.symbol.compareTo(y.symbol);
+        });
+        for (int i = 0; i < o.sDcaN; i++) {
+            sdcaStart.put(cand.get(i).symbol, tm);
+            event("INJECT_SDCA", cand.get(i).symbol, "pha " + Arrays.toString(SDCA_FACTORS) + " tu " + fmt(tm)
+                    + " first=" + cand.get(i).firstEntryPrice);
+        }
+        sdca0 = true;
+    }
+
+    double sdcaFactor(String s, long barTs) {
+        Long st = sdcaStart.get(s);
+        if (st == null || barTs < st) return 1d;
+        int ph = (int) Math.min(SDCA_FACTORS.length - 1, (barTs - st) / SDCA_PHASE_MS);
+        return SDCA_FACTORS[ph];
+    }
+
+    /** [E2E_V12 F1] tap fin cua phut b = symbol co nen 1m CHOT trong Vision o phut b (fixture) — tru symbol bi tiem. */
+    boolean finAllows(long b, String sym, String level, boolean predictPass) {
+        boolean on = com.binance.chuyennd.aerospike.MinuteCompletenessGuard.enabled()
+                && com.binance.chuyennd.aerospike.MinuteCompletenessGuard.finEnabled();
+        if (!on) return com.binance.chuyennd.aerospike.MinuteCompletenessGuard.finAllows(null, sym);
+        // tap fin day du = moi symbol co nen chot o phut b; finAllows chi hoi thanh vien cua sym => du dung {sym} khi co nen
+        Set<String> fin = new HashSet<>();
+        if (d.bar(sym, b) != null) fin.add(sym);
+        if (o.finInjAt >= 0 && predictPass && !finInj0 && b >= o.finInjAt) {
+            finInj0 = true;
+            finInjSym = sym;
+            finInjBar = b;
+            event("INJECT_FIN", sym, "bo khoi tap fin phut " + fmt(b));
+        }
+        if (finInjBar == b && sym.equals(finInjSym)) fin.remove(sym);
+        boolean ok = com.binance.chuyennd.aerospike.MinuteCompletenessGuard.finAllows(fin, sym);
+        if (!ok) {
+            nFinExcl++;
+            // = dong log production DetectEntrySignal2TradeNormal:1352 (in boi harness, vong main khong chay)
+            LOG.warn("[MINUTE-FIN-EXCL] chan leg {} {} (phut {} nen CHUA chot) | tong_chan_leg={} [harness]", level, sym, fmt(b),
+                    nFinExcl);
+            finRows.add(b + "," + sym + "," + level);
+        }
+        return ok;
     }
 
     static GatewayException rl429() {
@@ -619,7 +692,7 @@ final class CrashDayRig {
             if (x) heldX.add(s);
             return x;
         };
-        Predicate<String> legacy = s -> o.legacy.contains(s);
+        Predicate<String> legacy = s -> o.legacy.contains(s) || LegacySymbols.blocksC3(s);
         final List<String[]> gatedRows = new ArrayList<>();
         GatePreFilter.runSelector(pool.entrySet(), TOPK, a1, legacy, held, s -> d.bar(s, b),
                 (s, k) -> bySym.get(s).gv, new GatePreFilter.SelectorSink<ReplayData.Bar>() {
@@ -644,6 +717,9 @@ final class CrashDayRig {
                         if (pass && o.exec) {
                             if (legacy.test(symbol)) {
                                 outc = "SKIP_LEGACY_AFTER_GATE";
+                            } else if (!finAllows(b, symbol, "PREDICT_SYMBOL_TRADE", true)) {
+                                outc = "FIN_EXCL";   // = createOrderBuyRequest0:1349 (sau gate + LEGACY, truoc hook)
+                                outcome(b, symbol, "PREDICT_SYMBOL_TRADE", "FIN_EXCL", "", "");
                             } else {
                                 outc = leg(symbol, "PREDICT_SYMBOL_TRADE", false, b, sp, rankOf.get(symbol));
                             }
@@ -657,7 +733,7 @@ final class CrashDayRig {
         for (ReplayData.SelRow r : rows) {
             String[] x = g.get(r.symbol);
             float fac = Math.max(EntryGate.DYN_MIN, (r.gv / EntryGate.SCORE_BASE) * EntryGate.DYN_MULT);
-            float rr = r.p15 / (fac * GS);
+            float rr = r.p15 / (fac * EntryGate.GATE_DYN_SCALE);
             traceRows.add(b + "," + r.symbol + "," + Float.floatToRawIntBits(r.key) + "," + r.rank + ","
                     + (rankOf.containsKey(r.symbol) ? rankOf.get(r.symbol) : -1) + "," + (a1x.contains(r.symbol) ? 1 : 0) + ","
                     + (o.legacy.contains(r.symbol) ? 1 : 0) + "," + (heldX.contains(r.symbol) ? 1 : 0) + ","
@@ -673,9 +749,23 @@ final class CrashDayRig {
                 outcome(b, bd.symbol, "BIG_DOWN", "A1_EXCLUDED", "", "");
                 continue;
             }
-            AIRejectFilter.FilterResult fr = gate.entryGate(new AiPredictionData(b, p15, 0f), null, false, false);
+            // [E2E_V12] = createOrderBuyRequest0 r4u (BIG_DOWN-GATE 11-10): profile c3 => bo gate p15, chi guard seed
+            AIRejectFilter.FilterResult fr;
+            if (com.binance.chuyennd.tradecore.selector.BigDownSelect.bypassGate(LiveProfileC3.on(),
+                    com.binance.chuyennd.object.MarketLevelChange.BIG_DOWN)) {
+                String g0 = com.binance.chuyennd.tradecore.selector.BigDownSelect.bigDownGuard(
+                        com.binance.chuyennd.ai_ml.onnx.entry.LiveGateRollingRatio.isSeedBlocked());
+                fr = g0 != null ? new AIRejectFilter.FilterResult(AIRejectFilter.FilterDecision.REJECT, g0)
+                        : new AIRejectFilter.FilterResult(AIRejectFilter.FilterDecision.PASS, "BIG_DOWN bypass");
+            } else {
+                fr = gate.entryGate(new AiPredictionData(b, p15, 0f), null, false, false);
+            }
             if (fr.decision != AIRejectFilter.FilterDecision.PASS) {
                 outcome(b, bd.symbol, "BIG_DOWN", "GATE_REJECT", fr.reason, "");
+                continue;
+            }
+            if (!finAllows(b, bd.symbol, "BIG_DOWN", false)) {
+                outcome(b, bd.symbol, "BIG_DOWN", "FIN_EXCL", "", "");
                 continue;
             }
             leg(bd.symbol, "BIG_DOWN", false, b, null, -1);
@@ -684,12 +774,16 @@ final class CrashDayRig {
         for (LiveDcaGridC3.GridState gs : book.gridStates()) {
             ReplayData.Bar br = d.bar(gs.symbol, b);
             if (br == null) continue;
-            float close = sdca0 && gs.symbol.equals(sdcaSymbol) ? br.c * 0.5f : br.c;
+            float close = (float) (br.c * sdcaFactor(gs.symbol, b));
             if (!DcaUtils.shouldDcaGrid(gs.firstEntryPrice, close, gs.legCount)) continue;
             nDcaDue++;
             AIRejectFilter.FilterResult fr = gate.entryGate(new AiPredictionData(b, p15, 0f), null, false, false);
             if (fr.decision != AIRejectFilter.FilterDecision.PASS) {
                 outcome(b, gs.symbol, "DCA_LEVEL1", "GATE_REJECT", fr.reason, "");
+                continue;
+            }
+            if (!finAllows(b, gs.symbol, "DCA_LEVEL1", false)) {
+                outcome(b, gs.symbol, "DCA_LEVEL1", "FIN_EXCL", "", "");
                 continue;
             }
             String oc = leg(gs.symbol, "DCA_LEVEL1", true, b, null, -1);
@@ -734,17 +828,39 @@ final class CrashDayRig {
             outcome(b, sym, level, "NO_BAR", "", "");
             return "NO_BAR";
         }
-        double ref = sdca0 && sym.equals(sdcaSymbol) ? br.c * 0.5d : br.c;
+        // ref = close nen quyet dinh (C3LiveHook.onLeg) x he so S-DCA
+        double fct = sdcaFactor(sym, b);
+        double ref = fct == 1d ? (double) br.c : (double) br.c * fct;
+        boolean hadCluster = book.cluster(sym).isPresent();
+        // sizing = gia nhip hien tai (~ price_realtime tuoi = open nen b+1 x he so S-DCA); tierMul = 1, tier3 = false (gioi han)
         C3LiveEntry.Result r = entry.onLeg(new C3LiveEntry.LegInput(sym, level, dca, b, ref, cur.doubleValue(), 1f, false, sp,
                 rank == null ? -1 : rank), t());
         if (r.outcome == C3LiveEntry.Outcome.SUBMITTED) {
             submittedCids.add(r.cid);
             submitTime.put(r.cid, t());
             cidSym.put(r.cid, sym);
+            if (!hadCluster) firstLegBar.put(sym, b);
         }
         outcome(b, sym, level, r.outcome.name(), r.detail, r.cid == null ? "" : r.cid);
+        legRows.add(b + "," + t() + "," + sym + "," + level + "," + r.outcome.name() + "," + (r.cid == null ? "" : r.cid) + ","
+                + (r.qty == null ? "" : r.qty.toPlainString()) + "," + (Double.isNaN(r.budget) ? "" : Double.toString(r.budget))
+                + "," + (Double.isNaN(r.marginBefore) ? "" : Double.toString(r.marginBefore)) + ","
+                + (Double.isNaN(r.capital) ? "" : Double.toString(r.capital)) + "," + ref + "," + cur + "," + legIdxOf(r.detail) + ","
+                + (rules.tickSize(sym) == null ? "" : rules.tickSize(sym).toPlainString()) + ","
+                + (r.detail == null ? "" : r.detail.replace(',', ';')));
         if (fake != null) fake.drain();
         return r.outcome.name();
+    }
+
+    final List<String> legRows = new ArrayList<>();
+
+    static String legIdxOf(String detail) {
+        if (detail == null) return "";
+        int i = detail.indexOf("legIdx=");
+        if (i < 0) return "";
+        int j = i + 7, k = j;
+        while (k < detail.length() && (Character.isDigit(detail.charAt(k)) || detail.charAt(k) == '-')) k++;
+        return detail.substring(j, k);
     }
 
     static KlineObjectSimple kline(long b, ReplayData.Bar br) {
@@ -771,6 +887,9 @@ final class CrashDayRig {
             a[0] += x.has("rp") ? x.get("rp").getAsDouble() : 0d;
             a[1] += x.has("n") ? x.get("n").getAsDouble() : 0d;
             double lq = x.get("l").getAsDouble(), lp = x.get("L").getAsDouble();
+            fillRows.add(t() + "," + s + "," + x.get("S").getAsString() + "," + x.get("l").getAsString() + ","
+                    + x.get("L").getAsString() + "," + cid + "," + (x.has("rp") ? x.get("rp").getAsString() : "") + ","
+                    + (x.has("n") ? x.get("n").getAsString() : ""));
             double[] v = c3Vwap.computeIfAbsent(s, k -> new double[3]);
             if ("BUY".equals(x.get("S").getAsString())) {
                 v[0] += lq;
@@ -954,13 +1073,29 @@ final class CrashDayRig {
         if (o.held == HeldMode.NONE_V11 && !o.a1) e2a(appended);
         if (o.held == HeldMode.SHADOW_R4H) e2b();
         if (o.exec) execCriteria();
-        res.put("criteria", crit);
+        res.put("rig_checks_e2e1105", crit);   // kiem lop thuc thi kieu E2E_REPLAY 11-05 (bao cao); tieu chi V12 cham bang check_v12.py
         res.put("violations", viol);
         res.put("errors", errors);
         res.put("log_errors", logCap == null ? "n/a" : logCap.errors());
         res.put("log_capture", logCap == null ? "KHONG gan duoc appender" : logCap.kind());
         writeText(new File(out, "outcomes.csv"), "decision_ts,decision_t7,submit_ms,symbol,level,outcome,cid,detail", outcomeRows);
         writeText(new File(out, "events.csv"), "ms,t7,type,symbol,value,detail", eventRows);
+        writeText(new File(out, "legs.csv"), "decision_ts,submit_ms,symbol,level,outcome,cid,qty,budget,margin_before,capital,"
+                + "ref_px,sizing_px,leg_idx,tick,detail", legRows);
+        writeText(new File(out, "fills.csv"), "ms,symbol,side,qty,price,cid,rp,fee", fillRows);
+        writeText(new File(out, "fin_excl.csv"), "decision_ts,symbol,level", finRows);
+        Map<String, Object> inj = new LinkedHashMap<>();
+        inj.put("sdca_at", o.sDcaAt);
+        inj.put("sdca_n", o.sDcaN);
+        inj.put("sdca_factors", SDCA_FACTORS);
+        inj.put("sdca_phase_ms", SDCA_PHASE_MS);
+        inj.put("sdca_start", sdcaStart);
+        inj.put("fin_inj_at", o.finInjAt);
+        inj.put("fin_inj_symbol", finInjSym);
+        inj.put("fin_inj_bar", finInjBar);
+        inj.put("fin_excl_legs", nFinExcl);
+        res.put("injections", inj);
+        res.put("cfg_effective", cfgEffective());
         writeText(new File(out, "ks_lines.txt"), "", ksLines);
         writeText(new File(out, "alerts.txt"), "", alerts);
         writeText(new File(out, "journal.txt"), "", journal);
@@ -968,6 +1103,40 @@ final class CrashDayRig {
         Files.write(new File(out, "result.json").toPath(), gs.toJson(res).getBytes(StandardCharsets.UTF_8));
         if (logCap != null) logCap.detach();
         GatePreFilter.setC3OwnedSourceForTest(null);
+    }
+
+    /** Gia tri HIEU LUC (doc tu class production da nap env) — C1 doi chieu voi env 242 + override. */
+    static Map<String, Object> cfgEffective() {
+        Map<String, Object> m = new LinkedHashMap<>();
+        for (String f : new String[]{"F_BASE", "U_MAX", "DCA_GRID_SCALE", "DCA_GRID_WEIGHTS", "DCA_GRID_LEVELS", "FIX_B1", "FIX_B2",
+                "FIX_B3", "RATE_PROFIT_STOP_MARKET", "TS_GIVEBACK_RATIO", "TS_MAX_GAP", "TS_MAX_GAP_WEAK", "LOSER_TIME_STOP_HOURS",
+                "MIN_MOMENTUM_15M", "PRE_ARM_SL", "TS_PEAK_MODE", "SELECTOR_RANK_TOPK", "GATE_QUOTA_SKIP_WHEN_FULL"}) {
+            try {
+                Object v = Configs.class.getField(f).get(null);
+                m.put("Configs." + f, v instanceof float[] ? Arrays.toString((float[]) v) : String.valueOf(v));
+            } catch (Throwable e) {
+                m.put("Configs." + f, "n/a");
+            }
+        }
+        m.put("EntryGate.GATE_DYN_SCALE", EntryGate.GATE_DYN_SCALE);
+        m.put("EntryGate.GATE_REGIME_ADAPTIVE", EntryGate.GATE_REGIME_ADAPTIVE);
+        m.put("LiveGridSizing.on", LiveGridSizing.on());
+        m.put("LiveDcaGridC3.active", LiveDcaGridC3.active());
+        m.put("LiveProfileC3.SIZE_CAP_OF_EQUITY", LiveProfileC3.SIZE_CAP_OF_EQUITY);
+        m.put("LiveProfileC3.on", LiveProfileC3.on());
+        m.put("LegacySymbols.excludeLegacyHeld", LegacySymbols.excludeLegacyHeld());
+        m.put("MinuteGuard.enabled", com.binance.chuyennd.aerospike.MinuteCompletenessGuard.enabled());
+        m.put("MinuteGuard.finEnabled", com.binance.chuyennd.aerospike.MinuteCompletenessGuard.finEnabled());
+        m.put("TsMktExt.enabled", com.binance.chuyennd.tradecore.selector.TsMktExt.enabled());
+        m.put("C3TrailRate.armRate", com.binance.chuyennd.tradecore.selector.C3TrailRate.armRate());
+        m.put("C3TrailRate.timeStopHours", com.binance.chuyennd.tradecore.selector.C3TrailRate.timeStopHours());
+        List<Float> ratio = new ArrayList<>();
+        for (int i = 0; i < 5; i++) ratio.add(DcaUtils.gridLegWeightRatio(i));
+        m.put("DcaUtils.gridLegWeightRatio[0..4]", ratio);
+        m.put("rig.TOPK", TOPK);
+        m.put("rig.CAPITAL", CAPITAL);
+        m.put("Cfg.asked", Cfg.asked());
+        return m;
     }
 
     void e2a(List<long[]> appended) {

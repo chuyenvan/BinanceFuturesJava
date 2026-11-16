@@ -30,6 +30,30 @@ public final class E2eGateSupport {
         LiveGateRollingRatio.loadPersistedAndSeed(now);
     }
 
+    /**
+     * [E2E_V12] Duong PRODUCTION: ghi buffer khoi dau (ts &lt; START) vao file persist (= env LIVE_GATE_ROLLING_FILE do
+     * script chay dat) roi goi {@link LiveGateRollingRatio#init()} THAT (doc LIVE_GATE_ROLLING_MODE/PCT/DAYS/FILE tu
+     * Cfg/env, in banner "[GATE-RATIO] LIVE BAT"). KHONG configureForTest. Tra [isOn, persistFileEnv, size].
+     */
+    public static Object[] startProduction(String persistPath, long[] ts, float[] r) throws IOException {
+        Integer[] idx = new Integer[ts.length];
+        for (int i = 0; i < idx.length; i++) idx[i] = i;
+        Arrays.sort(idx, (a, b) -> Long.compare(ts[a], ts[b]));
+        long[] st = new long[ts.length];
+        float[] sr = new float[ts.length];
+        for (int i = 0; i < idx.length; i++) {
+            st[i] = ts[idx[i]];
+            sr[i] = r[idx[i]];
+        }
+        String envFile = com.binance.chuyennd.tradecore.Cfg.get("LIVE_GATE_ROLLING_FILE");
+        if (envFile == null || !new java.io.File(envFile.trim()).getAbsolutePath().equals(new java.io.File(persistPath).getAbsolutePath())) {
+            throw new IllegalStateException("LIVE_GATE_ROLLING_FILE=" + envFile + " != file persist harness " + persistPath);
+        }
+        GateRatioPersist.writeFresh(persistPath, st, sr);
+        LiveGateRollingRatio.init();
+        return new Object[]{LiveGateRollingRatio.isOn(), envFile, LiveGateRollingRatio.bufferSizeForTest()};
+    }
+
     /** q (thrBase) cua gio chua ts — KHONG nap r (= thresholdCheckOnly, cung q ma threshold() se tra). */
     public static float qPeek(long ts, float p15, float sp) {
         return LiveGateRollingRatio.thresholdCheckOnly(ts, p15, sp);
