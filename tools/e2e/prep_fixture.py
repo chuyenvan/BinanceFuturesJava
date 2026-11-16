@@ -8,6 +8,14 @@
 Doc: pull242/<D>/dumps/sel_dump_*.csv.gz (D = ngay truoc START .. ngay END), pull242/<D>/logs/full.log@*.gz (BIG_DOWN would-BUY +
 [C3-LIVE] SUBMIT cua dry that), pull242/<buffer-day>/run/gate_ratio_live.bin.gz, Vision klines_1m zip, exchangeInfo fixture gan nhat
 <= START. Ghi: sel.csv.gz, bigdown.csv, klines.csv.gz, gate_ratio_live.bin, exinfo.json, [dry_submits.csv], manifest.json (sha256).
+
+[ERRATA1 E1/N6, E2/N3] them dau vao THO cho dieu kien thi truong DCA + X14 (rig va REF TU TINH rieng tu cung file):
+  mkt.csv.gz  = Vision 1m MOI symbol co file trong VIS (khong loc), cot symbol,t,o,h,l,c,qv (qv = quote_volume Vision cot 8),
+                t trong [START - MKT_PRE phut, END) (MKT_PRE phut lich su cho cua so 15 nen).
+  ts_ext.csv  = moi dong log live "[TS-EXT] flag day=D flag=F ... final=X" trong pull242/<D>/logs/full.log@*.gz (X14 that).
+  manifest["mkt"]["died_symbols_sim"] = DIED_SYMBOLS cua config sim A3 (SIM_CFG, chi doc dung key nay).
+  Fixture dev 10-30 da co (KHONG ghi de): them bang --extend-from (chep nguyen fixture cu + them 2 file tren):
+      --out ~/claude_master/e2e_v12/fx1030 --extend-from ~/claude_master/e2e1105/fx
 """
 import argparse
 import csv
@@ -29,6 +37,9 @@ FIXT = H + "/claude_master/v12/fixtures"
 TZ7 = timezone(timedelta(hours=7))
 RX = re.compile(r"\[SHADOW\] would-BUY BUY (\S+) entry: (\S+) quantity: (\S+) time:(\d{8} \d\d:\d\d) market level: (\S+)")
 # dong dry that: "... [C3-LIVE] SUBMIT <SYM> <LEVEL> SUBMITTED cid=c3-<SYM>-<barMin>-<leg> qty=... budget=... legIdx=..."
+RXT = re.compile(r"^(\d\d/\d\d/\d{4} \d\d:\d\d:\d\d)\.\d+ .*\[TS-EXT\] flag day=(\d{4}-\d\d-\d\d) flag=(\S+) .*final=(\S+)")
+MKT_PRE = 60
+SIM_CFG = H + "/kaggle_sim/out/r1-a3-a1/config.properties"
 RXS = re.compile(r"^(\d\d/\d\d/\d{4} \d\d:\d\d:\d\d)\.\d+ .*\[C3-LIVE\] SUBMIT (\S+) (\S+) SUBMITTED cid=(\S+) qty=(\S+) budget=(\S+)")
 
 
@@ -52,15 +63,98 @@ def days(a, b):
     return out
 
 
+def died_sim():
+    """DIED_SYMBOLS cua config sim A3 (chi dong 'DIED_SYMBOLS='); + 'USDT' neu thieu (= Constants:60-66)."""
+    for ln in open(SIM_CFG):
+        if ln.startswith("DIED_SYMBOLS="):
+            return [x if "USDT" in x else x + "USDT" for x in ln.split("=", 1)[1].strip().split(",") if x]
+    raise SystemExit("khong thay DIED_SYMBOLS trong " + SIM_CFG)
+
+
+def add_market_inputs(out, man, START, END, PDAYS):
+    """[ERRATA1] mkt.csv.gz (Vision 1m moi symbol) + ts_ext.csv (log X14 that) + died (sim)."""
+    lo = START - MKT_PRE * 60000
+    u0 = datetime.fromtimestamp(lo / 1000, timezone.utc).date()
+    u1 = datetime.fromtimestamp((END - 1) / 1000, timezone.utc).date()
+    md = days(u0, u1)
+    syms = sorted({os.path.basename(p)[:-4] for d in md for p in glob.glob("%s/%s/*.zip" % (VIS, d))})
+    n, miss = 0, []
+    with gzip.open(out + "/mkt.csv.gz", "wt", compresslevel=6) as fo:
+        w = csv.writer(fo, lineterminator="\n")
+        w.writerow(["symbol", "t", "o", "h", "l", "c", "qv"])
+        for s in syms:
+            for d in md:
+                p = "%s/%s/%s.zip" % (VIS, d, s)
+                if not os.path.exists(p):
+                    miss.append(s + "@" + d)
+                    continue
+                with zipfile.ZipFile(p) as z:
+                    with z.open(z.namelist()[0]) as fh:
+                        for x in csv.reader(io.TextIOWrapper(fh)):
+                            if not x or not x[0][:1].isdigit():
+                                continue
+                            t = int(x[0])
+                            if lo <= t < END:
+                                w.writerow([s, t, x[1], x[2], x[3], x[4], x[7]])
+                                n += 1
+    man["mkt"] = {"from": lo, "to": END, "vdays": md, "symbols": len(syms), "rows": n, "symbol_days_missing_n": len(miss),
+                  "symbol_days_missing": miss[:200], "died_symbols_sim": died_sim(), "died_source": SIM_CFG,
+                  "vision_dir": VIS}
+    logs = sorted(set(sum([glob.glob(PULL + "/%s/logs/full.log@*.gz" % d) for d in PDAYS], [])))
+    seen, rows = set(), []
+    for f in logs:
+        with gzip.open(f, "rt", errors="replace") as fh:
+            for ln in fh:
+                if "[TS-EXT] flag day=" not in ln:
+                    continue
+                m = RXT.search(ln)
+                if not m or m.group(0) in seen:
+                    continue
+                seen.add(m.group(0))
+                rows.append([m.group(1), m.group(2), m.group(3), m.group(4), os.path.basename(f)])
+    rows.sort(key=lambda z: (z[1], datetime.strptime(z[0], "%d/%m/%Y %H:%M:%S")))
+    with open(out + "/ts_ext.csv", "w") as fh:
+        w = csv.writer(fh, lineterminator="\n")
+        w.writerow(["log_t7", "day", "flag", "final", "log"])
+        w.writerows(rows)
+    man["ts_ext"] = {"logs": [os.path.basename(x) for x in logs], "rows": len(rows), "days": sorted({z[1] for z in rows})}
+
+
+def extend(a):
+    """Chep fixture co san (a.extend_from) sang a.out (moi) + them dau vao ERRATA1. Khong doi file cu (sha giu nguyen)."""
+    out = a.out
+    if os.path.exists(out + "/manifest.json"):
+        raise SystemExit("TU CHOI: %s da co fixture (khong ghi de)" % out)
+    os.makedirs(out, exist_ok=True)
+    src = a.extend_from
+    for f in sorted(os.listdir(src)):
+        if os.path.isfile(src + "/" + f) and f != "manifest.json":
+            shutil.copy2(src + "/" + f, out + "/" + f)
+    man = json.load(open(src + "/manifest.json"))
+    man["extended_from"] = {"dir": src, "manifest_sha256": sha(src + "/manifest.json"), "outputs_before": man.get("outputs")}
+    START, END = man["START"], man["END"]
+    d0 = datetime.fromtimestamp(START / 1000, TZ7).date()
+    d1 = datetime.fromtimestamp((END - 1) / 1000, TZ7).date()
+    add_market_inputs(out, man, START, END, days(d0 - timedelta(days=1), d1))
+    man["outputs"] = {f: sha(out + "/" + f) for f in sorted(os.listdir(out)) if f != "manifest.json"}
+    json.dump(man, open(out + "/manifest.json", "w"), indent=1)
+    print(json.dumps({k: man[k] for k in ("mkt", "ts_ext")}, default=str)[:3000])
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
-    ap.add_argument("--start", required=True, help="+07, 'YYYY-MM-DD HH:MM'")
-    ap.add_argument("--end", required=True)
-    ap.add_argument("--buffer-day", required=True, help="pull242/<ngay>/run/gate_ratio_live.bin.gz (chi ban ghi < START duoc dung)")
+    ap.add_argument("--start", default="", help="+07, 'YYYY-MM-DD HH:MM'")
+    ap.add_argument("--end", default="")
+    ap.add_argument("--extend-from", default="", help="[ERRATA1] chep fixture co san + them mkt.csv.gz, ts_ext.csv")
+    ap.add_argument("--buffer-day", default="", help="pull242/<ngay>/run/gate_ratio_live.bin.gz (chi ban ghi < START duoc dung)")
     ap.add_argument("--exinfo", default="", help="mac dinh: fixture exchangeInfo moi nhat <= ngay START")
     ap.add_argument("--dry-submits", action="store_true", help="trich [C3-LIVE] SUBMIT dry that trong cua so -> dry_submits.csv (E2)")
     a = ap.parse_args()
+    if a.extend_from:
+        return extend(a)
+    if not (a.start and a.end and a.buffer_day):
+        raise SystemExit("thieu --start/--end/--buffer-day")
     out = a.out
     if os.path.exists(out + "/manifest.json"):
         raise SystemExit("TU CHOI: %s da co fixture (khong ghi de)" % out)
@@ -168,6 +262,7 @@ def main():
         shutil.copyfileobj(fi, fo)
     for k, p in (("buffer", src), ("exinfo", exinfo)):
         man["inputs"][k] = {"path": p, "sha256": sha(p)}
+    add_market_inputs(out, man, START, END, PDAYS)
     for f in sorted(os.listdir(out)):
         if f != "manifest.json":
             man.setdefault("outputs", {})[f] = sha(out + "/" + f)

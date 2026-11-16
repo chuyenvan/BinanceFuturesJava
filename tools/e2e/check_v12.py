@@ -3,6 +3,10 @@
 (<ref>/<LUOT>/ref_*.csv, do ref_v12.py sinh DOC LAP) + fixture. In PASS / FAIL / KHONG XAY RA / KHONG DU MAU / CHUA AP DUNG
 cho C1, E1, S1, D1, X1, F1, K1, E2 + bang §6. "KHONG XAY RA" / "KHONG DU MAU" KHONG tinh la PASS.
 
+ERRATA1 (33633d41): E (|E_REF - E_replay|/E <= 1e-6, C_eff = min(C3_CAPITAL, E) trong S1/D1), D1 tu nhien vao ket luan + dieu
+kien thi truong / p15 cho moi leg DCA, X1 moi (TIME_STOP 0 lech phut + gia trong [L,H]; ARM_CUNG_NEN; stopPrice jar dat vs SL REF
+<= 2 tick; gia khop san gia chi bao cao; X14_HOAN loai khoi X1), C1 kiem dung danh sach override khai bao (+LIVE_TS_MKT_EXT=0).
+
 argv: --runs DIR --ref DIR --fx DIR --env FILE [--out FILE] [--dry-1105 CSV --labels-1105 CSV]
 """
 import argparse
@@ -33,8 +37,8 @@ def lane(runs, n):
     d = os.path.join(runs, n)
     res = json.load(open(d + "/result.json")) if os.path.isfile(d + "/result.json") else None
     log = open(d + "/run.log", errors="replace").read() if os.path.isfile(d + "/run.log") else ""
-    return dict(dir=d, res=res, log=log, legs=rd(d + "/legs.csv"), fills=rd(d + "/fills.csv"), events=rd(d + "/events.csv"),
-                outcomes=rd(d + "/outcomes.csv"))
+    return dict(dir=d, name=n, res=res, log=log, legs=rd(d + "/legs.csv"), fills=rd(d + "/fills.csv"),
+                events=rd(d + "/events.csv"), outcomes=rd(d + "/outcomes.csv"), market=rd(d + "/market.csv"))
 
 
 def fnum(x):
@@ -49,6 +53,11 @@ BANNERS = {"LIVE-SIZING": r"\[LIVE-SIZING\] LIVE_APPLY_GRID_RATIO=true", "LIVE-D
            "MINUTE-FIN": r"\[MINUTE-FIN\] BAT", "GATE-RATIO": r"\[GATE-RATIO\] LIVE BAT"}
 
 
+# prereg ?1 + ERRATA1 E2 (N3): DUNG tap override khai bao (LIVE_GATE_ROLLING_FILE = "duong dan du lieu")
+DECL_OVR = {"LIVE_ADAPTER", "C3_CAPITAL", "LIVE_APPLY_GRID_RATIO", "LIVE_DCA_GRID_ENABLED", "C3_EXCLUDE_LEGACY_HELD",
+            "LIVE_IS_SHADOW_HOST", "LIVE_GATE_ROLLING_FILE", "LIVE_TS_MKT_EXT"}
+
+
 def c1(L):
     if L["res"] is None:
         return FAIL, {"loi": "khong co result.json (refused/crash)"}
@@ -57,8 +66,13 @@ def c1(L):
     ban = {k: bool(re.search(p, L["log"])) for k, p in BANNERS.items()}
     det = {"jar_md5": jc.get("jar_md5"), "jar_ok": jc.get("ok"), "classes_from_jar": nres, "banners": ban,
            "missing_names": ec.get("missing_names_not_overridden"), "differ": ec.get("differ_not_overridden"),
-           "overrides": ec.get("overrides_declared")}
-    ok = (jc.get("ok") is True and jc.get("jar_md5") == "641803565297d4065d90245e04a00f11" and nres == 10 and all(ban.values())
+           "overrides": ec.get("overrides_declared"),
+           "config_properties_replay(E5)": L["res"].get("config_properties_replay"),
+           "Cfg_khong_dat_env_mac_dinh_JAR(E5)": L["res"].get("cfg_effective", {}).get("Cfg.asked_khong_dat_env_(mac_dinh_JAR)"),
+           "died_symbols_jar": (L["res"].get("market") or {}).get("died_symbols_jar")}
+    ov = ec.get("overrides_declared") or {}
+    det["override_set_ok"] = set(ov) == DECL_OVR and ov.get("LIVE_TS_MKT_EXT") == "0"
+    ok = det["override_set_ok"] and (jc.get("ok") is True and jc.get("jar_md5") == "641803565297d4065d90245e04a00f11" and nres == 10 and all(ban.values())
           and not ec.get("missing_names_not_overridden") and not ec.get("differ_not_overridden"))
     return (PASS if ok else FAIL), det
 
@@ -81,7 +95,7 @@ def e1(L, refdir):
     return PASS, det
 
 
-# ------------------------------------------------------------------ S1
+# ------------------------------------------------------------------ S1 + E (ERRATA1 E1/N4)
 def p_for(env, cap, flags):
     return R.params(env, cap, flags)
 
@@ -93,41 +107,114 @@ def qty_ok(b, px, step, qty):
 
 
 def c3cap(L):
-    """C = C3_CAPITAL cua luot (prereg §3: U = marginUsed/C, b = 0,0225*C*...) - KHONG dung von 'capital' code tra ve."""
+    """C3_CAPITAL cua luot (override khai truoc)."""
     return float(L["res"]["cfg_effective"]["rig.CAPITAL"]) if L["res"] else None
 
 
-def s1(L, env, meta, flags="on"):
+class FX:
+    """Fixture (nen giao dich klines.csv.gz + ts_ext.csv) cho mark / gia nen / X14."""
+
+    def __init__(self, fx):
+        self.dir = fx
+        self.man = json.load(open(fx + "/manifest.json"))
+        self.END = self.man["END"]
+        self.bars = R.load_bars(fx)
+        self.lastc = {s: m[max(t for t in m if t < self.END)][3] for s, m in self.bars.items() if any(t < self.END for t in m)}
+        self.tsext = rd(fx + "/ts_ext.csv")
+
+    def raw_bar_fn(self, flat):
+        def raw_bar(s, t):
+            x = self.bars.get(s, {}).get(t)
+            if x is None and flat and t >= self.END and s in self.lastc:
+                v = self.lastc[s]
+                x = (v, v, v, v)
+            return x
+        return raw_bar
+
+    def x14_flag(self, day):
+        """flag X14 that cua ngay UTC `day` (dong log [TS-EXT] flag cuoi cung cua ngay, uu tien final=true); None = khong co."""
+        rows = [x for x in self.tsext if x["day"] == day]
+        fin = [x for x in rows if x["final"] == "true"]
+        r = (fin or rows)
+        return r[-1]["flag"] if r else None
+
+
+def ref_summary(refdir):
+    p = refdir + "/ref_summary.json"
+    return json.load(open(p)) if os.path.isfile(p) else {}
+
+
+def lane_fct_flat(L, refdir):
+    """he so S-DCA theo moc cua REF (doc lap) + co gia phang (S-TS) cua luot."""
+    st = {k: int(v) for k, v in (ref_summary(refdir).get("sdca_start") or {}).items()}
+    flat = bool(((L["res"] or {}).get("injections") or {}).get("flat_ext"))
+    return R.sdca_fct(st), flat
+
+
+def e_rows(L, refdir, fxo):
+    """Moi leg SUBMITTED: E_replay (cot eq = cache C3MainEquity ma capital() vua dung), eq_at, E_REF(eq_at) = ref_v12.equity_at
+    (khop SAN fills.csv + mark fixture, doc lap code jar), C_eff_REF = min(C3_CAPITAL, E_REF)."""
+    fills = R.load_fills(L["dir"] + "/fills.csv") if os.path.isfile(L["dir"] + "/fills.csv") else []
+    fct, flat = lane_fct_flat(L, refdir)
+    mark = R.make_mark(fxo.raw_bar_fn(flat), fct)
+    C3 = c3cap(L)
+    out = {}
+    for x in L["legs"]:
+        if x["outcome"] != "SUBMITTED":
+            continue
+        at = int(x.get("eq_at") or -1) if (x.get("eq_at") or "").lstrip("-").isdigit() else -1
+        er = R.equity_at(fills, at, mark, C3) if at > 0 else None
+        out[x["cid"]] = dict(eq=fnum(x.get("eq")), at=at, e_ref=er, ceff=(min(C3, er) if er is not None else None),
+                             dec=int(x["decision_ts"]))
+    return out
+
+
+def e_check(E):
+    bad, worst, lag = [], 0.0, collections.Counter()
+    for cid, e in E.items():
+        lag[(e["at"] - e["dec"]) // 1000 if e["at"] > 0 else None] += 1
+        if e["eq"] is None or e["e_ref"] is None:
+            bad.append({"leg": cid, "loi": "thieu eq/eq_at"})
+            continue
+        rel = abs(e["e_ref"] - e["eq"]) / abs(e["e_ref"])
+        worst = max(worst, rel)
+        if rel > 1e-6:
+            bad.append({"leg": cid, "E_replay": e["eq"], "E_REF": e["e_ref"], "rel": rel})
+    return bad, worst, dict(lag)
+
+
+def s1(L, env, meta, E, flags="on"):
     bad, n, worst = [], 0, 0.0
     first3 = []
-    capdiff = []
-    C = c3cap(L)
+    C3 = c3cap(L)
+    ebad, eworst, lag = e_check(E)
     for x in L["legs"]:
         if x["outcome"] != "SUBMITTED":
             continue
         n += 1
-        cap, used, b = C, float(x["margin_before"]), float(x["budget"])
-        if abs(float(x["capital"]) - C) > 1e-9:
-            capdiff.append((x["cid"], float(x["capital"])))   # NGHI VAN N4: code dung min(C3_CAPITAL, equity c3, ...)
+        e = E.get(x["cid"]) or {}
+        cap = e.get("ceff") if e.get("ceff") is not None else C3
+        used, b = float(x["margin_before"]), float(x["budget"])
         li = int(x["leg_idx"]) if x["leg_idx"] not in ("", None) else 0
-        P = p_for(env, cap, flags)
-        bref = R.budget(P, used, li)
+        bref = R.budget(p_for(env, cap, flags), used, li)
         rel = abs(b - float(bref)) / b if bref is not None else 1.0
         worst = max(worst, rel)
         m = meta.get(x["symbol"])
         qok, want = qty_ok(b, float(x["sizing_px"]), m["step"] if m else Decimal(0), x["qty"])
         if rel > 1e-5 or not qok:
             bad.append({"leg": x["cid"], "b": b, "b_ref": float(bref) if bref is not None else None, "rel": rel, "qty": x["qty"],
-                        "qty_ref": want})
+                        "qty_ref": want, "C_eff_REF": cap, "capital_code": fnum(x["capital"])})
         if len(first3) < 3:
             first3.append((b, used))
     hv = R.hand_values()
     hv_ok = all(abs(a - e) <= 0.005 * e for a, e in zip(hv, [225.00, 216.56, 208.44]))
-    det = {"n_submit": n, "worst_rel": worst, "bad": bad[:20], "n_bad": len(bad), "hand_values_ref": hv, "hand_ok": hv_ok,
-           "first3_replay(b,used)": first3, "C3_CAPITAL": C, "leg_capital_khac_C(N4)": capdiff[:20], "n_capital_khac_C": len(capdiff)}
+    det = {"n_submit": n, "worst_rel_budget": worst, "bad": bad[:20], "n_bad": len(bad), "hand_values_ref": hv, "hand_ok": hv_ok,
+           "first3_replay(b,used)": first3, "C3_CAPITAL": C3,
+           "E": {"worst_rel": eworst, "n_bad(>1e-6)": len(ebad), "bad": ebad[:10], "eq_at_minus_decision_s": lag,
+                 "C_eff_min": min((e["ceff"] for e in E.values() if e["ceff"] is not None), default=None)}}
     if n == 0:
         return NA, det
-    return (PASS if not bad and hv_ok else FAIL), det
+    return (PASS if not bad and hv_ok and not ebad else FAIL), det
 
 
 # ------------------------------------------------------------------ cum (replay) tu fills + events
@@ -157,6 +244,7 @@ def clusters_replay(L, meta):
                 sq = sum(z[0] for z in c["sells"])
                 c["exit_px"] = sum(z[0] * z[1] for z in c["sells"]) / sq
                 c["exit_ms"] = c["sells"][-1][2]
+                c["exit_cid"] = c["sells"][-1][3]
                 tstop = any(c["first_ms"] <= t <= c["exit_ms"] for t in ts_ev.get(s, []))
                 c["reason"] = "TIME_STOP" if tstop else ("TRAIL" if c["sells"][-1][3].startswith("c3s-") else
                                                          "OTHER:" + c["sells"][-1][3].split("-")[0])
@@ -166,11 +254,29 @@ def clusters_replay(L, meta):
     return out, list(cur.values())
 
 
-def x1(L, refdir, meta):
+def utc_day(ms):
+    import datetime as _dt
+    return _dt.datetime.fromtimestamp(ms / 1000, _dt.timezone.utc).strftime("%Y-%m-%d")
+
+
+def x1(L, refdir, meta, fxo):
+    """ERRATA1 X1: ly do cum 1 leg == REF; TIME_STOP: phut == REF (0 lech) + gia khop trong [L,H] nen do; ARM_CUNG_NEN (ARM hoac
+    doi SL trong CHINH phut thoat): duoc lech dung -1 phut; con lai >= 98 % cung phut, du <= +-1; stop/trailing: stopPrice jar DAT
+    (lenh stop da khop) vs SL REF <= 2 tick; X14_HOAN (TIME_STOP o ngay X14 that = ON) loai khoi X1. Gia khop san gia: BAO CAO."""
     rep, rep_open = clusters_replay(L, meta)
     ref = {(x["symbol"], int(x["b0"])): x for x in rd(refdir + "/ref_clusters.csv")}
-    rows, dl, mism = [], [], []
-    same_min = pm1 = 0
+    fct, flat = lane_fct_flat(L, refdir)
+    raw = fxo.raw_bar_fn(flat)
+    stop_px = {}
+    armsl = collections.defaultdict(list)
+    for e in L["events"]:
+        if e["type"] == "TRAIL_STOP_PLACED":
+            m = re.search(r"cid=(\S+)", e["detail"])
+            if m:
+                stop_px[m.group(1)] = float(e["value"])
+        elif e["type"] in ("TRAIL_ARM", "TRAIL_SL"):
+            armsl[e["symbol"]].append(int(e["ms"]))
+    rows, mism = [], []
     for c in rep:
         k = (c["symbol"], c["b0"])
         f = ref.get(k)
@@ -179,62 +285,119 @@ def x1(L, refdir, meta):
             continue
         em = c["exit_ms"] // 60000 * 60000
         dm = (em - int(f["exit_bar"])) // 60000
-        same_min += dm == 0
-        pm1 += abs(dm) == 1
-        d = (c["exit_px"] - float(f["exit_px"])) / float(f["exit_px"])
-        dl.append(d)
-        tick = float(meta[c["symbol"]]["tick"]) if c["symbol"] in meta else 0.0
         rr = "TRAIL" if f["reason"].startswith("TRAIL") else f["reason"]
-        rows.append({"cum": k, "legs": c["legs"], "reason": (c["reason"], rr), "dmin": dm, "dpx": d,
-                     "px_ok": d >= -0.015 or abs(c["exit_px"] - float(f["exit_px"])) <= 2 * tick + 1e-12})
+        tick = float(meta[c["symbol"]]["tick"]) if c["symbol"] in meta else 0.0
+        is_ts = rr == "TIME_STOP" or c["reason"] == "TIME_STOP"
+        flag = fxo.x14_flag(utc_day(int(f["exit_bar"]))) if is_ts else None
+        x14 = is_ts and flag == "ON"
+        arm_same = any(em <= t < em + 60000 and t >= c["first_ms"] for t in armsl[c["symbol"]])
+        dfill = (c["exit_px"] - float(f["exit_px"])) / float(f["exit_px"])
+        row = {"cum": k, "legs": c["legs"], "reason": (c["reason"], rr), "dmin": dm, "dfill_bao_cao": dfill, "x14_flag": flag,
+               "X14_HOAN": x14, "ARM_CUNG_NEN": arm_same and not is_ts}
+        if c["reason"] == "TRAIL":
+            sp = stop_px.get(c["exit_cid"])
+            sl = fnum(f["sl"])
+            row["stop_dat"], row["sl_ref"], row["tick"] = sp, sl, tick
+            row["px_ok"] = sp is not None and sl is not None and abs(sp - sl) <= 2 * tick + 1e-12
+            row["dstop_tick"] = (sp - sl) / tick if (sp is not None and sl is not None and tick > 0) else None
+        elif c["reason"] == "TIME_STOP":
+            x = raw(c["symbol"], em)
+            fv = fct(c["symbol"], em)
+            if x is None:
+                row["px_ok"] = False
+            else:
+                lo, hi = x[2] * fv, x[1] * fv
+                row["bar_LH"] = (lo, hi)
+                row["px_ok"] = lo * (1 - 1e-12) <= c["exit_px"] <= hi * (1 + 1e-12)
+        else:
+            row["px_ok"] = False
+        rows.append(row)
     ref_exited_not_rep = [k for k, f in ref.items() if f["reason"] != "OPEN" and not any((c["symbol"], c["b0"]) == k for c in rep)]
-    n = len(rows)
-    one = [r for r in rows if r["legs"] == 1]
+    ev = [r for r in rows if not r["X14_HOAN"]]
+    ts = [r for r in ev if "TIME_STOP" in r["reason"]]
+    arm = [r for r in ev if r["ARM_CUNG_NEN"]]
+    oth = [r for r in ev if r not in ts and r not in arm]
+    same = sum(1 for r in oth if r["dmin"] == 0)
+    one = [r for r in ev if r["legs"] == 1]
     reason_ok = all(r["reason"][0] == r["reason"][1] for r in one) and not mism and not ref_exited_not_rep
-    kinds = collections.Counter(r["reason"][0] for r in rows)
-    mean = sum(dl) / len(dl) if dl else None
-    det = {"n_exited_matched": n, "kinds_replay": dict(kinds), "same_minute": same_min, "pm1": pm1,
-           "mean_dpx": mean, "min_dpx": min(dl) if dl else None, "mismatch": mism[:20], "ref_exited_not_replay": ref_exited_not_rep[:20],
-           "reason_diff_1leg": [r for r in one if r["reason"][0] != r["reason"][1]][:20],
-           "px_bad": [r for r in rows if not r["px_ok"]][:20], "open_end_replay": len(rep_open)}
-    if n < 10 or kinds.get("TIME_STOP", 0) < 1 or kinds.get("TRAIL", 0) < 1:
-        # van danh gia de lo loi som, nhung ket luan = KHONG DU MAU
-        det["danh_gia_tam"] = _x1_ok(rows, n, same_min, pm1, mean, reason_ok)
+    ok_min = (all(r["dmin"] == 0 for r in ts) and all(r["dmin"] in (0, -1) for r in arm)
+              and (not oth or same >= 0.98 * len(oth)) and all(abs(r["dmin"]) <= 1 for r in oth))
+    ok_px = all(r["px_ok"] for r in ev)
+    kinds = collections.Counter(r["reason"][0] for r in ev)
+    dl = [r["dfill_bao_cao"] for r in ev if "TIME_STOP" not in r["reason"]]
+    det = {"n_danh_gia": len(ev), "kinds_replay": dict(kinds), "n_TIME_STOP": len(ts), "n_ARM_CUNG_NEN": len(arm),
+           "ARM_CUNG_NEN": [{"cum": r["cum"], "dmin": r["dmin"], "dfill": r["dfill_bao_cao"], "dstop_tick": r.get("dstop_tick")}
+                            for r in arm],
+           "n_X14_HOAN": len(rows) - len(ev), "con_lai_cung_phut": same, "con_lai_n": len(oth),
+           "dmin_lech": [(r["cum"], r["dmin"]) for r in ev if r["dmin"] != 0][:20],
+           "px_bad": [r for r in ev if not r["px_ok"]][:20], "dstop_tick_max": max((abs(r["dstop_tick"]) for r in ev
+                                                                                     if r.get("dstop_tick") is not None), default=None),
+           "gia_khop_san_gia_BAO_CAO": {"mean": sum(dl) / len(dl) if dl else None, "min": min(dl) if dl else None},
+           "mismatch": mism[:20], "ref_exited_not_replay": ref_exited_not_rep[:20],
+           "reason_diff_1leg": [r for r in one if r["reason"][0] != r["reason"][1]][:20], "open_end_replay": len(rep_open),
+           "ok_reason": reason_ok, "ok_phut": ok_min, "ok_gia": ok_px}
+    good = reason_ok and ok_min and ok_px and len(ev) > 0
+    if len(ev) < 10 or kinds.get("TIME_STOP", 0) < 1 or kinds.get("TRAIL", 0) < 1:
+        det["danh_gia_tam"] = good
         return NS, det
-    return (PASS if _x1_ok(rows, n, same_min, pm1, mean, reason_ok) else FAIL), det
+    return (PASS if good else FAIL), det
 
 
-def _x1_ok(rows, n, same_min, pm1, mean, reason_ok):
-    if n == 0:
-        return False
-    return (reason_ok and same_min >= 0.98 * n and same_min + pm1 == n and mean is not None and -0.008 <= mean <= 0
-            and all(r["px_ok"] for r in rows))
-
-
-# ------------------------------------------------------------------ D1
+# ------------------------------------------------------------------ D1 (ERRATA1: dieu kien thi truong + p15 + C_eff)
 def dca_rows(legs):
     return [x for x in legs if x["level"] == "DCA_LEVEL1" and x["outcome"] == "SUBMITTED"]
 
 
-def d1_natural(L, refdir):
+def ref_market(refdir):
+    return {int(x["b"]): x for x in rd(refdir + "/ref_market.csv")}
+
+
+def dca_leg_checks(x, mref, env, E, C3):
+    """1 leg DCA replay: phut co dieu kien thi truong (REF: BIG_DOWN hoac isDcaAlt, universe A1) + p15 >= MIN_MOMENTUM_15M
+    (REF) + budget = cong thuc voi C_eff_REF (<= 1e-5) + E (<= 1e-6)."""
+    b = int(x["decision_ts"])
+    r = mref.get(b)
+    P = p_for(env, C3, "on")
+    cond = bool(r) and r["big_a1"] != "" and (r["big_a1"] == "1" or r["alt_a1"] == "1")
+    p15ok = bool(r) and float(r["p15"]) >= float(P["MOM"])
+    e = E.get(x["cid"]) or {}
+    cap = e.get("ceff") if e.get("ceff") is not None else C3
+    bref = R.budget(p_for(env, cap, "on"), float(x["margin_before"]), int(x["leg_idx"]))
+    brel = abs(float(x["budget"]) - float(bref)) / float(x["budget"]) if bref is not None else 1.0
+    erel = abs(e["e_ref"] - e["eq"]) / abs(e["e_ref"]) if e.get("eq") is not None and e.get("e_ref") is not None else 1.0
+    return {"b": b, "sym": x["symbol"], "legIdx": int(x["leg_idx"]), "dieu_kien_tt": cond, "p15_ok": p15ok,
+            "tt": None if not r else {"big": r["big_a1"], "alt": r["alt_a1"], "p15": r["p15"], "dip": r["dip"]},
+            "budget_rel": brel, "E_rel": erel, "ok": cond and p15ok and brel <= 1e-5 and erel <= 1e-6}
+
+
+def d1_natural(L, refdir, env, E):
+    mref = ref_market(refdir)
+    C3 = c3cap(L)
     rep = [(int(x["decision_ts"]), x["symbol"], int(x["leg_idx"])) for x in dca_rows(L["legs"])]
     ref = [(int(x["decision_ts"]), x["symbol"], int(x["leg_idx"])) for x in rd(refdir + "/ref_legs.csv")
            if x["level"] == "DCA_LEVEL1" and x["outcome"] == "SUBMITTED"]
-    det = {"replay": rep[:20], "ref": ref[:20]}
+    chk = [dca_leg_checks(x, mref, env, E, C3) for x in dca_rows(L["legs"])]
+    det = {"replay": rep[:20], "ref": ref[:20], "leg_checks": chk[:20]}
     if not rep and not ref:
         return NA, det
-    return (PASS if sorted(rep) == sorted(ref) else FAIL), det
+    return (PASS if sorted(rep) == sorted(ref) and all(c["ok"] for c in chk) else FAIL), det
 
 
-def d1_sdca(L, refdir, env, meta):
+def d1_sdca(L, refdir, env, meta, E):
     if L["res"] is None:
         return FAIL, {"loi": "khong co result.json"}
     inj = L["res"].get("injections", {})
     syms = list((inj.get("sdca_start") or {}).keys())
-    refsum = json.load(open(refdir + "/ref_summary.json")) if os.path.isfile(refdir + "/ref_summary.json") else {}
+    refsum = ref_summary(refdir)
     ref_syms = list((refsum.get("sdca_start") or {}).keys())
     reflegs = rd(refdir + "/ref_legs.csv")
-    det = {"sdca_replay": inj.get("sdca_start"), "sdca_ref": refsum.get("sdca_start"), "clusters": {}}
+    mref = ref_market(refdir)
+    C3 = c3cap(L)
+    st = int(inj.get("sdca_st", -1))
+    design = [st + 3 * 60000, st + 12 * 60000, st + 22 * 60000] if st > 0 else None
+    det = {"sdca_replay": inj.get("sdca_start"), "sdca_ref": refsum.get("sdca_start"), "st": st,
+           "thiet_ke_phut_DCA(st+3,+12,+22)": design, "dip_ref": (refsum.get("sdca_synth") or {}).get("dip"),
+           "p15_zero_ref": (refsum.get("sdca_synth") or {}).get("p15_zero"), "clusters": {}}
     ok = len(syms) >= 2 and sorted(syms) == sorted(ref_syms)
     full = 0
     first_buy = {}
@@ -242,18 +405,13 @@ def d1_sdca(L, refdir, env, meta):
         if f["side"] == "BUY" and f["symbol"] in syms and f["symbol"] not in first_buy:
             first_buy[f["symbol"]] = float(f["price"])
     for s in syms:
-        st = int(inj["sdca_start"][s])
-        rows = [x for x in L["legs"] if x["symbol"] == s and x["outcome"] == "SUBMITTED" and int(x["decision_ts"]) >= st - 60000]
-        dl = [x for x in rows if x["level"] == "DCA_LEVEL1"]
+        sts = int(inj["sdca_start"][s])
+        dl = [x for x in L["legs"] if x["symbol"] == s and x["outcome"] == "SUBMITTED" and x["level"] == "DCA_LEVEL1"
+              and int(x["decision_ts"]) >= sts - 60000]
         idx = [int(x["leg_idx"]) for x in dl]
         mins = [int(x["decision_ts"]) for x in dl]
         rmins = [int(x["decision_ts"]) for x in reflegs if x["symbol"] == s and x["level"] == "DCA_LEVEL1" and x["outcome"] == "SUBMITTED"]
-        P = p_for(env, c3cap(L), "on")
-        bud_ok = all(abs(float(x["budget"]) - float(R.budget(P, float(x["margin_before"]), int(x["leg_idx"])))) / float(x["budget"]) <= 1e-5
-                     for x in dl)
-        # chi bao cao: cung cong thuc nhung C = 'capital' code tra ve (min(C3_CAPITAL, equity c3, ...)) - NGHI VAN N4
-        bud_ok_code_cap = all(abs(float(x["budget"]) - float(R.budget(p_for(env, float(x["capital"]), "on"), float(x["margin_before"]),
-                                                                       int(x["leg_idx"])))) / float(x["budget"]) <= 1e-5 for x in dl)
+        chk = [dca_leg_checks(x, mref, env, E, C3) for x in dl]
         pre = []
         for x in dl:
             li = int(x["leg_idx"])
@@ -263,14 +421,36 @@ def d1_sdca(L, refdir, env, meta):
                 pre.append((x["decision_ts"], li, drop))
         no5 = len([x for x in L["legs"] if x["symbol"] == s and x["outcome"] == "SUBMITTED" and x["level"] == "DCA_LEVEL1"
                    and int(x["leg_idx"]) >= 4]) == 0
-        c_ok = idx == [1, 2, 3] and mins == rmins and bud_ok and not pre and no5
+        c_ok = idx == [1, 2, 3] and mins == rmins and all(c["ok"] for c in chk) and not pre and no5
         full += c_ok
-        det["clusters"][s] = {"leg_idx": idx, "minutes": mins, "ref_minutes": rmins, "budget_ok": bud_ok,
-                              "budget_ok_neu_C=capital_code(N4,bao cao)": bud_ok_code_cap,
-                              "capital_code": [float(x["capital"]) for x in dl], "leg_before_level": pre,
-                              "no_5th": no5, "ok": c_ok}
+        det["clusters"][s] = {"leg_idx": idx, "minutes": mins, "ref_minutes": rmins, "khop_thiet_ke": mins == design,
+                              "leg_checks": chk, "leg_before_level": pre, "no_5th": no5, "ok": c_ok}
     ok = ok and full >= 2
     return (PASS if ok else FAIL), det
+
+
+def mkt_compare(L, refdir):
+    """BAO CAO: co dieu kien thi truong moi phut - rig (vong live, ham production) vs REF (cong thuc sim, universe A1)."""
+    mref = ref_market(refdir)
+    n = nd = 0
+    diff = []
+    for x in L["market"]:
+        b = int(x["b"])
+        r = mref.get(b)
+        if r is None or r["big_a1"] == "":
+            continue
+        n += 1
+        a = (x["big"], x["alt"])
+        bb = (r["big_a1"], r["alt_a1"])
+        if a != bb:
+            nd += 1
+            if len(diff) < 15:
+                diff.append({"b": b, "rig(big,alt,down,down15)": (x["big"], x["alt"], x["down"], x["down15"]),
+                             "ref": (r["big_a1"], r["alt_a1"], r["down_a1"], r["down15_a1"])})
+    return {"phut_so": n, "phut_lech_co": nd, "rig_big": sum(1 for x in L["market"] if x["big"] == "1"),
+            "rig_alt": sum(1 for x in L["market"] if x["alt"] == "1"),
+            "ref_big": sum(1 for r in mref.values() if r["big_a1"] == "1"), "ref_alt": sum(1 for r in mref.values() if r["alt_a1"] == "1"),
+            "lech": diff}
 
 
 # ------------------------------------------------------------------ F1
@@ -375,32 +555,50 @@ def main():
     ap.add_argument("--dry-1105", default="")
     ap.add_argument("--labels-1105", default="")
     a = ap.parse_args()
-    env = R.load_env(a.env)
-    meta, _ = R.load_exinfo(a.fx + "/exinfo.json")
-    Ls = {n: lane(a.runs, n) for n in ["R0", "R0-DRY", "R-OLD", "S-DCA", "FIN-INJ", "R-1000", "R-4000"]}
-    out = collections.OrderedDict()
-    c1s = {n: c1(Ls[n]) for n in FLAG_ON_LANES if Ls[n]["res"] is not None or os.path.isdir(Ls[n]["dir"])}
-    out["C1"] = (PASS if c1s and all(v[0] == PASS for v in c1s.values()) else FAIL, c1s)
-    for n in ("R0", "R0-DRY"):
-        out["E1[%s]" % n] = e1(Ls[n], os.path.join(a.ref, n))
-        out["S1[%s]" % n] = s1(Ls[n], env, meta)
-        out["K1[%s]" % n] = k1(Ls[n])
-    out["D1[tu nhien R0]"] = d1_natural(Ls["R0"], os.path.join(a.ref, "R0"))
-    out["D1[S-DCA]"] = d1_sdca(Ls["S-DCA"], os.path.join(a.ref, "S-DCA"), env, meta)
-    out["X1[R0]"] = x1(Ls["R0"], os.path.join(a.ref, "R0"), meta)
-    out["F1[FIN-INJ]"] = f1(Ls["FIN-INJ"], Ls["R0"], os.path.join(a.ref, "FIN-INJ"))
-    out["E2[R-OLD]"] = e2(Ls["R-OLD"], a.fx, a.dry_1105, a.labels_1105)
-    out["R-OLD banners (ky vong TAT)"] = ("BAO CAO", {k: bool(re.search(p, Ls["R-OLD"]["log"])) for k, p in BANNERS.items()})
-    out["VON_MICRO_6"] = ("BAO CAO", micro(Ls["R0"], env, meta, Ls["R-1000"], Ls["R-4000"]))
-    keys = ["C1", "E1[R0]", "E1[R0-DRY]", "S1[R0]", "S1[R0-DRY]", "D1[S-DCA]", "X1[R0]", "F1[FIN-INJ]", "K1[R0]", "K1[R0-DRY]", "E2[R-OLD]"]
-    concl = PASS if all(out[k][0] == PASS for k in keys) else FAIL
-    out["KET LUAN (iii)"] = (concl, "PASS <=> moi tieu chi PASS (KHONG XAY RA / KHONG DU MAU / CHUA AP DUNG != PASS)")
+    out = run_checks(a.runs, a.ref, a.fx, a.env, a.dry_1105, a.labels_1105)
     js = json.dumps(out, indent=1, default=str, ensure_ascii=False)
     if a.out:
         open(a.out, "w").write(js)
     for k, v in out.items():
         print("%-28s %s" % (k, v[0]))
-    print(js[:20000])
+    print(js[:30000])
+
+
+def run_checks(runs, refroot, fx, envf, dry_1105="", labels_1105=""):
+    env = R.load_env(envf)
+    meta, _ = R.load_exinfo(fx + "/exinfo.json")
+    fxo = FX(fx)
+    Ls = {n: lane(runs, n) for n in ["R0", "R0-DRY", "R-OLD", "S-DCA", "FIN-INJ", "R-1000", "R-4000", "S-TS"]}
+    rf = lambda n: os.path.join(refroot, n)  # noqa: E731
+    E = {n: e_rows(Ls[n], rf(n), fxo) for n in ("R0", "R0-DRY", "S-DCA", "S-TS") if Ls[n]["res"] is not None}
+    out = collections.OrderedDict()
+    lanes_c1 = FLAG_ON_LANES + (["S-TS"] if Ls["S-TS"]["res"] is not None else [])
+    c1s = {n: c1(Ls[n]) for n in lanes_c1 if Ls[n]["res"] is not None or os.path.isdir(Ls[n]["dir"])}
+    out["C1"] = (PASS if c1s and all(v[0] == PASS for v in c1s.values()) else FAIL, c1s)
+    for n in ("R0", "R0-DRY"):
+        out["E1[%s]" % n] = e1(Ls[n], rf(n))
+        out["S1[%s]" % n] = s1(Ls[n], env, meta, E.get(n, {}))
+        out["K1[%s]" % n] = k1(Ls[n])
+    out["D1[tu nhien R0]"] = d1_natural(Ls["R0"], rf("R0"), env, E.get("R0", {}))
+    out["D1[S-DCA]"] = d1_sdca(Ls["S-DCA"], rf("S-DCA"), env, meta, E.get("S-DCA", {}))
+    out["X1[R0]"] = x1(Ls["R0"], rf("R0"), meta, fxo)
+    if Ls["S-TS"]["res"] is not None:
+        out["X1[S-TS DEV tong hop]"] = x1(Ls["S-TS"], rf("S-TS"), meta, fxo)
+        out["S1[S-TS DEV]"] = s1(Ls["S-TS"], env, meta, E.get("S-TS", {}))
+    out["S1[S-DCA]"] = s1(Ls["S-DCA"], env, meta, E.get("S-DCA", {}))
+    out["F1[FIN-INJ]"] = f1(Ls["FIN-INJ"], Ls["R0"], rf("FIN-INJ"))
+    out["E2[R-OLD]"] = e2(Ls["R-OLD"], fx, dry_1105, labels_1105)
+    out["MKT[R0] rig vs REF"] = ("BAO CAO", mkt_compare(Ls["R0"], rf("R0")))
+    out["R-OLD banners (ky vong TAT)"] = ("BAO CAO", {k: bool(re.search(p, Ls["R-OLD"]["log"])) for k, p in BANNERS.items()})
+    out["VON_MICRO_6"] = ("BAO CAO", micro(Ls["R0"], env, meta, Ls["R-1000"], Ls["R-4000"]))
+    out["errata/khoa"] = ("BAO CAO", {n: {"errata_mo_lai": (Ls[n]["res"] or {}).get("errata_mo_lai"),
+                                          "official_lock": (Ls[n]["res"] or {}).get("official_lock")} for n in ("R0",)})
+    keys = ["C1", "E1[R0]", "E1[R0-DRY]", "S1[R0]", "S1[R0-DRY]", "D1[S-DCA]", "X1[R0]", "F1[FIN-INJ]", "K1[R0]", "K1[R0-DRY]",
+            "E2[R-OLD]"]
+    # ERRATA1 E5: D1 tu nhien vao ket luan (co DCA tu nhien => phai PASS; khong co => KHONG XAY RA, S-DCA quyet dinh)
+    concl = PASS if (all(out[k][0] == PASS for k in keys) and out["D1[tu nhien R0]"][0] in (PASS, NA)) else FAIL
+    out["KET LUAN (iii)"] = (concl, "PASS <=> moi tieu chi PASS + D1 tu nhien PASS/KHONG XAY RA (KHONG DU MAU / CHUA AP DUNG != PASS)")
+    return out
 
 
 if __name__ == "__main__":

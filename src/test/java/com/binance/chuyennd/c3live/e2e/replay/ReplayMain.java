@@ -151,6 +151,25 @@ public final class ReplayMain {
         return m;
     }
 
+    /** [ERRATA1 E5] config.properties cua luot (tools/e2e/config_replay.properties): key -> "[NHAN] gia tri" (nhan = comment # [X]). */
+    static Map<String, String> cfgProps(File f) throws Exception {
+        Map<String, String> m = new LinkedHashMap<>();
+        if (!f.isFile()) return m;
+        String tag = "?";
+        for (String ln : Files.readAllLines(f.toPath(), StandardCharsets.UTF_8)) {
+            String s = ln.trim();
+            if (s.startsWith("# [")) {
+                int e = s.indexOf(']');
+                if (e > 3) tag = s.substring(3, e);
+                continue;
+            }
+            if (s.isEmpty() || s.startsWith("#")) continue;
+            int i = s.indexOf('=');
+            if (i > 0) m.put(s.substring(0, i).trim(), "[" + tag + "] " + s.substring(i + 1).trim());
+        }
+        return m;
+    }
+
     public static void main(String[] args) throws Exception {
         String name = env("E2E_RUN", "R0");
         File fx = new File(env("E2E_FX_DIR", System.getProperty("user.home") + "/claude_master/e2e1105/fx"));
@@ -177,7 +196,12 @@ public final class ReplayMain {
         LOG.warn("[MINUTE-FIN] {} [harness: MinuteCompletenessGuard.enabled() && finEnabled() tu jar; banner production in o "
                 + "DetectEntrySignal2TradeNormal.start, vong main khong chay]", fin ? "BAT" : "TAT");
         LOG.warn("[E2E_V12] run={} LiveGridSizing.on={} LiveDcaGridC3.active={} fin={}", name, sizing, grid, fin);
+        if (!new File(fx, "mkt.csv.gz").isFile()) {
+            System.err.println("[E2E_V12] TU CHOI CHAY: fixture thieu mkt.csv.gz (ERRATA1 N6: dieu kien thi truong DCA)");
+            System.exit(3);
+        }
         ReplayData d = new ReplayData(fx);
+        d.flatExt = "1".equals(env("E2E_FLAT_EXT", "0"));
         CrashDayRig.Opts o = new CrashDayRig.Opts();
         o.name = name;
         o.venue = CrashDayRig.Venue.valueOf(env("E2E_VENUE", "FAKE"));
@@ -186,7 +210,11 @@ public final class ReplayMain {
         o.sDcaN = (int) envL("E2E_SDCA_N", 2L);
         o.finInjAt = envL("E2E_FIN_INJ_AT", -1L);
         CrashDayRig r = new CrashDayRig(o, d, outRoot);
-        r.res.put("prereg", "PREREG_E2E_REPLAY_V12 (vz_e1_wt ea6c7a5b)");
+        r.res.put("prereg", "PREREG_E2E_REPLAY_V12 (vz_e1_wt ea6c7a5b) + ERRATA1 (33633d41)");
+        r.res.put("errata_mo_lai", env("E2E_ERRATA", ""));
+        r.res.put("official_lock", env("E2E_OFFICIAL_LOCK", ""));
+        r.res.put("config_properties_replay", cfgProps(new File("config.properties")));
+        r.res.put("worktree_config_keys_KHONG_doc", env("E2E_WT_CFG_KEYS", ""));
         r.res.put("fixture_dir", fx.getAbsolutePath());
         r.res.put("fixture_START", ReplayData.START);
         r.res.put("fixture_END", ReplayData.END);

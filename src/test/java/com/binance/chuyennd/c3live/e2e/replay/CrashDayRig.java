@@ -88,6 +88,9 @@ final class CrashDayRig {
     // S-DCA: he so gia tong hop theo pha 10' (bac grid -0,50/-0,75/-0,90 tinh tren gia vao leg dau)
     static final double[] SDCA_FACTORS = {0.40d, 0.20d, 0.07d};
     static final long SDCA_PHASE_MS = 10 * 60_000L;
+    // [ERRATA1 E5] S-DCA tong hop dieu kien thi truong + p15 (= ref_v12.py SDCA_DIP_OFFS / SDCA_P15_ZERO_OFF; SPEC ?R7b)
+    static final long[] SDCA_DIP_OFFS = {2L, 3L, 12L, 22L};
+    static final long SDCA_P15_ZERO_OFF = 2L;
 
     static double parseD(String v, double def) {
         if (v == null || v.trim().isEmpty()) return def;
@@ -180,6 +183,10 @@ final class CrashDayRig {
     int rlOrdersLeft, rlStopsLeft;
     boolean rlArmed, merged0, dd0, sdca0, finInj0;
     final Map<String, Long> sdcaStart = new LinkedHashMap<>();     // S-DCA: symbol -> phut bat dau ep gia
+    long sdcaSt = -1;                                              // S-DCA: moc chon cum (tm)
+    final List<String> marketRows = new ArrayList<>();             // [ERRATA1 N6] dieu kien thi truong moi phut quyet dinh
+    int nMktBig, nMktAlt, nMktNull;
+    String curDcaTag = "";
     final Map<String, Long> firstLegBar = new HashMap<>();         // symbol -> phut quyet dinh leg dau cum dang mo (harness)
     String finInjSym;
     long finInjBar = -1;
@@ -473,8 +480,8 @@ final class CrashDayRig {
     /** Nhip gia k (0..3) cua nen phut tm: O, cuc 1, cuc 2, C (nen giam: O,H,L,C; nen tang: O,L,H,C). */
     void applyPrices(long tm, int k, boolean trigger) {
         Map<String, Float> m = new HashMap<>();
-        for (Map.Entry<String, Map<Long, ReplayData.Bar>> e : d.bars.entrySet()) {
-            ReplayData.Bar br = e.getValue().get(tm);
+        for (String s0 : d.bars.keySet()) {
+            ReplayData.Bar br = d.bar(s0, tm);   // [S-TS] sau END: gia phang neu flatExt
             if (br == null) continue;
             int i;
             boolean down = br.c < br.o;
@@ -485,7 +492,7 @@ final class CrashDayRig {
                 default: i = 3;
             }
             BigDecimal px = br.bd(i);
-            String s = e.getKey();
+            String s = s0;
             double fct = sdcaFactor(s, tm);
             if (fct != 1d) px = px.multiply(BigDecimal.valueOf(fct));   // S-DCA: gia ep (nhan he so pha)
             lastPxBd.put(s, px);
@@ -618,6 +625,7 @@ final class CrashDayRig {
                     + " first=" + cand.get(i).firstEntryPrice);
         }
         sdca0 = true;
+        sdcaSt = tm;
     }
 
     double sdcaFactor(String s, long barTs) {
@@ -662,17 +670,66 @@ final class CrashDayRig {
         long n = t();
         List<ReplayData.SelRow> rows = d.selAt(b);
         Map<String, List<KlineObjectSimple>> win = new HashMap<>();
-        for (Map.Entry<String, Map<Long, ReplayData.Bar>> e : d.bars.entrySet()) {
-            ReplayData.Bar br = e.getValue().get(b);
+        for (String s0 : d.bars.keySet()) {
+            ReplayData.Bar br = d.bar(s0, b);
             if (br == null) continue;
-            win.put(e.getKey(), Collections.singletonList(kline(b, br)));
+            win.put(s0, Collections.singletonList(kline(b, br)));
         }
         if (o.exec) {
             ks.onTickStart(n);
             ks.onMarketData(n, win);
         }
         if (rows.isEmpty()) return;
-        final float p15 = rows.get(0).p15;
+        // [ERRATA1 E5] S-DCA tong hop dieu kien thi truong + p15 (moc sdcaSt = phut chon cum; offset tinh tren nen quyet dinh b)
+        long off = sdcaSt >= 0 && b >= sdcaSt ? (b - sdcaSt) / MIN : -1;
+        boolean dip = false;
+        for (long x : SDCA_DIP_OFFS) if (off == x) dip = true;
+        final float p15 = off == SDCA_P15_ZERO_OFF ? 0f : rows.get(0).p15;
+        // [ERRATA1 N6] dieu kien thi truong cua phut = vong live DetectEntrySignal2TradeNormal:280-356 (ham production)
+        MarketReplay.State mk = MarketReplay.at(d, b, (s, bb) -> o.a1 && a1Excluded(s, bb), this::sdcaFactor, dip);
+        if (mk == null) nMktNull++;
+        else {
+            if (mk.level != null) nMktBig++;
+            if (mk.dcaAlt) nMktAlt++;
+        }
+        marketRows.add(b + "," + p15 + "," + (dip ? 1 : 0) + "," + (mk == null ? ",,,,,,," : mk.down + "," + mk.down15 + ","
+                + mk.up + "," + (mk.level == null ? "" : mk.level.name()) + "," + (mk.level != null ? 1 : 0) + ","
+                + (mk.dcaAlt ? 1 : 0) + "," + mk.n + "," + mk.n15));
+        if (o.exec) {
+            // [ERRATA1] thu tu = production (DetectEntrySignal2TradeNormal:433-516): BIG_DOWN -> DCA "level" -> DCA "dcaAlt" -> selector
+            // 1. nhanh BIG_DOWN (shadow log)
+            for (ReplayData.BigDownLeg bd : d.bigDown) {
+                if (bd.ts != b) continue;
+                if (o.a1 && a1Excluded(bd.symbol, b)) {
+                    outcome(b, bd.symbol, "BIG_DOWN", "A1_EXCLUDED", "", "");
+                    continue;
+                }
+                // [E2E_V12] = createOrderBuyRequest0 r4u (BIG_DOWN-GATE 11-10): profile c3 => bo gate p15, chi guard seed
+                AIRejectFilter.FilterResult fr;
+                if (com.binance.chuyennd.tradecore.selector.BigDownSelect.bypassGate(LiveProfileC3.on(),
+                        com.binance.chuyennd.object.MarketLevelChange.BIG_DOWN)) {
+                    String g0 = com.binance.chuyennd.tradecore.selector.BigDownSelect.bigDownGuard(
+                            com.binance.chuyennd.ai_ml.onnx.entry.LiveGateRollingRatio.isSeedBlocked());
+                    fr = g0 != null ? new AIRejectFilter.FilterResult(AIRejectFilter.FilterDecision.REJECT, g0)
+                            : new AIRejectFilter.FilterResult(AIRejectFilter.FilterDecision.PASS, "BIG_DOWN bypass");
+                } else {
+                    fr = gate.entryGate(new AiPredictionData(b, p15, 0f), null, false, false);
+                }
+                if (fr.decision != AIRejectFilter.FilterDecision.PASS) {
+                    outcome(b, bd.symbol, "BIG_DOWN", "GATE_REJECT", fr.reason, "");
+                    continue;
+                }
+                if (!finAllows(b, bd.symbol, "BIG_DOWN", false)) {
+                    outcome(b, bd.symbol, "BIG_DOWN", "FIN_EXCL", "", "");
+                    continue;
+                }
+                leg(bd.symbol, "BIG_DOWN", false, b, null, -1);
+            }
+            // 2-3. DCA grid CHI o phut co dieu kien thi truong (N6): paperDcaGrid("level") neu BIG_DOWN, ("dcaAlt") neu isDcaAlt
+            if (mk != null && mk.level != null) dcaPass(b, p15, "level");
+            if (mk != null && mk.dcaAlt) dcaPass(b, p15, "dcaAlt");
+        }
+        // 4. selector PREDICT
         final Map<String, ReplayData.SelRow> bySym = new HashMap<>();
         TreeMap<Float, String> pool = new TreeMap<>();
         for (ReplayData.SelRow r : rows) {
@@ -733,44 +790,22 @@ final class CrashDayRig {
         for (ReplayData.SelRow r : rows) {
             String[] x = g.get(r.symbol);
             float fac = Math.max(EntryGate.DYN_MIN, (r.gv / EntryGate.SCORE_BASE) * EntryGate.DYN_MULT);
-            float rr = r.p15 / (fac * EntryGate.GATE_DYN_SCALE);
+            float rr = p15 / (fac * EntryGate.GATE_DYN_SCALE);
             traceRows.add(b + "," + r.symbol + "," + Float.floatToRawIntBits(r.key) + "," + r.rank + ","
                     + (rankOf.containsKey(r.symbol) ? rankOf.get(r.symbol) : -1) + "," + (a1x.contains(r.symbol) ? 1 : 0) + ","
                     + (o.legacy.contains(r.symbol) ? 1 : 0) + "," + (heldX.contains(r.symbol) ? 1 : 0) + ","
                     + (x != null ? 1 : 0) + "," + (x != null ? x[1] : "0") + "," + Float.floatToRawIntBits(rr) + ","
-                    + Float.floatToRawIntBits(r.gv) + "," + Float.floatToRawIntBits(r.p15) + "," + (x != null ? x[2] : "")
+                    + Float.floatToRawIntBits(r.gv) + "," + Float.floatToRawIntBits(p15) + "," + (x != null ? x[2] : "")
                     + "," + (x != null ? x[3] : "0") + "," + (x != null ? x[4] : "-"));
         }
         if (!o.exec) return;
-        // nhanh BIG_DOWN (shadow log) — gate co dinh MIN_MOMENTUM_15M (sp null)
-        for (ReplayData.BigDownLeg bd : d.bigDown) {
-            if (bd.ts != b) continue;
-            if (o.a1 && a1Excluded(bd.symbol, b)) {
-                outcome(b, bd.symbol, "BIG_DOWN", "A1_EXCLUDED", "", "");
-                continue;
-            }
-            // [E2E_V12] = createOrderBuyRequest0 r4u (BIG_DOWN-GATE 11-10): profile c3 => bo gate p15, chi guard seed
-            AIRejectFilter.FilterResult fr;
-            if (com.binance.chuyennd.tradecore.selector.BigDownSelect.bypassGate(LiveProfileC3.on(),
-                    com.binance.chuyennd.object.MarketLevelChange.BIG_DOWN)) {
-                String g0 = com.binance.chuyennd.tradecore.selector.BigDownSelect.bigDownGuard(
-                        com.binance.chuyennd.ai_ml.onnx.entry.LiveGateRollingRatio.isSeedBlocked());
-                fr = g0 != null ? new AIRejectFilter.FilterResult(AIRejectFilter.FilterDecision.REJECT, g0)
-                        : new AIRejectFilter.FilterResult(AIRejectFilter.FilterDecision.PASS, "BIG_DOWN bypass");
-            } else {
-                fr = gate.entryGate(new AiPredictionData(b, p15, 0f), null, false, false);
-            }
-            if (fr.decision != AIRejectFilter.FilterDecision.PASS) {
-                outcome(b, bd.symbol, "BIG_DOWN", "GATE_REJECT", fr.reason, "");
-                continue;
-            }
-            if (!finAllows(b, bd.symbol, "BIG_DOWN", false)) {
-                outcome(b, bd.symbol, "BIG_DOWN", "FIN_EXCL", "", "");
-                continue;
-            }
-            leg(bd.symbol, "BIG_DOWN", false, b, null, -1);
-        }
-        // DCA grid (= C3LiveHook.dcaDue tren so that)
+        if (fake != null) fake.deliverDue(t());
+        latchWatch();
+    }
+
+    /** DCA grid (= C3LiveHook.dcaDue tren so that), 1 nhanh (level / dcaAlt) - cong p15 phang MIN_MOMENTUM_15M (sp null). */
+    void dcaPass(long b, float p15, String tag) {
+        curDcaTag = tag;
         for (LiveDcaGridC3.GridState gs : book.gridStates()) {
             ReplayData.Bar br = d.bar(gs.symbol, b);
             if (br == null) continue;
@@ -779,18 +814,31 @@ final class CrashDayRig {
             nDcaDue++;
             AIRejectFilter.FilterResult fr = gate.entryGate(new AiPredictionData(b, p15, 0f), null, false, false);
             if (fr.decision != AIRejectFilter.FilterDecision.PASS) {
-                outcome(b, gs.symbol, "DCA_LEVEL1", "GATE_REJECT", fr.reason, "");
+                outcome(b, gs.symbol, "DCA_LEVEL1", "GATE_REJECT", fr.reason + " tag=" + tag, "");
                 continue;
             }
             if (!finAllows(b, gs.symbol, "DCA_LEVEL1", false)) {
-                outcome(b, gs.symbol, "DCA_LEVEL1", "FIN_EXCL", "", "");
+                outcome(b, gs.symbol, "DCA_LEVEL1", "FIN_EXCL", "tag=" + tag, "");
                 continue;
             }
             String oc = leg(gs.symbol, "DCA_LEVEL1", true, b, null, -1);
             if ("SUBMITTED".equals(oc)) nDcaSubmitted++;
         }
-        if (fake != null) fake.deliverDue(t());
-        latchWatch();
+        curDcaTag = "";
+    }
+
+    /** [ERRATA1 N4] E (equity c3) ma C3MainEquity.capital() vua dung (cache ttl) + thoi diem tinh - doc field (test, chi doc). */
+    double[] eqSnap() {
+        try {
+            java.lang.reflect.Field a = C3MainEquity.class.getDeclaredField("eqCached");
+            java.lang.reflect.Field at = C3MainEquity.class.getDeclaredField("eqAtMs");
+            a.setAccessible(true);
+            at.setAccessible(true);
+            Object v = a.get(eq);
+            return new double[]{v == null ? Double.NaN : ((Number) v).doubleValue(), ((Number) at.get(eq)).doubleValue()};
+        } catch (Exception e) {
+            return new double[]{Double.NaN, -1d};
+        }
     }
 
     Predicate<String> heldPredicate(long b) {
@@ -835,6 +883,7 @@ final class CrashDayRig {
         // sizing = gia nhip hien tai (~ price_realtime tuoi = open nen b+1 x he so S-DCA); tierMul = 1, tier3 = false (gioi han)
         C3LiveEntry.Result r = entry.onLeg(new C3LiveEntry.LegInput(sym, level, dca, b, ref, cur.doubleValue(), 1f, false, sp,
                 rank == null ? -1 : rank), t());
+        double[] es = eqSnap();
         if (r.outcome == C3LiveEntry.Outcome.SUBMITTED) {
             submittedCids.add(r.cid);
             submitTime.put(r.cid, t());
@@ -847,7 +896,8 @@ final class CrashDayRig {
                 + "," + (Double.isNaN(r.marginBefore) ? "" : Double.toString(r.marginBefore)) + ","
                 + (Double.isNaN(r.capital) ? "" : Double.toString(r.capital)) + "," + ref + "," + cur + "," + legIdxOf(r.detail) + ","
                 + (rules.tickSize(sym) == null ? "" : rules.tickSize(sym).toPlainString()) + ","
-                + (r.detail == null ? "" : r.detail.replace(',', ';')));
+                + (r.detail == null ? "" : r.detail.replace(',', ';')) + "," + (Double.isNaN(es[0]) ? "" : Double.toString(es[0]))
+                + "," + (long) es[1] + "," + (dca ? curDcaTag : ""));
         if (fake != null) fake.drain();
         return r.outcome.name();
     }
@@ -1081,7 +1131,18 @@ final class CrashDayRig {
         writeText(new File(out, "outcomes.csv"), "decision_ts,decision_t7,submit_ms,symbol,level,outcome,cid,detail", outcomeRows);
         writeText(new File(out, "events.csv"), "ms,t7,type,symbol,value,detail", eventRows);
         writeText(new File(out, "legs.csv"), "decision_ts,submit_ms,symbol,level,outcome,cid,qty,budget,margin_before,capital,"
-                + "ref_px,sizing_px,leg_idx,tick,detail", legRows);
+                + "ref_px,sizing_px,leg_idx,tick,detail,eq,eq_at,dca_tag", legRows);
+        writeText(new File(out, "market.csv"), "b,p15,dip,down,down15,up,level,big,alt,n,n15", marketRows);
+        Map<String, Object> mkr = new LinkedHashMap<>();
+        mkr.put("minutes", marketRows.size());
+        mkr.put("big", nMktBig);
+        mkr.put("dcaAlt", nMktAlt);
+        mkr.put("no_btc", nMktNull);
+        mkr.put("dca_due", nDcaDue);
+        mkr.put("dca_submitted", nDcaSubmitted);
+        mkr.put("died_symbols_jar", new TreeSet<>(com.binance.client.constant.Constants.diedSymbol));
+        mkr.put("mkt_symbols", d.mSym.length);
+        res.put("market", mkr);
         writeText(new File(out, "fills.csv"), "ms,symbol,side,qty,price,cid,rp,fee", fillRows);
         writeText(new File(out, "fin_excl.csv"), "decision_ts,symbol,level", finRows);
         Map<String, Object> inj = new LinkedHashMap<>();
@@ -1090,6 +1151,11 @@ final class CrashDayRig {
         inj.put("sdca_factors", SDCA_FACTORS);
         inj.put("sdca_phase_ms", SDCA_PHASE_MS);
         inj.put("sdca_start", sdcaStart);
+        inj.put("sdca_st", sdcaSt);
+        inj.put("sdca_dip_offs_min", SDCA_DIP_OFFS);
+        inj.put("sdca_dip", MarketReplay.DIP);
+        inj.put("sdca_p15_zero_off_min", SDCA_P15_ZERO_OFF);
+        inj.put("flat_ext", d.flatExt);
         inj.put("fin_inj_at", o.finInjAt);
         inj.put("fin_inj_symbol", finInjSym);
         inj.put("fin_inj_bar", finInjBar);
@@ -1110,7 +1176,8 @@ final class CrashDayRig {
         Map<String, Object> m = new LinkedHashMap<>();
         for (String f : new String[]{"F_BASE", "U_MAX", "DCA_GRID_SCALE", "DCA_GRID_WEIGHTS", "DCA_GRID_LEVELS", "FIX_B1", "FIX_B2",
                 "FIX_B3", "RATE_PROFIT_STOP_MARKET", "TS_GIVEBACK_RATIO", "TS_MAX_GAP", "TS_MAX_GAP_WEAK", "LOSER_TIME_STOP_HOURS",
-                "MIN_MOMENTUM_15M", "PRE_ARM_SL", "TS_PEAK_MODE", "SELECTOR_RANK_TOPK", "GATE_QUOTA_SKIP_WHEN_FULL"}) {
+                "MIN_MOMENTUM_15M", "PRE_ARM_SL", "TS_PEAK_MODE", "SELECTOR_RANK_TOPK", "GATE_QUOTA_SKIP_WHEN_FULL",
+                "MS_DOWN_BIG_AVG", "MS_DOWN_BIG_AVG_DCA", "NUMBER_TICKER_CAL_RATE_CHANGE", "BD_FRACTION"}) {
             try {
                 Object v = Configs.class.getField(f).get(null);
                 m.put("Configs." + f, v instanceof float[] ? Arrays.toString((float[]) v) : String.valueOf(v));
@@ -1136,6 +1203,10 @@ final class CrashDayRig {
         m.put("rig.TOPK", TOPK);
         m.put("rig.CAPITAL", CAPITAL);
         m.put("Cfg.asked", Cfg.asked());
+        // [ERRATA1 E5] key code DA HOI nhung env luot KHONG dat (242 khong dat + khong override) => mac dinh trong code JAR
+        TreeSet<String> unset = new TreeSet<>();
+        for (String k : Cfg.asked()) if (System.getenv(k) == null) unset.add(k);
+        m.put("Cfg.asked_khong_dat_env_(mac_dinh_JAR)", unset);
         return m;
     }
 

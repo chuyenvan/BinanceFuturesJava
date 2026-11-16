@@ -86,6 +86,15 @@ final class ReplayData {
     final float[] bufR;
     final Map<String, List<Long>> shadowOpens = new HashMap<>();
     final Map<String, List<Long>> shadowCloses = new HashMap<>();
+    // [ERRATA1 N6] nen 1m MOI symbol (mkt.csv.gz, prep_fixture) cho dieu kien thi truong DCA - harness TU TINH (MarketReplay)
+    String[] mSym = new String[0];
+    final Map<String, Integer> mIdx = new HashMap<>();
+    long mT0;
+    int mN;
+    float[][] mO, mH, mL, mC, mQ;
+    // [ERRATA1 E1/N1 S-TS] luot tong hop: sau END fixture gia dung yen = close cuoi (time-stop 168 h)
+    boolean flatExt;
+    final Map<String, Bar> lastBar = new HashMap<>();
 
     ReplayData(File dir) throws Exception {
         this.dir = dir;
@@ -107,6 +116,16 @@ final class ReplayData {
         Object[] raw = E2eGateSupport.loadRaw(new File(dir, "gate_ratio_live.bin").getPath());
         bufTs = (long[]) raw[0];
         bufR = (float[]) raw[1];
+        for (Map.Entry<String, Map<Long, Bar>> e : bars.entrySet()) {
+            long best = Long.MIN_VALUE;
+            for (long t : e.getValue().keySet()) if (t < END && t > best) best = t;
+            if (best != Long.MIN_VALUE) {
+                String c = e.getValue().get(best).s[3];
+                lastBar.put(e.getKey(), new Bar(c, c, c, c));
+            }
+        }
+        File mk = new File(dir, "mkt.csv.gz");
+        if (mk.isFile()) loadMkt(mk, man.getAsJsonObject("mkt").get("from").getAsLong());
         Pattern p = Pattern.compile("^(\\S+ \\S+)\\.\\d+\\s+(open|closed) (\\S+)");
         SimpleDateFormat f = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
         f.setTimeZone(TimeZone.getTimeZone("GMT+7"));
@@ -121,7 +140,57 @@ final class ReplayData {
 
     Bar bar(String sym, long t) {
         Map<Long, Bar> m = bars.get(sym);
-        return m == null ? null : m.get(t);
+        Bar x = m == null ? null : m.get(t);
+        if (x == null && flatExt && t >= END) return lastBar.get(sym);
+        return x;
+    }
+
+    void loadMkt(File f, long from) throws Exception {
+        mT0 = from;
+        mN = (int) ((END - mT0) / MIN);
+        Map<String, float[][]> m = new TreeMap<>();
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f)),
+                StandardCharsets.UTF_8), 1 << 20)) {
+            String ln = br.readLine();
+            while ((ln = br.readLine()) != null) {
+                if (ln.isEmpty()) continue;
+                String[] a = ln.split(",", -1);
+                int j = (int) ((Long.parseLong(a[1]) - mT0) / MIN);
+                if (j < 0 || j >= mN) continue;
+                float[][] x = m.get(a[0]);
+                if (x == null) {
+                    x = new float[5][mN];
+                    for (float[] r : x) java.util.Arrays.fill(r, Float.NaN);
+                    m.put(a[0], x);
+                }
+                for (int k = 0; k < 5; k++) x[k][j] = Float.parseFloat(a[2 + k]);
+            }
+        }
+        mSym = m.keySet().toArray(new String[0]);
+        int n = mSym.length;
+        mO = new float[n][];
+        mH = new float[n][];
+        mL = new float[n][];
+        mC = new float[n][];
+        mQ = new float[n][];
+        for (int i = 0; i < n; i++) {
+            float[][] x = m.get(mSym[i]);
+            mO[i] = x[0];
+            mH[i] = x[1];
+            mL[i] = x[2];
+            mC[i] = x[3];
+            mQ[i] = x[4];
+            mIdx.put(mSym[i], i);
+        }
+    }
+
+    /** {o,h,l,c,qv} (ban sao) cua symbol thu i o phut t; null = khong co nen. */
+    float[] mkt(int i, long t) {
+        if (t < mT0) return null;
+        long j = (t - mT0) / MIN;
+        if (j >= mN || Float.isNaN(mC[i][(int) j])) return null;
+        int k = (int) j;
+        return new float[]{mO[i][k], mH[i][k], mL[i][k], mC[i][k], mQ[i][k]};
     }
 
     List<SelRow> selAt(long ts) {
@@ -172,6 +241,9 @@ final class ReplayData {
         m.put("bigdown", d.bigDown.size());
         m.put("symbols_klines", d.bars.size());
         m.put("buffer_records", d.bufTs.length);
+        m.put("mkt_symbols", d.mSym.length);
+        m.put("mkt_from", d.mT0);
+        m.put("flat_ext", d.flatExt);
         return m;
     }
 }
