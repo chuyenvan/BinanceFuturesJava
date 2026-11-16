@@ -24,7 +24,7 @@ set -uo pipefail
 #   (1) drain that: dat run/KILL_SWITCH la BUOC DAU TIEN, doc lap: TRUOC kiem pin m1 / manifest M5 / source lib / doc 242 /
 #       YES / Telegram / log (khong gate, khong heartbeat, khong flock). Chi can ssh 242 (SSH_242 / APP_DIR mac dinh = golive_lib), thu 3 lan,
 #       moi lan timeout LO_KS_TIMEOUT_S (60 s). KILL_SWITCH cua script khac (vd token "golive_micro_on <TS>") => GHI DE bang token drain
-#       (ban cu => run/KILL_SWITCH.prev_<TS>) de script kia KHONG tu go duoc. Khong dat duoc => KHAN exit 2. Drain KHONG hoi YES.
+#       (ban cu => run/KILL_SWITCH.prev_<TS>) de script kia KHONG tu go duoc. Khong xac nhan duoc => KHAN exit 2. Drain KHONG hoi YES.
 #       Lech pin m1 / thieu file pin / khong phai repo git / lech manifest M5 => CANH BAO TO (+ Telegram neu duoc) + VAN chay phan thong tin.
 #       [OPS-MICRO3 n5] golive_lib thieu/hong/thoat som => KET QUA KILL_SWITCH van in RO (trap EXIT): "DA DAT run/KILL_SWITCH (xac nhan)"
 #       exit 0 | "KHONG xac nhan duoc" exit 2.
