@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # =============================================================================
 # golive_use_sub_key.sh — [ADD4 §2] OWNER chay 1 LAN tren ORACLE: dua key TAI KHOAN CON vao file rieng tren 242, roi kiem key (CHI DOC san).
-#   DRY=1 bash ~/claude_master/v12/c3live/ops/c3live/golive_use_sub_key.sh   # chi kiem nguon / dich / file tk chinh, KHONG ghi
-#   bash ~/claude_master/v12/c3live/ops/c3live/golive_use_sub_key.sh         # go YES
+#   $OPS = thu muc chua script nay = worktree A1 duyet (HEAD co trong deploy/gates/A1_APPROVED_OPS.commit), vd ~/claude_master/fin1114/c3_w1c/ops/c3live
+#   DRY=1 bash $OPS/golive_use_sub_key.sh   # chi kiem nguon / dich / file tk chinh, KHONG ghi
+#   bash $OPS/golive_use_sub_key.sh         # go YES
 # Tren 242 (root): nguon $SUB_SRC (mac dinh keys.env.bak_20261028_050947): sha256(key)[:8] PHAI = $SUB_KEY_SHA8 (43820b5b) va KHAC key
 #   tk chinh $MAIN_KEY_SHA8, quyen 600, chu root, dung 1 dong KEY + 1 dong SECRET. Copy (umask 077, cp -p) -> <dich>.tmp_<TS>,
 #   chmod 600 + chown root, kiem lai sha8 -> mv -n vao $KEYS_FILE (/root/.config/c3live/keys_sub.env). Dich da co: dung key + 600 + root

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # =============================================================================
 # dry_enable_grid_sizing.sh — [WAVE1 16/11 D-01] BAT 2 co sizing + DCA grid tren v_t_m DRY (KHONG doi jar, CHI env.sh + 1 restart).
+#   $OPS = thu muc chua script nay = worktree A1 duyet (HEAD co trong deploy/gates/A1_APPROVED_OPS.commit), vd ~/claude_master/fin1114/c3_w1c/ops/c3live
 #   Owner chay tren ORACLE, 1 lenh:
-#     DRY=1 bash ~/claude_master/fin1114/c3_fin/ops/c3live/dry_enable_grid_sizing.sh   # chi kiem + in ke hoach, KHONG ghi gi
-#     bash ~/claude_master/fin1114/c3_fin/ops/c3live/dry_enable_grid_sizing.sh         # go YES (khung :10-:44, tranh 07/19h, 00:50-01:20, 12:50-13:20)
+#     DRY=1 bash $OPS/dry_enable_grid_sizing.sh   # chi kiem + in ke hoach, KHONG ghi gi
+#     bash $OPS/dry_enable_grid_sizing.sh         # go YES (khung :10-:44, tranh 07/19h, 00:50-01:20, 12:50-13:20)
 # Vi sao: env v_t_m THIEU LIVE_APPLY_GRID_RATIO=true + LIVE_DCA_GRID_ENABLED=true (code mac dinh TAT) => C3LiveEntry (duong lenh THAT,
 #   dry lan live) size leg = managerBudget = von x 0,015 / 4 = 37,5 @10 000 (= 1/6 sim 225) va KHONG co leg DCA grid (DCA_OFF).
 #   Bat 2 co => leg_i = von x F_BASE / sum(w) x w_i x SCALE = 225 @10 000 moi leg (leg0 + 3 bac DCA -50/-75/-90 %) = sim B0/A3.
@@ -23,6 +24,13 @@
 # Bien test: nhu golive_lib.sh + GMICRO_TARGET REG_JAR_SH REG_NAME TARGET_TAG
 # =============================================================================
 set -uo pipefail
+# [WAVE1c m1] pin NGOAI repo, kiem TRUOC khi source lib (lib khong tu chung nhan): HEAD repo chua script = 1 commit A1/MASTER
+#   duyet trong A1_APPROVED_OPS (deploy/gates/A1_APPROVED_OPS.commit, 1 dong/commit, script CHI DOC) + thu muc script KHONG co sua chua commit.
+_OPS=$(cd "$(dirname "$0")" && pwd); _APO=${A1_APPROVED_OPS:-/home/ubuntu/claude_master/deploy/gates/A1_APPROVED_OPS.commit}; _PW=""
+_HC=$(git -C "$_OPS" rev-parse --verify -q HEAD 2>/dev/null) || _PW="$_OPS khong phai repo git"
+[ -n "$_PW" ] || { [ -f "$_APO" ] && grep -qE "^$_HC([[:space:]]|\$)" "$_APO"; } || _PW="HEAD $_HC CHUA duoc A1 duyet (khong co trong $_APO)"
+[ -n "$_PW" ] || git -C "$_OPS" diff --quiet HEAD -- . 2>/dev/null || _PW="$_OPS co sua CHUA commit (git diff HEAD)"
+[ -z "$_PW" ] || { echo "TU CHOI [m1]: $_PW - KHONG lam gi."; exit 1; }
 . "$(cd "$(dirname "$0")" && pwd)/golive_lib.sh"
 gl_manifest_check "$0" || exit 1   # [WAVE1b M5] script + lib + manifest khop md5 da commit, lech => TU CHOI truoc moi viec
 GMICRO_TARGET=${GMICRO_TARGET:-/home/ubuntu/claude_master/parity_v12w/gmicro_target.json}

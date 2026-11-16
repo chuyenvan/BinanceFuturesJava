@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
 # golive_monitor.sh — [V12 R4o / ADD4] 1 LENH: trang thai tong c3_live tren 242 (khong restart).
-#   bash ~/claude_master/v12/c3live/ops/c3live/golive_monitor.sh            # tay; C3_ACCOUNT=SUB mac dinh (MAIN = chi doc nhu R4o)
+#   $OPS = thu muc chua script nay = worktree A1 duyet (HEAD co trong deploy/gates/A1_APPROVED_OPS.commit), vd ~/claude_master/fin1114/c3_w1c/ops/c3live
+#   bash $OPS/golive_monitor.sh            # tay; C3_ACCOUNT=SUB mac dinh (MAIN = chi doc nhu R4o)
 #   DRY=1 ...            (SUB: chi doc + in, KHONG dat co, KHONG ghi dinh / bo dem)
 #   owner NAP/RUT co chu dich => bash golive_rebase_equity.sh <delta> "ly do" (tmb0 += delta, GIU dinh eq; delta phai khop tmb that)
 #   [A1 ADD4 C-1] CRON (install_cron_golive_monitor.sh, */2 phut, flock -n rieng): MONITOR_CRON=1 => KHONG co co $GL_MON_FLAG
@@ -200,12 +201,13 @@ fi
 KA=""
 if [ -f "$GL_MON_FLAG" ] || [ "$(sv ENV_LIVE_ADAPTER)" = live ]; then
   if [ "$READOK" = 1 ]; then
-    # [WAVE1b M6] restart CO CHU DICH (PAUSE watchdog con han <= WD_PAUSE_MAX_S: golive_*/dry_enable/swap dat truoc stop) => khong KHAN so process
-    PSA=$(sv PAUSE_AGE)
-    if [ "$(sv NPROC)" != 1 ] && [ "$(sv PAUSE | cut -c1)" = 1 ] && [[ "$PSA" =~ ^[0-9]+$ ]] && [ "$PSA" -le "$WD_PAUSE_MAX_S" ]; then
-      say "INFO so_process_v_t_m=$(sv NPROC) trong luc PAUSE co chu dich ($(sv PAUSE | cut -c3-62), ${PSA}s <= ${WD_PAUSE_MAX_S}s) — KHONG KHAN"
+    # [WAVE1b M6 + WAVE1c m3] restart CO CHU DICH: CHI bo qua so_process=0 khi PAUSE watchdog con han (<= WD_PAUSE_MAX_S) VA tuoi PAUSE
+    #   <= MON_PAUSE_NP0_MAX_S (600 s, restart thuc te < 5'); so_process >= 2 (2 JVM = lenh doi) LUON KHAN, ke ca dang PAUSE
+    PSA=$(sv PAUSE_AGE); NPR=$(sv NPROC); NP0MAX=${MON_PAUSE_NP0_MAX_S:-600}
+    if [ "$NPR" = 0 ] && [ "$(sv PAUSE | cut -c1)" = 1 ] && [[ "$PSA" =~ ^[0-9]+$ ]] && [ "$PSA" -le "$WD_PAUSE_MAX_S" ] && [ "$PSA" -le "$NP0MAX" ]; then
+      say "INFO so_process_v_t_m=0 trong luc PAUSE co chu dich ($(sv PAUSE | cut -c3-62), ${PSA}s <= ${NP0MAX}s) - KHONG KHAN"
     else
-      [ "$(sv NPROC)" = 1 ] || KA="$KA so_process_v_t_m=$(sv NPROC)"
+      [ "$NPR" = 1 ] || KA="$KA so_process_v_t_m=$NPR"
     fi
     case "$(sv LATCH)" in NONE|NOFILE) ;; *) KA="$KA latch=$(sv LATCH)";; esac
   else

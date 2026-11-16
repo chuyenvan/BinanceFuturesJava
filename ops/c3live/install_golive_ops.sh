@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # =============================================================================
 # install_golive_ops.sh - [WAVE1 16/11 B-13] OWNER chay tren ORACLE: dong bo ban cai trong ~/claude_master/deploy/ voi repo
-#   (nhanh v1.2/wave1, ~/claude_master/fin1114/c3_fin/ops/c3live). KHONG cham 242, KHONG restart.
-#   DRY=1 bash ~/claude_master/fin1114/c3_fin/ops/c3live/install_golive_ops.sh   # chi liet ke file nao lech (md5 cu -> moi), KHONG ghi
-#   bash ~/claude_master/fin1114/c3_fin/ops/c3live/install_golive_ops.sh         # go YES: chep (ban cu => <file>.bak_wave1_<TS>)
+#   $OPS = thu muc chua script nay = worktree A1 duyet (HEAD co trong deploy/gates/A1_APPROVED_OPS.commit), vd ~/claude_master/fin1114/c3_w1c/ops/c3live
+#   (worktree A1 duyet = $OPS, nhanh v1.2/wave1c). KHONG cham 242, KHONG restart.
+#   DRY=1 bash $OPS/install_golive_ops.sh   # chi liet ke file nao lech (md5 cu -> moi), KHONG ghi
+#   bash $OPS/install_golive_ops.sh         # go YES: chep (ban cu => <file>.bak_wave1_<TS>)
 # File dong bo (repo -> deploy/), md5 repo PHAI = PIN ben duoi (repo bi sua ngoai quy trinh => TU CHOI, khong chep gi):
 #   deploy_chain.sh (CHECK_R mac dinh ingfin + pin moi), ingfin_check_remote.sh (51ff3962), set_telegram_env_242.sh (EXPECT_SHA8 bdee1480),
 #   deploy_ingest_fin.sh (TG_SHA8 bdee1480, CHECK_R ingfin 51ff3962).
@@ -14,6 +15,13 @@
 # Ma thoat: 0 OK | 1 loi / TU CHOI.
 # =============================================================================
 set -uo pipefail
+# [WAVE1c m1] pin NGOAI repo, kiem TRUOC khi source lib (lib khong tu chung nhan): HEAD repo chua script = 1 commit A1/MASTER
+#   duyet trong A1_APPROVED_OPS (deploy/gates/A1_APPROVED_OPS.commit, 1 dong/commit, script CHI DOC) + thu muc script KHONG co sua chua commit.
+_OPS=$(cd "$(dirname "$0")" && pwd); _APO=${A1_APPROVED_OPS:-/home/ubuntu/claude_master/deploy/gates/A1_APPROVED_OPS.commit}; _PW=""
+_HC=$(git -C "$_OPS" rev-parse --verify -q HEAD 2>/dev/null) || _PW="$_OPS khong phai repo git"
+[ -n "$_PW" ] || { [ -f "$_APO" ] && grep -qE "^$_HC([[:space:]]|\$)" "$_APO"; } || _PW="HEAD $_HC CHUA duoc A1 duyet (khong co trong $_APO)"
+[ -n "$_PW" ] || git -C "$_OPS" diff --quiet HEAD -- . 2>/dev/null || _PW="$_OPS co sua CHUA commit (git diff HEAD)"
+[ -z "$_PW" ] || { echo "TU CHOI [m1]: $_PW - KHONG lam gi."; exit 1; }
 H=$(cd "$(dirname "$0")" && pwd)
 # [WAVE1b M5] nhu gl_manifest_check (golive_lib): script nay + lib + moi file manifest khop md5 da commit, lech => TU CHOI truoc moi viec
 MF=$H/GOLIVE_MANIFEST.md5

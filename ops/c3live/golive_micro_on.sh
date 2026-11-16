@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # =============================================================================
 # golive_micro_on.sh — [V12 R4o/R4q/ADD4] DRY -> MICRO-LIVE. Chay tren ORACLE (owner):
-#   DRY=1 bash ~/claude_master/v12/c3live/ops/c3live/golive_micro_on.sh   # chi kiem + in ke hoach, KHONG ghi gi
-#   bash ~/claude_master/v12/c3live/ops/c3live/golive_micro_on.sh         # go YES (khung :10-:44)
+#   $OPS = thu muc chua script nay = worktree A1 duyet (HEAD co trong deploy/gates/A1_APPROVED_OPS.commit), vd ~/claude_master/fin1114/c3_w1c/ops/c3live
+#   DRY=1 bash $OPS/golive_micro_on.sh   # chi kiem + in ke hoach, KHONG ghi gi
+#   bash $OPS/golive_micro_on.sh         # go YES (khung :10-:44)
 # C3_ACCOUNT=SUB (mac dinh, ADD4: tk con, key /root/.config/c3live/keys_sub.env) | MAIN (ADD1 tk chinh — chi khi chi dinh ro).
 # Kiem: file gate G-MICRO (jar_md5 = jar dang chay = pin r4u3, golive_lib NJ_MD5), dry dang chay, latch NONE, khong run/KILL_SWITCH, key file, RAM/dia,
 #   khong canary/soak/PAUSE; [R4q] doc san (chi doc) TRUOC: vi the + 0 lenh/algo c3 => chu ky vi the.
@@ -33,6 +34,13 @@
 # Ma thoat: 0 XONG | 1 DUNG/da rollback | 2 can owner/MASTER.
 # =============================================================================
 set -uo pipefail
+# [WAVE1c m1] pin NGOAI repo, kiem TRUOC khi source lib (lib khong tu chung nhan): HEAD repo chua script = 1 commit A1/MASTER
+#   duyet trong A1_APPROVED_OPS (deploy/gates/A1_APPROVED_OPS.commit, 1 dong/commit, script CHI DOC) + thu muc script KHONG co sua chua commit.
+_OPS=$(cd "$(dirname "$0")" && pwd); _APO=${A1_APPROVED_OPS:-/home/ubuntu/claude_master/deploy/gates/A1_APPROVED_OPS.commit}; _PW=""
+_HC=$(git -C "$_OPS" rev-parse --verify -q HEAD 2>/dev/null) || _PW="$_OPS khong phai repo git"
+[ -n "$_PW" ] || { [ -f "$_APO" ] && grep -qE "^$_HC([[:space:]]|\$)" "$_APO"; } || _PW="HEAD $_HC CHUA duoc A1 duyet (khong co trong $_APO)"
+[ -n "$_PW" ] || git -C "$_OPS" diff --quiet HEAD -- . 2>/dev/null || _PW="$_OPS co sua CHUA commit (git diff HEAD)"
+[ -z "$_PW" ] || { echo "TU CHOI [m1]: $_PW - KHONG lam gi."; exit 1; }
 . "$(cd "$(dirname "$0")" && pwd)/golive_lib.sh"
 gl_manifest_check "$0" || exit 1   # [WAVE1b M5] script + lib + manifest khop md5 da commit, lech => TU CHOI truoc moi viec
 MICRO_CAPITAL=${MICRO_CAPITAL:-1000}
@@ -218,7 +226,8 @@ if ! echo "$RS" | grep -q '^FAIL' && gl_postloop CHK && mon_hb_ok; then
     gl_pause_clear >/dev/null 2>&1
   else
     gl_pause_clear >/dev/null 2>&1
-    M="hau kiem DAT nhung KHONG go duoc run/KILL_SWITCH (ssh/token) => bot live NHUNG khong mo moi (an toan). Kiem golive_monitor.sh; go: MODE=undrain golive_live_off.sh"
+    # [WAVE1c m4] mv co the DA chay o 242 du ssh bao loi => trang thai KHONG BIET (khong phai "an toan")
+    M="hau kiem DAT nhung KHONG XAC NHAN DUOC trang thai run/KILL_SWITCH (ssh/token) => KHONG XAC NHAN DUOC - co the da go KILL_SWITCH (bot LIVE co the mo lenh moi). KHAN: owner kiem NGAY ls $A/run/KILL_SWITCH tren 242 / chay MODE=drain bash $(cd "$(dirname "$0")" && pwd)/golive_live_off.sh roi kiem golive_monitor.sh"
   fi
   say "KHAN: $M"; tg "[golive] KHAN TS=$TS micro_on: $M | log $LOG"; exit 2
 fi

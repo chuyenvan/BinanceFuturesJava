@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # =============================================================================
 # golive_check_key.sh — [V12 R4o / ADD4] KIEM key c3 tren 242, CHI DOC san. Chay tren ORACLE (owner):
-#   DRY=1 bash ~/claude_master/v12/c3live/ops/c3live/golive_check_key.sh   # chi kiem file key + python tren 242, KHONG goi san
-#   bash ~/claude_master/v12/c3live/ops/c3live/golive_check_key.sh         # goi san CHI DOC (ky tu 242)
+#   $OPS = thu muc chua script nay = worktree A1 duyet (HEAD co trong deploy/gates/A1_APPROVED_OPS.commit), vd ~/claude_master/fin1114/c3_w1c/ops/c3live
+#   DRY=1 bash $OPS/golive_check_key.sh   # chi kiem file key + python tren 242, KHONG goi san
+#   bash $OPS/golive_check_key.sh         # goi san CHI DOC (ky tu 242)
 # C3_ACCOUNT=SUB (mac dinh, ADD4 §2: tk con, /root/.config/c3live/keys_sub.env) | MAIN (ADD1 §3: tk chinh keys.env — chi khi chi dinh ro).
 # MAIN: DAT <=> apiRestrictions HTTP 200 VA enableWithdrawals=false VA ipRestrict=true VA enableFutures=true.
 # SUB (ADD4 §2) DAT <=> nhu MAIN VA sha256(key)[:8] != key tk chinh ($MAIN_KEY_SHA8) VA 0 vi the VA 0 lenh mo VA 0 algo VA

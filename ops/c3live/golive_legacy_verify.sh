@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
 # golive_legacy_verify.sh — [V12 R4o] CHI DOC: sau khi owner tu dong TOAN BO vi the LEGACY (+ huy lenh/algo LEGACY) tren UI
-# (GOLIVE_SCENARIO ADD1 §5). Chay tren ORACLE:  bash ~/claude_master/v12/c3live/ops/c3live/golive_legacy_verify.sh
+#   $OPS = thu muc chua script nay = worktree A1 duyet (HEAD co trong deploy/gates/A1_APPROVED_OPS.commit), vd ~/claude_master/fin1114/c3_w1c/ops/c3live
+# (GOLIVE_SCENARIO ADD1 §5). Chay tren ORACLE:  bash $OPS/golive_legacy_verify.sh
 #   (DRY=1: kiem nhu that nhung KHONG ghi file ket qua)
 # DAT <=> tren san (key c3, goi ky tu 242): [R4q MAJ-2] so QTY tung symbol: |vi the san| - qty MO c3 (cum mo cua so) = 0 moi symbol
 #   (phan vuot = LEGACY con sot, KE CA tren symbol c3 dang giu / MERGED; vi the am = LEGACY), qty c3 khong vuot san, 0 leg c3 chua xac

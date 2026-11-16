@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # =============================================================================
 # install_cron_golive_monitor.sh — [A1 ADD4 C-1] OWNER chay tren ORACLE: cai (hoac go) lich chay golive_monitor trong crontab user ubuntu.
-#   bash ~/claude_master/v12/c3live/ops/c3live/install_cron_golive_monitor.sh            # cai / cap nhat pin (idempotent)
-#   bash ~/claude_master/v12/c3live/ops/c3live/install_cron_golive_monitor.sh --remove   # go dong cron (giu cac ban pin)
+#   $OPS = thu muc chua script nay = worktree A1 duyet (HEAD co trong deploy/gates/A1_APPROVED_OPS.commit), vd ~/claude_master/fin1114/c3_w1c/ops/c3live
+#   bash $OPS/install_cron_golive_monitor.sh            # cai / cap nhat pin (idempotent)
+#   bash $OPS/install_cron_golive_monitor.sh --remove   # go dong cron (giu cac ban pin)
 #   DRY=1 ...                                                                            # chi in truoc/sau, KHONG ghi
 # [A1 delta MIN-4] PIN: chep golive_monitor.sh + golive_lib.sh (monitor source lib canh no) vao
 #   ~/claude_master/deploy/pinned/golive_monitor_<md5_12>/ (md5_12 = md5(monitor + lib)[:12], chmod 444/555); cron CHI chay ban pin.

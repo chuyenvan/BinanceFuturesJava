@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # =============================================================================
 # golive_make_gate.sh — [WAVE1 16/11 B-08 + WAVE1b M4] MASTER tao file gate G-MICRO (deploy/gates/GOLIVE_GATE_MICRO.ok) TU BANG CHUNG, khong go tay.
+#   $OPS = thu muc chua script nay = worktree A1 duyet (HEAD co trong deploy/gates/A1_APPROVED_OPS.commit), vd ~/claude_master/fin1114/c3_w1c/ops/c3live
 #   GMICRO_MANUAL=<docs/result/GMICRO_MANUAL_<ngay>.md> REPLAY_RESULT=<file ket qua replay> SIZING_RESULT=<file ket qua sizing> \
-#     bash golive_make_gate.sh <prereg_commit> [report_G-MICRO]        # DRY=1: chi in noi dung, khong ghi
+#     bash $OPS/golive_make_gate.sh <prereg_commit> [report_G-MICRO]        # DRY=1: chi in noi dung, khong ghi
 # RANG BUOC CUNG (khong override duoc) — sai => TU CHOI:
 #   (a) 242 (CHI DOC): 1 process v_t_m, jar DANG chay = NJ_MD5 pin, ingestor DANG chay = ING_FIN_MD5 pin;
 #       parity_v12w/gmicro_target.json target_md5 = NJ_MD5 + smoke_start_ms (13 so).
@@ -25,6 +26,13 @@
 # Ma thoat: 0 da ghi (hoac DRY in) | 1 TU CHOI.
 # =============================================================================
 set -uo pipefail
+# [WAVE1c m1] pin NGOAI repo, kiem TRUOC khi source lib (lib khong tu chung nhan): HEAD repo chua script = 1 commit A1/MASTER
+#   duyet trong A1_APPROVED_OPS (deploy/gates/A1_APPROVED_OPS.commit, 1 dong/commit, script CHI DOC) + thu muc script KHONG co sua chua commit.
+_OPS=$(cd "$(dirname "$0")" && pwd); _APO=${A1_APPROVED_OPS:-/home/ubuntu/claude_master/deploy/gates/A1_APPROVED_OPS.commit}; _PW=""
+_HC=$(git -C "$_OPS" rev-parse --verify -q HEAD 2>/dev/null) || _PW="$_OPS khong phai repo git"
+[ -n "$_PW" ] || { [ -f "$_APO" ] && grep -qE "^$_HC([[:space:]]|\$)" "$_APO"; } || _PW="HEAD $_HC CHUA duoc A1 duyet (khong co trong $_APO)"
+[ -n "$_PW" ] || git -C "$_OPS" diff --quiet HEAD -- . 2>/dev/null || _PW="$_OPS co sua CHUA commit (git diff HEAD)"
+[ -z "$_PW" ] || { echo "TU CHOI [m1]: $_PW - KHONG lam gi."; exit 1; }
 . "$(cd "$(dirname "$0")" && pwd)/golive_lib.sh"
 gl_manifest_check "$0" || exit 1   # [WAVE1b M5] script + lib + manifest khop md5 da commit, lech => TU CHOI truoc moi viec
 PW=${PARITY_W:-/home/ubuntu/claude_master/parity_v12w}
