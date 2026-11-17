@@ -30,3 +30,16 @@ lọc 720 bản ghi cho q ≈ 0,00791; model live cut 2025-12-31; parity các ng
    live hiện tại ⇒ khuyến nghị train lại + kiểm chứng holdout TRƯỚC PILOT (không trước micro: micro kiểm đường lệnh, và đổi model làm mất
    cửa sổ parity). Nếu không ⇒ không cần train lại trước pilot, đặt lịch train định kỳ theo nhịp WFO của sim.
 4. Không kết luận nào ở đây được dùng để đổi tham số chiến lược. Mọi thay đổi (lọc buffer, train lại) cần prereg riêng.
+
+## Bổ sung 1 (2026-11-17 ~09:20 +07, TRƯỚC khi đo — chưa có số nào của Q1–Q5)
+- **Q6 Vòng quyết định có chạy không ("khâu nào đó tính sai"):** theo ngày từ 11-06: số nhịp quyết định c3 đã chạy (kỳ vọng 1 440/ngày), số phút
+  fail-closed `FIN_THIEU`, số coin bị chặn riêng (M2), số exception trên đường quyết định, số phút thiếu dòng `[GATE-RATIO]`. Riêng 10 đợt giảm
+  60 phút sâu nhất của Q1 nằm trong 11-06 → nay: tại các phút đó vòng quyết định có chạy bình thường không, p15 / r / q ghi nhận là bao nhiêu.
+- **Q7 Tần suất mở gate trong sim đã có (mô tả):** từ kết quả sim v1.2 sẵn có (2021 → 2025-12-30): số cụm vào lệnh theo tháng, khoảng lặng dài
+  nhất và trung vị giữa 2 cụm, và số giai đoạn BTC giảm ≥ 20 % trong ≤ 30 ngày mà sim không có lệnh nào. Chỉ dùng số đã có; không chạy sim mới
+  với tham số khác.
+- **Luật 5 (Q6):** nếu ở bất kỳ đợt nào trong 10 đợt giảm 60 phút sâu nhất (11-06 → nay) vòng quyết định bị fail-closed, thiếu nhịp hoặc lỗi
+  ⇒ kết luận "pipeline làm mất cơ hội quan sát" ⇒ điều tra nguyên nhân TRƯỚC micro. Nếu số nhịp/ngày < 1 400 ở bất kỳ ngày nào không có restart
+  đã biết (14/11 deploy FIN, 16/11 bật cờ grid) ⇒ cũng điều tra trước micro.
+- **Luật 6 (Q7):** chỉ mô tả. Nếu khoảng lặng hiện tại (từ 11-05 22:53) dài hơn khoảng lặng dài nhất của sim ⇒ ghi là "bất thường so với sim",
+  chuyển thành điều kiện xem xét cùng luật 1–3; không tự nó dẫn tới thay đổi nào.
