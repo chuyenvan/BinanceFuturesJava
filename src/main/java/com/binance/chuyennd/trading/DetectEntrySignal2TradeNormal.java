@@ -470,9 +470,12 @@ public class DetectEntrySignal2TradeNormal {
                     }
                 }
                 try {
-                    List<String> symbolDcaLevel = DcaProcessor.getDCAProduction(levelChange,
+                    // [W3A muc 1] AUDIT_LEGACY_DCA_1116 Q5(2).1: profile c3 bat => KHONG chay DCA luat cu cua LEGACY
+                    //   (khong would-BUY/add-leg ngoai luoi, khong goi C3LiveHook.onLeg). Co C3_SKIP_LEGACY_DCA=false => y cu.
+                    final MarketLevelChange lcLegacyDca = levelChange;
+                    List<String> symbolDcaLevel = legacyDcaSymbols(legacyDcaRuns(), () -> DcaProcessor.getDCAProduction(lcLegacyDca,
                             System.currentTimeMillis(), BudgetManager.getInstance().getBudget(),
-                            BudgetManager.getInstance().symbol2Pos);
+                            BudgetManager.getInstance().symbol2Pos));
                     for (String symbol : symbolDcaLevel) {
                         KlineObjectSimple ticker = symbol2FinalTicker.get(symbol);
                         if (ticker == null && com.binance.chuyennd.tradecore.selector.UniverseA1Filter.isActive()) {   // [V12 R4d] co tat: y nguyen
@@ -496,8 +499,10 @@ public class DetectEntrySignal2TradeNormal {
             }
             // dca buy
             if (MarketBigChangeDetector.isDcaAlt(rateDown15MAvg, rateDownAvg, rateUpAvg)) {
-                List<String> symbolDcaLossBig = DcaProcessor.getDCAProduction(null, System.currentTimeMillis(),
-                        BudgetManager.getInstance().getBudget(), BudgetManager.getInstance().symbol2Pos);
+                // [W3A muc 1] nhu tren: c3 bat => khong "DCA big loss" cua LEGACY (paperDcaGrid ben duoi GIU nguyen)
+                List<String> symbolDcaLossBig = legacyDcaSymbols(legacyDcaRuns(), () -> DcaProcessor.getDCAProduction(null,
+                        System.currentTimeMillis(), BudgetManager.getInstance().getBudget(),
+                        BudgetManager.getInstance().symbol2Pos));
                 if (!symbolDcaLossBig.isEmpty()) {
                     LOG.info("DCA big loss:{}", symbolDcaLossBig);
                 }
@@ -929,6 +934,59 @@ public class DetectEntrySignal2TradeNormal {
     //   CASCADE: dung du lieu RE de quyet ai CON CO THE DAT, chi giu bay nhieu ung vien.
     // ⚠️ ENTRY_CASCADE<=0 => tra ve DUNG tap dau vao (cung object) => khong doi gi.
     // ==========================================================================================
+
+
+    // ===================== [W3A muc 1 2026-11-19] LEGACY-DCA khong di vao c3 / so giay =====================
+    /** Env tat chot (chi "false" moi tat): {@code C3_SKIP_LEGACY_DCA=false} => DCA luat cu LEGACY chay lai nhu jar 5e10325b. */
+    static final String KEY_SKIP_LEGACY_DCA = "C3_SKIP_LEGACY_DCA";
+    private static final java.util.concurrent.atomic.AtomicLong LEGACY_DCA_SKIPPED = new java.util.concurrent.atomic.AtomicLong();
+
+    /**
+     * Vong DCA luat cu ({@code DcaProcessor.getDCAProduction} tren vi the THAT tk chinh) co chay o tick nay khong.
+     * Profile c3 (c3_shadow/c3_live) bat => KHONG (sim A3 khong co tin hieu nay; tren live no chi nhiem so giay va
+     * goi C3LiveHook.onLeg). Profile tat => luon chay (LEGACY y nguyen).
+     *
+     * @return true neu duoc goi getDCAProduction
+     */
+    static boolean legacyDcaRuns() {
+        return decideLegacyDcaRuns(com.binance.chuyennd.tradecore.selector.LiveProfileC3.on(),
+                System.getenv(KEY_SKIP_LEGACY_DCA));
+    }
+
+    /**
+     * Thuan tinh toan cua {@link #legacyDcaRuns()}.
+     *
+     * @param c3On profile c3 bat
+     * @param flag gia tri env {@code C3_SKIP_LEGACY_DCA} (null = mac dinh = bo qua khi c3 bat)
+     * @return true neu vong DCA LEGACY duoc chay
+     */
+    static boolean decideLegacyDcaRuns(boolean c3On, String flag) {
+        if (!c3On) return true;
+        return flag != null && "false".equalsIgnoreCase(flag.trim());
+    }
+
+    /**
+     * Danh sach symbol DCA LEGACY cho tick: {@code runs=false} => rong va KHONG goi {@code production} (khong doc
+     * vi the, khong log "DCA big loss"); {@code runs=true} => dung ket qua {@code production} (y nguyen).
+     *
+     * @param runs       ket qua {@link #legacyDcaRuns()}
+     * @param production nguon cu (getDCAProduction)
+     * @return danh sach symbol se di vao createOrderBuyRequest(DCA_LEVEL1)
+     */
+    static List<String> legacyDcaSymbols(boolean runs, java.util.function.Supplier<List<String>> production) {
+        if (runs) return production.get();
+        if (LEGACY_DCA_SKIPPED.getAndIncrement() == 0) {
+            LOG.warn("[LEGACY-DCA] profile c3 bat => BO QUA DCA luat cu cua LEGACY (getDCAProduction) ? khong would-BUY/add-leg"
+                    + " ngoai luoi, khong goi C3LiveHook.onLeg; luoi c3 (paperDcaGrid) giu nguyen. Rollback: {}=false",
+                    KEY_SKIP_LEGACY_DCA);
+        }
+        return Collections.emptyList();
+    }
+
+    /** So lan da bo qua vong DCA LEGACY (chan doan/test). */
+    static long legacyDcaSkippedCount() {
+        return LEGACY_DCA_SKIPPED.get();
+    }
 
     /**
      * Tap universe cho tang predict khi BAT cascade. Tra ve DUNG {@code universe} (cung object) khi
