@@ -512,6 +512,11 @@ chk "k3 [8b] gl_restart ks=1 + KS c3live_boot => GHI DE token script, ban cu -> 
 cp $W/env.sh.k8 $F/conf/env.sh; startbot 1000; echo 'c3_autodrain 20261119_101500 caller=x' > $F/run/KILL_SWITCH; touch $W/daemon_nostop
 OUT=$(GR 20990101_000002); RC=$?; rm -f $W/daemon_nostop
 chk "k4 [8b] gl_restart ks=1 FAIL (stop khong dung duoc) => ksoff tra lai token cu c3_autodrain (khong mat drain), env khoi phuc" "echo \"\$OUT\" | grep -q 'FAIL van_con_process_sau_stop' && [ \"\$(cat $F/run/KILL_SWITCH)\" = 'c3_autodrain 20261119_101500 caller=x' ] && [ -e $F/run/KILL_SWITCH.rb_20990101_000002 ] && ! grep -q O5F_K8 $F/conf/env.sh"
+cp $W/env.sh.k8 $F/conf/env.sh; startbot 1000; BP=$(pgrep -f "^$FPAT" | head -1); printf 'golive_live_off drain 20990101_1\n' > $F/run/KILL_SWITCH; cp $F/run/KILL_SWITCH $W/ks_owner
+OUT=$(GR 20990101_000003); RC=$?
+chk "k8 [F3] owner drain xuat hien SAU precheck (truoc buoc dat KS) => gl_restart KHONG ghi de: FAIL KILL_SWITCH_token_khac, KS owner byte-giong, env khoi phuc, bot KHONG bi dung" "echo \"\$OUT\" | grep -q 'FAIL KILL_SWITCH_token_khac_luc_restart' && cmp -s $W/ks_owner $F/run/KILL_SWITCH && [ ! -e $F/run/KILL_SWITCH.prev_20990101_000003 ] && ! grep -q O5F_K8 $F/conf/env.sh && [ \"\$(pgrep -f \"^$FPAT\" | head -1)\" = '$BP' ]"
+printf 'c3_autodrain 20261119_101500 caller=x\ngolive_monitor 1 KHAN y\n' > $F/run/KILL_SWITCH; OUT=$(GR 20990101_000004)
+chk "k9 [F3] KS 2 dong (autodrain + KHAN monitor append) luc restart => KHONG ghi de" "echo \"\$OUT\" | grep -q 'FAIL KILL_SWITCH_token_khac_luc_restart' && [ \$(grep -c '' $F/run/KILL_SWITCH) = 2 ]"
 rm -f $F/run/KILL_SWITCH* $F/run/.golive_* $F/conf/env.sh.bak_*; cp $W/env.sh.k8 $F/conf/env.sh; rm -f $F/bin/daemon.sh; startbot 1000
 
 echo "== OPS5_FIX muc 6/7: deadman bo qua gate khi PAUSE con han; rollback autodrain chi go WD_PRESTART dong watchdog (A19)"

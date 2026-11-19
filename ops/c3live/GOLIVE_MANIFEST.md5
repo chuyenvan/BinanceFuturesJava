@@ -7,7 +7,7 @@ fdc57b5a12a6a30b66c88c7ee694641c  golive_make_gate.sh
 4f25c048b6f49d5078be6080479e0c28  install_golive_ops.sh
 194bb84f136d706ce0f3926557ae5ec3  install_cron_golive_monitor.sh
 f765f6832c5d5c8c0669afa1e3673f4f  golive_monitor.sh
-8de13bde6de483701ca65cb4c6094c13  golive_lib.sh
+65d6ba34c32a1ac73054355292f5f09c  golive_lib.sh
 12e8084cd03b61cd446bfa6a9f56666d  golive_use_sub_key.sh
 5db4049d6fcb9ff097ebcc78dcc81fb9  golive_check_key.sh
 74986055ba1f183ad2e02c27a8725c46  golive_legacy_verify.sh

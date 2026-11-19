@@ -379,6 +379,12 @@ else
   else \cp -f "\$BK" conf/env.sh; echo "FAIL env_diff=\$D (da khoi phuc)"; echo END_RS; exit 0; fi
 fi
 if [ "\$KS" = 1 ]; then
+  # [VONG3 F3] kiem LAI ngay truoc khi dat: KS co san ma KHONG phai cua minh va KHONG phai 1 dong token boot/autodrain chuan
+  #   (owner drain / monitor KHAN xuat hien SAU precheck) => KHONG ghi de, env khoi phuc, bot KHONG dung
+  if [ -e run/KILL_SWITCH ] && ! grep -q "^\${NM} \$TS " run/KILL_SWITCH 2>/dev/null \
+     && ! { [ "\$(grep -c '' run/KILL_SWITCH)" = 1 ] && grep -qxE '(c3_autodrain [0-9]{8}_[0-9]{6}( caller=[A-Za-z0-9_.-]*)?|c3live_boot [0-9]{8}_[0-9]{6}( B-09: JVM LIVE khoi dong KHONG qua script go-live \(crash/watchdog/reboot/restart tay\) => dung mo moi, vi the c3 van duoc quan ly\. Mo: MODE=undrain bash golive_live_off\.sh)?)' run/KILL_SWITCH; }; then
+    restore; echo "FAIL KILL_SWITCH_token_khac_luc_restart (owner drain / monitor KHAN xuat hien sau precheck: \$(head -c 60 run/KILL_SWITCH | tr -cd 'A-Za-z0-9_ .=:-')) - KHONG ghi de, env khoi phuc, bot KHONG dung"; echo END_RS; exit 0
+  fi
   { grep -q "^\${NM} \$TS " run/KILL_SWITCH 2>/dev/null || { { [ ! -e run/KILL_SWITCH ] || [ -e run/KILL_SWITCH.prev_\$TS ] || cp -p run/KILL_SWITCH run/KILL_SWITCH.prev_\$TS; } && echo "\${NM} \$TS hau_kiem: dung mo moi toi khi hau kiem DAT" > run/KILL_SWITCH; }; } && grep -q "^\${NM} \$TS " run/KILL_SWITCH \
     && echo "OK KILL_SWITCH_dat_truoc_start" || { restore; echo "FAIL khong_dat_duoc_KILL_SWITCH (env khoi phuc, bot KHONG dung)"; echo END_RS; exit 0; }
 fi
