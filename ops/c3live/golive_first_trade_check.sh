@@ -12,7 +12,8 @@
 #       cum DA arm (C3_ARMED_SYMS) => phai co lenh algo c3 (ALGO_C3_SYMS) cung symbol; thieu 2 luot lien tiep => FAIL.
 #       chua arm => cho (kiem lai moi luot toi khi arm / dong / qua FT_PENDING_MAX_S).
 #   (c) bang chung $FT_DIR/SIZING_IV_<ts>.md (dong "sizing_iv: DAT|FAIL", md5 jar, tung dong so sanh) khi co ket qua MOI.
-#   (d) Telegram tom tat (lib tg; token theo co che san co, khong in); co FAIL => "KHAN".
+#   (d) Telegram tom tat (lib tg; token theo co che san co, khong in); FAIL KHONG giai thich duoc / (b) FAIL => "KHAN";
+#       FAIL chi do C_eff / TIER_3 (xem [OPS5_FIX M-3]) => "CANH BAO ... can MASTER phan xu" (khong chu KHAN).
 # Idempotent: $FT_DIR/state.txt (1 dong / cid). Ma thoat: 0 | 2 co FAIL moi | 1 DUNG.
 # =============================================================================
 set -uo pipefail
@@ -93,7 +94,7 @@ while IFS= read -r ln; do
 done < <(echo "$LOGR" | sed -n 's/^S=//p')
 CIDS=$(for c in "${!R_T[@]}"; do echo "${R_T[$c]} $c"; done | sort -n | awk '{print $2}' | tr '\n' ' ')
 for c in $CIDS; do case "${R_B[$c]}|${R_ARM[$c]}" in *CHO*|*NOALGO1*) NPEND=$((NPEND + 1));; esac; done
-API=""; APIOK=0; CHG=""
+API=""; APIOK=0; CHG=""; KHANB=0
 if [ "$NPEND" -gt 0 ] && [ "$DRY" != 1 ]; then
   API=$(gl_api242 mon) || API="ERR=ssh_api"
   echo "$API" | grep -qx END_API && ! echo "$API" | grep -q '^ERR' && [ "$(av API_OK)" = 1 ] && [ "$(av C3_ARMED_SYMS)" != '?' ] && APIOK=1
@@ -120,18 +121,55 @@ if [ "$APIOK" = 1 ]; then
     esac
     [ "${R_B[$c]}" != "$b0" ] && CHG="$CHG $c"
     [ "${R_ARM[$c]}" != "$m0" ] && [ "${R_ARM[$c]}" != NOALGO1 ] && CHG="$CHG $c"
-    case "${R_B[$c]}${R_ARM[$c]}" in *FAIL*) case "$b0$m0" in *FAIL*) ;; *) ANYF=1;; esac;; esac
+    case "${R_B[$c]}${R_ARM[$c]}" in *FAIL*) case "$b0$m0" in *FAIL*) ;; *) ANYF=1; KHANB=1;; esac;; esac
   done
 fi
+# [OPS5_FIX M-3] PHAN LOAI dong (a) FAIL - KHONG doi phan quyet prereg (sizing_iv van FAIL; tieu chi 0,0225 x C3_CAPITAL x (1-U/0,6) +-2 % giu nguyen).
+#   C_eff = min(C3_CAPITAL, eq, avail+margin) (jar C3MainEquity.capital():163-170). eq = C3_CAPITAL + (TMB - tmb0) (moc $SUB_BASE_FILE, nhu monitor ?5);
+#   avail+margin = AVAIL / (1 - U_before) (margin c3 = U_before x cap). NGUON: gl_api242 mon CUA LUOT NAY (CHI DOC; gia tri LUC CHAY, khong phai luc SUBMIT).
+#   budget khop +-FT_TOL voi 0,0225 x C_eff x (1-U/0,6) => GIAI_THICH_DUOC_CEFF. TIER_3 x 0,5 (CoinRankManager, khi TIER_FLAT env process != 1) => GIAI_THICH_DUOC_TIER3x0.5
+#   (nhan rieng). Con lai (hoac lech do legIdx / thieu truong / khong doc duoc san) => KHONG_GIAI_THICH_DUOC. Telegram: co dong KHONG giai thich duoc
+#   hoac (b) FAIL => KHAN; chi co FAIL giai thich duoc => CANH BAO (khong KHAN) "can MASTER phan xu".
+TFL=$(sv ENV_TIER_FLAT); TMBV=""; AVV=""
+[ "$APIOK" = 1 ] && { TMBV=$(av TMB); AVV=$(av AVAIL); }
+T0B=$(sed -n 's/^tmb0=//p' "$SUB_BASE_FILE" 2>/dev/null | head -1)
+CSRC="gl_api242 mon luot $TS (CHI DOC, luc chay): TMB=${TMBV:-?} AVAIL=${AVV:-?} | moc tmb0=${T0B:-?} ($SUB_BASE_FILE) | TIER_FLAT env process=${TFL:-(khong dat)}"
+cls_fail() {   # $1 budget $2 U_before $3 ly do FAIL -> nhan phan loai
+  case "$3" in *"legIdx<"*|*thieu_truong*) echo "KHONG_GIAI_THICH_DUOC(loi_legIdx/truong)"; return;; esac
+  awk -v b="$1" -v u="$2" -v c="$CAP" -v k="$FT_K" -v m="$FT_UMAX" -v tol="$FT_TOL" -v tmb="$TMBV" -v av="$AVV" -v t0="$T0B" -v tf="$TFL" '
+  function isn(x) { return x ~ /^-?[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?$/ }
+  function ok(e) { return e > 0 && b / e - 1 <= tol && b / e - 1 >= -tol }
+  BEGIN { if (!isn(b) || !isn(u)) { print "KHONG_GIAI_THICH_DUOC(thieu_truong)"; exit }
+    f = 1 - u / m; ce = c; src = "C3_CAPITAL"; have = 0
+    if (isn(tmb) && isn(t0)) { eq = c + (tmb - t0); have = 1; if (eq < ce) { ce = eq; src = "eq=C3_CAPITAL+(TMB-tmb0)" } }
+    if (isn(av) && u < 1) { ac = av / (1 - u); have = 1; if (ac < ce) { ce = ac; src = "avail+margin=AVAIL/(1-U)" } }
+    if (have && ok(k * ce * f)) { printf "GIAI_THICH_DUOC_CEFF(C_eff=%.2f,%s)\n", ce, src; exit }
+    if (tf != "1" && (ok(0.5 * k * c * f) || (have && ok(0.5 * k * ce * f)))) { printf "GIAI_THICH_DUOC_TIER3x0.5(TIER_FLAT=%s)\n", (tf == "" ? "tat" : tf); exit }
+    if (have) printf "KHONG_GIAI_THICH_DUOC(C_eff=%.2f,%s)\n", ce, src; else print "KHONG_GIAI_THICH_DUOC(khong_doc_duoc_C_eff)" }'
+}
+declare -A R_C
+for c in $CIDS; do
+  [ "${R_A[$c]}" = FAIL ] || continue
+  pc=$(printf '%s' "${R_D[$c]}" | grep -oE 'phan_loai=[^ ]+' | head -1 | cut -d= -f2-)
+  if [ -z "$pc" ]; then
+    pc=$(cls_fail "$(printf '%s' "${R_D[$c]}" | grep -oE 'budget=[-0-9.eE]+' | tail -1 | cut -d= -f2)" "$(printf '%s' "${R_D[$c]}" | grep -oE 'U_before=[-0-9.eE]+' | tail -1 | cut -d= -f2)" "${R_D[$c]}")
+    R_D[$c]="${R_D[$c]} phan_loai=$pc"
+  fi
+  R_C[$c]=$pc
+done
+NXC=0; NXT=0; NKG=0; NKGNEW=0
+for c in $CIDS; do case "${R_C[$c]:-}" in GIAI_THICH_DUOC_CEFF*) NXC=$((NXC + 1));; GIAI_THICH_DUOC_TIER3*) NXT=$((NXT + 1));; KHONG*) NKG=$((NKG + 1)); case " $NEWA " in *" $c "*) NKGNEW=$((NKGNEW + 1));; esac;; esac; done
+PLS="giai_thich_duoc_C_eff=$NXC giai_thich_duoc_TIER3x0.5=$NXT KHONG_giai_thich_duoc=$NKG"
 CHG=$(echo $NEWA $CHG | tr ' ' '\n' | sort -u | tr '\n' ' ')
 # tong (moi cid trong state + moi): sizing_iv theo (a)
 NA=0; NAF=0; NBF=0
 for c in $CIDS; do NA=$((NA + 1)); [ "${R_A[$c]}" = FAIL ] && NAF=$((NAF + 1)); case "${R_B[$c]}${R_ARM[$c]}" in *FAIL*) NBF=$((NBF + 1));; esac; done
 SIV=DAT; [ "$NAF" -gt 0 ] && SIV=FAIL; [ "$NA" = 0 ] && SIV="KHONG_DO_DUOC (0 dong SUBMIT JVM nay)"
 DCS=DAT; [ "$NBF" -gt 0 ] && DCS=FAIL; [ "$APIOK" = 1 ] || DCS="${DCS}_(luot nay khong doc duoc san)"
-row() { printf '| %s | %s | %s | %s | %s | %s | %s |\n' "$1" "$(TZ=Asia/Ho_Chi_Minh date -d @"${R_T[$1]:-0}" '+%d/%m %H:%M:%S')" "${R_S[$1]}" "${R_L[$1]}" "${R_A[$1]}" "${R_B[$1]}/${R_ARM[$1]}" "${R_D[$1]}"; }
+row() { printf '| %s | %s | %s | %s | %s | %s | %s | %s |\n' "$1" "$(TZ=Asia/Ho_Chi_Minh date -d @"${R_T[$1]:-0}" '+%d/%m %H:%M:%S')" "${R_S[$1]}" "${R_L[$1]}" "${R_A[$1]}" "${R_B[$1]}/${R_ARM[$1]}" "${R_D[$1]}" "${R_C[$1]:--}"; }
 for c in $CIDS; do say "  $(row "$c")"; done
 say "sizing_iv: $SIV (dong SUBMIT JVM nay: $NA, lech: $NAF) | doi_chieu_san: $DCS (FAIL: $NBF) | moi/doi luot nay:${CHG:- 0}"
+[ "$NAF" -gt 0 ] && say "phan_loai_FAIL (a): $PLS (phan quyet prereg GIU NGUYEN) | nguon C_eff: $CSRC"
 if [ "$DRY" = 1 ]; then say "DRY=1: KHONG ghi state / bang chung / Telegram"; exit 0; fi
 # ghi state (thay toan bo dong cua cac cid JVM nay, giu dong cu khac)
 { for c in $CIDS; do printf '%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n' "$c" "${R_T[$c]}" "${R_S[$c]}" "${R_L[$c]}" "${R_A[$c]}" "${R_B[$c]}" "${R_ARM[$c]}" "${R_N[$c]}" "${R_F[$c]}" "$NOW" "${R_D[$c]}"; done
@@ -145,13 +183,21 @@ EVF=$FT_DIR/SIZING_IV_$TS.md
   echo "c3_capital_process: $CAP | cong thuc: budget trong +-$(awk -v t="$FT_TOL" 'BEGIN{print t*100}')% cua $FT_K x C3_CAPITAL x (1 - U_before/$FT_UMAX); DCA => legIdx>=1"
   echo "jvm_start: ${JVS:-?} | pid: $(sv PID) | adapter: $(sv ENV_LIVE_ADAPTER) | W_USED_1M: $(av W_USED_1M)"
   echo "moi_luot_nay: $CHG"
+  echo "phan_loai_FAIL_a: $PLS (CHI chan doan - phan quyet prereg GIU NGUYEN; KHONG noi tieu chi)"
+  echo "nguon_C_eff: $CSRC"
   echo
-  echo "| cid | gio +07 | symbol | level | (a) sizing | (b) san / arm | chi tiet |"
-  echo "|---|---|---|---|---|---|---|"
+  echo "| cid | gio +07 | symbol | level | (a) sizing | (b) san / arm | chi tiet | phan loai FAIL |"
+  echo "|---|---|---|---|---|---|---|---|"
   for c in $CIDS; do row "$c"; done; } > "$EVF.tmp" && mv -f "$EVF.tmp" "$EVF"
 say "bang chung: $EVF"
-PFX="[golive] sizing_iv"; [ "$ANYF" = 1 ] && PFX="[golive] KHAN sizing_iv/doi chieu san"
+PFX="[golive] sizing_iv"
+if [ "$KHANB" = 1 ] || [ "$NKGNEW" -gt 0 ]; then PFX="[golive] KHAN sizing_iv/doi chieu san"
+elif [ "$ANYF" = 1 ]; then PFX="[golive] CANH BAO sizing_iv FAIL-GIAI-THICH-DUOC ($PLS) - can MASTER phan xu (prereg FAIL giu nguyen)"; fi
 MSG="$PFX TS=$TS: sizing_iv=$SIV ($NA dong, lech $NAF) doi_chieu_san=$DCS (FAIL $NBF). Moi: $(for c in $CHG; do printf '%s %s a=%s b=%s/%s; ' "${R_S[$c]}" "${R_L[$c]}" "${R_A[$c]}" "${R_B[$c]}" "${R_ARM[$c]}"; done | cut -c1-1500) File $EVF"
 tg "$MSG" || say "!! gui Telegram loi"
-[ "$ANYF" = 1 ] && { say "KHAN: co dong lech / doi chieu san FAIL - bao MASTER"; exit 2; }
+if [ "$ANYF" = 1 ]; then
+  if [ "$KHANB" = 1 ] || [ "$NKGNEW" -gt 0 ]; then say "KHAN: co dong lech KHONG giai thich duoc / doi chieu san FAIL - bao MASTER"
+  else say "CANH BAO: dong lech deu GIAI THICH DUOC ($PLS) - can MASTER phan xu"; fi
+  exit 2
+fi
 exit 0

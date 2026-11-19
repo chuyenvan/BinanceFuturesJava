@@ -130,6 +130,33 @@ OUT=$(E A1_APPROVED_OPS=$W/khong_co.commit DRY=1 bash "$HERE/golive_first_trade_
 chk "m1 pin: HEAD khong trong A1_APPROVED_OPS => TU CHOI [m1]" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'TU CHOI \[m1\]'"
 chk "m1 khong lo key/secret trong toan bo deploy/ + Telegram" "nosec ''"
 
+# ---- [OPS5_FIX M-3] phan loai dong FAIL (C_eff / TIER_3) - phan quyet prereg giu nguyen
+cp $F/logs/full.log $W/full.log.m3bak; FT2=$W/ft_m3; E2() { E FT_DIR=$FT2 "$@"; }
+MCL3() { echo "$(D7 $1) INFO  [main] c.b.c.u.Utils: MainClass: com.binance.chuyennd.trading.BinanceOrderTradingManager APPDir: ./run"; }
+SUB3() { echo "$(D7 $1) INFO  [pool-1-thread-1] c.b.c.c.e.C3LiveEntry: [C3-LIVE] SUBMIT $2 PREDICT_SYMBOL_TRADE SUBMITTED cid=c3-$2-$1-0 qty=1 budget=$3 legIdx=0 notional=$3 U_before=0.0"; }
+printf 'tmb0=1000\nc3_capital=1000\nkey_sha8=%s\nbase_id=t\nrebase_t=1\nreason=t\n' "$SK8" > $W/deploy/c3sub_eq_base.txt
+api account '{"totalMarginBalance":"970.00","availableBalance":"990.00","assets":[]}'
+api positionRisk '[{"symbol":"EQUSDT","positionAmt":"1"},{"symbol":"T3USDT","positionAmt":"1"},{"symbol":"XXUSDT","positionAmt":"1"},{"symbol":"T4USDT","positionAmt":"1"}]'
+book '{"clusters":[{"symbol":"EQUSDT","adj_qty":"1"},{"symbol":"T3USDT","adj_qty":"1"},{"symbol":"XXUSDT","adj_qty":"1"},{"symbol":"T4USDT","adj_qty":"1"}]}'
+{ MCL3 $((NOW - 900)); SUB3 $((NOW - 600)) EQUSDT 21.825; } > $F/logs/full.log
+OUT=$(E2 bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?; EV=$(ls -t $FT2/SIZING_IV_*.md 2>/dev/null | head -1)
+chk "f1 [M-3] C_eff=970 (eq=C3_CAPITAL+(TMB-tmb0)): sizing_iv FAIL GIU NGUYEN + phan loai GIAI_THICH_DUOC_CEFF (file co ca 2 + nguon), Telegram CANH BAO 'can MASTER phan xu' KHONG chu KHAN, rc 2" "[ $RC = 2 ] && grep -qx 'sizing_iv: FAIL' '$EV' && grep -q 'EQUSDT .*GIAI_THICH_DUOC_CEFF(C_eff=970.00,eq=C3_CAPITAL+(TMB-tmb0))' '$EV' && grep -q '^phan_loai_FAIL_a: giai_thich_duoc_C_eff=1 giai_thich_duoc_TIER3x0.5=0 KHONG_giai_thich_duoc=0' '$EV' && grep -q '^nguon_C_eff: gl_api242 mon .*TMB=970.00 AVAIL=990.00 .*tmb0=1000' '$EV' && tail -2 $W/tg.txt | grep -q 'CANH BAO sizing_iv FAIL-GIAI-THICH-DUOC.*can MASTER phan xu' && ! tail -2 $W/tg.txt | grep -q KHAN"
+SUB3 $((NOW - 500)) T3USDT 11.25 >> $F/logs/full.log
+OUT=$(E2 bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?; EV=$(ls -t $FT2/SIZING_IV_*.md | head -1)
+chk "f2 [M-3] TIER_3 x0,5 (TIER_FLAT process khong dat) => nhan rieng GIAI_THICH_DUOC_TIER3x0.5(TIER_FLAT=tat), CANH BAO khong KHAN, sizing_iv FAIL" "[ $RC = 2 ] && grep -qx 'sizing_iv: FAIL' '$EV' && grep -q 'T3USDT .*GIAI_THICH_DUOC_TIER3x0.5(TIER_FLAT=tat)' '$EV' && tail -2 $W/tg.txt | grep -q 'CANH BAO sizing_iv FAIL-GIAI-THICH-DUOC' && ! tail -2 $W/tg.txt | grep -q KHAN"
+SUB3 $((NOW - 400)) XXUSDT 99 >> $F/logs/full.log
+OUT=$(E2 bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?; EV=$(ls -t $FT2/SIZING_IV_*.md | head -1)
+chk "f3 [M-3] budget 99 => KHONG_GIAI_THICH_DUOC(C_eff=970.00,...) => Telegram KHAN; dong cu giu phan loai cu" "[ $RC = 2 ] && grep -q 'XXUSDT .*KHONG_GIAI_THICH_DUOC(C_eff=970.00' '$EV' && grep -q 'EQUSDT .*GIAI_THICH_DUOC_CEFF' '$EV' && tail -2 $W/tg.txt | grep -q 'KHAN sizing_iv'"
+cleanup; sleep 0.3; (cd "$F" && env -i PATH="$PATH" C3_CAPITAL=1000 TIER_FLAT=1 LIVE_ADAPTER=live LIVE_C3_KEYS_FILE="$W/keys_sub.env" setsid bash -c "exec -a '$FPAT' sleep 900" >/dev/null 2>&1 &); sleep 0.5
+SUB3 $((NOW - 300)) T4USDT 11.25 >> $F/logs/full.log
+OUT=$(E2 bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?; EV=$(ls -t $FT2/SIZING_IV_*.md | head -1)
+chk "f4 [M-3] TIER_FLAT=1 tren process => x0,5 KHONG giai thich duoc => KHAN" "[ $RC = 2 ] && grep -q 'T4USDT .*KHONG_GIAI_THICH_DUOC' '$EV' && grep -q 'TIER_FLAT env process=1' '$EV' && tail -2 $W/tg.txt | grep -q 'KHAN sizing_iv'"
+OUT=$(E2 DRY=1 bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?
+chk "f5 [M-3] DRY (khong doc san): dong moi khong co C_eff => in phan loai 'khong_doc_duoc_C_eff' hoac giu nhan cu tu state; sizing_iv FAIL" "echo \"\$OUT\" | grep -q 'sizing_iv: FAIL' && echo \"\$OUT\" | grep -q 'phan_loai_FAIL (a): giai_thich_duoc_C_eff=1 giai_thich_duoc_TIER3x0.5=1 KHONG_giai_thich_duoc=2'"
+startbot 1000; cp $W/full.log.m3bak $F/logs/full.log; rm -f $W/deploy/c3sub_eq_base.txt
+api account '{"totalMarginBalance":"1000.00","availableBalance":"990.00","assets":[{"asset":"USDT","walletBalance":"1000.00","marginBalance":"1000.00","marginAvailable":true}]}'
+api positionRisk '[]'; book '{"clusters":[]}'
+
 echo "== OPS5 muc 2a: golive_deadman.sh + install_ops5_oracle.sh"
 DMD=$W/deploy/deadman
 printf 'MemTotal: 24000000 kB\nMemAvailable: 8000000 kB\n' > $W/meminfo
