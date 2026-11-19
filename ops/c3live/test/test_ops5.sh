@@ -212,6 +212,30 @@ chk "t5 c3_price_lag_day: dem ngay (n, gap_gt, p50, max, lag_s) + ket luan %" "[
 OUT=$(env SSH_242="bash -c" APP_DIR=$F ING_DIR=$IGD bash "$HERE/c3_price_lag_day.sh" 2001-01-01 2>&1); RC=$?
 chk "t6 c3_price_lag_day: ngay khong co du lieu => KHONG DO DUOC" "echo \"\$OUT\" | grep -q 'KET LUAN: KHONG DO DUOC'"
 
+echo "== OPS5 muc 3: golive_check_lev.sh"
+python3 -c "
+import json; s=[{'symbol':'S%02dUSDT'%i,'status':'TRADING','quoteAsset':'USDT','contractType':'PERPETUAL'} for i in range(40)]
+s.append({'symbol':'XBTUSD_PERP','status':'TRADING','quoteAsset':'USD','contractType':'PERPETUAL'}); s.append({'symbol':'DEADUSDT','status':'SETTLING','quoteAsset':'USDT','contractType':'PERPETUAL'})
+json.dump({'symbols':s}, open('$F/run/c3live_exchangeInfo.json','w'))
+json.dump([{'symbol':'S%02dUSDT'%i,'marginType':'CROSSED','isAutoAddMargin':'false','leverage':20,'maxNotionalValue':'25000'} for i in range(40)]+[{'symbol':'DEADUSDT','marginType':'ISOLATED','leverage':1,'maxNotionalValue':'1'}], open('$W/api/symbolConfig.json','w'))"
+: > $W/api/calls.log
+OUT=$(E DRY=1 bash "$HERE/golive_check_lev.sh" 2>&1); RC=$?
+chk "l1 DRY=1: doc C3_CAPITAL process, KHONG goi san" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && [ ! -s $W/api/calls.log ]"
+OUT=$(E bash "$HERE/golive_check_lev.sh" 2>&1); RC=$?
+chk "l2 universe 40 (loc TRADING/USDT/PERPETUAL tu exchangeInfo), tat ca 20x CROSSED maxNotional 25000 => DAT rc 0, in W_USED_1M, chi goi account + symbolConfig" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'universe=40 exchangeInfo' && echo \"\$OUT\" | grep -q 'symbol lech: 0/40' && echo \"\$OUT\" | grep -q 'X-MBX-USED-WEIGHT-1M cuoi=77' && [ \"\$(sort -u $W/api/calls.log | tr '\n' ' ')\" = 'account symbolConfig ' ] && ls $W/deploy/lev_check/LEV_CHECK_SUB_*.txt >/dev/null && nosec \"\$OUT\""
+python3 -c "
+import json; c=json.load(open('$W/api/symbolConfig.json')); c[0]['leverage']=0; c[1]['marginType']='ISOLATED'; c[2]['maxNotionalValue']='50'; json.dump(c, open('$W/api/symbolConfig.json','w'))"
+OUT=$(E bash "$HERE/golive_check_lev.sh" 2>&1); RC=$?
+chk "l3 tiem loi: 1 symbol leverage 0 < 1, 1 ISOLATED, 1 maxNotional 50 < 90 => CANH_BAO rc 3, liet ke dung 3 symbol" "[ $RC = 3 ] && echo \"\$OUT\" | grep -q 'symbol lech: 3/40 (leverage thap 1, marginType khac 1, maxNotional thap 1)' && echo \"\$OUT\" | grep -q 'S00USDT:lev=0<1' && echo \"\$OUT\" | grep -q 'S01USDT:margin=ISOLATED' && echo \"\$OUT\" | grep -q 'S02USDT:maxNotional=50<90.00'"
+api account '{"totalMarginBalance":"300.00","availableBalance":"300.00","assets":[]}'
+OUT=$(E bash "$HERE/golive_check_lev.sh" 2>&1); RC=$?
+chk "l4 tmb 300 < von 1000 x 0,6 => LEV_NEED=2, symbol 20x van DAT, symbol 0x lech" "[ $RC = 3 ] && echo \"\$OUT\" | grep -q 'leverage >= 2 ' && echo \"\$OUT\" | grep -q 'leverage thap 1'"
+api account '{"totalMarginBalance":"1000.00","availableBalance":"990.00","assets":[{"asset":"USDT","walletBalance":"1000.00","marginBalance":"1000.00","marginAvailable":true}]}'
+echo 400 > $W/api/symbolConfig.code
+OUT=$(E bash "$HERE/golive_check_lev.sh" 2>&1); RC=$?
+chk "l5 san loi symbolConfig HTTP 400 => DUNG rc 1" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'doc san loi'"
+rm -f $W/api/symbolConfig.code
+
 # == KET THUC ==
 cleanup
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
