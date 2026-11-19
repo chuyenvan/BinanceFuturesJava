@@ -73,8 +73,13 @@ EOF
 chmod +x "$F/bin/daemon.sh"; echo "$PN" > "$F/FAKE_PN"; echo "$$" > "$F/FAKE_TID"
 cat > $W/fakessh.sh <<'EOF'
 #!/usr/bin/env bash
+# launcher: ghi lenh ra file roi exec => cmdline KHONG chua mau PROC_PAT (nhu ssh that: lenh chay tren may khac)
+T=$(mktemp "$FAKESSH_PLAN.cmd.XXXXXX"); printf '%s' "$*" > "$T"; exec bash "${FAKESSH_PLAN%/*}/fakessh2.sh" "$T"
+EOF
+cat > $W/fakessh2.sh <<'EOF'
+#!/usr/bin/env bash
 # ssh gia: chay cuc bo; PLAN (file $FAKESSH_PLAN): dong "<LOAI> before|after <so lan>" => tra 255 (truoc/sau khi chay)
-CMD="$*"; IN=""; [ -t 0 ] || IN=$(cat)
+CMD=$(cat "$1"); rm -f "$1"; IN=""; [ -t 0 ] || IN=$(cat)
 C=OTHER
 case "$IN" in *END_RS*) C=RESTART;; *END_RB*) C=ROLLBACK;; *END_CHK*) C=CHK;; *END_STATE*) C=STATE;; esac
 case "$CMD" in *END_PHASE*) C=PHASE;; *"chmod 600"*hfks_*) C=STAGEMD5;; *"PUSH doi trang thai"*) C=PUSHWAIT;; *KILL_SWITCH.ok_*) C=KSOFF;; esac
@@ -116,7 +121,7 @@ chk "swap XONG: jar=moi, 1 process env giu (C3_CAPITAL=1000 live key), backup ja
  "[ $RC = 0 ] && echo \"\$OUT\" | grep -q '=== XONG' && [ \"\$(jm)\" = $NEW ] && [ \"\$(np)\" = 1 ] && penv | grep -qx C3_CAPITAL=1000 && penv | grep -qx LIVE_ADAPTER=live && penv | grep -qx LIVE_C3_KEYS_FILE=$W/keys_sub.env && ls $F/target/*.bak_golive_swap_jar_* >/dev/null 2>&1 && [ \"\$(md5sum < \$(ls $F/target/binance-java-sdk-1.2.4.jar.bak_golive_swap_jar_* | grep -v md5 | head -1) | cut -c1-32)\" = $OLD ] && [ ! -e $F/run/KILL_SWITCH ] && ls $F/run/KILL_SWITCH.ok_* >/dev/null && [ ! -e $W/PAUSE ] && [ \"\$(md5sum < $F/conf/env.sh)\" = '$E0' ] && grep -q 'PUSH doi trang thai -> ON' $F/logs/full.log && echo \"\$OUT\" | grep -q 'THOI GIAN BOT TAT (stop -> start): [0-9]*s' && grep -q 'XONG' $W/tg.txt && echo \"\$OUT\" | grep -q 'OK MINUTE-FIN_BAT' && echo \"\$OUT\" | grep -q 'OK scope_tk_con_0' && echo \"\$OUT\" | grep -q 'OK LEGACY_managed=44' && echo \"\$OUT\" | grep -q 'OK file_key_600_sha8' && nosec \"\$OUT\""
 # 3 chay lai => DA XONG
 P1=$(pid); OUT=$(echo YES | bash $S 2>&1); RC=$?
-chk "chay lai lan 2: DA XONG rc0, khong restart" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DA XONG' && [ \"\$(pid)\" = '$P1' ] && ! grep -q '^RESTART' $W/sshplan.log 2>/dev/null || [ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DA XONG' && [ \"\$(pid)\" = '$P1' ]"
+chk "chay lai lan 2: DA XONG rc0, khong restart" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DA XONG' && [ \"\$(pid)\" = '$P1' ]"
 # 4 MODE=rollback
 rm -f $W/sshplan.log; OUT=$(echo YES | MODE=rollback bash $S 2>&1); RC=$?
 chk "MODE=rollback: ve jar cu, XONG, KS/PAUSE go" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q '=== XONG' && [ \"\$(jm)\" = $OLD ] && [ \"\$(np)\" = 1 ] && [ ! -e $F/run/KILL_SWITCH ] && [ ! -e $W/PAUSE ]"
