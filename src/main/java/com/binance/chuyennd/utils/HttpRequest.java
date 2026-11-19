@@ -104,7 +104,7 @@ public class HttpRequest {
      * lan read (ban cu goi setConnectTimeout SAU connect => vo tac dung, thuc te 30 s + 30 s x 5 lan thu). Env
      * {@code HTTP_TIMEOUT_FIX=false} => y nguyen ban cu. Read timeout co the dat rieng: {@code HTTP_TIMEOUT_READ_MS}.
      */
-    static final boolean TIMEOUT_FIX = !"false".equalsIgnoreCase(String.valueOf(System.getenv("HTTP_TIMEOUT_FIX")).trim());
+    static final boolean TIMEOUT_FIX = flagOn(System.getenv("HTTP_TIMEOUT_FIX"));
     private static final int TIMEOUT_READ_OVERRIDE_MS = envMs("HTTP_TIMEOUT_READ_MS", 0);
     /**
      * [W3B muc 3c] Duong co timeout: them han TONG doc BODY moi lan thu = timeout + read timeout (read timeout cua socket la
@@ -112,7 +112,19 @@ public class HttpRequest {
      * => lan thu loi, thu lai nhu cu. KHONG phu header nho giot (HttpURLConnection doc header noi bo). Env
      * {@code HTTP_TIMEOUT_TOTAL=false} => tat (y nhu W3A).
      */
-    static final boolean TOTAL_TIMEOUT = !"false".equalsIgnoreCase(String.valueOf(System.getenv("HTTP_TIMEOUT_TOTAL")).trim());
+    static final boolean TOTAL_TIMEOUT = flagOn(System.getenv("HTTP_TIMEOUT_TOTAL"));
+
+    /**
+     * [W3B v2] co mac dinh BAT: chi "false" hoac "0" moi tat (dong bo cach tat voi KILLSW_EQ_POLL_UNLOCKED / C3_EQ_REST_UNLOCKED).
+     *
+     * @param raw gia tri env
+     * @return true = bat
+     */
+    static boolean flagOn(String raw) {
+        if (raw == null) return true;
+        String v = raw.trim();
+        return !("false".equalsIgnoreCase(v) || "0".equals(v));
+    }
 
     /**
      * Doc so ms duong tu env; thieu/sai/&lt;= 0 => mac dinh.

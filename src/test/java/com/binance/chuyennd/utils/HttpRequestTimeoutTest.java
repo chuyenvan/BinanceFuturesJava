@@ -151,6 +151,11 @@ public class HttpRequestTimeoutTest {
         assertTrue("mac dinh HTTP_TIMEOUT_FIX bat (env khong dat tren may test)", HttpRequest.TIMEOUT_FIX
                 || "false".equalsIgnoreCase(System.getenv("HTTP_TIMEOUT_FIX")));
         assertEquals(30_000, HttpRequest.envMs("W3A_KHONG_CO_ENV_NAY", 30_000));
+        // [W3B v2] A1 muc 4: "0" cung tat (dong bo cach tat)
+        assertTrue(HttpRequest.flagOn(null));
+        assertTrue(HttpRequest.flagOn("1"));
+        assertFalse(HttpRequest.flagOn("0"));
+        assertFalse(HttpRequest.flagOn(" False "));
         if (System.getenv("HTTP_CONNECT_TIMEOUT_MS") == null) assertEquals(30_000, HttpRequest.connect_time_out);
         if (System.getenv("HTTP_READ_TIMEOUT_MS") == null) assertEquals(30_000, HttpRequest.read_time_out);
         if (System.getenv("HTTP_TIMEOUT_READ_MS") == null) assertEquals(5_000, HttpRequest.readTimeoutFor(5_000));
