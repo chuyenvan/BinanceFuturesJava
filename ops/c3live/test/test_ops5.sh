@@ -130,6 +130,68 @@ OUT=$(E A1_APPROVED_OPS=$W/khong_co.commit DRY=1 bash "$HERE/golive_first_trade_
 chk "m1 pin: HEAD khong trong A1_APPROVED_OPS => TU CHOI [m1]" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'TU CHOI \[m1\]'"
 chk "m1 khong lo key/secret trong toan bo deploy/ + Telegram" "nosec ''"
 
+echo "== OPS5 muc 2a: golive_deadman.sh + install_ops5_oracle.sh"
+DMD=$W/deploy/deadman
+printf 'MemTotal: 24000000 kB\nMemAvailable: 8000000 kB\n' > $W/meminfo
+(setsid bash -c "exec -a 'fk_${TAG}_watch_daily_v12.sh' sleep 900" >/dev/null 2>&1 &); sleep 0.3
+gate_at() { echo "$(D7 $1) INFO  [pool-1-thread-1] c.b.c.t.DetectEntrySignal2TradeNormal: [GATE] scale=1.5500 topk=24 n_pass=0 ${2:-}" >> "$F/logs/full.log"; }
+DM() { env SSH_242="bash -c" APP_DIR="$F" LOGDIR="$W/deploy" GL_MON_FLAG="$W/deploy/golive_monitor.on" MON_HB_FILE="$W/deploy/run/monitor_heartbeat" \
+  DM_WATCH_PAT="fk_${TAG}_watch_daily_v12.sh" DM_DISK_MIN_GB=0 DM_MEMINFO=$W/meminfo DEPLOY_TG_SINK=$W/tgdm.txt "$@"; }
+mkdir -p $W/deploy/run; printf 'C3_ACCOUNT=SUB\n' > $W/deploy/golive_monitor.on
+touch $W/deploy/run/monitor_heartbeat; gate_at $(( $(date +%s) - 30 ))
+OUT=$(DM bash "$HERE/golive_deadman.sh" 2>&1); RC=$?
+chk "d1 moi thu OK => rc 0, khong Telegram, heartbeat deadman ghi" "[ $RC = 0 ] && [ ! -e $W/tgdm.txt ] && grep -q '^ts=' $DMD/heartbeat && echo \"\$OUT\" | grep -q 'OK gate tuoi' && echo \"\$OUT\" | grep -q 'OK watcher'"
+touch -d '-20 min' $W/deploy/run/monitor_heartbeat
+OUT=$(DM bash "$HERE/golive_deadman.sh" 2>&1); RC=$?
+chk "d2 tiem loi: heartbeat monitor cu 20' => CANH BAO mon_hb + Telegram 1 lan, rc 2" "[ $RC = 2 ] && [ \$(grep -c 'CANH BAO mon_hb' $W/tgdm.txt) = 1 ]"
+OUT=$(DM bash "$HERE/golive_deadman.sh" 2>&1); RC=$?
+chk "d2 chong spam: lan 2 (< 30') KHONG gui lai" "[ $RC = 2 ] && [ \$(grep -c 'CANH BAO mon_hb' $W/tgdm.txt) = 1 ] && echo \"\$OUT\" | grep -q 'da bao < 1800s truoc'"
+OUT=$(DM DM_REMIND_S=0 bash "$HERE/golive_deadman.sh" 2>&1); RC=$?
+chk "d2 nhac lai sau DM_REMIND_S" "[ \$(grep -c 'CANH BAO mon_hb' $W/tgdm.txt) = 2 ]"
+touch $W/deploy/run/monitor_heartbeat
+OUT=$(DM bash "$HERE/golive_deadman.sh" 2>&1); RC=$?; OUT2=$(DM bash "$HERE/golive_deadman.sh" 2>&1)
+chk "d2 hoi phuc: tin 'DA HOI PHUC mon_hb' dung 1 lan, rc 0" "[ $RC = 0 ] && [ \$(grep -c 'DA HOI PHUC mon_hb' $W/tgdm.txt) = 1 ]"
+rm -f $W/deploy/golive_monitor.on; touch -d '-30 min' $W/deploy/run/monitor_heartbeat
+OUT=$(DM bash "$HERE/golive_deadman.sh" 2>&1); RC=$?
+chk "d3 khong co co micro/pilot => bo qua mon_hb (monitor khong chay)" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'bo qua mon_hb'"
+printf 'C3_ACCOUNT=SUB\n' > $W/deploy/golive_monitor.on; touch $W/deploy/run/monitor_heartbeat
+gate_at $(( $(date +%s) - 240 )) ; sed -i '$!{/\[GATE\] /d}' "$F/logs/full.log"
+OUT=$(DM bash "$HERE/golive_deadman.sh" 2>&1); RC=$?
+chk "d4 tiem loi: dong [GATE] cuoi cu 4' => CANH BAO gate (bot treo) + Telegram" "[ $RC = 2 ] && grep -q 'CANH BAO gate.*bot treo' $W/tgdm.txt"
+gate_at $(( $(date +%s) - 10 )) '1234567890:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+OUT=$(DM bash "$HERE/golive_deadman.sh" 2>&1); RC=$?
+chk "d4 gate hoi phuc => 'DA HOI PHUC gate'" "[ $RC = 0 ] && grep -q 'DA HOI PHUC gate' $W/tgdm.txt"
+printf '#!/bin/bash\nexit 255\n' > $W/ssh255.sh
+OUT=$(DM SSH_242="bash $W/ssh255.sh" bash "$HERE/golive_deadman.sh" 2>&1); RC=$?
+chk "d5 ssh 242 loi luot 1 => chua canh bao (dem 1/2)" "[ $RC = 0 ] && ! grep -q 'CANH BAO ssh242' $W/tgdm.txt && echo \"\$OUT\" | grep -q 'luot loi lien tiep 1/2'"
+OUT=$(DM SSH_242="bash $W/ssh255.sh" bash "$HERE/golive_deadman.sh" 2>&1); RC=$?
+chk "d5 tiem loi: ssh 242 loi 2 luot lien tiep => CANH BAO ssh242" "[ $RC = 2 ] && grep -q 'CANH BAO ssh242' $W/tgdm.txt"
+OUT=$(DM bash "$HERE/golive_deadman.sh" 2>&1); RC=$?
+chk "d5 ssh hoi phuc => 'DA HOI PHUC ssh242', bo dem ve 0" "[ $RC = 0 ] && grep -q 'DA HOI PHUC ssh242' $W/tgdm.txt && grep -qx 'sshfail=0' $DMD/state"
+OUT=$(DM DM_WATCH_PAT="khong_co_watcher_$TAG" bash "$HERE/golive_deadman.sh" 2>&1); RC=$?
+chk "d6 tiem loi: watcher parity chet => CANH BAO watcher" "[ $RC = 2 ] && grep -q 'CANH BAO watcher' $W/tgdm.txt"
+printf 'MemAvailable: 1000000 kB\n' > $W/meminfo
+OUT=$(DM DM_DISK_MIN_GB=999999 bash "$HERE/golive_deadman.sh" 2>&1); RC=$?
+chk "d6 tiem loi: dia < nguong + RAM available 976 MB < 2000 => CANH BAO disk + mem" "[ $RC = 2 ] && grep -q 'CANH BAO disk' $W/tgdm.txt && grep -q 'CANH BAO mem.*976 MB' $W/tgdm.txt"
+printf 'MemAvailable: 8000000 kB\n' > $W/meminfo; G0=$(grep -c '^----' $W/tgdm.txt); cp $DMD/state $W/dmstate0
+OUT=$(DM DRY=1 DM_WATCH_PAT="khong_co_watcher2_$TAG" DM_REMIND_S=0 bash "$HERE/golive_deadman.sh" 2>&1); RC=$?
+chk "d7 DRY=1: chi in (khong gui), KHONG ghi state" "[ \$(grep -c '^----' $W/tgdm.txt) = $G0 ] && cmp -s $DMD/state $W/dmstate0 && echo \"\$OUT\" | grep -q 'DRY=1 (khong gui)'"
+chk "d8 mask token trong output + Telegram; deadman KHONG source golive_lib.sh" "! grep -q '1234567890:AAAA' $W/tgdm.txt $DMD/deadman.log && ! grep -v '^[[:space:]]*#' $HERE/golive_deadman.sh | grep -q 'golive_lib'"
+# installer
+printf '#!/bin/bash\ncase "$1" in -l) cat %s/ct 2>/dev/null;; -) cat > %s/ct;; esac\n' "$W" "$W" > $W/ct.sh; printf '0 * * * * echo giu # cu\n*/2 * * * * x # golive_monitor (ADD4 C-1)\n' > $W/ct; cp $W/ct $W/ct0
+IO() { env ORA_CRONTAB_CMD="bash $W/ct.sh" LOGDIR="$W/deploy" DM_PIN_ROOT=$W/pinned OPS5_LOCKS=$W/locks "$@"; }
+OUT=$(IO DRY=1 bash "$HERE/install_ops5_oracle.sh" 2>&1 < /dev/null); RC=$?
+chk "i1 install DRY=1: in 2 dong MOI, crontab KHONG doi" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && [ \$(echo \"\$OUT\" | grep -c '   MOI: ') = 2 ] && cmp -s $W/ct $W/ct0"
+OUT=$(echo YES | IO bash "$HERE/install_ops5_oracle.sh" 2>&1); RC=$?
+chk "i2 install: 2 dong OPS5 them, dong cu giu, ban ghim deadman chi doc dung md5" "[ $RC = 0 ] && grep -q 'golive_deadman (OPS5 2a)' $W/ct && grep -q 'FT_CRON=1 .*golive_first_trade (OPS5 1)' $W/ct && grep -q 'echo giu # cu' $W/ct && grep -q 'golive_monitor (ADD4 C-1)' $W/ct && cmp -s $HERE/golive_deadman.sh $W/pinned/golive_deadman_*/golive_deadman.sh && [ ! -w $W/pinned/golive_deadman_*/golive_deadman.sh ]"
+OUT=$(echo YES | IO bash "$HERE/install_ops5_oracle.sh" 2>&1); RC=$?
+chk "i3 install lan 2: KHONG DOI, khong nhan doi dong" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'KHONG DOI' && [ \$(grep -c 'OPS5' $W/ct) = 2 ]"
+OUT=$(echo YES | IO MODE=rollback bash "$HERE/install_ops5_oracle.sh" 2>&1); RC=$?
+chk "i4 rollback: go 2 dong OPS5, crontab = ban dau" "[ $RC = 0 ] && cmp -s $W/ct $W/ct0"
+OUT=$(IO A1_APPROVED_OPS=$W/khong_co.commit DRY=1 bash "$HERE/install_ops5_oracle.sh" 2>&1); RC=$?
+chk "i5 installer: HEAD chua A1 duyet => TU CHOI [m1]" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'TU CHOI \[m1\]'"
+chmod -R u+w $W/pinned 2>/dev/null
+
 # == KET THUC ==
 cleanup
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
