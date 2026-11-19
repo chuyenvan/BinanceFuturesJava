@@ -52,6 +52,7 @@ gt_init() {   # $1 ten script; log + loc moi output (signature / token)
   GL_NAME=$1; NM=$1
   TS=$(TZ=Asia/Ho_Chi_Minh date +%Y%m%d_%H%M%S)
   mkdir -p "$GT_SDIR"; LOG=$GT_SDIR/${1}_$TS.log
+  PAUSE_TOK="C3GOLIVE_${NM} TS=$TS pid=$$"   # = TOK trong _gt_restart_rx (gl_pause_clear chi go PAUSE cua lan nay)
   exec > >(trap '' HUP INT TERM PIPE; sed -u -E "$GT_SED" | tee --output-error=warn -a "$LOG") 2>&1
   say "=== $1 TS=$TS DRY=$DRY HEAD=$_GT_HC ==="
 }
