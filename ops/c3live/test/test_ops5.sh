@@ -277,6 +277,57 @@ OUT=$(AI DRY=1 bash "$HERE/install_242_autodrain.sh" 2>&1 < /dev/null); RC=$?
 chk "a12 watchdog khong ho tro WD_PRESTART => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'KHONG ho tro WD_PRESTART'"
 chk "a13 khong lo key/secret (autodrain)" "nosec \"\$OUT\" && ! grep -q \"$SKEY\" $W/tgad.txt"
 
+# ---- [OPS5_FIX A-1] wrapper KHONG BAO GIO tra rc != 0 (tru prestart goc chay duoc va tu tra rc != 0) ----
+AWX() { env AD_STATE_DIR=$W/adstate AD_TG_SINK=$W/tgad.txt "$@"; }
+rm -f $F/run/KILL_SWITCH
+OUT=$(AWX AD_ORIG_PRESTART=$SB/khong_co.sh bash "$HERE/c3_autodrain_prestart.sh" "$F" x 2>&1); RC=$?
+chk "a14 [A-1] prestart goc MAT => rc 0, VAN drain (KS dat), Telegram KHAN 'MAT'" "[ $RC = 0 ] && [ -e $F/run/KILL_SWITCH ] && tail -2 $W/tgad.txt | grep -q 'KHAN.*MAT/khong co quyen x'"
+rm -f $F/run/KILL_SWITCH; chmod 644 $SB/h242-prestart.sh
+OUT=$(AWX AD_ORIG_PRESTART=$SB/h242-prestart.sh bash "$HERE/c3_autodrain_prestart.sh" "$F" x 2>&1); RC=$?; chmod 755 $SB/h242-prestart.sh
+chk "a15 [A-1] prestart goc mat quyen x => rc 0 + KS + KHAN" "[ $RC = 0 ] && [ -e $F/run/KILL_SWITCH ] && tail -2 $W/tgad.txt | grep -q KHAN"
+rm -f $F/run/KILL_SWITCH; printf '#!/khong/co/interp\nexit 0\n' > $SB/badshebang.sh; chmod 755 $SB/badshebang.sh
+OUT=$(AWX AD_ORIG_PRESTART=$SB/badshebang.sh bash "$HERE/c3_autodrain_prestart.sh" "$F" x 2>&1); RC=$?
+chk "a16 [A-1] prestart goc shebang hong (exec rc 126/127) => rc 0 + KS + KHAN 'KHONG exec duoc'" "[ $RC = 0 ] && [ -e $F/run/KILL_SWITCH ] && tail -2 $W/tgad.txt | grep -q 'KHONG exec duoc'"
+rm -f $F/run/KILL_SWITCH; mkdir -p $W/adfull; ln -sf /dev/full $W/adfull/autodrain.log; ln -sf /dev/full $W/adfull/ALERT_PENDING.txt
+OUT=$(env AD_ORIG_PRESTART=$SB/h242-prestart.sh AD_STATE_DIR=$W/adfull AD_TG_SINK=/dev/full bash "$HERE/c3_autodrain_prestart.sh" "$F" x 2>/dev/full >/dev/full); RC=$?
+chk "a17 [A-1] het dia (log/Telegram sink/stdout/stderr = /dev/full ENOSPC) => rc 0, KS van dat" "[ $RC = 0 ] && [ -e $F/run/KILL_SWITCH ]"
+rm -f $F/run/KILL_SWITCH
+OUT=$(env -i PATH=/usr/bin:/bin AD_ORIG_PRESTART= AD_STATE_DIR= AD_TG_ENV= AD_TG_SINK=$W/tgad.txt bash "$HERE/c3_autodrain_prestart.sh" 2>&1); RC=$?
+chk "a18 [A-1] env -i + moi bien rong + khong tham so (APP mac dinh, goc mac dinh khong co tren Oracle) => rc 0" "[ $RC = 0 ]"
+OUT=$(AWX AD_ORIG_PRESTART=$SB/h242-prestart.sh bash "$HERE/c3_autodrain_prestart.sh" "$W/khong_co_app" x 2>&1); RC=$?
+chk "a19 [A-1] APP khong ton tai (env.sh/run mat) => rc 0" "[ $RC = 0 ]"
+a20chk() { ! grep -qE '^[^#]*(set -[a-z]*[eu]|pipefail)' "$1" && grep -q '^trap .exit \$_RC. EXIT$' "$1" && bash -n "$1"; }
+chk "a20 [A-1] wrapper khong con set -e/-u/pipefail (ngoai comment); co trap EXIT ep rc; bash -n OK" "a20chk $HERE/c3_autodrain_prestart.sh"
+# ---- watchdog THAT (ban sao ops/h242_watchdog.sh) + wrapper, tung nhanh loi => bot VAN start (tru goc rc 1) ----
+WDC=$W/wd_real.sh; cp "$HERE/../h242_watchdog.sh" $WDC
+MCN=com.o5f_$$.Main; WF=$W/wdapp; mkdir -p $WF/conf $WF/run $WF/bin; printf 'export LIVE_ADAPTER=live\n' > $WF/conf/env.sh
+printf '#!/bin/bash\ncd %s; nohup bash -c "sleep 300; : o5f_wdjava_%s" %s >/dev/null 2>&1 &\n' "$WF" "$$" "$MCN" > $WF/bin/start.sh; chmod 755 $WF/bin/start.sh
+wdk() { local p; for p in $(pgrep -f -- "o5f_wdjava_$$" 2>/dev/null); do kill "$p" 2>/dev/null; done; sleep 0.5; rm -f $WF/run/KILL_SWITCH $W/wd/state; }
+WDRUN() {   # $1 = goc, $2 = STATE dir, $3 = sink
+  cat > $SB/wr_o5f.sh <<EOW
+#!/bin/bash
+AD_ORIG_PRESTART=$1 AD_STATE_DIR=$2 AD_TG_SINK=$3 exec bash $HERE/c3_autodrain_prestart.sh "\$@"
+EOW
+  chmod 755 $SB/wr_o5f.sh
+  env -i PATH=/usr/bin:/bin HOME=$W WD_APP=$WF WD_MAIN_CLASS=$MCN WD_STATE_DIR=$W/wd WD_TG_ENV=$W/khong_co WD_START_CMD="bash $WF/bin/start.sh" WD_START_WAIT_SEC=4 WD_START_BACKOFF_SEC=0 WD_PRESTART=$SB/wr_o5f.sh bash $WDC >/dev/null 2>&1
+  sleep 1; pgrep -fc -- "o5f_wdjava_$$" 2>/dev/null || true
+}
+wdk; NP=$(WDRUN $SB/khong_co.sh $W/adstate $W/tgad.txt)
+chk "a21 [A-1] watchdog THAT + goc MAT => bot START (NP=$NP) + KS dat" "[ ${NP:-0} -ge 1 ] && [ -e $WF/run/KILL_SWITCH ]"
+wdk; chmod 644 $SB/h242-prestart.sh; NP=$(WDRUN $SB/h242-prestart.sh $W/adstate $W/tgad.txt); chmod 755 $SB/h242-prestart.sh
+chk "a22 [A-1] watchdog THAT + goc mat quyen x => START (NP=$NP)" "[ ${NP:-0} -ge 1 ]"
+wdk; NP=$(WDRUN $SB/badshebang.sh $W/adstate $W/tgad.txt)
+chk "a23 [A-1] watchdog THAT + goc shebang hong => START (NP=$NP)" "[ ${NP:-0} -ge 1 ]"
+wdk; NP=$(WDRUN $SB/h242-prestart.sh $W/adfull /dev/full)
+chk "a24 [A-1] watchdog THAT + het dia (log/sink ENOSPC) => START (NP=$NP) + KS" "[ ${NP:-0} -ge 1 ] && [ -e $WF/run/KILL_SWITCH ]"
+wdk; chmod 555 $WF/run; NP=$(WDRUN $SB/h242-prestart.sh /proc/khong_ghi $W/tgad.txt); chmod 755 $WF/run
+chk "a25 [A-1] watchdog THAT + run/ chi doc + STATE khong ghi => START (NP=$NP)" "[ ${NP:-0} -ge 1 ]"
+wdk; NP=$(WDRUN "" "" $W/tgad.txt)
+chk "a26 [A-1] watchdog THAT + bien rong (goc mac dinh khong co) => START (NP=$NP)" "[ ${NP:-0} -ge 1 ]"
+wdk; echo 1 > $W/pre_rc; NP=$(WDRUN $SB/h242-prestart.sh $W/adstate $W/tgad.txt); echo 0 > $W/pre_rc
+chk "a27 [A-1] watchdog THAT + goc chay duoc TRA rc 1 (deps) => KHONG start (giong truoc OPS5, NP=$NP)" "[ ${NP:-0} = 0 ] && grep -q 'PRESTART rc=1 - KHONG start' $W/wd/watchdog.log"
+wdk; rm -rf $W/adfull
+
 echo "== OPS5 muc 2b: c3_oracle_seen_242.sh + install_242_oracle_seen.sh"
 OSL=$W/secure; NS=$(date +%s)
 printf '%s sshd[1]: Accepted publickey for root from 161.118.212.3 port 1 ssh2: RSA SHA256:x\n%s sshd[2]: Accepted publickey for root from 1.2.3.4 port 1 ssh2\n' "$(date -d @$((NS - 3000)) '+%b %e %H:%M:%S')" "$(date -d @$((NS - 10)) '+%b %e %H:%M:%S')" > $OSL
