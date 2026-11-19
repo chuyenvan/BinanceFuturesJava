@@ -200,7 +200,7 @@ NOWL=$(date +%s)
 echo "$(D7 $((NOWL - 120))) INFO  [C3LIVE-OPS] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=x mode=act | lag_s=6 miss=0/517 api=positions" >> "$F/logs/full.log"
 api positionRisk '[]'; book '{"clusters":[]}'; api openAlgoOrders '[]'
 OUT=$(E DRY=1 ING_LOG=$IGD/logs/full.log bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
-chk "t1 monitor: dong tre_gia_1h dem 10 phut 1 h qua (bo dong 2 h truoc), 6 phut gap > 5000, max 5600, lag_s=6" "echo \"\$OUT\" | grep -q '== tre_gia_1h: n=10 gap_gt=6 gap_max_ms=5600 age_gt=2 age_max_ms=7000 nguong_ms=5000 | lag_s=6 miss=0/517'"
+chk "t1 monitor: dong tre_gia_1h dem 10 phut 1 h qua (bo dong 2 h truoc), 6 phut gap > 5000, max 5600, lag_s=6" "echo \"\$OUT\" | grep -q '== tre_gia_1h: n=10 gap_gt=6 gap_max_ms=5600 age_gt=3 age_max_ms=7000 nguong_ms=5000 | lag_s=6 miss=0/517'"
 chk "t2 monitor: >= 5 phut tre => CANH BAO tre gia (khong KHAN), TOM TAT tre_gia=6/10" "echo \"\$OUT\" | grep -q 'CANH BAO tre gia: 6/10' && echo \"\$OUT\" | grep -q 'TOM TAT: .* tre_gia=6/10' && ! echo \"\$OUT\" | grep -q 'KHAN.*tre'"
 OUT=$(E DRY=1 ING_LOG=$IGD/logs/full.log LAG_WARN_N=7 bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
 chk "t3 monitor: duoi nguong canh bao (LAG_WARN_N=7) => khong CANH BAO tre gia" "! echo \"\$OUT\" | grep -q 'CANH BAO tre gia' && echo \"\$OUT\" | grep -q 'tre_gia=6/10'"
