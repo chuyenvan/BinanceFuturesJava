@@ -162,6 +162,46 @@ public final class C3LiveOrderExecutor {
         this.prices = new FillPriceResolver(clock, sleeper, this.api);
     }
 
+    // ===================== [W3A muc 3 A-06] Telegram khi san tu choi lenh VAO =====================
+    private volatile java.util.function.Consumer<String> rejectAlertSink;
+    private volatile com.binance.chuyennd.c3live.alert.C3AlertThrottle rejectThrottle;
+    private final AtomicLong nRejectAlert = new AtomicLong();
+
+    /**
+     * Bat canh bao (thua) khi san TU CHOI lenh vao c3 (khong gom tu choi phia client/pham vi). Mac dinh tat (canary,
+     * test cu y nguyen); runtime bat theo env {@code C3_REJECT_ALERT}.
+     *
+     * @param sink     kenh canh bao (null = tat)
+     * @param windowMs toi da 1 canh bao / symbol / cua so
+     */
+    public void setRejectAlert(java.util.function.Consumer<String> sink, long windowMs) {
+        this.rejectThrottle = new com.binance.chuyennd.c3live.alert.C3AlertThrottle(windowMs);
+        this.rejectAlertSink = sink;
+    }
+
+    /** @return so canh bao reject da gui */
+    public long rejectAlertsSent() {
+        return nRejectAlert.get();
+    }
+
+    private void rejectAlert(String sym, String kind, int code) {
+        java.util.function.Consumer<String> a = rejectAlertSink;
+        com.binance.chuyennd.c3live.alert.C3AlertThrottle t = rejectThrottle;
+        if (a == null || t == null) return;
+        long sup = t.tryAcquire(sym, clock.getAsLong());
+        if (sup < 0) return;
+        nRejectAlert.incrementAndGet();
+        // khong in "code=-20xx"/"-4164" (golive_monitor dem REJECT_SINCE tu dong [C3-LIVE-EXEC] KHONG khop, tranh dem doi)
+        String m = "[C3-LIVE] REJECT lenh vao bi san tu choi: " + sym + " kind=" + kind + " ma_san=" + Math.abs(code)
+                + " => leg da huy (khong tu gui lai)" + (sup > 0 ? "; " + sup + " lan tu choi khac bi nen" : "")
+                + ". Canh bao toi da 1 lan/symbol/" + (t.windowMs() / 60_000L) + " phut";
+        try {
+            a.accept(m);
+        } catch (RuntimeException ex) {
+            LOG.warn("[C3-LIVE-EXEC] gui canh bao reject loi: {}", ex.getClass().getSimpleName());
+        }
+    }
+
     /**
      * [3j] dung CHUNG 1 FillPriceResolver voi FillAccounting (user stream) — bat buoc trong production/canary de nguon (a)
      * stream co tac dung. Goi truoc khi su dung; null = giu resolver rieng (chi con (b)/(c)).
@@ -303,6 +343,9 @@ public final class C3LiveOrderExecutor {
                     nCancelled.incrementAndGet();
                     LOG.warn("[C3-LIVE-EXEC] {} {} KHONG khop ({} {}) => huy giu cho", sym, cid, e.getKind(),
                             e.getExchangeCode());
+                    if (!(e instanceof com.binance.chuyennd.c3live.api.ClientSideRefusal)) {
+                        rejectAlert(sym, String.valueOf(e.getKind()), e.getExchangeCode());   // [W3A muc 3 A-06]
+                    }
                     return;
                 }
                 book.markUnknown(cid, "send:" + e.getKind(), clock.getAsLong());

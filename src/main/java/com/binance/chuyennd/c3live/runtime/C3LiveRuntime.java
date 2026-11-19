@@ -300,6 +300,10 @@ public final class C3LiveRuntime {
         this.executor = new C3LiveOrderExecutor(gw, book, api, fillObs, System::currentTimeMillis, Thread::sleep, safe,
                 (int) parseD(Cfg.get("LIVE_C3_ORDER_MAX_ATTEMPTS"), C3LiveOrderExecutor.DEFAULT_MAX_ATTEMPTS), ex);
         this.executor.setPriceResolver(priceResolver);   // [3j R2]
+        // [W3A muc 3 A-06] Telegram thua khi san tu choi lenh vao (env C3_REJECT_ALERT=false tat; C3_REJECT_ALERT_MIN phut)
+        long rejectWin = com.binance.chuyennd.c3live.alert.C3AlertThrottle.windowFromMinutes(Cfg.get("C3_REJECT_ALERT_MIN"), 30L);
+        boolean rejectOn = com.binance.chuyennd.c3live.alert.C3AlertThrottle.enabled(Cfg.get("C3_REJECT_ALERT"));
+        if (rejectOn) this.executor.setRejectAlert(alerts::send, rejectWin);
         // [2b C7/C9] ke toan fill + doi chieu
         this.acct = new FillAccounting(book, gw, audit, fillObs, alerts::send, api, System::currentTimeMillis,
                 TrailingStopManager::tsExtOnClosed);
@@ -330,6 +334,7 @@ public final class C3LiveRuntime {
         this.flattener = new C3LiveFlattener(gw, book, OpsHooks::requiredAction, alerts::send, api,
                 System::currentTimeMillis, (int) parseD(Cfg.get("LIVE_C3_FLATTEN_MAX_ORDERS"), 5d),
                 (long) parseD(Cfg.get("LIVE_C3_FLATTEN_WINDOW_MS"), 10_000d), safe, flat);
+        if (rejectOn) this.flattener.setCloseFailAlert(rejectWin);   // [W3A muc 3 A-06] dong loi >= 3 lan
         this.trailing = TrailingStopManager.builder()
                 .gateway(gw)
                 .book(book)

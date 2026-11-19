@@ -184,11 +184,40 @@ public final class C3LiveFlattener {
             } else {
                 LOG.warn("[C3-LIVE-CLOSE] {} {} trang thai khong ro ({}) => tra san luot sau", sym, cid, e.getKind());
             }
+            closeFailAlert(sym, attempt, String.valueOf(e.getKind()), now);   // [W3A muc 3 A-06]
         } catch (RuntimeException e) {
             api.onApiResult("newMarketOrder", false);
             LOG.warn("[C3-LIVE-CLOSE] {} {} loi {} => tra san luot sau", sym, cid, e.toString());
+            closeFailAlert(sym, attempt, e.getClass().getSimpleName(), now);   // [W3A muc 3 A-06]
         }
         return 1;
+    }
+
+    // ===================== [W3A muc 3 A-06] Telegram khi lenh DONG loi lap =====================
+    /** So lan dong loi lien tiep (closeAttempts) tu do bat dau canh bao. */
+    public static final int CLOSE_FAIL_ALERT_MIN_ATTEMPTS = 3;
+    private volatile com.binance.chuyennd.c3live.alert.C3AlertThrottle closeFailThrottle;
+
+    /**
+     * Bat canh bao (thua) khi lenh DONG c3 loi lan thu &gt;= 3 (mac dinh tat; runtime bat theo env {@code C3_REJECT_ALERT}).
+     *
+     * @param windowMs toi da 1 canh bao / symbol / cua so; &lt;= 0 => tat
+     */
+    public void setCloseFailAlert(long windowMs) {
+        this.closeFailThrottle = windowMs > 0 ? new com.binance.chuyennd.c3live.alert.C3AlertThrottle(windowMs) : null;
+    }
+
+    void closeFailAlert(String sym, int attempt, String why, long now) {
+        com.binance.chuyennd.c3live.alert.C3AlertThrottle t = closeFailThrottle;
+        if (t == null || attempt < CLOSE_FAIL_ALERT_MIN_ATTEMPTS) return;
+        long sup = t.tryAcquire(sym, now);
+        if (sup < 0) return;
+        try {
+            alert.accept("[C3-LIVE] CLOSE-FAIL lenh dong " + sym + " loi lan " + attempt + " (" + why
+                    + ") => van thu lai luot sau; kiem vi the tren san" + (sup > 0 ? "; " + sup + " canh bao bi nen" : ""));
+        } catch (RuntimeException ex) {
+            LOG.warn("[C3-LIVE-CLOSE] gui canh bao loi: {}", ex.getClass().getSimpleName());
+        }
     }
 
     /** @return 1 = duoc phep gui lenh dong moi; 0 = cho / da xu ly xong. */
