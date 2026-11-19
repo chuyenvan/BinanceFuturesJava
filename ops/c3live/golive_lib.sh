@@ -595,6 +595,16 @@ def readbook():
         q -= Dd(str(c.get('exit_qty') or '0'))
         c3[sym] = c3.get(sym, Dd(0)) + q
     return c3, unres
+def readarmed():
+    # [OPS5 muc 1] cum c3 DA arm (armed=true) trong so - doi chieu lenh stop/trailing c3 tren san
+    try:
+        bk = json.load(open(bookf, encoding='utf-8'))
+    except FileNotFoundError:
+        return []
+    except Exception:
+        return None
+    cl = (bk.get('clusters') or []) if isinstance(bk, dict) else []
+    return sorted({c['symbol'] for c in cl if isinstance(c, dict) and isinstance(c.get('symbol'), str) and c.get('armed') is True})
 ok = True
 if mode in ('restrictions', 'sub'):
     code, j = call('https://api.binance.com', '/sapi/v1/account/apiRestrictions')
@@ -661,6 +671,9 @@ if mode in ('scope', 'sub', 'mon'):
         if c3a.get(sy) != c3b.get(sy): unres.add(sy)
     c3 = {sy: max(c3a.get(sy, Dd(0)), c3b.get(sy, Dd(0))) for sy in set(c3a) | set(c3b)}
     print('C3_BOOK_SYMBOLS=%d' % len(c3))
+    ar = readarmed()   # [OPS5 muc 1]
+    print('C3_BOOK_LIST=' + ','.join(sorted(sy for sy, q in c3.items() if q > 0 or sy in unres)))
+    print('C3_ARMED_SYMS=' + ('?' if ar is None else ','.join(ar)))
     print('C3_UNRESOLVED=%d %s' % (len(unres), ','.join(sorted(unres)[:8])))
     if code != '200' or not isinstance(pr, list): ok = False; print('ERR_POS=HTTP%s' % code)
     else:
@@ -687,6 +700,7 @@ if mode in ('scope', 'sub', 'mon'):
         non = [o.get('symbol') for o in oo if not str(o.get('clientOrderId', '')).startswith(CIDOK)]
         print('ORD_TOTAL=%d' % len(oo)); print('ORD_NONC3=%d %s' % (len(non), ','.join(non[:8])))
         print('ORD_C3=%d' % (len(oo) - len(non)))
+        print('ORD_C3_SYMS=' + ','.join(sorted({str(o.get('symbol')) for o in oo if str(o.get('clientOrderId', '')).startswith(CIDOK)})))   # [OPS5 muc 1]
     code, ao = call(FAPI, '/fapi/v1/openAlgoOrders', 40)
     if isinstance(ao, dict): ao = ao.get('orders', ao.get('rows', []))
     if code != '200' or not isinstance(ao, list): ok = False; print('ERR_ALGO=HTTP%s' % code)
@@ -694,8 +708,40 @@ if mode in ('scope', 'sub', 'mon'):
         non = [o.get('symbol') for o in ao if not str(o.get('clientAlgoId', '')).startswith(CIDOK)]
         print('ALGO_TOTAL=%d' % len(ao)); print('ALGO_NONC3=%d %s' % (len(non), ','.join(non[:8])))
         print('ALGO_C3=%d' % (len(ao) - len(non)))
+        print('ALGO_C3_SYMS=' + ','.join(sorted({str(o.get('symbol')) for o in ao if str(o.get('clientAlgoId', '')).startswith(CIDOK)})))   # [OPS5 muc 1]
     print('API_OK=%d' % (1 if ok else 0))
-if mode in ('sub', 'mon'):
+if mode == 'lev':
+    # [OPS5 muc 3] CHI DOC: v3/account (5) + v1/symbolConfig (5, moi symbol) = 10 weight IP. Universe = run/c3live_exchangeInfo.json
+    #   (TRADING, USDT, PERPETUAL); thieu file => moi symbol symbolConfig tra ve.
+    code, ac = call(FAPI, '/fapi/v3/account', 5)
+    print('ACC_HTTP=' + code)
+    if code == '200' and isinstance(ac, dict):
+        print('TMB=%s' % ac.get('totalMarginBalance')); print('AVAIL=%s' % ac.get('availableBalance'))
+    else:
+        ok = False; print('ERR_ACC=HTTP%s' % code)
+    uni = None
+    try:
+        ex = json.load(open('run/c3live_exchangeInfo.json', encoding='utf-8'))
+        sl = ex.get('symbols') if isinstance(ex, dict) else None
+        uni = sorted(x['symbol'] for x in (sl or []) if isinstance(x, dict) and isinstance(x.get('symbol'), str)
+                     and x.get('status') == 'TRADING' and x.get('quoteAsset') == 'USDT' and x.get('contractType') == 'PERPETUAL')
+    except Exception as e:
+        print('LEV_UNI_ERR=' + type(e).__name__)
+    code, sc = call(FAPI, '/fapi/v1/symbolConfig', 5)
+    print('LEV_HTTP=' + code)
+    if code != '200' or not isinstance(sc, list):
+        ok = False; print('ERR_LEV=HTTP%s' % code)
+    else:
+        m = {x['symbol']: x for x in sc if isinstance(x, dict) and isinstance(x.get('symbol'), str)}
+        u = uni if uni else sorted(m)
+        print('LEV_UNI=%d %s' % (len(u), 'exchangeInfo' if uni else 'symbolConfig'))
+        miss = [sy for sy in u if sy not in m]
+        print('LEV_MISS=%d %s' % (len(miss), ','.join(miss[:8])))
+        for sy in u:
+            if sy in m:
+                x = m[sy]; print('LEVSYM=%s:%s:%s:%s' % (sy, x.get('leverage'), x.get('marginType'), x.get('maxNotionalValue')))
+    print('API_OK=%d' % (1 if ok else 0))
+if mode in ('sub', 'mon', 'lev'):
     print('W_NOMINAL=%d' % W['n']); print('W_USED_1M=%s' % (W['used'] or '?'))
 k = s = None
 print('END_API')

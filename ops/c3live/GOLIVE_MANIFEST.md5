@@ -7,7 +7,8 @@ b79e158dffb563076a612258d4fe4735  golive_rebase_equity.sh
 4f25c048b6f49d5078be6080479e0c28  install_golive_ops.sh
 194bb84f136d706ce0f3926557ae5ec3  install_cron_golive_monitor.sh
 bc7647d543c92a9bbfee855b1f0ba2e6  golive_monitor.sh
-1a88e2dbc482377463eddb2cd2728933  golive_lib.sh
+1df1a1d4227295d0ba15328fa79be4bd  golive_lib.sh
 12e8084cd03b61cd446bfa6a9f56666d  golive_use_sub_key.sh
 5db4049d6fcb9ff097ebcc78dcc81fb9  golive_check_key.sh
 74986055ba1f183ad2e02c27a8725c46  golive_legacy_verify.sh
+2e8ba68bf15e771c08c7f55b3ac87e7b  golive_first_trade_check.sh
