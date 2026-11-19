@@ -66,7 +66,7 @@ book '{"clusters":[{"symbol":"UAIUSDT","adj_qty":"228","armed":false},{"symbol":
 api positionRisk '[{"symbol":"UAIUSDT","positionAmt":"228"},{"symbol":"IDOLUSDT","positionAmt":"1019"}]'
 : > "$W/api/calls.log"
 OUT=$(E DRY=1 bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?
-chk "m1 DRY: (a) 2 dong JVM hien tai DAT (dong OLDUSDT cua JVM cu bo qua), KHONG goi san, KHONG ghi state/bang chung/Telegram" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'sizing_iv: DAT (dong SUBMIT JVM nay: 2, lech: 0)' && ! echo \"\$OUT\" | grep -q OLDUSDT && [ ! -s $W/api/calls.log ] && [ ! -s $FTD/state.txt ] && ! ls $FTD/SIZING_IV_* >/dev/null 2>&1 && [ ! -e $W/tg.txt ]"
+chk "m1 DRY: (a) 2 dong trong cua so (lan dau: NOW - 1800 s) DAT (OLDUSDT 3000 s truoc ngoai cua so), KHONG goi san, KHONG ghi state/bang chung/Telegram" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'sizing_iv: DAT (dong SUBMIT cham: 2, lech: 0, REJECTED: 0)' && ! echo \"\$OUT\" | grep -q OLDUSDT && [ ! -s $W/api/calls.log ] && [ ! -s $FTD/state.txt ] && ! ls $FTD/SIZING_IV_* >/dev/null 2>&1 && [ ! -e $W/tg.txt ]"
 OUT=$(E bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?
 EV=$(ls -t $FTD/SIZING_IV_*.md 2>/dev/null | head -1)
 chk "m1 lan 1: sizing_iv DAT, vi the co tren san, chua arm => cho; bang chung co 'sizing_iv: DAT' + md5 jar + 2 dong; Telegram tom tat" "[ $RC = 0 ] && [ -n '$EV' ] && grep -qx 'sizing_iv: DAT' '$EV' && grep -qx 'jar_md5: $JM' '$EV' && [ \$(grep -c '^| c3-' '$EV') = 2 ] && grep -q 'OK_CO_VI_THE/CHO' '$EV' && grep -q 'sizing_iv=DAT' $W/tg.txt && grep -q 'mon\|account' $W/api/calls.log"
@@ -114,7 +114,7 @@ rm -f $W/api/positionRisk.code
 # JVM moi: dong truoc MainClass moi KHONG tinh
 echo "$(D7 $((NOW - 100))) INFO  [main] c.b.c.u.Utils: MainClass: com.binance.chuyennd.trading.BinanceOrderTradingManager APPDir: ./run" >> "$F/logs/full.log"
 OUT=$(E DRY=1 bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?
-chk "m1 JVM moi (MainClass moi): 0 dong SUBMIT => sizing_iv KHONG_DO_DUOC" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'sizing_iv: KHONG_DO_DUOC (0 dong SUBMIT JVM nay)'"
+chk "m1 JVM moi (MainClass moi) [B3 sua hanh vi cu]: dong cua JVM truoc trong cua so / con cho VAN duoc cham => sizing_iv FAIL (BADUSDT), khong con KHONG_DO_DUOC sai" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'sizing_iv: FAIL' && echo \"\$OUT\" | grep -q 'BADUSDT'"
 startbot abc
 OUT=$(E DRY=1 bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?
 chk "m1 C3_CAPITAL process khong hop le => DUNG rc 1" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'C3_CAPITAL process khong hop le'"
@@ -129,6 +129,46 @@ chk "m1 cron co co + ssh 242 loi => DUNG rc 1 (ghi ft_cron.log), khong state hon
 OUT=$(E A1_APPROVED_OPS=$W/khong_co.commit DRY=1 bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?
 chk "m1 pin: HEAD khong trong A1_APPROVED_OPS => TU CHOI [m1]" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'TU CHOI \[m1\]'"
 chk "m1 khong lo key/secret trong toan bo deploy/ + Telegram" "nosec ''"
+
+# ---- [OPS5_FIX MINOR B3/B4/cron-repo] cua so qua JVM restart / log xoay; REJECTED; cron TU CHOI khong im lang
+cp $F/logs/full.log $W/full.log.b5bak; FTB=$W/ft_b5; EB() { E FT_DIR=$FTB "$@"; }
+MCLB() { echo "$(D7 $1) INFO  [main] c.b.c.u.Utils: MainClass: com.binance.chuyennd.trading.BinanceOrderTradingManager APPDir: ./run"; }
+SUBB() { echo "$(D7 $1) INFO  [pool-1-thread-1] c.b.c.c.e.C3LiveEntry: [C3-LIVE] SUBMIT $2 PREDICT_SYMBOL_TRADE SUBMITTED cid=c3-$2-$1-0 qty=1 budget=$3 legIdx=0 notional=$3 U_before=0.0"; }
+api positionRisk '[]'; book '{"clusters":[]}'
+{ MCLB $((NOW - 900)); SUBB $((NOW - 600)) LOSTUSDT 99; MCLB $((NOW - 300)); } > $F/logs/full.log
+OUT=$(EB DRY=1 bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?
+chk "b1 [B3] SUBMIT lech o JVM TRUOC restart (chua cron nao cham) => VAN cham: sizing_iv FAIL" "echo \"\$OUT\" | grep -q 'sizing_iv: FAIL (dong SUBMIT cham: 1, lech: 1' && echo \"\$OUT\" | grep -q 'so lan khoi dong JVM trong cua so: 2'"
+{ MCLB $((NOW - 900)); SUBB $((NOW - 600)) ROTUSDT 99; } > $F/logs/full.log.1; MCLB $((NOW - 200)) > $F/logs/full.log
+OUT=$(EB DRY=1 bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?; rm -f $F/logs/full.log.1
+chk "b2 [B3] SUBMIT chi con trong full.log.1 (log da xoay) => VAN cham (FAIL)" "echo \"\$OUT\" | grep -q 'ROTUSDT' && echo \"\$OUT\" | grep -q 'sizing_iv: FAIL'"
+RN=$(date +%s); { MCLB $((RN - 1500)); SUBB $((RN - 1200)) OLDWUSDT 99; MCLB $((RN - 300)); } > $F/logs/full.log; mkdir -p $FTB; echo $((RN - 60)) > $FTB/last_check
+OUT=$(EB DRY=1 bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?; rm -f $FTB/last_check
+chk "b3 [B3] SUBMIT truoc (lan cham cuoi - 900 s) => ngoai cua so (da cham o luot truoc) => khong cham lai" "! echo \"\$OUT\" | grep -q OLDWUSDT && echo \"\$OUT\" | grep -q 'truoc cua so bo qua: 1'"
+{ MCLB $((NOW - 900)); SUBB $((NOW - 600)) REJUSDT 22.5; echo "$(D7 $((NOW - 599))) WARN  [x] c.b.c.c.e.C3LiveOrderExecutor: [C3-LIVE-EXEC] REJUSDT c3-REJUSDT-$((NOW - 600))-0 KHONG khop (REJECTED -2019) => huy giu cho"
+  SUBB $((NOW - 500)) RJ2USDT 22.5; echo "$(D7 $((NOW - 499))) WARN [x] C3LiveExec: [C3-LIVE] REJECT RJ2USDT cid=c3-RJ2USDT-x code=-2019"; SUBB $((NOW - 400)) OKBUSDT 22.5; } > $F/logs/full.log
+api positionRisk '[{"symbol":"OKBUSDT","positionAmt":"1"}]'; book '{"clusters":[{"symbol":"OKBUSDT","adj_qty":"1"}]}'
+OUT=$(EB bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?; EV=$(ls -t $FTB/SIZING_IV_*.md 2>/dev/null | head -1)
+chk "b4 [B4] REJECT khop cid + REJECT cid la (khop symbol <= 300 s) => REJECTED/NA_REJECTED (KHONG OK_DA_DONG), khong tinh DAT; OKBUSDT DAT; last_check ghi" "[ $RC = 0 ] && grep -q '^c3-REJUSDT-.*|REJECTED|NA_REJECTED|' $FTB/state.txt && grep -q '^c3-RJ2USDT-.*|REJECTED|NA_REJECTED|' $FTB/state.txt && ! grep -q 'REJUSDT|.*OK_DA_DONG' $FTB/state.txt && grep -qx 'sizing_iv: DAT' '$EV' && echo \"\$OUT\" | grep -q 'dong SUBMIT cham: 1, lech: 0, REJECTED: 2' && [ -s $FTB/last_check ]"
+{ MCLB $((NOW - 900)); SUBB $((NOW - 600)) REJUSDT 22.5; echo "$(D7 $((NOW - 599))) WARN [x] y: [C3-LIVE] REJECT REJUSDT cid=c3-REJUSDT-$((NOW - 600))-0 code=-2019"; } > $F/logs/full.log; rm -rf $FTB
+OUT=$(EB DRY=1 bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?
+chk "b5 [B4] chi co lenh REJECTED => sizing_iv KHONG_DO_DUOC (khong phai DAT)" "echo \"\$OUT\" | grep -q 'sizing_iv: KHONG_DO_DUOC (0 dong SUBMIT khong-REJECTED trong cua so; REJECTED 1)'"
+{ MCLB $((NOW - 900)); SUBB $((NOW - 600)) PNDUSDT 22.5; } > $F/logs/full.log; rm -rf $FTB
+api positionRisk '[{"symbol":"PNDUSDT","positionAmt":"1"}]'; book '{"clusters":[{"symbol":"PNDUSDT","adj_qty":"1","armed":false}]}'
+OUT=$(EB bash "$HERE/golive_first_trade_check.sh" 2>&1)
+MCLB $((NOW - 100)) > $F/logs/full.log; book '{"clusters":[{"symbol":"PNDUSDT","adj_qty":"1","armed":true}]}'; api openAlgoOrders '[{"symbol":"PNDUSDT","clientAlgoId":"c3s-PNDUSDT-1-1"}]'
+sleep 1; OUT=$(EB bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?
+chk "b6 [B3] cid CON CHO trong state ma SUBMIT da ra khoi log => van doi chieu tiep (arm => OK_ARM_CO_ALGO)" "grep -q '^c3-PNDUSDT-.*|OK_CO_VI_THE|OK_ARM_CO_ALGO|' $FTB/state.txt"
+api openAlgoOrders '[]'
+printf 'C3_ACCOUNT=SUB\nKEYS_FILE=%s\n' "$W/keys_sub.env" > $W/deploy/golive_monitor.on; G0=$(grep -c 'TU CHOI \[m1\]' $W/tg.txt 2>/dev/null)
+OUT=$(EB A1_APPROVED_OPS=$W/khong_co.commit FT_CRON=1 bash "$HERE/golive_first_trade_check.sh" 2>&1); RC1=$?
+OUT=$(EB A1_APPROVED_OPS=$W/khong_co.commit FT_CRON=1 bash "$HERE/golive_first_trade_check.sh" 2>&1); RC2=$?
+G1=$(grep -c 'TU CHOI \[m1\]' $W/tg.txt 2>/dev/null)
+chk "b7 [cron] HEAD chua duyet / repo ban + co micro => KHONG im lang: ft_cron.log ghi ly do 2 lan, Telegram CANH BAO dung 1 lan/ngay (G0=${G0:-0} G1=$G1)" "[ $RC1 = 1 ] && [ $RC2 = 1 ] && [ \$(grep -c 'TU CHOI \[m1\]' $FTB/ft_cron.log) = 2 ] && [ \"$G1\" = \$(( ${G0:-0} + 1 )) ] && grep -q 'CANH BAO cron golive_first_trade_check TU CHOI' $W/tg.txt"
+rm -f $W/deploy/golive_monitor.on
+OUT=$(EB A1_APPROVED_OPS=$W/khong_co.commit FT_CRON=1 bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?
+chk "b8 [cron] khong co co micro => thoat im rc 0 (ke ca repo chua duyet)" "[ $RC = 0 ] && [ -z \"\$OUT\" ]"
+printf 'C3_ACCOUNT=SUB\nKEYS_FILE=%s\n' "$W/keys_sub.env" > $W/deploy/golive_monitor.on
+cp $W/full.log.b5bak $F/logs/full.log; api positionRisk '[]'; book '{"clusters":[]}'
 
 # ---- [OPS5_FIX M-3] phan loai dong FAIL (C_eff / TIER_3) - phan quyet prereg giu nguyen
 cp $F/logs/full.log $W/full.log.m3bak; FT2=$W/ft_m3; E2() { E FT_DIR=$FT2 "$@"; }
@@ -457,6 +497,23 @@ cp $W/env.sh.k8 $F/conf/env.sh; startbot 1000; echo 'c3_autodrain 20261119_10150
 OUT=$(GR 20990101_000002); RC=$?; rm -f $W/daemon_nostop
 chk "k4 [8b] gl_restart ks=1 FAIL (stop khong dung duoc) => ksoff tra lai token cu c3_autodrain (khong mat drain), env khoi phuc" "echo \"\$OUT\" | grep -q 'FAIL van_con_process_sau_stop' && [ \"\$(cat $F/run/KILL_SWITCH)\" = 'c3_autodrain 20261119_101500 caller=x' ] && [ -e $F/run/KILL_SWITCH.rb_20990101_000002 ] && ! grep -q O5F_K8 $F/conf/env.sh"
 rm -f $F/run/KILL_SWITCH* $F/run/.golive_* $F/conf/env.sh.bak_*; cp $W/env.sh.k8 $F/conf/env.sh; rm -f $F/bin/daemon.sh; startbot 1000
+
+echo "== OPS5_FIX muc 6/7: deadman bo qua gate khi PAUSE con han; rollback autodrain chi go WD_PRESTART dong watchdog (A19)"
+printf 'C3_ACCOUNT=SUB\n' > $W/deploy/golive_monitor.on; touch $W/deploy/run/monitor_heartbeat; rm -rf $DMD; gate_at $(( $(date +%s) - 900 ))
+echo "C3GOLIVE_golive_micro_on TS=1 pid=1 t=1" > $W/PAUSE_dm
+OUT=$(DM WD_PAUSE=$W/PAUSE_dm bash "$HERE/golive_deadman.sh" 2>&1); RC=$?
+chk "g1 [2a] gate cu 900 s NHUNG PAUSE watchdog moi (deploy/restart co chu dich) => BO QUA gate, khong canh bao gate" "echo \"\$OUT\" | grep -q 'INFO PAUSE watchdog 242 con han' && ! echo \"\$OUT\" | grep -q 'CANH BAO gate' && ! grep -qs 'CANH BAO gate' $W/tgdm.txt"
+touch -d '-40 min' $W/PAUSE_dm
+OUT=$(DM WD_PAUSE=$W/PAUSE_dm bash "$HERE/golive_deadman.sh" 2>&1); RC=$?
+chk "g2 [2a] PAUSE CU (> 1800 s, bi bo quen) => VAN canh bao gate" "[ $RC = 2 ] && echo \"\$OUT\" | grep -q 'CANH BAO gate'"
+rm -f $W/PAUSE_dm; OUT=$(DM WD_PAUSE=$W/PAUSE_dm bash "$HERE/golive_deadman.sh" 2>&1)
+chk "g3 [2a] khong PAUSE + gate cu => canh bao gate (nhu cu)" "echo \"\$OUT\" | grep -q 'CANH BAO gate'"
+rm -f $W/deploy/golive_monitor.on; rm -rf $DMD
+printf '#!/bin/bash\nPRESTART=${WD_PRESTART:-/usr/local/sbin/h242-prestart.sh}\n' > $SB/h242_watchdog.sh; mkdir -p $SB
+cp $W/ct242_0 $W/ct242; printf '*/2 * * * * WD_PRESTART=/x/y.sh /usr/local/sbin/other.sh\n' >> $W/ct242; cp $W/ct242 $W/ct242_a19
+OUT=$(echo YES | AI bash "$HERE/install_242_autodrain.sh" 2>&1); OUT=$(echo YES | AI MODE=rollback bash "$HERE/install_242_autodrain.sh" 2>&1); RC=$?
+chk "g4 [A19] rollback CHI go WD_PRESTART o dong watchdog; dong cron khac co WD_PRESTART giu nguyen (crontab = ban truoc install)" "[ $RC = 0 ] && cmp -s $W/ct242 $W/ct242_a19 && grep -q 'WD_PRESTART=/x/y.sh /usr/local/sbin/other.sh' $W/ct242"
+cp $W/ct242_0 $W/ct242
 
 # == KET THUC ==
 cleanup
