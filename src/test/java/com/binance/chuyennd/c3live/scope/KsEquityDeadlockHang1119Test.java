@@ -2,6 +2,7 @@ package com.binance.chuyennd.c3live.scope;
 
 import com.binance.chuyennd.c3live.api.PositionInfo;
 import com.binance.chuyennd.c3live.mock.MockExchangeGateway;
+import com.binance.chuyennd.c3live.risk.C3MainEquityTestAccess;
 import com.binance.chuyennd.ops.KillSwitchEngineTestAccess;
 import org.junit.After;
 import org.junit.Rule;
@@ -34,6 +35,7 @@ public class KsEquityDeadlockHang1119Test {
     @After
     public void restore() {
         KillSwitchEngineTestAccess.setEqPollUnlocked(true);
+        C3MainEquityTestAccess.setRestUnlocked(true);
     }
 
     /** positions() cua luong "B": bao da vao (dang giu EQ) roi cho tin hieu (mo phong REST dang cho/ngu burst). */
@@ -118,6 +120,7 @@ public class KsEquityDeadlockHang1119Test {
     @Test
     public void oldBehavior_reproducesDeadlock_andTickThreadStuck() throws Exception {
         KillSwitchEngineTestAccess.setEqPollUnlocked(false);
+        C3MainEquityTestAccess.setRestUnlocked(false);   // [W3B muc 2] ca 2 co ve hanh vi cu
         Run run = scenario();
         assertTrue("phai tai hien DEADLOCK KS<->EQ (hanh vi cu)", run.deadlock);
         assertTrue(run.dump, run.dump.contains("SIM-OpsKillSwitch") && run.dump.contains("SIM-C3LIVE-OPS"));
@@ -135,6 +138,30 @@ public class KsEquityDeadlockHang1119Test {
         assertFalse("A xong", run.a.isAlive());
         assertFalse("B xong", run.b.isAlive());
         assertFalse("pool-1 xong", run.c.isAlive());
+    }
+
+    /** [W3B muc 2] chi tat co KS (KILLSW_EQ_POLL_UNLOCKED=false), EQ REST ngoai khoa => KHONG deadlock. */
+    @Test
+    public void ksOld_eqRestUnlocked_noDeadlock() throws Exception {
+        KillSwitchEngineTestAccess.setEqPollUnlocked(false);
+        C3MainEquityTestAccess.setRestUnlocked(true);
+        Run run = scenario();
+        assertFalse("khong duoc deadlock: " + run.dump, run.deadlock);
+        assertFalse(run.a.isAlive());
+        assertFalse(run.b.isAlive());
+        assertFalse(run.c.isAlive());
+    }
+
+    /** [W3B muc 2] chi tat co EQ (C3_EQ_REST_UNLOCKED=false), KS poll ngoai khoa => KHONG deadlock. */
+    @Test
+    public void eqOld_ksUnlocked_noDeadlock() throws Exception {
+        KillSwitchEngineTestAccess.setEqPollUnlocked(true);
+        C3MainEquityTestAccess.setRestUnlocked(false);
+        Run run = scenario();
+        assertFalse("khong duoc deadlock: " + run.dump, run.deadlock);
+        assertFalse(run.a.isAlive());
+        assertFalse(run.b.isAlive());
+        assertFalse(run.c.isAlive());
     }
 
     @Test

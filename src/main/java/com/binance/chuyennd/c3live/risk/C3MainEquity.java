@@ -83,6 +83,28 @@ public final class C3MainEquity implements EquitySource {
     private long ledgerMtime = -1L;
     private double ledgerNet;
     private final Map<String, List<long[]>> closedIntervals = new HashMap<>();
+    /** [W3B muc 2] single-flight REST positions (c3Equity) / account (available): toi da 1 REST moi loai cung luc. */
+    private final Object posFlight = new Object();
+    private final Object accFlight = new Object();
+
+    /**
+     * [W3B muc 2 / HANG-1119 muc 6] REST (positions / account / income, gom ngu RateGuard toi ~14 s) va callback
+     * {@code api.onApiResult} / alert chay NGOAI khoa {@code this} (khoa chi giu khi doc/ghi cache + tinh). Single-flight
+     * theo loai; cache/TTL va ket qua 1 thread y nhu cu. Env {@value #KEY_REST_UNLOCKED}: khong dat / khac 0|false = BAT;
+     * "0"/"false" = hanh vi cu (ca loi goi trong khoa).
+     */
+    public static final String KEY_REST_UNLOCKED = "C3_EQ_REST_UNLOCKED";
+    static volatile boolean restUnlocked = restUnlockedFrom(com.binance.chuyennd.tradecore.Cfg.get(KEY_REST_UNLOCKED));
+
+    /**
+     * @param raw gia tri env
+     * @return true = REST ngoai khoa (mac dinh)
+     */
+    static boolean restUnlockedFrom(String raw) {
+        if (raw == null) return true;
+        String v = raw.trim();
+        return !("0".equals(v) || "false".equalsIgnoreCase(v));
+    }
 
     public C3MainEquity(C3ScopedGateway gw, LiveBookC3 book, C3Scope scope, double capital, File stateFile, String tag,
                         long ttlMs, LongSupplier clock, C3LiveOrderExecutor.ApiObserver api, Consumer<String> alert) {
@@ -119,19 +141,47 @@ public final class C3MainEquity implements EquitySource {
     }
 
     /** equity c3 (cache &lt;= ttl). null = khong co so tin cay. */
-    public synchronized Double c3Equity() {
-        long now = clock.getAsLong();
-        if (eqCached != null && now - eqAtMs < ttlMs) return eqCached;
-        Map<String, BigDecimal> mark = new HashMap<>();
-        try {
-            for (PositionInfo p : gw.positions()) {
-                if (p.getSymbol() != null && p.getMarkPrice() != null && p.getMarkPrice().signum() > 0) mark.put(p.getSymbol(), p.getMarkPrice());
+    public Double c3Equity() {
+        if (!restUnlocked) {
+            synchronized (this) {   // hanh vi cu: REST + onApiResult trong khoa
+                return c3EquityFlight();
             }
-            api.onApiResult("positions", true);
-        } catch (RuntimeException e) {
-            api.onApiResult("positions", false);
-            return fail(now, "positions() loi: " + e);
         }
+        synchronized (this) {   // [W3B muc 2] cache con han => tra ngay (khong cho REST cua thread khac)
+            long now = clock.getAsLong();
+            if (eqCached != null && now - eqAtMs < ttlMs) return eqCached;
+        }
+        return c3EquityFlight();
+    }
+
+    /** [W3B muc 2] single-flight positions: kiem lai cache trong luot; REST ngoai khoa this; onApiResult ngoai moi khoa. */
+    private Double c3EquityFlight() {
+        Double res;
+        RuntimeException err = null;
+        synchronized (posFlight) {
+            long now;
+            synchronized (this) {
+                now = clock.getAsLong();
+                if (eqCached != null && now - eqAtMs < ttlMs) return eqCached;
+            }
+            Map<String, BigDecimal> mark = new HashMap<>();
+            try {
+                for (PositionInfo p : gw.positions()) {
+                    if (p.getSymbol() != null && p.getMarkPrice() != null && p.getMarkPrice().signum() > 0) mark.put(p.getSymbol(), p.getMarkPrice());
+                }
+            } catch (RuntimeException e) {
+                err = e;
+            }
+            synchronized (this) {
+                res = err != null ? fail(now, "positions() loi: " + err) : computeEquity(now, mark);
+            }
+        }
+        api.onApiResult("positions", err == null);
+        return res;
+    }
+
+    /** Tinh equity c3 tu markPrice (goi trong khoa this). */
+    private Double computeEquity(long now, Map<String, BigDecimal> mark) {
         double upl = 0d;
         double openNet = 0d;
         for (LiveBookC3.ClusterView c : book.clusters()) {
@@ -160,57 +210,98 @@ public final class C3MainEquity implements EquitySource {
     }
 
     /** Von tinh size = min(C3_CAPITAL, equity c3, availableBalance + margin c3); null neu khong co so. */
-    public synchronized Double capital() {
+    public Double capital() {
+        if (!restUnlocked) {
+            synchronized (this) {   // hanh vi cu
+                return capitalImpl();
+            }
+        }
+        return capitalImpl();
+    }
+
+    private Double capitalImpl() {
         Double eq = c3Equity();
         if (eq == null) return null;
         Double avail = available();
         if (avail == null) return null;
-        double margin = book.marginUsed();
-        double cap = Math.min(capital, eq);
-        cap = Math.min(cap, avail + margin);
-        long now = clock.getAsLong();
-        if (margin > 0d && avail < 2d * margin && now - lastMarginWarnMs >= MARGIN_WARN_EVERY_MS) {
-            lastMarginWarnMs = now;
-            String m = "[C3-LIVE-EQ] CANH BAO ky quy tai khoan chinh: availableBalance=" + fmt(avail) + " < 2 x margin c3 "
-                    + fmt(margin) + " (LEGACY + c3 dung chung ky quy cross) — kiem tai khoan";
-            LOG.warn("{}", m);
-            alert.accept(m);
+        double cap;
+        String warn = null;
+        synchronized (this) {
+            double margin = book.marginUsed();
+            cap = Math.min(capital, eq);
+            cap = Math.min(cap, avail + margin);
+            long now = clock.getAsLong();
+            if (margin > 0d && avail < 2d * margin && now - lastMarginWarnMs >= MARGIN_WARN_EVERY_MS) {
+                lastMarginWarnMs = now;
+                warn = "[C3-LIVE-EQ] CANH BAO ky quy tai khoan chinh: availableBalance=" + fmt(avail) + " < 2 x margin c3 "
+                        + fmt(margin) + " (LEGACY + c3 dung chung ky quy cross) ? kiem tai khoan";
+            }
+        }
+        if (warn != null) {   // [W3B muc 2] alert ngoai khoa this
+            LOG.warn("{}", warn);
+            alert.accept(warn);
         }
         return cap;
     }
 
     private Double available() {
-        long now = clock.getAsLong();
-        if (availCached != null && now - availAtMs < ttlMs) return availCached;
-        try {
-            AccountSnapshot a = gw.accountRaw();
-            api.onApiResult("account", true);
-            BigDecimal av = a == null ? null : a.getAvailableBalance();
-            if (av == null) {
-                availCached = null;
-                return null;
-            }
-            availCached = av.doubleValue();
-            availAtMs = now;
-            return availCached;
-        } catch (RuntimeException e) {
-            api.onApiResult("account", false);
-            availCached = null;
-            LOG.warn("[C3-LIVE-EQ] account() loi {} => khong co availableBalance (chan mo moi)", e.toString());
-            return null;
+        synchronized (this) {
+            long now = clock.getAsLong();
+            if (availCached != null && now - availAtMs < ttlMs) return availCached;
         }
+        Double res;
+        RuntimeException err = null;
+        synchronized (accFlight) {   // [W3B muc 2] single-flight account, REST ngoai khoa this
+            long now;
+            synchronized (this) {
+                now = clock.getAsLong();
+                if (availCached != null && now - availAtMs < ttlMs) return availCached;
+            }
+            AccountSnapshot a = null;
+            try {
+                a = gw.accountRaw();
+            } catch (RuntimeException e) {
+                err = e;
+            }
+            synchronized (this) {
+                BigDecimal av = err != null || a == null ? null : a.getAvailableBalance();
+                if (av == null) {
+                    availCached = null;
+                    res = null;
+                } else {
+                    availCached = av.doubleValue();
+                    availAtMs = now;
+                    res = availCached;
+                }
+            }
+        }
+        api.onApiResult("account", err == null);
+        if (err != null) LOG.warn("[C3-LIVE-EQ] account() loi {} => khong co availableBalance (chan mo moi)", err.toString());
+        return res;
     }
 
     // ------------------------------------------------------------------ funding c3 (income)
     /** Moi {@link #FUNDING_POLL_MS}: income FUNDING_FEE moi => cong phan c3. @return so dong da cong; -1 = loi doc. */
-    public synchronized int pollFunding(long now) {
-        if (now - lastFundingPollMs < FUNDING_POLL_MS) return 0;
-        lastFundingPollMs = now;
-        long from = Math.max(startMs, incomeLastMs);
+    public int pollFunding(long now) {
+        if (!restUnlocked) {
+            synchronized (this) {   // hanh vi cu
+                return pollFundingImpl(now);
+            }
+        }
+        return pollFundingImpl(now);
+    }
+
+    /** [W3B muc 2] kiem+dat moc 10' trong khoa (=> single-flight), REST income ngoai khoa, xu ly + luu trong khoa. */
+    private int pollFundingImpl(long now) {
+        long from;
+        synchronized (this) {
+            if (now - lastFundingPollMs < FUNDING_POLL_MS) return 0;
+            lastFundingPollMs = now;
+            from = Math.max(startMs, incomeLastMs);
+        }
         List<IncomeRecord> rs;
         try {
             rs = gw.income("FUNDING_FEE", from, INCOME_LIMIT);
-            api.onApiResult("income", true);
         } catch (UnsupportedOperationException e) {
             return 0;
         } catch (RuntimeException e) {
@@ -218,6 +309,14 @@ public final class C3MainEquity implements EquitySource {
             LOG.warn("[C3-LIVE-EQ] doc income FUNDING_FEE loi {} => thu lai sau {} s", e.toString(), FUNDING_POLL_MS / 1000);
             return -1;
         }
+        api.onApiResult("income", true);
+        synchronized (this) {
+            return applyIncome(rs, from);
+        }
+    }
+
+    /** Cong funding c3 tu cac dong income (goi trong khoa this). */
+    private int applyIncome(List<IncomeRecord> rs, long from) {
         List<IncomeRecord> sorted = new ArrayList<>(rs);
         sorted.sort(Comparator.comparingLong(IncomeRecord::getTimeMs));
         int n = 0;
