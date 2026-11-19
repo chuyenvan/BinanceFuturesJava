@@ -124,7 +124,7 @@ public final class LiveProfileC3 {
         if (!LIVE) return true;
         String snp = Cfg.get("SHADOW_NO_PUSH");
         String le = Cfg.get(KEY_LIVE_ENTRY);
-        boolean kill = killSwitchPresent(KILL_FILE);
+        boolean kill = killSwitchPresent(KILL_FILE) || BOOT_LOCK_MEM;   // [W3A muc 6] khoa RAM khi khong ghi duoc file
         boolean np = decideNoPush(true, snp, le, kill);
         Boolean prev = lastNoPush;
         if (prev == null || prev != np) {
@@ -133,6 +133,33 @@ public final class LiveProfileC3 {
                     np ? "OFF" : "ON", snp, KEY_LIVE_ENTRY, le, KILL_FILE, kill);
         }
         return np;
+    }
+
+    // ===================== [W3A muc 6 B-09 2026-11-19] khoa khoi dong =====================
+    /** Khoa push trong RAM (chi dat khi C3BootLock KHONG ghi duoc run/KILL_SWITCH); giu toi khi JVM restart. */
+    private static volatile boolean BOOT_LOCK_MEM = false;
+
+    /**
+     * Duong dan file kill-switch hieu luc (env {@code LIVE_KILL_SWITCH_FILE}, mac dinh {@code run/KILL_SWITCH}).
+     *
+     * @return duong dan (tuong doi cwd JVM)
+     */
+    public static String killFile() {
+        return KILL_FILE;
+    }
+
+    /**
+     * [W3A muc 6] Dat khoa push trong RAM (fail-closed khi khong ghi duoc file KILL_SWITCH luc khoi dong).
+     *
+     * @param on true = chan push toi khi restart
+     */
+    public static void setBootLockMem(boolean on) {
+        BOOT_LOCK_MEM = on;
+    }
+
+    /** @return true neu dang co khoa push trong RAM */
+    public static boolean bootLockMem() {
+        return BOOT_LOCK_MEM;
     }
 
     /** [V12 R4q MIN-1] env tat chot chan queue LEGACY (chi "false" moi tat). */

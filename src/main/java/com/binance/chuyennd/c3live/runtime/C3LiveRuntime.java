@@ -101,6 +101,8 @@ public final class C3LiveRuntime {
     private static volatile C3LiveAlerts initAlerts;
     /** [V12 3] lock tai khoan con (chi adapter live), giu suot doi JVM. */
     private static volatile C3LiveAccountLock accountLock;
+    /** [W3A muc 6] khoa khoi dong B-09 (1 doi tuong / JVM => applyOnce chi 1 lan du create() thu lai). */
+    private static volatile C3BootLock BOOT_LOCK;
 
     final GatewayFactory.Mode mode;
     final ExchangeGateway gw;
@@ -201,6 +203,11 @@ public final class C3LiveRuntime {
         }
         C3LiveAlerts alerts = new C3LiveAlerts(Utils::sendSms2Telegram);
         OpsHooks.setAlert(alerts::send);
+        // [W3A muc 6 B-09] TRUOC khi tao gateway/runtime: JVM LIVE len khong qua script => tu dat run/KILL_SWITCH (1 lan/JVM)
+        if (BOOT_LOCK == null) {
+            BOOT_LOCK = new C3BootLock(new File(LiveProfileC3.killFile()), Cfg.get(C3BootLock.KEY_FLAG), alerts::send);
+        }
+        BOOT_LOCK.applyOnce(mode == GatewayFactory.Mode.LIVE, System.currentTimeMillis());
         double pilot = parseD(Cfg.get("LIVE_C3_PILOT_CAPITAL"), C3LiveEquity.DEFAULT_PILOT_CAPITAL);
         OrderAuditLog audit = mode == GatewayFactory.Mode.DRY ? OrderAuditLog.dry() : OrderAuditLog.live();
         ConcurrentHashMap<String, BigDecimal> refs = new ConcurrentHashMap<>();
