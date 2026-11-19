@@ -277,6 +277,33 @@ OUT=$(AI DRY=1 bash "$HERE/install_242_autodrain.sh" 2>&1 < /dev/null); RC=$?
 chk "a12 watchdog khong ho tro WD_PRESTART => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'KHONG ho tro WD_PRESTART'"
 chk "a13 khong lo key/secret (autodrain)" "nosec \"\$OUT\" && ! grep -q \"$SKEY\" $W/tgad.txt"
 
+echo "== OPS5 muc 2b: c3_oracle_seen_242.sh + install_242_oracle_seen.sh"
+OSL=$W/secure; NS=$(date +%s)
+printf '%s sshd[1]: Accepted publickey for root from 161.118.212.3 port 1 ssh2: RSA SHA256:x\n%s sshd[2]: Accepted publickey for root from 1.2.3.4 port 1 ssh2\n' "$(date -d @$((NS - 3000)) '+%b %e %H:%M:%S')" "$(date -d @$((NS - 10)) '+%b %e %H:%M:%S')" > $OSL
+OS() { env OS_AUTHLOG=$OSL OS_STATE_DIR=$W/osstate OS_TG_SINK=$W/tgos.txt "$@"; }
+OUT=$(OS bash "$HERE/c3_oracle_seen_242.sh" 2>&1); RC=$?
+chk "o1 tiem loi: lan cham cuoi cua Oracle 50' truoc (IP khac moi hon khong tinh) => CANH BAO + Telegram, rc 2" "[ $RC = 2 ] && grep -q 'ORACLE-SEEN\] CANH BAO: Oracle (161.118.212.3) KHONG cham 242' $W/tgos.txt"
+OUT=$(OS bash "$HERE/c3_oracle_seen_242.sh" 2>&1); RC=$?
+chk "o2 chong spam: lan 2 < 30' khong gui lai" "[ $RC = 2 ] && [ \$(grep -c 'CANH BAO' $W/tgos.txt) = 1 ]"
+printf '%s sshd[3]: Accepted publickey for root from 161.118.212.3 port 2 ssh2\n' "$(date -d @$((NS - 60)) '+%b %e %H:%M:%S')" >> $OSL
+OUT=$(OS bash "$HERE/c3_oracle_seen_242.sh" 2>&1); RC=$?
+chk "o3 Oracle cham lai (60 s) => DA HOI PHUC 1 lan, rc 0" "[ $RC = 0 ] && [ \$(grep -c 'DA HOI PHUC' $W/tgos.txt) = 1 ]"
+OUT=$(OS bash "$HERE/c3_oracle_seen_242.sh" 2>&1); RC=$?
+chk "o4 OK tiep => khong tin moi" "[ $RC = 0 ] && [ \$(grep -c '^----' $W/tgos.txt) = 2 ]"
+: > $OSL
+OUT=$(OS bash "$HERE/c3_oracle_seen_242.sh" 2>&1); RC1=$?; OUT=$(OS OS_NOW=$((NS + 1000)) bash "$HERE/c3_oracle_seen_242.sh" 2>&1); RC=$?
+chk "o5 log vua xoay (0 dong): luot dau OK (bat dau dem), sau > 15' khong thay => CANH BAO" "[ $RC1 = 0 ] && [ $RC = 2 ] && tail -2 $W/tgos.txt | grep -q 'khong thay dong ssh nao'"
+printf '0 * * * * echo giu\n' > $W/ct242; cp $W/ct242 $W/ct242_os0; rm -f $SB/c3_oracle_seen.sh
+OI() { E AD_SBIN=$SB AD_CT242="bash $W/ct242.sh" "$@"; }
+OUT=$(OI DRY=1 bash "$HERE/install_242_oracle_seen.sh" 2>&1 < /dev/null); RC=$?
+chk "o6 install DRY: KHONG doi" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && cmp -s $W/ct242 $W/ct242_os0 && [ ! -e $SB/c3_oracle_seen.sh ]"
+OUT=$(echo YES | OI bash "$HERE/install_242_oracle_seen.sh" 2>&1); RC=$?
+chk "o7 install: script = c3_oracle_seen_242.sh, 1 dong cron */5 co tag, dong cu giu" "[ $RC = 0 ] && cmp -s $HERE/c3_oracle_seen_242.sh $SB/c3_oracle_seen.sh && grep -qx \"\*/5 \* \* \* \* $SB/c3_oracle_seen.sh >/dev/null 2>&1 # C3_ORACLE_SEEN (OPS5 2b)\" $W/ct242 && grep -q 'echo giu' $W/ct242"
+OUT=$(echo YES | OI bash "$HERE/install_242_oracle_seen.sh" 2>&1); RC=$?
+chk "o8 install lan 2 => KHONG DOI" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'KHONG DOI (da cai)'"
+OUT=$(echo YES | OI MODE=rollback bash "$HERE/install_242_oracle_seen.sh" 2>&1); RC=$?
+chk "o9 rollback: crontab = ban dau, script -> .off_" "[ $RC = 0 ] && cmp -s $W/ct242 $W/ct242_os0 && [ ! -e $SB/c3_oracle_seen.sh ]"
+
 # == KET THUC ==
 cleanup
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"

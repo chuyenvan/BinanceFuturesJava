@@ -18,3 +18,5 @@ c5ca4bc44bc57a074ff5ee3ec7d21665  install_ops5_oracle.sh
 0f393298f9c80f4e69d31fb4d4cd10e9  golive_check_lev.sh
 f1c4e08fb630330e6d4e7f1c94667c9e  install_242_autodrain.sh
 540349bd45feed2b2cc6059f4153e6ea  c3_autodrain_prestart.sh
+96c1fc3c2ed14496d6d19d2925557de2  install_242_oracle_seen.sh
+4dd719800e15380883603b96d00eb69f  c3_oracle_seen_242.sh
