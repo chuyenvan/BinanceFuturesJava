@@ -72,7 +72,8 @@ if [ "$READOK" = 0 ]; then
   say "!! CANH BAO: doc trang thai 242 loi (ssh?)"; ST=""
 fi
 MON_SINCE=$(TZ=Asia/Ho_Chi_Minh date -d @"$MON_LAST_T" +%Y%m%d%H%M%S)
-OUT=$(s242in "PP='$(gl_rx "$PROC_PAT")' bash -s -- $A $MON_TAIL $MON_SINCE" <<'EOF'   # [WAVE1] gl_rx: khong tu dem wrapper
+ING_LOG=${ING_LOG:-/home/chuyennd/java/collectData/logs/full.log}; ING_TAIL=${ING_TAIL:-2500000}; LAG_MS=${LAG_MS:-5000}; LAG_WARN_N=${LAG_WARN_N:-5}   # [OPS5 muc 5]
+OUT=$(s242in "PP='$(gl_rx "$PROC_PAT")' bash -s -- $A $MON_TAIL $MON_SINCE $ING_LOG $ING_TAIL $LAG_MS" <<'EOF'   # [WAVE1] gl_rx: khong tu dem wrapper
 A=$1; TB=$2; SINCE=$3; cd "$A" || exit 0; L=logs/full.log
 P=$(pgrep -f "$PP" | head -1)
 H=$(tail -c $TB $L 2>/dev/null)
@@ -102,11 +103,18 @@ RJ=$(echo "$H" | awk -v s="$SINCE" '{split($1,a,"/"); split($2,b,"[:.]"); k=a[3]
 echo "== REJECT_SINCE=$(printf '%s' "$RJ" | grep -ac .) | $(printf '%s' "$RJ" | tail -1 | cut -c1-200)"
 # [WAVE1 A-03] chi dem [C3-EXCL-FORCE] TU lan khoi dong JVM CUOI (dong MainClass) - dong cua lan khoi dong cu (da rollback) khong KHAN lai
 echo "== EXCL_FORCE=$(echo "$H" | awk '/MainClass: com.binance.chuyennd.trading.BinanceOrderTradingManager/{n=0} /\[C3-EXCL-FORCE\]/{n++} END{print n+0}')"
+# [OPS5 muc 5] do tre gia 1 h qua: collectData [REST-BUDGET] ... price_gap_max_ms= price_age_ms= (1 dong / phut) + [KILLSW] HOURLY lag_s
+IL=$4; LG=$(TZ=Asia/Ho_Chi_Minh date -d '-1 hour' '+%Y%m%d%H%M%S')
+echo "== tre_gia_1h: $(tail -c ${5:-2500000} "$IL" 2>/dev/null | grep -a 'price_gap_max_ms=' | awk -v s="$LG" -v T="${6:-5000}" '{split($1,a,"/"); split($2,b,"[:.]"); k=a[3]a[2]a[1]b[1]b[2]b[3]; if (k<s) next; g=-1; ag=-1; if (match($0,/price_gap_max_ms=[0-9]+/)) g=substr($0,RSTART+17,RLENGTH-17)+0; if (match($0,/price_age_ms=[0-9]+/)) ag=substr($0,RSTART+13,RLENGTH-13)+0; n++; if (g>T) ng++; if (g>mg) mg=g; if (ag>T) na++; if (ag>ma) ma=ag} END{printf "n=%d gap_gt=%d gap_max_ms=%d age_gt=%d age_max_ms=%d nguong_ms=%d", n, ng, mg, na, ma, T}') | $(last '\[KILLSW\] HOURLY' 600 | grep -oE 'lag_s=[0-9]+ miss=[0-9/]+')"
 echo "== may: MemAvailable=$(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo)MB swap_free=$(awk '/SwapFree/{print int($2/1024)}' /proc/meminfo)MB dia=$(df -h . | awk 'NR==2{print $4" trong ("$5")"}')"
 EOF
 ) || OUT="(ssh 242 loi)"
 echo "$OUT"
 echo "== PAUSE watchdog: $(sv PAUSE)  canary/soak=$(sv CANARY_SOAK)"
+# [OPS5 muc 5] tre gia: >= LAG_WARN_N phut / 1 h co price_gap_max_ms > LAG_MS => CANH BAO (chi in + TOM TAT, KHONG KHAN / KILL_SWITCH)
+TGL=$(echo "$OUT" | sed -n 's/^== tre_gia_1h: //p' | head -1); TGN=$(echo "$TGL" | grep -oE 'gap_gt=[0-9]+' | cut -d= -f2); TGT=$(echo "$TGL" | grep -oE '^n=[0-9]+' | cut -d= -f2)
+TRE="${TGN:-?}/${TGT:-?}"
+[[ "${TGN:-}" =~ ^[0-9]+$ ]] && [ "$TGN" -ge "$LAG_WARN_N" ] && say "!! CANH BAO tre gia: $TGN/${TGT:-?} phut 1 h qua co price_gap_max_ms > ${LAG_MS} ms (nguong canh bao $LAG_WARN_N phut)"
 PUSH=OFF; [ "$(sv ENV_LIVE_ADAPTER)" = live ] && [ "$(sv ENV_SHADOW_NO_PUSH)" = false ] && [ "$(sv ENV_LIVE_ENTRY_ENABLED)" = true ] && [ "$(sv KILLSW_FILE)" = 0 ] && PUSH=ON
 RC=0; SUBSUM=""
 if [ "$C3_ACCOUNT" = SUB ]; then
@@ -233,7 +241,7 @@ if [ -n "$KA" ]; then
 fi
 # MAIN: khong co nhanh SUB => luot doc thanh cong dat lai bo dem
 if [ "$C3_ACCOUNT" != SUB ] && [ "$DRY" != 1 ]; then printf 'n=%s\nts=%s\n' "$([ "$READOK" = 1 ] && echo 0 || echo $((NF0 + 1)))" "$TS" > "$SUB_FAIL_FILE"; fi
-say "TOM TAT: adapter=$(sv ENV_LIVE_ADAPTER) C3_CAPITAL=$(sv ENV_C3_CAPITAL) push=$PUSH latch=$(sv LATCH) so_c3=$(sv BOOK_CUM)cum LEGACY=$(sv LEGACY_N) mem=$(sv MEM)MB jar=$(sv JAR_MD5 | cut -c1-8) pause=$(sv PAUSE | cut -c1)$SUBSUM khan_canh_bao=${KA:-0}"
+say "TOM TAT: adapter=$(sv ENV_LIVE_ADAPTER) C3_CAPITAL=$(sv ENV_C3_CAPITAL) push=$PUSH latch=$(sv LATCH) so_c3=$(sv BOOK_CUM)cum LEGACY=$(sv LEGACY_N) mem=$(sv MEM)MB jar=$(sv JAR_MD5 | cut -c1-8) pause=$(sv PAUSE | cut -c1) tre_gia=$TRE$SUBSUM khan_canh_bao=${KA:-0}"
 if [ "$MON_CRON" = 1 ]; then
   mkdir -p "$(dirname "$MON_HB_FILE")" && printf 'ts=%s TS=%s rc=%s\n' "$(date +%s)" "$TS" "$RC" > "$MON_HB_FILE.tmp" && mv -f "$MON_HB_FILE.tmp" "$MON_HB_FILE"
 fi

@@ -6,7 +6,7 @@ b79e158dffb563076a612258d4fe4735  golive_rebase_equity.sh
 74a083b69c85b234b8c9a27c72223e3e  golive_make_gate.sh
 4f25c048b6f49d5078be6080479e0c28  install_golive_ops.sh
 194bb84f136d706ce0f3926557ae5ec3  install_cron_golive_monitor.sh
-bc7647d543c92a9bbfee855b1f0ba2e6  golive_monitor.sh
+d866e870b1c258c1a67c5ee5327a3677  golive_monitor.sh
 1df1a1d4227295d0ba15328fa79be4bd  golive_lib.sh
 12e8084cd03b61cd446bfa6a9f56666d  golive_use_sub_key.sh
 5db4049d6fcb9ff097ebcc78dcc81fb9  golive_check_key.sh
@@ -14,3 +14,4 @@ bc7647d543c92a9bbfee855b1f0ba2e6  golive_monitor.sh
 5242156fa71072ba6b5bf98bed19a3b8  golive_first_trade_check.sh
 149b7f61660ff0be1c31e93e25523c6e  golive_deadman.sh
 c5ca4bc44bc57a074ff5ee3ec7d21665  install_ops5_oracle.sh
+93564c6f73fc7285d6d93ce60876c664  c3_price_lag_day.sh

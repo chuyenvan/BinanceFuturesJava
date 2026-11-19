@@ -192,6 +192,26 @@ OUT=$(IO A1_APPROVED_OPS=$W/khong_co.commit DRY=1 bash "$HERE/install_ops5_oracl
 chk "i5 installer: HEAD chua A1 duyet => TU CHOI [m1]" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'TU CHOI \[m1\]'"
 chmod -R u+w $W/pinned 2>/dev/null
 
+echo "== OPS5 muc 5: tre gia (monitor + c3_price_lag_day.sh)"
+IGD=$W/collectData; mkdir -p $IGD/logs
+NOWL=$(date +%s)
+{ for i in $(seq 1 10); do g=3300; [ $i -le 6 ] && g=$((5000 + i * 100)); echo "$(D7 $((NOWL - i * 60))) INFO  [ThreadAutoRestartProgram] c.b.c.w.BinanceDataIngestor: [REST-BUDGET] calls=47 weight=85 | price_gap_max_ms=$g price_age_ms=$((i * 700)) price_diff=2 loop_restarts=0"; done
+  echo "$(D7 $((NOWL - 7200))) INFO  [x] c.b.c.w.BinanceDataIngestor: [REST-BUDGET] calls=1 | price_gap_max_ms=99999 price_age_ms=99999 price_diff=0"; } | sort > $IGD/logs/full.log
+echo "$(D7 $((NOWL - 120))) INFO  [C3LIVE-OPS] c.b.c.o.OpsHooks: [KILLSW] HOURLY hour=x mode=act | lag_s=6 miss=0/517 api=positions" >> "$F/logs/full.log"
+api positionRisk '[]'; book '{"clusters":[]}'; api openAlgoOrders '[]'
+OUT=$(E DRY=1 ING_LOG=$IGD/logs/full.log bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "t1 monitor: dong tre_gia_1h dem 10 phut 1 h qua (bo dong 2 h truoc), 6 phut gap > 5000, max 5600, lag_s=6" "echo \"\$OUT\" | grep -q '== tre_gia_1h: n=10 gap_gt=6 gap_max_ms=5600 age_gt=2 age_max_ms=7000 nguong_ms=5000 | lag_s=6 miss=0/517'"
+chk "t2 monitor: >= 5 phut tre => CANH BAO tre gia (khong KHAN), TOM TAT tre_gia=6/10" "echo \"\$OUT\" | grep -q 'CANH BAO tre gia: 6/10' && echo \"\$OUT\" | grep -q 'TOM TAT: .* tre_gia=6/10' && ! echo \"\$OUT\" | grep -q 'KHAN.*tre'"
+OUT=$(E DRY=1 ING_LOG=$IGD/logs/full.log LAG_WARN_N=7 bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "t3 monitor: duoi nguong canh bao (LAG_WARN_N=7) => khong CANH BAO tre gia" "! echo \"\$OUT\" | grep -q 'CANH BAO tre gia' && echo \"\$OUT\" | grep -q 'tre_gia=6/10'"
+OUT=$(E DRY=1 ING_LOG=$W/khong_co.log bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "t4 monitor: thieu log ingestor => n=0, khong loi, TOM TAT tre_gia=0/0" "echo \"\$OUT\" | grep -q 'tre_gia_1h: n=0' && echo \"\$OUT\" | grep -q 'tre_gia=0/0'"
+DD=$(TZ=Asia/Ho_Chi_Minh date -d @$((NOWL - 60)) +%F)
+OUT=$(env SSH_242="bash -c" APP_DIR=$F ING_DIR=$IGD bash "$HERE/c3_price_lag_day.sh" "$DD" 2>&1); RC=$?
+chk "t5 c3_price_lag_day: dem ngay (n, gap_gt, p50, max, lag_s) + ket luan %" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'collectData: n=.* gap_gt=[67] ' && echo \"\$OUT\" | grep -q 'lag_s_max=6' && echo \"\$OUT\" | grep -q 'KET LUAN: [67]/'"
+OUT=$(env SSH_242="bash -c" APP_DIR=$F ING_DIR=$IGD bash "$HERE/c3_price_lag_day.sh" 2001-01-01 2>&1); RC=$?
+chk "t6 c3_price_lag_day: ngay khong co du lieu => KHONG DO DUOC" "echo \"\$OUT\" | grep -q 'KET LUAN: KHONG DO DUOC'"
+
 # == KET THUC ==
 cleanup
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
