@@ -106,6 +106,13 @@ public class HttpRequest {
      */
     static final boolean TIMEOUT_FIX = !"false".equalsIgnoreCase(String.valueOf(System.getenv("HTTP_TIMEOUT_FIX")).trim());
     private static final int TIMEOUT_READ_OVERRIDE_MS = envMs("HTTP_TIMEOUT_READ_MS", 0);
+    /**
+     * [W3B muc 3c] Duong co timeout: them han TONG doc BODY moi lan thu = timeout + read timeout (read timeout cua socket la
+     * MOI lan read => server nho giot body giu duoc vo han). Kiem giua cac lan read; vuot => disconnect + SocketTimeoutException
+     * => lan thu loi, thu lai nhu cu. KHONG phu header nho giot (HttpURLConnection doc header noi bo). Env
+     * {@code HTTP_TIMEOUT_TOTAL=false} => tat (y nhu W3A).
+     */
+    static final boolean TOTAL_TIMEOUT = !"false".equalsIgnoreCase(String.valueOf(System.getenv("HTTP_TIMEOUT_TOTAL")).trim());
 
     /**
      * Doc so ms duong tu env; thieu/sai/&lt;= 0 => mac dinh.
@@ -356,6 +363,15 @@ public class HttpRequest {
      * @param fix true => timeout ap that (truoc connect, ca read); false => ban cu (setConnectTimeout sau connect)
      */
     static String getContentFromUrl0(String url, Map<String, String> extendedHeader, int timeout, boolean fix) {
+        return getContentFromUrl0(url, extendedHeader, timeout, fix, TOTAL_TIMEOUT);
+    }
+
+    /**
+     * [W3B muc 3c] nhu tren + han tong moi lan thu.
+     *
+     * @param total true => han tong (timeout + read timeout) moi lan thu khi fix va timeout &gt; 0
+     */
+    static String getContentFromUrl0(String url, Map<String, String> extendedHeader, int timeout, boolean fix, boolean total) {
         String content = "";
         boolean useGZip = false;
         for (int i = 0; i < NUM_RETRY_CONNECTION; i++) {
@@ -363,6 +379,8 @@ public class HttpRequest {
                 HttpURLConnection hc = fix && timeout > 0
                         ? connect(new URL(url), extendedHeader, null, timeout, readTimeoutFor(timeout))
                         : connect(new URL(url), extendedHeader);
+                long budgetMs = fix && total && timeout > 0 ? (long) timeout + readTimeoutFor(timeout) : 0L;
+                long deadlineNs = System.nanoTime() + budgetMs * 1_000_000L;
                 int content_length = hc.getContentLength();
                 if ((content_length > max_content_length) || (content_length == -1)) {
                     content_length = max_content_length;
@@ -394,6 +412,10 @@ public class HttpRequest {
                     }
 
                     c = c + t;
+                    if (budgetMs > 0 && c < content_length && System.nanoTime() - deadlineNs > 0) {   // [W3B muc 3c]
+                        hc.disconnect();
+                        throw new java.net.SocketTimeoutException("vuot han tong doc body " + budgetMs + " ms");
+                    }
                 }
 
                 br.close();
