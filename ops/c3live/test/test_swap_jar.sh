@@ -12,7 +12,7 @@ rm -rf "$W"; mkdir -p "$W"
 git -C "$HERE" diff --quiet HEAD -- . || { echo "TEST FAIL: $HERE co sua CHUA commit (m1)"; exit 1; }
 export A1_APPROVED_OPS=$W/a1_approved_ops.commit; git -C "$HERE" rev-parse HEAD > "$A1_APPROVED_OPS"
 PN="BinanceOrderTradingManager hfx_$$"
-cleanup() { pkill -f "$PN" 2>/dev/null; pkill -f "hfxw_$$" 2>/dev/null; pkill -f "$W/" 2>/dev/null; :; }
+cleanup() { pkill -9 -f "$PN" 2>/dev/null; pkill -9 -f "hfxw_$$" 2>/dev/null; pkill -9 -f "$W/" 2>/dev/null; :; }
 trap cleanup EXIT
 trap 'exit 130' INT TERM
 F=$W/v_t_m; mkdir -p "$F/conf" "$F/bin" "$F/logs" "$F/run" "$F/target" "$W/deploylog" "$W/gates"
@@ -42,7 +42,8 @@ cat > "$F/bin/daemon.sh" <<'EOF'
 cd "$(dirname "$0")/.."
 PN=$(cat FAKE_PN)
 case "$1" in
-  stop) [ -f FAKE_NOSTOP ] && exit 0; pkill -f "$PN"; pkill -f "hfxw_$(cat FAKE_TID)" ;;
+  stop) [ -f FAKE_NOSTOP ] && exit 0; pkill -f "$PN"; pkill -f "hfxw_$(cat FAKE_TID)"; sleep 0.5   # nhu daemon.sh that: TERM roi -9
+        pkill -9 -f "$PN"; pkill -9 -f "hfxw_$(cat FAKE_TID)"; : ;;
   start)
     JM=$(md5sum < target/binance-java-sdk-1.2.4.jar | cut -c1-32); ISNEW=0; [ "$JM" = "$(cat FAKE_NEWMD5)" ] && ISNEW=1
     [ "$ISNEW" = 1 ] && [ -f FAKE_NOSTART_IF_NEW ] && exit 0
