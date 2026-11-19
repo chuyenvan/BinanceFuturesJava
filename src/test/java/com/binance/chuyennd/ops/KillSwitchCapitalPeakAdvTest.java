@@ -174,7 +174,7 @@ public class KillSwitchCapitalPeakAdvTest {
         assertEquals(KillSwitchEngine.Action.NONE, n3.requiredAction());
     }
 
-    // ------------------------------------------------------------------ ma tran
+    // ------------------------------------------------------------------ ma tran (W3B v2: + truc file equity)
 
     enum Trans { CU_MOI, MOI_CU, MOI_MOI, MOI_MOI_BAT_TAT, MOI_MOI_TAT_BAT }
 
@@ -182,16 +182,17 @@ public class KillSwitchCapitalPeakAdvTest {
 
     enum FileDinh { CO, KHONG, HONG }
 
-    /** Ket cuc 1 o: JVM1 len equity = C1 (dinh C1), JVM2 nhan equity = eq2. */
-    private KillSwitchEngine.Action cell(Trans t, Von v, boolean flagOn, FileDinh fd, boolean lossB) throws Exception {
+    /** file trang thai equity c3 luc JVM2 khoi dong: DUNG (von JVM1), MAT, CU (von = von MOI - kich ban t08 A1). */
+    enum FileEq { DUNG, MAT, CU }
+
+    private KillSwitchEngine.Action cell(Trans t, Von v, boolean flagOn, FileDinh fd, FileEq fe, boolean lossB) throws Exception {
         Run x = new Run();
         double c1 = v == Von.GIAM ? 10_000d : 1_000d;
-        double c2 = v == Von.TANG ? 10_000d : v == Von.GIAM ? 1_000d : 1_000d;
-        String f1 = flagOf(t, flagOn, true);
-        String f2 = flagOf(t, flagOn, false);
-        KillSwitchEngine j1 = t == Trans.CU_MOI ? x.oldJar(T0) : x.newJar(T0, c1, f1);
+        double c2 = v == Von.TANG ? 10_000d : 1_000d;
+        KillSwitchEngine j1 = t == Trans.CU_MOI ? x.oldJar(T0) : x.newJar(T0, c1, flagOf(t, flagOn, true));
         eq(j1, T0, c1);
-        x.eqState(c1);
+        if (fe == FileEq.DUNG) x.eqState(c1);
+        else if (fe == FileEq.CU) x.eqState(c2);
         if (fd == FileDinh.KHONG) {
             Files.deleteIfExists(x.ownPeak.toPath());
             Files.deleteIfExists(x.latch.toPath());
@@ -199,12 +200,12 @@ public class KillSwitchCapitalPeakAdvTest {
             Files.write(x.ownPeak.toPath(), "#!x hong\n".getBytes(StandardCharsets.UTF_8));
             Files.write(x.latch.toPath(), "{hong".getBytes(StandardCharsets.UTF_8));
         }
-        KillSwitchEngine j2 = t == Trans.MOI_CU ? x.oldJar(T0 + 60_000L) : x.newJar(T0 + 60_000L, c2, f2);
+        KillSwitchEngine j2 = t == Trans.MOI_CU ? x.oldJar(T0 + 60_000L) : x.newJar(T0 + 60_000L, c2, flagOf(t, flagOn, false));
         eq(j2, T0 + 61_000L, lossB ? 0.5d * c2 : c2);
         return j2.requiredAction();
     }
 
-    /** co cua JVM1 (first) / JVM2; jar cu => "false" (khong gan von). */
+    /** co cua JVM1 (first) / JVM2; jar cu => "false" (khong xet von). */
     private static String flagOf(Trans t, boolean flagOn, boolean first) {
         switch (t) {
             case CU_MOI: return first ? "false" : (flagOn ? null : "false");
@@ -215,57 +216,103 @@ public class KillSwitchCapitalPeakAdvTest {
         }
     }
 
-    /** Ket cuc MONG MUON (quy tac thiet ke W3B). */
-    private static KillSwitchEngine.Action expected(Trans t, Von v, boolean flagOn, FileDinh fd, boolean lossB) {
+    /**
+     * Ket cuc MONG MUON (thiet ke W3B v2). JVM2 moi co BAT: file co cap= (moi jar moi deu ghi, ke ca co tat) => cung von nap,
+     * khac von bo qua; file thieu cap (CHI jar cu ghi) => moc von JVM truoc khac => bo qua, con lai => dinh TAM: lan danh gia dau
+     * DD du nguong => NO_NEW_ENTRY (khong FLATTEN). JVM2 jar cu / co tat: nap moi dinh cung adapter (hanh vi cu).
+     */
+    private static KillSwitchEngine.Action expected(Trans t, Von v, boolean flagOn, FileDinh fd, FileEq fe, boolean lossB) {
+        if (fd == FileDinh.KHONG) return KillSwitchEngine.Action.NONE;
+        if (fd == FileDinh.HONG) return KillSwitchEngine.Action.NO_NEW_ENTRY;
         double c1 = v == Von.GIAM ? 10_000d : 1_000d;
         double c2 = v == Von.TANG ? 10_000d : 1_000d;
         double eq2 = lossB ? 0.5d * c2 : c2;
-        boolean binding2 = t != Trans.MOI_CU && flagOf(t, flagOn, false) == null;   // JVM2 xet von
-        boolean accepted = fd == FileDinh.CO && (!binding2 || v == Von.GIU);
-        boolean flatten = accepted && eq2 / c1 - 1d <= -0.40d;
-        if (flatten) return KillSwitchEngine.Action.FLATTEN;
-        return fd == FileDinh.HONG ? KillSwitchEngine.Action.NO_NEW_ENTRY : KillSwitchEngine.Action.NONE;
+        boolean trips = eq2 / c1 - 1d <= -0.40d;
+        boolean binding2 = t != Trans.MOI_CU && flagOf(t, flagOn, false) == null;
+        boolean unmarked1 = t == Trans.CU_MOI;
+        if (!binding2) return trips ? KillSwitchEngine.Action.FLATTEN : KillSwitchEngine.Action.NONE;
+        if (!unmarked1) return v == Von.GIU && trips ? KillSwitchEngine.Action.FLATTEN : KillSwitchEngine.Action.NONE;
+        Double prev = fe == FileEq.DUNG ? Double.valueOf(c1) : fe == FileEq.CU ? Double.valueOf(c2) : null;
+        if (prev != null && prev.doubleValue() != c2) return KillSwitchEngine.Action.NONE;
+        return trips ? KillSwitchEngine.Action.NO_NEW_ENTRY : KillSwitchEngine.Action.NONE;
     }
 
     @Test
     public void maTran() throws Exception {
         List<String> bad = new ArrayList<>();
         int n = 0;
-        StringBuilder tbl = new StringBuilder("\nMATRAN7|trans|von|co|file|A_khongLo|B_lo50%\n");
+        StringBuilder tbl = new StringBuilder("\nMATRAN7|trans|von|co|fileDinh|fileEq|A_khongLo|B_lo50%\n");
         for (Trans t : Trans.values()) {
             boolean[] flags = t == Trans.MOI_MOI_BAT_TAT || t == Trans.MOI_MOI_TAT_BAT ? new boolean[]{true} : new boolean[]{true, false};
             for (Von v : Von.values()) {
                 for (boolean fl : flags) {
                     for (FileDinh fd : FileDinh.values()) {
-                        String[] got = new String[2];
-                        for (int k = 0; k < 2; k++) {
-                            KillSwitchEngine.Action a = cell(t, v, fl, fd, k == 1);
-                            KillSwitchEngine.Action e = expected(t, v, fl, fd, k == 1);
-                            got[k] = a.name();
-                            n++;
-                            if (a != e) bad.add(t + "/" + v + "/" + (fl ? "BAT" : "TAT") + "/" + fd + "/" + (k == 1 ? "B" : "A") + " got=" + a + " exp=" + e);
+                        for (FileEq fe : FileEq.values()) {
+                            String[] got = new String[2];
+                            for (int k = 0; k < 2; k++) {
+                                KillSwitchEngine.Action a = cell(t, v, fl, fd, fe, k == 1);
+                                KillSwitchEngine.Action e = expected(t, v, fl, fd, fe, k == 1);
+                                got[k] = a.name();
+                                n++;
+                                if (a != e) bad.add(t + "/" + v + "/" + (fl ? "BAT" : "TAT") + "/" + fd + "/" + fe + "/" + (k == 1 ? "B" : "A")
+                                        + " got=" + a + " exp=" + e);
+                            }
+                            tbl.append("MATRAN7|").append(t).append('|').append(v).append('|')
+                                    .append(t == Trans.MOI_MOI_BAT_TAT || t == Trans.MOI_MOI_TAT_BAT ? "-" : fl ? "BAT" : "TAT")
+                                    .append('|').append(fd).append('|').append(fe).append('|').append(got[0]).append('|').append(got[1]).append('\n');
                         }
-                        tbl.append("MATRAN7|").append(t).append('|').append(v).append('|')
-                                .append(t == Trans.MOI_MOI_BAT_TAT || t == Trans.MOI_MOI_TAT_BAT ? "-" : fl ? "BAT" : "TAT")
-                                .append('|').append(fd).append('|').append(got[0]).append('|').append(got[1]).append('\n');
                     }
                 }
             }
         }
         LOG.info("{}", tbl);
         assertTrue("o lech ky vong: " + bad, bad.isEmpty());
-        assertEquals(2 * (3 * 3 * 3 * 2 + 2 * 3 * 3), n);
+        assertEquals(2 * 3 * (3 * 3 * 3 * 2 + 2 * 3 * 3), n);
     }
 
-    /** Bat bien an toan chinh: co BAT o JVM2 moi => KHONG BAO GIO FLATTEN khi khong lo that (moi o, moi von). */
+    /** Bat bien (2): JVM2 moi co BAT => KHONG BAO GIO FLATTEN khi khong lo (moi chieu/von/file dinh/file equity). */
     @Test
     public void batBien_coBat_khongFlattenGia() throws Exception {
         for (Trans t : new Trans[]{Trans.CU_MOI, Trans.MOI_MOI, Trans.MOI_MOI_TAT_BAT}) {
             for (Von v : Von.values()) {
                 for (FileDinh fd : FileDinh.values()) {
-                    assertNotEquals(t + "/" + v + "/" + fd, KillSwitchEngine.Action.FLATTEN, cell(t, v, true, fd, false));
+                    for (FileEq fe : FileEq.values()) {
+                        assertNotEquals(t + "/" + v + "/" + fd + "/" + fe, KillSwitchEngine.Action.FLATTEN, cell(t, v, true, fd, fe, false));
+                    }
                 }
             }
+        }
+    }
+
+    /**
+     * Bat bien (1)+(3): von KHONG doi, jar moi co BAT, crash-loop N lan (chet truoc equity dau / file equity mat-hong-cu xen
+     * ke) => dinh KHONG mat; sau khi da qua 1 lan danh gia binh thuong, lo that &gt;= nguong => LUON FLATTEN.
+     */
+    @Test
+    public void batBien_vonGiu_crashLoop_khongMatDinh_loThatFlatten() throws Exception {
+        for (boolean fromOld : new boolean[]{true, false}) {
+            Run x = new Run();
+            KillSwitchEngine j1 = fromOld ? x.oldJar(T0) : x.newJar(T0, 1_000d, null);
+            eq(j1, T0, 1_200d);
+            long t = T0;
+            for (int i = 0; i < 12; i++) {
+                t += 3_600_000L;
+                switch (i % 3) {
+                    case 0: Files.deleteIfExists(x.eqState.toPath()); break;
+                    case 1: Files.write(x.eqState.toPath(), "{hong".getBytes(StandardCharsets.UTF_8)); break;
+                    default: x.eqState(1_000d);
+                }
+                KillSwitchEngine k = x.newJar(t, 1_000d, null);
+                assertEquals("fromOld=" + fromOld + " restart " + i, 1_200d, k.peak(), 1e-9);
+                assertEquals("fromOld=" + fromOld + " restart " + i, 1_200d, k.acctPeak(), 1e-9);
+                if (i == 5) {   // 1 JVM song qua lan danh gia dau (DD nho) => xac nhan
+                    eq(k, t + 1_000L, 1_100d);
+                    assertEquals(KillSwitchEngine.Action.NONE, k.requiredAction());
+                }
+            }
+            KillSwitchEngine z = x.newJar(t + 3_600_000L, 1_000d, null);
+            eq(z, t + 3_601_000L, 700d);
+            assertEquals("fromOld=" + fromOld, KillSwitchEngine.Action.FLATTEN, z.requiredAction());
         }
     }
 }

@@ -100,7 +100,7 @@ public final class OpsHooks {
         return new KillSwitchEngine(mode, label, sink, shadowPeakFile, paperEquity, uMax, nowMs, prm);
     }
 
-    /** [W3A muc 7] env tat gan von vao dinh (chi "false" moi tat => hanh vi jar cu). */
+    /** [W3A muc 7] env tat XET von khi doc dinh ("0"|"false" => hanh vi doc jar cu; [W3B v2] van GHI cap=). */
     static final String KEY_PEAK_TAG_CAP = "C3_PEAK_TAG_CAPITAL";
 
     /**
@@ -120,6 +120,7 @@ public final class OpsHooks {
         String ad = adapterTag(adapterRaw);
         p.peakTag = ad + C3EQ_TAG_SUFFIX;
         p.peakCap = capValue(capRaw, pilotRaw, flag);
+        p.peakCapWrite = capValue(capRaw, pilotRaw, null);   // [W3B v2] ghi von ca khi co tat
         p.peakCapPrev = p.peakCap == null ? null : prevCapital(eqState, ad);
         LOG.info("[KILLSW] dinh c3_live nhan={} von={} von_JVM_truoc={} ({})", p.peakTag, p.peakCap == null ? "(khong gan, "
                 + KEY_PEAK_TAG_CAP + "=false)" : p.peakCap, p.peakCapPrev == null ? "-" : p.peakCapPrev,
@@ -136,7 +137,7 @@ public final class OpsHooks {
      * @return von hoac null
      */
     static String capValue(String capRaw, String pilotRaw, String flag) {
-        if (flag != null && "false".equalsIgnoreCase(flag.trim())) return null;
+        if (flag != null && ("false".equalsIgnoreCase(flag.trim()) || "0".equals(flag.trim()))) return null;   // [W3B v2] 0|false
         double pilot = posOr(pilotRaw, com.binance.chuyennd.c3live.risk.C3LiveEquity.DEFAULT_PILOT_CAPITAL);
         double cap = posOr(capRaw, pilot);
         return java.math.BigDecimal.valueOf(cap).stripTrailingZeros().toPlainString();
