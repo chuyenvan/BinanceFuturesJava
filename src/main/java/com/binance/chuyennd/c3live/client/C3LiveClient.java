@@ -91,10 +91,23 @@ public final class C3LiveClient implements ExchangeGateway {
         return new C3LiveClient(cfg, keys, rate, OrderAuditLog.live());
     }
 
+    /** [W3A muc 2] sha256(API KEY)[:8] cua key dang dung (khong bi mat). */
+    private final String keySha8;
+
+    /**
+     * [W3A muc 2] Dinh danh key dang dung de log khoi dong (KHONG phai key/secret).
+     *
+     * @return 8 ky tu hex dau sha256(API KEY)
+     */
+    public String keySha8() {
+        return keySha8;
+    }
+
     C3LiveClient(C3LiveClientConfig cfg, C3LiveKeys keys, RateGuard rate, OrderAuditLog audit) {
         this.cfg = Objects.requireNonNull(cfg, "cfg");
         Objects.requireNonNull(keys, "keys");
         this.apiKey = keys.apiKey();
+        this.keySha8 = keys.apiKeySha8();   // [W3A muc 2]
         this.signer = new HmacSigner(keys.secret());
         this.rate = rate == null ? RateGuard.defaults() : rate;
         this.audit = audit == null ? OrderAuditLog.live() : audit;

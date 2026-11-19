@@ -432,7 +432,10 @@ public final class C3LiveRuntime {
         OpsHooks.attachEquitySource(equity);   // [2c] chi gan khi runtime tao XONG (thu lai khong gan nguon cu)
         String m = "[C3-LIVE] khoi dong adapter=" + mode + " gateway=" + gw.name() + " book=" + book.file().getPath()
                 + " cum=" + book.openCount() + " leg_treo=" + book.unresolvedLegs().size() + " c3_capital="
-                + equity.capitalConfig() + " tai_khoan=CHINH(pham vi c3) killSwitchArmed=" + OpsHooks.killSwitchArmed() + " X14=" + TrailingStopManager.tsExtEnabled()
+                + equity.capitalConfig() + " " + accountLabel(mode, Cfg.get(LegacySymbols.KEY_KEYS_FILE),
+                rawGw instanceof com.binance.chuyennd.c3live.client.C3LiveClient
+                        ? ((com.binance.chuyennd.c3live.client.C3LiveClient) rawGw).keySha8() : null,
+                C3LiveRuntime::canonicalPath, Cfg.get(KEY_ACCOUNT_LABEL_V1)) + " killSwitchArmed=" + OpsHooks.killSwitchArmed() + " X14=" + TrailingStopManager.tsExtEnabled()
                 + " stream=" + (userStream == null ? "dry-events" : "ws") + (manageOnly ? " MANAGE_ONLY" : "");
         LOG.warn("{}", m);
         alerts.send(m);
@@ -772,6 +775,62 @@ public final class C3LiveRuntime {
 
     public void putRef(String symbol, double px) {
         if (symbol != null && px > 0d) refs.put(symbol, BigDecimal.valueOf(px));
+    }
+
+    // ===================== [W3A muc 2 2026-11-19] nhan tai khoan dung trong dong khoi dong =====================
+    /** Env rollback: {@code C3_ACCOUNT_LABEL_V1=true} => in lai chuoi cu "tai_khoan=CHINH(pham vi c3)". */
+    static final String KEY_ACCOUNT_LABEL_V1 = "C3_ACCOUNT_LABEL_V1";
+    /** Chuoi cu (jar 5e10325b) ? script c3live_reanchor.sh:16 grep dung chuoi nay. */
+    static final String ACCOUNT_LABEL_V1 = "tai_khoan=CHINH(pham vi c3)";
+
+    /**
+     * Nhan tai khoan cho dong "[C3-LIVE] khoi dong adapter=": SUB/CHINH suy tu file key THAT (ten chinh tac == keys_sub.env
+     * => SUB, cung luat {@code LegacySymbols.forceReason}); in basename file key cau hinh (KHONG in duong dan day du,
+     * KHONG doc noi dung) + sha8 API key (khong bi mat). Che do doi chieu c3_live la QTY pham vi c3 (recon=QTY).
+     *
+     * @param mode        adapter
+     * @param keysFileRaw env LIVE_C3_KEYS_FILE (null/rong => key mac dinh keys.env = tk CHINH)
+     * @param keySha8     sha8 API key cua client live (null => "?")
+     * @param canon       ham duong dan chinh tac (theo symlink)
+     * @param v1Flag      env C3_ACCOUNT_LABEL_V1
+     * @return chuoi nhan, vd "tai_khoan=SUB key_file=keys_sub.env key_sha8=1234abcd recon=QTY(pham vi c3)"
+     */
+    static String accountLabel(GatewayFactory.Mode mode, String keysFileRaw, String keySha8,
+                               java.util.function.Function<String, String> canon, String v1Flag) {
+        if (v1Flag != null && "true".equalsIgnoreCase(v1Flag.trim())) return ACCOUNT_LABEL_V1;
+        if (mode != GatewayFactory.Mode.LIVE) return "tai_khoan=DRY(khong dung key) recon=QTY(pham vi c3)";
+        String f = keysFileRaw == null || keysFileRaw.trim().isEmpty()
+                ? com.binance.chuyennd.c3live.client.C3LiveKeys.DEFAULT_PATH : keysFileRaw.trim();
+        String base = baseName(f);
+        String c = canon == null ? f : canon.apply(f);
+        String realBase = baseName(c == null ? f : c);
+        boolean sub = LegacySymbols.SUB_KEYS_NAME.equals(realBase);
+        return "tai_khoan=" + (sub ? "SUB" : "CHINH") + " key_file=" + base
+                + (realBase != null && !realBase.equals(base) ? " key_file_that=" + realBase : "")
+                + " key_sha8=" + (keySha8 == null || keySha8.isEmpty() ? "?" : keySha8) + " recon=QTY(pham vi c3)";
+    }
+
+    /** Ten file cuoi cua duong dan (khong co thu muc); loi => "?". */
+    static String baseName(String p) {
+        try {
+            java.nio.file.Path fn = java.nio.file.Paths.get(p).getFileName();
+            return fn == null ? "?" : fn.toString();
+        } catch (Exception e) {
+            return "?";
+        }
+    }
+
+    /** Duong dan chinh tac (realpath, theo symlink); file chua co => tuyet doi + normalize. KHONG doc noi dung. */
+    static String canonicalPath(String p) {
+        try {
+            return java.nio.file.Paths.get(p).toRealPath().toString();
+        } catch (Exception e) {
+            try {
+                return java.nio.file.Paths.get(p).toAbsolutePath().normalize().toString();
+            } catch (Exception e2) {
+                return p;
+            }
+        }
     }
 
     static double parseD(String raw, double def) {

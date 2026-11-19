@@ -126,6 +126,33 @@ public final class C3LiveKeys {
         return true;
     }
 
+    /**
+     * [W3A muc 2] Dinh danh KHONG bi mat cua key: 8 ky tu hex dau cua sha256(API KEY) (API key khong phai secret;
+     * secret KHONG bao gio duoc bam/in). Dung cho dong log khoi dong de doi chieu voi SUB_KEY_SHA8 cua ops.
+     *
+     * @return 8 ky tu hex thuong
+     */
+    public String apiKeySha8() {
+        return sha8(apiKey);
+    }
+
+    /**
+     * 8 ky tu hex dau cua sha256(UTF-8 cua s).
+     *
+     * @param s chuoi nguon (khong null)
+     * @return 8 ky tu hex thuong
+     */
+    static String sha8(String s) {
+        try {
+            byte[] d = java.security.MessageDigest.getInstance("SHA-256").digest(s.getBytes(StandardCharsets.UTF_8));
+            StringBuilder b = new StringBuilder(8);
+            for (int i = 0; i < 4; i++) b.append(String.format("%02x", d[i] & 0xff));
+            return b.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            return "????????";
+        }
+    }
+
     @Override
     public String toString() { return "C3LiveKeys[key=***(" + apiKey.length() + "), secret=***]"; }
 }
