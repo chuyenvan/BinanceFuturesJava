@@ -39,7 +39,8 @@ fi
 if [ -z "${_FT_MASKED:-}" ]; then export _FT_MASKED=1; bash "$0" "$@" 2>&1 | sed -u -E 's/[0-9]{8,10}:[A-Za-z0-9_-]{30,}/<TOKEN>/g'; exit "${PIPESTATUS[0]}"; fi
 . "$_OPS/golive_lib.sh"
 gl_manifest_check "$0" || exit 1
-FT_TAIL=${FT_TAIL:-30000000}; FT_TOL=${FT_TOL:-0.02}; FT_K=${FT_K:-0.0225}; FT_UMAX=${FT_UMAX:-0.6}
+FT_TAIL=${FT_TAIL:-$([ "$FT_CRON" = 1 ] && echo 6000000 || echo 30000000)};   # cron */5: 6 MB (~45 phut log) du - cid da kiem nam trong state
+ FT_TOL=${FT_TOL:-0.02}; FT_K=${FT_K:-0.0225}; FT_UMAX=${FT_UMAX:-0.6}
 FT_GRACE_S=${FT_GRACE_S:-120}; FT_PENDING_MAX_S=${FT_PENDING_MAX_S:-604800}
 FT_STATE=$FT_DIR/state.txt
 TS=$(TZ=Asia/Ho_Chi_Minh date +%Y%m%d_%H%M%S); NOW=$(date +%s)

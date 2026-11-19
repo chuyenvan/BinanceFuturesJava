@@ -11,7 +11,7 @@ d866e870b1c258c1a67c5ee5327a3677  golive_monitor.sh
 12e8084cd03b61cd446bfa6a9f56666d  golive_use_sub_key.sh
 5db4049d6fcb9ff097ebcc78dcc81fb9  golive_check_key.sh
 74986055ba1f183ad2e02c27a8725c46  golive_legacy_verify.sh
-5242156fa71072ba6b5bf98bed19a3b8  golive_first_trade_check.sh
+b02bf262b551e39b098ce97f976254d4  golive_first_trade_check.sh
 149b7f61660ff0be1c31e93e25523c6e  golive_deadman.sh
 c5ca4bc44bc57a074ff5ee3ec7d21665  install_ops5_oracle.sh
 93564c6f73fc7285d6d93ce60876c664  c3_price_lag_day.sh
