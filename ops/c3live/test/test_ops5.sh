@@ -180,10 +180,10 @@ api positionRisk '[{"symbol":"EQUSDT","positionAmt":"1"},{"symbol":"T3USDT","pos
 book '{"clusters":[{"symbol":"EQUSDT","adj_qty":"1"},{"symbol":"T3USDT","adj_qty":"1"},{"symbol":"XXUSDT","adj_qty":"1"},{"symbol":"T4USDT","adj_qty":"1"}]}'
 { MCL3 $((NOW - 900)); SUB3 $((NOW - 600)) EQUSDT 21.825; } > $F/logs/full.log
 OUT=$(E2 bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?; EV=$(ls -t $FT2/SIZING_IV_*.md 2>/dev/null | head -1)
-chk "f1 [M-3] C_eff=970 (eq=C3_CAPITAL+(TMB-tmb0)): sizing_iv FAIL GIU NGUYEN + phan loai GIAI_THICH_DUOC_CEFF (file co ca 2 + nguon), Telegram CANH BAO 'can MASTER phan xu' KHONG chu KHAN, rc 2" "[ $RC = 2 ] && grep -qx 'sizing_iv: FAIL' '$EV' && grep -q 'EQUSDT .*GIAI_THICH_DUOC_CEFF(C_eff=970.00,eq=C3_CAPITAL+(TMB-tmb0))' '$EV' && grep -q '^phan_loai_FAIL_a: giai_thich_duoc_C_eff=1 giai_thich_duoc_TIER3x0.5=0 KHONG_giai_thich_duoc=0' '$EV' && grep -q '^nguon_C_eff: gl_api242 mon .*TMB=970.00 AVAIL=990.00 .*tmb0=1000' '$EV' && tail -2 $W/tg.txt | grep -q 'CANH BAO sizing_iv FAIL-GIAI-THICH-DUOC.*can MASTER phan xu' && ! tail -2 $W/tg.txt | grep -q KHAN"
+chk "f1 [M-3] C_eff=970 (eq=C3_CAPITAL+(TMB-tmb0)): sizing_iv FAIL GIU NGUYEN + phan loai GIAI_THICH_DUOC_CEFF (file co ca 2 + nguon), Telegram CANH BAO 'can MASTER phan xu' KHONG chu KHAN, rc 2" "[ $RC = 2 ] && grep -qx 'sizing_iv: FAIL' '$EV' && grep -q 'EQUSDT .*GIAI_THICH_DUOC_CEFF(C_eff=970.00,eq=C3_CAPITAL+(TMB-tmb0),uoc_luong_sau_fill)' '$EV' && grep -q '^phan_loai_FAIL_a: giai_thich_duoc_C_eff(uoc_luong_sau_fill)=1 KHONG_giai_thich_duoc=0' '$EV' && grep -q '^nguon_C_eff: gl_api242 mon .*TMB=970.00 AVAIL=990.00 .*tmb0=1000' '$EV' && tail -2 $W/tg.txt | grep -q 'CANH BAO sizing_iv FAIL-GIAI-THICH-DUOC.*can MASTER phan xu' && ! tail -2 $W/tg.txt | grep -q KHAN"
 SUB3 $((NOW - 500)) T3USDT 11.25 >> $F/logs/full.log
 OUT=$(E2 bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?; EV=$(ls -t $FT2/SIZING_IV_*.md | head -1)
-chk "f2 [M-3] TIER_3 x0,5 (TIER_FLAT process khong dat) => nhan rieng GIAI_THICH_DUOC_TIER3x0.5(TIER_FLAT=tat), CANH BAO khong KHAN, sizing_iv FAIL" "[ $RC = 2 ] && grep -qx 'sizing_iv: FAIL' '$EV' && grep -q 'T3USDT .*GIAI_THICH_DUOC_TIER3x0.5(TIER_FLAT=tat)' '$EV' && tail -2 $W/tg.txt | grep -q 'CANH BAO sizing_iv FAIL-GIAI-THICH-DUOC' && ! tail -2 $W/tg.txt | grep -q KHAN"
+chk "f2 [F4] budget = x0,5 (giong TIER_3) nhung tier KHONG xac minh duoc tu ops => KHONG_GIAI_THICH_DUOC(...goi_y_x0.5_TIER3_chua_xac_minh) => KHAN" "[ $RC = 2 ] && grep -qx 'sizing_iv: FAIL' '$EV' && grep -q 'T3USDT .*KHONG_GIAI_THICH_DUOC(C_eff=970.00,.*goi_y_x0.5_TIER3_chua_xac_minh)' '$EV' && tail -2 $W/tg.txt | grep -q 'KHAN sizing_iv'"
 SUB3 $((NOW - 400)) XXUSDT 99 >> $F/logs/full.log
 OUT=$(E2 bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?; EV=$(ls -t $FT2/SIZING_IV_*.md | head -1)
 chk "f3 [M-3] budget 99 => KHONG_GIAI_THICH_DUOC(C_eff=970.00,...) => Telegram KHAN; dong cu giu phan loai cu" "[ $RC = 2 ] && grep -q 'XXUSDT .*KHONG_GIAI_THICH_DUOC(C_eff=970.00' '$EV' && grep -q 'EQUSDT .*GIAI_THICH_DUOC_CEFF' '$EV' && tail -2 $W/tg.txt | grep -q 'KHAN sizing_iv'"
@@ -192,7 +192,7 @@ SUB3 $((NOW - 300)) T4USDT 11.25 >> $F/logs/full.log
 OUT=$(E2 bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?; EV=$(ls -t $FT2/SIZING_IV_*.md | head -1)
 chk "f4 [M-3] TIER_FLAT=1 tren process => x0,5 KHONG giai thich duoc => KHAN" "[ $RC = 2 ] && grep -q 'T4USDT .*KHONG_GIAI_THICH_DUOC' '$EV' && grep -q 'TIER_FLAT env process=1' '$EV' && tail -2 $W/tg.txt | grep -q 'KHAN sizing_iv'"
 OUT=$(E2 DRY=1 bash "$HERE/golive_first_trade_check.sh" 2>&1); RC=$?
-chk "f5 [M-3] DRY (khong doc san): dong moi khong co C_eff => in phan loai 'khong_doc_duoc_C_eff' hoac giu nhan cu tu state; sizing_iv FAIL" "echo \"\$OUT\" | grep -q 'sizing_iv: FAIL' && echo \"\$OUT\" | grep -q 'phan_loai_FAIL (a): giai_thich_duoc_C_eff=1 giai_thich_duoc_TIER3x0.5=1 KHONG_giai_thich_duoc=2'"
+chk "f5 [M-3] DRY (khong doc san): dong moi khong co C_eff => in phan loai 'khong_doc_duoc_C_eff' hoac giu nhan cu tu state; sizing_iv FAIL" "echo \"\$OUT\" | grep -q 'sizing_iv: FAIL' && echo \"\$OUT\" | grep -q 'phan_loai_FAIL (a): giai_thich_duoc_C_eff(uoc_luong_sau_fill)=1 KHONG_giai_thich_duoc=3'"
 startbot 1000; cp $W/full.log.m3bak $F/logs/full.log; rm -f $W/deploy/c3sub_eq_base.txt
 api account '{"totalMarginBalance":"1000.00","availableBalance":"990.00","assets":[{"asset":"USDT","walletBalance":"1000.00","marginBalance":"1000.00","marginAvailable":true}]}'
 api positionRisk '[]'; book '{"clusters":[]}'
@@ -251,10 +251,12 @@ OUT=$(IO DRY=1 bash "$HERE/install_ops5_oracle.sh" 2>&1 < /dev/null); RC=$?
 chk "i1 install DRY=1: in 2 dong MOI, crontab KHONG doi" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && [ \$(echo \"\$OUT\" | grep -c '   MOI: ') = 2 ] && cmp -s $W/ct $W/ct0"
 OUT=$(echo YES | IO bash "$HERE/install_ops5_oracle.sh" 2>&1); RC=$?
 chk "i2 install: 2 dong OPS5 them, dong cu giu, ban ghim deadman chi doc dung md5" "[ $RC = 0 ] && grep -q 'golive_deadman (OPS5 2a)' $W/ct && grep -q 'FT_CRON=1 .*golive_first_trade (OPS5 1)' $W/ct && grep -q 'echo giu # cu' $W/ct && grep -q 'golive_monitor (ADD4 C-1)' $W/ct && cmp -s $HERE/golive_deadman.sh $W/pinned/golive_deadman_*/golive_deadman.sh && [ ! -w $W/pinned/golive_deadman_*/golive_deadman.sh ]"
+chk "i2b [VONG3 nit] install tao file danh dau deadman/INSTALLED (monitor phan biet chua cai / chet)" "grep -q '^installed TS=' $W/deploy/deadman/INSTALLED"
 OUT=$(echo YES | IO bash "$HERE/install_ops5_oracle.sh" 2>&1); RC=$?
 chk "i3 install lan 2: KHONG DOI, khong nhan doi dong" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'KHONG DOI' && [ \$(grep -c 'OPS5' $W/ct) = 2 ]"
 OUT=$(echo YES | IO MODE=rollback bash "$HERE/install_ops5_oracle.sh" 2>&1); RC=$?
 chk "i4 rollback: go 2 dong OPS5, crontab = ban dau" "[ $RC = 0 ] && cmp -s $W/ct $W/ct0"
+chk "i4b [VONG3 nit] rollback xoa deadman/INSTALLED" "[ ! -e $W/deploy/deadman/INSTALLED ]"
 OUT=$(IO A1_APPROVED_OPS=$W/khong_co.commit DRY=1 bash "$HERE/install_ops5_oracle.sh" 2>&1); RC=$?
 chk "i5 installer: HEAD chua A1 duyet => TU CHOI [m1]" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'TU CHOI \[m1\]'"
 chmod -R u+w $W/pinned 2>/dev/null
@@ -275,6 +277,10 @@ OUT=$(E DRY=1 ING_LOG=$W/khong_co.log bash "$HERE/golive_monitor.sh" 2>&1); RC=$
 chk "t4 monitor: thieu log ingestor => n=0, khong loi, TOM TAT tre_gia=0/0" "echo \"\$OUT\" | grep -q 'tre_gia_1h: n=0' && echo \"\$OUT\" | grep -q 'tre_gia=0/0'"
 # ---- [OPS5_FIX M-4] monitor canh heartbeat deadman
 DMH=$W/deploy/deadman/heartbeat; rm -f $DMH $W/deploy/c3_monitor_dm_alert.txt
+rm -f $W/deploy/deadman/INSTALLED
+OUT=$(E DRY=1 ING_LOG=$IGD/logs/full.log bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "d0 [VONG3 nit] deadman CHUA cai (khong heartbeat, khong INSTALLED) => INFO, KHONG CANH BAO, deadman=CHUA_CAI" "echo \"\$OUT\" | grep -q 'INFO deadman CHUA cai' && ! echo \"\$OUT\" | grep -q 'CANH BAO deadman' && echo \"\$OUT\" | grep -q 'deadman=CHUA_CAI'"
+mkdir -p $W/deploy/deadman; echo 'installed TS=t' > $W/deploy/deadman/INSTALLED
 OUT=$(E DRY=1 ING_LOG=$IGD/logs/full.log bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
 chk "d1 [M-4] monitor tay: KHONG co heartbeat deadman => CANH BAO (khong KHAN), TOM TAT deadman=KHONG_CO, khong Telegram (tay)" "echo \"\$OUT\" | grep -q 'CANH BAO deadman: heartbeat deadman $DMH KHONG CO' && echo \"\$OUT\" | grep -q 'TOM TAT: .* tre_gia=6/10 deadman=KHONG_CO' && ! echo \"\$OUT\" | grep -q 'KHAN.*deadman' && ! grep -qs 'deadman' $W/tg.txt"
 mkdir -p $W/deploy/deadman; printf 'ts=%s rc=0\n' $(( $(date +%s) - 30 )) > $DMH

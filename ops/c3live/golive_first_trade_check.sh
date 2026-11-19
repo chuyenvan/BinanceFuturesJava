@@ -192,10 +192,12 @@ if [ "$APIOK" = 1 ]; then
   done
 fi
 # [OPS5_FIX M-3] PHAN LOAI dong (a) FAIL - KHONG doi phan quyet prereg (sizing_iv van FAIL; tieu chi 0,0225 x C3_CAPITAL x (1-U/0,6) +-2 % giu nguyen).
-#   C_eff = min(C3_CAPITAL, eq, avail+margin) (jar C3MainEquity.capital():163-170). eq = C3_CAPITAL + (TMB - tmb0) (moc $SUB_BASE_FILE, nhu monitor ?5);
+#   C_eff = min(C3_CAPITAL, eq, avail+margin) (jar C3MainEquity.capital():163-170). eq = C3_CAPITAL + (TMB - tmb0) (moc $SUB_BASE_FILE, nhu monitor muc 5);
 #   avail+margin = AVAIL / (1 - U_before) (margin c3 = U_before x cap). NGUON: gl_api242 mon CUA LUOT NAY (CHI DOC; gia tri LUC CHAY, khong phai luc SUBMIT).
-#   budget khop +-FT_TOL voi 0,0225 x C_eff x (1-U/0,6) => GIAI_THICH_DUOC_CEFF. TIER_3 x 0,5 (CoinRankManager, khi TIER_FLAT env process != 1) => GIAI_THICH_DUOC_TIER3x0.5
-#   (nhan rieng). Con lai (hoac lech do legIdx / thieu truong / khong doc duoc san) => KHONG_GIAI_THICH_DUOC. Telegram: co dong KHONG giai thich duoc
+#   budget khop +-FT_TOL voi 0,0225 x C_eff x (1-U/0,6) => GIAI_THICH_DUOC_CEFF(...,uoc_luong_sau_fill): log bot KHONG in cap luc SUBMIT
+#   (C3LiveEntry.Result.toString:132-135 khong co cap) => C_eff la UOC LUONG SAU FILL, ghi ro trong nhan.
+#   [VONG3 F4] TIER_3 x 0,5: tier lay tu CoinRankManager.peekCoinTier (RAM jar, C3LiveHook:109) - KHONG doc duoc chi-doc tu ops / khong co trong log
+#   => BO nhan "giai thich duoc"; budget khop x0,5 chi ghi goi_y trong nhan KHONG_GIAI_THICH_DUOC(...,goi_y_x0.5_TIER3_chua_xac_minh) => KHAN. Con lai (hoac lech do legIdx / thieu truong / khong doc duoc san) => KHONG_GIAI_THICH_DUOC. Telegram: co dong KHONG giai thich duoc
 #   hoac (b) FAIL => KHAN; chi co FAIL giai thich duoc => CANH BAO (khong KHAN) "can MASTER phan xu".
 TFL=$(sv ENV_TIER_FLAT); TMBV=""; AVV=""
 [ "$APIOK" = 1 ] && { TMBV=$(av TMB); AVV=$(av AVAIL); }
@@ -210,9 +212,9 @@ cls_fail() {   # $1 budget $2 U_before $3 ly do FAIL -> nhan phan loai
     f = 1 - u / m; ce = c; src = "C3_CAPITAL"; have = 0
     if (isn(tmb) && isn(t0)) { eq = c + (tmb - t0); have = 1; if (eq < ce) { ce = eq; src = "eq=C3_CAPITAL+(TMB-tmb0)" } }
     if (isn(av) && u < 1) { ac = av / (1 - u); have = 1; if (ac < ce) { ce = ac; src = "avail+margin=AVAIL/(1-U)" } }
-    if (have && ok(k * ce * f)) { printf "GIAI_THICH_DUOC_CEFF(C_eff=%.2f,%s)\n", ce, src; exit }
-    if (tf != "1" && (ok(0.5 * k * c * f) || (have && ok(0.5 * k * ce * f)))) { printf "GIAI_THICH_DUOC_TIER3x0.5(TIER_FLAT=%s)\n", (tf == "" ? "tat" : tf); exit }
-    if (have) printf "KHONG_GIAI_THICH_DUOC(C_eff=%.2f,%s)\n", ce, src; else print "KHONG_GIAI_THICH_DUOC(khong_doc_duoc_C_eff)" }'
+    if (have && ok(k * ce * f)) { printf "GIAI_THICH_DUOC_CEFF(C_eff=%.2f,%s,uoc_luong_sau_fill)\n", ce, src; exit }
+    g = (tf != "1" && (ok(0.5 * k * c * f) || (have && ok(0.5 * k * ce * f)))) ? ",goi_y_x0.5_TIER3_chua_xac_minh" : ""
+    if (have) printf "KHONG_GIAI_THICH_DUOC(C_eff=%.2f,%s%s)\n", ce, src, g; else printf "KHONG_GIAI_THICH_DUOC(khong_doc_duoc_C_eff%s)\n", g }'
 }
 declare -A R_C
 for c in $CIDS; do
@@ -225,8 +227,8 @@ for c in $CIDS; do
   R_C[$c]=$pc
 done
 NXC=0; NXT=0; NKG=0; NKGNEW=0
-for c in $CIDS; do case "${R_C[$c]:-}" in GIAI_THICH_DUOC_CEFF*) NXC=$((NXC + 1));; GIAI_THICH_DUOC_TIER3*) NXT=$((NXT + 1));; KHONG*) NKG=$((NKG + 1)); case " $NEWA " in *" $c "*) NKGNEW=$((NKGNEW + 1));; esac;; esac; done
-PLS="giai_thich_duoc_C_eff=$NXC giai_thich_duoc_TIER3x0.5=$NXT KHONG_giai_thich_duoc=$NKG"
+for c in $CIDS; do case "${R_C[$c]:-}" in GIAI_THICH_DUOC_CEFF*) NXC=$((NXC + 1));; KHONG*) NKG=$((NKG + 1)); case " $NEWA " in *" $c "*) NKGNEW=$((NKGNEW + 1));; esac;; esac; done
+PLS="giai_thich_duoc_C_eff(uoc_luong_sau_fill)=$NXC KHONG_giai_thich_duoc=$NKG"
 CHG=$(echo $NEWA $CHG $RCHG | tr ' ' '\n' | sort -u | tr '\n' ' ')
 # tong (moi cid trong state + moi): sizing_iv theo (a)
 NA=0; NAF=0; NBF=0

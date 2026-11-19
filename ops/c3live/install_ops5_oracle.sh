@@ -36,7 +36,8 @@ case "$MODE" in
 esac
 say "cron OPS5 hien co:"; printf '%s\n' "$CUR" | grep -F -e "$TAG_DM" -e "$TAG_FT" | sed 's/^/   CU : /'
 [ "$MODE" = install ] && { say "cron OPS5 se dat:"; printf '   MOI: %s\n   MOI: %s\n' "$L_DM" "$L_FT"; }
-if [ "$(printf '%s\n' "$CUR" | sed '/^$/d')" = "$NEW" ] && { [ "$MODE" = rollback ] || [ -f "$PIN/golive_deadman.sh" ]; }; then say "KHONG DOI (da dung)"; exit 0; fi
+dm_mark() { [ "$DRY" = 1 ] && return 0; if [ "$MODE" = install ]; then mkdir -p "$LOGDIR/deadman" && printf 'installed TS=%s pin=%s\n' "$TS" "$PIN" > "$LOGDIR/deadman/INSTALLED"; else rm -f "$LOGDIR/deadman/INSTALLED"; fi; }   # [VONG3 nit] monitor phan biet chua cai / da cai ma chet
+if [ "$(printf '%s\n' "$CUR" | sed '/^$/d')" = "$NEW" ] && { [ "$MODE" = rollback ] || [ -f "$PIN/golive_deadman.sh" ]; }; then say "KHONG DOI (da dung)"; dm_mark; exit 0; fi
 [ "$DRY" = 1 ] && { say "DRY=1: KHONG ghi gi. (DRY PASS)"; exit 0; }
 gl_yes "OPS5 $MODE: sua crontab Oracle (user $(id -un)) nhu tren."
 mkdir -p "$LOGDIR" "$LOCKS"; printf '%s\n' "$CUR" > "$LOGDIR/crontab.bak_ops5_$TS"
@@ -51,9 +52,11 @@ printf '%s\n' "$NEW" | $CT - || { say "LOI ghi crontab - khoi phuc"; printf '%s\
 CHK=$($CT -l 2>/dev/null)
 if [ "$MODE" = install ]; then
   printf '%s\n' "$CHK" | grep -qxF "$L_DM" && printf '%s\n' "$CHK" | grep -qxF "$L_FT" || { say "LOI: crontab sau ghi KHONG co 2 dong OPS5"; exit 1; }
+  dm_mark
   say "XONG: 2 cron OPS5 da dat. Rollback: MODE=rollback bash $_OPS/install_ops5_oracle.sh (backup $LOGDIR/crontab.bak_ops5_$TS)"
 else
   printf '%s\n' "$CHK" | grep -qF -e "$TAG_DM" -e "$TAG_FT" && { say "LOI: con dong OPS5"; exit 1; }
+  dm_mark
   say "XONG rollback: da go 2 cron OPS5 (backup $LOGDIR/crontab.bak_ops5_$TS)"
 fi
 exit 0

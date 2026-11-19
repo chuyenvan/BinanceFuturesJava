@@ -249,8 +249,11 @@ DM_HB_FILE=${DM_HB_FILE:-$LOGDIR/deadman/heartbeat}; MON_DM_MAX_S=${MON_DM_MAX_S
 NOWD=$(date +%s); DMT=$(sed -n 's/^ts=\([0-9]*\).*/\1/p' "$DM_HB_FILE" 2>/dev/null | head -1)
 [[ "$DMT" =~ ^[0-9]+$ ]] || DMT=$(stat -c %Y "$DM_HB_FILE" 2>/dev/null || echo 0)
 DMA=$(( NOWD - DMT )); DMS=OK
-if [ "$DMT" = 0 ]; then DMS=KHONG_CO; elif [ "$DMA" -gt "$MON_DM_MAX_S" ]; then DMS=CU; fi
-if [ "$DMS" != OK ]; then
+DMI=${DM_INSTALLED_FILE:-$LOGDIR/deadman/INSTALLED}   # [VONG3 nit] install_ops5_oracle tao khi cai deadman, rollback xoa
+if [ "$DMT" = 0 ] && [ ! -f "$DMI" ]; then DMS=CHUA_CAI; elif [ "$DMT" = 0 ]; then DMS=KHONG_CO; elif [ "$DMA" -gt "$MON_DM_MAX_S" ]; then DMS=CU; fi
+if [ "$DMS" = CHUA_CAI ]; then
+  say "INFO deadman CHUA cai (khong co heartbeat va khong co $DMI) - khong canh bao"
+elif [ "$DMS" != OK ]; then
   DMM="heartbeat deadman $DM_HB_FILE $([ "$DMS" = KHONG_CO ] && echo 'KHONG CO' || echo "cu ${DMA}s > ${MON_DM_MAX_S}s") - cron golive_deadman chet/treo/chua cai? Kiem crontab Oracle + $LOGDIR/deadman/deadman.log"
   say "!! CANH BAO deadman: $DMM"
   if [ "$MON_CRON" = 1 ]; then
