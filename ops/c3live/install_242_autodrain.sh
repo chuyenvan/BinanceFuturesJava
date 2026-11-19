@@ -47,7 +47,7 @@ if [ "$STEP" = apply ]; then
     mkdir -p "$DI" && printf '[Service]\nExecStartPre=\nExecStartPre=%s %s %s\n' "$WR" "$APP" "$MC" > "$DF.tmp" && mv -f "$DF.tmp" "$DF" || { echo "ERR=ghi_dropin"; echo END_AD; exit 0; }
     $SC daemon-reload || echo "WARN=daemon_reload_loi"
   else
-    NEW=$(printf '%s\n' "$CUR" | sed -E "s#^(\*/2 \* \* \* \* )WD_PRESTART=[^ ]+ #\1#")
+    NEW=$(printf '%s\n' "$CUR" | sed -E "s#^(\*/2 \* \* \* \* )WD_PRESTART=[^ ]+ ($(printf '%s' "$WD" | sed 's/[.]/\\./g'))( |\$)#\1\2\3#")   # [OPS5_FIX A19] CHI dong watchdog
     printf '%s\n' "$NEW" | $CT - || { echo "ERR=ghi_crontab"; echo END_AD; exit 0; }
     rm -f "$DF"; rmdir "$DI" 2>/dev/null; $SC daemon-reload || echo "WARN=daemon_reload_loi"
     [ -f "$WR" ] && mv -f "$WR" "$WR.off_$TS"

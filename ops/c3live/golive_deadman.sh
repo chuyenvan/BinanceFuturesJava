@@ -7,6 +7,8 @@
 #   mon_hb   heartbeat cron golive_monitor ($MON_HB_FILE) cu > DM_HB_MAX_S (600) - CHI khi co micro/pilot ($GL_MON_FLAG) [monitor chi chay khi co co]
 #   ssh242   ssh 242 (CHI DOC) loi >= DM_SSH_FAIL_N (2) luot lien tiep
 #   gate     dong "[GATE] " moi nhat log bot cu > DM_GATE_MAX_S (180 s) (bot treo / chet) hoac khong thay
+#            [OPS5_FIX MINOR 2a] BO QUA khi PAUSE watchdog 242 ($DM_WD_PAUSE) con han (tuoi <= DM_PAUSE_MAX_S = WD_PAUSE_MAX_S 1800) - cung co che
+#            monitor dung (moi script golive/deploy/rollback dat PAUSE truoc stop/start) => khong bao gia trong cua so deploy / restart co chu dich.
 #   watcher  tien trinh parity watcher ($DM_WATCH_PAT) khong chay
 #   disk     dia $DM_DF_PATH Oracle trong < DM_DISK_MIN_GB (10)
 #   mem      MemAvailable Oracle < DM_MEM_MIN_MB (2000)
@@ -33,6 +35,7 @@ DM_DISK_MIN_GB=${DM_DISK_MIN_GB:-10}
 DM_MEM_MIN_MB=${DM_MEM_MIN_MB:-2000}
 DM_MEMINFO=${DM_MEMINFO:-/proc/meminfo}
 DM_REMIND_S=${DM_REMIND_S:-1800}
+DM_WD_PAUSE=${WD_PAUSE:-/var/lib/h242_watchdog/PAUSE}; DM_PAUSE_MAX_S=${WD_PAUSE_MAX_S:-1800}
 DEPLOY_TG_ENV=${DEPLOY_TG_ENV:-/home/ubuntu/.config/health242/tg.env}
 NOW=$(date +%s); TS=$(TZ=Asia/Ho_Chi_Minh date '+%F %T')
 say() { echo "[$TS] $*"; }
@@ -66,14 +69,16 @@ if [ -f "$GL_MON_FLAG" ]; then
   else say "OK mon_hb tuoi ${a}s"; fi
 else say "INFO khong co co micro/pilot ($GL_MON_FLAG) - bo qua mon_hb (monitor cron khong chay)"; fi
 # ---- ssh242 + gate (1 ssh CHI DOC)
-G=$(timeout -k 5 "$DM_SSH_TIMEOUT_S" $SSH_242 "cd $APP_DIR && nice -n 19 tail -c $DM_TAIL logs/full.log 2>/dev/null | grep -a '\[GATE\] ' | tail -1 | cut -c1-23; echo END_DM" < /dev/null 2>/dev/null); rc=$?
+G=$(timeout -k 5 "$DM_SSH_TIMEOUT_S" $SSH_242 "cd $APP_DIR && nice -n 19 tail -c $DM_TAIL logs/full.log 2>/dev/null | grep -a '\[GATE\] ' | tail -1 | cut -c1-23; [ -e $DM_WD_PAUSE ] && echo PAUSE_AGE=\$(( \$(date +%s) - \$(stat -c %Y $DM_WD_PAUSE 2>/dev/null || echo 0) )); echo END_DM" < /dev/null 2>/dev/null); rc=$?
 if [ "$rc" != 0 ] || ! printf '%s\n' "$G" | grep -qx END_DM; then
   SSHF=$((SSHF + 1)); say "!! ssh 242 loi rc=$rc (luot loi lien tiep $SSHF/$DM_SSH_FAIL_N)"
   [ "$SSHF" -ge "$DM_SSH_FAIL_N" ] && AL[ssh242]="ssh 242 (chi doc) loi $SSHF luot lien tiep (rc=$rc) - 242 mat mang / sshd / Oracle mat mang?"
 else
   SSHF=0; say "OK ssh242"
-  GL=$(printf '%s\n' "$G" | grep -v '^END_DM$' | tail -1)
-  if [[ "$GL" =~ ^([0-9]{2})/([0-9]{2})/([0-9]{4})\ ([0-9:]{8}) ]]; then
+  GL=$(printf '%s\n' "$G" | grep -v '^END_DM$' | grep -v '^PAUSE_AGE=' | tail -1)
+  PA=$(printf '%s\n' "$G" | sed -n 's/^PAUSE_AGE=//p' | head -1)
+  if [[ "$PA" =~ ^[0-9]+$ ]] && [ "$PA" -le "$DM_PAUSE_MAX_S" ]; then say "INFO PAUSE watchdog 242 con han (${PA}s <= ${DM_PAUSE_MAX_S}s: deploy / restart co chu dich) - BO QUA kiem gate"
+  elif [[ "$GL" =~ ^([0-9]{2})/([0-9]{2})/([0-9]{4})\ ([0-9:]{8}) ]]; then
     gt=$(TZ=Asia/Ho_Chi_Minh date -d "${BASH_REMATCH[3]}-${BASH_REMATCH[2]}-${BASH_REMATCH[1]} ${BASH_REMATCH[4]}" +%s 2>/dev/null || echo 0); ga=$(( NOW - gt ))
     if [ "$ga" -gt "$DM_GATE_MAX_S" ]; then AL[gate]="dong [GATE] moi nhat cu ${ga}s > ${DM_GATE_MAX_S}s ($GL) - bot treo / chet / dang khoi dong lai?"
     else say "OK gate tuoi ${ga}s"; fi
@@ -81,7 +86,7 @@ else
 fi
 # ---- watcher parity
 WP="[${DM_WATCH_PAT:0:1}]${DM_WATCH_PAT:1}"
-if [ "$(pgrep -fc -- "$WP" 2>/dev/null || echo 0)" -ge 1 ]; then say "OK watcher ($DM_WATCH_PAT)"; else AL[watcher]="watcher parity ($DM_WATCH_PAT) KHONG chay - nhan ngay khong ra"; fi
+NW=$(pgrep -fc -- "$WP" 2>/dev/null); if [ "${NW:-0}" -ge 1 ] 2>/dev/null; then say "OK watcher ($DM_WATCH_PAT)"; else AL[watcher]="watcher parity ($DM_WATCH_PAT) KHONG chay - nhan ngay khong ra"; fi
 # ---- disk / mem Oracle
 dk=$(df -Pk "$DM_DF_PATH" 2>/dev/null | awk 'NR==2{print int($4/1048576)}'); dk=${dk:-0}
 [ "$dk" -lt "$DM_DISK_MIN_GB" ] && AL[disk]="dia Oracle $DM_DF_PATH con ${dk} GB < ${DM_DISK_MIN_GB} GB" || say "OK disk ${dk} GB"

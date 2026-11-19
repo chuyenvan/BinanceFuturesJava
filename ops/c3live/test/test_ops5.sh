@@ -484,7 +484,7 @@ cat > $F/bin/daemon.sh <<EOD
 #!/bin/bash
 case "\$1" in
   stop) [ -e $W/daemon_nostop ] && exit 0; for p in \$(pgrep -f "^BinanceOrderTradingManager fk_$TAG"); do kill \$p 2>/dev/null; done;;
-  start) cd $F && env -i PATH="$PATH" C3_CAPITAL=1000 LIVE_ADAPTER=live nohup bash -c "exec -a '$FPAT' sleep 900" >/dev/null 2>&1 </dev/null & ;;
+  start) ( cd $F && exec env -i PATH="$PATH" C3_CAPITAL=1000 LIVE_ADAPTER=live nohup bash -c "exec -a '$FPAT' sleep 900" ) >/dev/null 2>&1 </dev/null & ;;
 esac
 EOD
 chmod 755 $F/bin/daemon.sh; cp $F/conf/env.sh $W/env.sh.k8; startbot 1000
@@ -501,6 +501,7 @@ rm -f $F/run/KILL_SWITCH* $F/run/.golive_* $F/conf/env.sh.bak_*; cp $W/env.sh.k8
 echo "== OPS5_FIX muc 6/7: deadman bo qua gate khi PAUSE con han; rollback autodrain chi go WD_PRESTART dong watchdog (A19)"
 printf 'C3_ACCOUNT=SUB\n' > $W/deploy/golive_monitor.on; touch $W/deploy/run/monitor_heartbeat; rm -rf $DMD; gate_at $(( $(date +%s) - 900 ))
 echo "C3GOLIVE_golive_micro_on TS=1 pid=1 t=1" > $W/PAUSE_dm
+rm -f $W/tgdm.txt
 OUT=$(DM WD_PAUSE=$W/PAUSE_dm bash "$HERE/golive_deadman.sh" 2>&1); RC=$?
 chk "g1 [2a] gate cu 900 s NHUNG PAUSE watchdog moi (deploy/restart co chu dich) => BO QUA gate, khong canh bao gate" "echo \"\$OUT\" | grep -q 'INFO PAUSE watchdog 242 con han' && ! echo \"\$OUT\" | grep -q 'CANH BAO gate' && ! grep -qs 'CANH BAO gate' $W/tgdm.txt"
 touch -d '-40 min' $W/PAUSE_dm
