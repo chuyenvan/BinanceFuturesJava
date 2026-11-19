@@ -15,7 +15,7 @@ b02bf262b551e39b098ce97f976254d4  golive_first_trade_check.sh
 149b7f61660ff0be1c31e93e25523c6e  golive_deadman.sh
 c5ca4bc44bc57a074ff5ee3ec7d21665  install_ops5_oracle.sh
 93564c6f73fc7285d6d93ce60876c664  c3_price_lag_day.sh
-0f393298f9c80f4e69d31fb4d4cd10e9  golive_check_lev.sh
+a321efc635268c45e852ab7d4e031a10  golive_check_lev.sh
 f1c4e08fb630330e6d4e7f1c94667c9e  install_242_autodrain.sh
 907e66681c36c879d93bd0d8ef77a98c  c3_autodrain_prestart.sh
 96c1fc3c2ed14496d6d19d2925557de2  install_242_oracle_seen.sh
