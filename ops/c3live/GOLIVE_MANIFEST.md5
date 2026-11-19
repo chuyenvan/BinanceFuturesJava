@@ -17,6 +17,6 @@ e35c141ad712cbc6b273b5f96e14b2c3  install_ops5_oracle.sh
 93564c6f73fc7285d6d93ce60876c664  c3_price_lag_day.sh
 a321efc635268c45e852ab7d4e031a10  golive_check_lev.sh
 33609366de613224946aa155ee6ea6c9  install_242_autodrain.sh
-80df69d71a168c13f0384caa85828350  c3_autodrain_prestart.sh
+eddd081cddf7de649485bb5d9d63238c  c3_autodrain_prestart.sh
 96c1fc3c2ed14496d6d19d2925557de2  install_242_oracle_seen.sh
 f521c970e2094c2f6ac2a2dcf04c04f5  c3_oracle_seen_242.sh

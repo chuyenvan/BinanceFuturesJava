@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+_RC=0
+trap 'exit $_RC' EXIT
+# ^ [VONG3 nit R1b] trap DAU TIEN (truoc header): loi cu phap o bat ky dong sau => van rc 0 (khong chan start)
 # =============================================================================
 # c3_autodrain_prestart.sh - [OPS5 muc 4] (cai tren 242 thanh /usr/local/sbin/h242-prestart-c3.sh boi install_242_autodrain.sh)
 #   Boc prestart goc (/usr/local/sbin/h242-prestart.sh <APP> <MainClass>): watchdog (WD_PRESTART) va systemd h242-trading (ExecStartPre)
@@ -14,8 +17,6 @@
 #   - KHONG set -e/-u/pipefail; trap EXIT ep rc ve _RC (chi gan khi ngoai le tren) => loi ngam (bien rong, pipe, ghi loi) khong doi rc.
 # Bien (test): AD_ORIG_PRESTART AD_STATE_DIR AD_TG_ENV AD_TG_SINK AD_TG_API
 # =============================================================================
-_RC=0
-trap 'exit $_RC' EXIT
 set +e +u
 ORIG=${AD_ORIG_PRESTART:-/usr/local/sbin/h242-prestart.sh}
 STATE=${AD_STATE_DIR:-/var/lib/c3_autodrain}
