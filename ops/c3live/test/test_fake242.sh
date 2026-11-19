@@ -1395,6 +1395,11 @@ printf 'G-PILOT test\njar_md5=%s\nsize=20000\ng_exec=Q4_OWNER test\ng_exit=Q4_OW
 OUT=$(echo 'YES DA CAT LEGACY' | GL bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "r4p pilot_on hau kiem TRUOT => ROLLBACK ve C3_CAPITAL cu (10000), adapter live" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'Da ROLLBACK xong: live C3_CAPITAL=10000' && penv | grep -qx C3_CAPITAL=10000 && penv | grep -qx LIVE_ADAPTER=live"
 rm -f $F4/FAKE_NORUNTIME
+# [OPS5 VONG3 F2] owner drain chen giua pilot_on (sau khi pilot dat KS) => KHONG bi mat; khong PUSH ON
+( for i in $(seq 1 900); do grep -q '^golive_pilot_on ' $F4/run/KILL_SWITCH 2>/dev/null && { printf 'golive_live_off drain 20990101_9\n' > $F4/run/KILL_SWITCH; break; }; sleep 0.1; done ) & OWP=$!
+OUT=$(echo 'YES DA CAT LEGACY' | GL bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?; kill $OWP 2>/dev/null; wait $OWP 2>/dev/null
+chk "VONG3 F2 pilot_on: owner drain chen giua => TU CHOI/ROLLBACK rc 1, C3_CAPITAL giu 10000, KS owner drain GIU NGUYEN (khong ghi de / khong go)" "[ $RC = 1 ] && penv | grep -qx C3_CAPITAL=10000 && grep -q '^golive_live_off drain 20990101_9' $F4/run/KILL_SWITCH && ! echo \"\$OUT\" | grep -q 'XONG: PILOT'"
+rm -f $F4/run/KILL_SWITCH; sleep 2
 OUT=$(GL MODE=dry DRY=1 bash "$HERE/golive_live_off.sh" 2>&1); RC=$?
 chk "r4p live_off MODE=dry khi CHUA drain => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL da drain'"
 OUT=$(echo YES | GL MODE=drain bash "$HERE/golive_live_off.sh" 2>&1); RC=$?
@@ -1942,8 +1947,14 @@ chk "add4 pilot_on SUB: lenh NGOAI c3 tren tk con => TU CHOI" "[ $RC = 1 ] && ec
 clean; api account "$ACC_PILOT"
 OUT=$(echo YES | GS bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "add4 pilot_on SUB: go YES (khong phai 'YES PILOT') => huy" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'Huy. Khong doi gi.'"
+# [OPS5 VONG3 F2] SUB: hau kiem TRUOT => rollback von cu + moc tmb0 tra lai; roi XONG khi co KS token c3_autodrain (ks=1 ghi de, .prev giu)
+cp -p $W/deploylog/c3sub_eq_base.txt $W/eqbase_truoc_f2; touch $F4/FAKE_NORUNTIME
+OUT=$(echo 'YES PILOT' | GS bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?; rm -f $F4/FAKE_NORUNTIME
+chk "VONG3 F2 pilot_on SUB hau kiem TRUOT => ROLLBACK C3_CAPITAL 1000 + moc tmb0 tra lai byte-giong + KS ve nhu truoc (PUSH)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'Da ROLLBACK xong: live C3_CAPITAL=1000. run/KILL_SWITCH sau rollback: PUSH' && penv | grep -qx C3_CAPITAL=1000 && cmp -s $W/eqbase_truoc_f2 $W/deploylog/c3sub_eq_base.txt && [ ! -e $F4/run/KILL_SWITCH ]"
+sleep 2; printf 'c3_autodrain 20261119_101500 caller=h242_watchdog.sh\n' > $F4/run/KILL_SWITCH
 OUT=$(echo 'YES PILOT' | GS bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "add4 pilot_on SUB XONG: C3_CAPITAL 1000 -> 10000, key tk con giu, LEGACY chi INFO" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: PILOT C3_CAPITAL=10000' && penv | grep -qx C3_CAPITAL=10000 && penv | grep -qx LIVE_C3_KEYS_FILE=$W/keys_sub.env && echo \"\$OUT\" | grep -q 'INFO LEGACY_managed=44'"
+chk "VONG3 F2 pilot_on SUB XONG voi KS token c3_autodrain co san: ks=1 ghi de (ban cu .prev_<TS>), hau kiem 2 pha, KS go, PUSH ON" "[ $RC = 0 ] && [ ! -e $F4/run/KILL_SWITCH ] && grep -qx 'c3_autodrain 20261119_101500 caller=h242_watchdog.sh' $F4/run/KILL_SWITCH.prev_* && echo \"\$OUT\" | grep -q 'OK go run/KILL_SWITCH (hau kiem DAT) - cho PUSH ON'"
 chk "errata2 pilot_on ghi lai moc tmb0 + C3_CAPITAL=10000; 0 leg so dry trong so live" "grep -qx 'c3_capital=10000' $W/deploylog/c3sub_eq_base.txt && grep -q 'golive_pilot_on' $W/deploylog/c3sub_eq_base.txt && echo \"\$OUT\" | grep -q 'OK 0_leg_so_dry_trong_so_live'"
 chk "A1 errata2 MIN-1 pilot_on reset dinh eq CO CHU DICH: ghi ro trong log moc + Telegram" "grep -q 'RESET dinh eq co chu dich' $W/deploylog/c3sub_eq_base.txt && grep -q 'RESET dinh eq co chu dich' $W/tg_sub.txt"
 OUT=$(echo YES | GS MODE=drain bash "$HERE/golive_live_off.sh" 2>&1); RC=$?

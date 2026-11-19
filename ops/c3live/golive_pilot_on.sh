@@ -10,6 +10,8 @@
 #   MAIN: + LEGACY_CUT_VERIFIED.ok (golive_legacy_verify.sh DAT <= 24 h) + LEGACY managed 0.
 #   [ADD4 SUB] BO LEGACY_CUT_VERIFIED / legacy_verify / LEGACY 0 (§3, chi ghi log); thay bang: bot live dung LIVE_C3_KEYS_FILE = file key
 #   tk con, key van dat (§2: IP-only, khong rut, futures, sha8 != tk chinh, dualSide=false, BFUSD), tk con 0 vi the / lenh / algo NGOAI c3 (§4).
+# [VONG3 F2] restart ks=1 (KS token golive_pilot_on TRUOC stop, ban cu .prev_<TS>) + hau kiem 2 pha nhu micro_on (KS con => kiem => go => cho PUSH ON);
+#   rollback => KS ve nhu truoc pilot (gl_ks_restore_prev). Precheck chap nhan KS token c3live_boot/c3_autodrain chuan (gl_ks_boot_ok).
 # Lam: env +C3_CAPITAL=<size> ; PAUSE token ; restart (so live + vi the c3 GIU NGUYEN; adapter khong doi) ; hau kiem env, c3_capital,
 #   PUSH=ON, stream, recon ok, latch NONE, 0 KHAN (MAIN: LEGACY 0). TRUOT => rollback: env.sh ve ban truoc (C3_CAPITAL cu), restart.
 # [A1 ADD4] SUB: doi cron golive_monitor da cai (C-1), dam bao co monitor; MIN-2: co tien trinh canary_early* tren Oracle => TU CHOI.
@@ -125,7 +127,7 @@ if [ "$C3_ACCOUNT" = SUB ]; then
   gl_eq_base_set "$(av TMB)" "$SIZE" "$(av KEY_SHA8)" "golive_pilot_on $TS (C3_CAPITAL $C0 -> $SIZE) — RESET dinh eq co chu dich" || die "KHONG ghi duoc moc tmb0 — khong pilot (ADD4 errata 2 §5)"
 fi
 trap 'say "BI DUNG (tin hieu) — kiem bash $GL_HERE/golive_monitor.sh"; gl_pause_clear >/dev/null 2>&1; exit 130' INT TERM HUP
-gl_restart "$ENV_ADD" "" none
+gl_restart "$ENV_ADD" "" none 1   # [VONG3 F2] ks=1: dat KILL_SWITCH token golive_pilot_on TRUOC stop (ban cu -> .prev_<TS>), go sau hau kiem DAT
 if gl_restart_unknown; then   # [WAVE1 B-02]
   s242 "cd $A && echo 'golive_pilot_on $TS ssh_restart_khong_ro' >> run/KILL_SWITCH && [ -e run/KILL_SWITCH ]" && say "run/KILL_SWITCH DANG DAT" || say "!! KHONG dat duoc run/KILL_SWITCH (ssh?)"
   M="restart pilot: ssh dut, KHONG doc duoc trang thai that tren 242 => KHONG ket luan. Owner/MASTER: bash $GL_HERE/golive_monitor.sh; env backup GOC $A/conf/env.sh.bak_golive_pilot_on_$TS"
@@ -145,20 +147,47 @@ CHK() { gl_chk_common "$SL" "$L0" '
 envk LIVE_ADAPTER=live; envk C3_CAPITAL='"$SIZE"'; envk SHADOW_NO_PUSH=false; envk LIVE_ENTRY_ENABLED=true; '"$KEYCHK"'
 '"$GL_D01_CHK"'
 [ "$(tail -n +$SL $L | grep -a "khoi dong adapter=LIVE" | grep -acE "c3_capital='"$SIZE"'(\.0)?( |$)")" -ge 1 ] && echo "OK c3_capital='"$SIZE"'" || echo "WAIT c3_capital"
-[ "$(T "PUSH=ON")" -ge 1 ] && echo "OK PUSH_ON" || echo "WAIT PUSH_ON"
+grep -q "^golive_pilot_on '"$TS"' " run/KILL_SWITCH 2>/dev/null && echo "OK KILL_SWITCH_con (chua mo lenh moi)" || echo "FAIL KILL_SWITCH_cua_script_mat"
+[ "$(T "PUSH=ON")" = 0 ] && echo "OK chua_PUSH_ON" || echo "FAIL PUSH_ON_khi_con_KILL_SWITCH"
 [ "$(T "C3-LIVE-STREAM\] da ket noi")" -ge 1 ] && echo "OK user_stream" || echo "WAIT user_stream"'"$PCHK"; }
 if ! echo "$RS" | grep -q '^FAIL' && gl_postloop CHK; then
-  trap - INT TERM HUP
-  gl_pause_clear >/dev/null || say "PAUSE con (ssh?) — tu go sau ${WD_PAUSE_MAX_S}s"
-  say "=== XONG: PILOT C3_CAPITAL=$SIZE ($ACCT_TXT). Theo doi: bash $GL_HERE/golive_monitor.sh"
-  [ "$C3_ACCOUNT" = SUB ] && say "INFO lop phu monitor: moc tmb0 moi, RESET dinh eq co chu dich (pilot_on)"
-  tg "[golive] PILOT BAT TS=$TS C3_ACCOUNT=$C3_ACCOUNT C3_CAPITAL=$SIZE (truoc $C0)$([ "$C3_ACCOUNT" = SUB ] && echo '; lop phu monitor: moc tmb0 moi, RESET dinh eq co chu dich'). Log $LOG"; exit 0
+  # [VONG3 F2] hau kiem 2 pha (nhu micro_on): KS cua minh con => kiem DAT => go KS (chi khi MOI dong la cua minh) => cho PUSH ON
+  KG=$(gl_ks_go_own golive_pilot_on); PON=0
+  if [ "$KG" = OK ]; then
+    say "OK go run/KILL_SWITCH (hau kiem DAT) - cho PUSH ON"
+    for r in $(seq 1 "$POST_ROUNDS"); do
+      sleep "$POST_WAIT_S"
+      n=$(s242 "cd $A && tail -n +$SL logs/full.log 2>/dev/null | grep -ac 'PUSH doi trang thai -> ON'") || n=x
+      [ "$n" != x ] && [ "$n" -ge 1 ] 2>/dev/null && { PON=1; break; }
+    done
+  fi
+  if [ "$PON" = 1 ]; then
+    trap - INT TERM HUP
+    gl_pause_clear >/dev/null || say "PAUSE con (ssh?) — tu go sau ${WD_PAUSE_MAX_S}s"
+    say "=== XONG: PILOT C3_CAPITAL=$SIZE ($ACCT_TXT). Theo doi: bash $GL_HERE/golive_monitor.sh"
+    [ "$C3_ACCOUNT" = SUB ] && say "INFO lop phu monitor: moc tmb0 moi, RESET dinh eq co chu dich (pilot_on)"
+    tg "[golive] PILOT BAT TS=$TS C3_ACCOUNT=$C3_ACCOUNT C3_CAPITAL=$SIZE (truoc $C0)$([ "$C3_ACCOUNT" = SUB ] && echo '; lop phu monitor: moc tmb0 moi, RESET dinh eq co chu dich'). Log $LOG"; exit 0
+  fi
+  gl_pause_clear >/dev/null 2>&1
+  if [ "$KG" = OK ]; then
+    if s242 "cd $A && echo 'golive_pilot_on $TS push_khong_ON' >> run/KILL_SWITCH && [ -e run/KILL_SWITCH ]"; then
+      M="hau kiem DAT (C3_CAPITAL=$SIZE da ap dung) nhung KHONG thay 'PUSH doi trang thai -> ON' sau khi go KILL_SWITCH => DA DAT LAI KILL_SWITCH (xac nhan; an toan, khong mo moi). Owner/MASTER kiem bash $GL_HERE/golive_monitor.sh"
+    else
+      M="hau kiem DAT (C3_CAPITAL=$SIZE) nhung KHONG thay PUSH ON; DAT LAI KILL_SWITCH THAT BAI (ssh?) => KILL_SWITCH DA GO, CO THE MO LENH MOI. KHAN: owner chay NGAY MODE=drain bash $GL_HERE/golive_live_off.sh"
+    fi
+  elif [ "$KG" = KHAC ]; then
+    M="hau kiem DAT (C3_CAPITAL=$SIZE) nhung run/KILL_SWITCH co dong/token KHAC (owner drain / monitor KHAN chen vao) => GIU NGUYEN, KHONG go: bot LIVE dang DRAIN. Owner/MASTER kiem noi dung KS roi moi MODE=undrain bash $GL_HERE/golive_live_off.sh"
+  else
+    M="hau kiem DAT (C3_CAPITAL=$SIZE) nhung KHONG XAC NHAN DUOC trang thai run/KILL_SWITCH (ssh) - co the da go. KHAN: owner kiem NGAY ls $A/run/KILL_SWITCH tren 242 / MODE=drain bash $GL_HERE/golive_live_off.sh"
+  fi
+  say "KHAN: $M"; tg "[golive] KHAN TS=$TS pilot_on: $M | log $LOG"; exit 2
 fi
 WHY=$(echo "${RESULT:-$RS}" | grep '^FAIL\|^WAIT' | tr '\n' ' ' | cut -c1-200)
 say "hau kiem TRUOT ($WHY) => ROLLBACK ve C3_CAPITAL=$C0 (adapter live, so + vi the giu nguyen)"
 if gl_rollback none live "$C0"; then
   [ -f "$SUB_BASE_FILE.bak_$TS" ] && mv -f "$SUB_BASE_FILE.bak_$TS" "$SUB_BASE_FILE" && say "OK moc tmb0 tra lai ban truoc pilot"
-  say "Da ROLLBACK xong: live C3_CAPITAL=$C0."; tg "[golive] pilot_on FAIL TS=$TS: $WHY => ROLLBACK ve $C0 XONG. Log $LOG"; exit 1
+  KR=$(gl_ks_restore_prev golive_pilot_on)   # [VONG3 F2] KS ve nhu truoc pilot (token cu .prev / khong KS); dong khac => giu (DRAIN)
+  say "Da ROLLBACK xong: live C3_CAPITAL=$C0. run/KILL_SWITCH sau rollback: ${KR:-KHONG_RO} (PUSH = nhu truoc pilot; DRAIN = token cu / dong khac giu nguyen)"; tg "[golive] pilot_on FAIL TS=$TS: $WHY => ROLLBACK ve $C0 XONG, KS=${KR:-KHONG_RO}. Log $LOG"; exit 1
 fi
 s242 "cd $A && echo 'golive_pilot_on $TS rollback_loi' >> run/KILL_SWITCH && [ -e run/KILL_SWITCH ]" && say "run/KILL_SWITCH DANG DAT" || say "!! KHONG dat duoc run/KILL_SWITCH (ssh?)"
 M="ROLLBACK LOI / khong xac nhan adapter=live C3_CAPITAL=$C0 ($(echo "$RB" | grep '^FAIL' | head -2 | tr '\n' ' ')) => run/KILL_SWITCH; kiem bash $GL_HERE/golive_monitor.sh; env backup GOC $A/conf/env.sh.bak_golive_pilot_on_$TS"

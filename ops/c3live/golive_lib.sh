@@ -311,6 +311,11 @@ sv() { echo "$ST" | sed -n "s/^$1=//p" | head -1; }
 gl_ks_go_own() {
   s242 "cd $A && if [ -e run/KILL_SWITCH.ok_$TS ] && [ ! -e run/KILL_SWITCH ]; then echo KSGO=OK; elif [ ! -e run/KILL_SWITCH ]; then echo KSGO=MAT; elif ! grep -q '^$1 $TS ' run/KILL_SWITCH || [ \"\$(grep -vc '^$1 $TS ' run/KILL_SWITCH)\" != 0 ]; then echo KSGO=KHAC; else mv -f run/KILL_SWITCH run/KILL_SWITCH.ok_$TS && [ ! -e run/KILL_SWITCH ] && echo KSGO=OK || echo KSGO=LOI; fi" 2>/dev/null | sed -n 's/^KSGO=//p' | tail -1
 }
+# [VONG3 F2] gl_ks_restore_prev <NM> : sau rollback (live) - go KS cua minh (chi khi MOI dong la cua minh) roi tra token cu .prev_$TS
+#   (c3live_boot / c3_autodrain) neu co => trang thai PUSH nhu TRUOC script. In PUSH (khong con KS) | DRAIN (con KS).
+gl_ks_restore_prev() {
+  s242 "cd $A && { ! grep -q '^$1 $TS ' run/KILL_SWITCH 2>/dev/null || { [ \"\$(grep -vc '^$1 $TS ' run/KILL_SWITCH)\" = 0 ] && mv -f run/KILL_SWITCH run/KILL_SWITCH.rb_$TS; }; }; { [ ! -e run/KILL_SWITCH.prev_$TS ] || [ -e run/KILL_SWITCH ] || cp -p run/KILL_SWITCH.prev_$TS run/KILL_SWITCH; }; [ -e run/KILL_SWITCH ] && echo KSR=DRAIN || echo KSR=PUSH" 2>/dev/null | sed -n 's/^KSR=//p' | tail -1
+}
 gl_ks_boot_ok() { [ "$(sv KILLSW_FILE)" = 0 ] && return 0; case "$(sv KILLSW_TOK)" in c3live_boot|c3_autodrain) return 0;; esac; return 1; }
 # gl_excl_guard : [A1 r4u2 C-1] C3_ACCOUNT=MAIN + C3_EXCLUDE_LEGACY_HELD=false (process HOAC env.sh) => DUNG
 gl_excl_guard() {

@@ -1,13 +1,13 @@
 f08e4cb9ca1ffefae05cd62bdf9a8b8f  dry_enable_grid_sizing.sh
 5ca08eb78d2e47879afbc213bdef37ca  golive_micro_on.sh
-41f039f6ef9b8cb900587c754743be91  golive_pilot_on.sh
+ebbfa068e8f7cd0e12483bcfb9dbae56  golive_pilot_on.sh
 c7d1f45e20e15551e433e300ce3e2887  golive_live_off.sh
 b79e158dffb563076a612258d4fe4735  golive_rebase_equity.sh
 fdc57b5a12a6a30b66c88c7ee694641c  golive_make_gate.sh
 4f25c048b6f49d5078be6080479e0c28  install_golive_ops.sh
 194bb84f136d706ce0f3926557ae5ec3  install_cron_golive_monitor.sh
 f765f6832c5d5c8c0669afa1e3673f4f  golive_monitor.sh
-65d6ba34c32a1ac73054355292f5f09c  golive_lib.sh
+4527c6ef3e887c6a320dd7dbbec9457b  golive_lib.sh
 12e8084cd03b61cd446bfa6a9f56666d  golive_use_sub_key.sh
 5db4049d6fcb9ff097ebcc78dcc81fb9  golive_check_key.sh
 74986055ba1f183ad2e02c27a8725c46  golive_legacy_verify.sh
