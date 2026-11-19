@@ -48,6 +48,7 @@ esac
 GL_NAME=golive_swap_jar; NM=$GL_NAME
 TS=$(TZ=Asia/Ho_Chi_Minh date +%Y%m%d_%H%M%S)
 mkdir -p "$LOGDIR"; LOG=$LOGDIR/${GL_NAME}_${TS}.log
+PAUSE_TOK="C3GOLIVE_${NM} TS=$TS pid=$$"   # = TOK trong _sj_restart_rx (gl_pause_clear chi go PAUSE cua lan nay)
 exec > >(trap '' HUP INT TERM PIPE; exec tee --output-error=warn -a "$LOG") 2>&1
 say "=== $GL_NAME TS=$TS MODE=$MODE ($DIRTXT) DRY=$DRY nguon=$FROM_MD5 dich=$TO_MD5 ==="
 [ "$C3_ACCOUNT" = SUB ] || die "chi ho tro C3_ACCOUNT=SUB (micro tk con)"
