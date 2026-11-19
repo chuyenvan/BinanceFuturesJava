@@ -48,7 +48,9 @@ case "$1" in
     JM=$(md5sum < target/binance-java-sdk-1.2.4.jar | cut -c1-32); ISNEW=0; [ "$JM" = "$(cat FAKE_NEWMD5)" ] && ISNEW=1
     [ "$ISNEW" = 1 ] && [ -f FAKE_NOSTART_IF_NEW ] && exit 0
     set -a; . conf/env.sh; set +a; export PN
-    nohup bash -c 'exec -a "$PN" sleep 900' >/dev/null 2>&1 &
+    FDJ=target/binance-java-sdk-1.2.4.jar; [ -f FAKE_FD_STALE ] && [ "$ISNEW" = 1 ] && FDJ=$(cat FAKE_FD_STALE); export FDJ   # JVM gia giu fd jar nhu that
+    nohup bash -c 'exec 3<"$FDJ"; exec -a "$PN" sleep 900' >/dev/null 2>&1 &
+    [ "$ISNEW" = 1 ] && [ -f FAKE_TWO_JVM_IF_NEW ] && nohup bash -c 'exec 3<"$FDJ"; exec -a "$PN" sleep 900' >/dev/null 2>&1 &
     sleep 1
     D=$(TZ=Asia/Ho_Chi_Minh date '+%d/%m/%Y %H:%M:%S.000')
     PUSHV=OFF; [ ! -e run/KILL_SWITCH ] && PUSHV=ON
@@ -66,6 +68,7 @@ case "$1" in
       { [ -f FAKE_KHAN_ALWAYS ] || { [ "$ISNEW" = 1 ] && [ -f FAKE_KHAN_IF_NEW ]; }; } && echo "$D ERROR [x] x: [C3-LIVE] KHAN gia lap"
     } >> logs/full.log
     [ "$ISNEW" = 1 ] && [ -f FAKE_DRAIN_IF_NEW ] && echo "golive_live_off drain 20990101_000000" > run/KILL_SWITCH
+    [ -f FAKE_DRAIN_AFTER_OK ] && nohup bash -c 'echo hfxw_$(cat FAKE_TID) >/dev/null; for i in $(seq 1 120); do sleep 0.5; ls run/KILL_SWITCH.ok_* >/dev/null 2>&1 && { echo "golive_live_off drain 20990101_000001" > run/KILL_SWITCH; exit 0; }; done' "hfxw_$(cat FAKE_TID)" >/dev/null 2>&1 &
     if [ "$PUSHV" = OFF ] && [ ! -f FAKE_NOPUSHON ]; then
       nohup bash -c 'echo hfxw_$(cat FAKE_TID) >/dev/null; for i in $(seq 1 300); do sleep 1; [ -e run/KILL_SWITCH ] || { echo "$(TZ=Asia/Ho_Chi_Minh date "+%d/%m/%Y %H:%M:%S.000") WARN [x] x: [C3-LIVE] PUSH doi trang thai -> ON" >> logs/full.log; exit 0; }; done' "hfxw_$(cat FAKE_TID)" >/dev/null 2>&1 &
     fi ;;
@@ -89,6 +92,10 @@ M=""; if [ -f "$FAKESSH_PLAN" ]; then
   L=$(grep -m1 "^$C " "$FAKESSH_PLAN"); if [ -n "$L" ]; then set -- $L; n=$3
     if [ "$n" -gt 0 ]; then M=$2; sed -i "0,/^$C .*/s//$C $2 $((n - 1))/" "$FAKESSH_PLAN"; fi; fi; fi
 [ "$M" = before ] && exit 255
+if [ "$M" = hup ]; then   # ssh dut giua chung: lenh phia 242 nhan SIGHUP sau 3 s, client tra 255 ngay
+  printf '%s' "$IN" > "$1.in"; setsid bash -c "bash -c \"\$0\" < \"\$1\" > /dev/null 2>&1" "$CMD" "$1.in" & HP=$!
+  sleep 3; kill -HUP -- -$HP 2>/dev/null; exit 255
+fi
 printf '%s' "$IN" | bash -c "$CMD"; rc=$?
 [ "$M" = after ] && exit 255
 exit $rc
@@ -184,6 +191,46 @@ chk "ssh mat luc go KILL_SWITCH => KHAN rc2, KS con (drain), bot chay jar moi" "
 reset_state $W/old.jar; echo 'PUSHWAIT before 99' > $W/sshplan
 OUT=$(echo YES | bash $S 2>&1); RC=$?
 chk "ssh mat luc cho PUSH ON => dat lai KILL_SWITCH (xac nhan) + KHAN rc2" "[ $RC = 2 ] && grep -q 'push_khong_ON' $F/run/KILL_SWITCH && [ \"\$(np)\" = 1 ]"
+# ===== VONG 2 (A1 HOTFIX_KS)
+# 1a watchdog dang giu .lock
+reset_state $W/old.jar; ( flock $W/.lock sleep 5 ) & sleep 0.5
+OUT=$(echo YES | bash $S 2>&1); RC=$?
+chk "V2-1a watchdog giu .lock 5 s => script CHO roi XONG" "[ $RC = 0 ] && echo \"\$OUT\" | grep -qE 'OK watchdog_khong_con_luot_dang_chay \(cho [3-9]s' && [ \"\$(jm)\" = $NEW ]"
+reset_state $W/old.jar; P0=$(pid); ( flock $W/.lock sleep 30 ) & LKP=$!; sleep 0.5
+OUT=$(echo YES | SJ_WD_LOCK_WAIT_S=3 bash $S 2>&1); RC=$?; kill $LKP 2>/dev/null; pkill -f "flock $W/.lock" 2>/dev/null
+chk "V2-1a watchdog giu .lock qua han => TU CHOI truoc khi dung bot, KS + PAUSE cua script go" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL watchdog_dang_giu_lock' && [ \"\$(pid)\" = '$P0' ] && [ \"\$(jm)\" = $OLD ] && [ ! -e $F/run/KILL_SWITCH ] && [ ! -e $W/PAUSE ]"
+# 1b inode moi (mv), file .hfks da dung het, backup = cu
+reset_state $W/old.jar; I0=$(stat -c %i $F/target/binance-java-sdk-1.2.4.jar)
+OUT=$(echo YES | bash $S 2>&1); RC=$?
+chk "V2-1b cai jar bang mv (inode jar doi, khong con .hfks_*, backup md5 cu), process mo jar moi, ban va BAT" "[ $RC = 0 ] && [ \"\$(stat -c %i $F/target/binance-java-sdk-1.2.4.jar)\" != '$I0' ] && ! ls $F/target/*.hfks_* >/dev/null 2>&1 && echo \"\$OUT\" | grep -q 'OK jar_PROCESS_dang_mo=$NEW' && echo \"\$OUT\" | grep -q 'OK ban_va_deadlock_BAT' && echo \"\$OUT\" | grep -q 'OK dung_1_JVM'"
+# 1c process mo jar KHAC file
+reset_state $W/old.jar; echo "$W/old.jar" > $F/FAKE_FD_STALE
+OUT=$(echo YES | bash $S 2>&1); RC=$?
+chk "V2-1c process dang mo jar khac file (md5 /proc/fd) => FAIL hau kiem => ROLLBACK DAT rc1" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL jar_PROCESS_dang_mo=' && [ \"\$(jm)\" = $OLD ] && [ \"\$(np)\" = 1 ] && [ ! -e $F/run/KILL_SWITCH ]"
+# 1d 2 JVM sau start
+reset_state $W/old.jar; touch $F/FAKE_TWO_JVM_IF_NEW
+OUT=$(echo YES | bash $S 2>&1); RC=$?
+chk "V2-1d 2 JVM sau start => FAIL so_JVM => ROLLBACK, con dung 1 JVM jar cu" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL so_JVM_sau_start=2' && [ \"\$(jm)\" = $OLD ] && [ \"\$(np)\" = 1 ]"
+# 2 PAUSE khong tao duoc => fail-closed
+reset_state $W/old.jar; P0=$(pid)
+OUT=$(echo YES | WD_PAUSE=/proc/hfx_khong_ton_tai_$$/PAUSE bash $S 2>&1); RC=$?
+chk "V2-2 PAUSE khong tao duoc => TU CHOI, bot khong dung, KS go" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL khong_tao_duoc_PAUSE_watchdog' && [ \"\$(pid)\" = '$P0' ] && [ \"\$(jm)\" = $OLD ] && [ ! -e $F/run/KILL_SWITCH ]"
+# 3 PUSH khong ON + owner drain chen sau khi go KS => KHONG ghi de token drain
+reset_state $W/old.jar; touch $F/FAKE_NOPUSHON $F/FAKE_DRAIN_AFTER_OK
+OUT=$(echo YES | bash $S 2>&1); RC=$?
+chk "V2-3 PUSH khong ON + owner drain chen => GIU token drain (khong ghi de), rc2 KHAN" "[ $RC = 2 ] && grep -q '^golive_live_off drain 20990101_000001' $F/run/KILL_SWITCH && grep -q KHAN $W/tg.txt"
+# 4 ban va bi TAT qua env => hau kiem FAIL => rollback
+reset_state $W/old.jar; cp $F/conf/env.sh $W/env.bak; echo 'export KILLSW_EQ_POLL_UNLOCKED=False' >> $F/conf/env.sh; bash $F/bin/daemon.sh stop; bash $F/bin/daemon.sh start; sleep 1
+OUT=$(echo YES | bash $S 2>&1); RC=$?; cp $W/env.bak $F/conf/env.sh
+chk "V2-4 KILLSW_EQ_POLL_UNLOCKED=False => FAIL ban_va_TAT => ROLLBACK rc1" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL ban_va_TAT' && [ \"\$(jm)\" = $OLD ]"
+# 5 DONE_ALREADY=2 => Telegram
+reset_state $W/new.jar; echo 'golive_live_off drain 9' > $F/run/KILL_SWITCH
+OUT=$(echo YES | bash $S 2>&1); RC=$?
+chk "V2-5 jar da moi + KS dang dat => rc2 + Telegram KHAN" "[ $RC = 2 ] && grep -q 'KHAN' $W/tg.txt"
+# 6 ssh dut giua restart, phia 242 nhan HUP => khoi remote VAN chay het (bot len lai), Oracle doc lai + cho khoa => XONG
+reset_state $W/old.jar; echo 'RESTART hup 1' > $W/sshplan
+OUT=$(echo YES | bash $S 2>&1); RC=$?
+chk "V2-6 [m7] HUP phia 242 giua restart => bot VAN duoc start lai, script XONG rc0 (1 JVM, jar moi)" "[ $RC = 0 ] && [ \"\$(jm)\" = $NEW ] && [ \"\$(np)\" = 1 ] && [ ! -e $F/run/KILL_SWITCH ] && echo \"\$OUT\" | grep -q 'pha_da_xong_truoc'"
 # 21 khong YES
 reset_state $W/old.jar; P0=$(pid)
 OUT=$(echo no | bash $S 2>&1); RC=$?

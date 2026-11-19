@@ -38,6 +38,7 @@ SJ_OLD_JAR=${SJ_OLD_JAR:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2
 SJ_NEW_JAR=${SJ_NEW_JAR:-/home/ubuntu/claude_master/v12/jar/binance-java-sdk-1.2.4.jar_v12_r4u3fin2_hotfixks}
 SCP_242=${SCP_242:-"scp -P 2222 -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=10 -o ServerAliveCountMax=6 -i /home/ubuntu/.ssh/id_rsa_chuyennd"}
 RHOST=${RHOST-"root@103.157.218.242:"}
+SJ_WD_LOCK_WAIT_S=${SJ_WD_LOCK_WAIT_S:-300}   # [A1 MAJOR 1a] cho luot watchdog h242 dang chay (flock .lock canh PAUSE) toi da (s)
 MODE=${MODE:-swap}
 case "$MODE" in
   swap)     FROM_MD5=$SJ_OLD_MD5; TO_MD5=$SJ_NEW_MD5; TO_JAR=$SJ_NEW_JAR; DIRTXT="r4u3fin2 -> hotfix-ks" ;;
@@ -99,7 +100,7 @@ pre_check() {
 DONE_ALREADY=0
 pre_check
 [ "$DONE_ALREADY" = 1 ] && exit 0
-[ "$DONE_ALREADY" = 2 ] && exit 2
+[ "$DONE_ALREADY" = 2 ] && { tg "[golive] KHAN TS=$TS swap_jar($MODE): jar da = $TO_MD5 nhung run/KILL_SWITCH DANG DAT (bot drain). Kiem golive_monitor.sh roi MODE=undrain golive_live_off.sh | log $LOG" || :; exit 2; }
 [ "$F" = 0 ] || die "kiem truoc co muc FAIL (xem tren)"
 say "--- se chep jar dich len 242: $RJN (kiem md5, chmod 600) TRUOC khi dung bot"
 say "--- se dat run/KILL_SWITCH (token '$NM $TS') -> PAUSE watchdog -> stop -> backup jar (.bak_${NM}_$TS) -> cai jar $TO_MD5 -> start"
@@ -122,8 +123,11 @@ RM=$(s242 "chmod 600 $RJN && md5sum < $RJN | cut -c1-32") || die "ssh kiem md5 j
 say "OK jar dich tren 242 md5=$RM ($RJN, 600)"
 # ---------------------------------------------------------------- KILL_SWITCH -> PAUSE -> stop -> backup -> cai -> start (1 lan, idempotent)
 _sj_restart_rx() {
-  s242in_once "PP='$PROC_PAT' bash -s -- $A $TS $NM $FROM_MD5 $TO_MD5 $WD_PAUSE $WD_PAUSE_MAX_S $$ $RJN" <<'EOF'
-A=$1; TS=$2; NM=$3; FM=$4; TM=$5; PAUSE=$6; MAXS=$7; JP=$8; RJN=$9; cd "$A" || { echo "FAIL cd"; echo END_RS; exit 0; }
+  s242in_once "PP='$PROC_PAT' bash -s -- $A $TS $NM $FROM_MD5 $TO_MD5 $WD_PAUSE $WD_PAUSE_MAX_S $$ $RJN $SJ_WD_LOCK_WAIT_S" <<'EOF'
+trap '' HUP PIPE   # [A1 m7] ssh dut giua chung: khoi nay VAN chay het (stop -> start), khong de bot tat im lang
+{
+A=$1; TS=$2; NM=$3; FM=$4; TM=$5; PAUSE=$6; MAXS=$7; JP=$8; RJN=$9; WLW=${10:-300}; cd "$A" || { echo "FAIL cd"; echo END_RS; exit 0; }
+exec 8>>"run/.golive_${NM}_$TS.lk"; flock -w 600 8 || { echo "FAIL lan_chay_truoc_cung_TS_van_dang_chay"; echo END_RS; exit 0; }   # chay lai sau ssh dut: cho lan truoc xong
 J=target/binance-java-sdk-1.2.4.jar; JB=$J.bak_${NM}_$TS; PH=run/.golive_${NM}_$TS.phase
 ph() { grep -qx "$1" "$PH" 2>/dev/null; }
 pv() { sed -n "s/^$1=//p" "$PH" 2>/dev/null | tail -1; }
@@ -137,6 +141,7 @@ if ph started; then
   echo "INFO pha_da_xong_truoc (chay lai sau ssh dut): KHONG stop/start lai"
   echo "OK da_stop"; echo "OK jar_da_thay md5=$TM"; echo "START_LINE=$(pv START_LINE)"; echo "T_STOP=$(pv T_STOP)"; echo "T_START=$(pv T_START)"
   P=$(pgrep -f "$PP" | head -1); [ -n "$P" ] && echo "OK started pid=$P" || echo "FAIL khong_thay_process_sau_start"
+  [ "$(pgrep -fc "$PP")" = 1 ] && echo "OK dung_1_JVM" || echo "FAIL so_JVM_sau_start=$(pgrep -fc "$PP")"
   echo END_RS; exit 0
 fi
 if ! ph stopped; then
@@ -145,13 +150,19 @@ if ! ph stopped; then
     echo "$NM $TS hau_kiem: dung mo moi toi khi hau kiem jar moi DAT" > run/KILL_SWITCH
   fi
   myks && echo "OK KILL_SWITCH_dat_truoc_stop" || { echo "FAIL khong_dat_duoc_KILL_SWITCH (bot KHONG dung)"; echo END_RS; exit 0; }
-  mkdir -p "$(dirname "$PAUSE")" 2>/dev/null; echo "$TOK t=$(date +%s)" > "$PAUSE" && echo "OK watchdog_PAUSE token='$TOK'" || echo "WARN khong_tao_duoc_PAUSE"
-  if ! ph pause_timer; then setsid nohup bash -c "sleep $MAXS; grep -q '^$TOK ' '$PAUSE' 2>/dev/null && rm -f '$PAUSE'" > /dev/null 2>&1 < /dev/null & mark pause_timer; fi
+  if [ -e "$PAUSE" ] && ! grep -q "^$TOK " "$PAUSE" 2>/dev/null; then ksoff; echo "FAIL PAUSE_khac_dang_co ($(head -c 60 "$PAUSE" | tr '\n' ' ')) - bot KHONG dung"; echo END_RS; exit 0; fi
+  mkdir -p "$(dirname "$PAUSE")" 2>/dev/null; echo "$TOK t=$(date +%s)" > "$PAUSE" && grep -q "^$TOK " "$PAUSE" 2>/dev/null && echo "OK watchdog_PAUSE token='$TOK'" \
+    || { ksoff; pclr; echo "FAIL khong_tao_duoc_PAUSE_watchdog (bot KHONG dung, KILL_SWITCH cua minh da go)"; echo END_RS; exit 0; }   # [A1 m1] fail-closed
+  if ! ph pause_timer; then setsid nohup bash -c "sleep $MAXS; grep -q '^$TOK ' '$PAUSE' 2>/dev/null && rm -f '$PAUSE'" > /dev/null 2>&1 < /dev/null 8>&- & mark pause_timer; fi
+  # [A1 MAJOR 1a] watchdog chi xet PAUSE o DAU luot: CHO luot dang chay (giu .lock) xong roi moi dung bot
+  WL="$(dirname "$PAUSE")/.lock"; W0=$(date +%s)
+  if flock -w "$WLW" "$WL" true; then echo "OK watchdog_khong_con_luot_dang_chay (cho $(( $(date +%s) - W0 ))s, $WL)"
+  else ksoff; pclr; echo "FAIL watchdog_dang_giu_lock_qua_${WLW}s ($WL) - bot KHONG dung, KILL_SWITCH + PAUSE cua minh da go"; echo END_RS; exit 0; fi
   [ "$(m5 "$RJN")" = "$TM" ] || { ksoff; pclr; echo "FAIL jar_dich_tren_242_sai_md5 (bot KHONG dung, KILL_SWITCH + PAUSE cua minh da go)"; echo END_RS; exit 0; }
   CUR=$(m5 $J); [ "$CUR" = "$FM" ] || { ksoff; pclr; echo "FAIL jar_dang_dung_${CUR}_khac_nguon_$FM (bot KHONG dung)"; echo END_RS; exit 0; }
   echo "LEGACY_TRUOC_STOP=$(tail -c 20000000 logs/full.log 2>/dev/null | grep -a '\[LEGACY\] managed' | tail -1 | grep -aoE 'managed [0-9]+' | awk '{print $2}')"
   ph "T_STOP=.*" || mark "T_STOP=$(date +%s)"
-  bin/daemon.sh stop
+  bin/daemon.sh stop 8>&-
   for i in $(seq 1 30); do pgrep -f "$PP" >/dev/null || break; sleep 2; done
   if pgrep -f "$PP" >/dev/null; then ksoff; pclr; echo "FAIL van_con_process_sau_stop (jar KHONG doi, KILL_SWITCH + PAUSE cua minh da go)"; echo END_RS; exit 0; fi
   mark stopped
@@ -163,26 +174,35 @@ if ! ph jar_bak; then
   else echo "FAIL jar_sau_stop_khac_nguon_va_chua_backup"; echo END_RS; exit 0; fi
 fi
 echo "OK backup_jar md5=$FM ($JB)"
-if ! ph jar_new; then
-  \cp -f "$RJN" $J && [ "$(m5 $J)" = "$TM" ] && mark jar_new || { echo "FAIL jar_thay_sai"; echo END_RS; exit 0; }
+if ! ph jar_new; then   # [A1 MAJOR 1b] KHONG ghi de inode jar cu: doi ten (rename nguyen tu) file dich da kiem md5
+  if [ "$(m5 $J)" != "$TM" ]; then
+    [ "$(m5 "$RJN")" = "$TM" ] && chmod --reference=$J "$RJN" 2>/dev/null; chown --reference=$J "$RJN" 2>/dev/null
+    [ "$(m5 "$RJN")" = "$TM" ] && mv -f "$RJN" $J || { echo "FAIL jar_thay_sai (mv)"; echo END_RS; exit 0; }
+  fi
+  [ "$(m5 $J)" = "$TM" ] && mark jar_new || { echo "FAIL jar_thay_sai"; echo END_RS; exit 0; }
 fi
 echo "OK jar_da_thay md5=$TM"
 ph "START_LINE=.*" || mark "START_LINE=$(( $(wc -l < logs/full.log 2>/dev/null || echo 0) + 1 ))"
 echo "START_LINE=$(pv START_LINE)"
-pgrep -f "$PP" >/dev/null || bin/daemon.sh start
+pgrep -f "$PP" >/dev/null || bin/daemon.sh start 8>&-
 ph "T_START=.*" || mark "T_START=$(date +%s)"
 mark started
 echo "T_STOP=$(pv T_STOP)"; echo "T_START=$(pv T_START)"
 sleep 8
-P=$(pgrep -f "$PP" | head -1)
+P=$(pgrep -f "$PP" | head -1); NJ=$(pgrep -fc "$PP")
 [ -n "$P" ] && echo "OK started pid=$P lstart=$(ps -o lstart= -p $P)" || echo "FAIL khong_thay_process_sau_start"
+[ "$NJ" = 1 ] && echo "OK dung_1_JVM" || echo "FAIL so_JVM_sau_start=$NJ"   # [A1 MAJOR 1d]
 echo END_RS
+}
 EOF
 }
 # ---------------------------------------------------------------- rollback ve jar nguon (1 lan, idempotent)
 _sj_rollback_rx() {
   s242in_once "PP='$PROC_PAT' bash -s -- $A $TS $NM $FROM_MD5 $TO_MD5" <<'EOF'
+trap '' HUP PIPE   # [A1 m7]
+{
 A=$1; TS=$2; NM=$3; FM=$4; TM=$5; cd "$A" || { echo "FAIL cd"; echo END_RB; exit 0; }
+exec 8>>"run/.golive_${NM}_$TS.lk"; flock -w 600 8 || { echo "FAIL lan_chay_truoc_cung_TS_van_dang_chay"; echo END_RB; exit 0; }
 J=target/binance-java-sdk-1.2.4.jar; JB=$J.bak_${NM}_$TS; RP=run/.golive_${NM}_$TS.rbphase
 ph() { grep -qx "$1" "$RP" 2>/dev/null; }
 mark() { echo "$1" >> "$RP"; }
@@ -190,25 +210,29 @@ m5() { md5sum < "$1" 2>/dev/null | cut -c1-32; }
 [ -e run/KILL_SWITCH ] || echo "$NM $TS rollback: dung mo moi" > run/KILL_SWITCH
 [ -e run/KILL_SWITCH ] && echo "OK KILL_SWITCH_dang_dat" || echo "WARN khong_dat_duoc_KILL_SWITCH"
 if ! ph rb_started; then
-  bin/daemon.sh stop
+  bin/daemon.sh stop 8>&-
   for i in $(seq 1 30); do pgrep -f "$PP" >/dev/null || break; sleep 2; done
   pgrep -f "$PP" >/dev/null && { echo "FAIL van_con_process"; echo END_RB; exit 0; }
-  if [ "$(m5 $J)" != "$FM" ] && [ -f $JB ] && [ "$(m5 $JB)" = "$FM" ]; then \cp -f $JB $J; fi
+  if [ "$(m5 $J)" != "$FM" ] && [ -f $JB ] && [ "$(m5 $JB)" = "$FM" ]; then   # [A1 1b] cp ra file tam roi mv (khong ghi de inode)
+    \cp -p $JB $J.rbtmp_$TS && [ "$(m5 $J.rbtmp_$TS)" = "$FM" ] && mv -f $J.rbtmp_$TS $J; rm -f $J.rbtmp_$TS
+  fi
   JN=$(m5 $J)
   if [ "$JN" = "$FM" ]; then echo "OK jar_khoi_phuc md5=$FM"
   elif [ "$JN" = "$TM" ]; then echo "FAIL jar_khong_khoi_phuc_duoc (van la $TM) - van START de bot khong tat (KILL_SWITCH dat)"
   else echo "FAIL jar_hong_md5=$JN - KHONG start"; echo END_RB; exit 0; fi
   grep -q '^RB_START_LINE=' "$RP" 2>/dev/null || mark "RB_START_LINE=$(( $(wc -l < logs/full.log 2>/dev/null || echo 0) + 1 ))"
-  bin/daemon.sh start; mark rb_started; sleep 8
+  bin/daemon.sh start 8>&-; mark rb_started; sleep 8
 else
   echo "INFO rollback da start o lan truoc (chay lai sau ssh dut) - chi KIEM"
-  pgrep -f "$PP" >/dev/null || { bin/daemon.sh start; sleep 8; }
+  pgrep -f "$PP" >/dev/null || { bin/daemon.sh start 8>&-; sleep 8; }
 fi
 echo "RB_START_LINE=$(sed -n 's/^RB_START_LINE=//p' "$RP" | tail -1)"
 P=$(pgrep -f "$PP" | head -1)
 [ -n "$P" ] && echo "OK started pid=$P" || echo "FAIL khong_thay_process"
 echo "JAR_NOW=$(m5 $J)"
+[ "$(pgrep -fc "$PP")" = 1 ] && echo "OK dung_1_JVM" || echo "FAIL so_JVM_sau_start=$(pgrep -fc "$PP")"
 echo END_RB
+}
 EOF
 }
 # ---------------------------------------------------------------- hau kiem (nhu golive_micro_on) voi jar ky vong $1, START_LINE $2
@@ -216,7 +240,15 @@ CHK_JAR=$TO_MD5
 CHK() { gl_chk_common "$SL" "$L0" '
 envk LIVE_ADAPTER=live; envk C3_CAPITAL='"$CAP0"'; envk SHADOW_NO_PUSH=false; envk LIVE_ENTRY_ENABLED=true; envk LIVE_C3_KEYS_FILE='"$KEYS_FILE"'; envk C3_EXCLUDE_LEGACY_HELD='"$EXW"'
 '"$GL_D01_CHK"'
-[ "$(md5sum < target/binance-java-sdk-1.2.4.jar | cut -c1-32)" = '"$CHK_JAR"' ] && echo "OK jar_dang_chay='"$CHK_JAR"'" || echo "FAIL jar_md5_khac_'"$CHK_JAR"'"
+[ "$(md5sum < target/binance-java-sdk-1.2.4.jar | cut -c1-32)" = '"$CHK_JAR"' ] && echo "OK file_jar='"$CHK_JAR"'" || echo "FAIL file_jar_md5_khac_'"$CHK_JAR"'"
+JFD=$(find /proc/$P/fd -lname "*binance-java-sdk*.jar*" 2>/dev/null | head -1); JPM=$( [ -n "$JFD" ] && md5sum < "$JFD" 2>/dev/null | cut -c1-32)
+if [ -z "$JPM" ]; then echo "WAIT jar_process_mo_chua_thay (/proc/$P/fd)"; elif [ "$JPM" = '"$CHK_JAR"' ]; then echo "OK jar_PROCESS_dang_mo='"$CHK_JAR"'"; else echo "FAIL jar_PROCESS_dang_mo=${JPM}_khac_'"$CHK_JAR"'"; fi
+EQV=$(echo "$E" | sed -n "s/^KILLSW_EQ_POLL_UNLOCKED=//p" | tail -1); TPF=$(echo "$E" | sed -n "s/^TRADING_PROFILE=//p" | tail -1)
+EQL=$(printf %s "$EQV" | tr -d " \t" | tr "A-Z" "a-z")
+if [ '"$CHK_JAR"' = '"$SJ_NEW_MD5"' ]; then
+  case "$EQL" in 0|false) echo "FAIL ban_va_TAT (process KILLSW_EQ_POLL_UNLOCKED=$EQV)";; *) echo "OK ban_va_deadlock_BAT (process KILLSW_EQ_POLL_UNLOCKED=${EQV:-khong_dat=mac_dinh_BAT})";; esac
+  [ -z "$TPF" ] || echo "WARN co TRADING_PROFILE=$TPF: Cfg doc KILLSW_EQ_POLL_UNLOCKED tu profile (khong kiem duoc qua env)"
+else echo "INFO jar r4u3fin2 khong co ban va (KILLSW_EQ_POLL_UNLOCKED=${EQV:-khong_dat})"; fi
 [ "$(T "khoi dong adapter=LIVE")" -ge 1 ] && echo "OK adapter_LIVE" || echo "WAIT adapter_LIVE"
 [ "$(T "khoi dong adapter=DRY")" = 0 ] || echo "FAIL adapter_DRY_trong_log_JVM_moi"
 [ "$(tail -n +$SL $L | grep -a "khoi dong adapter=LIVE" | grep -acE "c3_capital='"$CAP0"'(\.0)?( |$)")" -ge 1 ] && echo "OK c3_capital='"$CAP0"'" || echo "WAIT c3_capital"
@@ -295,7 +327,7 @@ if s242 "cd $A && { grep -q '^$NM $TS ' run/KILL_SWITCH 2>/dev/null && mv -f run
     tg "[golive] swap_jar($MODE) XONG TS=$TS: jar $TO_MD5, bot tat $DT, PUSH ON. Log $LOG" || :
     exit 0
   fi
-  if s242 "cd $A && echo '$NM $TS push_khong_ON' > run/KILL_SWITCH && [ -e run/KILL_SWITCH ]"; then
+  if s242 "cd $A && { [ -e run/KILL_SWITCH ] || echo '$NM $TS push_khong_ON' > run/KILL_SWITCH; } && [ -e run/KILL_SWITCH ]"; then   # [A1 m2] KS nguoi khac (drain) => GIU
     M="hau kiem DAT nhung KHONG thay 'PUSH doi trang thai -> ON' sau khi go KILL_SWITCH => DA DAT LAI KILL_SWITCH (xac nhan; khong mo moi). Kiem bash $_OPS/golive_monitor.sh"
   else
     M="hau kiem DAT nhung KHONG thay PUSH ON; DAT LAI KILL_SWITCH THAT BAI (ssh?) => owner chay NGAY MODE=drain bash $_OPS/golive_live_off.sh"
