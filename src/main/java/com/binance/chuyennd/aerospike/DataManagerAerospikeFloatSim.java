@@ -291,13 +291,6 @@ public class DataManagerAerospikeFloatSim {
     }
 
     /**
-     * Đọc mốc thời gian (ms-epoch) lần cập nhật giá gần nhất của symbol (bin {@code ts}) để tính
-     * tuổi dữ liệu. Đọc 242 cùng lý do với {@link #getPriceRealtime}.
-     *
-     * @param symbol symbol (vd "BTCUSDT").
-     * @return ms-epoch hoặc {@code null} nếu chưa có record / bin ts rỗng / lỗi đọc.
-     */
-    /**
      * [W3B muc 3b] Doc ts price_realtime cua NHIEU symbol trong 1 lenh batch (thay N get tuan tu). Loi => NEM (nguoi goi
      * gom log, khong LOG.error lap).
      *
@@ -321,6 +314,13 @@ public class DataManagerAerospikeFloatSim {
         return out;
     }
 
+    /**
+     * Đọc mốc thời gian (ms-epoch) lần cập nhật giá gần nhất của symbol (bin {@code ts}) để tính
+     * tuổi dữ liệu. Đọc 242 cùng lý do với {@link #getPriceRealtime}.
+     *
+     * @param symbol symbol (vd "BTCUSDT").
+     * @return ms-epoch hoặc {@code null} nếu chưa có record / bin ts rỗng / lỗi đọc.
+     */
     public static Long getPriceRealtimeTs(String symbol) {
         if (symbol == null || symbol.isBlank()) return null;
         try {
