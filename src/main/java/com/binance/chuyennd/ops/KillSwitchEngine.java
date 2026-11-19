@@ -727,8 +727,55 @@ public final class KillSwitchEngine {
         maybeWritePeak(nowMs);
     }
 
+    /**
+     * [W3B HANG-1119] Poll equity (A40) NGOAI khoa engine. Cu: periodic() giu monitor engine roi goi
+     * {@code equitySource.totalMarginBalance()} = {@code C3MainEquity.c3Equity()} (synchronized, REST + ngu burst canary) -
+     * nguoc thu tu voi C3LIVE-OPS (giu khoa C3MainEquity, REST xong goi {@code OpsHooks.onApiResult} -> khoa engine)
+     * => DEADLOCK (bot treo 19/11 x4: OpsKillSwitch, C3LIVE-OPS, pool-1 onTickStart, pool-3 onApiResult).
+     * Env {@value #KEY_EQ_POLL_UNLOCKED}: khong dat / khac 0|false = BAT (sua); "0"/"false" = hanh vi cu (rollback).
+     */
+    public static final String KEY_EQ_POLL_UNLOCKED = "KILLSW_EQ_POLL_UNLOCKED";
+    static volatile boolean eqPollUnlocked = eqPollUnlockedFrom(com.binance.chuyennd.tradecore.Cfg.get(KEY_EQ_POLL_UNLOCKED));
+
+    static boolean eqPollUnlockedFrom(String raw) {
+        if (raw == null) return true;
+        String v = raw.trim();
+        return !("0".equals(v) || "false".equalsIgnoreCase(v));
+    }
+
     /** Thread rieng goi moi ~15 s: lan gio, C1 no_data, C5. [V12] + C2 het cua so, A40 poll, reset owner (ACT). */
-    public synchronized void periodic(long nowMs) {
+    public void periodic(long nowMs) {
+        if (!eqPollUnlocked) {
+            periodicAllLocked(nowMs);
+            return;
+        }
+        EquitySource src;
+        synchronized (this) {
+            periodicPre(nowMs);
+            src = equitySource;
+        }
+        if (src != null) onAccountEquity(nowMs, pollEquity(src));   // KHONG giu khoa engine khi goi nguon equity
+        synchronized (this) {
+            periodicPost(nowMs);
+        }
+    }
+
+    /** Hanh vi cu (KILLSW_EQ_POLL_UNLOCKED=0): ca luot trong khoa engine. */
+    private synchronized void periodicAllLocked(long nowMs) {
+        periodicPre(nowMs);
+        if (equitySource != null) onAccountEquity(nowMs, pollEquity(equitySource));
+        periodicPost(nowMs);
+    }
+
+    private static Double pollEquity(EquitySource src) {
+        try {
+            return src.totalMarginBalance();
+        } catch (Throwable e) {
+            return null;
+        }
+    }
+
+    private void periodicPre(long nowMs) {
         roll(nowMs);
         // reset owner TRUOC khi danh gia => ma con dat se latch lai ngay trong cung luot
         if (mode == Mode.ACT) checkResetRequest(nowMs);
@@ -743,15 +790,9 @@ public final class KillSwitchEngine {
                         + " (periodic)", nowMs);
             }
         }
-        if (equitySource != null) {
-            Double eq;
-            try {
-                eq = equitySource.totalMarginBalance();
-            } catch (Throwable e) {
-                eq = null;
-            }
-            onAccountEquity(nowMs, eq);
-        }
+    }
+
+    private void periodicPost(long nowMs) {
         // [V12 R4p Bug3] het cua so 429 lenh ma khong co call nao => van ha C3 (bat dau dem sach cho auto-release)
         CodeState c3s = st.get("C3");
         if (c3s != null && c3s.active && !c3Met(nowMs)) set("C3", false, c3Detail(lastApi) + " (het cua so 429 lenh)", nowMs);
@@ -1117,7 +1158,12 @@ public final class KillSwitchEngine {
                 + " edge=" + edge + " n_hour=" + s.metHour + " dur_s=" + (nowMs - s.since) / 1000L + " detail=" + s.detail;
     }
 
+    /** [W3B HANG-1119] moc lon nhat da roll: su kien tre (vd poll equity ngoai khoa) KHONG lui gio. */
+    private long rollMaxMs = Long.MIN_VALUE;
+
     private void roll(long nowMs) {
+        if (nowMs < rollMaxMs) return;
+        rollMaxMs = nowMs;
         String h = hourKey(nowMs);
         if (h.equals(hour)) return;
         sink.info(hourlyLine(hour));
