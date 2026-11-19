@@ -9,6 +9,7 @@
 #   (micro_on/pilot_on tao, live_off MODE=dry xoa) => thoat NGAY, 0 ssh / 0 call. Co co => C3_ACCOUNT + KEYS_FILE lay tu co; log
 #   ~/claude_master/deploy/golive_monitor_cron.log (xoay > 20 MB); doc 4 MB log 242 / luot; Telegram KHAN lap lai toi da 1 lan / 30'.
 #   [A1 delta MIN-3] cuoi moi luot cron ghi heartbeat ~/claude_master/deploy/run/monitor_heartbeat (c3live_status: KHAN neu > 6').
+#   [OPS5_FIX M-4] doc heartbeat golive_deadman ($LOGDIR/deadman/heartbeat) - cu > 10' / khong co => CANH BAO (+ Telegram 1 lan / 30' khi cron).
 # In: process/jar/env (adapter, C3_CAPITAL, push), PUSH (env + run/KILL_SWITCH), latch + dinh kill-switch, equity c3 / HOURLY,
 #   so c3 (cum, da arm, stop c3s-), lenh c3 1 h qua, LEGACY, user stream, RAM/dia/RSS, weight/429/418/ban, KHAN/ERROR 1 h qua,
 #   PAUSE watchdog, cron exinfo. Ket thuc bang dong TOM TAT.
@@ -241,7 +242,29 @@ if [ -n "$KA" ]; then
 fi
 # MAIN: khong co nhanh SUB => luot doc thanh cong dat lai bo dem
 if [ "$C3_ACCOUNT" != SUB ] && [ "$DRY" != 1 ]; then printf 'n=%s\nts=%s\n' "$([ "$READOK" = 1 ] && echo 0 || echo $((NF0 + 1)))" "$TS" > "$SUB_FAIL_FILE"; fi
-say "TOM TAT: adapter=$(sv ENV_LIVE_ADAPTER) C3_CAPITAL=$(sv ENV_C3_CAPITAL) push=$PUSH latch=$(sv LATCH) so_c3=$(sv BOOK_CUM)cum LEGACY=$(sv LEGACY_N) mem=$(sv MEM)MB jar=$(sv JAR_MD5 | cut -c1-8) pause=$(sv PAUSE | cut -c1) tre_gia=$TRE$SUBSUM khan_canh_bao=${KA:-0}"
+# [OPS5_FIX M-4] monitor canh deadman (deadman canh heartbeat monitor - doi xung): heartbeat deadman ($DM_HB_FILE, deadman ghi cuoi moi luot)
+#   cu > MON_DM_MAX_S (600) hoac KHONG co => CANH BAO (KHONG KHAN, KHONG KILL_SWITCH). Cron: Telegram toi da 1 lan / 30' + "DA HOI PHUC"
+#   (state $LOGDIR/c3_monitor_dm_alert.txt). Tay: chi in. TOM TAT co deadman=OK|CU|KHONG_CO.
+DM_HB_FILE=${DM_HB_FILE:-$LOGDIR/deadman/heartbeat}; MON_DM_MAX_S=${MON_DM_MAX_S:-600}; DMF=$LOGDIR/c3_monitor_dm_alert.txt
+NOWD=$(date +%s); DMT=$(sed -n 's/^ts=\([0-9]*\).*/\1/p' "$DM_HB_FILE" 2>/dev/null | head -1)
+[[ "$DMT" =~ ^[0-9]+$ ]] || DMT=$(stat -c %Y "$DM_HB_FILE" 2>/dev/null || echo 0)
+DMA=$(( NOWD - DMT )); DMS=OK
+if [ "$DMT" = 0 ]; then DMS=KHONG_CO; elif [ "$DMA" -gt "$MON_DM_MAX_S" ]; then DMS=CU; fi
+if [ "$DMS" != OK ]; then
+  DMM="heartbeat deadman $DM_HB_FILE $([ "$DMS" = KHONG_CO ] && echo 'KHONG CO' || echo "cu ${DMA}s > ${MON_DM_MAX_S}s") - cron golive_deadman chet/treo/chua cai? Kiem crontab Oracle + $LOGDIR/deadman/deadman.log"
+  say "!! CANH BAO deadman: $DMM"
+  if [ "$MON_CRON" = 1 ]; then
+    OTD=$(sed -n 's/^t=//p' "$DMF" 2>/dev/null | head -1); [[ "$OTD" =~ ^[0-9]+$ ]] || OTD=0
+    if [ $(( NOWD - OTD )) -lt 1800 ]; then say "(CANH BAO deadman da gui < 30' truoc - khong gui lai)"
+    elif [ -n "${MON_T0:-}" ] && [ $(( $(date +%s) - MON_T0 + ${GL_TG_TIMEOUT_S:-10} )) -ge 95 ]; then say "(het ngan sach luot cron - CANH BAO deadman gui luot sau)"
+    else tg "[golive] CANH BAO (khong KHAN) TS=$TS: $DMM"; printf 't=%s\n' "$NOWD" > "$DMF"
+    fi
+  fi
+else
+  say "OK deadman heartbeat tuoi ${DMA}s"
+  if [ "$MON_CRON" = 1 ] && [ -f "$DMF" ]; then tg "[golive] DA HOI PHUC deadman Oracle (heartbeat tuoi ${DMA}s)"; rm -f "$DMF"; fi
+fi
+say "TOM TAT: adapter=$(sv ENV_LIVE_ADAPTER) C3_CAPITAL=$(sv ENV_C3_CAPITAL) push=$PUSH latch=$(sv LATCH) so_c3=$(sv BOOK_CUM)cum LEGACY=$(sv LEGACY_N) mem=$(sv MEM)MB jar=$(sv JAR_MD5 | cut -c1-8) pause=$(sv PAUSE | cut -c1) tre_gia=$TRE deadman=$DMS$SUBSUM khan_canh_bao=${KA:-0}"
 if [ "$MON_CRON" = 1 ]; then
   mkdir -p "$(dirname "$MON_HB_FILE")" && printf 'ts=%s TS=%s rc=%s\n' "$(date +%s)" "$TS" "$RC" > "$MON_HB_FILE.tmp" && mv -f "$MON_HB_FILE.tmp" "$MON_HB_FILE"
 fi

@@ -206,6 +206,26 @@ OUT=$(E DRY=1 ING_LOG=$IGD/logs/full.log LAG_WARN_N=7 bash "$HERE/golive_monitor
 chk "t3 monitor: duoi nguong canh bao (LAG_WARN_N=7) => khong CANH BAO tre gia" "! echo \"\$OUT\" | grep -q 'CANH BAO tre gia' && echo \"\$OUT\" | grep -q 'tre_gia=6/10'"
 OUT=$(E DRY=1 ING_LOG=$W/khong_co.log bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
 chk "t4 monitor: thieu log ingestor => n=0, khong loi, TOM TAT tre_gia=0/0" "echo \"\$OUT\" | grep -q 'tre_gia_1h: n=0' && echo \"\$OUT\" | grep -q 'tre_gia=0/0'"
+# ---- [OPS5_FIX M-4] monitor canh heartbeat deadman
+DMH=$W/deploy/deadman/heartbeat; rm -f $DMH $W/deploy/c3_monitor_dm_alert.txt
+OUT=$(E DRY=1 ING_LOG=$IGD/logs/full.log bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "d1 [M-4] monitor tay: KHONG co heartbeat deadman => CANH BAO (khong KHAN), TOM TAT deadman=KHONG_CO, khong Telegram (tay)" "echo \"\$OUT\" | grep -q 'CANH BAO deadman: heartbeat deadman $DMH KHONG CO' && echo \"\$OUT\" | grep -q 'TOM TAT: .* tre_gia=6/10 deadman=KHONG_CO' && ! echo \"\$OUT\" | grep -q 'KHAN.*deadman' && ! grep -qs 'deadman' $W/tg.txt"
+mkdir -p $W/deploy/deadman; printf 'ts=%s rc=0\n' $(( $(date +%s) - 30 )) > $DMH
+OUT=$(E DRY=1 ING_LOG=$IGD/logs/full.log bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "d2 [M-4] heartbeat deadman 30 s => OK, deadman=OK" "echo \"\$OUT\" | grep -q 'OK deadman heartbeat tuoi [0-9]*s' && echo \"\$OUT\" | grep -q 'deadman=OK'"
+printf 'ts=%s rc=0\n' $(( $(date +%s) - 700 )) > $DMH
+OUT=$(E DRY=1 ING_LOG=$IGD/logs/full.log bash "$HERE/golive_monitor.sh" 2>&1); RC=$?
+chk "d3 [M-4] heartbeat deadman 700 s > 600 => CANH BAO 'cu', deadman=CU" "echo \"\$OUT\" | grep -q 'CANH BAO deadman: heartbeat deadman .* cu 70[0-9]s > 600s' && echo \"\$OUT\" | grep -q 'deadman=CU'"
+printf 'C3_ACCOUNT=SUB\nKEYS_FILE=%s\nby=test TS=1\ndry_ts=\n' "$W/keys_sub.env" > $W/deploy/golive_monitor.on
+MCR() { E DRY=1 ING_LOG=$IGD/logs/full.log MONITOR_CRON=1 MON_CRON_LOG=$W/moncron_dm.log MON_HB_FILE=$W/deploy/run/monitor_heartbeat bash "$HERE/golive_monitor.sh" >/dev/null 2>&1; }
+G0=$(grep -c 'CANH BAO (khong KHAN).*heartbeat deadman' $W/tg.txt 2>/dev/null); G0=${G0:-0}
+MCR; G1=$(grep -c 'CANH BAO (khong KHAN).*heartbeat deadman' $W/tg.txt 2>/dev/null)
+MCR; G2=$(grep -c 'CANH BAO (khong KHAN).*heartbeat deadman' $W/tg.txt 2>/dev/null)
+chk "d4 [M-4] cron: deadman cu => Telegram CANH BAO (khong KHAN) 1 lan; luot 2 trong 30' khong gui lai (G0=$G0 G1=$G1 G2=$G2)" "[ \"$G1\" = \$(( $G0 + 1 )) ] && [ \"$G2\" = \"$G1\" ] && grep -q 'CANH BAO deadman da gui < 30' $W/moncron_dm.log"
+printf 'ts=%s rc=0\n' $(date +%s) > $DMH; MCR
+chk "d5 [M-4] cron: deadman hoi phuc => Telegram DA HOI PHUC 1 lan, xoa state" "grep -q 'DA HOI PHUC deadman Oracle' $W/tg.txt && [ ! -e $W/deploy/c3_monitor_dm_alert.txt ]"
+rm -f $W/deploy/golive_monitor.on
+chk "d6 [M-4] duong heartbeat khop: deadman ghi \$DM_DIR/heartbeat (mac dinh \$LOGDIR/deadman) = monitor doc \$LOGDIR/deadman/heartbeat" "grep -q 'DM_DIR=\${DM_DIR:-\$LOGDIR/deadman}' $HERE/golive_deadman.sh && grep -q '\"\$DM_DIR/heartbeat\"' $HERE/golive_deadman.sh && grep -q 'DM_HB_FILE=\${DM_HB_FILE:-\$LOGDIR/deadman/heartbeat}' $HERE/golive_monitor.sh"
 DD=$(TZ=Asia/Ho_Chi_Minh date -d @$((NOWL - 60)) +%F)
 OUT=$(env SSH_242="bash -c" APP_DIR=$F ING_DIR=$IGD bash "$HERE/c3_price_lag_day.sh" "$DD" 2>&1); RC=$?
 chk "t5 c3_price_lag_day: dem ngay (n, gap_gt, p50, max, lag_s) + ket luan %" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'collectData: n=.* gap_gt=[67] ' && echo \"\$OUT\" | grep -q 'lag_s_max=6' && echo \"\$OUT\" | grep -q 'KET LUAN: [67]/'"

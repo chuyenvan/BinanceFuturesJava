@@ -3,7 +3,9 @@
 # c3_oracle_seen_242.sh - [OPS5 muc 2b] (cai tren 242: /usr/local/sbin/c3_oracle_seen.sh, cron root */5 boi install_242_oracle_seen.sh)
 #   242 tu biet giam sat Oracle con "cham" khong, KHONG can Oracle ghi gi len 242 (giu nguyen tac chi-doc cua monitor/deadman):
 #   moi luot doc cua deadman (*/2) / monitor (*/2) tao dong sshd "Accepted publickey for root from <ORACLE_IP>" trong /var/log/secure.
-#   Dong cuoi cu > OS_MAX_S (900 s) => Telegram (kenh watchdog 242) "Oracle KHONG cham 242": Oracle chet / mat mang / cron deadman chet.
+#   Dong cuoi cu > OS_MAX_S (900 s) => Telegram (kenh watchdog 242) "Oracle KHONG cham 242": Oracle chet / mat mang / ssh Oracle->242 hong.
+#   [OPS5_FIX M-4] KHONG phat hien duoc rieng cron deadman chet (monitor */2 + cac cron Oracle khac van ssh 242 => dong "Accepted" van co):
+#   viec do do golive_monitor canh heartbeat deadman (> 10' => CANH BAO). Cron NAY chet => KHONG ai bao (chap nhan, MINOR 2b).
 #   Chong spam: 1 lan / OS_REMIND_S (1800 s) + tin "DA HOI PHUC". Khong thay dong nao (log vua xoay) => tinh tu luc bat dau khong thay.
 # Bien (test): OS_ORACLE_IP OS_AUTHLOG OS_MAX_S OS_REMIND_S OS_STATE_DIR OS_TG_ENV OS_TG_SINK OS_NOW
 # =============================================================================
