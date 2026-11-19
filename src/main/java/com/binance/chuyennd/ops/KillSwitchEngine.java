@@ -172,7 +172,7 @@ public final class KillSwitchEngine {
         public String peakTag = null;
         /**
          * [W3B muc 7 A-02] von c3 HIEN TAI (C3_CAPITAL da chuan hoa, vd "1000") gan vao dinh C6 / acct_peak A40: ghi THEM
-         * token {@code cap=<von>} (file dinh) / truong {@code acct_peak_cap} (file latch) ? nhan {@code adapter=} GIU nhu jar
+         * token {@code cap=<von>} (file dinh) / truong {@code acct_peak_cap} (file latch) - nhan {@code adapter=} GIU nhu jar
          * cu nen jar cu (rollback) van nap duoc dinh. Nap: dinh co von KHAC => bo qua; dinh THIEU von => chi nhan khi
          * {@link #peakCapPrev} chung minh von khong doi, nguoc lai bo qua + canh bao (khong FLATTEN tu dinh do).
          * null = khong gan von (C3_PEAK_TAG_CAPITAL=false = hanh vi jar cu).

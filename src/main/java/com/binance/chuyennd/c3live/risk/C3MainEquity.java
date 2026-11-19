@@ -234,7 +234,7 @@ public final class C3MainEquity implements EquitySource {
             if (margin > 0d && avail < 2d * margin && now - lastMarginWarnMs >= MARGIN_WARN_EVERY_MS) {
                 lastMarginWarnMs = now;
                 warn = "[C3-LIVE-EQ] CANH BAO ky quy tai khoan chinh: availableBalance=" + fmt(avail) + " < 2 x margin c3 "
-                        + fmt(margin) + " (LEGACY + c3 dung chung ky quy cross) ? kiem tai khoan";
+                        + fmt(margin) + " (LEGACY + c3 dung chung ky quy cross) — kiem tai khoan";
             }
         }
         if (warn != null) {   // [W3B muc 2] alert ngoai khoa this
