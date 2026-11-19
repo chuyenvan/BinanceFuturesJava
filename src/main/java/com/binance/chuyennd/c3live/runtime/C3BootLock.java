@@ -78,6 +78,14 @@ public final class C3BootLock {
             LOG.warn("[C3-BOOT] {}=false => KHONG khoa khoi dong (B-09 tat)", KEY_FLAG);
             return Outcome.DISABLED;
         }
+        if (!killFile.exists() && Files.isSymbolicLink(killFile.toPath())) {
+            // [W3B muc 3a] symlink treo: LiveProfileC3.killSwitchPresent coi la CO => da khoa; khong ghi de, canh bao owner
+            String m = "[C3-BOOT] " + killFile.getPath() + " la symlink TREO luc khoi dong => coi nhu DA khoa (PUSH OFF), khong ghi"
+                    + " de. Owner kiem link roi MODE=undrain golive_live_off.sh";
+            LOG.warn("{}", m);
+            alert.accept(m);
+            return Outcome.EXISTING;
+        }
         if (killFile.exists()) {
             LOG.warn("[C3-BOOT] {} da co luc khoi dong (script/drain) => giu nguyen, khong ghi de", killFile.getPath());
             return Outcome.EXISTING;

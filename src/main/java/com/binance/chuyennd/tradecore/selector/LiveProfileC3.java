@@ -124,7 +124,7 @@ public final class LiveProfileC3 {
         if (!LIVE) return true;
         String snp = Cfg.get("SHADOW_NO_PUSH");
         String le = Cfg.get(KEY_LIVE_ENTRY);
-        boolean kill = killSwitchPresent(KILL_FILE) || BOOT_LOCK_MEM;   // [W3A muc 6] khoa RAM khi khong ghi duoc file
+        boolean kill = killActive(KILL_FILE);   // [W3A muc 6] + khoa RAM khi khong ghi duoc file
         boolean np = decideNoPush(true, snp, le, kill);
         Boolean prev = lastNoPush;
         if (prev == null || prev != np) {
@@ -198,10 +198,22 @@ public final class LiveProfileC3 {
     }
 
     /** [C3-LIVE] file kill-switch ton tai? Loi he thong file => coi nhu CO (fail-closed). */
+    /**
+     * [W3B muc 3a] kill-switch hieu luc cho push c3_live: file co mat (ke ca symlink TREO) HOAC khoa RAM boot.
+     *
+     * @param path duong dan file kill-switch
+     * @return true = chan push
+     */
+    public static boolean killActive(String path) {
+        return killSwitchPresent(path) || BOOT_LOCK_MEM;
+    }
+
     static boolean killSwitchPresent(String path) {
         if (path == null || path.trim().isEmpty()) return false;
         try {
-            return new java.io.File(path.trim()).exists();
+            java.io.File f = new java.io.File(path.trim());
+            // [W3B muc 3a] symlink treo: File.exists()=false nhung "file" CO dat => coi nhu DA khoa (fail-closed)
+            return f.exists() || java.nio.file.Files.isSymbolicLink(f.toPath());
         } catch (SecurityException e) {
             return true;
         }

@@ -112,12 +112,42 @@ public class C3BootLockTest {
         assertTrue(alerts.get(0).startsWith("[C3-BOOT] KHAN"));
     }
 
-    /** Khoa RAM duoc OR vao kill-switch trong forceNoPush; runtime ap khoa TRUOC khi tao gateway. */
+    /**
+     * [W3B muc 3d] HANH VI (thay test chuoi nguon): sau khoa khoi dong, LiveProfileC3.killActive (forceNoPush dung dung ham
+     * nay) = true; undrain (doi ten file) => false; khoa RAM (khong ghi duoc) => true du khong co file.
+     */
     @Test
-    public void nguon_wiring() throws Exception {
-        String lp = new String(Files.readAllBytes(new File(
-                "src/main/java/com/binance/chuyennd/tradecore/selector/LiveProfileC3.java").toPath()), StandardCharsets.UTF_8);
-        assertTrue(lp.contains("boolean kill = killSwitchPresent(KILL_FILE) || BOOT_LOCK_MEM;"));
+    public void hanhVi_khoaKhoiDong_chanPush_undrainMo_khoaRam() throws Exception {
+        File f = ks();
+        assertFalse(LiveProfileC3.killActive(f.getPath()));
+        assertEquals(C3BootLock.Outcome.LOCKED, new C3BootLock(f, null, alerts::add).applyOnce(true, NOW));
+        assertTrue("da khoa => chan push", LiveProfileC3.killActive(f.getPath()));
+        assertTrue(f.renameTo(new File(f.getPath() + ".off_w3b")));
+        assertFalse("undrain => mo", LiveProfileC3.killActive(f.getPath()));
+        File bad = new File(new File(tmp.getRoot(), "khong_ton_tai_w3b"), "KILL_SWITCH");
+        assertEquals(C3BootLock.Outcome.FAILED_MEM_LOCK, new C3BootLock(bad, null, alerts::add).applyOnce(true, NOW));
+        assertTrue("khoa RAM", LiveProfileC3.killActive(bad.getPath()));
+        assertTrue("khoa RAM tac dung moi duong dan", LiveProfileC3.killActive(f.getPath()));
+    }
+
+    /** [W3B muc 3a] A1: run/KILL_SWITCH la symlink TREO => coi nhu DA khoa (truoc: File.exists()=false => fail-open). */
+    @Test
+    public void symlinkTreo_coiNhuDaKhoa() throws Exception {
+        File f = ks();
+        Files.createSymbolicLink(f.toPath(), new File(tmp.getRoot(), "khong_co_dich_w3b/x").toPath());
+        assertFalse("tien de: File.exists() symlink treo = false", f.exists());
+        assertEquals(C3BootLock.Outcome.EXISTING, new C3BootLock(f, null, alerts::add).applyOnce(true, NOW));
+        assertTrue("forceNoPush thay khoa", LiveProfileC3.killActive(f.getPath()));
+        assertFalse("khong dung khoa RAM", LiveProfileC3.bootLockMem());
+        assertTrue(alerts.toString(), alerts.size() == 1 && alerts.get(0).contains("symlink TREO"));
+        assertTrue("link giu nguyen", Files.isSymbolicLink(f.toPath()));
+        assertTrue(f.toPath().toFile().renameTo(new File(f.getPath() + ".off")));   // undrain mv => mo
+        assertFalse(LiveProfileC3.killActive(f.getPath()));
+    }
+
+    /** Thu tu cau truc (khong test duoc hanh vi khi khong co runtime that): runtime ap khoa TRUOC khi tao gateway. */
+    @Test
+    public void nguon_thuTuKhoaTruocGateway() throws Exception {
         String rt = new String(Files.readAllBytes(new File(
                 "src/main/java/com/binance/chuyennd/c3live/runtime/C3LiveRuntime.java").toPath()), StandardCharsets.UTF_8);
         int a = rt.indexOf("BOOT_LOCK.applyOnce(mode == GatewayFactory.Mode.LIVE");
