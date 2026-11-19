@@ -288,6 +288,8 @@ LT=$(echo "$LL" | awk '{split($1,d,"/"); print d[3]"-"d[2]"-"d[1]" "substr($2,1,
 T=$(TZ=Asia/Ho_Chi_Minh date -d "$LT" +%s 2>/dev/null) && echo "LEGACY_AGE=$(( $(date +%s) - T ))" || echo "LEGACY_AGE=-1"
 B=run/c3live_book.json; [ -f $B ] && echo "BOOK_CUM=$(grep -o '"symbol":"' $B | wc -l)" || echo "BOOK_CUM=0"
 [ -e run/KILL_SWITCH ] && echo "KILLSW_FILE=1" || echo "KILLSW_FILE=0"
+# [OPS5_FIX 8b] tu dau token KILL_SWITCH (KHONG in ca dong): c3live_boot (jar C3BootLock) / c3_autodrain (wrapper 242) => micro_on/pilot_on chap nhan
+echo "KILLSW_TOK=$(head -n 1 run/KILL_SWITCH 2>/dev/null | awk '{print $1}' | tr -cd 'A-Za-z0-9_.-' | cut -c1-40)"
 [ -f "$KF" ] && [ "$(stat -c %a "$KF")" = 600 ] && [ "$(grep -c '^C3_LIVE_API_\(KEY\|SECRET\)=' "$KF")" = 2 ] && echo "KEYS_OK=1" || echo "KEYS_OK=0"
 # [WAVE1 A-03] sha8 key trong file (sha256 chuoi key, KHONG in key) + quyen — so voi SUB_KEY_SHA8 da dang ky o Oracle
 [ -f "$KF" ] && echo "KEYS_PERM=$(stat -c %a "$KF")" || echo "KEYS_PERM=thieu"
@@ -301,6 +303,9 @@ gl_read_state() {
   echo "$ST" | grep -q '^ERR=' && die "doc trang thai 242 loi: $(echo "$ST" | grep '^ERR=')"
 }
 sv() { echo "$ST" | sed -n "s/^$1=//p" | head -1; }
+# [OPS5_FIX 8b] precheck micro_on/pilot_on: KHONG co run/KILL_SWITCH, HOAC token bat dau c3live_boot / c3_autodrain (khoi dong ngoai quy trinh
+#   da tu drain) => chap nhan (gl_restart ks=1 ghi de, ban cu -> run/KILL_SWITCH.prev_<TS>). Token khac (owner drain / monitor / script) => tu choi.
+gl_ks_boot_ok() { [ "$(sv KILLSW_FILE)" = 0 ] && return 0; case "$(sv KILLSW_TOK)" in c3live_boot*|c3_autodrain*) return 0;; esac; return 1; }
 # gl_excl_guard : [A1 r4u2 C-1] C3_ACCOUNT=MAIN + C3_EXCLUDE_LEGACY_HELD=false (process HOAC env.sh) => DUNG
 gl_excl_guard() {
   if [ "$C3_ACCOUNT" = MAIN ] && { [ "$(sv ENV_C3_EXCLUDE_LEGACY_HELD)" = false ] || [ "$(sv ENVSH_C3_EXCLUDE_LEGACY_HELD)" = false ]; }; then
@@ -350,7 +355,7 @@ A=\$1; TS=\$2; EB=\$3; NADD=\$4; PAUSE=\$5; MAXS=\$6; JP=\$7; NM=\$8; SUF=\$9; K
 PH=run/.golive_\${NM}_\$TS.phase; BK=conf/env.sh.bak_\${NM}_\$TS
 ph() { grep -qx "\$1" "\$PH" 2>/dev/null; }
 mark() { echo "\$1" >> "\$PH"; }
-ksoff() { grep -q "^\${NM} \$TS " run/KILL_SWITCH 2>/dev/null && mv -f run/KILL_SWITCH run/KILL_SWITCH.rb_\$TS; }
+ksoff() { grep -q "^\${NM} \$TS " run/KILL_SWITCH 2>/dev/null && mv -f run/KILL_SWITCH run/KILL_SWITCH.rb_\$TS && { [ ! -e run/KILL_SWITCH.prev_\$TS ] || cp -p run/KILL_SWITCH.prev_\$TS run/KILL_SWITCH; }; }   # [OPS5_FIX 8b] tra token cu (c3live_boot/c3_autodrain)
 restore() { ph stopped || { \cp -f "\$BK" conf/env.sh; sed -i '/^env_ok\$/d' "\$PH" 2>/dev/null; }; }
 if ph started; then
   echo "INFO pha_da_xong_truoc (chay lai sau ssh dut): KHONG stop/start lai"
@@ -368,7 +373,7 @@ else
   else \cp -f "\$BK" conf/env.sh; echo "FAIL env_diff=\$D (da khoi phuc)"; echo END_RS; exit 0; fi
 fi
 if [ "\$KS" = 1 ]; then
-  { grep -q "^\${NM} \$TS " run/KILL_SWITCH 2>/dev/null || echo "\${NM} \$TS hau_kiem: dung mo moi toi khi hau kiem DAT" > run/KILL_SWITCH; } && grep -q "^\${NM} \$TS " run/KILL_SWITCH \
+  { grep -q "^\${NM} \$TS " run/KILL_SWITCH 2>/dev/null || { { [ ! -e run/KILL_SWITCH ] || [ -e run/KILL_SWITCH.prev_\$TS ] || cp -p run/KILL_SWITCH run/KILL_SWITCH.prev_\$TS; } && echo "\${NM} \$TS hau_kiem: dung mo moi toi khi hau kiem DAT" > run/KILL_SWITCH; }; } && grep -q "^\${NM} \$TS " run/KILL_SWITCH \
     && echo "OK KILL_SWITCH_dat_truoc_start" || { restore; echo "FAIL khong_dat_duoc_KILL_SWITCH (env khoi phuc, bot KHONG dung)"; echo END_RS; exit 0; }
 fi
 TOK="C3GOLIVE_\${NM} TS=\$TS pid=\$JP"

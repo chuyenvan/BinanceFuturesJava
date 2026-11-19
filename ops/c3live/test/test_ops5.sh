@@ -353,7 +353,7 @@ chk "a20 [A-1] wrapper khong con set -e/-u/pipefail (ngoai comment); co trap EXI
 WDC=$W/wd_real.sh; cp "$HERE/../h242_watchdog.sh" $WDC
 MCN=com.o5f_$$.Main; WF=$W/wdapp; mkdir -p $WF/conf $WF/run $WF/bin; printf 'export LIVE_ADAPTER=live\n' > $WF/conf/env.sh
 printf '#!/bin/bash\ncd %s; nohup bash -c "sleep 300; : o5f_wdjava_%s" %s >/dev/null 2>&1 &\n' "$WF" "$$" "$MCN" > $WF/bin/start.sh; chmod 755 $WF/bin/start.sh
-wdk() { local p; for p in $(pgrep -f -- "o5f_wdjava_$$" 2>/dev/null); do kill "$p" 2>/dev/null; done; sleep 0.5; rm -f $WF/run/KILL_SWITCH $W/wd/state; }
+wdk() { local p; for p in $(pgrep -f -- "o5f_wdjava_$$" 2>/dev/null); do pkill -P "$p" 2>/dev/null; kill "$p" 2>/dev/null; done; sleep 0.5; rm -f $WF/run/KILL_SWITCH $W/wd/state; }
 WDRUN() {   # $1 = goc, $2 = STATE dir, $3 = sink
   cat > $SB/wr_o5f.sh <<EOW
 #!/bin/bash
@@ -422,6 +422,41 @@ for S in golive_make_gate.sh golive_micro_on.sh; do
     echo "o0=[$o0] e0=[$e0] o1=[$o1]" )
   chk "n1d/n3c ($S): repo dung mau => gm_odd rong; limits 300 KB co ERRATA1 => KHONG tu choi oan (n3c); 5 ten ngoai mau (_ADDENDUM_23, chu thuong, .MD, thu muc con, errata chu thuong) => bi nhan dien; ADDENDUM23_X dung mau => khong" "[ \"\$(echo '$R6' | grep -o 'odd_ok' | wc -l)\" = 5 ] && echo '$R6' | grep -q 'o0=\[\] e0=\[\] o1=\[\]'"
 done
+
+echo "== OPS5_FIX muc 8: reanchor nhan cu/moi + micro_on/pilot_on chap nhan KILL_SWITCH c3live_boot/c3_autodrain"
+RA=$W/rapp; mkdir -p $RA/logs $RA/run
+RAN() { printf '%s\n' "$(D7 $((NOW - 100))) INFO  [main] c.b.c.u.Utils: MainClass: com.binance.chuyennd.trading.BinanceOrderTradingManager APPDir: ./run" "$(D7 $((NOW - 90))) INFO  [main] x: [C3-LIVE] khoi dong adapter=LIVE c3_capital=1000.0 $1 killSwitchArmed=true" > $RA/logs/full.log
+  echo YES | env SSH_242="bash -c" APP_DIR=$RA DRY=0 bash "$HERE/c3live_reanchor.sh" 2>&1; }
+OUT=$(RAN 'tai_khoan=CHINH(pham vi c3)'); RC=$?
+chk "r1 [8a] jar cu 'tai_khoan=CHINH(pham vi c3)' => TU CHOI rc 4, khong ghi req" "[ $RC = 4 ] && echo \"\$OUT\" | grep -q 'TU CHOI' && [ ! -f $RA/run/c3live_reanchor.req ]"
+OUT=$(RAN 'tai_khoan=SUB key_file=keys_sub.env key_sha8=1234abcd recon=QTY(pham vi c3)'); RC=$?
+chk "r2 [8a] jar moi (W3A muc 2) 'recon=QTY(pham vi c3)' => TU CHOI rc 4" "[ $RC = 4 ] && echo \"\$OUT\" | grep -q 'TU CHOI' && [ ! -f $RA/run/c3live_reanchor.req ]"
+OUT=$(RAN 'tai_khoan=DRY(khong dung key) recon=QTY(pham vi c3)'); RC=$?
+chk "r3 [8a] jar moi che do DRY cung in recon=QTY => TU CHOI (cung ngu nghia jar cu)" "[ $RC = 4 ]"
+OUT=$(RAN 'equity_mode=X'); RC=$?
+chk "r4 [8a] khong co nhan QTY (che do equity cu) => KHONG tu choi (ghi req)" "[ $RC != 4 ] && [ -f $RA/run/c3live_reanchor.req ]"
+KST() { [ -n "$1" ] && printf '%s\n' "$1" > $F/run/KILL_SWITCH || rm -f $F/run/KILL_SWITCH; E bash -c ". $HERE/golive_lib.sh >/dev/null 2>&1; ST=\$(gl_state242); printf 'TOK=%s ' \"\$(sv KILLSW_TOK)\"; gl_ks_boot_ok && echo CHAP_NHAN || echo TU_CHOI"; }
+R8=""; for t in "" "c3live_boot 20261119_101500" "c3_autodrain 20261119_101500 caller=h242_watchdog.sh" "golive_live_off drain 20261119_1" "golive_monitor KHAN x" "nguoi dat tay"; do R8="$R8[$(KST "$t")]"; done
+chk "k1 [8b] gl_state242 KILLSW_TOK + gl_ks_boot_ok: khong co / c3live_boot / c3_autodrain => CHAP_NHAN; drain owner / monitor / tay => TU_CHOI ($R8)" "[ \"$R8\" = '[TOK= CHAP_NHAN][TOK=c3live_boot CHAP_NHAN][TOK=c3_autodrain CHAP_NHAN][TOK=golive_live_off TU_CHOI][TOK=golive_monitor TU_CHOI][TOK=nguoi TU_CHOI]' ]"
+chk "k2 [8b] precheck micro_on + pilot_on dung gl_ks_boot_ok (khong con '[ KILLSW_FILE = 0 ]' tran)" "grep -q '^chk \"khong co run/KILL_SWITCH, hoac token c3live_boot/c3_autodrain.*\" \"gl_ks_boot_ok\"' $HERE/golive_micro_on.sh && grep -q '^chk \"khong co run/KILL_SWITCH, hoac token c3live_boot/c3_autodrain.*\" \"gl_ks_boot_ok\"' $HERE/golive_pilot_on.sh && ! grep -q \"KILLSW_FILE)' = 0 \\]\\\"\" $HERE/golive_micro_on.sh $HERE/golive_pilot_on.sh"
+# gl_restart ks=1 THAT (fake daemon.sh) voi KILL_SWITCH c3live_boot co san
+cat > $F/bin/daemon.sh <<EOD
+#!/bin/bash
+case "\$1" in
+  stop) [ -e $W/daemon_nostop ] && exit 0; for p in \$(pgrep -f "^BinanceOrderTradingManager fk_$TAG"); do kill \$p 2>/dev/null; done;;
+  start) cd $F && env -i PATH="$PATH" C3_CAPITAL=1000 LIVE_ADAPTER=live nohup bash -c "exec -a '$FPAT' sleep 900" >/dev/null 2>&1 </dev/null & ;;
+esac
+EOD
+chmod 755 $F/bin/daemon.sh; cp $F/conf/env.sh $W/env.sh.k8; startbot 1000
+GR() { E LOGDIR=$W/deploy WD_PAUSE=$W/PAUSE_k8 WD_PAUSE_MAX_S=3 bash -c ". $HERE/golive_lib.sh >/dev/null 2>&1; GL_NAME=golive_micro_on; TS=\$1; gl_restart '# k8
+export O5F_K8=1' '' none 1 2>&1" _ "$1"; }
+echo 'c3live_boot 20261119_101500' > $F/run/KILL_SWITCH
+OUT=$(GR 20990101_000001); RC=$?
+chk "k3 [8b] gl_restart ks=1 + KS c3live_boot => GHI DE token script, ban cu -> run/KILL_SWITCH.prev_<TS>, restart OK" "echo \"\$OUT\" | grep -q 'OK KILL_SWITCH_dat_truoc_start' && grep -q '^golive_micro_on 20990101_000001 ' $F/run/KILL_SWITCH && [ \"\$(cat $F/run/KILL_SWITCH.prev_20990101_000001)\" = 'c3live_boot 20261119_101500' ] && echo \"\$OUT\" | grep -q 'OK started pid='"
+cp $W/env.sh.k8 $F/conf/env.sh; startbot 1000; echo 'c3_autodrain 20261119_101500 caller=x' > $F/run/KILL_SWITCH; touch $W/daemon_nostop
+OUT=$(GR 20990101_000002); RC=$?; rm -f $W/daemon_nostop
+chk "k4 [8b] gl_restart ks=1 FAIL (stop khong dung duoc) => ksoff tra lai token cu c3_autodrain (khong mat drain), env khoi phuc" "echo \"\$OUT\" | grep -q 'FAIL van_con_process_sau_stop' && [ \"\$(cat $F/run/KILL_SWITCH)\" = 'c3_autodrain 20261119_101500 caller=x' ] && [ -e $F/run/KILL_SWITCH.rb_20990101_000002 ] && ! grep -q O5F_K8 $F/conf/env.sh"
+rm -f $F/run/KILL_SWITCH* $F/run/.golive_* $F/conf/env.sh.bak_*; cp $W/env.sh.k8 $F/conf/env.sh; rm -f $F/bin/daemon.sh; startbot 1000
 
 # == KET THUC ==
 cleanup

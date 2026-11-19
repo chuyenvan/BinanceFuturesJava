@@ -13,7 +13,8 @@ DRY=${DRY:-1}
 echo "== doi chieu equity gan nhat (242):"
 $SSH_242 "cd $A && grep -a '\[C3-LIVE-RECON\]' logs/full.log | grep -a 'equity\|EQUITY\|moc' | tail -4 | cut -c1-400" || { echo "DUNG: ssh loi"; exit 1; }
 # [V12 R4b §13] c3_live R4+ doi chieu theo QTY c3 (tai khoan chinh, khong co moc equity/tmb) => TU CHOI
-QM=$($SSH_242 "cd $A && L=\$(grep -a -n 'MainClass: com.binance.chuyennd.trading.BinanceOrderTradingManager' logs/full.log | tail -1 | cut -d: -f1); tail -n +\${L:-1} logs/full.log | grep -a -c 'tai_khoan=CHINH(pham vi c3)'" 2>/dev/null)
+# [OPS5_FIX 8a] nhan dong khoi dong: jar cu "tai_khoan=CHINH(pham vi c3)" | jar W3A muc 2 "recon=QTY(pham vi c3)" (ca 2 => TU CHOI)
+QM=$($SSH_242 "cd $A && L=\$(grep -a -n 'MainClass: com.binance.chuyennd.trading.BinanceOrderTradingManager' logs/full.log | tail -1 | cut -d: -f1); tail -n +\${L:-1} logs/full.log | grep -a -c -F -e 'tai_khoan=CHINH(pham vi c3)' -e 'recon=QTY(pham vi c3)'" 2>/dev/null)
 case "$QM" in ''|*[!0-9]*) QM=0;; esac
 if [ "$QM" -gt 0 ]; then
   echo "TU CHOI: c3_live (R4+) doi chieu theo QTY c3 tren tai khoan chinh — khong co moc equity/tmb de dat lai."

@@ -172,7 +172,7 @@ chk "LIVE_KILLSW_MODE=act" "[ '$(sv ENV_LIVE_KILLSW_MODE)' = act ]"
 EXW=false; [ "$C3_ACCOUNT" = MAIN ] && EXW=true   # [R4u2] SUB: c3 chi loai coin c3 dang giu; MAIN: loai ca LEGACY
 chk "process env C3_EXCLUDE_LEGACY_HELD=$EXW (C3_ACCOUNT=$C3_ACCOUNT; co: $(sv ENV_C3_EXCLUDE_LEGACY_HELD))" "[ '$(sv ENV_C3_EXCLUDE_LEGACY_HELD)' = $EXW ]"
 chk "latch kill-switch NONE (khac => owner xem + DRY=0 bash $GL_HERE/../killsw_reset.sh truoc)" "[ '$(sv LATCH)' = NONE ] || [ '$(sv LATCH)' = NOFILE ]"
-chk "khong co run/KILL_SWITCH (co => xoa co chu dich truoc)" "[ '$(sv KILLSW_FILE)' = 0 ]"
+chk "khong co run/KILL_SWITCH, hoac token c3live_boot/c3_autodrain (ks=1 ghi de, ban cu .prev_<TS>) (co: $(sv KILLSW_FILE) token: $(sv KILLSW_TOK); khac => xoa co chu dich truoc)" "gl_ks_boot_ok"
 chk "file key $KEYS_FILE (600, 2 dong)" "[ '$(sv KEYS_OK)' = 1 ]"
 [ "$C3_ACCOUNT" = SUB ] && chk "file key tk con: quyen $(sv KEYS_PERM) = 600, sha8 key $(sv KEYS_FILE_SHA8) = da dang ky $SUB_KEY_SHA8 (A-03)" "[ '$(sv KEYS_PERM)' = 600 ] && [ '$(sv KEYS_FILE_SHA8)' = '$SUB_KEY_SHA8' ]"
 # [WAVE1 D-01] budget leg du kien khi 2 co sizing/DCA BAT (cong thuc sim = C3LiveEntry), von MICRO_CAPITAL
