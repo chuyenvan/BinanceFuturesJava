@@ -35,7 +35,8 @@ if [ "$FT_CRON" = 1 ]; then
   exec >> "$CL" 2>&1
   export GL_SSH_TRIES=${GL_SSH_TRIES:-1} GL_SSH_TIMEOUT_S=${GL_SSH_TIMEOUT_S:-30} GL_TG_TIMEOUT_S=${GL_TG_TIMEOUT_S:-10}
 fi
-exec > >(sed -u -E 's/[0-9]{8,10}:[A-Za-z0-9_-]{30,}/<TOKEN>/g') 2>&1
+# moi output qua mask token (dong bo: chay lai chinh no qua ong sed, giu ma thoat)
+if [ -z "${_FT_MASKED:-}" ]; then export _FT_MASKED=1; bash "$0" "$@" 2>&1 | sed -u -E 's/[0-9]{8,10}:[A-Za-z0-9_-]{30,}/<TOKEN>/g'; exit "${PIPESTATUS[0]}"; fi
 . "$_OPS/golive_lib.sh"
 gl_manifest_check "$0" || exit 1
 FT_TAIL=${FT_TAIL:-30000000}; FT_TOL=${FT_TOL:-0.02}; FT_K=${FT_K:-0.0225}; FT_UMAX=${FT_UMAX:-0.6}
@@ -133,7 +134,7 @@ say "sizing_iv: $SIV (dong SUBMIT JVM nay: $NA, lech: $NAF) | doi_chieu_san: $DC
 if [ "$DRY" = 1 ]; then say "DRY=1: KHONG ghi state / bang chung / Telegram"; exit 0; fi
 # ghi state (thay toan bo dong cua cac cid JVM nay, giu dong cu khac)
 { for c in $CIDS; do printf '%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n' "$c" "${R_T[$c]}" "${R_S[$c]}" "${R_L[$c]}" "${R_A[$c]}" "${R_B[$c]}" "${R_ARM[$c]}" "${R_N[$c]}" "${R_F[$c]}" "$NOW" "${R_D[$c]}"; done
-  grep -vF -f <(for c in $CIDS; do printf '%s|\n' "$c"; done) "$FT_STATE" 2>/dev/null; } > "$FT_STATE.tmp" && mv -f "$FT_STATE.tmp" "$FT_STATE"
+  grep -vF -f <(for c in $CIDS; do printf '%s|\n' "$c"; done) "$FT_STATE" 2>/dev/null || :; } > "$FT_STATE.tmp" && mv -f "$FT_STATE.tmp" "$FT_STATE"
 CHG=$(echo $CHG); [ -n "$CHG" ] || { say "khong co ket qua moi - khong ghi bang chung, khong Telegram"; exit 0; }
 EVF=$FT_DIR/SIZING_IV_$TS.md
 { echo "# SIZING_IV $TS (golive_first_trade_check, ADD22 ?3 (iv))"
