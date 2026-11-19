@@ -83,7 +83,7 @@ EOF
 cat > $W/fakessh2.sh <<'EOF'
 #!/usr/bin/env bash
 # ssh gia: chay cuc bo; PLAN (file $FAKESSH_PLAN): dong "<LOAI> before|after <so lan>" => tra 255 (truoc/sau khi chay)
-CMD=$(cat "$1"); rm -f "$1"; IN=""; [ -t 0 ] || IN=$(cat)
+CF=$1; CMD=$(cat "$CF"); rm -f "$CF"; IN=""; [ -t 0 ] || IN=$(cat)
 C=OTHER
 case "$IN" in *END_RS*) C=RESTART;; *END_RB*) C=ROLLBACK;; *END_CHK*) C=CHK;; *END_STATE*) C=STATE;; esac
 case "$CMD" in *END_PHASE*) C=PHASE;; *"chmod 600"*hfks_*) C=STAGEMD5;; *"PUSH doi trang thai"*) C=PUSHWAIT;; *KILL_SWITCH.ok_*) C=KSOFF;; esac
@@ -93,7 +93,7 @@ M=""; if [ -f "$FAKESSH_PLAN" ]; then
     if [ "$n" -gt 0 ]; then M=$2; sed -i "0,/^$C .*/s//$C $2 $((n - 1))/" "$FAKESSH_PLAN"; fi; fi; fi
 [ "$M" = before ] && exit 255
 if [ "$M" = hup ]; then   # ssh dut giua chung: lenh phia 242 nhan SIGHUP sau 3 s, client tra 255 ngay
-  printf '%s' "$IN" > "$1.in"; setsid bash -c "bash -c \"\$0\" < \"\$1\" > /dev/null 2>&1" "$CMD" "$1.in" & HP=$!
+  printf '%s' "$IN" > "$CF.in"; setsid bash -c "bash -c \"\$0\" < \"\$1\" > /dev/null 2>&1" "$CMD" "$CF.in" & HP=$!
   sleep 3; kill -HUP -- -$HP 2>/dev/null; exit 255
 fi
 printf '%s' "$IN" | bash -c "$CMD"; rc=$?
