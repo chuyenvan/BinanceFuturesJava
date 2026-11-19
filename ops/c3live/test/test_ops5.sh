@@ -236,6 +236,47 @@ OUT=$(E bash "$HERE/golive_check_lev.sh" 2>&1); RC=$?
 chk "l5 san loi symbolConfig HTTP 400 => DUNG rc 1" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'doc san loi'"
 rm -f $W/api/symbolConfig.code
 
+echo "== OPS5 muc 4: c3_autodrain_prestart.sh + install_242_autodrain.sh"
+SB=$W/sbin; mkdir -p $SB $W/systemd
+printf '#!/bin/bash\necho "deps ok (gia)"\nexit $(cat %s/pre_rc 2>/dev/null || echo 0)\n' "$W" > $SB/h242-prestart.sh; chmod 755 $SB/h242-prestart.sh
+printf '#!/bin/bash\nPRESTART=${WD_PRESTART:-/usr/local/sbin/h242-prestart.sh}\n' > $SB/h242_watchdog.sh
+printf '#!/bin/bash\ncase "$1" in -l) cat %s/ct242 2>/dev/null;; -) cat > %s/ct242;; esac\n' "$W" "$W" > $W/ct242.sh
+printf '*/2 * * * * %s/h242_watchdog.sh >> /var/lib/h242_watchdog/cron.out 2>&1\n3,18,41,48 * * * * cd /x && bash exinfo.sh # C3LIVE_EXINFO\n' "$SB" > $W/ct242; cp $W/ct242 $W/ct242_0
+AI() { E AD_SBIN=$SB AD_SYSTEMD_DIR=$W/systemd AD_SYSTEMCTL=true AD_CT242="bash $W/ct242.sh" "$@"; }
+OUT=$(AI DRY=1 bash "$HERE/install_242_autodrain.sh" 2>&1 < /dev/null); RC=$?
+chk "a1 install DRY=1: doc 242, in ke hoach, KHONG doi cron / sbin / systemd" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && cmp -s $W/ct242 $W/ct242_0 && [ ! -e $SB/h242-prestart-c3.sh ] && [ ! -e $W/systemd/h242-trading.service.d ]"
+OUT=$(echo YES | AI bash "$HERE/install_242_autodrain.sh" 2>&1); RC=$?
+DF=$W/systemd/h242-trading.service.d/c3-autodrain.conf
+chk "a2 install: wrapper = c3_autodrain_prestart.sh (755), cron watchdog co WD_PRESTART, dong cron khac giu nguyen, drop-in ExecStartPre=wrapper" "[ $RC = 0 ] && cmp -s $HERE/c3_autodrain_prestart.sh $SB/h242-prestart-c3.sh && [ -x $SB/h242-prestart-c3.sh ] && grep -qx \"\*/2 \* \* \* \* WD_PRESTART=$SB/h242-prestart-c3.sh $SB/h242_watchdog.sh >> /var/lib/h242_watchdog/cron.out 2>&1\" $W/ct242 && grep -q 'C3LIVE_EXINFO' $W/ct242 && grep -qx 'ExecStartPre=' $DF && grep -qx \"ExecStartPre=$SB/h242-prestart-c3.sh $F com.binance.chuyennd.trading.BinanceOrderTradingManager\" $DF && grep -q 'XONG: autodrain da cai' <<<\"\$OUT\""
+OUT=$(echo YES | AI bash "$HERE/install_242_autodrain.sh" 2>&1); RC=$?
+chk "a3 install lan 2 => KHONG DOI" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'KHONG DOI (da cai dung'"
+AW() { env AD_ORIG_PRESTART=$SB/h242-prestart.sh AD_STATE_DIR=$W/adstate AD_TG_SINK=$W/tgad.txt "$@"; }
+rm -f $F/run/KILL_SWITCH; WP=$(grep -o 'WD_PRESTART=[^ ]*' $W/ct242 | cut -d= -f2)
+OUT=$(AW bash "$WP" "$F" com.binance.chuyennd.trading.BinanceOrderTradingManager 2>&1); RC=$?
+chk "a4 watchdog goi WD_PRESTART (tu dong cron da cai), env.sh live, chua co KS => tao run/KILL_SWITCH token c3_autodrain + Telegram, rc 0" "[ $RC = 0 ] && grep -q '^c3_autodrain [0-9_]* caller=' $F/run/KILL_SWITCH && grep -q '\[242-AUTODRAIN\] bot c3 LIVE khoi dong lai NGOAI quy trinh.*DA DAT run/KILL_SWITCH.*MODE=undrain' $W/tgad.txt"
+echo 'golive_live_off drain 20261119_000000' > $F/run/KILL_SWITCH
+OUT=$(AW bash "$WP" "$F" x 2>&1); RC=$?
+chk "a5 KS da co (drain cua owner) => GIU NGUYEN noi dung, bao 'DA CO'" "[ $RC = 0 ] && [ \"\$(cat $F/run/KILL_SWITCH)\" = 'golive_live_off drain 20261119_000000' ] && tail -2 $W/tgad.txt | grep -q 'DA CO (giu nguyen'"
+rm -f $F/run/KILL_SWITCH; echo 1 > $W/pre_rc
+OUT=$(AW bash "$WP" "$F" x 2>&1); RC=$?
+chk "a6 prestart goc rc 1 (deps chua san) => tra rc 1, KHONG tao KS" "[ $RC = 1 ] && [ ! -e $F/run/KILL_SWITCH ]"
+echo 0 > $W/pre_rc; sed -i 's/^export LIVE_ADAPTER=live/export LIVE_ADAPTER=dry/' $F/conf/env.sh
+OUT=$(AW bash "$WP" "$F" x 2>&1); RC=$?
+chk "a7 env.sh adapter=dry => khong drain, rc 0" "[ $RC = 0 ] && [ ! -e $F/run/KILL_SWITCH ] && echo \"\$OUT\" | grep -q 'khong live'"
+sed -i 's/^export LIVE_ADAPTER=dry/export LIVE_ADAPTER=live/' $F/conf/env.sh; chmod 555 $F/run
+OUT=$(AW bash "$WP" "$F" x 2>&1); RC=$?; chmod 755 $F/run
+chk "a8 tiem loi: KHONG ghi duoc KS (run chi doc) => van rc 0 (khong chan start, vi the can quan ly) + Telegram KHAN" "[ $RC = 0 ] && [ ! -e $F/run/KILL_SWITCH ] && tail -2 $W/tgad.txt | grep -q 'KHAN bot c3 LIVE.*KHONG dat duoc'"
+chk "a9 golive_live_off MODE=undrain go MOI token KILL_SWITCH (mv run/KILL_SWITCH) => mo lai duoc sau autodrain" "grep -q 'mv -f run/KILL_SWITCH run/KILL_SWITCH.off_' $HERE/golive_live_off.sh"
+OUT=$(echo YES | AI MODE=rollback bash "$HERE/install_242_autodrain.sh" 2>&1); RC=$?
+chk "a10 rollback: cron watchdog = ban dau, drop-in xoa, wrapper -> .off_" "[ $RC = 0 ] && cmp -s $W/ct242 $W/ct242_0 && [ ! -e $DF ] && [ ! -e $SB/h242-prestart-c3.sh ] && ls $SB/h242-prestart-c3.sh.off_* >/dev/null"
+printf '*/2 * * * * %s/h242_watchdog.sh\n*/2 * * * * %s/h242_watchdog.sh --x\n' "$SB" "$SB" > $W/ct242
+OUT=$(AI DRY=1 bash "$HERE/install_242_autodrain.sh" 2>&1 < /dev/null); RC=$?
+chk "a11 cron co 2 dong watchdog => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'khong dung 1 dong'"
+cp $W/ct242_0 $W/ct242; printf '#!/bin/bash\nPRESTART=/usr/local/sbin/h242-prestart.sh\n' > $SB/h242_watchdog.sh
+OUT=$(AI DRY=1 bash "$HERE/install_242_autodrain.sh" 2>&1 < /dev/null); RC=$?
+chk "a12 watchdog khong ho tro WD_PRESTART => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'KHONG ho tro WD_PRESTART'"
+chk "a13 khong lo key/secret (autodrain)" "nosec \"\$OUT\" && ! grep -q \"$SKEY\" $W/tgad.txt"
+
 # == KET THUC ==
 cleanup
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
