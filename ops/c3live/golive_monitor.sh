@@ -191,7 +191,7 @@ if [ "$C3_ACCOUNT" = SUB ]; then
     say "KHAN (ADD4 tk con):$KH — CHAN mo moi (run/KILL_SWITCH), KHONG tu dong vi the; owner/MASTER xu ly"
     [ "$MON_CRON" = 1 ] && GL_SSH_DEADLINE=$(( MON_T0 + MON_SSH_BUDGET_S ))   # [WAVE1b M7] phan ngan sach danh rieng cho dat KILL_SWITCH
     if [ "$DRY" = 1 ]; then say "DRY=1: KHONG dat run/KILL_SWITCH"
-    elif s242 "cd $A && { [ -e run/KILL_SWITCH ] || echo 'golive_monitor $TS KHAN $KT' > run/KILL_SWITCH; } && [ -e run/KILL_SWITCH ]"; then
+    elif s242 "cd $A && echo 'golive_monitor $TS KHAN $KT' >> run/KILL_SWITCH && [ -e run/KILL_SWITCH ]"; then
       say "run/KILL_SWITCH DANG DAT (dung mo moi; vi the c3 van duoc quan ly). Go sau khi xu ly: MODE=undrain golive_live_off.sh"
     else say "!! KHONG dat / xac nhan duoc run/KILL_SWITCH (ssh?) — owner dat tay: MODE=drain golive_live_off.sh"; fi
     # cron: Telegram cung noi dung toi da 1 lan / 30'; chay tay: luon gui

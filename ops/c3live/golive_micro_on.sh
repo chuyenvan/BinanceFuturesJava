@@ -253,7 +253,7 @@ GL_DRY_TS=$TS gl_mon_flag_set || die "KHONG ghi duoc co monitor $GL_MON_FLAG —
 trap 'say "BI DUNG (tin hieu) — kiem: bash $(cd "$(dirname "$0")" && pwd)/golive_monitor.sh"; gl_pause_clear >/dev/null 2>&1; exit 130' INT TERM HUP
 gl_restart "$ENV_ADD" "$GL_STATE_FILES" dry 1
 # [WAVE1 B-02] ket qua restart
-gl_ks_set() { s242 "cd $A && { [ -e run/KILL_SWITCH ] || echo 'golive_micro_on $TS $1' > run/KILL_SWITCH; } && [ -e run/KILL_SWITCH ]" \
+gl_ks_set() { s242 "cd $A && echo 'golive_micro_on $TS $1' >> run/KILL_SWITCH && [ -e run/KILL_SWITCH ]" \
   && say "run/KILL_SWITCH DANG DAT (dung mo moi; vi the c3 neu co van duoc quan ly)" || say "!! KHONG xac nhan duoc run/KILL_SWITCH (ssh?) — owner: MODE=drain bash $GL_HERE/golive_live_off.sh"; }
 if gl_restart_unknown; then
   gl_ks_set "ssh_restart_khong_ro"
@@ -303,7 +303,9 @@ grep -q "^golive_micro_on '"$TS"' " run/KILL_SWITCH 2>/dev/null && echo "OK KILL
 if ! echo "$RS" | grep -q '^FAIL' && gl_postloop CHK && mon_hb_ok; then
   # [R4q MAJ-1] hau kiem DAT => go KILL_SWITCH CUA MINH => cho JVM bao PUSH ON
   # [WAVE1 B-02] idempotent: chay lai sau ssh 255 (da mv o lan truoc) van ra dung ket qua
-  if s242 "cd $A && { grep -q '^golive_micro_on $TS ' run/KILL_SWITCH 2>/dev/null && mv -f run/KILL_SWITCH run/KILL_SWITCH.ok_$TS; [ -e run/KILL_SWITCH.ok_$TS ] && [ ! -e run/KILL_SWITCH ]; }"; then
+  # [VONG3 F1] chi go khi MOI dong KS la cua minh; co dong khac (owner drain / monitor KHAN chen vao) => GIU (KHAC)
+  KG=$(gl_ks_go_own golive_micro_on)
+  if [ "$KG" = OK ]; then
     say "OK go run/KILL_SWITCH (hau kiem DAT) — cho PUSH ON"
     PON=0
     for r in $(seq 1 "$POST_ROUNDS"); do
@@ -320,7 +322,7 @@ if ! echo "$RS" | grep -q '^FAIL' && gl_postloop CHK && mon_hb_ok; then
       exit 0
     fi
     # [WAVE1b M1] noi dung bao theo KET QUA THAT cua ssh dat lai KILL_SWITCH (kiem file ton tai), khong noi "da dat" khi ssh loi
-    if s242 "cd $A && echo 'golive_micro_on $TS push_khong_ON' > run/KILL_SWITCH && [ -e run/KILL_SWITCH ]"; then
+    if s242 "cd $A && echo 'golive_micro_on $TS push_khong_ON' >> run/KILL_SWITCH && [ -e run/KILL_SWITCH ]"; then
       say "DAT LAI run/KILL_SWITCH (da xac nhan file ton tai)"
       M="hau kiem DAT nhung KHONG thay 'PUSH doi trang thai -> ON' sau khi go KILL_SWITCH => DA DAT LAI KILL_SWITCH (xac nhan; an toan, khong mo moi). Owner/MASTER kiem bash $GL_HERE/golive_monitor.sh"
     else
@@ -331,7 +333,10 @@ if ! echo "$RS" | grep -q '^FAIL' && gl_postloop CHK && mon_hb_ok; then
   else
     gl_pause_clear >/dev/null 2>&1
     # [WAVE1c m4] mv co the DA chay o 242 du ssh bao loi => trang thai KHONG BIET (khong phai "an toan")
-    M="hau kiem DAT nhung KHONG XAC NHAN DUOC trang thai run/KILL_SWITCH (ssh/token) => KHONG XAC NHAN DUOC - co the da go KILL_SWITCH (bot LIVE co the mo lenh moi). KHAN: owner kiem NGAY ls $A/run/KILL_SWITCH tren 242 / chay MODE=drain bash $(cd "$(dirname "$0")" && pwd)/golive_live_off.sh roi kiem bash $GL_HERE/golive_monitor.sh"
+    if [ "$KG" = KHAC ]; then M="hau kiem DAT nhung run/KILL_SWITCH co dong/token KHAC (owner drain / monitor KHAN chen vao) => GIU NGUYEN, KHONG go: bot LIVE dang DRAIN (khong mo moi). Owner/MASTER kiem noi dung KS roi moi MODE=undrain bash $GL_HERE/golive_live_off.sh"
+    else
+      M="hau kiem DAT nhung KHONG XAC NHAN DUOC trang thai run/KILL_SWITCH (ssh/token) => KHONG XAC NHAN DUOC - co the da go KILL_SWITCH (bot LIVE co the mo lenh moi). KHAN: owner kiem NGAY ls $A/run/KILL_SWITCH tren 242 / chay MODE=drain bash $(cd "$(dirname "$0")" && pwd)/golive_live_off.sh roi kiem bash $GL_HERE/golive_monitor.sh"
+    fi
   fi
   say "KHAN: $M"; tg "[golive] KHAN TS=$TS micro_on: $M | log $LOG"; exit 2
 fi

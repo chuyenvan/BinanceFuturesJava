@@ -477,8 +477,24 @@ OUT=$(RAN 'equity_mode=X'); RC=$?
 chk "r4 [8a] khong co nhan QTY (che do equity cu) => KHONG tu choi (ghi req)" "[ $RC != 4 ] && [ -f $RA/run/c3live_reanchor.req ]"
 KST() { [ -n "$1" ] && printf '%s\n' "$1" > $F/run/KILL_SWITCH || rm -f $F/run/KILL_SWITCH; E bash -c ". $HERE/golive_lib.sh >/dev/null 2>&1; ST=\$(gl_state242); printf 'TOK=%s ' \"\$(sv KILLSW_TOK)\"; gl_ks_boot_ok && echo CHAP_NHAN || echo TU_CHOI"; }
 R8=""; for t in "" "c3live_boot 20261119_101500" "c3_autodrain 20261119_101500 caller=h242_watchdog.sh" "golive_live_off drain 20261119_1" "golive_monitor KHAN x" "nguoi dat tay"; do R8="$R8[$(KST "$t")]"; done
-chk "k1 [8b] gl_state242 KILLSW_TOK + gl_ks_boot_ok: khong co / c3live_boot / c3_autodrain => CHAP_NHAN; drain owner / monitor / tay => TU_CHOI ($R8)" "[ \"$R8\" = '[TOK= CHAP_NHAN][TOK=c3live_boot CHAP_NHAN][TOK=c3_autodrain CHAP_NHAN][TOK=golive_live_off TU_CHOI][TOK=golive_monitor TU_CHOI][TOK=nguoi TU_CHOI]' ]"
+chk "k1 [8b] gl_state242 KILLSW_TOK + gl_ks_boot_ok: khong co / c3live_boot / c3_autodrain => CHAP_NHAN; drain owner / monitor / tay => TU_CHOI ($R8)" "[ \"$R8\" = '[TOK= CHAP_NHAN][TOK=c3live_boot CHAP_NHAN][TOK=c3_autodrain CHAP_NHAN][TOK= TU_CHOI][TOK= TU_CHOI][TOK= TU_CHOI]' ]"
 chk "k2 [8b] precheck micro_on + pilot_on dung gl_ks_boot_ok (khong con '[ KILLSW_FILE = 0 ]' tran)" "grep -q '^chk \"khong co run/KILL_SWITCH, hoac token c3live_boot/c3_autodrain.*\" \"gl_ks_boot_ok\"' $HERE/golive_micro_on.sh && grep -q '^chk \"khong co run/KILL_SWITCH, hoac token c3live_boot/c3_autodrain.*\" \"gl_ks_boot_ok\"' $HERE/golive_pilot_on.sh && ! grep -q \"KILLSW_FILE)' = 0 \\]\\\"\" $HERE/golive_micro_on.sh $HERE/golive_pilot_on.sh"
+# ---- [VONG3 F1] KILLSW_TOK chat: dung 1 dong + khop tron token chuan; writer APPEND; go KS cua minh chi khi MOI dong la cua minh
+JT='c3live_boot 20261119_101500 B-09: JVM LIVE khoi dong KHONG qua script go-live (crash/watchdog/reboot/restart tay) => dung mo moi, vi the c3 van duoc quan ly. Mo: MODE=undrain bash golive_live_off.sh'
+R9=""; for t in '#c3live_boot 20261119_101500' 'c3live_bootX 20261119_101500' '"c3live_boot" 20261119_101500' "c3_autodrain 20261119_101500 caller=cron
+owner: GIU DRAIN" "c3_autodrain 20261119_101500 caller=x
+golive_monitor 20261119_1 KHAN vi_the_ngoai" "$JT" "c3_autodrain 20261119_101500 caller=unknown"; do R9="$R9[$(KST "$t")]"; done
+: > $F/run/KILL_SWITCH; R9="$R9[$(E bash -c ". $HERE/golive_lib.sh >/dev/null 2>&1; ST=\$(gl_state242); gl_ks_boot_ok && echo CHAP_NHAN || echo TU_CHOI")]"
+printf 'c3live_boot 20261119_101500' > $F/run/KILL_SWITCH; R9="$R9[$(E bash -c ". $HERE/golive_lib.sh >/dev/null 2>&1; ST=\$(gl_state242); gl_ks_boot_ok && echo CHAP_NHAN || echo TU_CHOI")]"
+chk "k5 [F1] '#c3live_boot' / 'c3live_bootX' / co ngoac / 2 dong (owner them) / 2 dong (monitor KHAN append) => TU_CHOI; token jar C3BootLock nguyen van + caller=unknown => CHAP_NHAN; file rong => TU_CHOI; 1 dong khong xuong dong => CHAP_NHAN ($R9)" "[ \"$R9\" = '[TOK= TU_CHOI][TOK= TU_CHOI][TOK= TU_CHOI][TOK= TU_CHOI][TOK= TU_CHOI][TOK=c3live_boot CHAP_NHAN][TOK=c3_autodrain CHAP_NHAN][TU_CHOI][CHAP_NHAN]' ]"
+chk "k6 [F1] khong con writer 'chi ghi KS khi chua co' (ghi de/nuot KHAN) trong ops/c3live: moi writer APPEND (>>)" "! grep -nE '\[ -e run/KILL_SWITCH \] \|\| (echo|printf)' $HERE/*.sh && grep -q \"echo 'golive_monitor \\\$TS KHAN \\\$KT' >> run/KILL_SWITCH\" $HERE/golive_monitor.sh"
+GKO() { E bash -c ". $HERE/golive_lib.sh >/dev/null 2>&1; TS=20990101_000777; gl_ks_go_own golive_micro_on"; }
+printf 'golive_micro_on 20990101_000777 hau_kiem\n' > $F/run/KILL_SWITCH; printf 'golive_monitor x KHAN vi_the_ngoai\n' >> $F/run/KILL_SWITCH; G1=$(GKO)
+printf 'golive_live_off drain 20990101_1\n' > $F/run/KILL_SWITCH; G2=$(GKO)
+printf 'golive_micro_on 20990101_000777 hau_kiem\n' > $F/run/KILL_SWITCH; G3=$(GKO); G4=$(GKO)
+chk "k7 [F1] gl_ks_go_own: KS cua minh + dong KHAN monitor => KHAC (GIU); KS owner drain => KHAC; chi cua minh => OK (go, idempotent) ($G1 $G2 $G3 $G4)" "[ '$G1 $G2 $G3 $G4' = 'KHAC KHAC OK OK' ] && [ ! -e $F/run/KILL_SWITCH ] && [ -e $F/run/KILL_SWITCH.ok_20990101_000777 ]"
+rm -f $F/run/KILL_SWITCH*
+
 # gl_restart ks=1 THAT (fake daemon.sh) voi KILL_SWITCH c3live_boot co san
 cat > $F/bin/daemon.sh <<EOD
 #!/bin/bash

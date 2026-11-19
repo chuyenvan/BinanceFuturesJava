@@ -1,13 +1,13 @@
-32b40f7edbcd0a4c8df81431bcd75acd  dry_enable_grid_sizing.sh
-4c1b58a9c54fa23b87e6a99d36ae26ea  golive_micro_on.sh
-077cd4b894206c01378abf6106fb7bd3  golive_pilot_on.sh
+f08e4cb9ca1ffefae05cd62bdf9a8b8f  dry_enable_grid_sizing.sh
+5ca08eb78d2e47879afbc213bdef37ca  golive_micro_on.sh
+41f039f6ef9b8cb900587c754743be91  golive_pilot_on.sh
 c7d1f45e20e15551e433e300ce3e2887  golive_live_off.sh
 b79e158dffb563076a612258d4fe4735  golive_rebase_equity.sh
 fdc57b5a12a6a30b66c88c7ee694641c  golive_make_gate.sh
 4f25c048b6f49d5078be6080479e0c28  install_golive_ops.sh
 194bb84f136d706ce0f3926557ae5ec3  install_cron_golive_monitor.sh
-a32528cbc32287664272ce253c44b04a  golive_monitor.sh
-38ef4bb6637a20aeba5d8489baf4ba90  golive_lib.sh
+f765f6832c5d5c8c0669afa1e3673f4f  golive_monitor.sh
+8de13bde6de483701ca65cb4c6094c13  golive_lib.sh
 12e8084cd03b61cd446bfa6a9f56666d  golive_use_sub_key.sh
 5db4049d6fcb9ff097ebcc78dcc81fb9  golive_check_key.sh
 74986055ba1f183ad2e02c27a8725c46  golive_legacy_verify.sh
@@ -17,6 +17,6 @@ c5ca4bc44bc57a074ff5ee3ec7d21665  install_ops5_oracle.sh
 93564c6f73fc7285d6d93ce60876c664  c3_price_lag_day.sh
 a321efc635268c45e852ab7d4e031a10  golive_check_lev.sh
 33609366de613224946aa155ee6ea6c9  install_242_autodrain.sh
-907e66681c36c879d93bd0d8ef77a98c  c3_autodrain_prestart.sh
+80df69d71a168c13f0384caa85828350  c3_autodrain_prestart.sh
 96c1fc3c2ed14496d6d19d2925557de2  install_242_oracle_seen.sh
 f521c970e2094c2f6ac2a2dcf04c04f5  c3_oracle_seen_242.sh

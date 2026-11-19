@@ -52,7 +52,7 @@ if [ "$AD" != live ]; then
   [ -n "$PRE_NOTE" ] && tg "[242-AUTODRAIN] KHAN $PRE_NOTE. LIVE_ADAPTER=${AD:-?} (khong live) - khong drain. Can owner kiem /usr/local/sbin."
   exit 0
 fi
-CALLER=$(ps -o comm= -p "$PPID" 2>/dev/null | tr -d ' '); TOKEN="c3_autodrain $(date +%Y%m%d_%H%M%S) caller=${CALLER:-?}"
+CALLER=$(ps -o comm= -p "$PPID" 2>/dev/null | tr -cd 'A-Za-z0-9_.-'); TOKEN="c3_autodrain $(date +%Y%m%d_%H%M%S) caller=${CALLER:-unknown}"   # [VONG3 F1] khop regex token chuan
 KS=$APP/run/KILL_SWITCH
 if [ -e "$KS" ]; then R="run/KILL_SWITCH DA CO (giu nguyen: $(head -c 60 "$KS" 2>/dev/null | tr -cd 'A-Za-z0-9_ .=:-'))"; LV=INFO
 elif ( set -C; printf '%s\n' "$TOKEN" > "$KS" ) 2>/dev/null && [ -e "$KS" ]; then R="DA DAT run/KILL_SWITCH ($TOKEN)"; LV=OK

@@ -161,6 +161,6 @@ say "hau kiem TRUOT ($WHY) => ROLLBACK ve env.sh backup GOC (dry, C3_CAPITAL=$CA
 if gl_rollback none dry "$CAP"; then
   say "Da ROLLBACK xong: dry chay lai voi env cu (adapter=dry, C3_CAPITAL=$CAP da kiem)."; tg "[dry grid] TRUOT TS=$TS: $WHY => ROLLBACK env cu XONG. Log $LOG"; exit 1
 fi
-s242 "cd $A && { [ -e run/KILL_SWITCH ] || echo 'dry_enable_grid_sizing $TS rollback_loi' > run/KILL_SWITCH; } && [ -e run/KILL_SWITCH ]" >/dev/null 2>&1
+s242 "cd $A && echo 'dry_enable_grid_sizing $TS rollback_loi' >> run/KILL_SWITCH && [ -e run/KILL_SWITCH ]" >/dev/null 2>&1
 M="hau kiem TRUOT ($WHY) VA ROLLBACK LOI ($(echo "$RB" | grep '^FAIL' | head -2 | tr '\n' ' ')) — kiem tay c3live_status.sh; env backup GOC $A/conf/env.sh.bak_dry_enable_grid_sizing_$TS"
 say "KHAN: $M"; tg "[dry grid] KHAN TS=$TS: $M | log $LOG"; exit 2

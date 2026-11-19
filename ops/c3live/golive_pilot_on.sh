@@ -127,7 +127,7 @@ fi
 trap 'say "BI DUNG (tin hieu) — kiem bash $GL_HERE/golive_monitor.sh"; gl_pause_clear >/dev/null 2>&1; exit 130' INT TERM HUP
 gl_restart "$ENV_ADD" "" none
 if gl_restart_unknown; then   # [WAVE1 B-02]
-  s242 "cd $A && { [ -e run/KILL_SWITCH ] || echo 'golive_pilot_on $TS ssh_restart_khong_ro' > run/KILL_SWITCH; } && [ -e run/KILL_SWITCH ]" && say "run/KILL_SWITCH DANG DAT" || say "!! KHONG dat duoc run/KILL_SWITCH (ssh?)"
+  s242 "cd $A && echo 'golive_pilot_on $TS ssh_restart_khong_ro' >> run/KILL_SWITCH && [ -e run/KILL_SWITCH ]" && say "run/KILL_SWITCH DANG DAT" || say "!! KHONG dat duoc run/KILL_SWITCH (ssh?)"
   M="restart pilot: ssh dut, KHONG doc duoc trang thai that tren 242 => KHONG ket luan. Owner/MASTER: bash $GL_HERE/golive_monitor.sh; env backup GOC $A/conf/env.sh.bak_golive_pilot_on_$TS"
   say "KHAN: $M"; tg "[golive] KHAN TS=$TS pilot_on: $M | log $LOG"; exit 2
 fi
@@ -160,6 +160,6 @@ if gl_rollback none live "$C0"; then
   [ -f "$SUB_BASE_FILE.bak_$TS" ] && mv -f "$SUB_BASE_FILE.bak_$TS" "$SUB_BASE_FILE" && say "OK moc tmb0 tra lai ban truoc pilot"
   say "Da ROLLBACK xong: live C3_CAPITAL=$C0."; tg "[golive] pilot_on FAIL TS=$TS: $WHY => ROLLBACK ve $C0 XONG. Log $LOG"; exit 1
 fi
-s242 "cd $A && { [ -e run/KILL_SWITCH ] || echo 'golive_pilot_on $TS rollback_loi' > run/KILL_SWITCH; } && [ -e run/KILL_SWITCH ]" && say "run/KILL_SWITCH DANG DAT" || say "!! KHONG dat duoc run/KILL_SWITCH (ssh?)"
+s242 "cd $A && echo 'golive_pilot_on $TS rollback_loi' >> run/KILL_SWITCH && [ -e run/KILL_SWITCH ]" && say "run/KILL_SWITCH DANG DAT" || say "!! KHONG dat duoc run/KILL_SWITCH (ssh?)"
 M="ROLLBACK LOI / khong xac nhan adapter=live C3_CAPITAL=$C0 ($(echo "$RB" | grep '^FAIL' | head -2 | tr '\n' ' ')) => run/KILL_SWITCH; kiem bash $GL_HERE/golive_monitor.sh; env backup GOC $A/conf/env.sh.bak_golive_pilot_on_$TS"
 say "KHAN: $M"; tg "[golive] KHAN TS=$TS pilot_on TRUOT ($WHY) VA $M | log $LOG"; exit 2
