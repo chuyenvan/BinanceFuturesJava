@@ -170,6 +170,11 @@ public final class KillSwitchEngine {
          * (c3_shadow / v1.1: dinh dang file y nguyen).
          */
         public String peakTag = null;
+        /**
+         * [W3A muc 7 A-02] nhan CU (khong co hau to von) duoc chap nhan khi nap file dinh/latch do jar truoc ghi (de khong
+         * mat dinh luc doi jar); nap xong => ghi lai voi nhan moi o lan ghi ke tiep. null = khong chap nhan nhan nao khac.
+         */
+        public String peakTagLegacy = null;
     }
 
     /**
@@ -406,6 +411,20 @@ public final class KillSwitchEngine {
         return mode;
     }
 
+    /** [W3A muc 7] true khi file dinh duoc nap bang nhan cu ({@link Params#peakTagLegacy}). */
+    private boolean legacyPeakLoaded = false;
+
+    /**
+     * [W3A muc 7 A-02] nhan trong file co dung cho engine nay khong: = peakTag, hoac = peakTagLegacy (file cua jar truoc).
+     *
+     * @param fileTag nhan doc tu file (null = khong nhan)
+     * @return true neu dung duoc
+     */
+    boolean peakTagMatches(String fileTag) {
+        if (prm.peakTag == null) return true;
+        return prm.peakTag.equals(fileTag) || (prm.peakTagLegacy != null && prm.peakTagLegacy.equals(fileTag));
+    }
+
     private void loadPeak() {
         if (peakFile == null || !peakFile.exists()) return;
         try {
@@ -414,17 +433,22 @@ public final class KillSwitchEngine {
                 String[] tok = s.split("\\s+");
                 String tag = null;
                 for (String x : tok) if (x.startsWith("adapter=")) tag = x.substring("adapter=".length());
-                if (!prm.peakTag.equals(tag)) {
+                if (!peakTagMatches(tag)) {
                     sink.warn("[KILLSW] file dinh " + peakFile.getAbsolutePath() + " cua adapter=" + (tag == null ? "(khong nhan)" : tag)
                             + " != adapter hien tai " + prm.peakTag + " => BO QUA (dinh lay lai tu tmb that dau tien)");
                     return;
                 }
+                legacyPeakLoaded = !prm.peakTag.equals(tag);
                 s = tok[0];
             }
             double v = Double.parseDouble(s);
             if (Double.isFinite(v) && v > 0d) {
                 peak = v;
-                peakWritten = v;
+                peakWritten = legacyPeakLoaded ? Double.NaN : v;   // [W3A muc 7] nhan cu => ghi lai nhan moi lan ke tiep
+                if (legacyPeakLoaded) {
+                    sink.info("[KILLSW] file dinh mang nhan cu adapter=" + prm.peakTagLegacy + " (jar truoc) => chap nhan, ghi lai"
+                            + " voi nhan " + prm.peakTag);
+                }
                 sink.info("[KILLSW] nap dinh equity " + (prm.c6OwnPeak ? "c3_live (tmb that, C6)" : "giay") + " tu "
                         + peakFile.getAbsolutePath() + " = " + fmt2(v));
             } else {
@@ -972,14 +996,15 @@ public final class KillSwitchEngine {
             c2Events.clear();
             if (o.has("c2_events_ms")) for (JsonElement e : o.getAsJsonArray("c2_events_ms")) c2Events.addLast(e.getAsLong());
             String apTag = o.has("acct_peak_adapter") ? o.get("acct_peak_adapter").getAsString() : null;
-            if (o.has("acct_peak") && prm.peakTag != null && !prm.peakTag.equals(apTag)) {   // [2d MIN-19]
+            if (o.has("acct_peak") && prm.peakTag != null && !peakTagMatches(apTag)) {   // [2d MIN-19] [W3A muc 7]
                 sink.warn("[KILLSW] acct_peak trong " + f.getPath() + " cua adapter=" + (apTag == null ? "(khong nhan)" : apTag)
                         + " != adapter hien tai " + prm.peakTag + " => BO QUA (A40 lay lai dinh tu tmb that dau tien)");
             } else if (o.has("acct_peak")) {
                 double p = o.get("acct_peak").getAsDouble();
                 if (Double.isFinite(p) && p > 0d) {
                     acctPeak = p;
-                    acctPeakWritten = p;
+                    // [W3A muc 7] nhan cu (jar truoc) => ghi lai latch voi nhan moi o lan onAccountEquity ke tiep
+                    acctPeakWritten = prm.peakTag != null && !prm.peakTag.equals(apTag) ? Double.NaN : p;
                 }
             }
             lastResetAtMs = o.has("last_reset_at_ms") ? o.get("last_reset_at_ms").getAsLong() : 0L;
@@ -987,10 +1012,12 @@ public final class KillSwitchEngine {
             // huong dan owner reset co chu dich bang ops/killsw_reset.sh
             if (prm.peakTag != null) {
                 String lt = o.has("adapter") ? o.get("adapter").getAsString() : null;
-                if (!prm.peakTag.equals(lt) && latch == Action.NONE && c2Events.isEmpty()) {
+                if (peakTagMatches(lt)) {
+                    // [W3A muc 7] cung nhan (hoac nhan cu cua jar truoc, cung adapter/von) => khong canh bao
+                } else if (latch == Action.NONE && c2Events.isEmpty()) {
                     sink.info("[KILLSW] file latch " + f.getPath() + " cua adapter=" + (lt == null ? "(khong nhan)" : lt)
                             + " != " + prm.peakTag + " nhung khong co latch / su kien C2 => khong co gi de giu");
-                } else if (!prm.peakTag.equals(lt)) {
+                } else {
                     String m = "[KILLSW] file latch " + f.getPath() + " cua adapter=" + (lt == null ? "(khong nhan)" : lt)
                             + " != adapter hien tai " + prm.peakTag + ": GIU nguyen latch=" + latch + " codes=" + latchCodes
                             + " c2_events=" + c2Events.size() + " (an toan). Neu chuyen adapter CO CHU DICH: owner chay"
