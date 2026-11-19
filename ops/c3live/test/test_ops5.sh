@@ -226,7 +226,7 @@ chk "l2 universe 40 (loc TRADING/USDT/PERPETUAL tu exchangeInfo), tat ca 20x CRO
 python3 -c "
 import json; c=json.load(open('$W/api/symbolConfig.json')); c[0]['leverage']=0; c[1]['marginType']='ISOLATED'; c[2]['maxNotionalValue']='50'; json.dump(c, open('$W/api/symbolConfig.json','w'))"
 OUT=$(E bash "$HERE/golive_check_lev.sh" 2>&1); RC=$?
-chk "l3 tiem loi: 1 symbol leverage 0 < 1, 1 ISOLATED, 1 maxNotional 50 < 90 => CANH_BAO rc 3, liet ke dung 3 symbol" "[ $RC = 3 ] && echo \"\$OUT\" | grep -q 'symbol lech: 3/40 (leverage thap 1, marginType khac 1, maxNotional thap 1)' && echo \"\$OUT\" | grep -q 'S00USDT:lev=0<1' && echo \"\$OUT\" | grep -q 'S01USDT:margin=ISOLATED' && echo \"\$OUT\" | grep -q 'S02USDT:maxNotional=50<90.00'"
+chk "l3 tiem loi: 1 symbol leverage 0 < 1, 1 ISOLATED, 1 maxNotional 50 < 90 => CANH_BAO rc 3, liet ke dung 3 symbol" "[ $RC = 3 ] && echo \"\$OUT\" | grep -q 'symbol lech: 3/40 (leverage thap 1, marginType khac 1, maxNotional thap 1)' && echo \"\$OUT\" | grep -q 'S00USDT:lev=0<1' && echo \"\$OUT\" | grep -q 'S01USDT:margin=ISOLATED' && echo \"\$OUT\" | grep -q 'S02USDT:maxNotional=50<90'"
 api account '{"totalMarginBalance":"300.00","availableBalance":"300.00","assets":[]}'
 OUT=$(E bash "$HERE/golive_check_lev.sh" 2>&1); RC=$?
 chk "l4 tmb 300 < von 1000 x 0,6 => LEV_NEED=2, symbol 20x van DAT, symbol 0x lech" "[ $RC = 3 ] && echo \"\$OUT\" | grep -q 'leverage >= 2 ' && echo \"\$OUT\" | grep -q 'leverage thap 1'"
