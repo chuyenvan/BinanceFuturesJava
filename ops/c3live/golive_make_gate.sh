@@ -71,8 +71,13 @@ gm_set() { local m f; m=$(gm_addmax "$1"); gm_list "$1" | while IFS= read -r f; 
     if { [ -n "$m" ] && [ "$(gm_pnum "$f")" = "$m" ]; } || [[ "$f" =~ ^docs/prereg/PREREG_E2E_REPLAY_V12[^/]*\.md$ ]] || [ "$f" = "$GM_LF" ]; then
       printf '%s %s\n' "$f" "$(git -C "$PREREG_REPO" cat-file blob "$1:$f" | sha256sum | cut -c1-64)"; fi; done | LC_ALL=C sort; }
 gm_setdiff() { diff <(printf '%s\n' "$1") <(printf '%s\n' "$2") | sed -n 's/^[<>] \([^ ]*\) .*/\1/p' | LC_ALL=C sort -u | tr '\n' ' ' | cut -c1-240; }
+# [OPS5 n1d] file trong docs/prereg (DE QUY, khong phan biet hoa thuong) mang ten addendum PREREG_PARITY_V12_DRY_ADD* ma gm_pnum KHONG parse duoc,
+#   hoac PREREG_E2E_REPLAY_V12* sai hoa/thuong / thu muc con => ten NGOAI mau (khong bi rang buoc) => TU CHOI (fail-closed)
+gm_odd() { local f u; git -C "$PREREG_REPO" ls-tree -r -z --name-only "$1" docs/prereg/ 2>/dev/null | tr '\0' '\n' | while IFS= read -r f; do
+    u=$(printf '%s' "${f##*/}" | tr 'a-z' 'A-Z')
+    case "$u" in *PREREG_PARITY_V12_DRY_ADD*) gm_pnum "$f" >/dev/null || printf '%s ' "$f";; *PREREG_E2E_REPLAY_V12*) [[ "$f" =~ ^docs/prereg/PREREG_E2E_REPLAY_V12[^/]*\.md$ ]] || printf '%s ' "$f";; esac; done; }
 gm_errata_miss() { local f h b L; L=$(git -C "$PREREG_REPO" cat-file blob "$1:$GM_LF" 2>/dev/null); printf '%s\n' "$2" | while read -r f h; do
-    [ -n "$f" ] || continue; b=${f##*/}; printf '%s' "$b" | grep -qi errata || continue; printf '%s\n' "$L" | grep -qF -- "$b" || printf '%s ' "$b"; done; }
+    [ -n "$f" ] || continue; b=${f##*/}; printf '%s' "$b" | grep -qi errata || continue; grep -qF -- "$b" <<<"$L" || printf '%s ' "$b"; done; }   # [OPS5 n3c] here-string: khong SIGPIPE khi limits lon
 GMICRO_MANUAL=${GMICRO_MANUAL:-}; REPLAY_RESULT=${REPLAY_RESULT:-}; SIZING_RESULT=${SIZING_RESULT:-}
 OVB=${GATE_OVERRIDE_BY:-}; OVW=${GATE_OVERRIDE_WHY:-}
 PRC=${1:-}; REP=${2:-$(ls -t "$PW"/report_*.out 2>/dev/null | head -1)}
@@ -98,6 +103,7 @@ PCHG=$(git -C "$PREREG_REPO" diff --name-only "$PRC" HEAD -- "$PREREG_FILE" "$LI
   || no "tu prereg_commit $PRC toi HEAD $PREREG_REPO co thay doi prereg/limits: $(echo "$PCHG" | tr '\n' ' ' | cut -c1-200)- gate phai dua tren prereg_commit MOI (HEAD)"
 # [OPS-MICRO4 n1c] TAP file prereg rang buoc tai prereg_commit = tai HEAD (file moi khop mau / doi / xoa => TU CHOI)
 PSC=$(gm_set "$PRC"); PSH=$(gm_set HEAD)
+ODD=$(gm_odd "$PRC")$(gm_odd HEAD); [ -z "$ODD" ] || no "file prereg ten NGOAI mau (OPS5 n1d, dat lai ten PREREG_PARITY_V12_DRY_ADDENDUM<n>[_X].md / PREREG_E2E_REPLAY_V12*.md ngay trong docs/prereg/): $(echo "$ODD" | cut -c1-240)"
 [ -n "$PSC" ] && [ "$PSC" = "$PSH" ] || no "tap file prereg rang buoc KHAC giua prereg_commit $PRC va HEAD $PREREG_REPO: $(gm_setdiff "$PSC" "$PSH")- gate phai dua tren prereg_commit MOI (HEAD)"
 # [OPS-MICRO4 n3b] moi file ERRATA trong tap => TEN file phai co nguyen van trong $LIMF tai prereg_commit
 EMISS=$(gm_errata_miss "$PRC" "$PSC")

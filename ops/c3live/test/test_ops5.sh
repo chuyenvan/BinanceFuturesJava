@@ -304,6 +304,23 @@ chk "o8 install lan 2 => KHONG DOI" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'KH
 OUT=$(echo YES | OI MODE=rollback bash "$HERE/install_242_oracle_seen.sh" 2>&1); RC=$?
 chk "o9 rollback: crontab = ban dau, script -> .off_" "[ $RC = 0 ] && cmp -s $W/ct242 $W/ct242_os0 && [ ! -e $SB/c3_oracle_seen.sh ]"
 
+echo "== OPS5 muc 6: MINOR n1d (ten prereg ngoai mau) + n3c (limits lon) - helper GIONG trong make_gate + micro_on"
+PRG5=$W/prereg5; mkdir -p $PRG5/docs/prereg/sub; git -C $PRG5 init -q
+pc() { git -C $PRG5 -c user.name=t -c user.email=t@t add -A && git -C $PRG5 -c user.name=t -c user.email=t@t commit -qm x; }
+echo a > $PRG5/docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM22_GRID.md; echo b > $PRG5/docs/prereg/PREREG_E2E_REPLAY_V12_ERRATA1.md; echo c > $PRG5/docs/prereg/PREREG_PARITY_V12_DRY_ADD9.md
+python3 -c "print('x' * 300000); print('PREREG_E2E_REPLAY_V12_ERRATA1.md')" > $PRG5/docs/prereg/GATE_LIMITS_MICRO.md; pc
+for S in golive_make_gate.sh golive_micro_on.sh; do
+  R6=$( PREREG_REPO=$PRG5; GM_LF=docs/prereg/GATE_LIMITS_MICRO.md
+    eval "$(grep -E '^gm_(list|pnum|addmax)\(\)' $HERE/$S)"; eval "$(sed -n '/^gm_odd()/,/done; }$/p' $HERE/$S)"; eval "$(sed -n '/^gm_errata_miss()/,/done; }/p' $HERE/$S)"
+    eval "$(sed -n '/^gm_set()/,/LC_ALL=C sort; }$/p' $HERE/$S)"
+    o0=$(gm_odd HEAD); e0=$(gm_errata_miss HEAD "$(gm_set HEAD)")
+    for n in PREREG_PARITY_V12_DRY_ADDENDUM_23.md prereg_parity_v12_dry_add24.md PREREG_PARITY_V12_DRY_ADDENDUM23.MD sub/PREREG_PARITY_V12_DRY_ADDENDUM23.md prereg_e2e_replay_v12_errata4.md; do
+      echo z > "$PRG5/docs/prereg/$n"; pc; o=$(gm_odd HEAD); echo "$o" | grep -qF "$n" && printf 'odd_ok ' || printf 'ODD_MISS:%s ' "$n"; git -C $PRG5 rm -q "docs/prereg/$n"; pc; done
+    echo z > $PRG5/docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM23_X.md; pc; o1=$(gm_odd HEAD); git -C $PRG5 rm -q docs/prereg/PREREG_PARITY_V12_DRY_ADDENDUM23_X.md; pc
+    echo "o0=[$o0] e0=[$e0] o1=[$o1]" )
+  chk "n1d/n3c ($S): repo dung mau => gm_odd rong; limits 300 KB co ERRATA1 => KHONG tu choi oan (n3c); 5 ten ngoai mau (_ADDENDUM_23, chu thuong, .MD, thu muc con, errata chu thuong) => bi nhan dien; ADDENDUM23_X dung mau => khong" "[ \"\$(echo '$R6' | grep -o 'odd_ok' | wc -l)\" = 5 ] && echo '$R6' | grep -q 'o0=\[\] e0=\[\] o1=\[\]'"
+done
+
 # == KET THUC ==
 cleanup
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
