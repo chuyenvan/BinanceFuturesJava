@@ -89,36 +89,80 @@ public final class OpsHooks {
             p.c6OwnPeak = true;
             // [2d MIN-19] dinh dry != dinh live; [V12 R4 R4] C6/A40 do tren EQUITY C3 => dinh rieng (dinh tmb cu bi bo qua)
             if (p.peakTag == null) {
-                String base = adapterTag(Cfg.get("LIVE_ADAPTER")) + C3EQ_TAG_SUFFIX;
-                // [W3A muc 7 A-02] gan dinh C6/A40 voi C3_CAPITAL: doi von (pilot_on / rollback / ha size) => dinh cu BO QUA
-                String cap = capTag(Cfg.get("C3_CAPITAL"), Cfg.get("LIVE_C3_PILOT_CAPITAL"), Cfg.get(KEY_PEAK_TAG_CAP));
-                p.peakTag = cap == null ? base : base + cap;
-                if (cap != null) p.peakTagLegacy = base;   // file cua jar truoc (khong hau to von) van nap duoc 1 lan
+                // [W3B muc 7 A-02] gan dinh C6/A40 voi C3_CAPITAL (token cap= rieng, nhan adapter= GIU nhu jar cu)
+                applyC3PeakTag(p, Cfg.get("LIVE_ADAPTER"), Cfg.get("C3_CAPITAL"), Cfg.get("LIVE_C3_PILOT_CAPITAL"),
+                        Cfg.get(KEY_PEAK_TAG_CAP), new File(Cfg.getOr(
+                                com.binance.chuyennd.c3live.runtime.C3LiveRuntime.KEY_EQUITY_FILE,
+                                com.binance.chuyennd.c3live.runtime.C3LiveRuntime.DEFAULT_EQUITY_FILE)));
             }
             return new KillSwitchEngine(mode, label, sink, c3livePeakFile, null, uMax, nowMs, p);
         }
         return new KillSwitchEngine(mode, label, sink, shadowPeakFile, paperEquity, uMax, nowMs, prm);
     }
 
-    /** [W3A muc 7] env tat gan von vao nhan dinh (chi "false" moi tat). */
+    /** [W3A muc 7] env tat gan von vao dinh (chi "false" moi tat => hanh vi jar cu). */
     static final String KEY_PEAK_TAG_CAP = "C3_PEAK_TAG_CAPITAL";
 
     /**
-     * [W3A muc 7 A-02] Hau to von cho nhan dinh kill-switch c3_live: "_cap&lt;von&gt;" (von = C3_CAPITAL, thieu/sai =>
-     * LIVE_C3_PILOT_CAPITAL, thieu/sai => 10 000 ? cung thu tu C3LiveRuntime). Phan thap phan: '.' -&gt; 'p'.
+     * [W3B muc 7 A-02] Dat nhan + von cho dinh kill-switch c3_live. Nhan = "&lt;adapter&gt;_c3eq" (y nhu jar cu => rollback jar
+     * van nap dinh); von hien tai -&gt; {@link KillSwitchEngine.Params#peakCap}; von JVM truoc (file trang thai equity c3
+     * cung adapter) -&gt; {@link KillSwitchEngine.Params#peakCapPrev} (chi dung khi file dinh thieu von).
+     *
+     * @param p          tham so engine (ghi de peakTag/peakCap/peakCapPrev)
+     * @param adapterRaw env LIVE_ADAPTER
+     * @param capRaw     env C3_CAPITAL
+     * @param pilotRaw   env LIVE_C3_PILOT_CAPITAL
+     * @param flag       env C3_PEAK_TAG_CAPITAL ("false" => khong gan von)
+     * @param eqState    file trang thai equity c3 (LIVE_C3_EQUITY_FILE)
+     */
+    static void applyC3PeakTag(KillSwitchEngine.Params p, String adapterRaw, String capRaw, String pilotRaw, String flag,
+                               File eqState) {
+        String ad = adapterTag(adapterRaw);
+        p.peakTag = ad + C3EQ_TAG_SUFFIX;
+        p.peakCap = capValue(capRaw, pilotRaw, flag);
+        p.peakCapPrev = p.peakCap == null ? null : prevCapital(eqState, ad);
+        LOG.info("[KILLSW] dinh c3_live nhan={} von={} von_JVM_truoc={} ({})", p.peakTag, p.peakCap == null ? "(khong gan, "
+                + KEY_PEAK_TAG_CAP + "=false)" : p.peakCap, p.peakCapPrev == null ? "-" : p.peakCapPrev,
+                eqState == null ? "-" : eqState.getPath());
+    }
+
+    /**
+     * [W3B muc 7 A-02] Von c3 hien tai dang chuan (vd "1000", "1000.5"): C3_CAPITAL, thieu/sai =&gt; LIVE_C3_PILOT_CAPITAL,
+     * thieu/sai =&gt; 10 000 (cung thu tu C3LiveRuntime).
      *
      * @param capRaw   env C3_CAPITAL
      * @param pilotRaw env LIVE_C3_PILOT_CAPITAL
-     * @param flag     env C3_PEAK_TAG_CAPITAL ("false" => null = khong gan)
-     * @return hau to hoac null
+     * @param flag     env C3_PEAK_TAG_CAPITAL ("false" =&gt; null = khong gan)
+     * @return von hoac null
      */
-    static String capTag(String capRaw, String pilotRaw, String flag) {
+    static String capValue(String capRaw, String pilotRaw, String flag) {
         if (flag != null && "false".equalsIgnoreCase(flag.trim())) return null;
         double pilot = posOr(pilotRaw, com.binance.chuyennd.c3live.risk.C3LiveEquity.DEFAULT_PILOT_CAPITAL);
         double cap = posOr(capRaw, pilot);
-        String v = (cap == Math.rint(cap) && Math.abs(cap) < 1e15) ? Long.toString((long) cap)
-                : java.math.BigDecimal.valueOf(cap).stripTrailingZeros().toPlainString().replace('.', 'p');
-        return "_cap" + v;
+        return java.math.BigDecimal.valueOf(cap).stripTrailingZeros().toPlainString();
+    }
+
+    /**
+     * [W3B muc 7] Von c3 cua JVM truoc: truong "capital" file trang thai equity c3 (C3MainEquity, jar cu va moi deu ghi)
+     * neu "adapter" cua file = adapter hien tai. Doc truoc khi runtime tao C3MainEquity (KS dung o class-init OpsHooks).
+     *
+     * @param f       file trang thai equity c3
+     * @param adapter nhan adapter (vd "live")
+     * @return von &gt; 0 hoac null (khong co / hong / adapter khac)
+     */
+    static Double prevCapital(File f, String adapter) {
+        if (f == null || !f.isFile() || adapter == null) return null;
+        try {
+            com.google.gson.JsonObject o = com.google.gson.JsonParser.parseString(new String(java.nio.file.Files.readAllBytes(
+                    f.toPath()), java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+            String t = o.has("adapter") && !o.get("adapter").isJsonNull() ? o.get("adapter").getAsString() : null;
+            if (!adapter.equals(t) || !o.has("capital")) return null;
+            double c = o.get("capital").getAsDouble();
+            return Double.isFinite(c) && c > 0d ? c : null;
+        } catch (Exception e) {
+            LOG.warn("[KILLSW] khong doc duoc von JVM truoc tu {}: {} => khong co moc von", f.getPath(), e.toString());
+            return null;
+        }
     }
 
     private static double posOr(String raw, double def) {

@@ -14,8 +14,9 @@ import java.util.List;
 import static org.junit.Assert.*;
 
 /**
- * [W3A muc 7 A-02] dinh C6/A40 c3_live gan voi C3_CAPITAL: pilot 10 000 -> rollback 1 000 KHONG tao DD gia -90 % =>
- * khong FLATTEN; file dinh cua jar truoc (nhan khong co von) van nap duoc (khong mat dinh khi doi jar) va duoc ghi lai.
+ * [W3A/W3B muc 7 A-02] dinh C6/A40 c3_live gan voi C3_CAPITAL (token cap= rieng, nhan adapter= giu nhu jar cu):
+ * pilot 10 000 -> rollback 1 000 KHONG tao DD gia -90 % => khong FLATTEN; dinh jar cu (thieu cap) chi nap khi von JVM truoc
+ * (file trang thai equity c3) = von hien tai; rollback jar / tat co van nap duoc dinh cua jar moi.
  */
 public class KillSwitchCapitalPeakTest {
 
@@ -26,7 +27,9 @@ public class KillSwitchCapitalPeakTest {
     File shadowPeak;
     File ownPeak;
     File latch;
+    File eqState;
     final List<String> lines = new ArrayList<>();
+    final List<String> alerts = new ArrayList<>();
     final KillSwitchEngine.Sink sink = new KillSwitchEngine.Sink() {
         public void info(String m) { lines.add("I " + m); }
         public void warn(String m) { lines.add("W " + m); }
@@ -34,94 +37,222 @@ public class KillSwitchCapitalPeakTest {
 
     @Before
     public void setUp() {
-        File run = new File(tmp.getRoot(), "run_w3a");
+        File run = new File(tmp.getRoot(), "run_w3b");
         assertTrue(run.mkdirs());
         shadowPeak = new File(run, "killsw_peak");
         ownPeak = new File(run, "c3live_killsw_peak");
         latch = new File(run, "killsw_latch.json");
+        eqState = new File(run, "c3live_equity_c3.json");
     }
 
-    private KillSwitchEngine.Params params(String tag, String legacy) {
+    private KillSwitchEngine.Params params() {
         KillSwitchEngine.Params p = new KillSwitchEngine.Params();
         p.latchFile = latch;
-        p.resetFile = new File(tmp.getRoot(), "run_w3a/killsw_reset.req");
+        p.resetFile = new File(tmp.getRoot(), "run_w3b/killsw_reset.req");
         p.autoReleaseMs = 30 * 60_000L;
         p.autoReleaseCodes.add("C3");
         p.c4Capacity = true;
-        p.peakTag = tag;
-        p.peakTagLegacy = legacy;
         return p;
     }
 
-    private KillSwitchEngine eng(long now, String tag, String legacy) {
-        return OpsHooks.build(KillSwitchEngine.Mode.ACT, "act", sink, true, shadowPeak, ownPeak, () -> 35_000d, () -> 0.6f,
-                now, params(tag, legacy));
+    /** JVM moi (co BAT) von cap / co tat ("false") = hanh vi jar cu. */
+    private KillSwitchEngine eng(long now, String cap, String flag) {
+        KillSwitchEngine.Params p = params();
+        OpsHooks.applyC3PeakTag(p, "live", cap, null, flag, eqState);
+        KillSwitchEngine e = OpsHooks.build(KillSwitchEngine.Mode.ACT, "act", sink, true, shadowPeak, ownPeak, () -> 35_000d,
+                () -> 0.6f, now, p);
+        e.setAlert(alerts::add);
+        return e;
+    }
+
+    /** gia lap C3MainEquity.saveState (jar cu va moi deu ghi "capital"). */
+    private void eqStateCap(String adapter, double cap) throws Exception {
+        Files.write(eqState.toPath(), ("{\"adapter\":\"" + adapter + "\",\"start_ms\":1,\"capital\":" + cap
+                + ",\"funding_cum\":0.0,\"income_last_ms\":1,\"income_last_ids\":[]}").getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static void eq(KillSwitchEngine e, long t, double v) {
+        e.onPaper(t, 0, 0f, (float) v);
+        e.onAccountEquity(t, v);
     }
 
     private String own() throws Exception {
         return new String(Files.readAllBytes(ownPeak.toPath()), StandardCharsets.UTF_8).trim();
     }
 
+    private String latchTxt() throws Exception {
+        return new String(Files.readAllBytes(latch.toPath()), StandardCharsets.UTF_8);
+    }
+
     @Test
-    public void capTag_thuTuNguonVaDinhDang() {
-        assertEquals("_cap10000", OpsHooks.capTag("10000", null, null));
-        assertEquals("_cap1000", OpsHooks.capTag(" 1000.0 ", "4000", null));
-        assertEquals("_cap4000", OpsHooks.capTag(null, "4000", null));
-        assertEquals("_cap10000", OpsHooks.capTag(null, null, null));
-        assertEquals("_cap10000", OpsHooks.capTag("abc", "-5", null));
-        assertEquals("_cap1000p5", OpsHooks.capTag("1000.5", null, "true"));
-        assertNull(OpsHooks.capTag("1000", null, "FALSE"));
+    public void capValue_thuTuNguonVaDinhDang() {
+        assertEquals("10000", OpsHooks.capValue("10000", null, null));
+        assertEquals("1000", OpsHooks.capValue(" 1000.0 ", "4000", null));
+        assertEquals("4000", OpsHooks.capValue(null, "4000", null));
+        assertEquals("10000", OpsHooks.capValue(null, null, null));
+        assertEquals("10000", OpsHooks.capValue("abc", "-5", null));
+        assertEquals("1000.5", OpsHooks.capValue("1000.5", null, "true"));
+        assertNull(OpsHooks.capValue("1000", null, "FALSE"));
+    }
+
+    @Test
+    public void applyTag_nhanGiuNhuJarCu_vonJvmTruocTuFileEquity() throws Exception {
+        KillSwitchEngine.Params p = params();
+        OpsHooks.applyC3PeakTag(p, "LIVE", "1000", null, null, eqState);
+        assertEquals("live_c3eq", p.peakTag);
+        assertEquals("1000", p.peakCap);
+        assertNull("chua co file equity", p.peakCapPrev);
+        eqStateCap("live", 10_000d);
+        OpsHooks.applyC3PeakTag(p, "live", "1000", null, null, eqState);
+        assertEquals(10_000d, p.peakCapPrev, 1e-9);
+        eqStateCap("dry", 10_000d);
+        OpsHooks.applyC3PeakTag(p, "live", "1000", null, null, eqState);
+        assertNull("file equity cua adapter khac => khong tin", p.peakCapPrev);
+        Files.write(eqState.toPath(), "{hong".getBytes(StandardCharsets.UTF_8));
+        OpsHooks.applyC3PeakTag(p, "live", "1000", null, null, eqState);
+        assertNull(p.peakCapPrev);
+        Files.write(eqState.toPath(), "{\"adapter\":\"live\",\"capital\":-3}".getBytes(StandardCharsets.UTF_8));
+        OpsHooks.applyC3PeakTag(p, "live", "1000", null, null, eqState);
+        assertNull(p.peakCapPrev);
+        OpsHooks.applyC3PeakTag(p, "live", "1000", null, "false", eqState);
+        assertEquals("live_c3eq", p.peakTag);
+        assertNull(p.peakCap);
+        assertNull(p.peakCapPrev);
     }
 
     /** Kich ban audit A-02: pilot_on 1000 -> 10000 (dinh ~10 000), hau kiem TRUOT => rollback C3_CAPITAL=1000. */
     @Test
     public void pilotRollback_khongFlatten() throws Exception {
-        KillSwitchEngine pilot = eng(T0, "live_c3eq_cap10000", "live_c3eq");
-        pilot.onPaper(T0, 0, 0f, 10_000f);
-        pilot.onAccountEquity(T0, 10_000d);
-        assertTrue(own(), own().endsWith("adapter=live_c3eq_cap10000"));
+        KillSwitchEngine pilot = eng(T0, "10000", null);
+        eq(pilot, T0, 10_000d);
+        assertEquals("10000.0 adapter=live_c3eq cap=10000", own());
+        assertTrue(latchTxt(), latchTxt().contains("\"acct_peak_adapter\":\"live_c3eq\"") && latchTxt().contains("\"acct_peak_cap\":\"10000\""));
+        eqStateCap("live", 10_000d);
         lines.clear();
-        KillSwitchEngine back = eng(T0 + 60_000L, "live_c3eq_cap1000", "live_c3eq");
+        KillSwitchEngine back = eng(T0 + 60_000L, "1000", null);
         assertTrue("dinh von khac => bo qua", Double.isNaN(back.peak()));
         assertTrue(Double.isNaN(back.acctPeak()));
-        back.onPaper(T0 + 61_000L, 0, 0f, 1_000f);
-        back.onAccountEquity(T0 + 61_000L, 1_000d);
+        eq(back, T0 + 61_000L, 1_000d);
         assertEquals(KillSwitchEngine.Action.NONE, back.requiredAction());
         assertEquals(1_000d, back.peak(), 1e-9);
+        assertTrue(alerts.toString(), alerts.stream().anyMatch(a -> a.contains("BO QUA vi von")));
     }
 
-    /** Hoi quy: nhan KHONG gan von (C3_PEAK_TAG_CAPITAL=false = jar cu) => van tai hien loi A-02 (FLATTEN). */
+    /** Hoi quy: C3_PEAK_TAG_CAPITAL=false (= jar cu) => van tai hien loi A-02 (FLATTEN). */
     @Test
     public void coTat_taiHienLoiCu() throws Exception {
-        KillSwitchEngine pilot = eng(T0, "live_c3eq", null);
-        pilot.onPaper(T0, 0, 0f, 10_000f);
-        pilot.onAccountEquity(T0, 10_000d);
-        KillSwitchEngine back = eng(T0 + 60_000L, "live_c3eq", null);
+        KillSwitchEngine pilot = eng(T0, "10000", "false");
+        eq(pilot, T0, 10_000d);
+        assertEquals("co tat => dinh dang y jar cu", "10000.0 adapter=live_c3eq", own());
+        assertFalse(latchTxt().contains("acct_peak_cap"));
+        KillSwitchEngine back = eng(T0 + 60_000L, "1000", "false");
         assertEquals(10_000d, back.peak(), 1e-9);
-        back.onPaper(T0 + 61_000L, 0, 0f, 1_000f);
-        back.onAccountEquity(T0 + 61_000L, 1_000d);
+        eq(back, T0 + 61_000L, 1_000d);
         assertEquals(KillSwitchEngine.Action.FLATTEN, back.requiredAction());
     }
 
-    /** Doi jar (cung von): dinh do jar cu ghi (nhan live_c3eq) duoc nap => khong mat DD dang co; ghi lai nhan moi. */
+    /** Doi jar (cung von): dinh jar cu (thieu cap) + von JVM truoc = von hien tai => nap, roi ghi lai kem cap=. */
     @Test
-    public void doiJar_napDinhNhanCu_roiGhiLaiNhanMoi() throws Exception {
-        KillSwitchEngine old = eng(T0, "live_c3eq", null);
-        old.onPaper(T0, 0, 0f, 1_200f);
-        old.onAccountEquity(T0, 1_200d);
-        assertTrue(own().endsWith("adapter=live_c3eq"));
-        KillSwitchEngine nw = eng(T0 + 60_000L, "live_c3eq_cap1000", "live_c3eq");
+    public void doiJar_cungVon_napDinhCu_roiGhiLaiKemCap() throws Exception {
+        KillSwitchEngine old = eng(T0, "1000", "false");
+        eq(old, T0, 1_200d);
+        eqStateCap("live", 1_000d);
+        assertEquals("1200.0 adapter=live_c3eq", own());
+        KillSwitchEngine nw = eng(T0 + 60_000L, "1000", null);
         assertEquals(1_200d, nw.peak(), 1e-9);
         assertEquals(1_200d, nw.acctPeak(), 1e-9);
-        assertTrue(lines.toString(), lines.stream().anyMatch(l -> l.contains("nhan cu adapter=live_c3eq")));
-        nw.onPaper(T0 + 400_000L, 0, 0f, 1_100f);
-        nw.onAccountEquity(T0 + 400_000L, 1_100d);
+        assertTrue(lines.toString(), lines.stream().anyMatch(l -> l.contains("dinh dang cu (thieu cap=) => chap nhan")));
+        eq(nw, T0 + 400_000L, 1_100d);
         assertEquals(KillSwitchEngine.Action.NONE, nw.requiredAction());
-        assertTrue("ghi lai nhan moi: " + own(), own().endsWith("adapter=live_c3eq_cap1000"));
-        String lt = new String(Files.readAllBytes(latch.toPath()), StandardCharsets.UTF_8);
-        assertTrue(lt, lt.contains("\"acct_peak_adapter\":\"live_c3eq_cap1000\""));
-        // sau khi ghi lai, ha von => dinh bi bo qua (lo A-02 dong)
-        KillSwitchEngine down = eng(T0 + 500_000L, "live_c3eq_cap500", "live_c3eq");
+        assertEquals("ghi lai kem cap", "1200.0 adapter=live_c3eq cap=1000", own());
+        assertTrue(latchTxt(), latchTxt().contains("\"acct_peak_cap\":\"1000\""));
+        // sau khi ghi lai, ha von => dinh bi bo qua
+        KillSwitchEngine down = eng(T0 + 500_000L, "500", null);
         assertTrue(Double.isNaN(down.peak()));
+        assertTrue(Double.isNaN(down.acctPeak()));
+    }
+
+    /** File thieu cap + KHONG co moc von (file equity mat) => bo qua, canh bao, cach ly; restart sau KHONG nap lai. */
+    @Test
+    public void thieuCap_khongMocVon_boQua_cachLy_restartKhongNapLai() throws Exception {
+        KillSwitchEngine old = eng(T0, "10000", "false");
+        eq(old, T0, 10_000d);
+        assertFalse(eqState.exists());
+        KillSwitchEngine nw = eng(T0 + 60_000L, "1000", null);
+        assertTrue(Double.isNaN(nw.peak()));
+        assertTrue(Double.isNaN(nw.acctPeak()));
+        assertTrue(alerts.toString(), alerts.stream().anyMatch(a -> a.contains("KHONG chung minh duoc von khong doi")));
+        assertFalse("file dinh cu da cach ly", ownPeak.exists());
+        File[] q = ownPeak.getParentFile().listFiles((d, n) -> n.startsWith("c3live_killsw_peak.bo_qua_"));
+        assertEquals(1, q.length);
+        assertFalse("latch da ghi lai khong acct_peak cu: " + latchTxt(), latchTxt().contains("acct_peak"));
+        // JVM chet truoc equity dau tien; C3MainEquity da ghi von moi => restart: van KHONG co dinh cu
+        eqStateCap("live", 1_000d);
+        KillSwitchEngine again = eng(T0 + 120_000L, "1000", null);
+        assertTrue(Double.isNaN(again.peak()));
+        assertTrue(Double.isNaN(again.acctPeak()));
+        eq(again, T0 + 121_000L, 1_000d);
+        assertEquals(KillSwitchEngine.Action.NONE, again.requiredAction());
+    }
+
+    /** File thieu cap + moc von JVM truoc KHAC => bo qua + cach ly (restart sau khi file equity mang von moi khong nap). */
+    @Test
+    public void thieuCap_vonDoiTheoMoc_boQua_cachLy() throws Exception {
+        KillSwitchEngine old = eng(T0, "10000", "false");
+        eq(old, T0, 10_000d);
+        eqStateCap("live", 10_000d);
+        KillSwitchEngine nw = eng(T0 + 60_000L, "1000", null);
+        assertTrue(Double.isNaN(nw.peak()));
+        assertFalse(ownPeak.exists());
+        eqStateCap("live", 1_000d);
+        KillSwitchEngine again = eng(T0 + 120_000L, "1000", null);
+        assertTrue(Double.isNaN(again.peak()));
+        assertTrue(Double.isNaN(again.acctPeak()));
+    }
+
+    /** Dinh dang nhan cua ban w3a (dd8547d9, "live_c3eq_cap1000") van doc duoc: cung von nap + ghi lai; von khac bo qua. */
+    @Test
+    public void nhanW3a_docDuoc() throws Exception {
+        Files.write(ownPeak.toPath(), "1200.0 adapter=live_c3eq_cap1000\n".getBytes(StandardCharsets.UTF_8));
+        KillSwitchEngine a = eng(T0, "1000", null);
+        assertEquals(1_200d, a.peak(), 1e-9);
+        eq(a, T0 + 1_000L, 1_150d);
+        assertEquals("1200.0 adapter=live_c3eq cap=1000", own());
+        Files.write(ownPeak.toPath(), "1200.0 adapter=live_c3eq_cap1000\n".getBytes(StandardCharsets.UTF_8));
+        KillSwitchEngine b = eng(T0 + 60_000L, "500", null);
+        assertTrue(Double.isNaN(b.peak()));
+        Files.write(ownPeak.toPath(), "1200.0 adapter=live_c3eq_cap1000p5\n".getBytes(StandardCharsets.UTF_8));
+        KillSwitchEngine c = eng(T0 + 70_000L, "1000.5", null);
+        assertEquals(1_200d, c.peak(), 1e-9);
+    }
+
+    /** Nhan adapter khac (dry) van bo qua nhu 2d MIN-19 (ke ca co cap trung). */
+    @Test
+    public void adapterKhac_boQua() throws Exception {
+        Files.write(ownPeak.toPath(), "1200.0 adapter=dry_c3eq cap=1000\n".getBytes(StandardCharsets.UTF_8));
+        KillSwitchEngine a = eng(T0, "1000", null);
+        assertTrue(Double.isNaN(a.peak()));
+        assertTrue(lines.toString(), lines.stream().anyMatch(l -> l.contains("!= adapter hien tai live_c3eq => BO QUA")));
+        assertTrue("khong cach ly file adapter khac", ownPeak.exists());
+    }
+
+    /**
+     * Tuong thich nguoc: chep NGUYEN logic loadPeak cua jar b9e661db (tag = token adapter= cuoi; so = token dau) => file
+     * jar moi ghi phai duoc jar cu chap nhan (khong mat dinh khi rollback).
+     */
+    @Test
+    public void jarCu_docDuocFileJarMoi() throws Exception {
+        KillSwitchEngine nw = eng(T0, "1000", null);
+        eq(nw, T0, 1_234.5d);
+        String s = own();
+        String[] tok = s.split("\\s+");
+        String tag = null;
+        for (String x : tok) if (x.startsWith("adapter=")) tag = x.substring("adapter=".length());
+        assertEquals("live_c3eq", tag);
+        assertEquals(1_234.5d, Double.parseDouble(tok[0]), 1e-9);
+        com.google.gson.JsonObject o = com.google.gson.JsonParser.parseString(latchTxt()).getAsJsonObject();
+        assertEquals("live_c3eq", o.get("acct_peak_adapter").getAsString());
+        assertEquals("live_c3eq", o.get("adapter").getAsString());
+        assertEquals(1_234.5d, o.get("acct_peak").getAsDouble(), 1e-9);
     }
 }
