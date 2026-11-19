@@ -249,5 +249,15 @@ chk "chu ky 2: off flat khong KS => env goc tung byte, PUSH ON, KS go, cron go" 
 reset_all; ON
 OUT=$(echo YES | DRY=0 bash $G/gridtest_off.sh 2>&1); RC=$?
 chk "chu ky 3: off binh thuong lan nua (idempotent qua nhieu phien)" "[ $RC = 0 ] && cmp -s $F/conf/env.sh $W/env0.sh"
+# ===================================================== mat ssh o cac buoc khac
+reset_all; echo "BASE before 3" > $W/sshplan; P0=$(pid); ON
+chk "mat ssh khi tao BASE: TU CHOI, bot khong dung, env khong doi, khong KS" "[ $RC = 1 ] && [ \"\$(pid)\" = '$P0' ] && [ \"\$(em5)\" = $E0 ] && [ ! -e $F/run/KILL_SWITCH ]"
+reset_all; echo "CHK before 2" > $W/sshplan; ON
+chk "mat ssh 2 lan o hau kiem (thu lai trong s242in): van XONG pha A" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG PHA A'"
+OUT=$(echo YES | DRY=0 bash $G/gridtest_off.sh 2>&1)
+reset_all; echo "KSOFF before 3" > $W/sshplan; ON
+chk "mat ssh khi go KS cua minh: KHAN exit 2, KS VAN DAT (bot drain, an toan), env test, state A" "[ $RC = 2 ] && grep -q '^gridtest_on ' $F/run/KILL_SWITCH && penv | grep -qx LIVE_GATE_ROLLING_PCT=0.99 && [ \"\$(st GT_PHASE)\" = A ] && grep -q KHAN $W/tg.txt"
+: > $W/sshplan; OUT=$(echo YES | DRY=0 bash $G/gridtest_off.sh 2>&1); RC=$?
+chk "sau do off (KS cua on con => coi la KS khac, GIU): env goc tung byte, KS con" "[ $RC = 0 ] && cmp -s $F/conf/env.sh $W/env0.sh && [ -e $F/run/KILL_SWITCH ]"
 echo "TONG: $P/$N"
 [ "$P" = "$N" ] && echo "TEST PASS $P/$N" || echo "TEST FAIL$FAILS ($P/$N)"
