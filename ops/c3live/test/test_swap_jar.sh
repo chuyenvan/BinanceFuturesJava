@@ -50,7 +50,7 @@ case "$1" in
     set -a; . conf/env.sh; set +a; export PN
     FDJ=target/binance-java-sdk-1.2.4.jar; [ -f FAKE_FD_STALE ] && [ "$ISNEW" = 1 ] && FDJ=$(cat FAKE_FD_STALE); export FDJ   # JVM gia giu fd jar nhu that
     nohup bash -c 'exec 3<"$FDJ"; exec -a "$PN" sleep 900' >/dev/null 2>&1 &
-    [ "$ISNEW" = 1 ] && [ -f FAKE_TWO_JVM_IF_NEW ] && nohup bash -c 'exec 3<"$FDJ"; exec -a "$PN" sleep 900' >/dev/null 2>&1 &
+    if [ "$ISNEW" = 1 ] && [ -f FAKE_TWO_JVM_IF_NEW ]; then nohup bash -c 'exec 3<"$FDJ"; exec -a "$PN" sleep 900' >/dev/null 2>&1 & fi
     sleep 1
     D=$(TZ=Asia/Ho_Chi_Minh date '+%d/%m/%Y %H:%M:%S.000')
     PUSHV=OFF; [ ! -e run/KILL_SWITCH ] && PUSHV=ON
@@ -68,7 +68,7 @@ case "$1" in
       { [ -f FAKE_KHAN_ALWAYS ] || { [ "$ISNEW" = 1 ] && [ -f FAKE_KHAN_IF_NEW ]; }; } && echo "$D ERROR [x] x: [C3-LIVE] KHAN gia lap"
     } >> logs/full.log
     [ "$ISNEW" = 1 ] && [ -f FAKE_DRAIN_IF_NEW ] && echo "golive_live_off drain 20990101_000000" > run/KILL_SWITCH
-    [ -f FAKE_DRAIN_AFTER_OK ] && nohup bash -c 'echo hfxw_$(cat FAKE_TID) >/dev/null; for i in $(seq 1 120); do sleep 0.5; ls run/KILL_SWITCH.ok_* >/dev/null 2>&1 && { echo "golive_live_off drain 20990101_000001" > run/KILL_SWITCH; exit 0; }; done' "hfxw_$(cat FAKE_TID)" >/dev/null 2>&1 &
+    if [ -f FAKE_DRAIN_AFTER_OK ]; then nohup bash -c 'echo hfxw_$(cat FAKE_TID) >/dev/null; for i in $(seq 1 120); do sleep 0.5; ls run/KILL_SWITCH.ok_* >/dev/null 2>&1 && { echo "golive_live_off drain 20990101_000001" > run/KILL_SWITCH; exit 0; }; done' "hfxw_$(cat FAKE_TID)" >/dev/null 2>&1 & fi
     if [ "$PUSHV" = OFF ] && [ ! -f FAKE_NOPUSHON ]; then
       nohup bash -c 'echo hfxw_$(cat FAKE_TID) >/dev/null; for i in $(seq 1 300); do sleep 1; [ -e run/KILL_SWITCH ] || { echo "$(TZ=Asia/Ho_Chi_Minh date "+%d/%m/%Y %H:%M:%S.000") WARN [x] x: [C3-LIVE] PUSH doi trang thai -> ON" >> logs/full.log; exit 0; }; done' "hfxw_$(cat FAKE_TID)" >/dev/null 2>&1 &
     fi ;;
@@ -200,11 +200,11 @@ reset_state $W/old.jar; P0=$(pid); ( flock $W/.lock sleep 30 ) & LKP=$!; sleep 0
 OUT=$(echo YES | SJ_WD_LOCK_WAIT_S=3 bash $S 2>&1); RC=$?; kill $LKP 2>/dev/null; pkill -f "flock $W/.lock" 2>/dev/null
 chk "V2-1a watchdog giu .lock qua han => TU CHOI truoc khi dung bot, KS + PAUSE cua script go" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL watchdog_dang_giu_lock' && [ \"\$(pid)\" = '$P0' ] && [ \"\$(jm)\" = $OLD ] && [ ! -e $F/run/KILL_SWITCH ] && [ ! -e $W/PAUSE ]"
 # 1b inode moi (mv), file .hfks da dung het, backup = cu
-reset_state $W/old.jar; I0=$(stat -c %i $F/target/binance-java-sdk-1.2.4.jar)
+reset_state $W/old.jar; rm -f $F/target/*.hfks_*; I0=$(stat -c %i $F/target/binance-java-sdk-1.2.4.jar)
 OUT=$(echo YES | bash $S 2>&1); RC=$?
 chk "V2-1b cai jar bang mv (inode jar doi, khong con .hfks_*, backup md5 cu), process mo jar moi, ban va BAT" "[ $RC = 0 ] && [ \"\$(stat -c %i $F/target/binance-java-sdk-1.2.4.jar)\" != '$I0' ] && ! ls $F/target/*.hfks_* >/dev/null 2>&1 && echo \"\$OUT\" | grep -q 'OK jar_PROCESS_dang_mo=$NEW' && echo \"\$OUT\" | grep -q 'OK ban_va_deadlock_BAT' && echo \"\$OUT\" | grep -q 'OK dung_1_JVM'"
 # 1c process mo jar KHAC file
-reset_state $W/old.jar; echo "$W/old.jar" > $F/FAKE_FD_STALE
+reset_state $W/old.jar; mkdir -p $W/stale; cp $W/old.jar $W/stale/binance-java-sdk-1.2.4.jar; echo "$W/stale/binance-java-sdk-1.2.4.jar" > $F/FAKE_FD_STALE
 OUT=$(echo YES | bash $S 2>&1); RC=$?
 chk "V2-1c process dang mo jar khac file (md5 /proc/fd) => FAIL hau kiem => ROLLBACK DAT rc1" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL jar_PROCESS_dang_mo=' && [ \"\$(jm)\" = $OLD ] && [ \"\$(np)\" = 1 ] && [ ! -e $F/run/KILL_SWITCH ]"
 # 1d 2 JVM sau start
