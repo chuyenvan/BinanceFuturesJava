@@ -602,7 +602,23 @@ public final class C3LiveRuntime {
         try (RateGuard.Urgent u = RateGuard.urgent(System.currentTimeMillis() + C3StopProtector.DEADLINE_MS)) {
             trailing.step(px);
         }
+        // [W3A muc 5 D-03] SAU khi exit da quyet: chi log + dem tuoi gia (khong doi quyet dinh)
+        if (priceAge != null) {
+            try {
+                priceAge.observe(syms);
+            } catch (Throwable e) {
+                LOG.debug("[C3-LIVE] PRICE-AGE loi: {}", e.toString());
+            }
+        }
     }
+
+    /** [W3A muc 5 D-03] theo doi tuoi gia nhip exit (null = tat qua env C3_PRICE_AGE_WATCH=false). */
+    private final com.binance.chuyennd.c3live.exit.PriceAgeWatch priceAge =
+            com.binance.chuyennd.c3live.exit.PriceAgeWatch.enabled(Cfg.get(com.binance.chuyennd.c3live.exit.PriceAgeWatch.KEY_FLAG))
+                    ? new com.binance.chuyennd.c3live.exit.PriceAgeWatch(
+                    com.binance.chuyennd.c3live.exit.PriceAgeWatch.staleFrom(Cfg.get(com.binance.chuyennd.c3live.exit.PriceAgeWatch.KEY_STALE_MS)),
+                    DataManagerAerospikeFloatSim::getPriceRealtimeTs, System::currentTimeMillis)
+                    : null;
 
     private void refreshRefData(long now) {
         try {
