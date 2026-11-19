@@ -94,7 +94,26 @@ public final class C3MainEquity implements EquitySource {
      * "0"/"false" = hanh vi cu (ca loi goi trong khoa).
      */
     public static final String KEY_REST_UNLOCKED = "C3_EQ_REST_UNLOCKED";
-    static volatile boolean restUnlocked = restUnlockedFrom(com.binance.chuyennd.tradecore.Cfg.get(KEY_REST_UNLOCKED));
+    static volatile boolean restUnlocked = effectiveRestUnlocked(com.binance.chuyennd.tradecore.Cfg.get(KEY_REST_UNLOCKED),
+            com.binance.chuyennd.tradecore.Cfg.get("KILLSW_EQ_POLL_UNLOCKED"));
+
+    /**
+     * [W3B v2] Cam to hop tat CA 2 co (C3_EQ_REST_UNLOCKED + KILLSW_EQ_POLL_UNLOCKED = 0|false) = chu trinh khoa
+     * KS&lt;-&gt;EQ cua lan treo 19/11: khi do ep REST ngoai khoa + WARN.
+     *
+     * @param eqRaw env C3_EQ_REST_UNLOCKED
+     * @param ksRaw env KILLSW_EQ_POLL_UNLOCKED
+     * @return true = REST ngoai khoa
+     */
+    static boolean effectiveRestUnlocked(String eqRaw, String ksRaw) {
+        boolean eq = restUnlockedFrom(eqRaw);
+        if (!eq && !restUnlockedFrom(ksRaw)) {
+            LOG.warn("[C3-LIVE-EQ] {}=false VA KILLSW_EQ_POLL_UNLOCKED=false = to hop DEADLOCK (treo 19/11) => BO QUA {}, giu REST"
+                    + " ngoai khoa", KEY_REST_UNLOCKED, KEY_REST_UNLOCKED);
+            return true;
+        }
+        return eq;
+    }
 
     /**
      * @param raw gia tri env

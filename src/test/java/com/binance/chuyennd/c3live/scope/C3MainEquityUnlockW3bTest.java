@@ -306,5 +306,11 @@ public class C3MainEquityUnlockW3bTest {
         assertTrue(C3MainEquityTestAccess.parse(" true "));
         assertFalse(C3MainEquityTestAccess.parse("0"));
         assertFalse(C3MainEquityTestAccess.parse("False"));
+        // [W3B v2] A1 e7: cam to hop tat CA 2 co (deadlock 19/11) => ep REST ngoai khoa
+        assertTrue(C3MainEquityTestAccess.effective(null, null));
+        assertFalse(C3MainEquityTestAccess.effective("false", null));
+        assertTrue(C3MainEquityTestAccess.effective(null, "false"));
+        assertTrue("to hop cam", C3MainEquityTestAccess.effective("false", "0"));
+        assertTrue("to hop cam", C3MainEquityTestAccess.effective("0", "FALSE"));
     }
 }

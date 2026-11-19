@@ -9,6 +9,10 @@ public final class C3MainEquityTestAccess {
         C3MainEquity.restUnlocked = v;
     }
 
+    public static boolean effective(String eqRaw, String ksRaw) {
+        return C3MainEquity.effectiveRestUnlocked(eqRaw, ksRaw);
+    }
+
     public static boolean parse(String raw) {
         return C3MainEquity.restUnlockedFrom(raw);
     }
