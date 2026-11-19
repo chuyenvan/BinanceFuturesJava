@@ -41,6 +41,47 @@ public class PriceAgeWatchTest {
         assertEquals(1L, w.missingObs());
     }
 
+    /** [W3B muc 3b] ban batch: 1 lan doc / nhip cho MOI symbol; ket qua dem nhu ban tung symbol. */
+    @Test
+    public void batch_motLanDocMoiNhip_ketQuaNhuCu() {
+        AtomicLong now = new AtomicLong(1_000_000L);
+        Map<String, Long> ts = new HashMap<>();
+        ts.put("AUSDT", 1_000_000L - 2_000L);
+        ts.put("BUSDT", 1_000_000L - 18_300L);
+        java.util.concurrent.atomic.AtomicInteger calls = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.List<java.util.Collection<String>> seen = new java.util.ArrayList<>();
+        PriceAgeWatch b = PriceAgeWatch.batch(15_000L, syms -> {
+            calls.incrementAndGet();
+            seen.add(new java.util.ArrayList<>(syms));
+            Map<String, Long> m = new HashMap<>();
+            for (String s : syms) if (ts.containsKey(s)) m.put(s, ts.get(s));
+            return m;
+        }, now::get);
+        PriceAgeWatch o = new PriceAgeWatch(15_000L, ts::get, now::get);
+        java.util.List<String> syms = Arrays.asList("AUSDT", "BUSDT", "CUSDT");
+        assertEquals(o.observe(syms), b.observe(syms));
+        assertEquals(1, calls.get());
+        assertEquals(syms, seen.get(0));
+        assertEquals(o.staleObs(), b.staleObs());
+        assertEquals(o.missingObs(), b.missingObs());
+        assertEquals(o.maxAgeMs(), b.maxAgeMs());
+        for (int i = 0; i < 50; i++) b.observe(syms);
+        assertEquals("1 lenh doc / nhip (khong N get)", 51, calls.get());
+    }
+
+    /** [W3B muc 3b] batch nem loi => ca nhip tinh thieu, khong nem, khong log moi nhip (dong WARN 1/phut). */
+    @Test
+    public void batch_loi_tinhThieu_khongNem() {
+        AtomicLong now = new AtomicLong(0L);
+        PriceAgeWatch b = PriceAgeWatch.batch(15_000L, s -> { throw new IllegalStateException("aerospike"); }, now::get);
+        for (int i = 0; i < 10; i++) {
+            assertEquals(0, b.observe(Arrays.asList("AUSDT", "BUSDT")));
+            now.addAndGet(1_000L);
+        }
+        assertEquals(20L, b.missingObs());
+        assertEquals(0L, b.staleTicks());
+    }
+
     @Test
     public void env() {
         assertTrue(PriceAgeWatch.enabled(null));

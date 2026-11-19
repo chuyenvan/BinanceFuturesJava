@@ -297,6 +297,30 @@ public class DataManagerAerospikeFloatSim {
      * @param symbol symbol (vd "BTCUSDT").
      * @return ms-epoch hoặc {@code null} nếu chưa có record / bin ts rỗng / lỗi đọc.
      */
+    /**
+     * [W3B muc 3b] Doc ts price_realtime cua NHIEU symbol trong 1 lenh batch (thay N get tuan tu). Loi => NEM (nguoi goi
+     * gom log, khong LOG.error lap).
+     *
+     * @param symbols danh sach symbol
+     * @return symbol (nhu dau vao) -&gt; ts ms; symbol khong co record / bin ts rong thi vang mat
+     */
+    public static Map<String, Long> getPriceRealtimeTsBatch(Collection<String> symbols) {
+        Map<String, Long> out = new HashMap<>();
+        if (symbols == null || symbols.isEmpty()) return out;
+        List<String> syms = new ArrayList<>();
+        for (String s : symbols) if (s != null && !s.isBlank()) syms.add(s);
+        if (syms.isEmpty()) return out;
+        Key[] keys = new Key[syms.size()];
+        for (int i = 0; i < keys.length; i++) {
+            keys[i] = new Key(Configs.AEROSPIKE_NAMESPACE, AEROSPIKE_SET_NAME_PRICE, syms.get(i).toUpperCase());
+        }
+        Record[] rs = getClient242().get(batchPolicy, keys, "ts");
+        for (int i = 0; i < keys.length && rs != null && i < rs.length; i++) {
+            if (rs[i] != null && rs[i].getValue("ts") != null) out.put(syms.get(i), rs[i].getLong("ts"));
+        }
+        return out;
+    }
+
     public static Long getPriceRealtimeTs(String symbol) {
         if (symbol == null || symbol.isBlank()) return null;
         try {

@@ -4,6 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
@@ -24,7 +26,9 @@ public final class PriceAgeWatch {
     static final long LOG_EVERY_MS = 60_000L;
 
     private final long staleMs;
-    private final Function<String, Long> tsReader;
+    /** [W3B muc 3b] doc ts theo LO (1 lenh / nhip); loi => nem (dem thieu + ghi vao dong WARN 1/phut). */
+    private final Function<Collection<String>, Map<String, Long>> batchReader;
+    private String lastErr;
     private final LongSupplier clock;
     private long lastLogMs = Long.MIN_VALUE / 2;
     private long nTicks;
@@ -39,9 +43,36 @@ public final class PriceAgeWatch {
      * @param clock    dong ho
      */
     public PriceAgeWatch(long staleMs, Function<String, Long> tsReader, LongSupplier clock) {
+        this(staleMs, clock, syms -> {
+            Map<String, Long> m = new HashMap<>();
+            for (String s : syms) {
+                try {
+                    Long t = tsReader.apply(s);
+                    if (t != null) m.put(s, t);
+                } catch (RuntimeException e) {
+                    // tinh la thieu ts
+                }
+            }
+            return m;
+        });
+    }
+
+    private PriceAgeWatch(long staleMs, LongSupplier clock, Function<Collection<String>, Map<String, Long>> batchReader) {
         this.staleMs = staleMs > 0 ? staleMs : DEFAULT_STALE_MS;
-        this.tsReader = tsReader;
+        this.batchReader = batchReader;
         this.clock = clock;
+    }
+
+    /**
+     * [W3B muc 3b] Ban doc ts theo LO (Aerospike batch get 1 lan / nhip thay vi N get tuan tu).
+     *
+     * @param staleMs     nguong tuoi gia (ms)
+     * @param batchReader doc ts nhieu symbol (thieu = vang mat); nem = ca nhip tinh thieu
+     * @param clock       dong ho
+     * @return watcher
+     */
+    public static PriceAgeWatch batch(long staleMs, Function<Collection<String>, Map<String, Long>> batchReader, LongSupplier clock) {
+        return new PriceAgeWatch(staleMs, clock, batchReader);
     }
 
     /**
@@ -83,13 +114,15 @@ public final class PriceAgeWatch {
         int missing = 0;
         long maxTick = 0L;
         TreeSet<String> staleSyms = new TreeSet<>();
+        Map<String, Long> all;
+        try {
+            all = batchReader.apply(syms);
+        } catch (RuntimeException e) {
+            all = null;
+            lastErr = e.getClass().getSimpleName() + ": " + e.getMessage();
+        }
         for (String s : syms) {
-            Long ts;
-            try {
-                ts = tsReader.apply(s);
-            } catch (RuntimeException e) {
-                ts = null;
-            }
+            Long ts = all == null ? null : all.get(s);
             if (ts == null) {
                 missing++;
                 continue;
@@ -110,6 +143,10 @@ public final class PriceAgeWatch {
             LOG.warn("[C3-LIVE] PRICE-AGE gia_cu={}/{} thieu_ts={} nguong_ms={} max_age_ms={} {} | tong: nhip={} nhip_cu={} obs_cu={}"
                             + " obs_thieu={} (CHI canh bao, KHONG doi exit ? D-03 can prereg)",
                     stale, syms.size(), missing, staleMs, maxTick, staleSyms, nTicks, nStaleTicks, nStaleObs, nMissingObs);
+            if (lastErr != null) {   // [W3B muc 3b] loi doc gom vao nhip log 1/phut (khong ERROR moi nhip)
+                LOG.warn("[C3-LIVE] PRICE-AGE loi doc ts gan nhat: {}", lastErr);
+                lastErr = null;
+            }
         }
         return stale;
     }
