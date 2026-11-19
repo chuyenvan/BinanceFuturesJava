@@ -95,10 +95,45 @@ public class HttpRequest {
     private static final String J_ACCEPT_CHARSET = "UTF-8,iso-8859-1;q=0.7,*;q=0.7";
     private static final String J_ACCEPT_LANGUAGE = "vi,en-US;q=0.8,en;q=0.6";
     private static final int NUM_RETRY_CONNECTION = 5;
-    // Thoi gian connect
-    public static int connect_time_out = 30 * 1000; // 30s
-    // Thoi gian doc
-    public static int read_time_out = 30 * 1000; // 30s
+    // Thoi gian connect ([W3A muc 4] env HTTP_CONNECT_TIMEOUT_MS, mac dinh 30s nhu cu)
+    public static int connect_time_out = envMs("HTTP_CONNECT_TIMEOUT_MS", 30 * 1000); // 30s
+    // Thoi gian doc ([W3A muc 4] env HTTP_READ_TIMEOUT_MS, mac dinh 30s nhu cu)
+    public static int read_time_out = envMs("HTTP_READ_TIMEOUT_MS", 30 * 1000); // 30s
+    /**
+     * [W3A muc 4] getContentFromUrl(url, header, timeout): timeout cua NGUOI GOI duoc ap TRUOC connect() cho ca connect
+     * lan read (ban cu goi setConnectTimeout SAU connect => vo tac dung, thuc te 30 s + 30 s x 5 lan thu). Env
+     * {@code HTTP_TIMEOUT_FIX=false} => y nguyen ban cu. Read timeout co the dat rieng: {@code HTTP_TIMEOUT_READ_MS}.
+     */
+    static final boolean TIMEOUT_FIX = !"false".equalsIgnoreCase(String.valueOf(System.getenv("HTTP_TIMEOUT_FIX")).trim());
+    private static final int TIMEOUT_READ_OVERRIDE_MS = envMs("HTTP_TIMEOUT_READ_MS", 0);
+
+    /**
+     * Doc so ms duong tu env; thieu/sai/&lt;= 0 => mac dinh.
+     *
+     * @param key ten env
+     * @param def mac dinh
+     * @return so ms
+     */
+    static int envMs(String key, int def) {
+        try {
+            String v = System.getenv(key);
+            if (v == null || v.trim().isEmpty()) return def;
+            int x = Integer.parseInt(v.trim());
+            return x > 0 ? x : def;
+        } catch (RuntimeException e) {
+            return def;
+        }
+    }
+
+    /**
+     * Read timeout cho duong co timeout cua nguoi goi.
+     *
+     * @param timeout timeout nguoi goi (ms)
+     * @return override env neu co, nguoc lai = timeout
+     */
+    static int readTimeoutFor(int timeout) {
+        return TIMEOUT_READ_OVERRIDE_MS > 0 ? TIMEOUT_READ_OVERRIDE_MS : timeout;
+    }
     // Do dai max content
     public static int max_content_length = 8 * 1024 * 1024; // 8M
     // Neu do dai cua content ma duoi gia tri nay thi day co the la trang redirect sang trag khac hoac la trang loi
@@ -123,6 +158,12 @@ public class HttpRequest {
     }
 
     private static HttpURLConnection connect(URL url_, Map<String, String> extendedHeader, Proxy proxy) {
+        return connect(url_, extendedHeader, proxy, connect_time_out, read_time_out);
+    }
+
+    /** [W3A muc 4] nhu {@link #connect(URL, Map, Proxy)} nhung timeout connect/read dat TRUOC conn.connect(). */
+    private static HttpURLConnection connect(URL url_, Map<String, String> extendedHeader, Proxy proxy,
+                                             int connectTimeoutMs, int readTimeoutMs) {
         try {
             URLConnection ucon;
             if (proxy == null) {
@@ -135,8 +176,8 @@ public class HttpRequest {
             conn.setUseCaches(false);
             conn.setAllowUserInteraction(true);
             conn.setRequestMethod("GET");
-            conn.setConnectTimeout(connect_time_out); // 10 sec
-            conn.setReadTimeout(read_time_out); // 10 sec
+            conn.setConnectTimeout(connectTimeoutMs); // mac dinh connect_time_out
+            conn.setReadTimeout(readTimeoutMs); // mac dinh read_time_out
 
             HttpURLConnection.setFollowRedirects(follow_redirect);
             conn.setInstanceFollowRedirects(follow_redirect);
@@ -306,16 +347,27 @@ public class HttpRequest {
     }
 
     public static String getContentFromUrl(String url, Map<String, String> extendedHeader, int timeout) {
+        return getContentFromUrl0(url, extendedHeader, timeout, TIMEOUT_FIX);
+    }
+
+    /**
+     * [W3A muc 4] than cua getContentFromUrl(url, header, timeout).
+     *
+     * @param fix true => timeout ap that (truoc connect, ca read); false => ban cu (setConnectTimeout sau connect)
+     */
+    static String getContentFromUrl0(String url, Map<String, String> extendedHeader, int timeout, boolean fix) {
         String content = "";
         boolean useGZip = false;
         for (int i = 0; i < NUM_RETRY_CONNECTION; i++) {
             try {
-                HttpURLConnection hc = connect(new URL(url), extendedHeader);
+                HttpURLConnection hc = fix && timeout > 0
+                        ? connect(new URL(url), extendedHeader, null, timeout, readTimeoutFor(timeout))
+                        : connect(new URL(url), extendedHeader);
                 int content_length = hc.getContentLength();
                 if ((content_length > max_content_length) || (content_length == -1)) {
                     content_length = max_content_length;
                 }
-                hc.setConnectTimeout(timeout);
+                if (!fix) hc.setConnectTimeout(timeout);   // ban cu: vo tac dung (da connect)
                 StringBuilder sb = new StringBuilder();
                 int c = 0;
                 InputStream is = null;
