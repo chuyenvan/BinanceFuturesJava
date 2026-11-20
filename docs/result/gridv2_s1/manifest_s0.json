@@ -1,0 +1,34 @@
+{
+ "shard": "0/5",
+ "n_sym": 128,
+ "cond": {
+  "A": {
+   "z": 2.5,
+   "vmult": 3.0
+  },
+  "B": {
+   "ratio": 1.5
+  }
+ },
+ "mkt_sym": "BTCUSDT",
+ "prereg_constants": true,
+ "test_overrides": {},
+ "alpha_fwer": 0.04,
+ "alpha_upper": 0.05,
+ "min_units": 200,
+ "inputs": {
+  "lifecycle.parquet": "1f21f7df47dd7f6c8965267a0d95979c9f66e20282fe6800ad331ed31a9159d2",
+  "funding-2021.parquet": "51386684a702a4fa009f7ee5f6bd5b69ad60341a9c61207f33c0227825980d62",
+  "funding-2022.parquet": "d1c4edccf23d8571665129149ab495de95449cbfa437c08774b56bd2ba9e0a61",
+  "funding-2023.parquet": "5498ebd6158c2c87a22b1642bc423a59b03e00d3ba252c26af3c57f685973e78",
+  "funding-2024.parquet": "93642c5938d62c15a9be8e98e0bdae54524d4e5308c544f0af8691052618d400",
+  "funding-2025.parquet": "ff69f933910d5bcb8438b725b55eadd2a6e56c87c3336060d20c2d6ba0fa51bb"
+ },
+ "code": {
+  "klite.py": "196f458489c5a808754d4afc39c2ad03f9149d57936de7f84c810074b8652680",
+  "kref.py": "6de0e412633658f1d548d28c7a650ff9b0e43b1a5f6cc3e64dbe93c51c928ff2",
+  "runner_kaggle.py": "23a788cf97f69c73aec663572d0f133136e6e872eb64c8251b9641ba0dd14ccf",
+  "stats.py": "975f3a427cd52750018d615b664ab13f899ee216764e5f80fca82192976df3e4"
+ },
+ "seconds": 2046.7
+}

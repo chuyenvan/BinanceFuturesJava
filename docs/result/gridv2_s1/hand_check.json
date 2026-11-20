@@ -1,0 +1,15 @@
+{
+ "rule_hand": "L-C",
+ "rule": "L-C",
+ "pass_mismatch": [],
+ "pass_opt": [
+  "S_COND_A_c0.2_k2"
+ ],
+ "pass_pess": [],
+ "LA": false,
+ "check": {
+  "max_abs_dM": 2.6645352591003757e-14,
+  "max_rel_dSE": 1.03641334823732e-14,
+  "n_cmp": 128
+ }
+}

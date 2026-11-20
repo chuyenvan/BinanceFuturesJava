@@ -1,0 +1,443 @@
+{
+ "d0": {
+  "same_file_names": true,
+  "n_files": [
+   6,
+   6
+  ],
+  "files": {
+   "agg.parquet": {
+    "present_both": true,
+    "rows": [
+     86864,
+     86864
+    ],
+    "ncols": [
+     24,
+     24
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "diag.parquet": {
+    "present_both": true,
+    "rows": [
+     912,
+     912
+    ],
+    "ncols": [
+     9,
+     9
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "hist.parquet": {
+    "present_both": true,
+    "rows": [
+     253330,
+     253330
+    ],
+    "ncols": [
+     5,
+     5
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "mon.parquet": {
+    "present_both": true,
+    "rows": [
+     648,
+     648
+    ],
+    "ncols": [
+     6,
+     6
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "shalf.parquet": {
+    "present_both": true,
+    "rows": [
+     7732,
+     7732
+    ],
+    "ncols": [
+     7,
+     7
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "tdiag.parquet": {
+    "present_both": true,
+    "rows": [
+     160,
+     160
+    ],
+    "ncols": [
+     9,
+     9
+    ],
+    "same_cols": true,
+    "equal": true
+   }
+  },
+  "ok": true
+ },
+ "d1": {
+  "same_file_names": true,
+  "n_files": [
+   6,
+   6
+  ],
+  "files": {
+   "agg.parquet": {
+    "present_both": true,
+    "rows": [
+     83408,
+     83408
+    ],
+    "ncols": [
+     24,
+     24
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "diag.parquet": {
+    "present_both": true,
+    "rows": [
+     912,
+     912
+    ],
+    "ncols": [
+     9,
+     9
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "hist.parquet": {
+    "present_both": true,
+    "rows": [
+     242999,
+     242999
+    ],
+    "ncols": [
+     5,
+     5
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "mon.parquet": {
+    "present_both": true,
+    "rows": [
+     648,
+     648
+    ],
+    "ncols": [
+     6,
+     6
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "shalf.parquet": {
+    "present_both": true,
+    "rows": [
+     7094,
+     7094
+    ],
+    "ncols": [
+     7,
+     7
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "tdiag.parquet": {
+    "present_both": true,
+    "rows": [
+     160,
+     160
+    ],
+    "ncols": [
+     9,
+     9
+    ],
+    "same_cols": true,
+    "equal": true
+   }
+  },
+  "ok": true
+ },
+ "d2": {
+  "same_file_names": true,
+  "n_files": [
+   6,
+   6
+  ],
+  "files": {
+   "agg.parquet": {
+    "present_both": true,
+    "rows": [
+     87172,
+     87172
+    ],
+    "ncols": [
+     24,
+     24
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "diag.parquet": {
+    "present_both": true,
+    "rows": [
+     912,
+     912
+    ],
+    "ncols": [
+     9,
+     9
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "hist.parquet": {
+    "present_both": true,
+    "rows": [
+     243583,
+     243583
+    ],
+    "ncols": [
+     5,
+     5
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "mon.parquet": {
+    "present_both": true,
+    "rows": [
+     648,
+     648
+    ],
+    "ncols": [
+     6,
+     6
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "shalf.parquet": {
+    "present_both": true,
+    "rows": [
+     7362,
+     7362
+    ],
+    "ncols": [
+     7,
+     7
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "tdiag.parquet": {
+    "present_both": true,
+    "rows": [
+     160,
+     160
+    ],
+    "ncols": [
+     9,
+     9
+    ],
+    "same_cols": true,
+    "equal": true
+   }
+  },
+  "ok": true
+ },
+ "d3": {
+  "same_file_names": true,
+  "n_files": [
+   6,
+   6
+  ],
+  "files": {
+   "agg.parquet": {
+    "present_both": true,
+    "rows": [
+     87026,
+     87026
+    ],
+    "ncols": [
+     24,
+     24
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "diag.parquet": {
+    "present_both": true,
+    "rows": [
+     912,
+     912
+    ],
+    "ncols": [
+     9,
+     9
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "hist.parquet": {
+    "present_both": true,
+    "rows": [
+     248190,
+     248190
+    ],
+    "ncols": [
+     5,
+     5
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "mon.parquet": {
+    "present_both": true,
+    "rows": [
+     648,
+     648
+    ],
+    "ncols": [
+     6,
+     6
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "shalf.parquet": {
+    "present_both": true,
+    "rows": [
+     7510,
+     7510
+    ],
+    "ncols": [
+     7,
+     7
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "tdiag.parquet": {
+    "present_both": true,
+    "rows": [
+     160,
+     160
+    ],
+    "ncols": [
+     9,
+     9
+    ],
+    "same_cols": true,
+    "equal": true
+   }
+  },
+  "ok": true
+ },
+ "d4": {
+  "same_file_names": true,
+  "n_files": [
+   6,
+   6
+  ],
+  "files": {
+   "agg.parquet": {
+    "present_both": true,
+    "rows": [
+     82790,
+     82790
+    ],
+    "ncols": [
+     24,
+     24
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "diag.parquet": {
+    "present_both": true,
+    "rows": [
+     912,
+     912
+    ],
+    "ncols": [
+     9,
+     9
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "hist.parquet": {
+    "present_both": true,
+    "rows": [
+     245615,
+     245615
+    ],
+    "ncols": [
+     5,
+     5
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "mon.parquet": {
+    "present_both": true,
+    "rows": [
+     648,
+     648
+    ],
+    "ncols": [
+     6,
+     6
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "shalf.parquet": {
+    "present_both": true,
+    "rows": [
+     8172,
+     8172
+    ],
+    "ncols": [
+     7,
+     7
+    ],
+    "same_cols": true,
+    "equal": true
+   },
+   "tdiag.parquet": {
+    "present_both": true,
+    "rows": [
+     160,
+     160
+    ],
+    "ncols": [
+     9,
+     9
+    ],
+    "same_cols": true,
+    "equal": true
+   }
+  },
+  "ok": true
+ },
+ "all_equal": true
+}
