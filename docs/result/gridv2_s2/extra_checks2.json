@@ -1,0 +1,51 @@
+{
+ "c_all_url_vision": true,
+ "c_all_dates_lt_2026": true,
+ "d_n_records": 7962,
+ "d_n_ok": 7962,
+ "d_n_outside_day_nonzero": 0,
+ "files_unique": 7950,
+ "files_duplicated_records": 12,
+ "res_n_parts": 661,
+ "state_part": 661,
+ "res_rows": 73932,
+ "res_dup_rows": 0,
+ "d_clusters_100pct_excl_THROUGH": [],
+ "d_n_clusters_100pct_excl_THROUGH": 0,
+ "excl_rate_THROUGH": 0.0,
+ "d_clusters_100pct_excl_THROUGH_LAT5S": [],
+ "d_n_clusters_100pct_excl_THROUGH_LAT5S": 0,
+ "excl_rate_THROUGH_LAT5S": 0.0,
+ "d_clusters_100pct_excl_TOUCH": [],
+ "d_n_clusters_100pct_excl_TOUCH": 0,
+ "excl_rate_TOUCH": 0.0,
+ "e_n_selected": 6604,
+ "e_n_done_ok": 6604,
+ "e_n_missing": 0,
+ "e_n_subs": 0,
+ "e_done_ok_equals_selected_nonmissing_union_subs": true,
+ "e_substitutions_first_unused_same_stratum": true,
+ "e_missing_have_non_ok_record": true,
+ "e_state_part_equals_nparts": true,
+ "i_total_id_gaps": 66788,
+ "i_files_with_id_gaps": 20,
+ "i_frac_files_gaps": 0.0025119316754584277,
+ "i_total_n_time_back": 0,
+ "i_us_converted_files": 0,
+ "w6": {
+  "ok": true,
+  "A": {
+   "n_selected": 3307,
+   "n_missing": 0,
+   "frac": 0.0,
+   "unreplaced": 0
+  },
+  "B": {
+   "n_selected": 3297,
+   "n_missing": 0,
+   "frac": 0.0,
+   "unreplaced": 0
+  },
+  "n_reserve_missing": 0
+ }
+}
