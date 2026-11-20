@@ -1,0 +1,64 @@
+{
+ "shard": "1/5",
+ "n_sym": 118,
+ "cond": {
+  "B": {
+   "ratio": 1.5
+  },
+  "MKT": {
+   "z": 1.0,
+   "win": 60
+  }
+ },
+ "mkt_sym": "BTCUSDT",
+ "prereg_constants": true,
+ "test_overrides": {},
+ "alpha_fwer": 0.04,
+ "alpha_upper": 0.05,
+ "min_units": 200,
+ "s3_const": {
+  "W_ENTRY": 60,
+  "EXIT_FRAC": 0.5,
+  "C_LIST": [
+   1.0,
+   1.5,
+   2.5
+  ],
+  "T_LIST": [
+   240,
+   1440
+  ],
+  "STRESS_SLIP_MULT": 5,
+  "MIN_D_TICKS": 4,
+  "FEE_MAKER": {
+   "OPT": 0.0002,
+   "PESS": 0.0004
+  },
+  "FEE_TAKER": 0.0005,
+  "DELIST_SLIP_PESS": 0.005,
+  "SLIP_TIER_FLOOR": {
+   "1": 0.0002,
+   "2": 0.0005,
+   "3": 0.001
+  },
+  "LONG_GAP_MIN": 60,
+  "FLOOR_BPS": 4.0,
+  "P_HALF_A": 0.1
+ },
+ "inputs": {
+  "lifecycle.parquet": "1f21f7df47dd7f6c8965267a0d95979c9f66e20282fe6800ad331ed31a9159d2",
+  "funding-2021.parquet": "51386684a702a4fa009f7ee5f6bd5b69ad60341a9c61207f33c0227825980d62",
+  "funding-2022.parquet": "d1c4edccf23d8571665129149ab495de95449cbfa437c08774b56bd2ba9e0a61",
+  "funding-2023.parquet": "5498ebd6158c2c87a22b1642bc423a59b03e00d3ba252c26af3c57f685973e78",
+  "funding-2024.parquet": "93642c5938d62c15a9be8e98e0bdae54524d4e5308c544f0af8691052618d400",
+  "funding-2025.parquet": "ff69f933910d5bcb8438b725b55eadd2a6e56c87c3336060d20c2d6ba0fa51bb"
+ },
+ "code": {
+  "klite3.py": "09bb18ebea6c0e2367a48f2a29508bfcfa6b8865ee64584d3572db73a7883946",
+  "kref3.py": "6b02dea6ef61bc2413e1f02b29da00d42833a68c3e8cde4e36060b53cc5a1b2b",
+  "stats.py": "975f3a427cd52750018d615b664ab13f899ee216764e5f80fca82192976df3e4",
+  "stats3_extra.py": "a9f9857f3888048b413cda3023400579674a5f2e6dae729d2808e35765755edb",
+  "runner3_kaggle.py": "7cb71c9bd75d6086afc2e0f8a4a98cd39e489aad24f32c1fc8e96ff1a69cac33"
+ },
+ "seconds": 1256.0
+}
