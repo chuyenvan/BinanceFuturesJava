@@ -1,0 +1,40 @@
+{
+ "W0_events": {
+  "ok": true,
+  "shards": [
+   "0/5",
+   "1/5",
+   "2/5",
+   "3/5",
+   "4/5"
+  ],
+  "all_pass": [
+   true,
+   true,
+   true,
+   true,
+   true
+  ],
+  "prereg_constants": [
+   true,
+   true,
+   true,
+   true,
+   true
+  ]
+ },
+ "E1b_vs_run2": {
+  "ok": true,
+  "max_abs_diff": 2.9103830456733704e-11
+ },
+ "events_sha256": {
+  "events_s0.parquet": "3c051f33260e4aa2aa7108db89b531389a70d2f5bdc9b986f1405c9cb4df3d1d",
+  "events_s1.parquet": "c5eb2046d2cb759c720bedfb7589519d941358be94261c28dda4fb39aea5cdd1",
+  "events_s2.parquet": "e12f30b1328faa5681f1df2638f6590a556703b5c033dc934b9f2170c2581f9f",
+  "events_s3.parquet": "11e81cec61905acb3af963a16ac4f01ee7809a2b5150f23e981cbf770aa07910",
+  "events_s4.parquet": "2cdcb453e2000f584aed9dcdf422ac2bf36a4a321003e180bf9dc68933ad6fe7"
+ },
+ "n_units": 268356,
+ "n_clusters": 70432,
+ "ok": true
+}
