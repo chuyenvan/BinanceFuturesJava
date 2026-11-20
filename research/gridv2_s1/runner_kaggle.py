@@ -268,12 +268,47 @@ def valid_rows(t):
     return a, cols, good
 
 
+# ------------------------------------------------------------------ V0a/V0b (R5-1)
+V0_SKIP_EXPECTED_REAL = [[2021, 1], [2021, 2], [2021, 3]]       # ky vong tren lake that (registry REGISTRY_REAL)
+
+
+def v0_rule_skipped(y, mo):
+    """Quy tac pass1: bo qua thang BAT DAU truoc DATA_START - 31 ngay (2021-01..03 tren lake that)."""
+    return ms("%04d-%02d-01" % (y, mo)) < DATA_START - 31 * DAY
+
+
+def v0_eval(meta_file, opened, rows_read, registry, expect_skip=None):
+    """R5-1. meta_file {(y, mo): so dong metadata}; opened [(y, mo)] pass1 da mo; rows_read {y: so dong pass1 doc}.
+    V0a: tong metadata MOI file cua nam == registry. V0b: dong doc == tong metadata cac file DA MO; tap bo qua == tap theo quy tac
+    (va == expect_skip neu co); registry - dong doc == tong metadata cac file bi bo qua. Tra (ok_a, ok_b, chi tiet)."""
+    opened = {(int(a), int(b)) for a, b in opened}
+    years = sorted({y for y, _ in meta_file})
+    meta_y = {y: sum(n for (yy, _), n in meta_file.items() if yy == y) for y in years}
+    skipped = sorted(k for k in meta_file if k not in opened)
+    rule = sorted(k for k in meta_file if v0_rule_skipped(*k))
+    ok_a = (registry is None) or all(meta_y.get(int(y)) == int(n) for y, n in registry.items())
+    ok_b = skipped == rule and (expect_skip is None or [list(k) for k in skipped] == [list(k) for k in expect_skip])
+    det = {}
+    for y in years:
+        mo_open = sum(n for k, n in meta_file.items() if k[0] == y and k in opened)
+        mo_skip = sum(n for k, n in meta_file.items() if k[0] == y and k not in opened)
+        rd = int(rows_read.get(y, 0))
+        ok_y = rd == mo_open
+        if registry is not None and int(y) in {int(k) for k in registry}:
+            ok_y = ok_y and (int(registry[y]) - rd == mo_skip)
+        det[int(y)] = dict(rows_read=rd, meta_opened=mo_open, meta_skipped=mo_skip, ok=bool(ok_y))
+        ok_b = ok_b and ok_y
+    files_skipped = [dict(file="kline1m-%04d-%02d.parquet" % k, meta_rows=int(meta_file[k])) for k in skipped]
+    return bool(ok_a), bool(ok_b), dict(by_year=det, files_skipped=files_skipped, rule_skipped=[list(k) for k in rule])
+
+
 # ------------------------------------------------------------------ pass 1: qv ngay, close gio (moi symbol), V0-V2
 def pass1(kl, VS, nday):
     qv, act, hc, rows = {}, {}, {}, {}
     for (y, mo), p in sorted(kl.items()):
         if ms("%04d-%02d-01" % (y, mo)) < DATA_START - 31 * DAY:
             continue
+        VS.v["V0"].setdefault("files_opened", []).append([y, mo])          # R5-1 (V0b)
         pf, m = rg_map(p)
         for s, i in m.items():
             t = pf.read_row_group(i, columns=["ts", "open", "high", "low", "close", "quote_volume", "active"])
@@ -652,13 +687,41 @@ def process_symbol(s, arrays, ctx, collect_units=False):
 
 
 # ------------------------------------------------------------------ V4: khong nhin tuong lai
-def v4_check(s, arrays, ctx, rng):
+V4_MIN_SPAN_DAYS = 90
+V4_LEAD_DAYS, V4_TAIL_DAYS = 45, 15
+
+
+def v4_pick(valid):
+    """R5-2: symbol hop le cho V4 neu (phut hop le cuoi - dau) >= 90 ngay; tc deu trong [max(dau + 45 ngay, STUDY_START + 45 ngay),
+    cuoi - 15 ngay] (chan duoi STUDY_START: diem lech, de co don vi ket thuc truoc tc). Tra (ok, lo, hi, ly do)."""
+    ii = np.nonzero(valid)[0]
+    if ii.size == 0:
+        return False, None, None, "khong co phut hop le"
+    a, b = int(ii[0]), int(ii[-1])
+    if b - a < V4_MIN_SPAN_DAYS * 1440:
+        return False, a, b, "span %.1f ngay < %d" % ((b - a) / 1440.0, V4_MIN_SPAN_DAYS)
+    lo = max(a + V4_LEAD_DAYS * 1440, (STUDY_START - DATA_START) // MIN + V4_LEAD_DAYS * 1440)
+    hi = b - V4_TAIL_DAYS * 1440
+    if lo > hi:
+        return False, lo, hi, "khoang tc rong (du lieu ket thuc truoc STUDY_START + 60 ngay)"
+    return True, lo, hi, ""
+
+
+def v4_check(s, arrays, ctx, rng, tc_range=None, junk_lead_min=0):
+    """tc_range (lo, hi) phut (R5-2, tu v4_pick). junk_lead_min CHI cho test: rac bat dau tu tc - junk_lead_min (phai FAIL)."""
     nday = ctx["nday"]
     d0 = (STUDY_START - DATA_START) // DAY
-    tc_day = int(rng.integers(d0 + 60, nday - 30))
-    tc = tc_day * 1440 + int(rng.integers(0, 1440))
+    if tc_range is None:
+        tc_day = int(rng.integers(d0 + 60, nday - 30))
+        tc = tc_day * 1440 + int(rng.integers(0, 1440))
+    else:
+        tc = int(rng.integers(tc_range[0], tc_range[1] + 1))
+        tc_day = tc // 1440
     a1 = process_symbol(s, arrays, ctx, collect_units=True)
     O, H, L, C, QV, valid = [x.copy() for x in arrays]
+    tj = tc - int(junk_lead_min)                                # = tc khi chay that
+    tc, tc_true = tj, tc
+    tc_day = tc // 1440
     nn = O.size - tc
     junk = np.exp(rng.normal(0, 3, nn))
     O[tc:], C[tc:] = junk, junk[::-1]
@@ -690,7 +753,7 @@ def v4_check(s, arrays, ctx, rng):
     for key, u1 in a1["units"].items():
         R1 = u1["R"]
         end1 = np.where(R1["filled"], R1["x"], u1["t0"] + u1["T"] - 1)
-        keep = (end1 < tc - 2) & (u1["t0"] < tc)
+        keep = (end1 < tc_true - 2) & (u1["t0"] < tc_true)
         u2 = a2["units"].get(key)
         if u2 is None:
             nbad += int(keep.sum())
@@ -710,7 +773,8 @@ def v4_check(s, arrays, ctx, rng):
                 m2 = u2["memb"].get(cid)
                 same = same and bool(m1[i]) == (bool(m2[j]) if m2 is not None else False)
             nbad += 0 if same else 1
-    return dict(sym=s, tc_min=int(tc), n_checked=nchk, n_diff=nbad, ok=(nchk > 0 and nbad == 0))
+    return dict(sym=s, tc_min=int(tc_true), tc_range=(None if tc_range is None else [int(tc_range[0]), int(tc_range[1])]),
+                n_checked=nchk, n_diff=nbad, ok=(nchk > 0 and nbad == 0))
 
 
 # ------------------------------------------------------------------ V5: doc lai tho + cai dat doc lap (kref)
@@ -744,17 +808,61 @@ def _dclose(Cl, nd):
     return out
 
 
-def v5_check(s, kl, fu_paths, life, res, ctx, rng, nmax=4):
+V5_MIN, V5_MAX = 8, 12
+
+
+def v5_select(res, need, cnt, rng, room):
+    """R5-6: chon tat dinh (rng co dinh theo shard) toi da 1 don vi DA KHOP cho moi ci trong need (thu tu 0..5); model / side chon
+    de can bang dem cnt (OPT/PESS, BUY/SELL), thieu thi doi model / side. Tra [(key, i)] (<= room)."""
+    picks = []
+    for ci in sorted(need):
+        if len(picks) >= room:
+            break
+        pm = ["OPT", "PESS"] if cnt["OPT"] <= cnt["PESS"] else ["PESS", "OPT"]
+        ps = [1, -1] if cnt[1] <= cnt[-1] else [-1, 1]
+        done = False
+        for model in pm:
+            u = res["units"].get((ci, model))
+            if u is None:
+                continue
+            for sd in ps:
+                cand = np.nonzero(u["ok"] & (u["side"] == sd))[0]
+                if cand.size:
+                    picks.append(((ci, model), int(rng.choice(cand))))
+                    cnt[model] += 1
+                    cnt[sd] += 1
+                    done = True
+                    break
+            if done:
+                break
+    return picks
+
+
+def v5_eval(v5):
+    """R5-6: V5 PASS = 8..12 don vi, du 6 (c,k), co BUY va SELL, co OPT va PESS, moi don vi khop kref."""
+    cov = dict(ck=sorted({x["ck"] for x in v5}), side=sorted({x["side"] for x in v5}), model=sorted({x["model"] for x in v5}))
+    ok = (V5_MIN <= len(v5) <= V5_MAX and cov["ck"] == list(range(len(CK_ALL))) and cov["side"] == [-1, 1]
+          and cov["model"] == ["OPT", "PESS"] and all(x["ok"] for x in v5))
+    return dict(checks=v5, coverage=cov, missing_ck=sorted(set(range(len(CK_ALL))) - set(cov["ck"])),
+                checked=[[x["sym"], x["t0"], x["c"], x["k"], x["side"], x["model"]] for x in v5], ok=bool(ok))
+
+
+def v5_check(s, kl, fu_paths, life, res, ctx, rng, nmax=4, picks=None):
+    """picks [(key, i)] (R5-6, tu v5_select); None -> cach cu (1 don vi / key dau tien, toi da nmax)."""
     out = []
     mkt_sym = ctx["mkt_sym"]
     aux = res["aux"]
-    for key in sorted(res["units"]):
+    if picks is None:
+        picks = []
+        for key in sorted(res["units"]):
+            cand = np.nonzero(res["units"][key]["ok"])[0]
+            if cand.size:
+                picks.append((key, int(rng.choice(cand))))
+            if len(picks) >= nmax:
+                break
+    for key, i in picks:
         u = res["units"][key]
         R = u["R"]
-        cand = np.nonzero(u["ok"])[0]
-        if cand.size == 0:
-            continue
-        i = int(rng.choice(cand))
         t0 = int(u["t0"][i])
         D = t0 // 1440
         base = DATA_START + (D - 32) * DAY
@@ -797,11 +905,10 @@ def v5_check(s, kl, fu_paths, life, res, ctx, rng, nmax=4):
                and ((np.isnan(er_r) and np.isnan(aux["er"][D])) or abs(er_r - aux["er"][D]) < 1e-12)
                and up_r == bool(aux["up"][D]) and dn_r == bool(aux["dn"][D]) and abs(beta_r - aux["beta"][D]) < 1e-9
                and ((np.isnan(f3_r) and np.isnan(aux["f3"][D])) or abs(f3_r - aux["f3"][D]) < 1e-15))
-        out.append(dict(ck=key[0], model=key[1], side=sd, t0=t0, net_main=float(R["net"][i]), net_ref=rr.get("net"),
+        out.append(dict(sym=s, ck=key[0], c=CK_ALL[key[0]][0], k=CK_ALL[key[0]][1], model=key[1], side=sd, t0=t0,
+                        net_main=float(R["net"][i]), net_ref=rr.get("net"),
                         er=[float(aux["er"][D]), er_r], beta=[float(aux["beta"][D]), beta_r], f3=[float(aux["f3"][D]), f3_r],
                         updown=[bool(aux["up"][D]), up_r, bool(aux["dn"][D]), dn_r], ok=bool(okv)))
-        if len(out) >= nmax:
-            break
     return out
 
 
@@ -867,15 +974,20 @@ def run(test_overrides=None):
     VS = V()
     kl, fu, lpath = find_inputs(inp)
     nday = (SEAL - DATA_START) // DAY
-    meta = {}
+    meta, meta_file = {}, {}
     for (y, mo), p in kl.items():
-        meta[y] = meta.get(y, 0) + pq.ParquetFile(p).metadata.num_rows
+        meta_file[(y, mo)] = pq.ParquetFile(p).metadata.num_rows
+        meta[y] = meta.get(y, 0) + meta_file[(y, mo)]
     VS.v["V0"].update(meta_rows=meta, registry=registry,
                       ok_registry=(registry is None) or all(meta.get(y) == registry[y] for y in registry))
     life = load_life(lpath)
     qv, act, hc, rows = pass1(kl, VS, nday)
     VS.v["V0"]["rows_read_pass1"] = rows
-    VS.v["V0"]["ok_read_eq_meta"] = all(rows.get(y, 0) == meta[y] for y in meta)
+    ok0a, ok0b, d0b = v0_eval(meta_file, VS.v["V0"].get("files_opened", []), rows, registry,
+                              V0_SKIP_EXPECTED_REAL if registry == REGISTRY_REAL else None)
+    VS.v["V0"].update(ok_V0a=ok0a, ok_V0b=ok0b, V0b=d0b)
+    VS.v["V0"]["ok_registry"] = bool(VS.v["V0"]["ok_registry"] and ok0a)
+    VS.v["V0"]["ok_read_eq_meta"] = ok0b                     # R5-1: thay "doc = metadata CA NAM" bang V0b
     ok2, mx2, fr2 = v2_eval(VS.v["V2"]["by_year"])
     VS.v["V2"].update(ok=ok2, max_bad_frac=mx2, bad_frac_by_year=fr2)
     if not ok2:
@@ -898,13 +1010,15 @@ def run(test_overrides=None):
         arr = load_symbol(kl, mkt_sym, nday)
         mkt = market_context(arr, delist_index(mkt_sym, life, arr[5]), nday)
     rng = np.random.default_rng(SEED_V + si)
-    v4, v5 = [], []
+    v4, v5, v4_skipped = [], [], []
+    v5_need, v5_cnt = set(range(len(CK_ALL))), {"OPT": 0, "PESS": 0, 1: 0, -1: 0}   # R5-6
     for k_ in ("long_gaps", "units_excl_gap", "units_excl_noend", "feat_mismatch_days"):
         VS.v["V3"][k_] = 0
     VS.v["V3"]["n_sym_from_checkpoint"] = 0
     for n_i, s in enumerate(mine):
         base = os.path.join(out, "agg_sym", s)
-        if all(os.path.exists("%s.%s.parquet" % (base, t)) for t in TABLES) and os.path.exists(base + ".v3.json") and n_i > nv4:
+        if (all(os.path.exists("%s.%s.parquet" % (base, t)) for t in TABLES) and os.path.exists(base + ".v3.json") and n_i > nv4
+                and len(v4) >= nv4 and not v5_need and len(v5) >= V5_MIN):
             v3s = json.load(open(base + ".v3.json"))            # checkpoint: lay lai bo dem V3 (R3-11)
             VS.v["V3"]["n_sym_from_checkpoint"] += 1
         else:
@@ -912,13 +1026,23 @@ def run(test_overrides=None):
             dl = delist_index(s, life, arr[5])
             ctx = dict(nday=nday, tier=tiers[s], qvd=qv[s], fund=fund.get(s), dl=dl, first_ms=life[s]["first"], mkt=mkt,
                        mkt_sym=mkt_sym, thr=thr, CP=CP, er_p1=er_p1[s], sig_p1=sg_p1[s])
-            res = process_symbol(s, arr, ctx, collect_units=(n_i <= nv4))
+            res = process_symbol(s, arr, ctx, collect_units=(n_i <= nv4 or bool(v5_need) or len(v5) < V5_MIN))
             v3s = _v3_sym(res, arr, nday, s)
-            if n_i < nv4:
-                v4.append(v4_check(s, arr, ctx, rng))
-                log.info("V4 %s", v4[-1])
-            if res["units"] and len(v5) < 8:
-                v5 += v5_check(s, kl, fu, life, res, ctx, rng)
+            if len(v4) < nv4:                                   # R5-2: 2 symbol HOP LE dau tien theo ten
+                okp, lo4, hi4, why = v4_pick(arr[5])
+                if okp:
+                    v4.append(v4_check(s, arr, ctx, rng, tc_range=(lo4, hi4)))
+                    log.info("V4 %s", v4[-1])
+                else:
+                    v4_skipped.append(dict(sym=s, reason=why))
+            if res["units"] and (v5_need or len(v5) < V5_MIN):  # R5-6: phu du 6 (c,k), BUY+SELL, OPT+PESS, 8..12 don vi
+                want = v5_need if v5_need else set(range(len(CK_ALL)))
+                pk = v5_select(res, want, v5_cnt, rng, V5_MAX - len(v5))
+                if not v5_need:
+                    pk = pk[:V5_MIN - len(v5)]
+                chk = v5_check(s, kl, fu, life, res, ctx, rng, picks=pk)
+                v5 += chk
+                v5_need -= {x["ck"] for x in chk}
             save_tables(res, base)
             json.dump(v3s, open(base + ".v3.json", "w"))
             log.info("sym %s (%d/%d) dl=%d rows=%d %.0fs", s, n_i + 1, len(mine), dl, len(res["agg"]), time.time() - t_start)
@@ -929,8 +1053,9 @@ def run(test_overrides=None):
     if os.environ.get("GRIDV2_KEEP_SYM", "0") != "1":
         for p in glob.glob(os.path.join(out, "agg_sym", "*.parquet")) + glob.glob(os.path.join(out, "agg_sym", "*.v3.json")):
             os.remove(p)
-    VS.v["V4"] = dict(checks=v4, ok=bool(v4) and all(x["ok"] for x in v4))
-    VS.v["V5"] = dict(checks=v5, ok=bool(v5) and all(x["ok"] for x in v5))
+    VS.v["V4"] = dict(checks=v4, v4_skipped=v4_skipped, n_required=nv4,
+                      ok=nv4 > 0 and len(v4) == nv4 and all(x["ok"] for x in v4))
+    VS.v["V5"] = v5_eval(v5)
     v = VS.v
     v["V1"]["ok"] = (not v["V1"]["bad"]) and v["V1"]["ts_max"] is not None and v["V1"]["ts_max"] < SEAL
     v["V3"]["ok"] = v["V3"]["feat_mismatch_days"] == 0

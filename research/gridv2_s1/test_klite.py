@@ -635,6 +635,8 @@ def t_runner(rng, outdir):
     for p in (root, ro):
         shutil.rmtree(p, ignore_errors=True)
     meta = synth.write_fake_lake(root)
+    extra = _add_premonths(root)                       # R5-4: thang truoc DATA_START - 31 ngay (pass1 bo qua)
+    meta["rows"][2021] = meta["rows"][2021] + sum(extra.values())
     os.makedirs(ro, exist_ok=True)
     os.environ.update(GRIDV2_INPUT=root, GRIDV2_OUT=ro, GRIDV2_SHARD="0/1", GRIDV2_KEEP_SYM="1")
     tov = dict(registry=meta["rows"], mkt_sym="AAAUSDT", cond={"A": dict(z=2.5, vmult=0.5)})
@@ -647,6 +649,18 @@ def t_runner(rng, outdir):
                                                                              excl_gap=v["V3"]["units_excl_gap"]),
         V4=[(c["n_checked"], c["n_diff"]) for c in v["V4"]["checks"]], V5=[c["ok"] for c in v["V5"]["checks"]],
         V6=v["V6"], seconds=secs)
+    fs = v["V0"]["V0b"]["files_skipped"]
+    rec("runner_V0b_skipped_premonths", v["V0"]["ok_V0a"] and v["V0"]["ok_V0b"]
+        and [f["file"] for f in fs] == ["kline1m-2021-01.parquet", "kline1m-2021-02.parquet", "kline1m-2021-03.parquet"]
+        and [f["meta_rows"] for f in fs] == [extra[(2021, m)] for m in (1, 2, 3)]
+        and v["V0"]["V0b"]["by_year"][2021]["meta_skipped"] == sum(extra.values()),
+        files_skipped=fs, v0b_2021=v["V0"]["V0b"]["by_year"][2021],
+        V4=[(c["sym"], c["tc_min"], c["tc_range"], c["n_checked"], c["n_diff"]) for c in v["V4"]["checks"]],
+        v4_skipped=v["V4"]["v4_skipped"])
+    v5v = v["V5"]
+    rec("runner_V5_full_coverage", v5v["ok"] and v5v["coverage"]["ck"] == list(range(6)) and v5v["coverage"]["side"] == [-1, 1]
+        and v5v["coverage"]["model"] == ["OPT", "PESS"] and 8 <= len(v5v["checked"]) <= 12 and not v5v["missing_ck"]
+        and all(len(r) == 6 for r in v5v["checked"]), checked=v5v["checked"], coverage=v5v["coverage"])
     # R3-11: chay lai tu checkpoint -> bo dem V3 giong het
     v3a = {k: v["V3"][k] for k in ("long_gaps", "units_excl_gap", "units_excl_noend", "feat_mismatch_days", "sym_month_missing")}
     tov2 = dict(tov, v4_syms=0)
@@ -1143,6 +1157,130 @@ def t_r4_merge(rng, outdir):
     shutil.rmtree(base, ignore_errors=True)
 
 
+def _add_premonths(root):
+    """Ghi kline1m-2021-01..03 (1 row group AAAUSDT) vao lake gia - thang pass1 phai bo qua (R5-4). Tra {(y, mo): so dong}."""
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+    out = {}
+    d = os.path.join(root, "datasets/x/vz-kline1m-2021")
+    for mo, n in ((1, 120), (2, 75), (3, 333)):
+        ts = int(np.datetime64("2021-%02d-01T00:00" % mo, "ms").astype(np.int64)) + 60000 * np.arange(n, dtype=np.int64)
+        px = np.full(n, 100.0)
+        tb = pa.table({"ts": ts, "sym": pa.array(["AAAUSDT"] * n).dictionary_encode(), "open": px, "high": px, "low": px,
+                       "close": px, "volume": np.ones(n), "quote_volume": np.ones(n), "active": np.ones(n, bool)})
+        pq.write_table(tb, os.path.join(d, "kline1m-2021-%02d.parquet" % mo), row_group_size=n + 1)
+        out[(2021, mo)] = n
+    return out
+
+
+def t_r5_v0():
+    """R5-1: V0a / V0b (pure) - dung, lech 1 dong, bo qua sai file, ky vong that."""
+    import runner_kaggle as rk
+    meta = {(2021, m): 100 + m for m in range(1, 13)}
+    meta.update({(2022, m): 1000 + m for m in range(1, 13)})
+    opened = [k for k in meta if not rk.v0_rule_skipped(*k)]
+    rows = {2021: sum(meta[k] for k in opened if k[0] == 2021), 2022: sum(meta[(2022, m)] for m in range(1, 13))}
+    reg = {2021: sum(meta[(2021, m)] for m in range(1, 13)), 2022: rows[2022]}
+    c = {}
+    a, b, d = rk.v0_eval(meta, opened, rows, reg, rk.V0_SKIP_EXPECTED_REAL)
+    c["valid"] = a and b and [f["file"] for f in d["files_skipped"]] == ["kline1m-2021-0%d.parquet" % m for m in (1, 2, 3)]
+    a, b, _ = rk.v0_eval(meta, opened, {**rows, 2021: rows[2021] - 1}, reg)
+    c["read_minus_1_fail"] = a and not b
+    a, b, _ = rk.v0_eval(meta, opened, rows, {**reg, 2021: reg[2021] + 1})
+    c["registry_plus_1_fail"] = not a and not b
+    a, b, _ = rk.v0_eval(meta, [k for k in opened if k != (2021, 4)], rows, reg)
+    c["extra_skip_fail"] = not b
+    a, b, _ = rk.v0_eval(meta, opened + [(2021, 3)], rows, reg)
+    c["skipped_file_opened_fail"] = not b
+    a, b, _ = rk.v0_eval(meta, opened, rows, reg, [[2021, 1], [2021, 2]])
+    c["expect_mismatch_fail"] = not b
+    rec("V0b_eval_pure", all(c.values()), **c)
+
+
+def t_r5_v4(rng):
+    """R5-2: v4_pick (90 ngay, khoang tc), v4_check tren symbol niem yet muon; rac truoc tc -> n_diff != 0 -> FAIL."""
+    import runner_kaggle as rk
+    nday = 150
+    names, arrs, funds, firsts = mini_universe(rng, nday)
+    hcs, tiers, qvd = {}, {}, {}
+    late = names[2]
+    O, H, L, C, QV, valid = arrs[late]
+    valid = valid.copy()
+    valid[:40 * 1440] = False                              # niem yet ngay 40 (truoc day: tc co the roi truoc -> n_checked 0)
+    arrs[late] = (O, H, L, C, QV, valid)
+    firsts[late] = rk.DATA_START + 40 * rk.DAY
+    for j, s_ in enumerate(names):
+        G = klite.prepare_grid(*arrs[s_][:4], arrs[s_][5], -1)
+        hcs[s_] = klite.hourly_close(G, nday)
+        tiers[s_] = np.full(nday, 1 if j < 2 else 2, np.int8)
+        qvd[s_] = arrs[s_][4].reshape(nday, 1440).sum(1)
+    tiers[late][:41] = 0
+    thr, er_p1, sg_p1 = rk.cross_section(tiers, hcs, nday)
+    mkt = rk.market_context(arrs["BTCUSDT"], -1, nday)
+    ctx = dict(nday=nday, tier=tiers[late], qvd=qvd[late], fund=funds[late], dl=-1, first_ms=firsts[late], mkt=mkt,
+               mkt_sym="BTCUSDT", thr=thr, CP=rk.cond_params(), er_p1=None, sig_p1=None)
+    okp, lo, hi, why = rk.v4_pick(valid)
+    d0m = (rk.STUDY_START - rk.DATA_START) // rk.MIN
+    c = dict(pick_late=okp and lo == max(40 * 1440 + 45 * 1440, d0m + 45 * 1440) and hi == int(np.nonzero(valid)[0][-1]) - 15 * 1440)
+    vs = np.zeros(nday * 1440, bool)
+    vs[50 * 1440:130 * 1440] = True                        # 80 ngay < 90 -> bo qua
+    ok_s, _, _, why_s = rk.v4_pick(vs)
+    c["short_skipped"] = (not ok_s) and why_s.startswith("span")
+    vo = np.ones(nday * 1440, bool)
+    ok_o, lo_o, _, _ = rk.v4_pick(vo)
+    c["old_symbol_lo_after_study"] = ok_o and lo_o == d0m + 45 * 1440
+    r_ok = rk.v4_check(late, arrs[late], ctx, np.random.default_rng(11), tc_range=(lo, hi))
+    r_old = rk.v4_check(late, arrs[late], ctx, np.random.default_rng(11), tc_range=(20 * 1440, 20 * 1440))
+    r_junk = rk.v4_check(late, arrs[late], ctx, np.random.default_rng(11), tc_range=(lo, hi), junk_lead_min=3 * 1440)
+    c["late_symbol_pass"] = r_ok["ok"] and r_ok["n_checked"] > 0 and r_ok["n_diff"] == 0 and lo <= r_ok["tc_min"] <= hi
+    c["tc_before_listing_fail"] = (not r_old["ok"]) and r_old["n_checked"] == 0
+    c["junk_before_tc_fail"] = (not r_junk["ok"]) and r_junk["n_diff"] > 0
+    rec("V4_pick_and_check_R5", all(c.values()), **c, n_checked=r_ok["n_checked"], n_diff_junk=r_junk["n_diff"], why_short=why_s)
+
+
+def t_r5_v5():
+    """R5-6: v5_select tat dinh, phu du (c,k) / side / model, doi model-side khi thieu, sang symbol ke tiep; v5_eval FAIL khi thieu."""
+    import runner_kaggle as rk
+
+    def fake_res(avail, seed):
+        r = np.random.default_rng(seed)
+        units = {}
+        for (ci, model), (nb, ns) in avail.items():
+            side = np.r_[np.ones(nb + 5, np.int8), -np.ones(ns + 5, np.int8)]
+            ok = np.r_[np.ones(nb, bool), np.zeros(5, bool), np.ones(ns, bool), np.zeros(5, bool)]
+            units[(ci, model)] = dict(ok=ok, side=side)
+        return dict(units=units)
+    full = {(ci, m): (3, 3) for ci in range(6) for m in ("OPT", "PESS")}
+    resA = fake_res({k: v for k, v in full.items() if k[0] != 5}, 1)          # symbol A: khong co don vi khop o ci 5
+    resA["units"][(4, "OPT")] = dict(ok=np.array([True, False]), side=np.array([-1, 1], np.int8))  # ci 4 OPT chi co SELL
+    resB = fake_res(full, 2)
+    c = {}
+    cnt = {"OPT": 0, "PESS": 0, 1: 0, -1: 0}
+    pa = rk.v5_select(resA, set(range(6)), cnt, np.random.default_rng(7), 12)
+    cnt2 = {"OPT": 0, "PESS": 0, 1: 0, -1: 0}
+    pa2 = rk.v5_select(resA, set(range(6)), cnt2, np.random.default_rng(7), 12)
+    c["deterministic"] = pa == pa2
+    c["symA_covers_0_4"] = sorted(k[0] for k, _ in pa) == [0, 1, 2, 3, 4]
+    c["picked_units_filled"] = all(bool(resA["units"][k]["ok"][i]) for k, i in pa)
+    need = set(range(6)) - {k[0] for k, _ in pa}
+    pb = rk.v5_select(resB, need, cnt, np.random.default_rng(8), 12 - len(pa))
+    c["next_symbol_fills_ci5"] = [k[0] for k, _ in pb] == [5]
+    allp = [(k, int(resA["units"][k]["side"][i])) for k, i in pa] + [(k, int(resB["units"][k]["side"][i])) for k, i in pb]
+    c["both_models_sides"] = {k[1] for k, _ in allp} == {"OPT", "PESS"} and {sd for _, sd in allp} == {1, -1}
+    c["room_respected"] = len(rk.v5_select(resB, set(range(6)), dict(cnt), np.random.default_rng(9), 2)) == 2
+
+    def chk(ck, side, model, ok=True):
+        return dict(sym="X", t0=1, ck=ck, c=rk.CK_ALL[ck][0], k=rk.CK_ALL[ck][1], side=side, model=model, ok=ok)
+    good = [chk(i, 1 if i % 2 else -1, "OPT" if i % 2 else "PESS") for i in range(6)] + [chk(0, 1, "OPT"), chk(1, -1, "PESS")]
+    c["eval_good"] = rk.v5_eval(good)["ok"]
+    c["eval_missing_ck_fail"] = (not rk.v5_eval([x for x in good if x["ck"] != 5] + [chk(2, 1, "OPT")])["ok"]
+                                 and rk.v5_eval([x for x in good if x["ck"] != 5] + [chk(2, 1, "OPT")])["missing_ck"] == [5])
+    c["eval_one_side_fail"] = not rk.v5_eval([chk(i % 6, 1, "OPT" if i % 2 else "PESS") for i in range(8)])["ok"]
+    c["eval_too_few_fail"] = not rk.v5_eval(good[:6])["ok"]
+    c["eval_mismatch_fail"] = not rk.v5_eval(good[:7] + [chk(1, -1, "PESS", ok=False)])["ok"]
+    rec("V5_select_eval_R5_6", all(c.values()), **c)
+
+
 def t_guards(rng, outdir):
     """R3-1 env cam; R3-7 allowlist; R3-6 V2 nguong; R3-10 V6; R3-5 s_hat thieu."""
     import runner_kaggle as rk
@@ -1252,6 +1390,9 @@ def main():
     t_merge_rules(rng, outdir)
     t_r4_stats(rng)
     t_r4_merge(rng, outdir)
+    t_r5_v0()
+    t_r5_v4(rng)
+    t_r5_v5()
     t_guards(rng, outdir)
     t_features(rng)
     t_masks_neth(rng)
