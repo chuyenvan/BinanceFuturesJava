@@ -364,7 +364,7 @@ chk "a5c [OPS6 T20] KS dong cuoi THIEU xuong dong => token c3_autodrain thanh do
 rm -f $F/run/KILL_SWITCH; echo 1 > $W/pre_rc
 OUT=$(AW bash "$WP" "$F" x 2>&1); RC=$?
 chk "a6 [luot3 m-4] prestart goc rc 1 (deps chua san) => tra rc 1; token KS DA ghi TRUOC prestart goc (giu: lan start sau van drain)" "[ $RC = 1 ] && grep -qxE 'c3_autodrain [0-9]{8}_[0-9]{6} caller=[A-Za-z0-9_.-]*' $F/run/KILL_SWITCH"
-echo 0 > $W/pre_rc; sed -i 's/^export LIVE_ADAPTER=live/export LIVE_ADAPTER=dry/' $F/conf/env.sh
+echo 0 > $W/pre_rc; rm -f $F/run/KILL_SWITCH; sed -i 's/^export LIVE_ADAPTER=live/export LIVE_ADAPTER=dry/' $F/conf/env.sh
 OUT=$(AW bash "$WP" "$F" x 2>&1); RC=$?
 chk "a7 env.sh adapter=dry => khong drain, rc 0" "[ $RC = 0 ] && [ ! -e $F/run/KILL_SWITCH ] && echo \"\$OUT\" | grep -q 'khong live'"
 sed -i 's/^export LIVE_ADAPTER=dry/export LIVE_ADAPTER=live/' $F/conf/env.sh; chmod 555 $F/run

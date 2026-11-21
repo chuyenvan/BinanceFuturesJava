@@ -467,7 +467,7 @@ chk "B1 systemd: ExecStartPre hieu luc = DUNG 1 lenh = wrapper $F $MCX (goc KHON
 rm -f $F/run/KILL_SWITCH $W/orig_args.log; echo 0 > $W/pre_rc; R1=$(sdstart)
 chk "B1 systemd boot: prestart GOC chay 1 lan voi DUNG 2 tham so ($F, main class), roi token c3_autodrain => KS CO luc ExecStart" '[ "$R1" = "SD_RC=0 SD_START=1 KS_LUC_START=1" ] && [ "$(cat $W/orig_args.log)" = "2|$F|$MCX" ] && grep -qxE "c3_autodrain [0-9]{8}_[0-9]{6} caller=[A-Za-z0-9_.-]*" $F/run/KILL_SWITCH'
 rm -f $F/run/KILL_SWITCH $W/orig_args.log; echo 1 > $W/pre_rc; R1=$(sdstart); echo 0 > $W/pre_rc
-chk "B1 systemd: prestart GOC tra rc 1 (deps chua san) => wrapper tra NGUYEN rc 1 => KHONG ExecStart, KHONG drain (giu hanh vi goc)" '[ "$R1" = "SD_RC=1 SD_START=0 KS_LUC_START=0" ] && [ "$(cat $W/orig_args.log)" = "2|$F|$MCX" ]'
+chk "B1 systemd: prestart GOC tra rc 1 (deps chua san) => wrapper tra NGUYEN rc 1 => KHONG ExecStart; [luot3 m-4] token KS DA ghi TRUOC goc (giu - lan start sau van drain)" '[ "$R1" = "SD_RC=1 SD_START=0 KS_LUC_START=1" ] && [ "$(cat $W/orig_args.log)" = "2|$F|$MCX" ]'
 rm -f $F/run/KILL_SWITCH $W/orig_args.log $W/wd39.log
 CL=$(grep 'h242_watchdog.sh' $W/ct242 | sed -E 's#^\*/2 \* \* \* \* ##; s#/var/lib/h242_watchdog/cron.out#'"$W"'/cron.out#')
 env -i PATH="$W/guardbin:/usr/bin:/bin" sh -c "$CL"
@@ -508,7 +508,7 @@ chk "pilot_down ssh dut SAU khoi restart (1 lan) => doc pha, chay lai idempotent
 # =============================================================================== LUOT 3 (A1 audit cbcea237: M-1, m-1..m-9, n-2, n-4, n-6, muc 14)
 echo "== LUOT 3"
 reset242 1005; printf 'c3_autodrain 20261121_101500 caller=h242_watchdog.sh\n' > $F/run/KILL_SWITCH; cp $F/run/KILL_SWITCH $W/ks_ad
-(cd $F && nohup bash -c 'exec -a "$(cat FAKE_PN)" sleep 120' >/dev/null 2>&1 &); sleep 0.3
+(cd $F; nohup bash -c 'exec -a "$(cat FAKE_PN)" sleep 120' >/dev/null 2>&1 < /dev/null &) >/dev/null 2>&1; sleep 0.3
 OUT=$(echo 'YES MO LAI' | bash "$HERE/golive_boot_undrain.sh" 2>&1); RC=$?
 chk "M-1 boot_undrain: 2 JVM => DUNG rc1, KHONG go KS (byte), in VIEC TIEP THEO + 1 lenh owner" '[ $RC = 1 ] && echo "$OUT" | grep -q "so process bot = 2" && cmp -s $W/ks_ad $F/run/KILL_SWITCH && echo "$OUT" | grep -q "VIEC TIEP THEO" && [ "$(echo "$OUT" | grep -c "LENH OWNER (dung 1)")" = 1 ] && echo "$OUT" | grep -q "run/KILL_SWITCH: 1_dong:c3_autodrainx1"'
 reset242 1005; cp $W/ks_ad $F/run/KILL_SWITCH; bash $F/bin/daemon.sh stop >/dev/null 2>&1
@@ -559,7 +559,7 @@ reset242 1005; cp -p $W/gate_ok $G; echo 10000 > $F/FAKE_KHAN_IF_CAP; rm -f $F/r
 ( for i in $(seq 1 900); do tail -n +$LNW $F/logs/full.log | grep -q 'c3_capital=10000' && { sleep 0.3; rm -f $W/PAUSE; exit 0; }; sleep 0.1; done ) & OWP=$!
 yp; kill $OWP 2>/dev/null; wait $OWP 2>/dev/null
 chk "m-3 rollback bat dau MUON (PAUSE restart DA het han / mat) => rollback ghi LAI PAUSE han moi token C3GOLIVE_RB_ TRUOC stop, xong go PAUSE, 1 JVM 1000" '[ $RC = 1 ] && echo "$OUT" | grep -q "OK watchdog_PAUSE_rollback token=.C3GOLIVE_RB_golive_pilot_on" && tail -1 $F/run/stop_trace.txt | grep -q "PAUSE=C3GOLIVE_RB_golive_pilot_on" && [ ! -e $W/PAUSE ] && [ "$(np)" = 1 ] && [ "$(envcap)" = 1000 ]'
-mkdir -p $W/pyx; printf '#!/bin/bash\ncase "$*" in *killsw_latch.json*) ;; *) exec python3 "$@";; esac\nif [ -f %s/intr ]; then n=$(( $(cat %s/intr) - 1 )); if [ $n -le 0 ]; then rm -f %s/intr; (cd %s && nohup bash -c '"'"'exec -a "$(cat FAKE_PN)" sleep 120'"'"' >/dev/null 2>&1 &); sleep 0.3; else echo $n > %s/intr; fi; fi\nexec python3 "$@"\n' $W $W $W $F $W > $W/pyx/python3; chmod +x $W/pyx/python3
+mkdir -p $W/pyx; printf '#!/bin/bash\ncase "$*" in *killsw_latch.json*) ;; *) exec python3 "$@";; esac\nif [ -f %s/intr ]; then n=$(( $(cat %s/intr) - 1 )); if [ $n -le 0 ]; then rm -f %s/intr; (cd %s; nohup bash -c '"'"'exec -a "$(cat FAKE_PN)" sleep 120'"'"' >/dev/null 2>&1 < /dev/null &) >/dev/null 2>&1 < /dev/null; sleep 0.3; else echo $n > %s/intr; fi; fi\nexec python3 "$@"\n' $W $W $W $F $W > $W/pyx/python3; chmod +x $W/pyx/python3
 reset242 1005; cp -p $W/gate_ok $G; echo 10000 > $F/FAKE_KHAN_IF_CAP; echo 2 > $W/intr; PY242=$W/pyx/python3 yp
 chk "m-3 'watchdog' start JVM giua rollback (sau stop, truoc start) => rollback KHONG start lan 2 (1 JVM), KS them dong rb_jvm_da_chay, KHAN rc2" '[ $RC = 2 ] && echo "$OUT" | grep -q "FAIL KHAN rb_jvm_DA_CHAY_truoc_start" && [ "$(np)" = 1 ] && grep -q "rb_jvm_da_chay_truoc_start" $F/run/KILL_SWITCH && echo "$OUT" | grep -q "LENH OWNER (dung 1): bash .*golive_monitor.sh"'
 reset242 1005; cp -p $W/gate_ok $G; echo 1 > $W/intr; PY242=$W/pyx/python3 yp
