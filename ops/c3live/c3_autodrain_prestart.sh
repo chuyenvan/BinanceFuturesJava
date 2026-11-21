@@ -7,8 +7,9 @@ trap 'exit $_RC' EXIT
 #   Boc prestart goc (/usr/local/sbin/h242-prestart.sh <APP> <MainClass>): watchdog (WD_PRESTART) va systemd h242-trading (ExecStartPre)
 #   goi TRUOC khi start bot. Script go-live (golive_*/deploy_*/rollback_*) start bang bin/daemon.sh truc tiep + PAUSE watchdog => KHONG qua day.
 #   => moi lan start qua day = khoi dong lai NGOAI y muon (watchdog HB_STALE_KILL / TRADING_DOWN / boot may).
-# Neu conf/env.sh co LIVE_ADAPTER=live: tao run/KILL_SWITCH (set -C, KHONG ghi de file co san) TRUOC khi start =>
-#   bot len o trang thai DRAIN (van quan ly vi the c3, KHONG mo lenh moi) + Telegram. Mo lai: MODE=undrain bash <OPS>/golive_live_off.sh.
+# Neu conf/env.sh co LIVE_ADAPTER=live: THEM dong token c3_autodrain vao run/KILL_SWITCH (>>, KHONG ghi de file co san) TRUOC khi start =>
+#   bot len o trang thai DRAIN (van quan ly vi the c3, KHONG mo lenh moi) + Telegram. Mo lai: bash <OPS>/golive_boot_undrain.sh (CHI go dong
+#   c3_autodrain). [OPS6 T20] KS co san (dong nguoi khac) => THEM dong token cua minh (>>), khong ghi de, khong xoa.
 # KHONG BAO GIO chan start (vi the can duoc quan ly) - [OPS5_FIX A-1]:
 #   - moi nhanh cua wrapper tra rc 0 (dat KILL_SWITCH loi, run/ mat, STATE/tg.env loi, dia day, bien rong ...);
 #   - prestart goc MAT / mat quyen x / rc 126|127 (khong exec duoc) => log KHAN + Telegram (curl -m 15), BO QUA buoc goc, van xet drain, rc 0
@@ -55,11 +56,19 @@ if [ "$AD" != live ]; then
 fi
 CALLER=$(ps -o comm= -p "$PPID" 2>/dev/null | tr -cd 'A-Za-z0-9_.-'); TOKEN="c3_autodrain $(date +%Y%m%d_%H%M%S) caller=${CALLER:-unknown}"   # [VONG3 F1] khop regex token chuan
 KS=$APP/run/KILL_SWITCH
-if [ -e "$KS" ]; then R="run/KILL_SWITCH DA CO (giu nguyen: $(head -c 60 "$KS" 2>/dev/null | tr -cd 'A-Za-z0-9_ .=:-'))"; LV=INFO
-elif ( set -C; printf '%s\n' "$TOKEN" > "$KS" ) 2>/dev/null && [ -e "$KS" ]; then R="DA DAT run/KILL_SWITCH ($TOKEN)"; LV=OK
-elif [ -e "$KS" ]; then R="DA DAT run/KILL_SWITCH nhung ghi token LOI (dia day?) - file co the rong"; LV=KHAN
-else R="KHONG dat duoc run/KILL_SWITCH (quyen/dia?) - bot se len MO LENH MOI"; LV=KHAN; fi
+# [OPS6 T20] ghi THEO DONG: dong token RIENG "c3_autodrain <ts> caller=<..>" LUON co trong run/KILL_SWITCH TRUOC khi start (them >>, KHONG ghi de /
+#   KHONG xoa dong nguoi khac). Da co dong c3_autodrain => giu (khong them dong thu 2). Mo lai: golive_boot_undrain.sh CHI go dong c3_autodrain.
+ADRX='^c3_autodrain [0-9]{8}_[0-9]{6}( caller=[A-Za-z0-9_.-]*)?$'
+KS0=$([ -e "$KS" ] && head -c 60 "$KS" 2>/dev/null | tr -cd 'A-Za-z0-9_ .=:-')
+if [ -e "$KS" ] && grep -qxE "$ADRX" "$KS" 2>/dev/null; then R="run/KILL_SWITCH DA CO dong c3_autodrain (giu nguyen, khong them: $KS0)"; LV=INFO
+else
+  [ -s "$KS" ] && [ -n "$(tail -c 1 "$KS" 2>/dev/null)" ] && printf '\n' >> "$KS" 2>/dev/null   # dong cuoi thieu xuong dong => khong dinh vao dong nguoi khac
+  if printf '%s\n' "$TOKEN" >> "$KS" 2>/dev/null && grep -qxF "$TOKEN" "$KS" 2>/dev/null; then
+    if [ -n "$KS0" ]; then R="DA THEM dong $TOKEN vao run/KILL_SWITCH co san (dong nguoi khac GIU NGUYEN: $KS0)"; else R="DA DAT run/KILL_SWITCH ($TOKEN)"; fi; LV=OK
+  elif [ -e "$KS" ]; then R="run/KILL_SWITCH CO nhung ghi dong token LOI (dia day?) - bot van DRAIN vi file ton tai"; LV=KHAN
+  else R="KHONG dat duoc run/KILL_SWITCH (quyen/dia?) - bot se len MO LENH MOI"; LV=KHAN; fi
+fi
 [ -n "$PRE_NOTE" ] && LV=KHAN
 log "$LV $R"
-tg "[242-AUTODRAIN] $([ "$LV" = KHAN ] && echo 'KHAN ')bot c3 LIVE khoi dong lai NGOAI quy trinh golive (caller=${CALLER:-?}: watchdog/boot): $R. Bot quan ly vi the, KHONG mo lenh moi.${PRE_NOTE:+ CANH BAO: $PRE_NOTE.} Kiem nguyen nhan (watchdog.log, logs/full.log) roi mo lai: MODE=undrain bash <OPS>/golive_live_off.sh"
+tg "[242-AUTODRAIN] $([ "$LV" = KHAN ] && echo 'KHAN ')bot c3 LIVE khoi dong lai NGOAI quy trinh golive (caller=${CALLER:-?}: watchdog/boot): $R. Bot quan ly vi the, KHONG mo lenh moi.${PRE_NOTE:+ CANH BAO: $PRE_NOTE.} Kiem nguyen nhan (watchdog.log, logs/full.log) roi mo lai (CHI go dong c3_autodrain): bash <OPS>/golive_boot_undrain.sh"
 exit 0

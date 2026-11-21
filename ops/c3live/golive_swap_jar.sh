@@ -22,6 +22,9 @@
 #   SIGHUP (dong terminal / rot ssh toi Oracle) bi bo qua tu dau; sau YES bo qua ca INT/TERM => script chay toi trang thai cuoi.
 # Ma thoat: 0 XONG / DA XONG / DRY PASS | 1 TU CHOI / da rollback ve jar nguon (DAT) | 2 KHAN (can owner/MASTER).
 # Bien (test): SJ_OLD_MD5 SJ_NEW_MD5 SJ_OLD_JAR SJ_NEW_JAR SCP_242 RHOST + bien golive_lib.sh
+# [OPS6 T3/H1] run/KILL_SWITCH ghi THEO DONG: script CHI them dong token "<NM> <TS> ..." cua minh (>>, khong ghi de) va CHI go file khi MOI dong
+#   la cua minh; co dong nguoi khac (owner drain / autodrain / monitor KHAN) => GIU NGUYEN ca file (ke ca dong cua minh), bao KHAN (bot DRAIN).
+# [OPS6 T4] MODE=rollback ve jar cu r4u3fin2 (SJ_OLD_MD5 64180356) => jar != NJ_MD5 (golive_lib) => micro_on/pilot_on/make_gate_pilot TU CHOI.
 # =============================================================================
 set -uo pipefail
 trap '' HUP
@@ -134,7 +137,8 @@ pv() { sed -n "s/^$1=//p" "$PH" 2>/dev/null | tail -1; }
 mark() { echo "$1" >> "$PH"; }
 m5() { md5sum < "$1" 2>/dev/null | cut -c1-32; }
 myks() { grep -q "^$NM $TS " run/KILL_SWITCH 2>/dev/null; }
-ksoff() { myks && mv -f run/KILL_SWITCH run/KILL_SWITCH.rb_$TS; }
+onlymine() { myks && [ "$(grep -vc "^$NM $TS " run/KILL_SWITCH)" = 0 ]; }
+ksoff() { if onlymine; then mv -f run/KILL_SWITCH run/KILL_SWITCH.rb_$TS; elif myks; then echo "WARN KILL_SWITCH_co_dong_nguoi_khac_GIU_NGUYEN (khong go dong cua script khi co dong khac)"; fi; }   # [OPS6 T3/H1]
 TOK="C3GOLIVE_${NM} TS=$TS pid=$JP"
 pclr() { grep -q "^$TOK " "$PAUSE" 2>/dev/null && rm -f "$PAUSE"; }
 if ph started; then
@@ -147,7 +151,7 @@ fi
 if ! ph stopped; then
   if ! myks; then
     [ -e run/KILL_SWITCH ] && { echo "FAIL KILL_SWITCH_khac_dang_dat ($(head -c 60 run/KILL_SWITCH | tr '\n' ' ')) - bot KHONG dung"; echo END_RS; exit 0; }
-    echo "$NM $TS hau_kiem: dung mo moi toi khi hau kiem jar moi DAT" > run/KILL_SWITCH
+    echo "$NM $TS hau_kiem: dung mo moi toi khi hau kiem jar moi DAT" >> run/KILL_SWITCH
   fi
   myks && echo "OK KILL_SWITCH_dat_truoc_stop" || { echo "FAIL khong_dat_duoc_KILL_SWITCH (bot KHONG dung)"; echo END_RS; exit 0; }
   if [ -e "$PAUSE" ] && ! grep -q "^$TOK " "$PAUSE" 2>/dev/null; then ksoff; echo "FAIL PAUSE_khac_dang_co ($(head -c 60 "$PAUSE" | tr '\n' ' ')) - bot KHONG dung"; echo END_RS; exit 0; fi
@@ -207,7 +211,7 @@ J=target/binance-java-sdk-1.2.4.jar; JB=$J.bak_${NM}_$TS; RP=run/.golive_${NM}_$
 ph() { grep -qx "$1" "$RP" 2>/dev/null; }
 mark() { echo "$1" >> "$RP"; }
 m5() { md5sum < "$1" 2>/dev/null | cut -c1-32; }
-[ -e run/KILL_SWITCH ] || echo "$NM $TS rollback: dung mo moi" > run/KILL_SWITCH
+grep -q "^$NM $TS " run/KILL_SWITCH 2>/dev/null || echo "$NM $TS rollback: dung mo moi" >> run/KILL_SWITCH   # [OPS6 T3/H1] APPEND dong cua minh (KS nguoi khac giu)
 [ -e run/KILL_SWITCH ] && echo "OK KILL_SWITCH_dang_dat" || echo "WARN khong_dat_duoc_KILL_SWITCH"
 if ! ph rb_started; then
   bin/daemon.sh stop 8>&-
@@ -261,8 +265,11 @@ LS=$(tail -n +$SL $L | grep -a "LEGACY tren tai khoan chinh:" | tail -1 | grep -
 if [ -z "$LS" ]; then echo "WAIT scope_tk_con"; elif [ "$LS" = 0 ]; then echo "OK scope_tk_con_0_vi_the_ngoai_c3"; else echo "FAIL scope_tk_con_${LS}_vi_the_ngoai_c3"; fi
 KF='"$KEYS_FILE"'
 [ -f "$KF" ] && [ "$(stat -c %a "$KF")" = 600 ] && [ "$(sed -n "s/^C3_LIVE_API_KEY=//p" "$KF" | head -1 | tr -d " \t\r\"" | tr -d "\n" | sha256sum | cut -c1-8)" = '"$SUB_KEY_SHA8"' ] && echo "OK file_key_600_sha8" || echo "FAIL file_key"'; }
-ks_ensure() { s242 "cd $A && { [ -e run/KILL_SWITCH ] || echo '$NM $TS $1' > run/KILL_SWITCH; } && [ -e run/KILL_SWITCH ]" \
+ks_ensure() { s242 "cd $A && { grep -q '^$NM $TS ' run/KILL_SWITCH 2>/dev/null || echo '$NM $TS $1' >> run/KILL_SWITCH; } && grep -q '^$NM $TS ' run/KILL_SWITCH" \
   && say "run/KILL_SWITCH DANG DAT (dung mo moi; vi the van duoc quan ly)" || say "!! KHONG xac nhan duoc run/KILL_SWITCH (ssh?) - owner: MODE=drain bash $_OPS/golive_live_off.sh"; }
+# [OPS6 T3/H1] sj_ks_go <hau to> : go run/KILL_SWITCH CHI khi MOI dong la cua minh. In OK (da go / da go o lan truoc) | KHAC (co dong nguoi khac
+#   hoac KS khong con dong cua minh => GIU NGUYEN) | MAT (khong co KS) | LOI / rong (ssh)
+sj_ks_go() { s242 "cd $A && if [ -e run/KILL_SWITCH.$1_$TS ] && [ ! -e run/KILL_SWITCH ]; then echo KSGO=OK; elif [ ! -e run/KILL_SWITCH ]; then echo KSGO=MAT; elif ! grep -q '^$NM $TS ' run/KILL_SWITCH || [ \"\$(grep -vc '^$NM $TS ' run/KILL_SWITCH)\" != 0 ]; then echo KSGO=KHAC; else mv -f run/KILL_SWITCH run/KILL_SWITCH.$1_$TS && [ ! -e run/KILL_SWITCH ] && echo KSGO=OK || echo KSGO=LOI; fi" 2>/dev/null | sed -n 's/^KSGO=//p' | tail -1; }
 pause_clear() { gl_pause_clear >/dev/null 2>&1 || say "PAUSE con (ssh?) - tu go sau ${WD_PAUSE_MAX_S}s"; }
 khan() { say "KHAN: $1"; tg "[golive] KHAN TS=$TS swap_jar($MODE): $1 | log $LOG" || say "!! Telegram KHONG gui duoc"; exit 2; }
 downtime() { local a b; a=$(echo "$1" | sed -n 's/^T_STOP=//p' | tail -1); b=$(echo "$1" | sed -n 's/^T_START=//p' | tail -1)
@@ -277,13 +284,16 @@ do_rollback() {   # $1 = ly do. Ve jar nguon + start + hau kiem; DAT => go KS cu
   fi
   SL=$(echo "$RB" | sed -n 's/^RB_START_LINE=//p' | tail -1); SL=${SL:-1}; CHK_JAR=$FROM_MD5
   if gl_postloop CHK; then
-    if s242 "cd $A && { grep -q '^$NM $TS ' run/KILL_SWITCH 2>/dev/null && mv -f run/KILL_SWITCH run/KILL_SWITCH.rbok_$TS; [ ! -e run/KILL_SWITCH ] || ! grep -q '^$NM $TS ' run/KILL_SWITCH; }"; then
+    KG=$(sj_ks_go rbok)   # [OPS6 T3/H1] khong mv ca file khi co dong nguoi khac
+    if [ "$KG" = OK ]; then
       pause_clear
       say "Da ROLLBACK xong: jar nguon $FROM_MD5 chay lai, hau kiem DAT, KILL_SWITCH cua script da go (KS khac neu co: giu)."
       tg "[golive] swap_jar($MODE) FAIL TS=$TS: $1 => ROLLBACK ve $FROM_MD5 XONG (hau kiem DAT). Log $LOG" || :
       exit 1
     fi
-    pause_clear; khan "$1; rollback hau kiem DAT nhung KHONG xac nhan go duoc KILL_SWITCH (ssh?) => co the van drain. Kiem golive_monitor.sh"
+    pause_clear
+    [ "$KG" = KHAC ] && khan "$1; rollback ve jar nguon $FROM_MD5 hau kiem DAT nhung run/KILL_SWITCH co dong NGUOI KHAC (owner drain / monitor KHAN) => GIU NGUYEN ca file, bot jar nguon DANG DRAIN. Owner/MASTER kiem noi dung roi MODE=undrain bash $_OPS/golive_live_off.sh"
+    khan "$1; rollback hau kiem DAT nhung KHONG xac nhan go duoc KILL_SWITCH (${KG:-ssh?}) => co the van drain. Kiem golive_monitor.sh"
   fi
   ks_ensure "rollback_hau_kiem_truot"; pause_clear
   khan "$1 VA hau kiem SAU ROLLBACK TRUOT ($(echo "$RESULT" | grep '^FAIL\|^WAIT' | tr '\n' ' ' | cut -c1-200)) => GIU run/KILL_SWITCH (dung mo moi). Kiem: bash $_OPS/golive_monitor.sh"
@@ -310,7 +320,8 @@ CHK_JAR=$TO_MD5
 gl_postloop CHK || do_rollback "hau kiem jar dich TRUOT ($(echo "$RESULT" | grep '^FAIL\|^WAIT' | tr '\n' ' ' | cut -c1-200))"
 # ---------------------------------------------------------------- DAT => go KILL_SWITCH cua minh => cho PUSH ON
 T_KS=$(date +%s)
-if s242 "cd $A && { grep -q '^$NM $TS ' run/KILL_SWITCH 2>/dev/null && mv -f run/KILL_SWITCH run/KILL_SWITCH.ok_$TS; [ -e run/KILL_SWITCH.ok_$TS ] && [ ! -e run/KILL_SWITCH ]; }"; then
+KG=$(sj_ks_go ok)   # [OPS6 T3/H1]
+if [ "$KG" = OK ]; then
   say "OK go run/KILL_SWITCH (hau kiem DAT) - cho PUSH ON"
   PON=0
   for r in $(seq 1 "$POST_ROUNDS"); do
@@ -327,7 +338,7 @@ if s242 "cd $A && { grep -q '^$NM $TS ' run/KILL_SWITCH 2>/dev/null && mv -f run
     tg "[golive] swap_jar($MODE) XONG TS=$TS: jar $TO_MD5, bot tat $DT, PUSH ON. Log $LOG" || :
     exit 0
   fi
-  if s242 "cd $A && { [ -e run/KILL_SWITCH ] || echo '$NM $TS push_khong_ON' > run/KILL_SWITCH; } && [ -e run/KILL_SWITCH ]"; then   # [A1 m2] KS nguoi khac (drain) => GIU
+  if s242 "cd $A && { grep -q '^$NM $TS ' run/KILL_SWITCH 2>/dev/null || echo '$NM $TS push_khong_ON' >> run/KILL_SWITCH; } && grep -q '^$NM $TS ' run/KILL_SWITCH"; then   # [A1 m2] KS nguoi khac (drain) => GIU
     M="hau kiem DAT nhung KHONG thay 'PUSH doi trang thai -> ON' sau khi go KILL_SWITCH => DA DAT LAI KILL_SWITCH (xac nhan; khong mo moi). Kiem bash $_OPS/golive_monitor.sh"
   else
     M="hau kiem DAT nhung KHONG thay PUSH ON; DAT LAI KILL_SWITCH THAT BAI (ssh?) => owner chay NGAY MODE=drain bash $_OPS/golive_live_off.sh"
@@ -335,4 +346,5 @@ if s242 "cd $A && { grep -q '^$NM $TS ' run/KILL_SWITCH 2>/dev/null && mv -f run
   pause_clear; khan "$M"
 fi
 pause_clear
+[ "$KG" = KHAC ] && khan "hau kiem jar $TO_MD5 DAT nhung run/KILL_SWITCH co dong NGUOI KHAC (owner drain / monitor KHAN) => GIU NGUYEN ca file, KHONG go: bot jar moi DANG DRAIN. Owner/MASTER kiem noi dung roi MODE=undrain bash $_OPS/golive_live_off.sh"
 khan "hau kiem DAT nhung KHONG XAC NHAN go duoc run/KILL_SWITCH (ssh / KILL_SWITCH khac da ghi de) => bot jar $TO_MD5 CO THE van drain hoac da mo. Kiem: bash $_OPS/golive_monitor.sh ; dung khan: MODE=drain bash $_OPS/golive_live_off.sh"

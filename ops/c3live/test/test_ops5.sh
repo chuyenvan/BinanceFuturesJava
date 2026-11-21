@@ -350,10 +350,15 @@ chk "a3 install lan 2 => KHONG DOI" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'KH
 AW() { env AD_ORIG_PRESTART=$SB/h242-prestart.sh AD_STATE_DIR=$W/adstate AD_TG_SINK=$W/tgad.txt "$@"; }
 rm -f $F/run/KILL_SWITCH; WP=$(grep -o 'WD_PRESTART=[^ ]*' $W/ct242 | cut -d= -f2)
 OUT=$(AW bash "$WP" "$F" com.binance.chuyennd.trading.BinanceOrderTradingManager 2>&1); RC=$?
-chk "a4 watchdog goi WD_PRESTART (tu dong cron da cai), env.sh live, chua co KS => tao run/KILL_SWITCH token c3_autodrain + Telegram, rc 0" "[ $RC = 0 ] && grep -q '^c3_autodrain [0-9_]* caller=' $F/run/KILL_SWITCH && grep -q '\[242-AUTODRAIN\] bot c3 LIVE khoi dong lai NGOAI quy trinh.*DA DAT run/KILL_SWITCH.*MODE=undrain' $W/tgad.txt"
+chk "a4 watchdog goi WD_PRESTART (tu dong cron da cai), env.sh live, chua co KS => tao run/KILL_SWITCH token c3_autodrain + Telegram, rc 0" "[ $RC = 0 ] && grep -q '^c3_autodrain [0-9_]* caller=' $F/run/KILL_SWITCH && grep -q '\[242-AUTODRAIN\] bot c3 LIVE khoi dong lai NGOAI quy trinh.*DA DAT run/KILL_SWITCH.*golive_boot_undrain.sh' $W/tgad.txt"
 echo 'golive_live_off drain 20261119_000000' > $F/run/KILL_SWITCH
 OUT=$(AW bash "$WP" "$F" x 2>&1); RC=$?
-chk "a5 KS da co (drain cua owner) => GIU NGUYEN noi dung, bao 'DA CO'" "[ $RC = 0 ] && [ \"\$(cat $F/run/KILL_SWITCH)\" = 'golive_live_off drain 20261119_000000' ] && tail -2 $W/tgad.txt | grep -q 'DA CO (giu nguyen'"
+chk "a5 [OPS6 T20] KS da co (drain cua owner) => dong owner GIU NGUYEN (dong 1), THEM dong token c3_autodrain (>>), bao 'DA THEM'" "[ $RC = 0 ] && [ \"\$(head -1 $F/run/KILL_SWITCH)\" = 'golive_live_off drain 20261119_000000' ] && [ \$(grep -c '' $F/run/KILL_SWITCH) = 2 ] && tail -1 $F/run/KILL_SWITCH | grep -qE '^c3_autodrain [0-9]{8}_[0-9]{6} caller=' && tail -2 $W/tgad.txt | grep -q 'DA THEM dong c3_autodrain'"
+OUT=$(AW bash "$WP" "$F" x 2>&1); RC=$?
+chk "a5b [OPS6 T20] chay lai (da co dong c3_autodrain) => KHONG them dong thu 3, bao 'DA CO dong c3_autodrain'" "[ $RC = 0 ] && [ \$(grep -c '' $F/run/KILL_SWITCH) = 2 ] && tail -2 $W/tgad.txt | grep -q 'DA CO dong c3_autodrain'"
+printf 'golive_live_off drain 20261119_000009' > $F/run/KILL_SWITCH
+OUT=$(AW bash "$WP" "$F" x 2>&1); RC=$?
+chk "a5c [OPS6 T20] KS dong cuoi THIEU xuong dong => token c3_autodrain thanh dong RIENG (khong dinh vao dong owner)" "[ $RC = 0 ] && grep -qx 'golive_live_off drain 20261119_000009' $F/run/KILL_SWITCH && grep -qxE 'c3_autodrain [0-9]{8}_[0-9]{6} caller=[A-Za-z0-9_.-]*' $F/run/KILL_SWITCH"
 rm -f $F/run/KILL_SWITCH; echo 1 > $W/pre_rc
 OUT=$(AW bash "$WP" "$F" x 2>&1); RC=$?
 chk "a6 prestart goc rc 1 (deps chua san) => tra rc 1, KHONG tao KS" "[ $RC = 1 ] && [ ! -e $F/run/KILL_SWITCH ]"

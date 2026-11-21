@@ -21,6 +21,10 @@
 # [WAVE1 16/11] B-01 pin jar r4u3fin2 (lib); A-03 file key 600 + sha8 = SUB_KEY_SHA8 + key doc san = SUB_KEY_SHA8; A-08 tmb tk con
 #   >= size (kiem truoc + sau YES); D-01 env +2 co sizing/DCA neu env.sh chua co + hau kiem log [LIVE-SIZING]/[LIVE-DCA-GRID] BAT;
 #   B-02 rollback idempotent + KIEM adapter=live va C3_CAPITAL cu that (sai => KILL_SWITCH + KHAN).
+# [OPS6 2026-11-21] T12b gate PILOT kiem day du bang gl_gate_pilot (body_sha256, han 48 h, size 5000|10000, g_exec/g_exit, mien X14/B2/C1,
+#   boot_guard=CAI, owner_decision; MASTER tao bang golive_make_gate_pilot.sh). T20 boot guard 242 phai DA CAI (doc lai luc precheck).
+#   T5/A-02 rollback HA VON dat lai dinh C6/A40 truoc start (lib a02_reset) - precheck: python 242 + duong dan dinh/latch/KS mac dinh.
+#   T2/N1 ssh dut sau khi bot DA dung + KS nguoi khac => env ve von cu, di nhanh rollback (khong bao sai "bot KHONG dung").
 # =============================================================================
 set -uo pipefail
 # [WAVE1c m1] pin NGOAI repo, kiem TRUOC khi source lib (lib khong tu chung nhan): HEAD repo chua script = 1 commit A1/MASTER
@@ -38,9 +42,9 @@ gl_init golive_pilot_on
 [ "$C3_ACCOUNT" = SUB ] && ACCT_TXT="tai khoan CON (ADD4)" || ACCT_TXT="tai khoan CHINH (ADD1)"
 say "tai khoan c3: C3_ACCOUNT=$C3_ACCOUNT — $ACCT_TXT, file key $KEYS_FILE"
 G=$GATE_DIR/GOLIVE_GATE_PILOT.ok
-GR=$(gl_gate "$G"); echo "$GR"; echo "$GR" | grep -q '^OK' || die "chua co cong G-PILOT hop le (MASTER tao $G voi jar_md5=$NJ_MD5 + size=)"
+GR=$(gl_gate_pilot "$G"); echo "$GR"; echo "$GR" | grep -q '^OK' || die "chua co cong G-PILOT hop le (MASTER tao $G bang golive_make_gate_pilot.sh; jar_md5=$NJ_MD5)"
 SIZE=$(gl_gate_val "$G" size)
-[[ "$SIZE" =~ ^[0-9]+$ ]] && [ "$SIZE" -ge 1000 ] && [ "$SIZE" -le 100000 ] || die "size='$SIZE' trong $G khong hop le (1000..100000)"
+[[ "$SIZE" =~ ^[0-9]+$ ]] && case " $GL_PILOT_SIZES " in *" $SIZE "*) true;; *) false;; esac || die "size='$SIZE' trong $G khong hop le (chi nhan: $GL_PILOT_SIZES)"
 # [R4p ADD2] G-EXEC chuyen sang G-PILOT: gate phai co g_exec=<GREEN|AMBER|RED_SIZE|Q4_OWNER> <dan chung>
 GX=$(gl_gate_val "$G" g_exec)
 [[ "$GX" =~ ^(GREEN|AMBER|RED_SIZE|Q4_OWNER) ]] || die "$G thieu dong g_exec=<GREEN|AMBER|RED_SIZE|Q4_OWNER> <dan chung> (GOLIVE ADD2: G-PILOT muc 6)"
@@ -73,6 +77,9 @@ chk "MemAvailable $(sv MEM) >= $MIN_MEM_MB MB" "[ '$(sv MEM)' -ge $MIN_MEM_MB ] 
 chk "Oracle: khong co tien trinh $CANARY_PAT dang chay (A1 ADD4 MIN-2; co $(pgrep -fc "$CANARY_PAT" 2>/dev/null))" "gl_no_canary"
 DTS=$(sed -n 's/^dry_ts=//p' "$GL_MON_FLAG" 2>/dev/null | head -1)   # [A1 errata2 MIN-2] so dry .dry_<TS> do micro_on ghi
 chk "co micro/pilot co dry_ts (so dry .dry_<TS> cua micro_on: ${DTS:-THIEU})" "[ -n '$DTS' ]"
+gl_bootguard242   # [OPS6 T20] OWNER_DECISION_PILOT_1121 Q4: boot guard BAT BUOC truoc pilot (CHI DOC 242)
+chk "boot guard 242 DA CAI (T20; $BG_DETAIL; owner: bash $GL_HERE/install_242_autodrain.sh)" "[ '$BG' = CAI ]"
+chk "A-02: rollback ha von dat lai duoc dinh (python 242 $PY242 co=$(sv PY_OK); env.sh ghi de duong dan dinh/latch/KS='$(sv ENVSH_PATH_OVR)')" "[ '$(sv PY_OK)' = 1 ] && [ -z '$(sv ENVSH_PATH_OVR)' ]"
 if [ "$C3_ACCOUNT" = SUB ]; then
   L0=SKIP; YESW="YES PILOT"
   say "INFO LEGACY managed=$(sv LEGACY_N) (tk chinh) — chi ghi log"
@@ -101,6 +108,7 @@ say "--- [D-01] budget leg du kien (2 co sizing/DCA BAT) voi C3_CAPITAL=$SIZE:"
 D01=$(gl_d01_plan "$SIZE"); D01RC=$?; echo "$D01" | sed 's/^/   /'
 chk "D-01 leg0 du kien >= $MIN_LEG_BUDGET (von toi thieu $(echo "$D01" | sed -n 's/^D01_MINCAP=//p'))" "[ '$D01RC' = 0 ]"
 [ "$F" = 0 ] || die "kiem truoc co muc FAIL (xem tren)"
+say "INFO [T10] LEV_CLUSTER_MAX voi von $SIZE = $(awk -v c="$SIZE" 'BEGIN{printf "%.0f", 4*0.0225*c}') USDT/cum (golive_check_lev.sh mac dinh dung von PROCESS $C0 => kiem cho pilot: LEV_CAP=$SIZE bash $GL_HERE/golive_check_lev.sh)"
 ENV_ADD="# [v1.2 R4o/ADD4 golive_pilot_on $TS] PILOT $ACCT_TXT size=$SIZE (truoc $C0)
 export C3_CAPITAL=$SIZE"
 [ "$(sv ENVSH_LIVE_APPLY_GRID_RATIO)" = true ] || ENV_ADD="$ENV_ADD
@@ -126,11 +134,11 @@ if [ "$C3_ACCOUNT" = SUB ]; then
   awk -v t="$(av TMB)" -v c="$SIZE" 'BEGIN{exit !(t+0 >= c+0)}' || die "A-08 tmb tk con $(av TMB) < size $SIZE ngay truoc khi pilot (owner nap them von truoc)"
   gl_eq_base_set "$(av TMB)" "$SIZE" "$(av KEY_SHA8)" "golive_pilot_on $TS (C3_CAPITAL $C0 -> $SIZE) — RESET dinh eq co chu dich" || die "KHONG ghi duoc moc tmb0 — khong pilot (ADD4 errata 2 §5)"
 fi
-trap 'say "BI DUNG (tin hieu) — kiem bash $GL_HERE/golive_monitor.sh"; gl_pause_clear >/dev/null 2>&1; exit 130' INT TERM HUP
+trap 'say "BI DUNG (tin hieu) giua restart: env.sh 242 CO THE da co C3_CAPITAL=$SIZE; run/KILL_SWITCH token golive_pilot_on $TS (neu da dat) giu => bot KHONG mo moi. Kiem bash $GL_HERE/golive_monitor.sh; env goc $A/conf/env.sh.bak_golive_pilot_on_$TS"; tg "[golive] KHAN TS=$TS pilot_on BI DUNG (tin hieu) giua restart: env.sh co the da C3_CAPITAL=$SIZE, KS script giu. Kiem golive_monitor.sh | log $LOG" >/dev/null 2>&1; gl_pause_clear >/dev/null 2>&1; exit 130' INT TERM HUP
 gl_restart "$ENV_ADD" "" none 1   # [VONG3 F2] ks=1: dat KILL_SWITCH token golive_pilot_on TRUOC stop (ban cu -> .prev_<TS>), go sau hau kiem DAT
 if gl_restart_unknown; then   # [WAVE1 B-02]
   s242 "cd $A && echo 'golive_pilot_on $TS ssh_restart_khong_ro' >> run/KILL_SWITCH && [ -e run/KILL_SWITCH ]" && say "run/KILL_SWITCH DANG DAT" || say "!! KHONG dat duoc run/KILL_SWITCH (ssh?)"
-  M="restart pilot: ssh dut, KHONG doc duoc trang thai that tren 242 => KHONG ket luan. Owner/MASTER: bash $GL_HERE/golive_monitor.sh; env backup GOC $A/conf/env.sh.bak_golive_pilot_on_$TS"
+  M="restart pilot: ssh dut, KHONG doc duoc trang thai that tren 242 => KHONG ket luan. env.sh 242 CO THE da co C3_CAPITAL=$SIZE (von MOI) va bot co the dang DUNG: PAUSE het han sau ${WD_PAUSE_MAX_S}s => watchdog start voi env.sh HIEN TAI duoi run/KILL_SWITCH (khong mo moi). Owner/MASTER: bash $GL_HERE/golive_monitor.sh; env backup GOC $A/conf/env.sh.bak_golive_pilot_on_$TS"
   say "KHAN: $M"; tg "[golive] KHAN TS=$TS pilot_on: $M | log $LOG"; exit 2
 fi
 if echo "$RS" | grep -q '^FAIL' && ! echo "$RS" | grep -q '^OK da_stop'; then

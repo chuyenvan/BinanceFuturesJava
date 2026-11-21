@@ -24,6 +24,11 @@ LEV_EXPECT=${LEV_EXPECT:-1}; LEV_MARGIN_EXPECT=${LEV_MARGIN_EXPECT:-CROSSED}; LE
 gl_read_state
 CAP=$(sv ENV_C3_CAPITAL); [ -n "$CAP" ] || CAP=$(sv ENVSH_C3_CAPITAL)
 [[ "$CAP" =~ ^[0-9]+(\.[0-9]+)?$ ]] || die "C3_CAPITAL khong doc duoc (process='$(sv ENV_C3_CAPITAL)' env.sh='$(sv ENVSH_C3_CAPITAL)')"
+# [OPS6 T10] LEV_CAP=<von> (vd 10000 truoc pilot): kiem LEV_CLUSTER_MAX cho von SE dung thay von process hien tai (chi doi nguong, CHI DOC)
+if [ -n "${LEV_CAP:-}" ]; then
+  [[ "$LEV_CAP" =~ ^[0-9]+(\.[0-9]+)?$ ]] && awk -v c="$LEV_CAP" 'BEGIN{exit !(c>0)}' || die "LEV_CAP='$LEV_CAP' khong hop le"
+  say "INFO LEV_CAP=$LEV_CAP ghi de von process $CAP cho nguong maxNotional (kiem truoc pilot)"; CAP=$LEV_CAP
+fi
 say "tai khoan c3: C3_ACCOUNT=$C3_ACCOUNT C3_CAPITAL=$CAP adapter=$(sv ENV_LIVE_ADAPTER)"
 [ "$DRY" = 1 ] && { say "DRY=1: KHONG goi san. (DRY PASS)"; exit 0; }
 API=$(gl_api242 lev) || die "ssh toi 242 loi"
