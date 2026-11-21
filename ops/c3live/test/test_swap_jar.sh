@@ -68,6 +68,7 @@ case "$1" in
       { [ -f FAKE_KHAN_ALWAYS ] || { [ "$ISNEW" = 1 ] && [ -f FAKE_KHAN_IF_NEW ]; }; } && echo "$D ERROR [x] x: [C3-LIVE] KHAN gia lap"
     } >> logs/full.log
     [ "$ISNEW" = 1 ] && [ -f FAKE_DRAIN_IF_NEW ] && echo "golive_live_off drain 20990101_000000" > run/KILL_SWITCH
+    [ "$ISNEW" = 1 ] && [ -f FAKE_MON_APPEND_IF_NEW ] && echo "golive_monitor 20990101_1 KHAN gia" >> run/KILL_SWITCH   # [OPS6 H1] monitor APPEND
     if [ -f FAKE_DRAIN_AFTER_OK ]; then nohup bash -c 'echo hfxw_$(cat FAKE_TID) >/dev/null; for i in $(seq 1 120); do sleep 0.5; ls run/KILL_SWITCH.ok_* >/dev/null 2>&1 && { echo "golive_live_off drain 20990101_000001" > run/KILL_SWITCH; exit 0; }; done' "hfxw_$(cat FAKE_TID)" >/dev/null 2>&1 & fi
     if [ "$PUSHV" = OFF ] && [ ! -f FAKE_NOPUSHON ]; then
       nohup bash -c 'echo hfxw_$(cat FAKE_TID) >/dev/null; for i in $(seq 1 300); do sleep 1; [ -e run/KILL_SWITCH ] || { echo "$(TZ=Asia/Ho_Chi_Minh date "+%d/%m/%Y %H:%M:%S.000") WARN [x] x: [C3-LIVE] PUSH doi trang thai -> ON" >> logs/full.log; exit 0; }; done' "hfxw_$(cat FAKE_TID)" >/dev/null 2>&1 &
@@ -231,6 +232,17 @@ chk "V2-5 jar da moi + KS dang dat => rc2 + Telegram KHAN" "[ $RC = 2 ] && grep 
 reset_state $W/old.jar; echo 'RESTART hup 1' > $W/sshplan
 OUT=$(echo YES | bash $S 2>&1); RC=$?
 chk "V2-6 [m7] HUP phia 242 giua restart => bot VAN duoc start lai, script XONG rc0 (1 JVM, jar moi)" "[ $RC = 0 ] && [ \"\$(jm)\" = $NEW ] && [ \"\$(np)\" = 1 ] && [ ! -e $F/run/KILL_SWITCH ] && echo \"\$OUT\" | grep -q 'pha_da_xong_truoc'"
+# ===== [OPS6 T3/H1] KILL_SWITCH theo dong: khong ghi de / khong xoa dong nguoi khac
+reset_state $W/old.jar; touch $F/FAKE_MON_APPEND_IF_NEW
+OUT=$(echo YES | bash $S 2>&1); RC=$?
+chk "H1-1 monitor KHAN APPEND vao KS luc hau kiem jar moi => hau kiem DAT nhung KS co dong nguoi khac: KHONG go (ca file giu: dong script + dong monitor), rc2 KHAN" "[ $RC = 2 ] && [ \"\$(grep -c '' $F/run/KILL_SWITCH)\" = 2 ] && grep -q '^golive_monitor 20990101_1 KHAN gia' $F/run/KILL_SWITCH && grep -q '^golive_swap_jar ' $F/run/KILL_SWITCH && echo \"\$OUT\" | grep -q 'co dong NGUOI KHAC' && [ \"\$(jm)\" = $NEW ] && [ \"\$(np)\" = 1 ]"
+reset_state $W/old.jar; touch $F/FAKE_DRAIN_IF_NEW
+OUT=$(echo YES | bash $S 2>&1); RC=$?
+chk "H1-2 owner drain GHI DE KS luc start jar moi => rollback: dong drain owner GIU NGUYEN (dong 1), dong rollback cua script APPEND, khong go, rc2" "[ $RC = 2 ] && [ \"\$(head -1 $F/run/KILL_SWITCH)\" = 'golive_live_off drain 20990101_000000' ] && grep -q '^golive_swap_jar .* rollback: dung mo moi' $F/run/KILL_SWITCH && [ \"\$(jm)\" = $OLD ] && [ \"\$(np)\" = 1 ]"
+reset_state $W/old.jar; touch $F/FAKE_MON_APPEND_IF_NEW $F/FAKE_KHAN_ALWAYS
+OUT=$(echo YES | bash $S 2>&1); RC=$?
+chk "H1-3 hau kiem + rollback TRUOT khi KS co dong monitor: ks_ensure KHONG nuot / ghi de dong monitor, dong script con, rc2" "[ $RC = 2 ] && grep -q '^golive_monitor 20990101_1 KHAN gia' $F/run/KILL_SWITCH && grep -q '^golive_swap_jar ' $F/run/KILL_SWITCH && [ \"\$(np)\" = 1 ]"
+chk "H1-4 tinh: golive_swap_jar.sh khong con writer ghi de KS ('> run/KILL_SWITCH' hoac '[ -e run/KILL_SWITCH ] ||'), moi mv KS co kiem 'MOI dong la cua minh'" "! grep -nE '[^>]> run/KILL_SWITCH|\\[ -e run/KILL_SWITCH \\] \\|\\|' $S && [ \"\$(grep -c 'mv -f run/KILL_SWITCH run/KILL_SWITCH' $S)\" = 2 ] && grep -q 'onlymine; then mv -f run/KILL_SWITCH' $S"
 # 21 khong YES
 reset_state $W/old.jar; P0=$(pid)
 OUT=$(echo no | bash $S 2>&1); RC=$?

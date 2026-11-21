@@ -23,7 +23,8 @@
 #   B-02 rollback idempotent + KIEM adapter=live va C3_CAPITAL cu that (sai => KILL_SWITCH + KHAN).
 # [OPS6 2026-11-21] T12b gate PILOT kiem day du bang gl_gate_pilot (body_sha256, han 48 h, size 5000|10000, g_exec/g_exit, mien X14/B2/C1,
 #   boot_guard=CAI, owner_decision; MASTER tao bang golive_make_gate_pilot.sh). T20 boot guard 242 phai DA CAI (doc lai luc precheck).
-#   T5/A-02 rollback HA VON dat lai dinh C6/A40 truoc start (lib a02_reset) - precheck: python 242 + duong dan dinh/latch/KS mac dinh.
+#   T5/A-02 doi von (pilot 1000 -> size: "dinh tinh tu luc pilot bat"; rollback HA von sau khi JVM von moi da chay) => dat lai dinh C6/A40
+#   jar TRUOC start (lib a02_reset) - precheck: python 242 + duong dan dinh/latch/KS mac dinh.
 #   T2/N1 ssh dut sau khi bot DA dung + KS nguoi khac => env ve von cu, di nhanh rollback (khong bao sai "bot KHONG dung").
 # =============================================================================
 set -uo pipefail

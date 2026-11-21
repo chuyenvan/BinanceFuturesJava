@@ -523,13 +523,14 @@ if [ "\$SUF" != none ] && ! ph moved; then
   mark moved
   echo "OK doi_ten_trang_thai .\${SUF}_\$TS: \$(tr '\n' ' ' < run/.golive_\${NM}_\$TS.moved)"
 fi
-# [OPS6 T5/A-02] HA VON qua gl_restart (so live giu, C3_CAPITAL moi < cu): dat lai dinh C6/A40 TRUOC start; khong dat lai duoc => env VE von cu
+# [OPS6 T5/A-02] DOI VON qua gl_restart (so live giu, C3_CAPITAL moi != cu): dat lai dinh C6/A40 TRUOC start (HA von: bat buoc, tranh DD gia
+#   -> FLATTEN gia; TANG von: "dinh tinh tu luc pilot bat" GOLIVE_SCENARIO s5.2 - dinh cu cao hon von moi se lam DD am gia). Loi => env VE von cu
 if [ "\$SUF" = none ] && ! ph a02_ok && ! ph a02_fail; then
   CB=\$(sed -n 's/^export C3_CAPITAL=//p' "\$BK" | tail -1); CN=\$(sed -n 's/^export C3_CAPITAL=//p' conf/env.sh | tail -1)
-  if awk -v b="\$CB" -v n="\$CN" 'BEGIN{exit !(b ~ /^[0-9]+(\.[0-9]+)?\$/ && n ~ /^[0-9]+(\.[0-9]+)?\$/ && n+0 < b+0)}'; then
-    echo "INFO a02: HA VON C3_CAPITAL \$CB -> \$CN => dat lai dinh C6/A40 TRUOC start"
+  if awk -v b="\$CB" -v n="\$CN" 'BEGIN{exit !(b ~ /^[0-9]+(\.[0-9]+)?\$/ && n ~ /^[0-9]+(\.[0-9]+)?\$/ && n+0 != b+0)}'; then
+    echo "INFO a02: DOI VON C3_CAPITAL \$CB -> \$CN => dat lai dinh C6/A40 TRUOC start"
     if a02_reset "\${NM}_\$TS" "\$PY"; then mark a02_ok
-    else \cp -f "\$BK" conf/env.sh; sed -i '/^env_ok\$/d' "\$PH"; mark a02_fail; echo "FAIL a02_ha_von_khong_dat_lai_duoc_dinh (C3_CAPITAL \$CB -> \$CN) => env.sh VE backup GOC (von cu \$CB, khop dinh), start lai von cu"; fi
+    else \cp -f "\$BK" conf/env.sh; sed -i '/^env_ok\$/d' "\$PH"; mark a02_fail; echo "FAIL a02_doi_von_khong_dat_lai_duoc_dinh (C3_CAPITAL \$CB -> \$CN) => env.sh VE backup GOC (von cu \$CB, khop dinh), start lai von cu"; fi
   fi
 fi
 ph "START_LINE=.*" || mark "START_LINE=\$(( \$(wc -l < logs/full.log 2>/dev/null || echo 0) + 1 ))"
@@ -573,20 +574,21 @@ if ! ph rb_started; then
   bin/daemon.sh stop
   for i in $(seq 1 30); do pgrep -f "$PP" >/dev/null || break; sleep 2; done
   pgrep -f "$PP" >/dev/null && { echo "FAIL van_con_process"; echo END_RB; exit 0; }
-  # [OPS6 T5/A-02] rollback HA VON (C3_CAPITAL backup < env.sh hien tai) SAU KHI JVM von moi DA start (pha 'started' cua restart cung TS):
-  #   dinh C6/A40 dang theo von MOI => dat lai TRUOC start. Khong dat lai duoc => KHONG ha von: env.sh GIU von moi (khop dinh) + KS cua minh.
+  # [OPS6 T5/A-02] rollback DOI VON (C3_CAPITAL backup != env.sh hien tai; thuong la HA von) SAU KHI JVM von moi DA start (pha 'started'
+  #   cua restart cung TS): dinh C6/A40 dang theo von MOI => dat lai TRUOC start. Khong dat lai duoc => KHONG doi von: env.sh GIU von moi
+  #   (khop dinh) + KS cua minh.
   A02F=0
   if [ "$SUF" = none ] && ! ph rb_a02; then
     CN=$(sed -n 's/^export C3_CAPITAL=//p' conf/env.sh | tail -1); CB=$(sed -n 's/^export C3_CAPITAL=//p' "$BK" | tail -1)
     if grep -qx started "run/.golive_${NM}_$TS.phase" 2>/dev/null \
-       && awk -v b="$CB" -v n="$CN" 'BEGIN{exit !(b ~ /^[0-9]+(\.[0-9]+)?$/ && n ~ /^[0-9]+(\.[0-9]+)?$/ && b+0 < n+0)}'; then
-      echo "INFO a02: rollback HA VON C3_CAPITAL $CN -> $CB sau khi JVM von moi DA chay => dat lai dinh C6/A40 TRUOC start"
+       && awk -v b="$CB" -v n="$CN" 'BEGIN{exit !(b ~ /^[0-9]+(\.[0-9]+)?$/ && n ~ /^[0-9]+(\.[0-9]+)?$/ && b+0 != n+0)}'; then
+      echo "INFO a02: rollback DOI VON C3_CAPITAL $CN -> $CB sau khi JVM von moi DA chay => dat lai dinh C6/A40 TRUOC start"
       if a02_reset "${NM}_$TS" "$PY"; then mark rb_a02
       else
         A02F=1; echo "${NM} $TS a02_khong_dat_lai_dinh: dung mo moi" >> run/KILL_SWITCH
-        echo "FAIL a02_rollback_khong_dat_lai_duoc_dinh => KHONG ha von: env.sh GIU C3_CAPITAL=$CN (khop dinh hien tai), start lai duoi run/KILL_SWITCH (khong mo moi) - owner/MASTER xu ly"
+        echo "FAIL a02_rollback_khong_dat_lai_duoc_dinh => KHONG doi von: env.sh GIU C3_CAPITAL=$CN (khop dinh hien tai), start lai duoi run/KILL_SWITCH (khong mo moi) - owner/MASTER xu ly"
       fi
-    else echo "INFO a02: khong can dat lai dinh (JVM von moi chua chay / khong ha von: env.sh $CN -> backup $CB)"; fi
+    else echo "INFO a02: khong can dat lai dinh (JVM von moi chua chay / von khong doi: env.sh $CN -> backup $CB)"; fi
   fi
   if [ "$A02F" = 1 ]; then echo "WARN env_KHONG_khoi_phuc (A-02: giu von moi)"; else \cp -f "$BK" conf/env.sh && echo "OK env_khoi_phuc (backup GOC $BK)"; fi
   if [ "$SUF" != none ] && [ -f run/.golive_${NM}_$TS.moved ] && ! ph rb_files; then
