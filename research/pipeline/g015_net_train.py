@@ -141,7 +141,8 @@ def load_labels(mode, thr, hi_ms):
     Loc chung: nBars_4h >= 16 va cot nhan notna (y het pipeline goc)."""
     col = "retEnd_4h" if mode == "net" else "maxFav_4h"
     fs = sorted(glob.glob(LB_DIR + "/funding_label_*.pb"))
-    fs = [f for f in fs if os.path.basename(f).split("_")[2] < "20260701"]
+    cut_lb = int((pd.to_datetime(hi_ms + TZ, unit="ms") - pd.DateOffset(months=OOS_MONTHS)).value // 10 ** 6) - TZ  # P14b: cut fold
+    fs = [f for f in fs if ms(os.path.basename(f).split("_")[2]) < cut_lb]  # P14b: file nhan bat dau < cut
     m0 = FLPB.meta(fs[0])
     assert int(m0["step_min"]) == GRID_MIN, "LABEL step != %d" % GRID_MIN
     log.info("Label meta OK (tu file .pb): step_min=%d, scale=%d, horizons=%s, %d file",
@@ -255,7 +256,7 @@ def main():
         tr_cut = c - PURGE_MS
         tp, ty = train_rows(ts_all, sym_all, L, tr_cut)
         assert len(tp) >= 5000 and len(np.unique(ty)) == 2, "fold %d train it" % fidx
-        assert int(ts_all[tp].max()) < c, "LEAK fold %d" % fidx
+        assert int(ts_all[tp].max()) < tr_cut, "LEAK fold %d (P14b: nhan train < cut - 72h)" % fidx
         lo = int(np.searchsorted(ts_all, c, "left"))
         hi = int(np.searchsorted(ts_all, b_hi, "left"))
         assert hi > lo, "fold %d OOS rong" % fidx
