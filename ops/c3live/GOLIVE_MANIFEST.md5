@@ -20,3 +20,4 @@ a321efc635268c45e852ab7d4e031a10  golive_check_lev.sh
 eddd081cddf7de649485bb5d9d63238c  c3_autodrain_prestart.sh
 96c1fc3c2ed14496d6d19d2925557de2  install_242_oracle_seen.sh
 f521c970e2094c2f6ac2a2dcf04c04f5  c3_oracle_seen_242.sh
+9ac8475098db3e65d732769a385cd695  golive_swap_jar.sh
