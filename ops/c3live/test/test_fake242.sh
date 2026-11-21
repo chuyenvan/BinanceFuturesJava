@@ -1297,6 +1297,23 @@ mkgm() { local c=${2:-$(( $(date +%s) * 1000 ))} d="DAT ev=$W/ev_test.txt ev_sha
   { printf 'G-MICRO test\njar_md5=%s\ningestor_md5=%s\ncreated_ms=%s\nexpires_ms=%s\ngmicro_i=%s n_sach=7\ngmicro_ii=%s\nsmoke=%s smoke_start_ms=1\nreplay_iii=%s\nsizing_iv=%s\nscript_v=%s\nprereg_commit=%s\nprereg_file=%s\n%s\nreplay_prereg=docs/prereg/PREREG_E2E_REPLAY_V12.md\nlimits_file=docs/prereg/GATE_LIMITS_MICRO.md\nlimits_sha256=%s\n%s\nreport=%s\nreport_sha256=%s\n' \
       "$1" "$INGW" "$c" "$(( c + 172800000 ))" "$d" "$d" "$d" "$r3" "$r4" "$d" "$gc" "$gf" "$ps" "$ls" "$lb" $W/ev_test.txt "$EVS"
     printf "$ov"; } | grep -v "^${3:-KHONGBO}=" > $GD/GOLIVE_GATE_MICRO.ok; gmbody; }
+# [OPS6 T12b/T20] gate PILOT hop le (body_sha256, han, size 5000|10000, mien X14/B2/C1, boot_guard, owner_decision) + boot guard 242 GIA da cai
+pgate() {   # pgate <jar_md5> <size> <g_exec> <g_exit> <thu muc gate>
+python3 - "$5/GOLIVE_GATE_PILOT.ok" "$1" "$2" "$3" "$4" <<'PYG'
+import hashlib, sys, time
+f, jar, size, gx, gt = sys.argv[1:6]
+now = int(time.time() * 1000)
+b = "\n".join(["# G-PILOT gate test_fake242", "jar_md5=" + jar, "size=" + size, "created_ms=%d" % now, "expires_ms=%d" % (now + 172800000),
+    "g_exec=" + gx, "g_exit=" + gt, "mien_x14=MIEN ref=abcdef0 test", "mien_b2=MIEN ref=abcdef0 test", "mien_c1=MIEN ref=abcdef0 test",
+    "owner_decision=" + "a" * 40 + " file=x sha256=x", "boot_guard=CAI test", "by=MASTER golive_make_gate_pilot.sh ops_head=test"]) + "\n"
+open(f, "w").write(b + "body_sha256=" + hashlib.sha256(b.encode()).hexdigest() + "\n")
+PYG
+}
+BGS=$W/bg_sbin; mkdir -p $BGS $W/bg_systemd/h242-trading.service.d; cp $HERE/c3_autodrain_prestart.sh $BGS/h242-prestart-c3.sh
+printf '*/2 * * * * WD_PRESTART=%s/h242-prestart-c3.sh %s/h242_watchdog.sh\n' $BGS $BGS > $W/bg_ct242
+printf '#!/bin/bash\n[ "$1" = -l ] && cat %s/bg_ct242\n' $W > $W/bg_ct.sh
+printf '[Service]\nExecStartPre=\nExecStartPre=%s/h242-prestart-c3.sh %s com.binance.chuyennd.trading.BinanceOrderTradingManager\n' $BGS $F4 > $W/bg_systemd/h242-trading.service.d/c3-autodrain.conf
+export AD_SBIN=$BGS AD_SYSTEMD_DIR=$W/bg_systemd AD_CT242="bash $W/bg_ct.sh"
 GL() { env ING_FIN_MD5=$INGW ING_PAT="$IGP" C3_ACCOUNT=MAIN CANARY_PAT=canary_early_fake242_NONE APP_DIR=$F4 NJ_MD5=$NEW4 GATE_DIR=$GD KEYS_FILE=$W/keys_c3.env PY242=$W/c3py_t/python/bin/python3 CURL242=$W/fakecurl.sh \
   DEPLOY_TG_SINK=$W/tg_gl.txt POST_WAIT_S=1 POST_ROUNDS=4 MIN_MEM_MB=100 FORCE_TIME=1 WD_PAUSE_MAX_S=300 "$@"; }
 penv() { tr '\0' '\n' < /proc/$(pgrep -f 'BinanceOrderTradingManager fake242' | head -1)/environ; }
@@ -1362,11 +1379,11 @@ OUT=$(GL DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "r4p pilot_on: chua co gate G-PILOT => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'chua co cong G-PILOT'"
 printf 'G-PILOT test\njar_md5=%s\nsize=10000\n' $NEW4 > $GD/GOLIVE_GATE_PILOT.ok
 OUT=$(GL DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
-chk "r4p pilot_on: gate thieu dong g_exec= (ADD2 G-EXEC o G-PILOT) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'thieu dong g_exec='"
-printf 'G-PILOT test\njar_md5=%s\nsize=10000\ng_exec=GREEN test\ng_exit=TRUOT 41 0.6 25/12 test\n' $NEW4 > $GD/GOLIVE_GATE_PILOT.ok
+chk "r4p pilot_on: gate thieu dong g_exec= (ADD2 G-EXEC o G-PILOT) => TU CHOI [OPS6: gl_gate_pilot]" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'g_exec_thieu/sai'"
+pgate $NEW4 10000 "GREEN test" "TRUOT 41 0.6 25/12 test" $GD
 OUT=$(GL DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
-chk "r4q pilot_on: g_exit=TRUOT (ADD3 G-EXIT) => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q \"g_exit='TRUOT\""
-printf 'G-PILOT test\njar_md5=%s\nsize=10000\ng_exec=GREEN test\ng_exit=DAT 18 0.92 25/12 test\n' $NEW4 > $GD/GOLIVE_GATE_PILOT.ok
+chk "r4q pilot_on: g_exit=TRUOT (ADD3 G-EXIT) => TU CHOI [OPS6: gl_gate_pilot]" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'g_exit_thieu/sai'"
+pgate $NEW4 10000 "GREEN test" "DAT 18 0.92 25/12 test" $GD
 OUT=$(GL DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "r4p pilot_on: chua co LEGACY_CUT_VERIFIED => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'LEGACY_CUT_VERIFIED.ok DAT'"
 OUT=$(GL bash "$HERE/golive_legacy_verify.sh" 2>&1); RC=$?
@@ -1387,19 +1404,19 @@ OUT=$(GL bash "$HERE/golive_legacy_verify.sh" 2>&1); RC=$?
 chk "r4p legacy_verify DAT: qty san = qty c3 (C01 10) + 0 lenh/algo ngoai c3 + log managed 0 => ghi LEGACY_CUT_VERIFIED.ok" "[ $RC = 0 ] && grep -q 'KET QUA: DAT' $GD/LEGACY_CUT_VERIFIED.ok"
 rm -f $F4/run/c3live_book.json; api positionRisk '[{"symbol":"Z0USDT","positionAmt":"0"}]'
 echo 0 > $F4/FAKE_LEGACY_N
+# [OPS6] size chi 5000|10000 => test rollback + owner drain chay TRUOC (1000 -> 10000), roi moi XONG
+touch $F4/FAKE_NORUNTIME
+OUT=$(echo 'YES DA CAT LEGACY' | GL bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+chk "r4p pilot_on hau kiem TRUOT => ROLLBACK ve C3_CAPITAL cu (1000), adapter live [OPS6: thu tu doi]" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'Da ROLLBACK xong: live C3_CAPITAL=1000' && penv | grep -qx C3_CAPITAL=1000 && penv | grep -qx LIVE_ADAPTER=live"
+rm -f $F4/FAKE_NORUNTIME
+( for i in $(seq 1 900); do grep -q '^golive_pilot_on ' $F4/run/KILL_SWITCH 2>/dev/null && { printf 'golive_live_off drain 20990101_9\n' > $F4/run/KILL_SWITCH; break; }; sleep 0.1; done ) & OWP=$!
+OUT=$(echo 'YES DA CAT LEGACY' | GL bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?; kill $OWP 2>/dev/null; wait $OWP 2>/dev/null
+chk "VONG3 F2 pilot_on: owner drain chen giua => TU CHOI/ROLLBACK rc 1, C3_CAPITAL giu 1000, KS owner drain GIU NGUYEN (khong ghi de / khong go)" "[ $RC = 1 ] && penv | grep -qx C3_CAPITAL=1000 && grep -q '^golive_live_off drain 20990101_9' $F4/run/KILL_SWITCH && ! echo \"\$OUT\" | grep -q 'XONG: PILOT'"
+rm -f $F4/run/KILL_SWITCH; sleep 2
 OUT=$(echo YES | GL bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "r4p pilot_on: go YES (khong phai 'YES DA CAT LEGACY') => huy" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'Huy. Khong doi gi.'"
 OUT=$(echo 'YES DA CAT LEGACY' | GL bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "r4p pilot_on XONG: C3_CAPITAL 1000 -> 10000, adapter live giu, so live giu, PAUSE go" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: PILOT C3_CAPITAL=10000' && penv | grep -qx C3_CAPITAL=10000 && penv | grep -qx LIVE_ADAPTER=live && [ ! -f $W/PAUSE ]"
-printf 'G-PILOT test\njar_md5=%s\nsize=20000\ng_exec=Q4_OWNER test\ng_exit=Q4_OWNER test\n' $NEW4 > $GD/GOLIVE_GATE_PILOT.ok; touch $F4/FAKE_NORUNTIME
-OUT=$(echo 'YES DA CAT LEGACY' | GL bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
-chk "r4p pilot_on hau kiem TRUOT => ROLLBACK ve C3_CAPITAL cu (10000), adapter live" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'Da ROLLBACK xong: live C3_CAPITAL=10000' && penv | grep -qx C3_CAPITAL=10000 && penv | grep -qx LIVE_ADAPTER=live"
-rm -f $F4/FAKE_NORUNTIME
-# [OPS5 VONG3 F2] owner drain chen giua pilot_on (sau khi pilot dat KS) => KHONG bi mat; khong PUSH ON
-( for i in $(seq 1 900); do grep -q '^golive_pilot_on ' $F4/run/KILL_SWITCH 2>/dev/null && { printf 'golive_live_off drain 20990101_9\n' > $F4/run/KILL_SWITCH; break; }; sleep 0.1; done ) & OWP=$!
-OUT=$(echo 'YES DA CAT LEGACY' | GL bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?; kill $OWP 2>/dev/null; wait $OWP 2>/dev/null
-chk "VONG3 F2 pilot_on: owner drain chen giua => TU CHOI/ROLLBACK rc 1, C3_CAPITAL giu 10000, KS owner drain GIU NGUYEN (khong ghi de / khong go)" "[ $RC = 1 ] && penv | grep -qx C3_CAPITAL=10000 && grep -q '^golive_live_off drain 20990101_9' $F4/run/KILL_SWITCH && ! echo \"\$OUT\" | grep -q 'XONG: PILOT'"
-rm -f $F4/run/KILL_SWITCH; sleep 2
 OUT=$(GL MODE=dry DRY=1 bash "$HERE/golive_live_off.sh" 2>&1); RC=$?
 chk "r4p live_off MODE=dry khi CHUA drain => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL da drain'"
 OUT=$(echo YES | GL MODE=drain bash "$HERE/golive_live_off.sh" 2>&1); RC=$?
@@ -1916,7 +1933,7 @@ mv $W/eqbase.bak $W/deploylog/c3sub_eq_base.txt; rm -f $F4/run/KILL_SWITCH
 OUT=$(GS bash "$HERE/golive_legacy_verify.sh" 2>&1); RC=$?
 chk "add4 legacy_verify o che do SUB => TU CHOI (ADD4 §3 bo)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'ADD4 §3'"
 touch $W/deploylog/run/monitor_heartbeat
-printf 'G-PILOT test\njar_md5=%s\nsize=10000\ng_exec=GREEN test\ng_exit=DAT 18 0.92 25/12 test\n' $NEWR > $GD/GOLIVE_GATE_PILOT.ok; echo 44 > $F4/FAKE_LEGACY_N
+pgate $NEWR 10000 "GREEN test" "DAT 18 0.92 25/12 test" $GD; echo 44 > $F4/FAKE_LEGACY_N
 OUT=$(GS DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "WAVE1 A-08 pilot_on: tmb tk con 1000 < size 10000 => TU CHOI (owner nap von truoc)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL A-08 tmb tk con 1000.00 >= size 10000'"
 ACC_PILOT='{"totalMarginBalance":"10000.00","availableBalance":"10000.00","assets":[{"asset":"USDT","walletBalance":"10000.00","marginBalance":"10000.00","marginAvailable":true},{"asset":"BTC","walletBalance":"0","marginAvailable":true}]}'
