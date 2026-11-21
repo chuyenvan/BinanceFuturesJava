@@ -1318,7 +1318,7 @@ b = "\n".join(["# G-PILOT gate test_fake242", "jar_md5=" + jar, "size=" + size, 
 open(f, "w").write(b + "body_sha256=" + hashlib.sha256(b.encode()).hexdigest() + "\n")
 PYG
 }
-BGS=$W/bg_sbin; mkdir -p $BGS $W/bg_systemd/h242-trading.service.d; cp $HERE/c3_autodrain_prestart.sh $BGS/h242-prestart-c3.sh
+BGS=$W/bg_sbin; mkdir -p $BGS $W/bg_systemd/h242-trading.service.d; cp $HERE/c3_autodrain_prestart.sh $BGS/h242-prestart-c3.sh; chmod 755 $BGS/h242-prestart-c3.sh   # [luot3 m-4] boot guard kiem ca quyen x
 printf '*/2 * * * * WD_PRESTART=%s/h242-prestart-c3.sh %s/h242_watchdog.sh\n' $BGS $BGS > $W/bg_ct242
 printf '#!/bin/bash\n[ "$1" = -l ] && cat %s/bg_ct242\n' $W > $W/bg_ct.sh
 printf '[Service]\nExecStartPre=\nExecStartPre=%s/h242-prestart-c3.sh %s com.binance.chuyennd.trading.BinanceOrderTradingManager\n' $BGS $F4 > $W/bg_systemd/h242-trading.service.d/c3-autodrain.conf
