@@ -488,8 +488,9 @@ if [ "\$KS" = 1 ]; then
   #   (owner drain / monitor KHAN xuat hien SAU precheck) => KHONG ghi de, env khoi phuc, bot KHONG dung
   if [ -e run/KILL_SWITCH ] && ! grep -q "^\${NM} \$TS " run/KILL_SWITCH 2>/dev/null \
      && ! { [ "\$(grep -c '' run/KILL_SWITCH)" = 1 ] && grep -qxE '(c3_autodrain [0-9]{8}_[0-9]{6}( caller=[A-Za-z0-9_.-]*)?|c3live_boot [0-9]{8}_[0-9]{6}( B-09: JVM LIVE khoi dong KHONG qua script go-live \(crash/watchdog/reboot/restart tay\) => dung mo moi, vi the c3 van duoc quan ly\. Mo: MODE=undrain bash golive_live_off\.sh)?)' run/KILL_SWITCH; }; then
-    if ph stopped; then
-      # [OPS6 T2/N1] chay LAI sau ssh dut: bot DA DUNG o lan truoc (pha stopped, chua started) va KS nguoi khac xuat hien (owner drain ghi de /
+    if ph stopped || ! pgrep -f "\$PP" >/dev/null; then
+      # [OPS6 T2/N1] chay LAI sau ssh dut: bot DA DUNG o lan truoc (pha stopped, HOAC ssh chet ngay sau 'daemon.sh stop' truoc khi kip ghi pha
+      #   => nhan biet bang process khong con) va KS nguoi khac xuat hien (owner drain ghi de /
       #   monitor KHAN) => KHONG start voi env MOI. env.sh VE backup GOC (von cu, khop dinh kill-switch), KS nguoi khac GIU NGUYEN (khong them/go),
       #   bot VAN DUNG (PAUSE cua script giu; het han => watchdog start voi env CU + KS drain). In 'OK da_stop' (SU THAT) => nguoi goi ROLLBACK.
       \cp -f "\$BK" conf/env.sh; sed -i '/^env_ok\$/d' "\$PH" 2>/dev/null; ph aborted_ks_khac || mark aborted_ks_khac

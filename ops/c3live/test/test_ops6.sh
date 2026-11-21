@@ -13,7 +13,7 @@ HERE=$(cd "$(dirname "$0")/.." && pwd)
 REPO=$(cd "$HERE/../.." && pwd)
 W=${1:?"thieu thu muc tam (/tmp/...)"}
 case "$W" in /tmp/*) ;; *) echo "TEST FAIL: thu muc tam phai trong /tmp"; exit 1;; esac
-rm -rf "$W"; mkdir -p "$W"
+chmod -R u+w "$W" 2>/dev/null; rm -rf "$W"; mkdir -p "$W"
 git -C "$HERE" diff --quiet HEAD -- . || { echo "TEST FAIL: $HERE co sua CHUA commit (m1) - commit truoc"; exit 1; }
 export A1_APPROVED_OPS=$W/a1_approved_ops.commit; git -C "$HERE" rev-parse HEAD > "$A1_APPROVED_OPS"
 mkdir -p "$W/guardbin"; for b in ssh scp; do printf '#!/bin/bash\necho "%s $*" >> %s/guard_blocked.log\nexit 255\n' "$b" "$W" > "$W/guardbin/$b"; chmod +x "$W/guardbin/$b"; done
@@ -321,10 +321,10 @@ echo "== pilot_on (SAU sua) - duong thanh cong + A-02 chieu TANG"
 reset242 1005; cp -p $W/gate_ok $G; yp
 chk "pilot_on XONG: 1000 -> 10000 (env.sh + process), KS script go, PUSH ON, PAUSE go, moc tmb0 c3_capital=10000, Telegram" '[ $RC = 0 ] && echo "$OUT" | grep -q "XONG: PILOT C3_CAPITAL=10000" && [ "$(envcap)" = 10000 ] && penv | grep -qx C3_CAPITAL=10000 && [ ! -e $F/run/KILL_SWITCH ] && [ ! -e $W/PAUSE ] && grep -qx c3_capital=10000 $W/deploy/c3sub_eq_base.txt && grep -q "PILOT BAT" $W/tg.txt && newlog | grep -q "PUSH doi trang thai -> ON"'
 chk "A-02 TANG 1000 -> 10000 (dinh cu 1005): a02 dat lai dinh jar truoc start (dinh tinh tu luc pilot bat), JVM 10000: dd C6 = dd A40 = 0, khong FLATTEN" 'echo "$OUT" | grep -q "INFO a02: DOI VON C3_CAPITAL 1000 -> 10000" && simok 10000.00 && ls $F/run/c3live_killsw_peak.a02_golive_pilot_on_* >/dev/null 2>&1'
-reset242 12000; cp -p $W/gate_ok $G; yp $OH
-chk "A-02 TANG - TRUOC sua (ban OPS5): dinh cu CAO hon von moi (12000, vd con sot tu lan pilot truoc) => JVM 10000 dd = -0.1667 ngay khi bat (DD am gia, nguong -40 % tinh tu 12000)" '[ $RC = 0 ] && grep -q "eq=10000.00 dd_C6=-0.1667" $F/run/ksim_last.txt'
-reset242 12000; cp -p $W/gate_ok $G; yp
-chk "A-02 TANG - SAU sua: cung dinh cu 12000 => dat lai, dd = 0 (nguong -40 % tinh tu equity luc pilot bat)" '[ $RC = 0 ] && simok 10000.00'
+reset242 1500; cp -p $W/gate_ok $G; yp $OH
+chk "A-02 TANG - TRUOC sua (ban OPS5): micro dang DD -33 % (dinh 1500, cao nhat co the ma chua latch) => JVM 10000: dinh tu nang len 10000, dd = 0 (KHONG co DD am gia khi tang x10)" '[ $RC = 0 ] && grep -q "eq=10000.00 dd_C6=0.0000 dd_A40=0.0000 OK" $F/run/ksim_last.txt'
+reset242 1500; cp -p $W/gate_ok $G; yp
+chk "A-02 TANG - SAU sua: cung dinh 1500 => dat lai co chu dich, dd = 0 (nguong -40 % tinh tu equity luc pilot bat)" '[ $RC = 0 ] && simok 10000.00'
 echo "== pilot_on hau kiem TRUOT => rollback HA VON (A-02 TRUOC / SAU sua)"
 reset242 1005; cp -p $W/gate_ok $G; echo 10000 > $F/FAKE_KHAN_IF_CAP; yp $OH
 chk "A-02 TRUOC sua (ban OPS5 fa95289b): rollback 10000 -> 1000 sau khi JVM 10000 day dinh => JVM 1000 nap dinh 10000 => dd -0.90 => FLATTEN GIA (latch FLATTEN)" '[ $RC = 1 ] && echo "$OUT" | grep -q "Da ROLLBACK xong" && grep -q "eq=1000.00 dd_C6=-0.9000 dd_A40=-0.9000 FLATTEN" $F/run/ksim_last.txt && [ "$(latch)" = FLATTEN ]'
