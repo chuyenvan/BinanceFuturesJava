@@ -363,7 +363,7 @@ gl_gate_val() { sed -n "s/^$2=//p" "$1" | head -1 | tr -d '\r '; }
 #   owner_decision: file = OWNER_DECISION_FILE va sha256(git show <commit>:<file>) = sha256 ghi trong gate; micro_start = GL_MICRO_START va
 #   micro7 = DU (kiem lai >= 7 ngay) | MIEN_OWNER (ref hop le). [n-6] lev_ev=<file> sha256=<..>: file con, sha256 khop.
 gl_od_commits() { git -C "$PREREG_REPO" log --format=%H -- 'docs/prereg/OWNER_DECISION_*' 2>/dev/null; }
-gl_od_ref() { local h; [[ "$1" =~ ^[0-9a-f]{7,40}$ ]] || return 1; h=$(git -C "$PREREG_REPO" rev-parse -q --verify "$1^{commit}" 2>/dev/null) || return 1; gl_od_commits | grep -qx "$h" || return 1; echo "$h"; }
+gl_od_ref() { local h c; [[ "$1" =~ ^[0-9a-f]{7,40}$ ]] || return 1; h=$(git -C "$PREREG_REPO" rev-parse -q --verify "$1^{commit}" 2>/dev/null) || return 1; c=$(gl_od_commits); [[ $'\n'"$c"$'\n' == *$'\n'"$h"$'\n'* ]] || return 1; echo "$h"; }   # khong pipe | grep -q (pipefail + SIGPIPE => sai ngau nhien)
 gl_refof() { printf '%s' "$1" | grep -oE '(^| )ref=[0-9a-f]{7,40}( |$)' | head -1 | sed -E 's/^ ?ref=//; s/ $//'; }
 gl_gate_pilot() {
   local f=$1 why="" now c e n x v od odf ods ms m7 p s
