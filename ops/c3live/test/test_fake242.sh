@@ -196,12 +196,11 @@ chk "deploy DRY khong doi env" "grep -qx 'export LIVE_PROFILE=c3_shadow' $F/conf
 OUT=$(DRY=1 KILLSW_MD5=00000000000000000000000000000000 bash "$HERE/deploy_v12_dry.sh" 2>&1)
 chk "deploy tu choi khi md5 killsw_reset.sh sai (pin)" "echo \"\$OUT\" | grep -q 'md5 killsw_reset.sh sai'"
 echo "== 2. deploy that KHONG FORCE_DATE (phai tu choi truoc 2026-11-18)"
-OUT=$(echo YES | FORCE_TIME=1 bash "$HERE/deploy_v12_dry.sh" 2>&1); echo "$OUT" | tail -2
-if [ "$(date +%s)" -lt "$(date -d '2026-11-18 08:00 +07' +%s)" ]; then
-  chk "tu choi truoc 11-18" "echo \"\$OUT\" | grep -q 'truoc 2026-11-18'"
-else
-  skp "tu choi truoc 11-18 (da qua ngay)"
-fi
+# [OPS6 luot 2 B3] ngay GIA (khong phu thuoc ngay chay): 'date +%s' tra 2026-11-17 12:00 +07 qua PATH, moi lenh date khac = date that
+RDATE=$(command -v date); mkdir -p "$W/fakedate"
+printf '#!/bin/bash\n[ "$*" = "+%%s" ] && { %s -d "2026-11-17 12:00 +07" +%%s; exit 0; }\nexec %s "$@"\n' "$RDATE" "$RDATE" > "$W/fakedate/date"; chmod +x "$W/fakedate/date"
+OUT=$(echo YES | PATH="$W/fakedate:$PATH" FORCE_TIME=1 bash "$HERE/deploy_v12_dry.sh" 2>&1); echo "$OUT" | tail -2
+chk "tu choi truoc 11-18 (ngay GIA 2026-11-17 qua date gia; khong doi gi)" "echo \"\$OUT\" | grep -q 'truoc 2026-11-18' && ! grep -q LIVE_ADAPTER $F/conf/env.sh"
 echo "== 3. deploy that (FORCE_DATE=1 FORCE_TIME=1, go YES) tren 242 gia"
 OUT=$(echo YES | FORCE_DATE=1 FORCE_TIME=1 bash "$HERE/deploy_v12_dry.sh" 2>&1); echo "$OUT" | tail -8
 TS=$(echo "$OUT" | grep -o 'TS=[0-9_]*' | head -1 | cut -d= -f2)

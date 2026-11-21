@@ -91,6 +91,7 @@ if fl:
 open(PF, "w").write("%s adapter=%s\n" % (peak, tag))
 o["acct_peak"] = acct; o["acct_peak_adapter"] = tag; o["adapter"] = tag
 open(LF, "w").write(json.dumps(o, separators=(",", ":")) + "\n")
+print("[KILLSW] HOURLY hour=sim mode=act open=0 U=0.0000 eq=%.2f peak=%.2f dd=%.4f acct_eq=%.2f acct_peak=%.2f acct_dd=%.4f latch=%s" % (eq, peak, dd, eq, acct, dda, o.get("latch")))
 open("run/ksim_last.txt", "w").write("eq=%.2f dd_C6=%.4f dd_A40=%.4f %s\n" % (eq, dd, dda, "FLATTEN" if fl else "OK"))
 PYS
 cat > "$F/bin/daemon.sh" <<'EOD'
@@ -417,6 +418,78 @@ OUT=$(echo YES | MODE=rollback bash "$HERE/install_242_autodrain.sh" 2>&1); RC=$
 chk "T20 go cai (MODE=rollback): cron 242 = ban dau (byte), drop-in xoa, wrapper -> .off_<TS>, KHONG restart bot" '[ $RC = 0 ] && cmp -s $W/ct242 $W/ct242_0 && [ ! -e $DF ] && [ ! -e $SB/h242-prestart-c3.sh ] && ls $SB/h242-prestart-c3.sh.off_* >/dev/null 2>&1 && [ "$(np)" = 1 ]'
 OUT=$(MGE DRY=1 bash "$HERE/golive_make_gate_pilot.sh" 2>&1); RC=$?
 chk "sau go cai boot guard: make_gate_pilot TU CHOI lai" '[ $RC = 1 ] && echo "$OUT" | grep -q "boot guard T20 CHUA CAI"'
+# =============================================================================== LUOT 2 B1: unit / cron / watchdog dong 39 NHU 242 (MASTER doc 21/11 21:49)
+echo "== LUOT 2 B1: h242-trading.service CO ExecStartPre=h242-prestart.sh san, cron watchdog KHONG WD_PRESTART, watchdog dong 39"
+MCX=com.binance.chuyennd.trading.BinanceOrderTradingManager
+cat > "$W/systemd/h242-trading.service" <<EOU
+[Unit]
+Description=h242 trading (noi dung theo MASTER doc 242)
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=H242=1
+ExecStartPre=$SB/h242-prestart.sh $F $MCX
+ExecStart=$F/bin/daemon.sh start
+ExecStop=$F/bin/daemon.sh stop
+EOU
+cp "$W/systemd/h242-trading.service" "$W/unit0"
+printf '#!/bin/bash\necho "$#|$1|$2" >> %s/orig_args.log\nexit $(cat %s/pre_rc 2>/dev/null || echo 0)\n' "$W" "$W" > "$SB/h242-prestart.sh"; chmod 755 "$SB/h242-prestart.sh"
+{ printf '#!/bin/bash\n'; for i in $(seq 2 38); do echo "# dong $i (watchdog 242)"; done
+  echo 'PRESTART=${WD_PRESTART:-/usr/local/sbin/h242-prestart.sh}'
+  echo "# test: /usr/local/sbin tren 242 = $SB o day => wrapper can AD_ORIG_PRESTART (tren 242 dung mac dinh /usr/local/sbin/h242-prestart.sh)"
+  printf 'env -i PATH=/usr/bin:/bin AD_ORIG_PRESTART=%s/h242-prestart.sh AD_STATE_DIR=%s/adstate AD_TG_SINK=%s/tgad.txt "$PRESTART" "%s" "%s"; echo "WD_PRESTART_RC=$? PRESTART=$PRESTART" >> %s/wd39.log\n' "$SB" "$W" "$W" "$F" "$MCX" "$W"; } > "$SB/h242_watchdog.sh"; chmod 755 "$SB/h242_watchdog.sh"
+printf '*/2 * * * * %s/h242_watchdog.sh >> /var/lib/h242_watchdog/cron.out 2>&1\n7,22,37,52 * * * * cd /x && bash exinfo_refresh_242.sh # C3LIVE_EXINFO_REFRESH\n' "$SB" > "$W/ct242"; cp "$W/ct242" "$W/ct242_b1"
+rm -f "$SB"/h242-prestart-c3.sh*; rm -rf "$W/systemd/h242-trading.service.d"
+OUT=$(echo YES | bash "$HERE/install_242_autodrain.sh" 2>&1); RC=$?
+chk "B1 install tren cau hinh 242 that: cron watchdog THEM tien to WD_PRESTART=wrapper (giu redirect, dong exinfo giu), unit KHONG bi sua, drop-in tao moi" '[ $RC = 0 ] && grep -qx "\*/2 \* \* \* \* WD_PRESTART=$SB/h242-prestart-c3.sh $SB/h242_watchdog.sh >> /var/lib/h242_watchdog/cron.out 2>&1" $W/ct242 && grep -q C3LIVE_EXINFO_REFRESH $W/ct242 && cmp -s $W/unit0 $W/systemd/h242-trading.service && [ -f $DF ]'
+chk "B1 tinh: watchdog dong 39 nguyen van '\''PRESTART=\${WD_PRESTART:-...}'\''; wrapper goi DUNG file goc cua unit (/usr/local/sbin/h242-prestart.sh) voi \"\$@\" va giu rc goc != 0" '[ "$(sed -n 39p $SB/h242_watchdog.sh)" = "PRESTART=\${WD_PRESTART:-/usr/local/sbin/h242-prestart.sh}" ] && grep -qF "ORIG=\${AD_ORIG_PRESTART:-/usr/local/sbin/h242-prestart.sh}" $HERE/c3_autodrain_prestart.sh && grep -qF "\"\$ORIG\" \"\$@\"; rc=\$?" $HERE/c3_autodrain_prestart.sh && grep -qF "_RC=\$rc; exit \"\$rc\"" $HERE/c3_autodrain_prestart.sh'
+# mo phong systemd: ExecStartPre hieu luc = unit + drop-in (dong "ExecStartPre=" rong XOA danh sach truoc), chay lan luot, rc != 0 => KHONG ExecStart
+sdpre() { { grep '^ExecStartPre=' "$W/systemd/h242-trading.service"; grep '^ExecStartPre=' "$DF"; } | while IFS= read -r l; do v=${l#ExecStartPre=}; [ -z "$v" ] && echo __RESET__ || echo "$v"; done \
+  | awk '/^__RESET__$/{n=0; next} {a[++n]=$0} END{for(i=1;i<=n;i++) print a[i]}'; }
+sdstart() {   # in SD_RC=<rc pre> SD_START=0|1 KS_LUC_START=0|1
+  local c rc=0
+  while IFS= read -r c; do env AD_ORIG_PRESTART=$SB/h242-prestart.sh AD_STATE_DIR=$W/adstate AD_TG_SINK=$W/tgad.txt bash -c "$c" >/dev/null 2>&1; rc=$?; [ $rc = 0 ] || break; done < <(sdpre)
+  if [ $rc = 0 ]; then echo "SD_RC=0 SD_START=1 KS_LUC_START=$([ -e $F/run/KILL_SWITCH ] && echo 1 || echo 0)"; else echo "SD_RC=$rc SD_START=0 KS_LUC_START=$([ -e $F/run/KILL_SWITCH ] && echo 1 || echo 0)"; fi; }
+chk "B1 systemd: ExecStartPre hieu luc = DUNG 1 lenh = wrapper $F $MCX (goc KHONG chay 2 lan, thu tu: reset roi wrapper)" '[ "$(sdpre)" = "$SB/h242-prestart-c3.sh $F $MCX" ] && [ "$(grep "^ExecStartPre=" $DF | head -1)" = "ExecStartPre=" ]'
+rm -f $F/run/KILL_SWITCH $W/orig_args.log; echo 0 > $W/pre_rc; R1=$(sdstart)
+chk "B1 systemd boot: prestart GOC chay 1 lan voi DUNG 2 tham so ($F, main class), roi token c3_autodrain => KS CO luc ExecStart" '[ "$R1" = "SD_RC=0 SD_START=1 KS_LUC_START=1" ] && [ "$(cat $W/orig_args.log)" = "2|$F|$MCX" ] && grep -qxE "c3_autodrain [0-9]{8}_[0-9]{6} caller=[A-Za-z0-9_.-]*" $F/run/KILL_SWITCH'
+rm -f $F/run/KILL_SWITCH $W/orig_args.log; echo 1 > $W/pre_rc; R1=$(sdstart); echo 0 > $W/pre_rc
+chk "B1 systemd: prestart GOC tra rc 1 (deps chua san) => wrapper tra NGUYEN rc 1 => KHONG ExecStart, KHONG drain (giu hanh vi goc)" '[ "$R1" = "SD_RC=1 SD_START=0 KS_LUC_START=0" ] && [ "$(cat $W/orig_args.log)" = "2|$F|$MCX" ]'
+rm -f $F/run/KILL_SWITCH $W/orig_args.log $W/wd39.log
+CL=$(grep 'h242_watchdog.sh' $W/ct242 | sed -E 's#^\*/2 \* \* \* \* ##; s#/var/lib/h242_watchdog/cron.out#'"$W"'/cron.out#')
+env -i PATH="$W/guardbin:/usr/bin:/bin" sh -c "$CL"
+chk "B1 cron watchdog (dong cron sau cai, chay bang sh nhu cron): PRESTART = wrapper (WD_PRESTART tu dong cron), wrapper goi goc 2 tham so, KS token co, rc 0" 'grep -qx "WD_PRESTART_RC=0 PRESTART=$SB/h242-prestart-c3.sh" $W/wd39.log && [ "$(cat $W/orig_args.log)" = "2|$F|$MCX" ] && grep -qxE "c3_autodrain [0-9]{8}_[0-9]{6} caller=[A-Za-z0-9_.-]*" $F/run/KILL_SWITCH'
+rm -f $F/run/KILL_SWITCH $W/wd39.log
+CL0=$(sed -E 's#^\*/2 \* \* \* \* ##; s#/var/lib/h242_watchdog/cron.out#'"$W"'/cron.out#' $W/ct242_b1 | grep h242_watchdog)
+env -i PATH="$W/guardbin:/usr/bin:/bin" sh -c "$CL0"
+chk "B1 doi chung: dong cron TRUOC khi cai (khong WD_PRESTART) => watchdog dung mac dinh /usr/local/sbin/h242-prestart.sh (KHONG qua wrapper, khong drain) - dung nhu MASTER thay tren 242" 'grep -q "PRESTART=/usr/local/sbin/h242-prestart.sh" $W/wd39.log && [ ! -e $F/run/KILL_SWITCH ]'
+# =============================================================================== LUOT 2 B2: golive_pilot_down.sh
+echo "== LUOT 2 B2: golive_pilot_down.sh (ha von, chi khi phang)"
+pdn() { LN0=$(wc -l < "$F/logs/full.log"); OUT=$(printf '%s\n' "${2:-}" | bash "$HERE/golive_pilot_down.sh" $1 2>&1); RC=$?; }
+rstart() { bash $F/bin/daemon.sh stop >/dev/null 2>&1; (cd $F && bin/daemon.sh start >/dev/null 2>&1); sleep 0.5; }
+up10k; OUT=$(DRY=1 bash "$HERE/golive_pilot_down.sh" 5000 2>&1); RC=$?
+chk "pilot_down DRY 10000 -> 5000 (phang): DRY PASS, IN von cu->moi, equity c3, du kien 5000, dinh dat lai, dung -40 % = 3000 USDT (lo 2000), so vi the; 242 khong doi" '[ $RC = 0 ] && echo "$OUT" | grep -q "DRY PASS" && echo "$OUT" | grep -q "von C3_CAPITAL: 10000 -> 5000" && echo "$OUT" | grep -q "so c3 0 cum, san 0 vi the" && echo "$OUT" | grep -q "equity c3 hien tai .*eq=10000.00" && echo "$OUT" | grep -q "du kien sau ha = 5000 + 0.00 = 5000.00" && echo "$OUT" | grep -q "dinh C6/A40 se DAT LAI" && echo "$OUT" | grep -q "equity c3 <= 3000.00 USDT (lo them 2000.00" && [ "$(envcap)" = 10000 ]'
+up10k; echo -300 > $F/FAKE_PNL; rstart; OUT=$(DRY=1 bash "$HERE/golive_pilot_down.sh" 5000 2>&1); RC=$?
+chk "pilot_down DRY: realized cong don -300 (ledger KHONG reset - quyet dinh MASTER) => IN ro: du kien 5000 + -300.00 = 4700.00, dung -40 % <= 2820.00" '[ $RC = 0 ] && echo "$OUT" | grep -q "realized + funding cong don .*: -300.00 USDT" && echo "$OUT" | grep -q "= 5000 + -300.00 = 4700.00" && echo "$OUT" | grep -q "equity c3 <= 2820.00"'
+for t in 7000 10000 ""; do up10k; OUT=$(DRY=1 bash "$HERE/golive_pilot_down.sh" $t 2>&1); RC=$?
+  chk "pilot_down: von dich '$t' (chi 5000|1000) => TU CHOI" '[ $RC = 1 ] && echo "$OUT" | grep -q "von dich"'; done
+reset242 1005; OUT=$(DRY=1 bash "$HERE/golive_pilot_down.sh" 1000 2>&1); RC=$?
+chk "pilot_down: von hien tai 1000, dich 1000 (khong phai HA) => TU CHOI" '[ $RC = 1 ] && echo "$OUT" | grep -q "FAIL C3_CAPITAL hien tai (1000) > dich 1000"'
+up10k; echo '{"clusters":[{"symbol":"C01USDT","legs":[{"cid":"c3-C01USDT-1-0","state":"CONFIRMED","exec_qty":"10"}],"exit_qty":"0"}]}' > $F/run/c3live_book.json
+OUT=$(DRY=1 bash "$HERE/golive_pilot_down.sh" 5000 2>&1); RC=$?; rm -f $F/run/c3live_book.json
+chk "pilot_down: so c3 con 1 cum (chua phang) => TU CHOI + huong dan drain" '[ $RC = 1 ] && echo "$OUT" | grep -q "FAIL so c3 PHANG: 0 cum (co 1; con vi the => MODE=drain"'
+up10k; api positionRisk '[{"symbol":"C01USDT","positionAmt":"10"}]'; OUT=$(DRY=1 bash "$HERE/golive_pilot_down.sh" 5000 2>&1); RC=$?; api positionRisk '[]'
+chk "pilot_down: tk con con vi the tren san => TU CHOI" '[ $RC = 1 ] && echo "$OUT" | grep -q "FAIL tk con PHANG"'
+up10k; P0=$(pid); pdn 5000 "YES"
+chk "pilot_down: go 'YES' (khong phai 'YES HA VON 5000') => huy, khong doi" '[ $RC = 0 ] && echo "$OUT" | grep -q "Huy. Khong doi gi." && [ "$(envcap)" = 10000 ] && [ "$(pid)" = "$P0" ]'
+up10k; pdn 5000 "YES HA VON 5000"
+chk "pilot_down XONG 10000 -> 5000 (khong KS): env + process 5000, a02 dinh dat lai (dd 0, khong FLATTEN), KS script go, PUSH ON, moc tmb0 c3_capital=5000, Telegram" '[ $RC = 0 ] && echo "$OUT" | grep -q "XONG: HA VON C3_CAPITAL=5000" && [ "$(envcap)" = 5000 ] && penv | grep -qx C3_CAPITAL=5000 && echo "$OUT" | grep -q "INFO a02: DOI VON C3_CAPITAL 10000 -> 5000" && simok 5000.00 && [ ! -e $F/run/KILL_SWITCH ] && newlog | grep -q "PUSH doi trang thai -> ON" && grep -qx c3_capital=5000 $W/deploy/c3sub_eq_base.txt && grep -q "HA VON XONG" $W/tg.txt'
+up10k; printf 'golive_live_off drain 20261121_5\n' > $F/run/KILL_SWITCH; pdn 1000 "YES HA VON 1000"
+chk "pilot_down XONG khi owner DRAIN co san (10000 -> 1000): KS owner GIU NGUYEN byte, bot VAN DRAIN (khong PUSH ON), env + process 1000, dd 0" '[ $RC = 0 ] && echo "$OUT" | grep -q "VAN DRAIN" && [ "$(cat $F/run/KILL_SWITCH)" = "golive_live_off drain 20261121_5" ] && [ "$(envcap)" = 1000 ] && penv | grep -qx C3_CAPITAL=1000 && simok 1000.00 && ! newlog | grep -q "PUSH doi trang thai -> ON"'
+up10k; echo 5000 > $F/FAKE_KHAN_IF_CAP; pdn 5000 "YES HA VON 5000"
+chk "pilot_down hau kiem TRUOT (KHAN o von 5000) => ROLLBACK ve 10000 rc1, a02 lai (JVM 5000 da chay) dd 0, moc tmb0 tra lai" '[ $RC = 1 ] && echo "$OUT" | grep -q "Da ROLLBACK xong: live C3_CAPITAL=10000" && [ "$(envcap)" = 10000 ] && penv | grep -qx C3_CAPITAL=10000 && simok 10000.00 && cmp -s $W/eqbase0 $W/deploy/c3sub_eq_base.txt'
+up10k; printf 'RESTART after 1\n' > $W/sshplan; pdn 5000 "YES HA VON 5000"
+chk "pilot_down ssh dut SAU khoi restart (1 lan) => doc pha, chay lai idempotent, XONG 5000" '[ $RC = 0 ] && echo "$OUT" | grep -q "pha_da_xong_truoc" && [ "$(envcap)" = 5000 ] && simok 5000.00'
 # =============================================================================== tong
 chk "AN TOAN: KHONG co lenh ssh/scp THAT nao duoc goi trong toan bo test" '[ ! -s $W/guard_blocked.log ]'
 chk "khong lo key/secret (log deploy, gate, Telegram)" 'nosec "$OUT"'
