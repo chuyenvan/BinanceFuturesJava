@@ -11,6 +11,7 @@ case "$W" in *hfx_*) ;; *) W=${W%/}_hfx_$$;; esac
 rm -rf "$W"; mkdir -p "$W"
 git -C "$HERE" diff --quiet HEAD -- . || { echo "TEST FAIL: $HERE co sua CHUA commit (m1)"; exit 1; }
 export A1_APPROVED_OPS=$W/a1_approved_ops.commit; git -C "$HERE" rev-parse HEAD > "$A1_APPROVED_OPS"
+export GL_TEST=1 MON_BG_CHECK=0   # [OPS6 luot3 m-7] ghi de (NJ_MD5...) CHI hieu luc khi GL_TEST=1
 PN="BinanceOrderTradingManager hfx_$$"
 cleanup() { pkill -9 -f "$PN" 2>/dev/null; pkill -9 -f "hfxw_$$" 2>/dev/null; pkill -9 -f "$W/" 2>/dev/null; :; }
 trap cleanup EXIT

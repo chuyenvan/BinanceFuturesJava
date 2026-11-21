@@ -12,6 +12,7 @@ case "$W" in /tmp/*|/home/ubuntu/claude_master/tmp/*) ;; *) echo "TEST FAIL: thu
 rm -rf "$W"; mkdir -p "$W"
 git -C "$HERE" diff --quiet HEAD -- . || { echo "TEST FAIL: $HERE co sua CHUA commit - commit truoc"; exit 1; }
 export A1_APPROVED_OPS=$W/a1_approved_ops.commit; git -C "$HERE" rev-parse HEAD > "$A1_APPROVED_OPS"
+export GL_TEST=1 MON_BG_CHECK=0   # [OPS6 luot3 m-7] ghi de (NJ_MD5, PREREG_REPO, GATE_MAX_AGE_S...) CHI hieu luc khi GL_TEST=1; boot guard monitor kiem o test_ops6
 TAG=ops5_$$
 FPAT="BinanceOrderTradingManager fk_$TAG"
 cleanup() { local p; for p in $(pgrep -f "fk_$TAG" 2>/dev/null); do [ "$p" != $$ ] && kill "$p" 2>/dev/null; done; }
@@ -339,7 +340,8 @@ printf '#!/bin/bash\necho "deps ok (gia)"\nexit $(cat %s/pre_rc 2>/dev/null || e
 printf '#!/bin/bash\nPRESTART=${WD_PRESTART:-/usr/local/sbin/h242-prestart.sh}\n' > $SB/h242_watchdog.sh
 printf '#!/bin/bash\ncase "$1" in -l) cat %s/ct242 2>/dev/null;; -) cat > %s/ct242;; esac\n' "$W" "$W" > $W/ct242.sh
 printf '*/2 * * * * %s/h242_watchdog.sh >> /var/lib/h242_watchdog/cron.out 2>&1\n3,18,41,48 * * * * cd /x && bash exinfo.sh # C3LIVE_EXINFO\n' "$SB" > $W/ct242; cp $W/ct242 $W/ct242_0
-AI() { E AD_SBIN=$SB AD_SYSTEMD_DIR=$W/systemd AD_SYSTEMCTL=true AD_CT242="bash $W/ct242.sh" "$@"; }
+printf '#!/bin/bash\nD=%s/systemd/h242-trading.service.d/c3-autodrain.conf\ncase "$1" in daemon-reload) if [ -f $D ]; then grep "^ExecStartPre=." $D | tail -1 | sed "s/^ExecStartPre=//; s/ .*//" > %s/fsc_state; else echo orig > %s/fsc_state; fi;; show) p=$(cat %s/fsc_state 2>/dev/null || echo orig); echo "ExecStartPre={ path=$p ; argv[]=$p x ; }";; esac\n' $W $W $W $W > $W/fsc.sh   # [luot3 m-5] systemctl gia co trang thai
+AI() { E AD_SBIN=$SB AD_SYSTEMD_DIR=$W/systemd AD_SYSTEMCTL="bash $W/fsc.sh" AD_CT242="bash $W/ct242.sh" "$@"; }
 OUT=$(AI DRY=1 bash "$HERE/install_242_autodrain.sh" 2>&1 < /dev/null); RC=$?
 chk "a1 install DRY=1: doc 242, in ke hoach, KHONG doi cron / sbin / systemd" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && cmp -s $W/ct242 $W/ct242_0 && [ ! -e $SB/h242-prestart-c3.sh ] && [ ! -e $W/systemd/h242-trading.service.d ]"
 OUT=$(echo YES | AI bash "$HERE/install_242_autodrain.sh" 2>&1); RC=$?
@@ -361,14 +363,14 @@ OUT=$(AW bash "$WP" "$F" x 2>&1); RC=$?
 chk "a5c [OPS6 T20] KS dong cuoi THIEU xuong dong => token c3_autodrain thanh dong RIENG (khong dinh vao dong owner)" "[ $RC = 0 ] && grep -qx 'golive_live_off drain 20261119_000009' $F/run/KILL_SWITCH && grep -qxE 'c3_autodrain [0-9]{8}_[0-9]{6} caller=[A-Za-z0-9_.-]*' $F/run/KILL_SWITCH"
 rm -f $F/run/KILL_SWITCH; echo 1 > $W/pre_rc
 OUT=$(AW bash "$WP" "$F" x 2>&1); RC=$?
-chk "a6 prestart goc rc 1 (deps chua san) => tra rc 1, KHONG tao KS" "[ $RC = 1 ] && [ ! -e $F/run/KILL_SWITCH ]"
+chk "a6 [luot3 m-4] prestart goc rc 1 (deps chua san) => tra rc 1; token KS DA ghi TRUOC prestart goc (giu: lan start sau van drain)" "[ $RC = 1 ] && grep -qxE 'c3_autodrain [0-9]{8}_[0-9]{6} caller=[A-Za-z0-9_.-]*' $F/run/KILL_SWITCH"
 echo 0 > $W/pre_rc; sed -i 's/^export LIVE_ADAPTER=live/export LIVE_ADAPTER=dry/' $F/conf/env.sh
 OUT=$(AW bash "$WP" "$F" x 2>&1); RC=$?
 chk "a7 env.sh adapter=dry => khong drain, rc 0" "[ $RC = 0 ] && [ ! -e $F/run/KILL_SWITCH ] && echo \"\$OUT\" | grep -q 'khong live'"
 sed -i 's/^export LIVE_ADAPTER=dry/export LIVE_ADAPTER=live/' $F/conf/env.sh; chmod 555 $F/run
 OUT=$(AW bash "$WP" "$F" x 2>&1); RC=$?; chmod 755 $F/run
 chk "a8 tiem loi: KHONG ghi duoc KS (run chi doc) => van rc 0 (khong chan start, vi the can quan ly) + Telegram KHAN" "[ $RC = 0 ] && [ ! -e $F/run/KILL_SWITCH ] && tail -2 $W/tgad.txt | grep -q 'KHAN bot c3 LIVE.*KHONG dat duoc'"
-chk "a9 golive_live_off MODE=undrain go MOI token KILL_SWITCH (mv run/KILL_SWITCH) => mo lai duoc sau autodrain" "grep -q 'mv -f run/KILL_SWITCH run/KILL_SWITCH.off_' $HERE/golive_live_off.sh"
+chk "a9 [luot3 m-6] golive_live_off MODE=undrain CHI go dong cua minh (khong xoa ca file khi con c3_autodrain) => chi dan golive_boot_undrain.sh" "grep -q 'LORX=' $HERE/golive_live_off.sh && grep -q 'golive_boot_undrain.sh' $HERE/golive_live_off.sh && ! grep -q 'mv -f run/KILL_SWITCH run/KILL_SWITCH.off_' $HERE/golive_live_off.sh"
 OUT=$(echo YES | AI MODE=rollback bash "$HERE/install_242_autodrain.sh" 2>&1); RC=$?
 chk "a10 rollback: cron watchdog = ban dau, drop-in xoa, wrapper -> .off_" "[ $RC = 0 ] && cmp -s $W/ct242 $W/ct242_0 && [ ! -e $DF ] && [ ! -e $SB/h242-prestart-c3.sh ] && ls $SB/h242-prestart-c3.sh.off_* >/dev/null"
 printf '*/2 * * * * %s/h242_watchdog.sh\n*/2 * * * * %s/h242_watchdog.sh --x\n' "$SB" "$SB" > $W/ct242
@@ -488,8 +490,8 @@ OUT=$(RAN 'equity_mode=X'); RC=$?
 chk "r4 [8a] khong co nhan QTY (che do equity cu) => KHONG tu choi (ghi req)" "[ $RC != 4 ] && [ -f $RA/run/c3live_reanchor.req ]"
 KST() { [ -n "$1" ] && printf '%s\n' "$1" > $F/run/KILL_SWITCH || rm -f $F/run/KILL_SWITCH; E bash -c ". $HERE/golive_lib.sh >/dev/null 2>&1; ST=\$(gl_state242); printf 'TOK=%s ' \"\$(sv KILLSW_TOK)\"; gl_ks_boot_ok && echo CHAP_NHAN || echo TU_CHOI"; }
 R8=""; for t in "" "c3live_boot 20261119_101500" "c3_autodrain 20261119_101500 caller=h242_watchdog.sh" "golive_live_off drain 20261119_1" "golive_monitor KHAN x" "nguoi dat tay"; do R8="$R8[$(KST "$t")]"; done
-chk "k1 [8b] gl_state242 KILLSW_TOK + gl_ks_boot_ok: khong co / c3live_boot / c3_autodrain => CHAP_NHAN; drain owner / monitor / tay => TU_CHOI ($R8)" "[ \"$R8\" = '[TOK= CHAP_NHAN][TOK=c3live_boot CHAP_NHAN][TOK=c3_autodrain CHAP_NHAN][TOK= TU_CHOI][TOK= TU_CHOI][TOK= TU_CHOI]' ]"
-chk "k2 [8b] precheck micro_on + pilot_on dung gl_ks_boot_ok (khong con '[ KILLSW_FILE = 0 ]' tran)" "grep -q '^chk \"khong co run/KILL_SWITCH, hoac token c3live_boot/c3_autodrain.*\" \"gl_ks_boot_ok\"' $HERE/golive_micro_on.sh && grep -q '^chk \"khong co run/KILL_SWITCH, hoac token c3live_boot/c3_autodrain.*\" \"gl_ks_boot_ok\"' $HERE/golive_pilot_on.sh && ! grep -q \"KILLSW_FILE)' = 0 \\]\\\"\" $HERE/golive_micro_on.sh $HERE/golive_pilot_on.sh"
+chk "k1 [8b] gl_state242 KILLSW_TOK + gl_ks_boot_ok: khong co / c3live_boot => CHAP_NHAN; c3_autodrain [luot3 n-2] / drain owner / monitor / tay => TU_CHOI ($R8)" "[ \"$R8\" = '[TOK= CHAP_NHAN][TOK=c3live_boot CHAP_NHAN][TOK=c3_autodrain TU_CHOI][TOK= TU_CHOI][TOK= TU_CHOI][TOK= TU_CHOI]' ]"
+chk "k2 [8b] precheck micro_on + pilot_on dung gl_ks_boot_ok (khong con '[ KILLSW_FILE = 0 ]' tran)" "grep -q '^chk \"khong co run/KILL_SWITCH, hoac 1 dong token c3live_boot.*\" \"gl_ks_boot_ok\"' $HERE/golive_micro_on.sh && grep -q '^chk \"khong co run/KILL_SWITCH, hoac 1 dong token c3live_boot.*\" \"gl_ks_boot_ok\"' $HERE/golive_pilot_on.sh && ! grep -q \"KILLSW_FILE)' = 0 \\]\\\"\" $HERE/golive_micro_on.sh $HERE/golive_pilot_on.sh"
 # ---- [VONG3 F1] KILLSW_TOK chat: dung 1 dong + khop tron token chuan; writer APPEND; go KS cua minh chi khi MOI dong la cua minh
 JT='c3live_boot 20261119_101500 B-09: JVM LIVE khoi dong KHONG qua script go-live (crash/watchdog/reboot/restart tay) => dung mo moi, vi the c3 van duoc quan ly. Mo: MODE=undrain bash golive_live_off.sh'
 R9=""; for t in '#c3live_boot 20261119_101500' 'c3live_bootX 20261119_101500' '"c3live_boot" 20261119_101500' "c3_autodrain 20261119_101500 caller=cron
@@ -497,7 +499,7 @@ owner: GIU DRAIN" "c3_autodrain 20261119_101500 caller=x
 golive_monitor 20261119_1 KHAN vi_the_ngoai" "$JT" "c3_autodrain 20261119_101500 caller=unknown"; do R9="$R9[$(KST "$t")]"; done
 : > $F/run/KILL_SWITCH; R9="$R9[$(E bash -c ". $HERE/golive_lib.sh >/dev/null 2>&1; ST=\$(gl_state242); gl_ks_boot_ok && echo CHAP_NHAN || echo TU_CHOI")]"
 printf 'c3live_boot 20261119_101500' > $F/run/KILL_SWITCH; R9="$R9[$(E bash -c ". $HERE/golive_lib.sh >/dev/null 2>&1; ST=\$(gl_state242); gl_ks_boot_ok && echo CHAP_NHAN || echo TU_CHOI")]"
-chk "k5 [F1] '#c3live_boot' / 'c3live_bootX' / co ngoac / 2 dong (owner them) / 2 dong (monitor KHAN append) => TU_CHOI; token jar C3BootLock nguyen van + caller=unknown => CHAP_NHAN; file rong => TU_CHOI; 1 dong khong xuong dong => CHAP_NHAN ($R9)" "[ \"$R9\" = '[TOK= TU_CHOI][TOK= TU_CHOI][TOK= TU_CHOI][TOK= TU_CHOI][TOK= TU_CHOI][TOK=c3live_boot CHAP_NHAN][TOK=c3_autodrain CHAP_NHAN][TU_CHOI][CHAP_NHAN]' ]"
+chk "k5 [F1] '#c3live_boot' / 'c3live_bootX' / co ngoac / 2 dong (owner them) / 2 dong (monitor KHAN append) => TU_CHOI; token jar C3BootLock nguyen van => CHAP_NHAN; c3_autodrain caller=unknown => TU_CHOI [luot3 n-2]; file rong => TU_CHOI; 1 dong khong xuong dong => CHAP_NHAN ($R9)" "[ \"$R9\" = '[TOK= TU_CHOI][TOK= TU_CHOI][TOK= TU_CHOI][TOK= TU_CHOI][TOK= TU_CHOI][TOK=c3live_boot CHAP_NHAN][TOK=c3_autodrain TU_CHOI][TU_CHOI][CHAP_NHAN]' ]"
 chk "k6 [F1] khong con writer 'chi ghi KS khi chua co' (ghi de/nuot KHAN) trong ops/c3live: moi writer APPEND (>>)" "! grep -nE '\[ -e run/KILL_SWITCH \] \|\| (echo|printf)' $HERE/*.sh && grep -q \"echo 'golive_monitor \\\$TS KHAN \\\$KT' >> run/KILL_SWITCH\" $HERE/golive_monitor.sh"
 GKO() { E bash -c ". $HERE/golive_lib.sh >/dev/null 2>&1; TS=20990101_000777; gl_ks_go_own golive_micro_on"; }
 printf 'golive_micro_on 20990101_000777 hau_kiem\n' > $F/run/KILL_SWITCH; printf 'golive_monitor x KHAN vi_the_ngoai\n' >> $F/run/KILL_SWITCH; G1=$(GKO)
@@ -520,9 +522,9 @@ export O5F_K8=1' '' none 1 2>&1" _ "$1"; }
 echo 'c3live_boot 20261119_101500' > $F/run/KILL_SWITCH
 OUT=$(GR 20990101_000001); RC=$?
 chk "k3 [8b] gl_restart ks=1 + KS c3live_boot => GHI DE token script, ban cu -> run/KILL_SWITCH.prev_<TS>, restart OK" "echo \"\$OUT\" | grep -q 'OK KILL_SWITCH_dat_truoc_start' && grep -q '^golive_micro_on 20990101_000001 ' $F/run/KILL_SWITCH && [ \"\$(cat $F/run/KILL_SWITCH.prev_20990101_000001)\" = 'c3live_boot 20261119_101500' ] && echo \"\$OUT\" | grep -q 'OK started pid='"
-cp $W/env.sh.k8 $F/conf/env.sh; startbot 1000; echo 'c3_autodrain 20261119_101500 caller=x' > $F/run/KILL_SWITCH; touch $W/daemon_nostop
+cp $W/env.sh.k8 $F/conf/env.sh; startbot 1000; echo 'c3live_boot 20261119_101500' > $F/run/KILL_SWITCH; touch $W/daemon_nostop
 OUT=$(GR 20990101_000002); RC=$?; rm -f $W/daemon_nostop
-chk "k4 [8b] gl_restart ks=1 FAIL (stop khong dung duoc) => ksoff tra lai token cu c3_autodrain (khong mat drain), env khoi phuc" "echo \"\$OUT\" | grep -q 'FAIL van_con_process_sau_stop' && [ \"\$(cat $F/run/KILL_SWITCH)\" = 'c3_autodrain 20261119_101500 caller=x' ] && [ -e $F/run/KILL_SWITCH.rb_20990101_000002 ] && ! grep -q O5F_K8 $F/conf/env.sh"
+chk "k4 [8b] gl_restart ks=1 FAIL (stop khong dung duoc) => ksoff tra lai token cu c3live_boot (khong mat drain), env khoi phuc" "echo \"\$OUT\" | grep -q 'FAIL van_con_process_sau_stop' && [ \"\$(cat $F/run/KILL_SWITCH)\" = 'c3live_boot 20261119_101500' ] && [ -e $F/run/KILL_SWITCH.rb_20990101_000002 ] && ! grep -q O5F_K8 $F/conf/env.sh"
 cp $W/env.sh.k8 $F/conf/env.sh; startbot 1000; BP=$(pgrep -f "^$FPAT" | head -1); printf 'golive_live_off drain 20990101_1\n' > $F/run/KILL_SWITCH; cp $F/run/KILL_SWITCH $W/ks_owner
 OUT=$(GR 20990101_000003); RC=$?
 chk "k8 [F3] owner drain xuat hien SAU precheck (truoc buoc dat KS) => gl_restart KHONG ghi de: FAIL KILL_SWITCH_token_khac, KS owner byte-giong, env khoi phuc, bot KHONG bi dung" "echo \"\$OUT\" | grep -q 'FAIL KILL_SWITCH_token_khac_luc_restart' && cmp -s $W/ks_owner $F/run/KILL_SWITCH && [ ! -e $F/run/KILL_SWITCH.prev_20990101_000003 ] && ! grep -q O5F_K8 $F/conf/env.sh && [ \"\$(pgrep -f \"^$FPAT\" | head -1)\" = '$BP' ]"

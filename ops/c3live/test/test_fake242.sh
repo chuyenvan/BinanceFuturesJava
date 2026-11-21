@@ -14,6 +14,7 @@ chmod -R u+w "$W" 2>/dev/null; rm -rf "$W"; mkdir -p "$W"   # [delta MIN-4] pin 
 # [WAVE1c m1] script owner kiem HEAD repo = commit trong A1_APPROVED_OPS + khong sua chua commit: test dung file pin TAM (KHONG deploy/gates)
 git -C "$HERE" diff --quiet HEAD -- . || { echo "TEST FAIL: $HERE co sua CHUA commit - commit truoc khi chay test (m1)"; exit 1; }
 export A1_APPROVED_OPS=$W/a1_approved_ops.commit; git -C "$HERE" rev-parse HEAD > "$A1_APPROVED_OPS"
+export GL_TEST=1 MON_BG_CHECK=0 GL_MICRO_START="$(date -d '9 days ago' '+%F %T %z')"   # [OPS6 luot3 m-7] ghi de CHI hieu luc khi GL_TEST=1; boot guard monitor kiem o test_ops6
 gitpin() { git -C "$1" init -q 2>/dev/null; git -C "$1" -c user.name=t -c user.email=t@t add -A && git -C "$1" -c user.name=t -c user.email=t@t commit -qm "${2:-pin}" && git -C "$1" rev-parse HEAD >> "$A1_APPROVED_OPS"; }   # commit + "A1 duyet" (ban sao test)
 # [A1 ADD4] trap: ket thuc / loi / ngat => don MOI tien trinh con cua bo test (ke ca setsid / nohup / mo coi): nhan dien bang duong dan
 #   "$W/" trong cmdline / cwd / environ. KHONG dong tien trinh ngoai $W (vd mo coi cua lan test khac), khong dong bo test + to tien.
@@ -1297,14 +1298,23 @@ mkgm() { local c=${2:-$(( $(date +%s) * 1000 ))} d="DAT ev=$W/ev_test.txt ev_sha
       "$1" "$INGW" "$c" "$(( c + 172800000 ))" "$d" "$d" "$d" "$r3" "$r4" "$d" "$gc" "$gf" "$ps" "$ls" "$lb" $W/ev_test.txt "$EVS"
     printf "$ov"; } | grep -v "^${3:-KHONGBO}=" > $GD/GOLIVE_GATE_MICRO.ok; gmbody; }
 # [OPS6 T12b/T20] gate PILOT hop le (body_sha256, han, size 5000|10000, mien X14/B2/C1, boot_guard, owner_decision) + boot guard 242 GIA da cai
+# [OPS6 luot3 m-7] repo prereg GIA cho gate PILOT: ref (g_exec/g_exit/mien/owner_decision) phai la commit CHAM docs/prereg/OWNER_DECISION_*
+PRP=$W/prereg_pilot; mkdir -p $PRP/docs/prereg; git -C $PRP init -q; echo "owner decision pilot (test)" > $PRP/docs/prereg/OWNER_DECISION_PILOT_1121_ADD1.md
+git -C $PRP -c user.name=t -c user.email=t@t add -A; git -C $PRP -c user.name=t -c user.email=t@t commit -qm od; PODC=$(git -C $PRP rev-parse HEAD)
+PODS=$(git -C $PRP show $PODC:docs/prereg/OWNER_DECISION_PILOT_1121_ADD1.md | sha256sum | cut -c1-64)
+printf 'golive_check_lev SUB t key_sha8=x KET QUA: DAT\nvon_kiem=10000\n' > $W/lev_pg.txt; PLEVS=$(sha256sum < $W/lev_pg.txt | cut -c1-64)
 pgate() {   # pgate <jar_md5> <size> <g_exec> <g_exit> <thu muc gate>
-python3 - "$5/GOLIVE_GATE_PILOT.ok" "$1" "$2" "$3" "$4" <<'PYG'
+python3 - "$5/GOLIVE_GATE_PILOT.ok" "$1" "$2" "$3" "$4" "$PODC" "$PODS" "$W/lev_pg.txt" "$PLEVS" "$GL_MICRO_START" <<'PYG'
 import hashlib, sys, time
-f, jar, size, gx, gt = sys.argv[1:6]
+f, jar, size, gx, gt, od, ods, lev, levs, ms = sys.argv[1:11]
+r = " n=5 ref=" + od[:8]
 now = int(time.time() * 1000)
 b = "\n".join(["# G-PILOT gate test_fake242", "jar_md5=" + jar, "size=" + size, "created_ms=%d" % now, "expires_ms=%d" % (now + 172800000),
-    "g_exec=" + gx, "g_exit=" + gt, "mien_x14=MIEN ref=abcdef0 test", "mien_b2=MIEN ref=abcdef0 test", "mien_c1=MIEN ref=abcdef0 test",
-    "owner_decision=" + "a" * 40 + " file=x sha256=x", "boot_guard=CAI test", "by=MASTER golive_make_gate_pilot.sh ops_head=test"]) + "\n"
+    "g_exec=" + gx + ("" if "ref=" in gx else r), "g_exit=" + gt + ("" if "ref=" in gt else r),
+    "mien_x14=MIEN ref=%s test" % od[:8], "mien_b2=MIEN ref=%s test" % od[:8], "mien_c1=MIEN ref=%s test" % od[:8],
+    "owner_decision=%s file=docs/prereg/OWNER_DECISION_PILOT_1121_ADD1.md sha256=%s" % (od, ods),
+    "lev_ev=%s sha256=%s" % (lev, levs), "test=1", "micro_start=%s micro_days=9 micro7=DU (>= 7 ngay)" % ms,
+    "boot_guard=CAI test", "by=MASTER golive_make_gate_pilot.sh ops_head=test"]) + "\n"
 open(f, "w").write(b + "body_sha256=" + hashlib.sha256(b.encode()).hexdigest() + "\n")
 PYG
 }
@@ -1374,16 +1384,16 @@ OUT=$(echo YES | GL bash "$HERE/golive_micro_on.sh" 2>&1); RC=$?
 chk "r4p micro_on XONG: process live/1000/push/key/C11, so dry doi ten .dry_TS (live bat dau sach), stream + recon + LEGACY 44, PAUSE go" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: MICRO-LIVE' && penv | grep -qx LIVE_ADAPTER=live && penv | grep -qx C3_CAPITAL=1000 && penv | grep -qx SHADOW_NO_PUSH=false && penv | grep -qx LIVE_ENTRY_ENABLED=true && penv | grep -qx LIVE_SEED_EXCLUDE_DECISION_MIN=1 && penv | grep -qx LIVE_C3_KEYS_FILE=$W/keys_c3.env && [ ! -f $F4/run/c3live_book.json ] && ls $F4/run/c3live_book.json.dry_* >/dev/null && echo \"\$OUT\" | grep -q 'OK LEGACY_managed=44' && echo \"\$OUT\" | grep -q 'OK user_stream' && [ ! -f $W/PAUSE ] && echo \"\$OUT\" | grep -q 'OK KILL_SWITCH_con' && echo \"\$OUT\" | grep -q 'OK chua_PUSH_ON' && [ ! -e $F4/run/KILL_SWITCH ] && grep -q 'PUSH doi trang thai -> ON' $F4/logs/full.log"
 OUT=$(GL bash "$HERE/golive_monitor.sh" 2>&1)
 chk "r4p monitor: 1 lenh in TOM TAT adapter=live C3_CAPITAL=1000 push=ON, latch, so c3, RAM" "echo \"\$OUT\" | grep -q 'TOM TAT: adapter=live C3_CAPITAL=1000 push=ON' && echo \"\$OUT\" | grep -q '== may: MemAvailable='"
-OUT=$(GL DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+OUT=$(GL DRY=1 PREREG_REPO=$PRP bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "r4p pilot_on: chua co gate G-PILOT => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'chua co cong G-PILOT'"
 printf 'G-PILOT test\njar_md5=%s\nsize=10000\n' $NEW4 > $GD/GOLIVE_GATE_PILOT.ok
-OUT=$(GL DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+OUT=$(GL DRY=1 PREREG_REPO=$PRP bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "r4p pilot_on: gate thieu dong g_exec= (ADD2 G-EXEC o G-PILOT) => TU CHOI [OPS6: gl_gate_pilot]" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'g_exec_thieu/sai'"
 pgate $NEW4 10000 "GREEN test" "TRUOT 41 0.6 25/12 test" $GD
-OUT=$(GL DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+OUT=$(GL DRY=1 PREREG_REPO=$PRP bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "r4q pilot_on: g_exit=TRUOT (ADD3 G-EXIT) => TU CHOI [OPS6: gl_gate_pilot]" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'g_exit_thieu/sai'"
 pgate $NEW4 10000 "GREEN test" "DAT 18 0.92 25/12 test" $GD
-OUT=$(GL DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+OUT=$(GL DRY=1 PREREG_REPO=$PRP bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "r4p pilot_on: chua co LEGACY_CUT_VERIFIED => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'LEGACY_CUT_VERIFIED.ok DAT'"
 OUT=$(GL bash "$HERE/golive_legacy_verify.sh" 2>&1); RC=$?
 chk "r4p legacy_verify: con 2 vi the + log managed 44 => TRUOT, khong ghi file" "[ $RC = 3 ] && echo \"\$OUT\" | grep -q 'POS_NONC3=2' && echo \"\$OUT\" | grep -q 'log_LEGACY_managed=44' && [ ! -f $GD/LEGACY_CUT_VERIFIED.ok ]"
@@ -1405,16 +1415,16 @@ rm -f $F4/run/c3live_book.json; api positionRisk '[{"symbol":"Z0USDT","positionA
 echo 0 > $F4/FAKE_LEGACY_N
 # [OPS6] size chi 5000|10000 => test rollback + owner drain chay TRUOC (1000 -> 10000), roi moi XONG
 touch $F4/FAKE_NORUNTIME
-OUT=$(echo 'YES DA CAT LEGACY' | GL bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+OUT=$(echo 'YES DA CAT LEGACY' | GL PREREG_REPO=$PRP bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "r4p pilot_on hau kiem TRUOT => ROLLBACK ve C3_CAPITAL cu (1000), adapter live [OPS6: thu tu doi]" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'Da ROLLBACK xong: live C3_CAPITAL=1000' && penv | grep -qx C3_CAPITAL=1000 && penv | grep -qx LIVE_ADAPTER=live"
 rm -f $F4/FAKE_NORUNTIME
 ( for i in $(seq 1 900); do grep -q '^golive_pilot_on ' $F4/run/KILL_SWITCH 2>/dev/null && { printf 'golive_live_off drain 20990101_9\n' > $F4/run/KILL_SWITCH; break; }; sleep 0.1; done ) & OWP=$!
-OUT=$(echo 'YES DA CAT LEGACY' | GL bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?; kill $OWP 2>/dev/null; wait $OWP 2>/dev/null
+OUT=$(echo 'YES DA CAT LEGACY' | GL PREREG_REPO=$PRP bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?; kill $OWP 2>/dev/null; wait $OWP 2>/dev/null
 chk "VONG3 F2 pilot_on: owner drain chen giua => TU CHOI/ROLLBACK rc 1, C3_CAPITAL giu 1000, KS owner drain GIU NGUYEN (khong ghi de / khong go)" "[ $RC = 1 ] && penv | grep -qx C3_CAPITAL=1000 && grep -q '^golive_live_off drain 20990101_9' $F4/run/KILL_SWITCH && ! echo \"\$OUT\" | grep -q 'XONG: PILOT'"
 rm -f $F4/run/KILL_SWITCH; sleep 2
-OUT=$(echo YES | GL bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+OUT=$(echo YES | GL PREREG_REPO=$PRP bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "r4p pilot_on: go YES (khong phai 'YES DA CAT LEGACY') => huy" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'Huy. Khong doi gi.'"
-OUT=$(echo 'YES DA CAT LEGACY' | GL bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+OUT=$(echo 'YES DA CAT LEGACY' | GL PREREG_REPO=$PRP bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "r4p pilot_on XONG: C3_CAPITAL 1000 -> 10000, adapter live giu, so live giu, PAUSE go" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: PILOT C3_CAPITAL=10000' && penv | grep -qx C3_CAPITAL=10000 && penv | grep -qx LIVE_ADAPTER=live && [ ! -f $W/PAUSE ]"
 OUT=$(GL MODE=dry DRY=1 bash "$HERE/golive_live_off.sh" 2>&1); RC=$?
 chk "r4p live_off MODE=dry khi CHUA drain => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL da drain'"
@@ -1933,44 +1943,47 @@ OUT=$(GS bash "$HERE/golive_legacy_verify.sh" 2>&1); RC=$?
 chk "add4 legacy_verify o che do SUB => TU CHOI (ADD4 §3 bo)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'ADD4 §3'"
 touch $W/deploylog/run/monitor_heartbeat
 pgate $NEWR 10000 "GREEN test" "DAT 18 0.92 25/12 test" $GD; echo 44 > $F4/FAKE_LEGACY_N
-OUT=$(GS DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+OUT=$(GS DRY=1 PREREG_REPO=$PRP bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "WAVE1 A-08 pilot_on: tmb tk con 1000 < size 10000 => TU CHOI (owner nap von truoc)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL A-08 tmb tk con 1000.00 >= size 10000'"
 ACC_PILOT='{"totalMarginBalance":"10000.00","availableBalance":"10000.00","assets":[{"asset":"USDT","walletBalance":"10000.00","marginBalance":"10000.00","marginAvailable":true},{"asset":"BTC","walletBalance":"0","marginAvailable":true}]}'
 api account "$ACC_PILOT"   # [WAVE1 A-08] pilot: owner da nap tk con du size 10000
-OUT=$(GS DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+OUT=$(GS DRY=1 PREREG_REPO=$PRP bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "add4 pilot_on SUB DRY: KHONG can LEGACY_CUT_VERIFIED / LEGACY 0 (managed 44), bot dung key tk con, tk con 0 ngoai c3 => DRY PASS" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'DRY PASS' && echo \"\$OUT\" | grep -q 'BO dieu kien LEGACY_CUT_VERIFIED' && echo \"\$OUT\" | grep -q 'OK   bot live dung key tk con' && [ ! -e $GD/LEGACY_CUT_VERIFIED.ok ]"
-OUT=$(GS C3_ACCOUNT=MAIN KEYS_FILE=$W/keys_sub.env DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+OUT=$(GS C3_ACCOUNT=MAIN KEYS_FILE=$W/keys_sub.env DRY=1 PREREG_REPO=$PRP bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "A1 r4u2 C-1 pilot_on: C3_ACCOUNT=MAIN tren process C3_EXCLUDE_LEGACY_HELD=false => DUNG" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'C3_ACCOUNT=MAIN di voi C3_EXCLUDE_LEGACY_HELD=false'"
 bash -c 'exec -a canary_early_fake242_NONE_all sleep 60' & CPX=$!; sleep 0.3
-OUT=$(GS DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+OUT=$(GS DRY=1 PREREG_REPO=$PRP bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "MIN-2 pilot_on: co tien trinh canary_early* tren Oracle => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL Oracle: khong co tien trinh canary_early_fake242_NONE'"
 kill $CPX 2>/dev/null; wait $CPX 2>/dev/null
 touch -d '7 min ago' $W/deploylog/run/monitor_heartbeat
-OUT=$(GS DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+OUT=$(GS DRY=1 PREREG_REPO=$PRP bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "delta MIN-3 pilot_on SUB: heartbeat cron monitor cu > 6' => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL heartbeat cron golive_monitor'"
 touch $W/deploylog/run/monitor_heartbeat
 rm -rf $W/roflag; mkdir -p $W/roflag; cp $W/deploylog/golive_monitor.on $W/roflag/; chmod 555 $W/roflag   # co doc duoc (dry_ts) nhung KHONG ghi duoc
-OUT=$(echo 'YES PILOT' | GS GL_MON_FLAG=$W/roflag/golive_monitor.on bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+OUT=$(echo 'YES PILOT' | GS GL_MON_FLAG=$W/roflag/golive_monitor.on PREREG_REPO=$PRP bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chmod 755 $W/roflag
 chk "delta MIN-2 pilot_on: KHONG ghi duoc co monitor => DUNG truoc restart, C3_CAPITAL giu 1000" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'KHONG ghi duoc co monitor' && penv | grep -qx C3_CAPITAL=1000"
 cp $W/deploylog/golive_monitor.on $W/monon.bak; sed -i '/^dry_ts=/d' $W/deploylog/golive_monitor.on
-OUT=$(GS DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+OUT=$(GS DRY=1 PREREG_REPO=$PRP bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "A1 errata2 MIN-2 pilot_on: co micro KHONG co dry_ts => TU CHOI (khong doan so dry bang ls -t)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL co micro/pilot co dry_ts'"
 cp $W/monon.bak $W/deploylog/golive_monitor.on
 api openOrders '[{"symbol":"Q3USDT","clientOrderId":"web_2"}]'
-OUT=$(GS DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+OUT=$(GS DRY=1 PREREG_REPO=$PRP bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "add4 pilot_on SUB: lenh NGOAI c3 tren tk con => TU CHOI" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'FAIL tk con: 0 vi the / lenh / algo NGOAI c3.*ORD_NONC3=1'"
 clean; api account "$ACC_PILOT"
-OUT=$(echo YES | GS bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+OUT=$(echo YES | GS PREREG_REPO=$PRP bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "add4 pilot_on SUB: go YES (khong phai 'YES PILOT') => huy" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'Huy. Khong doi gi.'"
 # [OPS5 VONG3 F2] SUB: hau kiem TRUOT => rollback von cu + moc tmb0 tra lai; roi XONG khi co KS token c3_autodrain (ks=1 ghi de, .prev giu)
 cp -p $W/deploylog/c3sub_eq_base.txt $W/eqbase_truoc_f2; touch $F4/FAKE_NORUNTIME
-OUT=$(echo 'YES PILOT' | GS bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?; rm -f $F4/FAKE_NORUNTIME
+OUT=$(echo 'YES PILOT' | GS PREREG_REPO=$PRP bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?; rm -f $F4/FAKE_NORUNTIME
 chk "VONG3 F2 pilot_on SUB hau kiem TRUOT => ROLLBACK C3_CAPITAL 1000 + moc tmb0 tra lai byte-giong + KS ve nhu truoc (PUSH)" "[ $RC = 1 ] && echo \"\$OUT\" | grep -q 'Da ROLLBACK xong: live C3_CAPITAL=1000. run/KILL_SWITCH sau rollback: PUSH' && penv | grep -qx C3_CAPITAL=1000 && cmp -s $W/eqbase_truoc_f2 $W/deploylog/c3sub_eq_base.txt && [ ! -e $F4/run/KILL_SWITCH ]"
 sleep 2; printf 'c3_autodrain 20261119_101500 caller=h242_watchdog.sh\n' > $F4/run/KILL_SWITCH
-OUT=$(echo 'YES PILOT' | GS bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+OUT=$(echo 'YES PILOT' | GS PREREG_REPO=$PRP bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
+chk "[luot3 n-2] pilot_on SUB voi KS token c3_autodrain (boot guard) => TU CHOI (khong go ngam), KS byte giu, lenh tiep theo golive_boot_undrain.sh" "[ $RC = 1 ] && [ \"\$(cat $F4/run/KILL_SWITCH)\" = 'c3_autodrain 20261119_101500 caller=h242_watchdog.sh' ] && echo \"\$OUT\" | grep -q 'LENH OWNER (dung 1): DRY=1 bash .*golive_boot_undrain.sh'"
+rm -f $F4/run/KILL_SWITCH; sleep 1
+OUT=$(echo 'YES PILOT' | GS PREREG_REPO=$PRP bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "add4 pilot_on SUB XONG: C3_CAPITAL 1000 -> 10000, key tk con giu, LEGACY chi INFO" "[ $RC = 0 ] && echo \"\$OUT\" | grep -q 'XONG: PILOT C3_CAPITAL=10000' && penv | grep -qx C3_CAPITAL=10000 && penv | grep -qx LIVE_C3_KEYS_FILE=$W/keys_sub.env && echo \"\$OUT\" | grep -q 'INFO LEGACY_managed=44'"
-chk "VONG3 F2 pilot_on SUB XONG voi KS token c3_autodrain co san: ks=1 ghi de (ban cu .prev_<TS>), hau kiem 2 pha, KS go, PUSH ON" "[ $RC = 0 ] && [ ! -e $F4/run/KILL_SWITCH ] && grep -qx 'c3_autodrain 20261119_101500 caller=h242_watchdog.sh' $F4/run/KILL_SWITCH.prev_* && echo \"\$OUT\" | grep -q 'OK go run/KILL_SWITCH (hau kiem DAT) - cho PUSH ON'"
+chk "VONG3 F2 pilot_on SUB XONG (khong KS co san): hau kiem 2 pha, KS go, PUSH ON" "[ $RC = 0 ] && [ ! -e $F4/run/KILL_SWITCH ] && echo \"\$OUT\" | grep -q 'OK go run/KILL_SWITCH (hau kiem DAT) - cho PUSH ON'"
 chk "errata2 pilot_on ghi lai moc tmb0 + C3_CAPITAL=10000; 0 leg so dry trong so live" "grep -qx 'c3_capital=10000' $W/deploylog/c3sub_eq_base.txt && grep -q 'golive_pilot_on' $W/deploylog/c3sub_eq_base.txt && echo \"\$OUT\" | grep -q 'OK 0_leg_so_dry_trong_so_live'"
 chk "A1 errata2 MIN-1 pilot_on reset dinh eq CO CHU DICH: ghi ro trong log moc + Telegram" "grep -q 'RESET dinh eq co chu dich' $W/deploylog/c3sub_eq_base.txt && grep -q 'RESET dinh eq co chu dich' $W/tg_sub.txt"
 OUT=$(echo YES | GS MODE=drain bash "$HERE/golive_live_off.sh" 2>&1); RC=$?

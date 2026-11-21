@@ -175,6 +175,15 @@ case "\$1" in -l) [ -f $W/oracron.txt ] && cat $W/oracron.txt || { echo "no cron
 EOC
 echo '*/5 * * * * /home/ubuntu/ops/health_242.sh # HEALTH' > "$W/oracron.txt"
 SB=$W/sbin; mkdir -p "$SB" "$W/systemd"
+# [luot3 m-5] systemctl GIA CO TRANG THAI: daemon-reload nap drop-in (tru khi $W/fsc_broken); show -p ExecStartPre in theo trang thai nap
+cat > $W/fsc.sh <<EOF5
+#!/bin/bash
+DFX=$W/systemd/h242-trading.service.d/c3-autodrain.conf
+case "\$1" in
+  daemon-reload) if [ -f \$DFX ] && [ ! -f $W/fsc_broken ]; then grep '^ExecStartPre=.' \$DFX | tail -1 | sed 's/^ExecStartPre=//; s/ .*//' > $W/fsc_state; else echo $SB/h242-prestart.sh > $W/fsc_state; fi ;;
+  show) p=\$(cat $W/fsc_state 2>/dev/null || echo $SB/h242-prestart.sh); echo "ExecStartPre={ path=\$p ; argv[]=\$p x y ; ignore_errors=no ; start_time=[n/a] ; status=0/0 }" ;;
+esac
+EOF5
 printf '#!/bin/bash\necho "deps ok (gia)"\nexit 0\n' > "$SB/h242-prestart.sh"; chmod 755 "$SB/h242-prestart.sh"
 printf '#!/bin/bash\nPRESTART=${WD_PRESTART:-/usr/local/sbin/h242-prestart.sh}\n' > "$SB/h242_watchdog.sh"
 printf '#!/bin/bash\ncase "$1" in -l) cat %s/ct242 2>/dev/null;; -) cat > %s/ct242;; esac\n' "$W" "$W" > "$W/ct242.sh"
@@ -190,7 +199,7 @@ export SSH_242="bash $W/fakessh.sh" FAKESSH_PLAN=$W/sshplan SCP_242=false RHOST=
   LOGDIR=$W/deploy GATE_DIR=$W/gates GL_MON_FLAG=$W/deploy/golive_monitor.on KEYS_FILE=$W/keys_sub.env SUB_KEY_SHA8=$SK8 C3_ACCOUNT=SUB \
   PY242=$W/py/bin/python3 CURL242=$W/fakecurl.sh DEPLOY_TG_SINK=$W/tg.txt NJ_MD5=$JM ING_PAT=o6_khong_co_ingestor_$$ CANARY_PAT=canary_early_o6_NONE_$$ \
   ORA_CRONTAB_CMD="bash $W/oracron.sh" MON_PIN_ROOT=$W/pinned MON_LOCK=$W/locks/golive_monitor.lock \
-  AD_SBIN=$SB AD_SYSTEMD_DIR=$W/systemd AD_SYSTEMCTL=true AD_CT242="bash $W/ct242.sh" \
+  AD_SBIN=$SB AD_SYSTEMD_DIR=$W/systemd AD_SYSTEMCTL="bash $W/fsc.sh" AD_CT242="bash $W/ct242.sh" \
   POST_WAIT_S=1 POST_ROUNDS=4 SSH_RETRY_S=0 FORCE_TIME=1 MIN_MEM_MB=100 RB_LOG_WAIT_S=10 RB_LOG_POLL_S=1 PREREG_REPO=$PR \
   GL_TEST=1 LEV_EV=$W/lev10000.txt GL_MICRO_START="$(date -d '8 days ago' '+%F %T %z')"   # [luot3 m-7] ghi de CHI hieu luc khi GL_TEST=1
 np() { pgrep -fc "$PN"; }
@@ -571,18 +580,11 @@ chk "m-4 monitor: wrapper MAT quyen x => KHAN boot_guard_MAT (x=0), rc 2" '[ $RC
 cp $DF $W/df.bak; rm -f $DF; OUT=$(DRY=1 bash "$HERE/golive_monitor.sh" 2>&1); RC=$?; cp $W/df.bak $DF
 chk "m-4 monitor: drop-in systemd MAT => KHAN boot_guard_MAT (dropin=0)" '[ $RC = 2 ] && echo "$OUT" | grep -q "boot_guard_MAT(.*dropin=0"'
 echo "-- m-5 installer: systemctl show xac nhan"
-cat > $W/fsc.sh <<EOF5
-#!/bin/bash
-case "\$1" in
-  daemon-reload) if [ -f $DF ] && [ ! -f $W/fsc_broken ]; then grep '^ExecStartPre=.' $DF | tail -1 | sed 's/^ExecStartPre=//; s/ .*//' > $W/fsc_state; else echo $SB/h242-prestart.sh > $W/fsc_state; fi ;;
-  show) p=\$(cat $W/fsc_state 2>/dev/null || echo $SB/h242-prestart.sh); echo "ExecStartPre={ path=\$p ; argv[]=\$p $F x ; ignore_errors=no ; start_time=[n/a] ; status=0/0 }" ;;
-esac
-EOF5
 OUT=$(echo YES | MODE=rollback bash "$HERE/install_242_autodrain.sh" 2>&1); cp $W/ct242 $W/ct242_m5
-OUT=$(echo YES | AD_SYSTEMCTL="bash $W/fsc.sh" bash "$HERE/install_242_autodrain.sh" 2>&1); RC=$?
+OUT=$(echo YES | bash "$HERE/install_242_autodrain.sh" 2>&1); RC=$?
 chk "m-5 install voi systemctl CO TRANG THAI: sau daemon-reload show ExecStartPre = wrapper => XONG" '[ $RC = 0 ] && echo "$OUT" | grep -q "SYSTEMD_EXECSTARTPRE=wrapper" && [ -f $DF ]'
 OUT=$(echo YES | MODE=rollback bash "$HERE/install_242_autodrain.sh" 2>&1); touch $W/fsc_broken
-OUT=$(echo YES | AD_SYSTEMCTL="bash $W/fsc.sh" bash "$HERE/install_242_autodrain.sh" 2>&1); RC=$?; rm -f $W/fsc_broken
+OUT=$(echo YES | bash "$HERE/install_242_autodrain.sh" 2>&1); RC=$?; rm -f $W/fsc_broken
 chk "m-5 install: systemd KHONG nap drop-in (show = prestart goc) => ROLLBACK NGAY: crontab cu (byte), drop-in xoa, wrapper .off, rc1 + bao loi" '[ $RC = 1 ] && echo "$OUT" | grep -q "DA ROLLBACK" && cmp -s $W/ct242 $W/ct242_m5 && [ ! -e $DF ] && [ ! -e $SB/h242-prestart-c3.sh ]'
 OUT=$(echo YES | bash "$HERE/install_242_autodrain.sh" 2>&1)
 echo "-- m-6 live_off undrain CHI go dong cua minh"
