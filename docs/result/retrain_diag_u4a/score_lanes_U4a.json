@@ -1,0 +1,1499 @@
+{
+ "tag": "U4a",
+ "seeds": [
+  "a1",
+  "s123"
+ ],
+ "lanes": {
+  "LLL": {
+   "seeds": {
+    "a1": {
+     "n": 110,
+     "sum_pnl": 5060.544370400001,
+     "E_start": 162110.0,
+     "E_end": 169420.0,
+     "d_start": "20260701",
+     "d_end": "20260930",
+     "n_pts": 92,
+     "roi": 0.04509283819628651,
+     "maxdd": -0.014804762198507238,
+     "sharpe": 3.6335499236103077,
+     "pct_days": 0.10869565217391304,
+     "days": 92,
+     "cagr_ann": 0.19122793986613584,
+     "roi_q3_d5": 0.031216731666152617,
+     "split": {
+      "07": {
+       "n_start": 2,
+       "sum_pnl_end": -4649.7587666,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "08": {
+       "n_start": 75,
+       "sum_pnl_end": 6715.512313000001,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "09": {
+       "n_start": 33,
+       "sum_pnl_end": 2994.790824,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0701-0709": {
+       "n_start": 2,
+       "sum_pnl_end": -4649.7587666,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0710-0930": {
+       "n_start": 108,
+       "sum_pnl_end": 9710.303137,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      }
+     },
+     "weekly_pnl": [
+      -4649.7587666,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1114.03388,
+      0.0,
+      5166.920183000002,
+      434.55824999999993,
+      -473.1699100000001,
+      353.46927,
+      4381.26347,
+      -1266.772006,
+      0.0
+     ],
+     "orders_by_month": {
+      "2026-07": 2,
+      "2026-08": 75,
+      "2026-09": 33
+     },
+     "gate_ncand_npass_total": [
+      59521820,
+      4062
+     ],
+     "trades_q3": 110,
+     "common_with_L": 110,
+     "pnl_common": 7728.8862604000005,
+     "pnl_lane_only": 0,
+     "pnl_L_only_missing": 0
+    },
+    "s123": {
+     "n": 110,
+     "sum_pnl": 5017.360861499999,
+     "E_start": 160737.0,
+     "E_end": 167985.0,
+     "d_start": "20260701",
+     "d_end": "20260930",
+     "n_pts": 92,
+     "roi": 0.045092293622501334,
+     "maxdd": -0.014806796195026672,
+     "sharpe": 3.6330162612623025,
+     "pct_days": 0.10869565217391304,
+     "days": 92,
+     "cagr_ann": 0.19122547722328442,
+     "roi_q3_d5": 0.031214722568543643,
+     "split": {
+      "07": {
+       "n_start": 2,
+       "sum_pnl_end": -4610.5393285,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "08": {
+       "n_start": 75,
+       "sum_pnl_end": 6658.672577,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "09": {
+       "n_start": 33,
+       "sum_pnl_end": 2969.227613,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0701-0709": {
+       "n_start": 2,
+       "sum_pnl_end": -4610.5393285,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0710-0930": {
+       "n_start": 108,
+       "sum_pnl_end": 9627.90019,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      }
+     },
+     "weekly_pnl": [
+      -4610.5393285,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1104.58441,
+      0.0,
+      5123.1783860000005,
+      430.9097809999999,
+      -469.1958900000001,
+      350.47312999999997,
+      4344.156249999999,
+      -1256.2058769999999,
+      0.0
+     ],
+     "orders_by_month": {
+      "2026-07": 2,
+      "2026-08": 75,
+      "2026-09": 33
+     },
+     "gate_ncand_npass_total": [
+      59620014,
+      4057
+     ],
+     "trades_q3": 110,
+     "common_with_L": 110,
+     "pnl_common": 7663.304631500002,
+     "pnl_lane_only": 0,
+     "pnl_L_only_missing": 0
+    }
+   },
+   "mean": {
+    "roi_q3_d5": 0.03121572711734813,
+    "sum_pnl": 5038.95261595,
+    "trades_q3": 110.0,
+    "common_with_L": 110.0,
+    "pnl_common": 7696.095445950001,
+    "pnl_lane_only": 0.0,
+    "pnl_L_only_missing": 0.0,
+    "maxdd": -0.014805779196766955,
+    "roi_q3_d5_pct": 3.121572711734813
+   },
+   "by_month": {
+    "07": {
+     "n_start": 2.0,
+     "sum_pnl_end": -4630.1490475499995
+    },
+    "08": {
+     "n_start": 75.0,
+     "sum_pnl_end": 6687.092445
+    },
+    "09": {
+     "n_start": 33.0,
+     "sum_pnl_end": 2982.0092185000003
+    },
+    "0701-0709": {
+     "n_start": 2.0,
+     "sum_pnl_end": -4630.1490475499995
+    },
+    "0710-0930": {
+     "n_start": 108.0,
+     "sum_pnl_end": 9669.101663500001
+    }
+   }
+  },
+  "NNN": {
+   "seeds": {
+    "a1": {
+     "n": 164,
+     "sum_pnl": -10444.020472,
+     "E_start": 162110.0,
+     "E_end": 153124.0,
+     "d_start": "20260701",
+     "d_end": "20260930",
+     "n_pts": 92,
+     "roi": -0.055431497131577356,
+     "maxdd": -0.07450496576398746,
+     "sharpe": -3.2140688794120016,
+     "pct_days": 0.18478260869565216,
+     "days": 92,
+     "cagr_ann": -0.20248025634641797,
+     "roi_q3_d5": -0.064425516451792,
+     "split": {
+      "07": {
+       "n_start": 11,
+       "sum_pnl_end": -5445.992367999999,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "08": {
+       "n_start": 76,
+       "sum_pnl_end": -5697.517166999999,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "09": {
+       "n_start": 77,
+       "sum_pnl_end": 699.489063,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0701-0709": {
+       "n_start": 4,
+       "sum_pnl_end": -5842.025168,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0710-0930": {
+       "n_start": 160,
+       "sum_pnl_end": -4601.995303999999,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      }
+     },
+     "weekly_pnl": [
+      -4649.469788,
+      -1192.55538,
+      0.0,
+      0.0,
+      -7005.952689999999,
+      3042.3441820000003,
+      -4319.88074,
+      4669.612600999999,
+      -1687.60772,
+      47.36516999999998,
+      3394.690727,
+      -169.79509000000024,
+      404.774411,
+      -2977.546155
+     ],
+     "orders_by_month": {
+      "2026-07": 11,
+      "2026-08": 76,
+      "2026-09": 77
+     },
+     "gate_ncand_npass_total": [
+      59392942,
+      4117
+     ],
+     "trades_q3": 164,
+     "common_with_L": 35,
+     "pnl_common": 3696.528352999999,
+     "pnl_lane_only": -11472.206934999998,
+     "pnl_L_only_missing": 3602.3790630000003
+    },
+    "s123": {
+     "n": 164,
+     "sum_pnl": -10355.811695,
+     "E_start": 160737.0,
+     "E_end": 151827.0,
+     "d_start": "20260701",
+     "d_end": "20260930",
+     "n_pts": 92,
+     "roi": -0.055432165587263715,
+     "maxdd": -0.07450680303850388,
+     "sharpe": -3.213900437228924,
+     "pct_days": 0.18478260869565216,
+     "days": 92,
+     "cagr_ann": -0.2024824955067248,
+     "roi_q3_d5": -0.06442705596720108,
+     "split": {
+      "07": {
+       "n_start": 11,
+       "sum_pnl_end": -5400.001517999999,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "08": {
+       "n_start": 76,
+       "sum_pnl_end": -5649.09141,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "09": {
+       "n_start": 77,
+       "sum_pnl_end": 693.2812330000017,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0701-0709": {
+       "n_start": 4,
+       "sum_pnl_end": -5792.685267999999,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0710-0930": {
+       "n_start": 160,
+       "sum_pnl_end": -4563.126426999998,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      }
+     },
+     "weekly_pnl": [
+      -4610.252918,
+      -1182.4323499999998,
+      0.0,
+      0.0,
+      -6946.3963699999995,
+      3016.6278549999997,
+      -4283.33944,
+      4630.001858999999,
+      -1673.301564,
+      46.968530000000044,
+      3365.889577,
+      -168.7553530000001,
+      401.48903899999965,
+      -2952.31056
+     ],
+     "orders_by_month": {
+      "2026-07": 11,
+      "2026-08": 76,
+      "2026-09": 77
+     },
+     "gate_ncand_npass_total": [
+      59491136,
+      4112
+     ],
+     "trades_q3": 164,
+     "common_with_L": 35,
+     "pnl_common": 3665.2762449999996,
+     "pnl_lane_only": -11375.144170000001,
+     "pnl_L_only_missing": 3571.707806
+    }
+   },
+   "mean": {
+    "roi_q3_d5": -0.06442628620949653,
+    "sum_pnl": -10399.9160835,
+    "trades_q3": 164.0,
+    "common_with_L": 35.0,
+    "pnl_common": 3680.9022989999994,
+    "pnl_lane_only": -11423.6755525,
+    "pnl_L_only_missing": 3587.0434345000003,
+    "maxdd": -0.07450588440124567,
+    "roi_q3_d5_pct": -6.4426286209496535
+   },
+   "by_month": {
+    "07": {
+     "n_start": 11.0,
+     "sum_pnl_end": -5422.996942999999
+    },
+    "08": {
+     "n_start": 76.0,
+     "sum_pnl_end": -5673.3042884999995
+    },
+    "09": {
+     "n_start": 77.0,
+     "sum_pnl_end": 696.3851480000009
+    },
+    "0701-0709": {
+     "n_start": 4.0,
+     "sum_pnl_end": -5817.355218
+    },
+    "0710-0930": {
+     "n_start": 160.0,
+     "sum_pnl_end": -4582.560865499999
+    }
+   }
+  },
+  "P": {
+   "seeds": {
+    "a1": {
+     "n": 145,
+     "sum_pnl": -626.2033059999987,
+     "E_start": 162110.0,
+     "E_end": 162947.0,
+     "d_start": "20260701",
+     "d_end": "20260930",
+     "n_pts": 92,
+     "roi": 0.005163160816729295,
+     "maxdd": -0.021516254395163803,
+     "sharpe": 0.41770800932774227,
+     "pct_days": 0.13043478260869565,
+     "days": 92,
+     "cagr_ann": 0.020641732358694487,
+     "roi_q3_d5": -0.0038628295971870875,
+     "split": {
+      "07": {
+       "n_start": 14,
+       "sum_pnl_end": -4574.607282,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "08": {
+       "n_start": 74,
+       "sum_pnl_end": 2673.5908380000005,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "09": {
+       "n_start": 57,
+       "sum_pnl_end": 1274.8131379999995,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0701-0709": {
+       "n_start": 4,
+       "sum_pnl_end": -5716.981401999999,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0710-0930": {
+       "n_start": 141,
+       "sum_pnl_end": 5090.778096000001,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      }
+     },
+     "weekly_pnl": [
+      -4185.300502,
+      -1531.6809,
+      0.0,
+      0.0,
+      2071.71057,
+      2609.4049149999996,
+      -3338.4403800000005,
+      4480.622413000001,
+      -2007.33256,
+      463.57718,
+      919.2358100000001,
+      2368.218386,
+      735.9381919999996,
+      -3212.15643
+     ],
+     "orders_by_month": {
+      "2026-07": 14,
+      "2026-08": 74,
+      "2026-09": 57
+     },
+     "gate_ncand_npass_total": [
+      59442378,
+      4098
+     ],
+     "trades_q3": 145,
+     "common_with_L": 56,
+     "pnl_common": 3733.0797120000016,
+     "pnl_lane_only": -1690.9411279999997,
+     "pnl_L_only_missing": 3869.5917289999993
+    },
+    "s123": {
+     "n": 145,
+     "sum_pnl": -621.0482270000014,
+     "E_start": 160737.0,
+     "E_end": 161567.0,
+     "d_start": "20260701",
+     "d_end": "20260930",
+     "n_pts": 92,
+     "roi": 0.005163714639442096,
+     "maxdd": -0.021519625226301353,
+     "sharpe": 0.41771993054158174,
+     "pct_days": 0.13043478260869565,
+     "days": 92,
+     "cagr_ann": 0.02064396342723973,
+     "roi_q3_d5": -0.003863754001878854,
+     "split": {
+      "07": {
+       "n_start": 14,
+       "sum_pnl_end": -4535.969794000001,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "08": {
+       "n_start": 74,
+       "sum_pnl_end": 2650.8609940000006,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "09": {
+       "n_start": 57,
+       "sum_pnl_end": 1264.0605729999997,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0701-0709": {
+       "n_start": 4,
+       "sum_pnl_end": -5668.661834,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0710-0930": {
+       "n_start": 141,
+       "sum_pnl_end": 5047.613606999998,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      }
+     },
+     "weekly_pnl": [
+      -4149.977534,
+      -1518.6843,
+      0.0,
+      0.0,
+      2054.16082,
+      2587.2910840000004,
+      -3310.1535999999996,
+      4442.692512999999,
+      -1990.4377829999996,
+      459.65207,
+      911.45843,
+      2348.1497309999995,
+      729.7819179999992,
+      -3184.981576
+     ],
+     "orders_by_month": {
+      "2026-07": 14,
+      "2026-08": 74,
+      "2026-09": 57
+     },
+     "gate_ncand_npass_total": [
+      59540572,
+      4093
+     ],
+     "trades_q3": 145,
+     "common_with_L": 56,
+     "pnl_common": 3701.4943980000003,
+     "pnl_lane_only": -1676.5988550000015,
+     "pnl_L_only_missing": 3836.842299
+    }
+   },
+   "mean": {
+    "roi_q3_d5": -0.0038632917995329707,
+    "sum_pnl": -623.6257665,
+    "trades_q3": 145.0,
+    "common_with_L": 56.0,
+    "pnl_common": 3717.2870550000007,
+    "pnl_lane_only": -1683.7699915000007,
+    "pnl_L_only_missing": 3853.217014,
+    "maxdd": -0.021517939810732578,
+    "roi_q3_d5_pct": -0.3863291799532971
+   },
+   "by_month": {
+    "07": {
+     "n_start": 14.0,
+     "sum_pnl_end": -4555.288538000001
+    },
+    "08": {
+     "n_start": 74.0,
+     "sum_pnl_end": 2662.2259160000003
+    },
+    "09": {
+     "n_start": 57.0,
+     "sum_pnl_end": 1269.4368554999996
+    },
+    "0701-0709": {
+     "n_start": 4.0,
+     "sum_pnl_end": -5692.821618
+    },
+    "0710-0930": {
+     "n_start": 141.0,
+     "sum_pnl_end": 5069.1958515
+    }
+   }
+  },
+  "S": {
+   "seeds": {
+    "a1": {
+     "n": 110,
+     "sum_pnl": 4263.9493324,
+     "E_start": 162110.0,
+     "E_end": 168624.0,
+     "d_start": "20260701",
+     "d_end": "20260930",
+     "n_pts": 92,
+     "roi": 0.04018259206711483,
+     "maxdd": -0.017284628983706862,
+     "sharpe": 2.7891504490151866,
+     "pct_days": 0.11956521739130435,
+     "days": 92,
+     "cagr_ann": 0.16917737972485036,
+     "roi_q3_d5": 0.026302814955277278,
+     "split": {
+      "07": {
+       "n_start": 2,
+       "sum_pnl_end": -4649.7587666,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "08": {
+       "n_start": 75,
+       "sum_pnl_end": 8167.795575999999,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "09": {
+       "n_start": 33,
+       "sum_pnl_end": 745.9125229999995,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0701-0709": {
+       "n_start": 2,
+       "sum_pnl_end": -4649.7587666,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0710-0930": {
+       "n_start": 108,
+       "sum_pnl_end": 8913.708099,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      }
+     },
+     "weekly_pnl": [
+      -4649.7587666,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1048.82071,
+      0.0,
+      5875.270514,
+      1243.704352,
+      -446.0894799999999,
+      158.35477,
+      2219.359081,
+      -1185.7118480000004,
+      0.0
+     ],
+     "orders_by_month": {
+      "2026-07": 2,
+      "2026-08": 75,
+      "2026-09": 33
+     },
+     "gate_ncand_npass_total": [
+      59515498,
+      4062
+     ],
+     "trades_q3": 110,
+     "common_with_L": 79,
+     "pnl_common": 4117.377044399998,
+     "pnl_lane_only": 2814.9141780000004,
+     "pnl_L_only_missing": 3654.1521199999997
+    },
+    "s123": {
+     "n": 110,
+     "sum_pnl": 4227.5779915,
+     "E_start": 160737.0,
+     "E_end": 167196.0,
+     "d_start": "20260701",
+     "d_end": "20260930",
+     "n_pts": 92,
+     "roi": 0.040183654043561834,
+     "maxdd": -0.017281675039454547,
+     "sharpe": 2.7890019107461703,
+     "pct_days": 0.11956521739130435,
+     "days": 92,
+     "cagr_ann": 0.16918211550358286,
+     "roi_q3_d5": 0.026301212486857416,
+     "split": {
+      "07": {
+       "n_start": 2,
+       "sum_pnl_end": -4610.5393285,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "08": {
+       "n_start": 75,
+       "sum_pnl_end": 8098.604265,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "09": {
+       "n_start": 33,
+       "sum_pnl_end": 739.5130550000001,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0701-0709": {
+       "n_start": 2,
+       "sum_pnl_end": -4610.5393285,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0710-0930": {
+       "n_start": 108,
+       "sum_pnl_end": 8838.117320000001,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      }
+     },
+     "weekly_pnl": [
+      -4610.5393285,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1039.94711,
+      0.0,
+      5825.523912999999,
+      1233.133242,
+      -442.31018000000006,
+      157.01471,
+      2200.5780600000003,
+      -1175.7695349999997,
+      0.0
+     ],
+     "orders_by_month": {
+      "2026-07": 2,
+      "2026-08": 75,
+      "2026-09": 33
+     },
+     "gate_ncand_npass_total": [
+      59613692,
+      4057
+     ],
+     "trades_q3": 110,
+     "common_with_L": 79,
+     "pnl_common": 4082.4130214999996,
+     "pnl_lane_only": 2791.10874,
+     "pnl_L_only_missing": 3623.174806
+    }
+   },
+   "mean": {
+    "roi_q3_d5": 0.026302013721067347,
+    "sum_pnl": 4245.76366195,
+    "trades_q3": 110.0,
+    "common_with_L": 79.0,
+    "pnl_common": 4099.8950329499985,
+    "pnl_lane_only": 2803.0114590000003,
+    "pnl_L_only_missing": 3638.663463,
+    "maxdd": -0.017283152011580705,
+    "roi_q3_d5_pct": 2.6302013721067348
+   },
+   "by_month": {
+    "07": {
+     "n_start": 2.0,
+     "sum_pnl_end": -4630.1490475499995
+    },
+    "08": {
+     "n_start": 75.0,
+     "sum_pnl_end": 8133.199920499999
+    },
+    "09": {
+     "n_start": 33.0,
+     "sum_pnl_end": 742.7127889999998
+    },
+    "0701-0709": {
+     "n_start": 2.0,
+     "sum_pnl_end": -4630.1490475499995
+    },
+    "0710-0930": {
+     "n_start": 108.0,
+     "sum_pnl_end": 8875.9127095
+    }
+   }
+  },
+  "M": {
+   "seeds": {
+    "a1": {
+     "n": 124,
+     "sum_pnl": 1227.7831654000033,
+     "E_start": 162110.0,
+     "E_end": 165366.0,
+     "d_start": "20260701",
+     "d_end": "20260930",
+     "n_pts": 92,
+     "roi": 0.020085127382641454,
+     "maxdd": -0.01779655789278889,
+     "sharpe": 1.6905026543909665,
+     "pct_days": 0.14130434782608695,
+     "days": 92,
+     "cagr_ann": 0.08209163684488163,
+     "roi_q3_d5": 0.007573765747948944,
+     "split": {
+      "07": {
+       "n_start": 2,
+       "sum_pnl_end": -4649.7587666,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "08": {
+       "n_start": 77,
+       "sum_pnl_end": 4216.978564999999,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "09": {
+       "n_start": 45,
+       "sum_pnl_end": 1660.5633670000007,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0701-0709": {
+       "n_start": 2,
+       "sum_pnl_end": -4649.7587666,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0710-0930": {
+       "n_start": 122,
+       "sum_pnl_end": 5877.541932000004,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      }
+     },
+     "weekly_pnl": [
+      -4649.7587666,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1336.76523,
+      -1333.17947,
+      4145.663350999998,
+      67.7294539999999,
+      -57.32592000000005,
+      761.01277,
+      4050.64794,
+      -1519.287593,
+      -1574.48383
+     ],
+     "orders_by_month": {
+      "2026-07": 2,
+      "2026-08": 77,
+      "2026-09": 45
+     },
+     "gate_ncand_npass_total": [
+      59474384,
+      4076
+     ],
+     "trades_q3": 124,
+     "common_with_L": 79,
+     "pnl_common": 6042.066896400002,
+     "pnl_lane_only": -2145.941841,
+     "pnl_L_only_missing": 1393.1703519999996
+    },
+    "s123": {
+     "n": 124,
+     "sum_pnl": 1217.5866134999992,
+     "E_start": 160737.0,
+     "E_end": 163966.0,
+     "d_start": "20260701",
+     "d_end": "20260930",
+     "n_pts": 92,
+     "roi": 0.020088716350311397,
+     "maxdd": -0.0177992621487274,
+     "sharpe": 1.690570475857474,
+     "pct_days": 0.14130434782608695,
+     "days": 92,
+     "cagr_ann": 0.08210674127955309,
+     "roi_q3_d5": 0.007575023880624867,
+     "split": {
+      "07": {
+       "n_start": 2,
+       "sum_pnl_end": -4610.5393285,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "08": {
+       "n_start": 77,
+       "sum_pnl_end": 4181.2435909999995,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "09": {
+       "n_start": 45,
+       "sum_pnl_end": 1646.8823510000002,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0701-0709": {
+       "n_start": 2,
+       "sum_pnl_end": -4610.5393285,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0710-0930": {
+       "n_start": 122,
+       "sum_pnl_end": 5828.125942,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      }
+     },
+     "weekly_pnl": [
+      -4610.5393285,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1325.44358,
+      -1321.91336,
+      4110.558609,
+      67.15476200000008,
+      -56.819660000000056,
+      754.6973800000001,
+      4016.3520209999992,
+      -1506.1833199999999,
+      -1561.16407
+     ],
+     "orders_by_month": {
+      "2026-07": 2,
+      "2026-08": 77,
+      "2026-09": 45
+     },
+     "gate_ncand_npass_total": [
+      59572578,
+      4071
+     ],
+     "trades_q3": 124,
+     "common_with_L": 79,
+     "pnl_common": 5990.968586499998,
+     "pnl_lane_only": -2127.4382029999997,
+     "pnl_L_only_missing": 1381.194317
+    }
+   },
+   "mean": {
+    "roi_q3_d5": 0.007574394814286905,
+    "sum_pnl": 1222.6848894500013,
+    "trades_q3": 124.0,
+    "common_with_L": 79.0,
+    "pnl_common": 6016.51774145,
+    "pnl_lane_only": -2136.6900219999998,
+    "pnl_L_only_missing": 1387.1823344999998,
+    "maxdd": -0.017797910020758145,
+    "roi_q3_d5_pct": 0.7574394814286906
+   },
+   "by_month": {
+    "07": {
+     "n_start": 2.0,
+     "sum_pnl_end": -4630.1490475499995
+    },
+    "08": {
+     "n_start": 77.0,
+     "sum_pnl_end": 4199.111078
+    },
+    "09": {
+     "n_start": 45.0,
+     "sum_pnl_end": 1653.7228590000004
+    },
+    "0701-0709": {
+     "n_start": 2.0,
+     "sum_pnl_end": -4630.1490475499995
+    },
+    "0710-0930": {
+     "n_start": 122.0,
+     "sum_pnl_end": 5852.833937000001
+    }
+   }
+  },
+  "PS": {
+   "seeds": {
+    "a1": {
+     "n": 147,
+     "sum_pnl": -1440.841523400001,
+     "E_start": 162110.0,
+     "E_end": 162055.0,
+     "d_start": "20260701",
+     "d_end": "20260930",
+     "n_pts": 92,
+     "roi": -0.00033927580038251026,
+     "maxdd": -0.02921473073838754,
+     "sharpe": 0.0051455023412574335,
+     "pct_days": 0.13043478260869565,
+     "days": 92,
+     "cagr_ann": -0.001345362438680886,
+     "roi_q3_d5": -0.008888048383196602,
+     "split": {
+      "07": {
+       "n_start": 15,
+       "sum_pnl_end": -5897.2255764,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "08": {
+       "n_start": 75,
+       "sum_pnl_end": 4829.231668999999,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "09": {
+       "n_start": 57,
+       "sum_pnl_end": -372.84761599999933,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0701-0709": {
+       "n_start": 5,
+       "sum_pnl_end": -6985.495986399999,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0710-0930": {
+       "n_start": 142,
+       "sum_pnl_end": 5544.654462999999,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      }
+     },
+     "weekly_pnl": [
+      -4448.7573864000005,
+      -2536.7386,
+      0.0,
+      0.0,
+      2129.000906,
+      3216.7691740000005,
+      -2656.6531200000004,
+      4775.348204999999,
+      -1546.9630859999997,
+      402.48218999999995,
+      1081.53765,
+      125.40921999999983,
+      1108.9592690000002,
+      -3091.235945
+     ],
+     "orders_by_month": {
+      "2026-07": 15,
+      "2026-08": 75,
+      "2026-09": 57
+     },
+     "gate_ncand_npass_total": [
+      59432835,
+      4100
+     ],
+     "trades_q3": 147,
+     "common_with_L": 46,
+     "pnl_common": 2394.8023766000006,
+     "pnl_lane_only": -1167.3020099999972,
+     "pnl_L_only_missing": 5407.227044000001
+    },
+    "s123": {
+     "n": 147,
+     "sum_pnl": -1428.7812569999967,
+     "E_start": 160737.0,
+     "E_end": 160683.0,
+     "d_start": "20260701",
+     "d_end": "20260930",
+     "n_pts": 92,
+     "roi": -0.00033595251871065823,
+     "maxdd": -0.029209205099012703,
+     "sharpe": 0.005373212459662447,
+     "pct_days": 0.13043478260869565,
+     "days": 92,
+     "cagr_ann": -0.0013321908844183827,
+     "roi_q3_d5": -0.008888938184736536,
+     "split": {
+      "07": {
+       "n_start": 15,
+       "sum_pnl_end": -5847.343903999999,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "08": {
+       "n_start": 75,
+       "sum_pnl_end": 4788.312731000002,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "09": {
+       "n_start": 57,
+       "sum_pnl_end": -369.75008399999876,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0701-0709": {
+       "n_start": 5,
+       "sum_pnl_end": -6926.400143999999,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0710-0930": {
+       "n_start": 142,
+       "sum_pnl_end": 5497.618887000002,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      }
+     },
+     "weekly_pnl": [
+      -4411.240744000001,
+      -2515.1594,
+      0.0,
+      0.0,
+      2110.97797,
+      3189.493084000001,
+      -2634.1760100000006,
+      4734.8997500000005,
+      -1533.8258229999994,
+      399.06795,
+      1072.37989,
+      124.30141400000016,
+      1099.5272720000005,
+      -3065.02661
+     ],
+     "orders_by_month": {
+      "2026-07": 15,
+      "2026-08": 75,
+      "2026-09": 57
+     },
+     "gate_ncand_npass_total": [
+      59531029,
+      4095
+     ],
+     "trades_q3": 147,
+     "common_with_L": 46,
+     "pnl_common": 2374.501835000001,
+     "pnl_lane_only": -1157.3393220000005,
+     "pnl_L_only_missing": 5361.437823000001
+    }
+   },
+   "mean": {
+    "roi_q3_d5": -0.00888849328396657,
+    "sum_pnl": -1434.8113901999989,
+    "trades_q3": 147.0,
+    "common_with_L": 46.0,
+    "pnl_common": 2384.6521058000008,
+    "pnl_lane_only": -1162.3206659999987,
+    "pnl_L_only_missing": 5384.332433500002,
+    "maxdd": -0.02921196791870012,
+    "roi_q3_d5_pct": -0.888849328396657
+   },
+   "by_month": {
+    "07": {
+     "n_start": 15.0,
+     "sum_pnl_end": -5872.2847402
+    },
+    "08": {
+     "n_start": 75.0,
+     "sum_pnl_end": 4808.7722
+    },
+    "09": {
+     "n_start": 57.0,
+     "sum_pnl_end": -371.29884999999905
+    },
+    "0701-0709": {
+     "n_start": 5.0,
+     "sum_pnl_end": -6955.948065199999
+    },
+    "0710-0930": {
+     "n_start": 142.0,
+     "sum_pnl_end": 5521.136675000001
+    }
+   }
+  },
+  "PM": {
+   "seeds": {
+    "a1": {
+     "n": 164,
+     "sum_pnl": -15388.473087000002,
+     "E_start": 162110.0,
+     "E_end": 148281.0,
+     "d_start": "20260701",
+     "d_end": "20260930",
+     "n_pts": 92,
+     "roi": -0.08530627351798159,
+     "maxdd": -0.09967923015236568,
+     "sharpe": -5.0375761666209256,
+     "pct_days": 0.18478260869565216,
+     "days": 92,
+     "cagr_ann": -0.297954030016475,
+     "roi_q3_d5": -0.09492611860465118,
+     "split": {
+      "07": {
+       "n_start": 12,
+       "sum_pnl_end": -8617.345108,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "08": {
+       "n_start": 74,
+       "sum_pnl_end": -7711.848324000001,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "09": {
+       "n_start": 78,
+       "sum_pnl_end": 940.7203449999981,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0701-0709": {
+       "n_start": 4,
+       "sum_pnl_end": -6181.150688,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0710-0930": {
+       "n_start": 160,
+       "sum_pnl_end": -9207.322399000002,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      }
+     },
+     "weekly_pnl": [
+      -4649.469788,
+      -1531.6809,
+      -2935.776,
+      0.0,
+      -6758.291056,
+      2472.860849,
+      -4840.398619999999,
+      3942.0743139999995,
+      -2028.5122310000004,
+      585.6504,
+      3311.039282,
+      -194.88513300000017,
+      219.3375510000002,
+      -2980.421755
+     ],
+     "orders_by_month": {
+      "2026-07": 12,
+      "2026-08": 74,
+      "2026-09": 78
+     },
+     "gate_ncand_npass_total": [
+      59378168,
+      4118
+     ],
+     "trades_q3": 164,
+     "common_with_L": 34,
+     "pnl_common": 2823.260984,
+     "pnl_lane_only": -15543.392181,
+     "pnl_L_only_missing": 4080.052339
+    },
+    "s123": {
+     "n": 164,
+     "sum_pnl": -15259.107864000001,
+     "E_start": 160737.0,
+     "E_end": 147024.0,
+     "d_start": "20260701",
+     "d_end": "20260930",
+     "n_pts": 92,
+     "roi": -0.08531327572369773,
+     "maxdd": -0.0996783565700492,
+     "sharpe": -5.0383262988274256,
+     "pct_days": 0.18478260869565216,
+     "days": 92,
+     "cagr_ann": -0.29797535186335744,
+     "roi_q3_d5": -0.09493214296646076,
+     "split": {
+      "07": {
+       "n_start": 12,
+       "sum_pnl_end": -8545.587314,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "08": {
+       "n_start": 74,
+       "sum_pnl_end": -7646.382611,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "09": {
+       "n_start": 78,
+       "sum_pnl_end": 932.8620610000005,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0701-0709": {
+       "n_start": 4,
+       "sum_pnl_end": -6128.937218000001,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0710-0930": {
+       "n_start": 160,
+       "sum_pnl_end": -9130.170645999999,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      }
+     },
+     "weekly_pnl": [
+      -4610.252918,
+      -1518.6843,
+      -2911.9988,
+      0.0,
+      -6700.887661999999,
+      2451.9349060000004,
+      -4799.42568,
+      3908.616623999999,
+      -2011.2720949999996,
+      580.68724,
+      3282.9830549999997,
+      -193.0442930000005,
+      217.27641899999966,
+      -2955.04036
+     ],
+     "orders_by_month": {
+      "2026-07": 12,
+      "2026-08": 74,
+      "2026-09": 78
+     },
+     "gate_ncand_npass_total": [
+      59476362,
+      4113
+     ],
+     "trades_q3": 164,
+     "common_with_L": 34,
+     "pnl_common": 2799.3511199999994,
+     "pnl_lane_only": -15412.515214000003,
+     "pnl_L_only_missing": 4045.3276219999993
+    }
+   },
+   "mean": {
+    "roi_q3_d5": -0.09492913078555597,
+    "sum_pnl": -15323.790475500002,
+    "trades_q3": 164.0,
+    "common_with_L": 34.0,
+    "pnl_common": 2811.306052,
+    "pnl_lane_only": -15477.953697500001,
+    "pnl_L_only_missing": 4062.6899804999994,
+    "maxdd": -0.09967879336120744,
+    "roi_q3_d5_pct": -9.492913078555597
+   },
+   "by_month": {
+    "07": {
+     "n_start": 12.0,
+     "sum_pnl_end": -8581.466210999999
+    },
+    "08": {
+     "n_start": 74.0,
+     "sum_pnl_end": -7679.115467500001
+    },
+    "09": {
+     "n_start": 78.0,
+     "sum_pnl_end": 936.7912029999993
+    },
+    "0701-0709": {
+     "n_start": 4.0,
+     "sum_pnl_end": -6155.043953
+    },
+    "0710-0930": {
+     "n_start": 160.0,
+     "sum_pnl_end": -9168.746522500001
+    }
+   }
+  },
+  "SM": {
+   "seeds": {
+    "a1": {
+     "n": 125,
+     "sum_pnl": 1118.8929383999998,
+     "E_start": 162110.0,
+     "E_end": 164614.0,
+     "d_start": "20260701",
+     "d_end": "20260930",
+     "n_pts": 92,
+     "roi": 0.015446301893775827,
+     "maxdd": -0.017570876017348303,
+     "sharpe": 1.172917977586882,
+     "pct_days": 0.15217391304347827,
+     "days": 92,
+     "cagr_ann": 0.06270022941006292,
+     "roi_q3_d5": 0.006902059949417062,
+     "split": {
+      "07": {
+       "n_start": 2,
+       "sum_pnl_end": -4649.7587666,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "08": {
+       "n_start": 80,
+       "sum_pnl_end": 6645.093072999998,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "09": {
+       "n_start": 43,
+       "sum_pnl_end": -876.4413679999993,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0701-0709": {
+       "n_start": 2,
+       "sum_pnl_end": -4649.7587666,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0710-0930": {
+       "n_start": 123,
+       "sum_pnl_end": 5768.651705,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      }
+     },
+     "weekly_pnl": [
+      -4649.7587666,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1452.4813399999998,
+      -1333.17947,
+      5220.466460000001,
+      1305.324743,
+      -113.69190999999987,
+      108.16164,
+      1940.0882889999998,
+      -1768.2414119999999,
+      -1042.757975
+     ],
+     "orders_by_month": {
+      "2026-07": 2,
+      "2026-08": 80,
+      "2026-09": 43
+     },
+     "gate_ncand_npass_total": [
+      59471463,
+      4077
+     ],
+     "trades_q3": 125,
+     "common_with_L": 65,
+     "pnl_common": 6869.329741400001,
+     "pnl_lane_only": -3082.094913,
+     "pnl_L_only_missing": 792.3110290000002
+    },
+    "s123": {
+     "n": 125,
+     "sum_pnl": 1109.1600115000006,
+     "E_start": 160737.0,
+     "E_end": 163220.0,
+     "d_start": "20260701",
+     "d_end": "20260930",
+     "n_pts": 92,
+     "roi": 0.015447594517752572,
+     "maxdd": -0.017575364156449225,
+     "sharpe": 1.1728588226405114,
+     "pct_days": 0.15217391304347827,
+     "days": 92,
+     "cagr_ann": 0.06270559641354101,
+     "roi_q3_d5": 0.006900464805862997,
+     "split": {
+      "07": {
+       "n_start": 2,
+       "sum_pnl_end": -4610.5393285,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "08": {
+       "n_start": 80,
+       "sum_pnl_end": 6588.710468000001,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "09": {
+       "n_start": 43,
+       "sum_pnl_end": -869.0111280000001,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0701-0709": {
+       "n_start": 2,
+       "sum_pnl_end": -4610.5393285,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      },
+      "0710-0930": {
+       "n_start": 123,
+       "sum_pnl_end": 5719.699340000001,
+       "gate_pass_minutes": "khong co (log sim chi in tong)"
+      }
+     },
+     "weekly_pnl": [
+      -4610.5393285,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1440.18938,
+      -1321.91385,
+      5176.231389,
+      1294.203549,
+      -112.7483499999999,
+      107.27755000000002,
+      1923.6541280000001,
+      -1753.2641429999999,
+      -1033.930313
+     ],
+     "orders_by_month": {
+      "2026-07": 2,
+      "2026-08": 80,
+      "2026-09": 43
+     },
+     "gate_ncand_npass_total": [
+      59569657,
+      4072
+     ],
+     "trades_q3": 125,
+     "common_with_L": 65,
+     "pnl_common": 6811.145544499999,
+     "pnl_lane_only": -3056.041763,
+     "pnl_L_only_missing": 785.4761670000003
+    }
+   },
+   "mean": {
+    "roi_q3_d5": 0.0069012623776400295,
+    "sum_pnl": 1114.0264749500002,
+    "trades_q3": 125.0,
+    "common_with_L": 65.0,
+    "pnl_common": 6840.23764295,
+    "pnl_lane_only": -3069.068338,
+    "pnl_L_only_missing": 788.8935980000002,
+    "maxdd": -0.017573120086898764,
+    "roi_q3_d5_pct": 0.690126237764003
+   },
+   "by_month": {
+    "07": {
+     "n_start": 2.0,
+     "sum_pnl_end": -4630.1490475499995
+    },
+    "08": {
+     "n_start": 80.0,
+     "sum_pnl_end": 6616.9017705
+    },
+    "09": {
+     "n_start": 43.0,
+     "sum_pnl_end": -872.7262479999997
+    },
+    "0701-0709": {
+     "n_start": 2.0,
+     "sum_pnl_end": -4630.1490475499995
+    },
+    "0710-0930": {
+     "n_start": 123.0,
+     "sum_pnl_end": 5744.175522500001
+    }
+   }
+  }
+ },
+ "attribution": {
+  "delta_tot_pp": -9.564201332684465,
+  "delta_pp": {
+   "P": -3.50790189168811,
+   "S": -0.4913713396280781,
+   "M": -2.3641332303061224
+  },
+  "interaction_pp": -3.200794871062155,
+  "share": {
+   "P": 0.36677415809935876,
+   "S": 0.051376097442541055,
+   "M": 0.2471856402925137
+  },
+  "main_cause": [],
+  "any_single_ge_50pct": false
+ },
+ "shapley_desc_pp": {
+  "P": -5.8417861268818685,
+  "S": 0.7579988073079471,
+  "M": -4.480414013110545
+ },
+ "pair_interaction_desc_pp": {
+  "PS": -0.011148808815281797,
+  "PM": -6.742450668296178,
+  "SM": 0.4240580959633906
+ }
+}

@@ -1,0 +1,5 @@
+{"id": "chuyendinh/rt-diag-ruler", "title": "rt-diag-ruler", "code_file": "run.py", "language": "python", "kernel_type": "script",
+ "is_private": true, "enable_gpu": false, "enable_internet": true,
+ "dataset_sources": ["chuyendinh/rt-diag-code", "chuyendinh/sel1m-code", "chuyendinh/ho4p1-code", "chuyendinh/ho5-a3-data26", "chuyendinh/rt-s-data26"],
+ "competition_sources": [],
+ "kernel_sources": ["chuyendinh/ho4p1-x26-q3", "chuyendinh/ho4p1-chain-y26", "chuyendinh/ho5-a3-chain26", "chuyendinh/rt-chain-n26"]}
