@@ -228,7 +228,7 @@ reset242 1005
 echo "== T20 boot guard: install_242_autodrain (242 gia)"
 MGE() { env PILOT_SIZE=10000 OWNER_DECISION=$ODC G_EXEC="Q4_OWNER n=73 ref=$MRC 73/100 leg that (test)" G_EXEC_EV=$W/ev_gexec.md \
   G_EXIT="Q4_OWNER n=12 ref=$MRC thieu mau thoat (test)" G_EXIT_EV=$W/ev_gexit.md MIEN_X14="MIEN ref=$MRC owner mien X14 (test)" \
-  MIEN_B2="MIEN ref=$MRC owner mien B2 (test)" MIEN_C1="MIEN ref=$MRC owner mien C1 (test)" GL_MICRO_START="$(date -d '8 days ago' '+%F %T %z')" "$@"; }
+  MIEN_B2="MIEN ref=$MRC owner mien B2 (test)" MIEN_C1="MIEN ref=$MRC owner mien C1 (test)" "$@"; }   # GL_MICRO_START: export chung (8 ngay truoc)
 OUT=$(MGE DRY=1 bash "$HERE/golive_make_gate_pilot.sh" 2>&1); RC=$?
 chk "T12b make_gate_pilot: boot guard CHUA cai => TU CHOI (T20 bat buoc)" '[ $RC = 1 ] && echo "$OUT" | grep -q "boot guard T20 CHUA CAI"'
 OUT=$(DRY=1 bash "$HERE/install_242_autodrain.sh" 2>&1 < /dev/null); RC=$?
