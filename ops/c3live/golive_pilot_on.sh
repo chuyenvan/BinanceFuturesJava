@@ -39,6 +39,7 @@ _HC=$(git -C "$_OPS" rev-parse --verify -q HEAD 2>/dev/null) || _PW="$_OPS khong
 gl_manifest_check "$0" || exit 1   # [WAVE1b M5] script + lib + manifest khop md5 da commit, lech => TU CHOI truoc moi viec
 LEGACY_OK_MAX_AGE_S=${LEGACY_OK_MAX_AGE_S:-86400}
 gl_init golive_pilot_on
+trap 'gl_exit_report $?' EXIT   # [OPS6 luot3 muc 14] rc != 0 => khoi VIEC TIEP THEO (trang thai 242 + 1 lenh owner)
 [ "$C3_ACCOUNT" = MAIN ] && { gl_read_state; gl_excl_guard; }   # [A1 r4u2 C-1]
 [ "$C3_ACCOUNT" = SUB ] && ACCT_TXT="tai khoan CON (ADD4)" || ACCT_TXT="tai khoan CHINH (ADD1)"
 say "tai khoan c3: C3_ACCOUNT=$C3_ACCOUNT — $ACCT_TXT, file key $KEYS_FILE"
@@ -70,8 +71,10 @@ chk "1 process bot" "[ '$(sv NPROC)' = 1 ]"
 chk "jar dang chay = pin $NJ_MD5" "[ '$(sv JAR_MD5)' = '$NJ_MD5' ]"
 chk "dang chay c3_live LIVE, push mo (SHADOW_NO_PUSH=false, LIVE_ENTRY_ENABLED=true)" "[ '$(sv ENV_LIVE_PROFILE)' = c3_live ] && [ '$(sv ENV_LIVE_ADAPTER)' = live ] && [ '$(sv ENVSH_LIVE_ADAPTER)' = live ] && [ '$(sv ENV_SHADOW_NO_PUSH)' = false ] && [ '$(sv ENV_LIVE_ENTRY_ENABLED)' = true ]"
 chk "C3_CAPITAL hien tai ($C0) < size $SIZE" "[[ '$C0' =~ ^[0-9]+$ ]] && [ '$C0' -lt $SIZE ]"
+chk "[m-1] C3_CAPITAL DONG CUOI env.sh ('$(sv ENVSH_C3_CAPITAL)') la so tron = process ($C0) (khong doc duoc / lech => KHONG doi von)" "[[ '$(sv ENVSH_C3_CAPITAL)' =~ ^[0-9]+$ ]] && [ '$(sv ENVSH_C3_CAPITAL)' = '$C0' ]"
 chk "latch kill-switch NONE" "[ '$(sv LATCH)' = NONE ] || [ '$(sv LATCH)' = NOFILE ]"
-chk "khong co run/KILL_SWITCH, hoac token c3live_boot/c3_autodrain (co: $(sv KILLSW_FILE) token: $(sv KILLSW_TOK))" "gl_ks_boot_ok"
+chk "khong co run/KILL_SWITCH, hoac 1 dong token c3live_boot (co: $(sv KILLSW_FILE) token: $(sv KILLSW_TOK); c3_autodrain $(sv KILLSW_AD) dong => TU CHOI: owner dieu tra + golive_boot_undrain.sh truoc)" "gl_ks_boot_ok"
+[ "$(sv KILLSW_AD)" -ge 1 ] 2>/dev/null && GL_NEXT="DRY=1 bash $GL_HERE/golive_boot_undrain.sh  (SAU khi dieu tra vi sao bot khoi dong NGOAI quy trinh: watchdog.log, logs/full.log)"
 chk "khong PAUSE watchdog" "[ '$(sv PAUSE | cut -c1)' = 0 ]"
 chk "khong canary/soak" "[ '$(sv CANARY_SOAK)' = 0 ]"
 chk "MemAvailable $(sv MEM) >= $MIN_MEM_MB MB" "[ '$(sv MEM)' -ge $MIN_MEM_MB ] 2>/dev/null"

@@ -15,7 +15,7 @@
 #   PAUSE watchdog, cron exinfo. Ket thuc bang dong TOM TAT.
 # [ADD4] SUB doc them san tk con CHI DOC (gl_api242 mon: v3/account 5 + v3/positionRisk 5 + openOrders 40 + openAlgoOrders 40 = 90 weight IP):
 #   §4 vi the (vuot qty c3 trong so; leg dang khop => POS_PENDING) / lenh / algo cid KHONG c3-|c3x-|c3s- => KHAN + dat run/KILL_SWITCH
-#      (co san: chan MO MOI; vi the c3 van duoc quan ly), KHONG tu dong vi the. Owner/MASTER xu ly; go co: MODE=undrain golive_live_off.sh.
+#      (co san: chan MO MOI; vi the c3 van duoc quan ly), KHONG tu dong vi the. Owner/MASTER xu ly; go: XOA_DONG_MONITOR=YES MODE=undrain golive_live_off.sh.
 #   §5 [ERRATA 2] eq = C3_CAPITAL + (tmb - tmb0) (moc $SUB_BASE_FILE: micro_on / pilot_on / golive_rebase_equity ghi); dinh eq
 #      $SUB_PEAK_FILE (theo moc); DD <= -SUB_DD_LIMIT (0.40 = A40/C6) => KHAN + run/KILL_SWITCH. Co micro/pilot ma KHONG co moc => KHAN
 #      + KILL_SWITCH (fail-closed). tmb gom BFUSD; lai/gia BFUSD = nhieu chap nhan.
@@ -192,7 +192,7 @@ if [ "$C3_ACCOUNT" = SUB ]; then
     [ "$MON_CRON" = 1 ] && GL_SSH_DEADLINE=$(( MON_T0 + MON_SSH_BUDGET_S ))   # [WAVE1b M7] phan ngan sach danh rieng cho dat KILL_SWITCH
     if [ "$DRY" = 1 ]; then say "DRY=1: KHONG dat run/KILL_SWITCH"
     elif s242 "cd $A && echo 'golive_monitor $TS KHAN $KT' >> run/KILL_SWITCH && [ -e run/KILL_SWITCH ]"; then
-      say "run/KILL_SWITCH DANG DAT (dung mo moi; vi the c3 van duoc quan ly). Go sau khi xu ly: MODE=undrain golive_live_off.sh"
+      say "run/KILL_SWITCH DANG DAT (dung mo moi; vi the c3 van duoc quan ly). Go sau khi xu ly: XOA_DONG_MONITOR=YES MODE=undrain bash $GL_HERE/golive_live_off.sh (CHI go dong golive_monitor/golive_live_off/c3live_boot)"
     else say "!! KHONG dat / xac nhan duoc run/KILL_SWITCH (ssh?) — owner dat tay: MODE=drain golive_live_off.sh"; fi
     # cron: Telegram cung noi dung toi da 1 lan / 30'; chay tay: luon gui
     SIG=$(echo "$KH" | sed 's/DD_tmb=[^ ]*/DD/; s/doc_san_loi_[0-9]*_/doc_san_loi_/' | md5sum | cut -c1-12); NOW=$(date +%s)
@@ -219,6 +219,16 @@ if [ -f "$GL_MON_FLAG" ] || [ "$(sv ENV_LIVE_ADAPTER)" = live ]; then
       [ "$NPR" = 1 ] || KA="$KA so_process_v_t_m=$NPR"
     fi
     case "$(sv LATCH)" in NONE|NOFILE) ;; *) KA="$KA latch=$(sv LATCH)";; esac
+    # [OPS6 luot3 m-4] boot guard 242 MOI luot (CHI DOC: md5 + quyen x wrapper, cron WD_PRESTART, drop-in systemd) khi bot live: mat => KHAN
+    #   (bot crash/reboot luc do se len MO LENH MOI). Test gia: MON_BG_CHECK=0 CHI hieu luc khi GL_TEST=1.
+    if [ "$(sv ENV_LIVE_ADAPTER)" = live ] && { [ "${GL_TEST:-0}" != 1 ] || [ "${MON_BG_CHECK:-1}" = 1 ]; }; then
+      gl_bootguard242
+      case "$BG" in
+        CAI) ;;
+        CHUA_CAI) KA="$KA boot_guard_MAT($(printf '%s' "$BG_DETAIL" | tr ' ' ','))";;
+        *) say "WARN boot guard 242: khong doc duoc ($BG_DETAIL) - luot sau kiem lai";;
+      esac
+    fi
   else
     NF=${NF:-$NF0}
   fi

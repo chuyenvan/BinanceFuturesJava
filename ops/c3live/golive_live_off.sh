@@ -5,6 +5,8 @@
 #   MODE=drain   bash $OPS/golive_live_off.sh  # dat run/KILL_SWITCH: DUNG MO MOI ngay (khong restart); vi the c3 van duoc quan ly
 #                                              #   (trailing/stop/time-stop) toi khi dong. Khong chot gio (khan cap duoc).
 #   MODE=undrain bash $OPS/golive_live_off.sh  # go run/KILL_SWITCH (mo lai push) - chi khi co chu dich
+#     [luot3 m-6] CHI go dong CUA MINH (golive_live_off drain / c3live_boot / dong trong; golive_monitor CHI khi XOA_DONG_MONITOR=YES);
+#     con dong c3_autodrain / dong khac => GIU (van drain) + chi dan (golive_boot_undrain.sh / MASTER), ma thoat 1
 #   MODE=dry     bash $OPS/golive_live_off.sh  # khi c3 PHANG: env ve dry, so/trang thai live doi ten .live_<TS>, restart (khung :10-:44)
 #   DRY=1 MODE=<...> bash $OPS/golive_live_off.sh  # chi kiem, KHONG ghi (drain: mo phong buoc 1 - in lenh + ssh CHI DOC)
 # MODE=dry TU CHOI khi: chua drain (khong co run/KILL_SWITCH), so c3 con cum, san con lenh/algo cid 'c3', key/API loi,
@@ -151,10 +153,56 @@ echo "$ST" | grep -v '^END_STATE$' | sed 's/^/   242: /'
 if [ "$MODE" = undrain ]; then
   [ "$(sv KILLSW_FILE)" = 0 ] && { say "khong co run/KILL_SWITCH. Khong lam gi."; exit 0; }
   [ "$(sv LATCH)" = NONE ] || [ "$(sv LATCH)" = NOFILE ] || die "latch kill-switch=$(sv LATCH) - xu ly latch truoc (bash $GL_HERE/../killsw_reset.sh)"
+  # [OPS6 luot3 m-6] CHI go dong CUA MINH: 'golive_live_off drain <TS>' + 'c3live_boot ...' (token jar chi dan dung lenh nay) + dong trong;
+  #   dong 'golive_monitor <TS> KHAN' CHI khi XOA_DONG_MONITOR=YES (owner da xu ly nguyen nhan). Dong c3_autodrain (boot guard) / script khac
+  #   => GIU NGUYEN (bot VAN DRAIN) + chi dan: c3_autodrain -> golive_boot_undrain.sh; khac -> MASTER. KHONG BAO GIO xoa ca file khi con dong khac.
+  XM=$([ "${XOA_DONG_MONITOR:-}" = YES ] && echo YES || echo NO)
+  LORX='^(golive_live_off drain |c3live_boot |[[:space:]]*$)'; [ "$XM" = YES ] && LORX='^(golive_live_off drain |c3live_boot |golive_monitor |[[:space:]]*$)'
+  KP=$(s242 "cd $A && K=run/KILL_SWITCH; if [ -e \$K ]; then echo KS_N=\$(grep -c '' \$K); echo KS_GO=\$(grep -cE '$LORX' \$K); echo KS_AD=\$(grep -cxE '$GL_AD_RX' \$K); echo KS_MON=\$(grep -c '^golive_monitor ' \$K); sed -n '1,20p' \$K | tr -cd 'A-Za-z0-9_ .=:()/\n-' | sed 's/^/KS_L=/'; else echo KS_N=0; fi; echo END_KS") || die "ssh toi 242 loi (doc run/KILL_SWITCH)"
+  printf '%s\n' "$KP" | grep -qx END_KS || die "doc run/KILL_SWITCH khong tron ven"
+  kpv() { printf '%s\n' "$KP" | sed -n "s/^$1=//p" | head -1; }
+  say "--- run/KILL_SWITCH: $(kpv KS_N) dong (go duoc boi lenh nay: $(kpv KS_GO); c3_autodrain: $(kpv KS_AD); golive_monitor: $(kpv KS_MON); XOA_DONG_MONITOR=$XM):"
+  printf '%s\n' "$KP" | sed -n 's/^KS_L=/     | /p'
+  [ "$(kpv KS_N)" = 0 ] && { say "khong co run/KILL_SWITCH. Khong lam gi."; exit 0; }
+  KCON=$(( $(kpv KS_N) - $(kpv KS_GO) ))
+  lo_hint() {
+    [ "$(kpv KS_AD)" -ge 1 ] 2>/dev/null && say "   - $(kpv KS_AD) dong c3_autodrain (boot guard: bot khoi dong NGOAI quy trinh): owner dieu tra roi bash $GL_HERE/golive_boot_undrain.sh"
+    [ "$XM" != YES ] && [ "$(kpv KS_MON)" -ge 1 ] 2>/dev/null && say "   - $(kpv KS_MON) dong golive_monitor KHAN: xu ly nguyen nhan roi XOA_DONG_MONITOR=YES MODE=undrain bash $_LO_ME"
+    say "   - dong khac (script go-live / owner tay): gui MASTER"
+  }
+  if [ "$(kpv KS_GO)" = 0 ]; then
+    say "KHONG co dong nao cua lenh nay de go (con $KCON dong khac) => KHONG doi gi, bot VAN DRAIN:"; lo_hint
+    if [ "$(kpv KS_AD)" -ge 1 ] 2>/dev/null; then GL_NEXT="DRY=1 bash $GL_HERE/golive_boot_undrain.sh"; fi
+    die "run/KILL_SWITCH chi con dong cua nguoi khac"
+  fi
+  [ "$KCON" -gt 0 ] && { say "SAU (du kien): go $(kpv KS_GO) dong cua minh, CON $KCON dong khac => bot VAN DRAIN:"; lo_hint; } || say "SAU (du kien): file chi co dong cua minh => go file => c3_live MO LAI lenh moi"
   [ "$DRY" = 1 ] && { say "DRY=1: KHONG ghi gi. (DRY PASS)"; exit 0; }
-  gl_yes "UNDRAIN: go run/KILL_SWITCH, c3_live MO LAI lenh moi."
-  s242 "cd $A && mv -f run/KILL_SWITCH run/KILL_SWITCH.off_$TS && [ ! -e run/KILL_SWITCH ]" || die "khong go duoc run/KILL_SWITCH"
-  gl_mon_flag_set; say "XONG: push mo lai."; tg "[golive] UNDRAIN TS=$TS: run/KILL_SWITCH go, c3 mo lai lenh moi. Log $LOG"; exit 0
+  gl_yes "UNDRAIN: go $(kpv KS_GO) dong cua golive_live_off/c3live_boot$([ "$XM" = YES ] && echo '/golive_monitor') khoi run/KILL_SWITCH$([ "$KCON" -gt 0 ] && echo " (con $KCON dong khac => VAN DRAIN)" || echo ', c3_live MO LAI lenh moi')."
+  R=$(s242in_once "RX='$LORX' bash -s -- $A $TS" <<'EOLO'
+A=$1; TS=$2; cd "$A" || { echo "KSU=LOI_cd"; echo END_KSU; exit 0; }
+K=run/KILL_SWITCH
+if [ ! -e $K ]; then echo "KSU=KHONG_CO_FILE"; echo END_KSU; exit 0; fi
+cp -p $K $K.lo_$TS || { echo "KSU=LOI_backup"; echo END_KSU; exit 0; }
+NG=$(grep -cE "$RX" $K.lo_$TS); NK=$(grep -cvE "$RX" $K.lo_$TS)
+if [ "$NG" = 0 ]; then echo "KSU=KHONG_CO_DONG_CUA_MINH"
+elif [ "$NK" = 0 ]; then
+  if cmp -s $K $K.lo_$TS && mv -f $K $K.off_$TS && [ ! -e $K ]; then echo "KSU=MO"; else echo "KSU=LOI_FILE_DOI_GIUA_CHUNG"; fi
+else
+  if grep -vE "$RX" $K.lo_$TS > $K.tmp_$TS && cmp -s $K $K.lo_$TS && mv -f $K.tmp_$TS $K && ! grep -qE "$RX" $K; then echo "KSU=CON_DONG_KHAC"
+  else rm -f $K.tmp_$TS; echo "KSU=LOI_FILE_DOI_GIUA_CHUNG"; fi
+fi
+[ -e $K ] && echo "SAU_N=$(grep -c '' $K)" || echo "SAU_N=0"
+echo END_KSU
+EOLO
+) || true
+  printf '%s\n' "$R" | grep -v '^END_KSU$' | sed 's/^/   242: /'
+  case "$(printf '%s\n' "$R" | sed -n 's/^KSU=//p' | head -1)" in
+    MO) gl_mon_flag_set; say "XONG: push mo lai (run/KILL_SWITCH -> .off_$TS)."; tg "[golive] UNDRAIN TS=$TS: run/KILL_SWITCH go (chi dong cua golive_live_off/c3live_boot), c3 mo lai lenh moi. Log $LOG"; exit 0 ;;
+    CON_DONG_KHAC) say "XONG MOT PHAN: da go dong cua minh; run/KILL_SWITCH CON $(printf '%s\n' "$R" | sed -n 's/^SAU_N=//p') dong khac => bot VAN DRAIN:"; lo_hint
+      tg "[golive] UNDRAIN TS=$TS: go dong cua golive_live_off, CON dong khac => VAN DRAIN. Log $LOG"; exit 1 ;;
+    KHONG_CO_FILE|KHONG_CO_DONG_CUA_MINH) say "KHONG doi gi ($(printf '%s\n' "$R" | sed -n 's/^KSU=//p'))."; exit 1 ;;
+    *) say "KHAN: go dong KS loi / khong ro ($(printf '%s\n' "$R" | sed -n 's/^KSU=//p' | head -1)) - run/KILL_SWITCH KHONG doi (hoac khong xac nhan). Chay lai: MODE=undrain bash $_LO_ME"; exit 2 ;;
+  esac
 fi
 # ---------------------------------------------------------------- MODE=dry
 F=0; chk() { if eval "$2"; then say "OK   $1"; else say "FAIL $1"; F=1; fi; }

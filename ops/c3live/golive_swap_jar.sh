@@ -103,7 +103,7 @@ pre_check() {
 DONE_ALREADY=0
 pre_check
 [ "$DONE_ALREADY" = 1 ] && exit 0
-[ "$DONE_ALREADY" = 2 ] && { tg "[golive] KHAN TS=$TS swap_jar($MODE): jar da = $TO_MD5 nhung run/KILL_SWITCH DANG DAT (bot drain). Kiem golive_monitor.sh roi MODE=undrain golive_live_off.sh | log $LOG" || :; exit 2; }
+[ "$DONE_ALREADY" = 2 ] && { tg "[golive] KHAN TS=$TS swap_jar($MODE): jar da = $TO_MD5 nhung run/KILL_SWITCH DANG DAT (bot drain). Kiem golive_monitor.sh roi go DUNG loai dong KS (golive_live_off undrain CHI go dong cua no; c3_autodrain -> golive_boot_undrain.sh) | log $LOG" || :; exit 2; }
 [ "$F" = 0 ] || die "kiem truoc co muc FAIL (xem tren)"
 say "--- se chep jar dich len 242: $RJN (kiem md5, chmod 600) TRUOC khi dung bot"
 say "--- se dat run/KILL_SWITCH (token '$NM $TS') -> PAUSE watchdog -> stop -> backup jar (.bak_${NM}_$TS) -> cai jar $TO_MD5 -> start"
@@ -292,7 +292,7 @@ do_rollback() {   # $1 = ly do. Ve jar nguon + start + hau kiem; DAT => go KS cu
       exit 1
     fi
     pause_clear
-    [ "$KG" = KHAC ] && khan "$1; rollback ve jar nguon $FROM_MD5 hau kiem DAT nhung run/KILL_SWITCH co dong NGUOI KHAC (owner drain / monitor KHAN) => GIU NGUYEN ca file, bot jar nguon DANG DRAIN. Owner/MASTER kiem noi dung roi MODE=undrain bash $_OPS/golive_live_off.sh"
+    [ "$KG" = KHAC ] && khan "$1; rollback ve jar nguon $FROM_MD5 hau kiem DAT nhung run/KILL_SWITCH co dong NGUOI KHAC (owner drain / monitor KHAN) => GIU NGUYEN ca file, bot jar nguon DANG DRAIN. Owner/MASTER kiem noi dung roi go DUNG loai dong: $(gl_ks_hint)"
     khan "$1; rollback hau kiem DAT nhung KHONG xac nhan go duoc KILL_SWITCH (${KG:-ssh?}) => co the van drain. Kiem golive_monitor.sh"
   fi
   ks_ensure "rollback_hau_kiem_truot"; pause_clear
@@ -346,5 +346,5 @@ if [ "$KG" = OK ]; then
   pause_clear; khan "$M"
 fi
 pause_clear
-[ "$KG" = KHAC ] && khan "hau kiem jar $TO_MD5 DAT nhung run/KILL_SWITCH co dong NGUOI KHAC (owner drain / monitor KHAN) => GIU NGUYEN ca file, KHONG go: bot jar moi DANG DRAIN. Owner/MASTER kiem noi dung roi MODE=undrain bash $_OPS/golive_live_off.sh"
+[ "$KG" = KHAC ] && khan "hau kiem jar $TO_MD5 DAT nhung run/KILL_SWITCH co dong NGUOI KHAC (owner drain / monitor KHAN) => GIU NGUYEN ca file, KHONG go: bot jar moi DANG DRAIN. Owner/MASTER kiem noi dung roi go DUNG loai dong: $(gl_ks_hint)"
 khan "hau kiem DAT nhung KHONG XAC NHAN go duoc run/KILL_SWITCH (ssh / KILL_SWITCH khac da ghi de) => bot jar $TO_MD5 CO THE van drain hoac da mo. Kiem: bash $_OPS/golive_monitor.sh ; dung khan: MODE=drain bash $_OPS/golive_live_off.sh"

@@ -5,6 +5,7 @@
 #   bash $OPS/install_242_autodrain.sh                   # go YES: (1) /usr/local/sbin/h242-prestart-c3.sh = c3_autodrain_prestart.sh (md5 kiem)
 #        (2) cron watchdog: them tien to WD_PRESTART=/usr/local/sbin/h242-prestart-c3.sh (crontab cu => /root/crontab.bak_autodrain_<TS>)
 #        (3) systemd drop-in h242-trading.service.d/c3-autodrain.conf (ExecStartPre = wrapper) + daemon-reload (KHONG restart service)
+#        [luot3 m-5] sau daemon-reload doc `systemctl show -p ExecStartPre h242-trading`: khong phai wrapper => ROLLBACK ngay + bao loi (exit 1)
 #   MODE=rollback bash $OPS/install_242_autodrain.sh     # go (2)(3), wrapper -> .off_<TS>
 # Dieu kien: h242_watchdog.sh co ho tro WD_PRESTART; dung 1 dong cron watchdog; prestart goc ton tai. Lech => TU CHOI, khong doi gi.
 # Bien (test): SSH_242 AD_SBIN AD_WD AD_SYSTEMD_DIR AD_SYSTEMCTL AD_CT242
@@ -46,6 +47,14 @@ if [ "$STEP" = apply ]; then
     printf '%s\n' "$NEW" | $CT - || { echo "ERR=ghi_crontab"; echo END_AD; exit 0; }
     mkdir -p "$DI" && printf '[Service]\nExecStartPre=\nExecStartPre=%s %s %s\n' "$WR" "$APP" "$MC" > "$DF.tmp" && mv -f "$DF.tmp" "$DF" || { echo "ERR=ghi_dropin"; echo END_AD; exit 0; }
     $SC daemon-reload || echo "WARN=daemon_reload_loi"
+    # [OPS6 luot3 m-5] xac nhan systemd DA NAP drop-in: ExecStartPre cua h242-trading phai la wrapper (va KHONG con prestart goc). Khong =>
+    #   ROLLBACK NGAY (crontab cu, xoa drop-in + daemon-reload, wrapper -> .off) + bao loi => khong bao gio "cai nua chung".
+    SP=$($SC show -p ExecStartPre h242-trading 2>/dev/null)
+    if printf '%s\n' "$SP" | grep -qF "path=$WR " && ! printf '%s\n' "$SP" | grep -qF "path=$OR "; then echo "SYSTEMD_EXECSTARTPRE=wrapper"
+    else
+      printf '%s\n' "$CUR" | $CT - ; rm -f "$DF"; rmdir "$DI" 2>/dev/null; $SC daemon-reload; [ -f "$WR" ] && mv -f "$WR" "$WR.off_$TS"
+      echo "ERR=systemd_ExecStartPre_khong_phai_wrapper_DA_ROLLBACK (show: $(printf '%s' "$SP" | tr -cd 'A-Za-z0-9_/.=;{} -' | cut -c1-160))"; echo END_AD; exit 0
+    fi
   else
     NEW=$(printf '%s\n' "$CUR" | sed -E "s#^(\*/2 \* \* \* \* )WD_PRESTART=[^ ]+ ($(printf '%s' "$WD" | sed 's/[.]/\\./g'))( |\$)#\1\2\3#")   # [OPS5_FIX A19] CHI dong watchdog
     printf '%s\n' "$NEW" | $CT - || { echo "ERR=ghi_crontab"; echo END_AD; exit 0; }
@@ -81,6 +90,7 @@ gl_yes "AUTODRAIN $MODE tren 242 (cron root + systemd drop-in)."
 R=$(printf '%s\n' "$RSCRIPT" | s242in_once "bash -s -- apply $RARGS") || R="ERR=ssh_apply"
 echo "$R" | grep -v '^END_AD$' | sed 's/^/   242: /'
 rv() { echo "$R" | sed -n "s/^$1=//p" | head -1; }
+echo "$R" | grep -q '^ERR=systemd_ExecStartPre_khong_phai_wrapper_DA_ROLLBACK' && { say "TU CHOI: systemd KHONG nap drop-in (ExecStartPre != wrapper) => DA ROLLBACK (crontab cu, drop-in xoa, wrapper .off_$TS) - boot guard CHUA cai. Gui output nay cho MASTER."; tg "[golive] install_242_autodrain TS=$TS: systemd khong nhan wrapper => da rollback" || :; exit 1; }
 echo "$R" | grep -qx END_AD && ! echo "$R" | grep -q '^ERR=' || { say "KHAN: apply loi/khong ro ($(echo "$R" | grep '^ERR' | head -1)) - doc lai: DRY=1 bash $0 ; rollback: MODE=rollback bash $0"; tg "[golive] KHAN install_242_autodrain $MODE TS=$TS loi/khong ro"; exit 1; }
 if [ "$MODE" = install ]; then
   [ "$(rv POST_CRON_HOOK)" = 1 ] && [ "$(rv POST_CRON_N)" = 1 ] && [ "$(rv POST_WRAPPER_MD5)" = "$W5" ] && [ "$(rv POST_DROPIN)" = 1 ] || { say "KHAN: hau kiem cai SAI - chay MODE=rollback"; exit 1; }

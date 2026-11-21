@@ -8,7 +8,7 @@
 #     (AccountModeGuard.java:105; C3LiveRuntime dung ctor 2 tham so => expectedLeverage=1, dong 134). lev 20x = jar CHAN symbol do => CANH BAO.
 #   maxNotionalValue < LEV_CLUSTER_MAX = 4 x 0,0225 x C3_CAPITAL (cum: leg mo + 3 leg DCA o U=0) - san tu choi leg DCA cuoi
 #   marginType != LEV_MARGIN_EXPECT (mac dinh CROSSED = jar bat buoc isCrossed())
-# In W_USED_1M. Ket qua: $LOGDIR/lev_check/LEV_CHECK_<acc>_<TS>.txt. KHONG in key/secret. Ma thoat 0 DAT | 3 CANH BAO | 1 DUNG.
+# In W_USED_1M. Ket qua: $LOGDIR/lev_check/LEV_CHECK_<acc>_<TS>.txt (dong von_kiem=<von da kiem> - LEV_EV cua golive_make_gate_pilot.sh). KHONG in key/secret. Ma thoat 0 DAT | 3 CANH BAO | 1 DUNG.
 # =============================================================================
 set -uo pipefail
 _OPS=$(cd "$(dirname "$0")" && pwd); _APO=${A1_APPROVED_OPS:-/home/ubuntu/claude_master/deploy/gates/A1_APPROVED_OPS.commit}; _PW=""
@@ -59,6 +59,6 @@ V=DAT; [ "$(ev N_BAD)" = 0 ] || V=CANH_BAO
 [ "$(ev N)" -gt 0 ] 2>/dev/null || { V=CANH_BAO; say "!! 0 symbol co cau hinh (symbolConfig rong?)"; }
 say "symbol lech: $(ev N_BAD)/$(ev N) (leverage != $LEV_EXPECT: $(ev N_LEV), marginType khac $(ev N_MARGIN), maxNotional thap $(ev N_NOTIONAL)); toi da $LEV_SHOW dau:$(ev BAD)"
 mkdir -p "$LOGDIR/lev_check"; R=$LOGDIR/lev_check/LEV_CHECK_${C3_ACCOUNT}_$TS.txt
-{ echo "golive_check_lev $C3_ACCOUNT $TS key_sha8=$(av KEY_SHA8) KET QUA: $V"; echo "$EV"; echo "W_USED_1M=$(av W_USED_1M)"; echo "$API" | grep '^LEVSYM='; } > "$R"
+{ echo "golive_check_lev $C3_ACCOUNT $TS key_sha8=$(av KEY_SHA8) KET QUA: $V"; echo "von_kiem=$CAP"; echo "$EV"; echo "W_USED_1M=$(av W_USED_1M)"; echo "$API" | grep '^LEVSYM='; } > "$R"
 say "KET QUA: $V. File: $R"
 [ "$V" = DAT ] && exit 0 || exit 3

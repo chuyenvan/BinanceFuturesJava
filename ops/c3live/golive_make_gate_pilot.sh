@@ -7,7 +7,13 @@
 #   G_EXIT="Q4_OWNER n=<so lenh thoat> ref=<commit> <ghi chu>" G_EXIT_EV=<file bang chung> \
 #   MIEN_X14="MIEN|DA_SUA ref=<commit> <ghi chu>" MIEN_B2="MIEN|DA_SUA ref=<commit> ..." MIEN_C1="MIEN|DA_SUA ref=<commit> ..." \
 #   [MIEN_MICRO7="MIEN ref=<commit> <ly do >= 10 ky tu>"  - CHI khi micro chua du 7 ngay] \
+#   LEV_EV=<file KET QUA cua: LEV_CAP=<PILOT_SIZE> bash $OPS/golive_check_lev.sh> \
 #     [DRY=1] bash $OPS/golive_make_gate_pilot.sh
+# [OPS6 luot3] m-7: G_EXEC / G_EXIT MOI dang (ke ca GREEN/AMBER/DAT) bat buoc n=<so nguyen >= 1> va ref=<commit>; MOI ref (G_*, MIEN_*, MIEN_MICRO7,
+#   OWNER_DECISION) phai la commit trong PREREG_REPO co CHAM file docs/prereg/OWNER_DECISION_* (git log -- path). Ghi de GL_MICRO_START /
+#   PREREG_REPO / OWNER_DECISION_FILE / NJ_MD5 / GATE_MAX_AGE_S CHI hieu luc khi GL_TEST=1 (golive_lib) => gate ghi test=1 (pilot_on that TU CHOI).
+#   n-6: LEV_EV bat buoc: file ton tai, "KET QUA: DAT", von_kiem=<PILOT_SIZE>, tuoi < 48 h; sha256 ghi vao gate (lev_ev=). m-8: dem lenh = timeout 120
+#   + nice 19 + ionice -c3 (neu co), CHI logs/full.log (+ full.log.1 neu xoay SAU moc micro). body_sha256 CHI chong sua nham (khong phai chu ky).
 # TU CHOI (exit 1, khong ghi) khi:
 #   - PILOT_SIZE khong phai 5000 / 10000; thieu / sai dinh dang BAT KY tham so: G_EXEC, G_EXIT (TRUOT => khong pilot), MIEN_X14, MIEN_B2,
 #     MIEN_C1, OWNER_DECISION; Q4_OWNER / RED_SIZE thieu n=<so mau thuc te> hoac ref=<commit>; ref / OWNER_DECISION khong phai commit trong
@@ -33,34 +39,34 @@ _HC=$(git -C "$_OPS" rev-parse --verify -q HEAD 2>/dev/null) || _PW="$_OPS khong
 . "$_OPS/golive_lib.sh"
 gl_manifest_check "$0" || exit 1
 gl_init golive_make_gate_pilot
-PREREG_REPO=${PREREG_REPO:-/home/ubuntu/claude_master/vz_e1_wt}
-OWNER_DECISION_FILE=${OWNER_DECISION_FILE:-docs/prereg/OWNER_DECISION_PILOT_1121_ADD1.md}
-GL_MICRO_START=${GL_MICRO_START:-"2026-11-19 09:31:00 +07"}
+trap 'gl_exit_report $?' EXIT   # [OPS6 luot3 muc 14]
+# PREREG_REPO / OWNER_DECISION_FILE / GL_MICRO_START: golive_lib.sh (ghim; ghi de CHI khi GL_TEST=1)
 MICRO_MIN_DAYS=7
+LEV_MAX_AGE_S=172800
 G=$GATE_DIR/GOLIVE_GATE_PILOT.ok
 no() { echo "TU CHOI: $*"; exit 1; }
 WHY=""
 need() { WHY="$WHY
   - $*"; }
 one() { [[ "$1" != *$'\n'* ]] && [[ "$1" != *$'\r'* ]]; }
-iscommit() { [[ "$1" =~ ^[0-9a-f]{7,40}$ ]] && git -C "$PREREG_REPO" cat-file -e "$1^{commit}" 2>/dev/null; }
-refof() { printf '%s' "$1" | grep -oE '(^| )ref=[0-9a-f]{7,40}( |$)' | head -1 | sed -E 's/^ ?ref=//; s/ $//'; }
-SIZE=${PILOT_SIZE:-}; GX=${G_EXEC:-}; GXE=${G_EXEC_EV:-}; GT=${G_EXIT:-}; GTE=${G_EXIT_EV:-}
+iscommit() { gl_od_ref "$1" >/dev/null; }   # [luot3 m-7] commit CO CHAM docs/prereg/OWNER_DECISION_* trong PREREG_REPO
+refof() { gl_refof "$1"; }
+SIZE=${PILOT_SIZE:-}; GX=${G_EXEC:-}; GXE=${G_EXEC_EV:-}; GT=${G_EXIT:-}; GTE=${G_EXIT_EV:-}; LEV=${LEV_EV:-}
 MX=${MIEN_X14:-}; MB=${MIEN_B2:-}; MC=${MIEN_C1:-}; OD=${OWNER_DECISION:-}; M7=${MIEN_MICRO7:-}
 echo "=== golive_make_gate_pilot $(TZ=Asia/Ho_Chi_Minh date '+%F %T') +07 DRY=${DRY:-0} ops_head=${_HC:0:12} jar pin NJ_MD5=$NJ_MD5"
 # ---- tham so
 case " $GL_PILOT_SIZES " in *" $SIZE "*) [ -n "$SIZE" ] || need "PILOT_SIZE thieu (chi nhan: $GL_PILOT_SIZES)";; *) need "PILOT_SIZE='$SIZE' khong hop le (chi nhan: $GL_PILOT_SIZES)";; esac
 for v in "$GX" "$GT" "$MX" "$MB" "$MC" "$M7"; do one "$v" || need "tham so co ky tu xuong dong / CR"; done
-if ! [[ "$GX" =~ ^(GREEN|AMBER|RED_SIZE|Q4_OWNER)\ [^\ ] ]]; then need "G_EXEC='$GX' thieu / sai (GREEN|AMBER|RED_SIZE|Q4_OWNER <dan chung>)"
-elif [[ "$GX" =~ ^(Q4_OWNER|RED_SIZE) ]]; then
-  [[ " $GX " =~ \ n=[0-9]+\  ]] || need "G_EXEC ${GX%% *} thieu n=<so leg that thuc te>"
-  iscommit "$(refof "$GX")" || need "G_EXEC ${GX%% *} thieu ref=<commit quyet dinh owner trong $PREREG_REPO>"
+if ! [[ "$GX" =~ ^(GREEN|AMBER|RED_SIZE|Q4_OWNER)\ [^\ ] ]]; then need "G_EXEC='$GX' thieu / sai (GREEN|AMBER|RED_SIZE|Q4_OWNER n=<so> ref=<commit> <dan chung>)"
+else
+  [[ " $GX " =~ \ n=[1-9][0-9]*\  ]] || need "G_EXEC ${GX%% *} thieu n=<so leg that thuc te, so nguyen >= 1>"
+  iscommit "$(refof "$GX")" || need "G_EXEC ${GX%% *} thieu ref=<commit quyet dinh owner (cham docs/prereg/OWNER_DECISION_*) trong $PREREG_REPO>"
 fi
 if [[ "$GT" =~ ^TRUOT ]]; then need "G_EXIT=TRUOT (ADD3: G-EXIT TRUOT => KHONG pilot)"
-elif ! [[ "$GT" =~ ^(DAT|Q4_OWNER)\ [^\ ] ]]; then need "G_EXIT='$GT' thieu / sai (DAT|Q4_OWNER <median> <R> <n> <dan chung>)"
-elif [[ "$GT" =~ ^Q4_OWNER ]]; then
-  [[ " $GT " =~ \ n=[0-9]+\  ]] || need "G_EXIT Q4_OWNER thieu n=<so lenh thoat thuc te>"
-  iscommit "$(refof "$GT")" || need "G_EXIT Q4_OWNER thieu ref=<commit quyet dinh owner trong $PREREG_REPO>"
+elif ! [[ "$GT" =~ ^(DAT|Q4_OWNER)\ [^\ ] ]]; then need "G_EXIT='$GT' thieu / sai (DAT|Q4_OWNER n=<so> ref=<commit> <median> <R> <dan chung>)"
+else
+  [[ " $GT " =~ \ n=[1-9][0-9]*\  ]] || need "G_EXIT ${GT%% *} thieu n=<so lenh thoat thuc te, so nguyen >= 1>"
+  iscommit "$(refof "$GT")" || need "G_EXIT ${GT%% *} thieu ref=<commit quyet dinh owner (cham docs/prereg/OWNER_DECISION_*) trong $PREREG_REPO>"
 fi
 evsha() { [ -n "$1" ] && [ -s "$1" ] && [ -r "$1" ] && sha256sum < "$1" | cut -c1-64; }
 GXS=$(evsha "$GXE") || need "G_EXEC_EV='$GXE' (file bang chung g_exec) thieu / rong"
@@ -68,10 +74,10 @@ GTS=$(evsha "$GTE") || need "G_EXIT_EV='$GTE' (file bang chung g_exit) thieu / r
 for p in "MIEN_X14:$MX" "MIEN_B2:$MB" "MIEN_C1:$MC"; do
   n=${p%%:*}; v=${p#*:}
   if ! [[ "$v" =~ ^(MIEN|DA_SUA)\ ref=[0-9a-f]{7,40}(\ .*)?$ ]]; then need "$n='$v' thieu / sai - CHUA co quyet dinh owner (MIEN|DA_SUA ref=<commit> <ghi chu>), KHONG mac dinh"
-  elif ! iscommit "$(refof "$v")"; then need "$n ref=$(refof "$v") khong phai commit trong $PREREG_REPO"; fi
+  elif ! iscommit "$(refof "$v")"; then need "$n ref=$(refof "$v") khong phai commit cham docs/prereg/OWNER_DECISION_* trong $PREREG_REPO"; fi
 done
 ODF=""; ODS=""
-if ! iscommit "$OD"; then need "OWNER_DECISION='$OD' khong phai commit trong $PREREG_REPO (quyet dinh owner pilot, vd 8cc2704f)"
+if ! iscommit "$OD"; then need "OWNER_DECISION='$OD' khong phai commit cham docs/prereg/OWNER_DECISION_* trong $PREREG_REPO (quyet dinh owner pilot, vd 8cc2704f)"
 elif ! git -C "$PREREG_REPO" cat-file -e "$OD:$OWNER_DECISION_FILE" 2>/dev/null; then need "OWNER_DECISION $OD khong co $OWNER_DECISION_FILE"
 else ODF=$(git -C "$PREREG_REPO" rev-parse "$OD^{commit}"); ODS=$(git -C "$PREREG_REPO" show "$OD:$OWNER_DECISION_FILE" | sha256sum | cut -c1-64); fi
 # ---- micro >= 7 ngay lien tuc
@@ -80,7 +86,18 @@ NOWS=$(date +%s); MD=$(awk -v a="$NOWS" -v b="$MS" 'BEGIN{printf "%.2f", (a-b)/8
 if awk -v d="$MD" -v m="$MICRO_MIN_DAYS" 'BEGIN{exit !(d >= m)}'; then M7L="DU (>= $MICRO_MIN_DAYS ngay)"
 elif [[ "$M7" =~ ^MIEN\ ref=[0-9a-f]{7,40}\ .{10,}$ ]] && iscommit "$(refof "$M7")"; then M7L="MIEN_OWNER $M7"
 else need "micro moi $MD ngay < $MICRO_MIN_DAYS ke tu $GL_MICRO_START (som nhat $(TZ=Asia/Ho_Chi_Minh date -d @$((MS + MICRO_MIN_DAYS * 86400)) '+%F %T') +07); mien chi bang MIEN_MICRO7=\"MIEN ref=<commit> <ly do>\""; fi
-[ "$GL_MICRO_START" = "2026-11-19 09:31:00 +07" ] || echo "!! CANH BAO: GL_MICRO_START ghi de = '$GL_MICRO_START' (khac moc ADD1 2026-11-19 09:31:00 +07) - ghi vao gate"
+[ "$GL_MICRO_START" = "2026-11-19 09:31:00 +07" ] || echo "!! CANH BAO: GL_MICRO_START ghi de = '$GL_MICRO_START' (khac moc ADD1 2026-11-19 09:31:00 +07; CHI GL_TEST=1) - ghi vao gate"
+# ---- [n-6] bang chung LEV_CLUSTER_MAX cho DUNG von pilot (golive_check_lev.sh voi LEV_CAP=<size>)
+LEVS=""
+if [ -z "$LEV" ] || [ ! -s "$LEV" ] || [ ! -r "$LEV" ]; then need "LEV_EV='$LEV' thieu / rong - chay: LEV_CAP=${SIZE:-<size>} bash $_OPS/golive_check_lev.sh roi LEV_EV=<file KET QUA>"
+else
+  LA=$(( $(date +%s) - $(stat -c %Y "$LEV") ))
+  grep -q 'KET QUA: DAT' "$LEV" || need "LEV_EV $LEV khong co 'KET QUA: DAT'"
+  LVK=$(sed -n 's/^von_kiem=//p' "$LEV" | head -1)
+  awk -v a="$LVK" -v b="$SIZE" 'BEGIN{exit !(a ~ /^[0-9]+(\.[0-9]+)?$/ && b ~ /^[0-9]+$/ && a+0 == b+0)}' || need "LEV_EV $LEV von_kiem='$LVK' != PILOT_SIZE '$SIZE' (chay lai voi LEV_CAP=$SIZE)"
+  [ "$LA" -ge 0 ] && [ "$LA" -lt "$LEV_MAX_AGE_S" ] || need "LEV_EV $LEV cu ${LA}s >= ${LEV_MAX_AGE_S}s (chay lai golive_check_lev.sh)"
+  LEVS=$(sha256sum < "$LEV" | cut -c1-64)
+fi
 # ---- 242 CHI DOC
 gl_read_state
 for k in NPROC JAR_MD5 LATCH ENV_LIVE_ADAPTER ENV_C3_CAPITAL KILLSW_FILE PAUSE; do echo "   242: $k=$(sv $k)"; done
@@ -93,10 +110,12 @@ C0=$(sv ENV_C3_CAPITAL)
 gl_bootguard242
 echo "   242 boot guard: BG=$BG $BG_DETAIL"
 [ "$BG" = CAI ] || need "boot guard T20 CHUA CAI ($BG: $BG_DETAIL) - owner: bash $_OPS/install_242_autodrain.sh"
-NO=$(s242 "cd $A && nice -n 19 grep -ah '\[C3-LIVE-ORDER\]' logs/full.log* 2>/dev/null | grep -a 'status=FILLED' | grep -aoE 'cid=c3[xs]?-[^ ]+' | sort -u | awk '/^cid=c3-/{e++} /^cid=c3[xs]-/{x++} END{printf \"N_VAO=%d\\nN_THOAT=%d\\n\", e, x}'; echo END_NO") || NO=""
+# [luot3 m-8] dem lenh nhe: timeout 120 + nice 19 + ionice -c3 (neu co); CHI full.log (+ full.log.1 neu xoay SAU moc micro - ban xoay cu hon khong co lenh micro)
+NO=$(s242 "cd $A && F=logs/full.log; [ -f logs/full.log.1 ] && [ \$(stat -c %Y logs/full.log.1) -ge $MS ] && F=\"logs/full.log.1 \$F\"; IO=''; command -v ionice >/dev/null 2>&1 && IO='ionice -c3'; echo LOGS=\$F; timeout 120 nice -n 19 \$IO grep -ah '\[C3-LIVE-ORDER\]' \$F 2>/dev/null | grep -a 'status=FILLED' | grep -aoE 'cid=c3[xs]?-[^ ]+' | sort -u | awk '/^cid=c3-/{e++} /^cid=c3[xs]-/{x++} END{printf \"N_VAO=%d\\nN_THOAT=%d\\n\", e, x}'; echo RC_GREP=\${PIPESTATUS[0]}; echo END_NO") || NO=""
 printf '%s\n' "$NO" | grep -qx END_NO || need "242: dem lenh that (log [C3-LIVE-ORDER]) loi / khong tron ven"
 NV=$(printf '%s\n' "$NO" | sed -n 's/^N_VAO=//p'); NT=$(printf '%s\n' "$NO" | sed -n 's/^N_THOAT=//p')
-echo "   242 lenh that FILLED (log, uniq cid): vao=${NV:-?} thoat=${NT:-?}"
+echo "   242 lenh that FILLED (log, uniq cid): vao=${NV:-?} thoat=${NT:-?} ($(printf '%s\n' "$NO" | sed -n 's/^LOGS=//p'))"
+[ "$(printf '%s\n' "$NO" | sed -n 's/^RC_GREP=//p')" = 124 ] && need "242: dem lenh qua 120 s (timeout) - so khong tron ven"
 DTS=$(sed -n 's/^dry_ts=//p' "$GL_MON_FLAG" 2>/dev/null | head -1)
 [ -z "$WHY" ] || no "thieu / sai dieu kien G-PILOT:$WHY"
 NOW=$(( NOWS * 1000 )); EXP=$(( NOW + GATE_MAX_AGE_S * 1000 ))
@@ -113,6 +132,8 @@ mien_x14=$MX
 mien_b2=$MB
 mien_c1=$MC
 owner_decision=$ODF file=$OWNER_DECISION_FILE sha256=$ODS
+lev_ev=$LEV sha256=$LEVS
+test=$([ "${GL_TEST:-0}" = 1 ] && echo 1 || echo 0)
 micro_start=$GL_MICRO_START micro_days=$MD micro7=$M7L
 so_lenh_that_luc_tao=vao_FILLED:$NV thoat_FILLED:$NT (log [C3-LIVE-ORDER] tren 242, uniq cid; tham khao - log co the da xoay)
 latch=$(sv LATCH)

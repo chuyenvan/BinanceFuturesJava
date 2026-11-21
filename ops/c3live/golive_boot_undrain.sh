@@ -14,6 +14,8 @@
 # In TRUOC / SAU: so dong KS (noi dung loc ky tu), latch, process, adapter, C3_CAPITAL. Telegram (token doc tu file, khong in).
 # Gioi han: neu nguoi khac ghi run/KILL_SWITCH DUNG LUC giua doc va thay file => script so (cmp) ban sao ngay truoc khi thay; khac => KHONG
 #   thay, KHAN (chay lai). Ma thoat: 0 XONG / DRY / khong co gi de go | 1 TU CHOI | 2 KHAN.
+# [OPS6 luot3 M-1] TU CHOI (die, KHONG go KS, ke ca DRY) khi: so process bot != 1 | LIVE_ADAPTER process != live | jar DANG chay != NJ_MD5 |
+#   latch kill-switch != NONE (ke ca chua co file) => in ly do + DUNG 1 lenh tiep theo (khoi VIEC TIEP THEO).
 # =============================================================================
 set -uo pipefail
 _OPS=$(cd "$(dirname "$0")" && pwd); _APO=${A1_APPROVED_OPS:-/home/ubuntu/claude_master/deploy/gates/A1_APPROVED_OPS.commit}; _PW=""
@@ -24,19 +26,27 @@ _HC=$(git -C "$_OPS" rev-parse --verify -q HEAD 2>/dev/null) || _PW="$_OPS khong
 . "$_OPS/golive_lib.sh"
 gl_manifest_check "$0" || exit 1
 gl_init golive_boot_undrain
+trap 'gl_exit_report $?' EXIT   # [OPS6 luot3 muc 14]
 ksread() {   # CHI DOC: so dong, so dong c3_autodrain, <= 20 dong dau (loc ky tu)
   s242 "cd $A && if [ -e run/KILL_SWITCH ]; then echo KS_N=\$(grep -c '' run/KILL_SWITCH); echo KS_AD=\$(grep -cxE '$GL_AD_RX' run/KILL_SWITCH); sed -n '1,20p' run/KILL_SWITCH | tr -cd 'A-Za-z0-9_ .=:()/\n-' | sed 's/^/KS_L=/'; else echo KS_N=0; echo KS_AD=0; fi; echo KS_LOGN=\$(wc -l < logs/full.log 2>/dev/null || echo 0); echo END_KS"
 }
 kv() { printf '%s\n' "$1" | sed -n "s/^$2=//p" | head -1; }
 gl_read_state
-echo "$ST" | grep -E '^(NPROC|JAR_MD5|ENV_LIVE_ADAPTER|ENV_C3_CAPITAL|LATCH|KILLSW_FILE|PAUSE)=' | sed 's/^/   242: /'
+echo "$ST" | grep -E '^(NPROC|JAR_MD5|ENV_LIVE_ADAPTER|ENV_C3_CAPITAL|ENVSH_C3_CAPITAL|LATCH|KILLSW_FILE|KILLSW_AD|PAUSE)=' | sed 's/^/   242: /'
 K0=$(ksread) || die "ssh toi 242 loi (doc run/KILL_SWITCH)"
 printf '%s\n' "$K0" | grep -qx END_KS || die "doc run/KILL_SWITCH khong tron ven"
 say "--- run/KILL_SWITCH TRUOC: $(kv "$K0" KS_N) dong, trong do $(kv "$K0" KS_AD) dong boot guard c3_autodrain:"
 printf '%s\n' "$K0" | sed -n 's/^KS_L=/     | /p'
 [ "$(kv "$K0" KS_AD)" -ge 1 ] 2>/dev/null || { say "KHONG co dong c3_autodrain trong run/KILL_SWITCH - khong co gi de go (dong khac KHONG dung toi)."; say "KET QUA: KHONG CAN. Log: $LOG"; exit 0; }
-[ "$(sv NPROC)" = 1 ] || say "WARN so process bot = $(sv NPROC) (bot chua chay lai? go dong boot guard van an toan: khong co JVM thi khong mo lenh)"
-[ "$(sv LATCH)" = NONE ] || [ "$(sv LATCH)" = NOFILE ] || say "WARN latch kill-switch = $(sv LATCH): go KS boot guard KHONG mo duoc lenh moi (latch chan) - xu ly latch truoc (killsw_reset.sh)"
+# [OPS6 luot3 M-1] dieu kien CUNG truoc khi go (ke ca DRY): sai => DUNG, KHONG go KS
+if [ "$(sv NPROC)" != 1 ]; then
+  if [ "$(sv NPROC)" = 0 ]; then GL_NEXT="khong chay gi them: bot CHUA chay (watchdog se start duoi KS); chay lai DRY=1 bash $_OPS/golive_boot_undrain.sh khi co dung 1 process"
+  else GL_NEXT="khong chay gi them, gui output nay cho MASTER (so process $(sv NPROC) >= 2 = KHAN)"; fi
+  die "so process bot = $(sv NPROC) (can dung 1) - KHONG go dong boot guard"
+fi
+[ "$(sv ENV_LIVE_ADAPTER)" = live ] || die "process LIVE_ADAPTER='$(sv ENV_LIVE_ADAPTER)' != live - KHONG go dong boot guard (bot khong chay live: dong c3_autodrain khong anh huong; MASTER xem)"
+[ "$(sv JAR_MD5)" = "$NJ_MD5" ] || die "jar DANG chay $(sv JAR_MD5) != pin NJ_MD5 $NJ_MD5 - KHONG go dong boot guard (MASTER xem jar nao dang chay)"
+[ "$(sv LATCH)" = NONE ] || die "latch kill-switch = $(sv LATCH) (can NONE; NOFILE = chua co file latch) - KHONG go dong boot guard (latch => MASTER/owner xu ly bang killsw_reset.sh truoc)"
 NO=$(( $(kv "$K0" KS_N) - $(kv "$K0" KS_AD) ))
 if [ "$NO" -le 0 ]; then say "--- SAU (du kien): file CHI co dong c3_autodrain => doi ten run/KILL_SWITCH.bootok_<TS> => bot PUSH ON (<= 10 s)"
 else say "--- SAU (du kien): con $NO dong NGUOI KHAC (giu nguyen) => bot VAN DRAIN; chi go $(kv "$K0" KS_AD) dong c3_autodrain"; fi
@@ -77,5 +87,5 @@ case "$U" in
     say "=== XONG (mot phan): $M. Log: $LOG"; tg "[golive] BOOT UNDRAIN TS=$TS: $M. Log $LOG" || :; exit 0 ;;
   KHONG_CO_FILE|KHONG_CO_DONG_AUTODRAIN) say "KET QUA: KHONG CAN ($U) - khong doi gi. Log: $LOG"; exit 0 ;;
   *) M="go dong boot guard LOI / khong ro (${U:-ssh?}) - run/KILL_SWITCH KHONG doi (hoac khong xac nhan). Chay lai lenh."
-    say "KHAN: $M"; tg "[golive] KHAN TS=$TS boot_undrain: $M | log $LOG" || :; exit 2 ;;
+    GL_NEXT="DRY=1 bash $_OPS/golive_boot_undrain.sh  (doc lai run/KILL_SWITCH roi moi chay lai)"; say "KHAN: $M"; tg "[golive] KHAN TS=$TS boot_undrain: $M | log $LOG" || :; exit 2 ;;
 esac

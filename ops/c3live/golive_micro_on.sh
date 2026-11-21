@@ -172,7 +172,7 @@ chk "LIVE_KILLSW_MODE=act" "[ '$(sv ENV_LIVE_KILLSW_MODE)' = act ]"
 EXW=false; [ "$C3_ACCOUNT" = MAIN ] && EXW=true   # [R4u2] SUB: c3 chi loai coin c3 dang giu; MAIN: loai ca LEGACY
 chk "process env C3_EXCLUDE_LEGACY_HELD=$EXW (C3_ACCOUNT=$C3_ACCOUNT; co: $(sv ENV_C3_EXCLUDE_LEGACY_HELD))" "[ '$(sv ENV_C3_EXCLUDE_LEGACY_HELD)' = $EXW ]"
 chk "latch kill-switch NONE (khac => owner xem + DRY=0 bash $GL_HERE/../killsw_reset.sh truoc)" "[ '$(sv LATCH)' = NONE ] || [ '$(sv LATCH)' = NOFILE ]"
-chk "khong co run/KILL_SWITCH, hoac token c3live_boot/c3_autodrain (ks=1 ghi de, ban cu .prev_<TS>) (co: $(sv KILLSW_FILE) token: $(sv KILLSW_TOK); khac => xoa co chu dich truoc)" "gl_ks_boot_ok"
+chk "khong co run/KILL_SWITCH, hoac 1 dong token c3live_boot (ks=1 ghi de, ban cu .prev_<TS>) (co: $(sv KILLSW_FILE) token: $(sv KILLSW_TOK); c3_autodrain => TU CHOI [luot3 n-2]: owner dieu tra + golive_boot_undrain.sh; khac => xu ly co chu dich truoc)" "gl_ks_boot_ok"
 chk "file key $KEYS_FILE (600, 2 dong)" "[ '$(sv KEYS_OK)' = 1 ]"
 [ "$C3_ACCOUNT" = SUB ] && chk "file key tk con: quyen $(sv KEYS_PERM) = 600, sha8 key $(sv KEYS_FILE_SHA8) = da dang ky $SUB_KEY_SHA8 (A-03)" "[ '$(sv KEYS_PERM)' = 600 ] && [ '$(sv KEYS_FILE_SHA8)' = '$SUB_KEY_SHA8' ]"
 # [WAVE1 D-01] budget leg du kien khi 2 co sizing/DCA BAT (cong thuc sim = C3LiveEntry), von MICRO_CAPITAL
@@ -333,7 +333,7 @@ if ! echo "$RS" | grep -q '^FAIL' && gl_postloop CHK && mon_hb_ok; then
   else
     gl_pause_clear >/dev/null 2>&1
     # [WAVE1c m4] mv co the DA chay o 242 du ssh bao loi => trang thai KHONG BIET (khong phai "an toan")
-    if [ "$KG" = KHAC ]; then M="hau kiem DAT nhung run/KILL_SWITCH co dong/token KHAC (owner drain / monitor KHAN chen vao) => GIU NGUYEN, KHONG go: bot LIVE dang DRAIN (khong mo moi). Owner/MASTER kiem noi dung KS roi moi MODE=undrain bash $GL_HERE/golive_live_off.sh"
+    if [ "$KG" = KHAC ]; then M="hau kiem DAT nhung run/KILL_SWITCH co dong/token KHAC (owner drain / monitor KHAN chen vao) => GIU NGUYEN, KHONG go: bot LIVE dang DRAIN (khong mo moi). Owner/MASTER kiem noi dung KS roi go DUNG loai dong: $(gl_ks_hint)"
     else
       M="hau kiem DAT nhung KHONG XAC NHAN DUOC trang thai run/KILL_SWITCH (ssh/token) => KHONG XAC NHAN DUOC - co the da go KILL_SWITCH (bot LIVE co the mo lenh moi). KHAN: owner kiem NGAY ls $A/run/KILL_SWITCH tren 242 / chay MODE=drain bash $(cd "$(dirname "$0")" && pwd)/golive_live_off.sh roi kiem bash $GL_HERE/golive_monitor.sh"
     fi

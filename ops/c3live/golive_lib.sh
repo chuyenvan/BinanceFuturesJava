@@ -17,6 +17,21 @@ ING_FIN_MD5=${ING_FIN_MD5:-5e78ac0663b4a765551eac1c362bf194}   # [WAVE1 B-08] ja
 ING_PAT=${ING_PAT:-websocket.BinanceDataIngestor}
 SUB_KEY_SHA8=${SUB_KEY_SHA8:-43820b5b}   # [WAVE1 A-03] sha256(key tk con)[:8] da dang ky (KEY_CHECK_SUB 11-09) — key doc san PHAI = gia tri nay
 GATE_MAX_AGE_S=${GATE_MAX_AGE_S:-172800}  # [WAVE1 B-08] gate G-MICRO het han 48 h
+# [OPS6 luot3 m-7] ghi de NJ_MD5 / GATE_MAX_AGE_S / PREREG_REPO / OWNER_DECISION_FILE / GL_MICRO_START CHI hieu luc khi GL_TEST=1 (moi truong
+#   gia). Thieu GL_TEST=1 => gia tri GHIM duoi day (ghi de bi BO QUA + canh bao stderr). Gate PILOT tao voi GL_TEST=1 mang dong test=1 =>
+#   gl_gate_pilot (golive_pilot_on.sh) TU CHOI tru khi cung GL_TEST=1.
+GL_NJ_PIN=01cfbb4324fb4a10b615dc3c976ddc73
+if [ "${GL_TEST:-0}" = 1 ]; then
+  PREREG_REPO=${PREREG_REPO:-/home/ubuntu/claude_master/vz_e1_wt}; OWNER_DECISION_FILE=${OWNER_DECISION_FILE:-docs/prereg/OWNER_DECISION_PILOT_1121_ADD1.md}
+  GL_MICRO_START=${GL_MICRO_START:-"2026-11-19 09:31:00 +07"}
+else
+  for _glv in "NJ_MD5:$GL_NJ_PIN" "GATE_MAX_AGE_S:172800" "PREREG_REPO:/home/ubuntu/claude_master/vz_e1_wt" "OWNER_DECISION_FILE:docs/prereg/OWNER_DECISION_PILOT_1121_ADD1.md" "GL_MICRO_START:2026-11-19 09:31:00 +07"; do
+    _glk=${_glv%%:*}; _gld=${_glv#*:}
+    [ -z "${!_glk:-}" ] || [ "${!_glk}" = "$_gld" ] || echo "!! [m-7] bo qua ghi de $_glk='${!_glk}' (chi hieu luc khi GL_TEST=1) => dung gia tri ghim '$_gld'" >&2
+    printf -v "$_glk" '%s' "$_gld"
+  done; unset _glv _glk _gld
+fi
+GL_WD_LOCK_WAIT_S=${GL_WD_LOCK_WAIT_S:-300}   # [OPS6 luot3 m-3] restart/rollback cho luot watchdog dang chay (flock .lock canh PAUSE) toi da (s)
 GL_GATE_FIELDS="gmicro_i gmicro_ii smoke replay_iii sizing_iv script_v"   # [WAVE1b M4] truong ADD22 §3 bat buoc trong gate G-MICRO (khong doi qua env)
 GL_SSH_TRIES=${GL_SSH_TRIES:-3}            # [WAVE1 B-05] so lan thu ssh CHI DOC (cron monitor: 1)
 GL_SSH_TIMEOUT_S=${GL_SSH_TIMEOUT_S:-0}    # [WAVE1 B-05] >0 => moi lenh ssh boc timeout (cron monitor: 25 s)
@@ -93,6 +108,10 @@ GL_PILOT_SIZES="5000 10000"   # [OPS6 T12b] OWNER_DECISION_PILOT_1121 Q1: 10 000
 #   su kien C2 GIU NGUYEN); khong co python => CHI khi latch NONE: ghi run/killsw_reset.req reset_peak=1 (co che jar, dinh dang ops/killsw_reset.sh).
 #   Ket qua: jar lay lai dinh tu equity c3 dau tien sau start (= RESET_PEAK co chu dich). Loi => return 1 (nguoi goi KHONG ha von).
 read -r -d '' GL_A02_FN <<'A02EOF' || true
+# [OPS6 luot3 m-1] envlast <KEY> [file] : gia tri THO o DONG GAN CUOI CUNG (moi dang: "[ ]export K=" / "K=") cua file env (mac dinh conf/env.sh);
+#   isnum <v> : so tron (khong ngoac, khong khoang trang, khong chu thich). Khong phai so => nguoi goi FAIL ro rang (KHONG lang le bo qua A-02).
+envlast() { grep -E "^[[:space:]]*(export[[:space:]]+)?$1=" "${2:-conf/env.sh}" 2>/dev/null | tail -1 | sed -E "s/^[[:space:]]*(export[[:space:]]+)?$1=//" | tr -d '\r'; }
+isnum() { printf '%s' "$1" | grep -qxE '[0-9]+(\.[0-9]+)?'; }
 a02_reset() {
   local tg=$1 py=$2 LF=run/killsw_latch.json PF=run/c3live_killsw_peak RQ=run/killsw_reset.req k L r
   for k in LIVE_KILLSW_LATCH_FILE LIVE_C3_KILLSW_PEAK_FILE LIVE_KILLSW_RESET_FILE; do
@@ -109,9 +128,17 @@ o = json.load(open(p))
 l0 = o.get("latch")
 o.pop("acct_peak", None)
 o.pop("acct_peak_adapter", None)
+st = os.stat(p)
 t = p + ".a02tmp"
 with open(t, "w") as f:
     f.write(json.dumps(o, separators=(",", ":")) + "\n")
+    f.flush()
+    os.fsync(f.fileno())
+try:
+    os.chown(t, st.st_uid, st.st_gid)
+except Exception:
+    pass
+os.chmod(t, st.st_mode & 0o7777)
 os.replace(t, p)
 o2 = json.load(open(p))
 print("A02PY=" + ("OK" if ("acct_peak" not in o2 and o2.get("latch") == l0) else "FAIL") + " latch=" + str(l0))
@@ -224,6 +251,22 @@ tg() {
   tok=""; [ "$code" = 200 ]
 }
 die() { say "DUNG: $*"; say "KET QUA: TU_CHOI (khong doi gi). Log: $LOG"; exit 1; }
+# [OPS6 luot3 muc 14] gl_exit_report <rc> (trap EXIT cua pilot_on / pilot_down / boot_undrain / make_gate_pilot): rc != 0 => in CUOI dung 1 khoi
+#   "VIEC TIEP THEO:" = trang thai 242 ngan (CHI DOC, 1 ssh: C3_CAPITAL dong cuoi env.sh, so process, run/KILL_SWITCH, PAUSE) + DUNG 1 lenh owner
+#   (GL_NEXT do nhanh dat; mac dinh: khong chay gi them, gui output cho MASTER).
+gl_exit_report() {
+  local rc=$1 o px
+  [ "$rc" = 0 ] && return 0
+  [ -n "${_GL_ER:-}" ] && return 0; _GL_ER=1
+  px=$(gl_rx "$PROC_PAT")
+  o=$(GL_SSH_TRIES=1 s242 "cd $A 2>/dev/null || { echo ER_CD=1; exit 0; }; C=\$(grep -E '^[[:space:]]*(export[[:space:]]+)?C3_CAPITAL=' conf/env.sh 2>/dev/null | tail -1 | sed -E 's/^[[:space:]]*(export[[:space:]]+)?C3_CAPITAL=//' | tr -cd 'A-Za-z0-9._'); echo ER_CAP=\${C:-?}; echo ER_NP=\$(pgrep -fc '$px'); if [ -e run/KILL_SWITCH ]; then echo ER_KS=\$(grep -c '' run/KILL_SWITCH)_dong:\$(cut -d' ' -f1 run/KILL_SWITCH | tr -cd 'A-Za-z0-9_\n-' | sort | uniq -c | awk '{printf \"%s%sx%s\", s, \$2, \$1; s=\",\"}'); else echo ER_KS=khong; fi; [ -e $WD_PAUSE ] && echo ER_PAUSE=\$(head -c 40 $WD_PAUSE | tr -cd 'A-Za-z0-9_ .=:-') || echo ER_PAUSE=khong" 2>/dev/null)
+  _gl_erv() { printf '%s\n' "$o" | sed -n "s/^$1=//p" | head -1; }
+  echo "==================== VIEC TIEP THEO: (ma thoat $rc)"
+  if printf '%s\n' "$o" | grep -q '^ER_NP='; then
+    echo "   242 luc thoat: env.sh C3_CAPITAL (dong cuoi)=$(_gl_erv ER_CAP) | bot: $(_gl_erv ER_NP) process ($([ "$(_gl_erv ER_NP)" = 0 ] && echo DANG_DUNG || echo DANG_CHAY)) | run/KILL_SWITCH: $(_gl_erv ER_KS) | PAUSE watchdog: $(_gl_erv ER_PAUSE)"
+  else echo "   242 luc thoat: KHONG doc duoc (ssh?) - trang thai CHUA RO"; fi
+  echo "   LENH OWNER (dung 1): ${GL_NEXT:-khong chay gi them, gui output nay (log ${LOG:-?}) cho MASTER}"
+}
 # [WAVE1 B-05] _ssh: boc timeout khi GL_SSH_TIMEOUT_S > 0 (cron monitor) — ssh treo khong an het "timeout 100" cua cron
 # [WAVE1b M7] GL_SSH_DEADLINE (epoch, cron monitor dat): timeout moi lenh = min(GL_SSH_TIMEOUT_S, con lai); con < 3 s => KHONG ssh, rc 255
 #   => TONG thoi gian ssh 1 luot <= ngan sach (+5 s kill), < "timeout 100" cua cron du 242 mat mang
@@ -313,14 +356,22 @@ gl_gate() {
 }
 gl_gate_val() { sed -n "s/^$2=//p" "$1" | head -1 | tr -d '\r '; }
 # [OPS6 T12b] gl_gate_pilot <file> : gate G-PILOT do golive_make_gate_pilot.sh ghi. In "OK ..." / "FAIL ...". Kiem: body_sha256 (dong cuoi = sha256
-#   moi dong tren => sua tay bi bat), created_ms/expires_ms (tuoi <= GATE_MAX_AGE_S, chua het han), jar_md5=NJ_MD5, size thuoc GL_PILOT_SIZES,
-#   g_exec / g_exit hop le, mien_x14 / mien_b2 / mien_c1 = MIEN|DA_SUA ref=<commit>, boot_guard=CAI, owner_decision=<commit 40 hex>, by=make_gate_pilot.
+#   moi dong tren => CHI chong sua NHAM / sua tay vo y: ai ghi duoc file gate cung tinh lai duoc sha - KHONG phai chu ky), created_ms/expires_ms
+#   (tuoi <= GATE_MAX_AGE_S, chua het han), jar_md5=NJ_MD5, size thuoc GL_PILOT_SIZES, boot_guard=CAI, by=make_gate_pilot.
+#   [OPS6 luot3 m-7] test=0 (test=1 => CHI nhan khi GL_TEST=1); g_exec / g_exit co n=<so nguyen >= 1> va ref=; MOI ref (g_exec, g_exit, mien_*,
+#   micro7 MIEN, owner_decision) phai la commit trong PREREG_REPO co CHAM file docs/prereg/OWNER_DECISION_* (git log -- path);
+#   owner_decision: file = OWNER_DECISION_FILE va sha256(git show <commit>:<file>) = sha256 ghi trong gate; micro_start = GL_MICRO_START va
+#   micro7 = DU (kiem lai >= 7 ngay) | MIEN_OWNER (ref hop le). [n-6] lev_ev=<file> sha256=<..>: file con, sha256 khop.
+gl_od_commits() { git -C "$PREREG_REPO" log --format=%H -- 'docs/prereg/OWNER_DECISION_*' 2>/dev/null; }
+gl_od_ref() { local h; [[ "$1" =~ ^[0-9a-f]{7,40}$ ]] || return 1; h=$(git -C "$PREREG_REPO" rev-parse -q --verify "$1^{commit}" 2>/dev/null) || return 1; gl_od_commits | grep -qx "$h" || return 1; echo "$h"; }
+gl_refof() { printf '%s' "$1" | grep -oE '(^| )ref=[0-9a-f]{7,40}( |$)' | head -1 | sed -E 's/^ ?ref=//; s/ $//'; }
 gl_gate_pilot() {
-  local f=$1 why="" now c e n x v
+  local f=$1 why="" now c e n x v od odf ods ms m7 p s
   [ -s "$f" ] || { echo "FAIL thieu_file_gate $f"; return 1; }
   grep -qx "jar_md5=$NJ_MD5" "$f" || why="$why jar_md5!=$NJ_MD5"
   n=$(grep -c '' "$f"); x=$(tail -n 1 "$f" | sed -n 's/^body_sha256=//p'); v=$(head -n $(( n - 1 )) "$f" | sha256sum | cut -c1-64)
   [ -n "$x" ] && [ "$x" = "$v" ] || why="$why body_sha256_sai(gate_bi_sua_tay?)"
+  case "$(gl_gate_val "$f" test)" in 0) ;; 1) [ "${GL_TEST:-0}" = 1 ] || why="$why gate_TEST(test=1)_KHONG_dung_cho_242_that";; *) why="$why thieu_dong_test";; esac
   now=$(( $(date +%s) * 1000 )); c=$(gl_gate_val "$f" created_ms); e=$(gl_gate_val "$f" expires_ms)
   if ! [[ "$c" =~ ^[0-9]{13}$ ]]; then why="$why thieu_created_ms"
   elif [ $(( now - c )) -gt $(( GATE_MAX_AGE_S * 1000 )) ]; then why="$why gate_cu_$(( (now - c) / 1000 ))s>${GATE_MAX_AGE_S}s(het_han)"
@@ -328,27 +379,49 @@ gl_gate_pilot() {
   if ! [[ "$e" =~ ^[0-9]{13}$ ]]; then why="$why thieu_expires_ms"
   elif [ "$e" -le "$now" ]; then why="$why expires_ms_da_qua(het_han)"; fi
   v=$(gl_gate_val "$f" size); case " $GL_PILOT_SIZES " in *" $v "*) [ -n "$v" ] || why="$why thieu_size";; *) why="$why size='$v'_ngoai_{${GL_PILOT_SIZES// /,}}";; esac
-  grep -qE '^g_exec=(GREEN|AMBER|RED_SIZE|Q4_OWNER) [^ ]' "$f" || why="$why g_exec_thieu/sai"
-  grep -qE '^g_exit=(DAT|Q4_OWNER) [^ ]' "$f" || why="$why g_exit_thieu/sai"
-  for x in mien_x14 mien_b2 mien_c1; do grep -qE "^$x=(MIEN|DA_SUA) ref=[0-9a-f]{7,40}( |\$)" "$f" || why="$why thieu_$x"; done
+  for x in g_exec g_exit; do
+    v=$(sed -n "s/^$x=//p" "$f" | head -1)
+    case "$x:$v" in g_exec:GREEN\ *|g_exec:AMBER\ *|g_exec:RED_SIZE\ *|g_exec:Q4_OWNER\ *|g_exit:DAT\ *|g_exit:Q4_OWNER\ *) ;; *) why="$why ${x}_thieu/sai"; continue;; esac
+    [[ " $v " =~ \ n=[1-9][0-9]*\  ]] || why="$why ${x}_thieu_n>=1"
+    gl_od_ref "$(gl_refof "$v")" >/dev/null || why="$why ${x}_ref_khong_phai_commit_OWNER_DECISION"
+  done
+  for x in mien_x14 mien_b2 mien_c1; do
+    v=$(sed -n "s/^$x=//p" "$f" | head -1)
+    [[ "$v" =~ ^(MIEN|DA_SUA)\ ref=[0-9a-f]{7,40}(\ |$) ]] && gl_od_ref "$(gl_refof "$v")" >/dev/null || why="$why ${x}_thieu/ref_khong_phai_commit_OWNER_DECISION"
+  done
+  v=$(sed -n 's/^owner_decision=//p' "$f" | head -1); od=${v%% *}
+  odf=$(printf '%s' "$v" | sed -n 's/.* file=\([^ ]*\).*/\1/p'); ods=$(printf '%s' "$v" | sed -n 's/.* sha256=\([0-9a-f]\{64\}\).*/\1/p')
+  if ! [[ "$od" =~ ^[0-9a-f]{40}$ ]] || [ "$(gl_od_ref "$od")" != "$od" ]; then why="$why owner_decision_khong_phai_commit_OWNER_DECISION"
+  elif [ "$odf" != "$OWNER_DECISION_FILE" ]; then why="$why owner_decision_file='$odf'!=$OWNER_DECISION_FILE"
+  elif [ -z "$ods" ] || [ "$(git -C "$PREREG_REPO" show "$od:$odf" 2>/dev/null | sha256sum | cut -c1-64)" != "$ods" ]; then why="$why owner_decision_sha256_lech"; fi
+  v=$(sed -n 's/^micro_start=//p' "$f" | head -1); ms=${v%% micro_days=*}; m7=${v#* micro7=}
+  if [ "$ms" != "$GL_MICRO_START" ]; then why="$why micro_start_lech('$ms'!='$GL_MICRO_START')"
+  else
+    case "$m7" in
+      "DU "*) s=$(date -d "$GL_MICRO_START" +%s 2>/dev/null) && [ $(( $(date +%s) - s )) -ge $(( 7 * 86400 )) ] || why="$why micro_chua_du_7_ngay";;
+      "MIEN_OWNER MIEN ref="*) gl_od_ref "$(gl_refof "${m7#MIEN_OWNER }")" >/dev/null || why="$why micro7_mien_ref_khong_phai_commit_OWNER_DECISION";;
+      *) why="$why thieu_micro7";;
+    esac
+  fi
+  v=$(sed -n 's/^lev_ev=//p' "$f" | head -1); p=${v%% sha256=*}; s=${v##* sha256=}
+  [[ "$s" =~ ^[0-9a-f]{64}$ ]] && [ -f "$p" ] && [ "$(sha256sum < "$p" | cut -c1-64)" = "$s" ] || why="$why lev_ev_thieu/file_doi"
   grep -qE '^boot_guard=CAI( |$)' "$f" || why="$why boot_guard_chua_CAI"
-  grep -qE '^owner_decision=[0-9a-f]{40}( |$)' "$f" || why="$why thieu_owner_decision"
   grep -qE '^by=MASTER golive_make_gate_pilot\.sh( |$)' "$f" || why="$why khong_phai_golive_make_gate_pilot"
   [ -z "$why" ] || { echo "FAIL gate $f:$why"; return 1; }
-  echo "OK gate PILOT $f (jar_md5=$NJ_MD5 size=$(gl_gate_val "$f" size) tuoi=$(( (now - c) / 1000 ))s het_han_sau=$(( (e - now) / 1000 ))s)"
+  echo "OK gate PILOT $f (jar_md5=$NJ_MD5 size=$(gl_gate_val "$f" size) tuoi=$(( (now - c) / 1000 ))s het_han_sau=$(( (e - now) / 1000 ))s test=$(gl_gate_val "$f" test))"
 }
 # [OPS6 T20] gl_bootguard242 : CHI DOC 242 - boot guard (wrapper $AD_SBIN/h242-prestart-c3.sh = c3_autodrain_prestart.sh cua repo nay, cron watchdog
 #   co WD_PRESTART=wrapper, drop-in systemd h242-trading ExecStartPre=wrapper). Dat BG=CAI|CHUA_CAI|LOI, BG_DETAIL. Lenh tren 242: md5sum file
 #   wrapper, crontab -l (root), grep file drop-in - KHONG ghi gi.
 gl_bootguard242() {
-  local w5 o bw bh bd
+  local w5 o bw bh bd bx
   w5=$(md5sum < "$GL_HERE/c3_autodrain_prestart.sh" 2>/dev/null | cut -c1-32)
-  o=$(s242 "WR=$AD_SBIN/h242-prestart-c3.sh; DF=$AD_SYSTEMD_DIR/h242-trading.service.d/c3-autodrain.conf; echo BG_WRAPPER_MD5=\$([ -f \"\$WR\" ] && md5sum < \"\$WR\" | cut -c1-32); echo BG_CRON_HOOK=\$($AD_CT242 -l 2>/dev/null | grep -v '^[[:space:]]*#' | grep -F 'h242_watchdog.sh' | grep -cF \"WD_PRESTART=\$WR \"); echo BG_DROPIN=\$(grep -qxF \"ExecStartPre=\$WR $A com.binance.chuyennd.trading.BinanceOrderTradingManager\" \"\$DF\" 2>/dev/null && echo 1 || echo 0); echo END_BG" 2>/dev/null)
+  o=$(s242 "WR=$AD_SBIN/h242-prestart-c3.sh; DF=$AD_SYSTEMD_DIR/h242-trading.service.d/c3-autodrain.conf; echo BG_WRAPPER_MD5=\$([ -f \"\$WR\" ] && md5sum < \"\$WR\" | cut -c1-32); echo BG_WRAPPER_X=\$([ -x \"\$WR\" ] && echo 1 || echo 0); echo BG_CRON_HOOK=\$($AD_CT242 -l 2>/dev/null | grep -v '^[[:space:]]*#' | grep -F 'h242_watchdog.sh' | grep -cF \"WD_PRESTART=\$WR \"); echo BG_DROPIN=\$(grep -qxF \"ExecStartPre=\$WR $A com.binance.chuyennd.trading.BinanceOrderTradingManager\" \"\$DF\" 2>/dev/null && echo 1 || echo 0); echo END_BG" 2>/dev/null)
   bw=$(printf '%s\n' "$o" | sed -n 's/^BG_WRAPPER_MD5=//p' | head -1); bh=$(printf '%s\n' "$o" | sed -n 's/^BG_CRON_HOOK=//p' | head -1)
-  bd=$(printf '%s\n' "$o" | sed -n 's/^BG_DROPIN=//p' | head -1)
-  BG_DETAIL="wrapper_md5=${bw:-khong_co} repo=$w5 cron_hook=${bh:-?} dropin=${bd:-?}"
+  bd=$(printf '%s\n' "$o" | sed -n 's/^BG_DROPIN=//p' | head -1); bx=$(printf '%s\n' "$o" | sed -n 's/^BG_WRAPPER_X=//p' | head -1)
+  BG_DETAIL="wrapper_md5=${bw:-khong_co} repo=$w5 x=${bx:-?} cron_hook=${bh:-?} dropin=${bd:-?}"
   if ! printf '%s\n' "$o" | grep -qx END_BG; then BG=LOI; BG_DETAIL="doc 242 loi (ssh?)"
-  elif [ -n "$w5" ] && [ "$bw" = "$w5" ] && [ "$bh" = 1 ] && [ "$bd" = 1 ]; then BG=CAI
+  elif [ -n "$w5" ] && [ "$bw" = "$w5" ] && [ "$bx" = 1 ] && [ "$bh" = 1 ] && [ "$bd" = 1 ]; then BG=CAI
   else BG=CHUA_CAI; fi
 }
 
@@ -366,7 +439,7 @@ for k in LIVE_PROFILE LIVE_ADAPTER C3_CAPITAL TIER_FLAT SHADOW_NO_PUSH LIVE_ENTR
   echo "ENV_$k=$(echo "$E" | sed -n "s/^$k=//p" | tail -1)"
 done
 for k in LIVE_ADAPTER C3_CAPITAL LIVE_SEED_EXCLUDE_DECISION_MIN C3_EXCLUDE_LEGACY_HELD LIVE_APPLY_GRID_RATIO LIVE_DCA_GRID_ENABLED SIM_F_BASE DCA_GRID_WEIGHTS DCA_GRID_SCALE DCA_GRID_LEVELS SIM_FIX_B2 SIM_U_MAX LIVE_C3_KEYS_FILE; do
-  echo "ENVSH_$k=$(sed -n "s/^export $k=//p" conf/env.sh | tail -1)"
+  echo "ENVSH_$k=$(grep -E "^[[:space:]]*(export[[:space:]]+)?$k=" conf/env.sh 2>/dev/null | tail -1 | sed -E "s/^[[:space:]]*(export[[:space:]]+)?$k=//" | tr -d '\r')"   # [OPS6 luot3 m-1] DONG CUOI (moi dang), gia tri THO
 done
 # [WAVE1 B-08] md5 jar ingestor DANG chay (fd cua process, nhu deploy_chain rstate)
 IP=$(pgrep -f "${IPAT:-websocket.BinanceDataIngestor}" | head -1); IFD=$(find /proc/$IP/fd -lname '*binance-java-sdk*.jar*' 2>/dev/null | head -1)
@@ -388,6 +461,7 @@ B=run/c3live_book.json; [ -f $B ] && echo "BOOK_CUM=$(grep -o '"symbol":"' $B | 
 # [OPS5_FIX 8b + VONG3 F1] KILLSW_TOK = c3live_boot | c3_autodrain CHI KHI file DUNG 1 dong va KHOP TRON dong token chuan (wrapper 242 /
 #   jar C3BootLock nguyen van); moi truong hop khac (them dong, ky tu la, file rong) => rong => micro_on/pilot_on TU CHOI. KHONG in ca dong.
 echo "KILLSW_TOK=$([ "$(grep -c '' run/KILL_SWITCH 2>/dev/null)" = 1 ] && grep -qxE '(c3_autodrain [0-9]{8}_[0-9]{6}( caller=[A-Za-z0-9_.-]*)?|c3live_boot [0-9]{8}_[0-9]{6}( B-09: JVM LIVE khoi dong KHONG qua script go-live \(crash/watchdog/reboot/restart tay\) => dung mo moi, vi the c3 van duoc quan ly\. Mo: MODE=undrain bash golive_live_off\.sh)?)' run/KILL_SWITCH && awk 'NR==1{print $1}' run/KILL_SWITCH)"
+N=$(grep -cxE 'c3_autodrain [0-9]{8}_[0-9]{6}( caller=[A-Za-z0-9_.-]*)?' run/KILL_SWITCH 2>/dev/null); echo "KILLSW_AD=${N:-0}"   # [OPS6 luot3 n-2] so dong boot guard
 [ -f "$KF" ] && [ "$(stat -c %a "$KF")" = 600 ] && [ "$(grep -c '^C3_LIVE_API_\(KEY\|SECRET\)=' "$KF")" = 2 ] && echo "KEYS_OK=1" || echo "KEYS_OK=0"
 # [WAVE1 A-03] sha8 key trong file (sha256 chuoi key, KHONG in key) + quyen — so voi SUB_KEY_SHA8 da dang ky o Oracle
 [ -f "$KF" ] && echo "KEYS_PERM=$(stat -c %a "$KF")" || echo "KEYS_PERM=thieu"
@@ -416,7 +490,11 @@ gl_ks_go_own() {
 gl_ks_restore_prev() {
   s242 "cd $A && { ! grep -q '^$1 $TS ' run/KILL_SWITCH 2>/dev/null || { [ \"\$(grep -vc '^$1 $TS ' run/KILL_SWITCH)\" = 0 ] && mv -f run/KILL_SWITCH run/KILL_SWITCH.rb_$TS; }; }; { [ ! -e run/KILL_SWITCH.prev_$TS ] || [ -e run/KILL_SWITCH ] || cp -p run/KILL_SWITCH.prev_$TS run/KILL_SWITCH; }; [ -e run/KILL_SWITCH ] && echo KSR=DRAIN || echo KSR=PUSH" 2>/dev/null | sed -n 's/^KSR=//p' | tail -1
 }
-gl_ks_boot_ok() { [ "$(sv KILLSW_FILE)" = 0 ] && return 0; case "$(sv KILLSW_TOK)" in c3live_boot|c3_autodrain) return 0;; esac; return 1; }
+# [OPS6 luot3 n-2] CHI chap nhan: khong co KS, HOAC 1 dong token c3live_boot (jar). Token c3_autodrain (boot guard da chan khoi dong NGOAI quy
+#   trinh) => TU CHOI: owner dieu tra nguyen nhan + golive_boot_undrain.sh TRUOC (script KHONG go ngam).
+gl_ks_boot_ok() { [ "$(sv KILLSW_FILE)" = 0 ] && return 0; [ "$(sv KILLSW_TOK)" = c3live_boot ] && return 0; return 1; }
+# [OPS6 luot3 m-6] gl_ks_hint : chi dan go tung loai dong run/KILL_SWITCH (moi lenh CHI go dong cua no)
+gl_ks_hint() { echo "dong 'golive_live_off drain'/'c3live_boot' -> MODE=undrain bash $GL_HERE/golive_live_off.sh; dong c3_autodrain -> owner dieu tra roi bash $GL_HERE/golive_boot_undrain.sh; dong golive_monitor -> xu ly nguyen nhan roi XOA_DONG_MONITOR=YES MODE=undrain bash $GL_HERE/golive_live_off.sh; dong khac -> gui MASTER"; }
 # gl_excl_guard : [A1 r4u2 C-1] C3_ACCOUNT=MAIN + C3_EXCLUDE_LEGACY_HELD=false (process HOAC env.sh) => DUNG
 gl_excl_guard() {
   if [ "$C3_ACCOUNT" = MAIN ] && { [ "$(sv ENV_C3_EXCLUDE_LEGACY_HELD)" = false ] || [ "$(sv ENVSH_C3_EXCLUDE_LEGACY_HELD)" = false ]; }; then
@@ -462,11 +540,11 @@ FAIL ssh_${step}_loi_trang_thai_khong_ro (rc=$rc sau $GL_RESUME_MAX lan doc lai)
 #   TS (KHONG ghi de); chay lai sau ssh dut => buoc da xong KHONG lam lai. Khong bao gio tu chay lai khi rc=255 ma khong doc 242.
 _gl_restart_rx() {
   { printf '%s\n' "$GL_A02_FN"; cat <<EOF2
-A=\$1; TS=\$2; EB=\$3; NADD=\$4; PAUSE=\$5; MAXS=\$6; JP=\$7; NM=\$8; SUF=\$9; KS=\${10:-0}; PY=\${11:-}; cd "\$A" || { echo "FAIL cd"; echo END_RS; exit 0; }
+A=\$1; TS=\$2; EB=\$3; NADD=\$4; PAUSE=\$5; MAXS=\$6; JP=\$7; NM=\$8; SUF=\$9; KS=\${10:-0}; PY=\${11:-}; WLW=\${12:-300}; cd "\$A" || { echo "FAIL cd"; echo END_RS; exit 0; }
 PH=run/.golive_\${NM}_\$TS.phase; BK=conf/env.sh.bak_\${NM}_\$TS
 ph() { grep -qx "\$1" "\$PH" 2>/dev/null; }
 mark() { echo "\$1" >> "\$PH"; }
-ksoff() { grep -q "^\${NM} \$TS " run/KILL_SWITCH 2>/dev/null && [ "\$(grep -vc "^\${NM} \$TS " run/KILL_SWITCH)" = 0 ] && mv -f run/KILL_SWITCH run/KILL_SWITCH.rb_\$TS && { [ ! -e run/KILL_SWITCH.prev_\$TS ] || cp -p run/KILL_SWITCH.prev_\$TS run/KILL_SWITCH; }; }   # [OPS5_FIX 8b] tra token cu (c3live_boot/c3_autodrain)
+ksoff() { grep -q "^\${NM} \$TS " run/KILL_SWITCH 2>/dev/null && [ "\$(grep -vc "^\${NM} \$TS " run/KILL_SWITCH)" = 0 ] && mv -f run/KILL_SWITCH run/KILL_SWITCH.rb_\$TS && { [ ! -e run/KILL_SWITCH.prev_\$TS ] || cp -p run/KILL_SWITCH.prev_\$TS run/KILL_SWITCH; }; }   # [OPS5_FIX 8b] tra token cu (c3live_boot)
 restore() { ph stopped || { \cp -f "\$BK" conf/env.sh; sed -i '/^env_ok\$/d' "\$PH" 2>/dev/null; }; }
 if ph started; then
   echo "INFO pha_da_xong_truoc (chay lai sau ssh dut): KHONG stop/start lai"
@@ -476,18 +554,27 @@ if ph started; then
   echo END_RS; exit 0
 fi
 [ -e "\$BK" ] || \cp -p conf/env.sh "\$BK" || { echo "FAIL backup_env"; echo END_RS; exit 0; }
-if ph env_ok; then echo "OK env_them_\${NADD}_dong (pha truoc)"
-else
+# [OPS6 luot3 m-1] von CU = DONG CUOI C3_CAPITAL cua backup GOC; von MOI = dong cuoi C3_CAPITAL trong ENV_ADD (khong co => von khong doi)
+CB=\$(envlast C3_CAPITAL "\$BK"); CN=\$(printf '%s' "\$EB" | base64 -d > run/.golive_\${NM}_\$TS.envadd && envlast C3_CAPITAL run/.golive_\${NM}_\$TS.envadd); [ -n "\$CN" ] || CN=\$CB
+# [OPS6 luot3 n-4] HA VON (von moi < von cu, ca 2 so tron): env.sh CHI doi SAU khi bot DA DUNG + dat lai dinh (a02) => moi diem cat chi co:
+#   (von cu + dinh cu, bot chay) | (bot dung, von cu, dinh go) | (bot dung, von thap, dinh go) | (bot chay von thap, dinh tu equity moi)
+#   => KHONG BAO GIO "von thap + dinh cao + bot chay" (watchdog / crash start giua chung van an toan).
+LOWER=0; isnum "\$CB" && isnum "\$CN" && awk -v b="\$CB" -v n="\$CN" 'BEGIN{exit !(n+0 < b+0)}' && LOWER=1
+envapply() {
+  local D
+  if ph env_ok; then echo "OK env_them_\${NADD}_dong (pha truoc)"; return 0; fi
   D=\$(diff "\$BK" conf/env.sh | grep -c '^>')
   [ "\$D" = 0 ] && { echo "\$EB" | base64 -d >> conf/env.sh; D=\$(diff "\$BK" conf/env.sh | grep -c '^>'); }
-  if [ "\$D" = "\$NADD" ] && [ "\$(tail -n "\$NADD" conf/env.sh | md5sum)" = "\$(echo "\$EB" | base64 -d | md5sum)" ]; then mark env_ok; echo "OK env_them_\${D}_dong"
-  else \cp -f "\$BK" conf/env.sh; echo "FAIL env_diff=\$D (da khoi phuc)"; echo END_RS; exit 0; fi
-fi
+  if [ "\$D" = "\$NADD" ] && [ "\$(tail -n "\$NADD" conf/env.sh | md5sum)" = "\$(echo "\$EB" | base64 -d | md5sum)" ]; then mark env_ok; echo "OK env_them_\${D}_dong"; return 0; fi
+  \cp -f "\$BK" conf/env.sh; echo "FAIL env_diff=\$D (da khoi phuc)"; return 1
+}
+if [ "\$LOWER" = 1 ]; then echo "INFO HA_VON C3_CAPITAL \$CB -> \$CN: env.sh CHI doi SAU khi bot dung + dat lai dinh (n-4)"
+else envapply || { echo END_RS; exit 0; }; fi
 if [ "\$KS" = 1 ]; then
-  # [VONG3 F3] kiem LAI ngay truoc khi dat: KS co san ma KHONG phai cua minh va KHONG phai 1 dong token boot/autodrain chuan
-  #   (owner drain / monitor KHAN xuat hien SAU precheck) => KHONG ghi de, env khoi phuc, bot KHONG dung
+  # [VONG3 F3 + luot3 n-2] kiem LAI ngay truoc khi dat: KS co san ma KHONG phai cua minh va KHONG phai 1 dong token c3live_boot chuan
+  #   (owner drain / monitor KHAN / boot guard c3_autodrain xuat hien SAU precheck) => KHONG ghi de, env khoi phuc, bot KHONG dung
   if [ -e run/KILL_SWITCH ] && ! grep -q "^\${NM} \$TS " run/KILL_SWITCH 2>/dev/null \
-     && ! { [ "\$(grep -c '' run/KILL_SWITCH)" = 1 ] && grep -qxE '(c3_autodrain [0-9]{8}_[0-9]{6}( caller=[A-Za-z0-9_.-]*)?|c3live_boot [0-9]{8}_[0-9]{6}( B-09: JVM LIVE khoi dong KHONG qua script go-live \(crash/watchdog/reboot/restart tay\) => dung mo moi, vi the c3 van duoc quan ly\. Mo: MODE=undrain bash golive_live_off\.sh)?)' run/KILL_SWITCH; }; then
+     && ! { [ "\$(grep -c '' run/KILL_SWITCH)" = 1 ] && grep -qxE '(c3live_boot [0-9]{8}_[0-9]{6}( B-09: JVM LIVE khoi dong KHONG qua script go-live \(crash/watchdog/reboot/restart tay\) => dung mo moi, vi the c3 van duoc quan ly\. Mo: MODE=undrain bash golive_live_off\.sh)?)' run/KILL_SWITCH; }; then
     if ph stopped || ! pgrep -f "\$PP" >/dev/null; then
       # [OPS6 T2/N1] chay LAI sau ssh dut: bot DA DUNG o lan truoc (pha stopped, HOAC ssh chet ngay sau 'daemon.sh stop' truoc khi kip ghi pha
       #   => nhan biet bang process khong con) va KS nguoi khac xuat hien (owner drain ghi de /
@@ -496,10 +583,10 @@ if [ "\$KS" = 1 ]; then
       \cp -f "\$BK" conf/env.sh; sed -i '/^env_ok\$/d' "\$PH" 2>/dev/null; ph aborted_ks_khac || mark aborted_ks_khac
       echo "OK da_stop (bot DA DUNG o lan chay truoc - ssh dut giua chung)"
       echo "FAIL KILL_SWITCH_token_khac_sau_khi_bot_DA_DUNG (\$(head -c 60 run/KILL_SWITCH | tr -cd 'A-Za-z0-9_ .=:-')) - env.sh DA VE backup goc (von cu), KS nguoi khac GIU NGUYEN, bot DANG DUNG => nguoi goi ROLLBACK (start env cu + kiem)"
-      echo "INFO trang_thai_242: env.sh C3_CAPITAL=\$(sed -n 's/^export C3_CAPITAL=//p' conf/env.sh | tail -1) process=\$(pgrep -fc "\$PP") KILL_SWITCH=\$(grep -c '' run/KILL_SWITCH)_dong PAUSE=\$([ -e "\$PAUSE" ] && head -c 50 "\$PAUSE" | tr -cd 'A-Za-z0-9_ .=:-' || echo khong)"
+      echo "INFO trang_thai_242: env.sh C3_CAPITAL=\$(envlast C3_CAPITAL) process=\$(pgrep -fc "\$PP") KILL_SWITCH=\$(grep -c '' run/KILL_SWITCH)_dong PAUSE=\$([ -e "\$PAUSE" ] && head -c 50 "\$PAUSE" | tr -cd 'A-Za-z0-9_ .=:-' || echo khong)"
       echo END_RS; exit 0
     fi
-    restore; echo "FAIL KILL_SWITCH_token_khac_luc_restart (owner drain / monitor KHAN xuat hien sau precheck: \$(head -c 60 run/KILL_SWITCH | tr -cd 'A-Za-z0-9_ .=:-')) - KHONG ghi de, env khoi phuc, bot KHONG dung"; echo END_RS; exit 0
+    restore; echo "FAIL KILL_SWITCH_token_khac_luc_restart (owner drain / monitor KHAN / boot guard xuat hien sau precheck: \$(head -c 60 run/KILL_SWITCH | tr -cd 'A-Za-z0-9_ .=:-')) - KHONG ghi de, env khoi phuc, bot KHONG dung"; echo END_RS; exit 0
   fi
   { grep -q "^\${NM} \$TS " run/KILL_SWITCH 2>/dev/null || { { [ ! -e run/KILL_SWITCH ] || [ -e run/KILL_SWITCH.prev_\$TS ] || cp -p run/KILL_SWITCH run/KILL_SWITCH.prev_\$TS; } && echo "\${NM} \$TS hau_kiem: dung mo moi toi khi hau kiem DAT" > run/KILL_SWITCH; }; } && grep -q "^\${NM} \$TS " run/KILL_SWITCH \
     && echo "OK KILL_SWITCH_dat_truoc_start" || { restore; echo "FAIL khong_dat_duoc_KILL_SWITCH (env khoi phuc, bot KHONG dung)"; echo END_RS; exit 0; }
@@ -510,12 +597,18 @@ if ! ph pause_timer; then
   setsid nohup bash -c "sleep \$MAXS; grep -q '^\$TOK ' '\$PAUSE' 2>/dev/null && rm -f '\$PAUSE'" > /dev/null 2>&1 < /dev/null &
   mark pause_timer
 fi
-if ! ph stopped; then
-  echo "LEGACY_TRUOC_STOP=\$(tail -c 20000000 logs/full.log 2>/dev/null | grep -a '\[LEGACY\] managed' | tail -1 | grep -aoE 'managed [0-9]+' | awk '{print \$2}')"   # [R4r] chup NGAY truoc stop
+# [OPS6 luot3 m-2] dung bot khi chua dung HOAC (chay lai sau ssh dut, pha stopped) process VAN con / da bi start lai => a02 CHI khi bot THAT SU dung
+if ! ph stopped || pgrep -f "\$PP" >/dev/null; then
+  ph stopped && echo "WARN pha_stopped_nhung_process_DANG_CHAY (bi start lai giua chung?) => dung LAI truoc khi dat lai dinh"
+  # [OPS6 luot3 m-3] watchdog chi xet PAUSE o DAU luot: CHO luot dang chay (giu .lock canh PAUSE) xong roi moi dung bot (nhu golive_swap_jar.sh)
+  WL="\$(dirname "\$PAUSE")/.lock"; W0=\$(date +%s)
+  if flock -w "\$WLW" "\$WL" true 2>/dev/null; then echo "OK watchdog_khong_con_luot_dang_chay (cho \$(( \$(date +%s) - W0 ))s, \$WL)"
+  else restore; ksoff; echo "FAIL watchdog_dang_giu_lock_qua_\${WLW}s (\$WL) - bot KHONG dung lan nay (env khoi phuc neu chua dung)"; echo END_RS; exit 0; fi
+  ph stopped || echo "LEGACY_TRUOC_STOP=\$(tail -c 20000000 logs/full.log 2>/dev/null | grep -a '\[LEGACY\] managed' | tail -1 | grep -aoE 'managed [0-9]+' | awk '{print \$2}')"   # [R4r] chup NGAY truoc stop
   bin/daemon.sh stop
   for i in \$(seq 1 30); do pgrep -f "\$PP" >/dev/null || break; sleep 2; done
   if pgrep -f "\$PP" >/dev/null; then \cp -f "\$BK" conf/env.sh; sed -i '/^env_ok\$/d' "\$PH"; ksoff; echo "FAIL van_con_process_sau_stop (env khoi phuc)"; echo END_RS; exit 0; fi
-  mark stopped
+  ph stopped || mark stopped
 fi
 echo "OK da_stop"
 [ -e run/.golive_\${NM}_\$TS.moved ] || : > run/.golive_\${NM}_\$TS.moved
@@ -526,24 +619,38 @@ if [ "\$SUF" != none ] && ! ph moved; then
 fi
 # [OPS6 T5/A-02] DOI VON qua gl_restart (so live giu, C3_CAPITAL moi != cu): dat lai dinh C6/A40 TRUOC start (HA von: bat buoc, tranh DD gia
 #   -> FLATTEN gia; TANG von: "dinh tinh tu luc pilot bat" GOLIVE_SCENARIO s5.2 - dinh cu cao hon von moi se lam DD am gia). Loi => env VE von cu
-if [ "\$SUF" = none ] && ! ph a02_ok && ! ph a02_fail; then
-  CB=\$(sed -n 's/^export C3_CAPITAL=//p' "\$BK" | tail -1); CN=\$(sed -n 's/^export C3_CAPITAL=//p' conf/env.sh | tail -1)
-  if awk -v b="\$CB" -v n="\$CN" 'BEGIN{exit !(b ~ /^[0-9]+(\.[0-9]+)?\$/ && n ~ /^[0-9]+(\.[0-9]+)?\$/ && n+0 != b+0)}'; then
+if [ "\$SUF" = none ] && ! ph a02_ok && ! ph a02_fail && [ "\$CB" != "\$CN" ]; then
+  if ! isnum "\$CB" || ! isnum "\$CN"; then
+    # [OPS6 luot3 m-1] DONG CUOI C3_CAPITAL khong phai so tron (ngoac / chu thich / rong) => KHONG doan, KHONG lang le bo qua A-02
+    \cp -f "\$BK" conf/env.sh; sed -i '/^env_ok\$/d' "\$PH"; mark a02_fail
+    echo "FAIL C3_CAPITAL_dong_cuoi_khong_phai_so_tron (cu='\$(printf '%s' "\$CB" | tr -cd 'A-Za-z0-9._' | cut -c1-20)' moi='\$(printf '%s' "\$CN" | tr -cd 'A-Za-z0-9._' | cut -c1-20)') => KHONG doi von, KHONG dat lai dinh: env.sh VE backup GOC"
+  elif pgrep -f "\$PP" >/dev/null; then
+    \cp -f "\$BK" conf/env.sh; sed -i '/^env_ok\$/d' "\$PH"; mark a02_fail
+    echo "FAIL a02_bot_dang_chay (chi dat lai dinh khi bot THAT SU dung) => env.sh VE backup GOC (von cu \$CB)"
+  elif awk -v b="\$CB" -v n="\$CN" 'BEGIN{exit !(n+0 != b+0)}'; then
     echo "INFO a02: DOI VON C3_CAPITAL \$CB -> \$CN => dat lai dinh C6/A40 TRUOC start"
     if a02_reset "\${NM}_\$TS" "\$PY"; then mark a02_ok
     else \cp -f "\$BK" conf/env.sh; sed -i '/^env_ok\$/d' "\$PH"; mark a02_fail; echo "FAIL a02_doi_von_khong_dat_lai_duoc_dinh (C3_CAPITAL \$CB -> \$CN) => env.sh VE backup GOC (von cu \$CB, khop dinh), start lai von cu"; fi
   fi
 fi
+# [OPS6 luot3 n-4] HA VON: env.sh doi BAY GIO (bot dung + dinh da go). a02 loi => KHONG doi (von cu + dinh cu)
+if [ "\$LOWER" = 1 ] && ! ph a02_fail; then envapply || echo "INFO env.sh giu von cu \$CB (dinh da go => jar lay lai dinh tu equity von cu)"; fi
 ph "START_LINE=.*" || mark "START_LINE=\$(( \$(wc -l < logs/full.log 2>/dev/null || echo 0) + 1 ))"
 echo "START_LINE=\$(sed -n 's/^START_LINE=//p' "\$PH" | tail -1)"
-pgrep -f "\$PP" >/dev/null || bin/daemon.sh start
+# [OPS6 luot3 m-3] dem LAI ngay truoc start: da co JVM (watchdog / nguoi khac start giua chung) => KHONG start lan 2, KS them dong cua minh, KHAN
+if pgrep -f "\$PP" >/dev/null; then
+  echo "\${NM} \$TS jvm_da_chay_truoc_start: dung mo moi" >> run/KILL_SWITCH
+  echo "FAIL KHAN jvm_DA_CHAY_truoc_start (\$(pgrep -fc "\$PP") process; watchdog/nguoi khac start giua chung) - KHONG start lan 2; run/KILL_SWITCH them dong \${NM} \$TS => nguoi goi ROLLBACK"
+  echo END_RS; exit 0
+fi
+bin/daemon.sh start
 mark started
 sleep 8
 P=\$(pgrep -f "\$PP" | head -1)
 [ -n "\$P" ] && echo "OK started pid=\$P lstart=\$(ps -o lstart= -p \$P)" || echo "FAIL khong_thay_process_sau_start"
 echo END_RS
 EOF2
-  } | s242in_once "PP='$PROC_PAT' bash -s -- $A $TS $GLR_EB $GLR_NADD $WD_PAUSE $WD_PAUSE_MAX_S $$ $GL_NAME ${GLR_SUF:-none} $GLR_KS $PY242"
+  } | s242in_once "PP='$PROC_PAT' bash -s -- $A $TS $GLR_EB $GLR_NADD $WD_PAUSE $WD_PAUSE_MAX_S $$ $GL_NAME ${GLR_SUF:-none} $GLR_KS $PY242 $GL_WD_LOCK_WAIT_S"
 }
 gl_restart() {
   local envadd=$1 suf=$3 ks=${4:-0}
@@ -566,12 +673,23 @@ gl_restart_unknown() { echo "$RS" | grep -q '^FAIL ssh_restart_loi_trang_thai_kh
 #   (nguoi goi: KHAN, KHONG go co monitor). Tra 0 chi khi END_RB va khong FAIL.
 _gl_rollback_rx() {
   { printf '%s\n' "$GL_A02_FN"; cat <<'EOF'
-A=$1; TS=$2; PAUSE=$3; NM=$4; SUF=$5; EXP=$6; ECAP=$7; LW=$8; LP=$9; PY=${10:-}; cd "$A" || { echo "FAIL cd"; echo END_RB; exit 0; }
+A=$1; TS=$2; PAUSE=$3; NM=$4; SUF=$5; EXP=$6; ECAP=$7; LW=$8; LP=$9; PY=${10:-}; MAXS=${11:-1800}; JP=${12:-0}; WLW=${13:-300}; cd "$A" || { echo "FAIL cd"; echo END_RB; exit 0; }
 RP=run/.golive_${NM}_$TS.rbphase; BK=conf/env.sh.bak_${NM}_$TS
 ph() { grep -qx "$1" "$RP" 2>/dev/null; }
 mark() { echo "$1" >> "$RP"; }
 [ -f "$BK" ] || { echo "FAIL thieu_backup_env"; echo END_RB; exit 0; }
 if ! ph rb_started; then
+  # [OPS6 luot3 m-3] rollback co the bat dau MUON (hau kiem dai / ssh dut) khi PAUSE cua restart DA HET HAN => ghi LAI PAUSE han MOI (token
+  #   rieng C3GOLIVE_RB_) + timer rieng, CHO luot watchdog dang chay (.lock) roi moi stop. PAUSE cua nguoi khac => giu nguyen (cung chan watchdog).
+  RTOK="C3GOLIVE_RB_${NM} TS=$TS pid=$JP"
+  if [ ! -e "$PAUSE" ] || grep -qE "^C3GOLIVE_(RB_)?${NM} TS=$TS " "$PAUSE" 2>/dev/null; then
+    mkdir -p "$(dirname "$PAUSE")" 2>/dev/null
+    if echo "$RTOK t=$(date +%s)" > "$PAUSE" && grep -q "^$RTOK " "$PAUSE"; then echo "OK watchdog_PAUSE_rollback token='$RTOK' (han moi ${MAXS}s)"; else echo "WARN khong_tao_duoc_PAUSE_rollback"; fi
+    if ! ph rb_pause_timer; then setsid nohup bash -c "sleep $MAXS; grep -q '^$RTOK ' '$PAUSE' 2>/dev/null && rm -f '$PAUSE'" > /dev/null 2>&1 < /dev/null & mark rb_pause_timer; fi
+  else echo "INFO PAUSE_nguoi_khac_dang_co (giu nguyen, van chan watchdog): $(head -c 60 "$PAUSE" | tr -cd 'A-Za-z0-9_ .=:-')"; fi
+  WL="$(dirname "$PAUSE")/.lock"; W0=$(date +%s)
+  if flock -w "$WLW" "$WL" true 2>/dev/null; then echo "OK watchdog_khong_con_luot_dang_chay (cho $(( $(date +%s) - W0 ))s)"
+  else echo "WARN watchdog_giu_lock_qua_${WLW}s - VAN rollback (truoc start dem lai process: da co JVM => KHONG start lan 2)"; fi
   bin/daemon.sh stop
   for i in $(seq 1 30); do pgrep -f "$PP" >/dev/null || break; sleep 2; done
   pgrep -f "$PP" >/dev/null && { echo "FAIL van_con_process"; echo END_RB; exit 0; }
@@ -579,17 +697,21 @@ if ! ph rb_started; then
   #   cua restart cung TS): dinh C6/A40 dang theo von MOI => dat lai TRUOC start. Khong dat lai duoc => KHONG doi von: env.sh GIU von moi
   #   (khop dinh) + KS cua minh.
   A02F=0
+  #   [OPS6 luot3 m-1/m-2] von = DONG CUOI (envlast); dat lai dinh khi von DOI (khong phu thuoc pha 'started': ssh co the chet sau daemon.sh start
+  #   truoc khi kip ghi pha) - bot DA DUNG (kiem tren). Dong cuoi khong phai so tron => KHONG doan: giu env hien tai + KS (owner/MASTER xu ly).
   if [ "$SUF" = none ] && ! ph rb_a02; then
-    CN=$(sed -n 's/^export C3_CAPITAL=//p' conf/env.sh | tail -1); CB=$(sed -n 's/^export C3_CAPITAL=//p' "$BK" | tail -1)
-    if grep -qx started "run/.golive_${NM}_$TS.phase" 2>/dev/null \
-       && awk -v b="$CB" -v n="$CN" 'BEGIN{exit !(b ~ /^[0-9]+(\.[0-9]+)?$/ && n ~ /^[0-9]+(\.[0-9]+)?$/ && b+0 != n+0)}'; then
+    CN=$(envlast C3_CAPITAL conf/env.sh); CB=$(envlast C3_CAPITAL "$BK")
+    if [ "$CB" != "$CN" ] && { ! isnum "$CB" || ! isnum "$CN"; }; then
+      A02F=1; echo "${NM} $TS c3_capital_khong_doc_duoc: dung mo moi" >> run/KILL_SWITCH
+      echo "FAIL C3_CAPITAL_dong_cuoi_khong_phai_so_tron (env.sh='$(printf '%s' "$CN" | tr -cd 'A-Za-z0-9._' | cut -c1-20)' backup='$(printf '%s' "$CB" | tr -cd 'A-Za-z0-9._' | cut -c1-20)') => KHONG doi von, KHONG dat lai dinh, start duoi run/KILL_SWITCH - owner/MASTER xu ly"
+    elif [ "$CB" != "$CN" ] && awk -v b="$CB" -v n="$CN" 'BEGIN{exit !(b+0 != n+0)}'; then
       echo "INFO a02: rollback DOI VON C3_CAPITAL $CN -> $CB sau khi JVM von moi DA chay => dat lai dinh C6/A40 TRUOC start"
       if a02_reset "${NM}_$TS" "$PY"; then mark rb_a02
       else
         A02F=1; echo "${NM} $TS a02_khong_dat_lai_dinh: dung mo moi" >> run/KILL_SWITCH
         echo "FAIL a02_rollback_khong_dat_lai_duoc_dinh => KHONG doi von: env.sh GIU C3_CAPITAL=$CN (khop dinh hien tai), start lai duoi run/KILL_SWITCH (khong mo moi) - owner/MASTER xu ly"
       fi
-    else echo "INFO a02: khong can dat lai dinh (JVM von moi chua chay / von khong doi: env.sh $CN -> backup $CB)"; fi
+    else echo "INFO a02: khong can dat lai dinh (von khong doi: env.sh $CN -> backup $CB)"; fi
   fi
   if [ "$A02F" = 1 ]; then echo "WARN env_KHONG_khoi_phuc (A-02: giu von moi)"; else \cp -f "$BK" conf/env.sh && echo "OK env_khoi_phuc (backup GOC $BK)"; fi
   if [ "$SUF" != none ] && [ -f run/.golive_${NM}_$TS.moved ] && ! ph rb_files; then
@@ -601,7 +723,12 @@ if ! ph rb_started; then
     echo "OK trang_thai_tra_lai ($(tr '\n' ' ' < run/.golive_${NM}_$TS.moved))"
   fi
   ph "RB_START_LINE=.*" || mark "RB_START_LINE=$(( $(wc -l < logs/full.log 2>/dev/null || echo 0) + 1 ))"
-  bin/daemon.sh start; mark rb_started; sleep 8
+  # [OPS6 luot3 m-3] dem LAI process ngay truoc start: da co JVM (watchdog start giua chung) => KHONG start lan 2, KS them dong cua minh
+  if pgrep -f "$PP" >/dev/null; then
+    echo "${NM} $TS rb_jvm_da_chay_truoc_start: dung mo moi" >> run/KILL_SWITCH
+    echo "FAIL KHAN rb_jvm_DA_CHAY_truoc_start ($(pgrep -fc "$PP") process) - KHONG start lan 2; run/KILL_SWITCH them dong ${NM} $TS"
+  else bin/daemon.sh start; fi
+  mark rb_started; sleep 8
 else
   echo "INFO rollback da start o lan truoc (chay lai sau ssh dut) — chi KIEM"
   pgrep -f "$PP" >/dev/null || { bin/daemon.sh start; sleep 8; }
@@ -630,11 +757,11 @@ else
   echo "${NM} $TS rollback_adapter_sai: dung mo moi" >> run/KILL_SWITCH   # [VONG3 F1] APPEND: khong bao gio nuot/ghi de dong KS khac
   echo "FAIL adapter_sau_rollback (ky vong $EXP${ECAP:+/$ECAP}: process=$PA cap=$PC env.sh=$SA log=${AL:-?}) — run/KILL_SWITCH $([ -e run/KILL_SWITCH ] && echo DANG_DAT || echo KHONG_DAT_DUOC)"
 fi
-grep -q "^C3GOLIVE_${NM} TS=$TS " "$PAUSE" 2>/dev/null && rm -f "$PAUSE"
+grep -qE "^C3GOLIVE_(RB_)?${NM} TS=$TS " "$PAUSE" 2>/dev/null && rm -f "$PAUSE"
 [ -e "$PAUSE" ] && echo "WARN PAUSE_con (token khac)" || echo "OK PAUSE_go"
 echo END_RB
 EOF
-  } | s242in_once "PP='$PROC_PAT' bash -s -- $A $TS $WD_PAUSE $GL_NAME $GLB_SUF $GLB_EXP ${GLB_CAP:-none} $RB_LOG_WAIT_S $RB_LOG_POLL_S $PY242"
+  } | s242in_once "PP='$PROC_PAT' bash -s -- $A $TS $WD_PAUSE $GL_NAME $GLB_SUF $GLB_EXP ${GLB_CAP:-none} $RB_LOG_WAIT_S $RB_LOG_POLL_S $PY242 $WD_PAUSE_MAX_S $$ $GL_WD_LOCK_WAIT_S"
 }
 gl_rollback() {
   GLB_SUF=${1:-none}; GLB_EXP=${2:-dry}; GLB_CAP=${3:-}
@@ -642,7 +769,7 @@ gl_rollback() {
   echo "$RB"
   echo "$RB" | grep -qx END_RB && ! echo "$RB" | grep -q '^FAIL'
 }
-gl_pause_clear() { s242 "grep -q '^$PAUSE_TOK ' $WD_PAUSE 2>/dev/null && rm -f $WD_PAUSE; [ ! -e $WD_PAUSE ]"; }
+gl_pause_clear() { s242 "grep -qE '^(${PAUSE_TOK:-KHONG_CO_TOKEN}|C3GOLIVE_RB_${GL_NAME:-x} TS=${TS:-x} pid=[0-9]+) ' $WD_PAUSE 2>/dev/null && rm -f $WD_PAUSE; [ ! -e $WD_PAUSE ]"; }   # [OPS6 luot3 m-3] + token PAUSE cua rollback
 # gl_postloop <ham CHK> : lap POST_ROUNDS lan; RESULT = lan cuoi; tra 0 khi DAT (khong FAIL/WAIT)
 gl_postloop() {
   local r
@@ -1025,7 +1152,7 @@ gl_cap_switch() {
   if gl_restart_unknown; then   # [WAVE1 B-02]
     s242 "cd $A && echo '$GL_NAME $TS ssh_restart_khong_ro' >> run/KILL_SWITCH && [ -e run/KILL_SWITCH ]" && say "run/KILL_SWITCH DANG DAT" || say "!! KHONG dat duoc run/KILL_SWITCH (ssh?)"
     M="restart $GL_CAP_LABEL: ssh dut, KHONG doc duoc trang thai that tren 242 => KHONG ket luan. env.sh 242 CO THE da co C3_CAPITAL=$SIZE (von MOI) va bot co the dang DUNG: PAUSE het han sau ${WD_PAUSE_MAX_S}s => watchdog start voi env.sh HIEN TAI duoi run/KILL_SWITCH (khong mo moi). Owner/MASTER: bash $GL_HERE/golive_monitor.sh; env backup GOC $A/conf/env.sh.bak_${GL_NAME}_$TS"
-    say "KHAN: $M"; tg "[golive] KHAN TS=$TS $GL_NAME: $M | log $LOG"; exit 2
+    GL_NEXT=${GL_NEXT:-"bash $GL_HERE/golive_monitor.sh  (roi gui output nay cho MASTER; KHONG chay lai $GL_NAME)"}; say "KHAN: $M"; tg "[golive] KHAN TS=$TS $GL_NAME: $M | log $LOG"; exit 2
   fi
   if echo "$RS" | grep -q '^FAIL' && ! echo "$RS" | grep -q '^OK da_stop'; then
     gl_pause_clear >/dev/null 2>&1; [ -f "$SUB_BASE_FILE.bak_$TS" ] && mv -f "$SUB_BASE_FILE.bak_$TS" "$SUB_BASE_FILE"
@@ -1053,7 +1180,7 @@ envk LIVE_ADAPTER=live; envk C3_CAPITAL='"$SIZE"'; envk SHADOW_NO_PUSH=false; en
     if [ "${GL_CAP_KS:-1}" != 1 ]; then
       trap - INT TERM HUP
       gl_pause_clear >/dev/null || say "PAUSE con (ssh?) - tu go sau ${WD_PAUSE_MAX_S}s"
-      say "=== XONG: $GL_CAP_LABEL C3_CAPITAL=$SIZE ($ACCT_TXT). Bot VAN DRAIN theo run/KILL_SWITCH co san (script khong go). Mo lai co chu dich: MODE=undrain bash $GL_HERE/golive_live_off.sh"
+      say "=== XONG: $GL_CAP_LABEL C3_CAPITAL=$SIZE ($ACCT_TXT). Bot VAN DRAIN theo run/KILL_SWITCH co san (script khong go). Mo lai co chu dich (moi lenh CHI go dong cua no): $(gl_ks_hint)"
       tg "$GL_CAP_TGOK (van DRAIN theo KS co san)"; exit 0
     fi
     # [VONG3 F2] hau kiem 2 pha (nhu micro_on): KS cua minh con => kiem DAT => go KS (chi khi MOI dong la cua minh) => cho PUSH ON
@@ -1078,14 +1205,14 @@ envk LIVE_ADAPTER=live; envk C3_CAPITAL='"$SIZE"'; envk SHADOW_NO_PUSH=false; en
       if s242 "cd $A && echo '$GL_NAME $TS push_khong_ON' >> run/KILL_SWITCH && [ -e run/KILL_SWITCH ]"; then
         M="hau kiem DAT (C3_CAPITAL=$SIZE da ap dung) nhung KHONG thay 'PUSH doi trang thai -> ON' sau khi go KILL_SWITCH => DA DAT LAI KILL_SWITCH (xac nhan; an toan, khong mo moi). Owner/MASTER kiem bash $GL_HERE/golive_monitor.sh"
       else
-        M="hau kiem DAT (C3_CAPITAL=$SIZE) nhung KHONG thay PUSH ON; DAT LAI KILL_SWITCH THAT BAI (ssh?) => KILL_SWITCH DA GO, CO THE MO LENH MOI. KHAN: owner chay NGAY MODE=drain bash $GL_HERE/golive_live_off.sh"
+        M="hau kiem DAT (C3_CAPITAL=$SIZE) nhung KHONG thay PUSH ON; DAT LAI KILL_SWITCH THAT BAI (ssh?) => KILL_SWITCH DA GO, CO THE MO LENH MOI. KHAN: owner chay NGAY MODE=drain bash $GL_HERE/golive_live_off.sh"; GL_NEXT="MODE=drain bash $GL_HERE/golive_live_off.sh  (NGAY)"
       fi
     elif [ "$KG" = KHAC ]; then
-      M="hau kiem DAT (C3_CAPITAL=$SIZE) nhung run/KILL_SWITCH co dong/token KHAC (owner drain / monitor KHAN chen vao) => GIU NGUYEN, KHONG go: bot LIVE dang DRAIN. Owner/MASTER kiem noi dung KS roi moi MODE=undrain bash $GL_HERE/golive_live_off.sh"
+      M="hau kiem DAT (C3_CAPITAL=$SIZE) nhung run/KILL_SWITCH co dong/token KHAC (owner drain / monitor KHAN chen vao) => GIU NGUYEN, KHONG go: bot LIVE dang DRAIN. Owner/MASTER kiem noi dung KS roi go DUNG loai dong: $(gl_ks_hint)"
     else
-      M="hau kiem DAT (C3_CAPITAL=$SIZE) nhung KHONG XAC NHAN DUOC trang thai run/KILL_SWITCH (ssh) - co the da go. KHAN: owner kiem NGAY ls $A/run/KILL_SWITCH tren 242 / MODE=drain bash $GL_HERE/golive_live_off.sh"
+      M="hau kiem DAT (C3_CAPITAL=$SIZE) nhung KHONG XAC NHAN DUOC trang thai run/KILL_SWITCH (ssh) - co the da go. KHAN: owner kiem NGAY ls $A/run/KILL_SWITCH tren 242 / MODE=drain bash $GL_HERE/golive_live_off.sh"; GL_NEXT="MODE=drain bash $GL_HERE/golive_live_off.sh  (NGAY; idempotent)"
     fi
-    say "KHAN: $M"; tg "[golive] KHAN TS=$TS $GL_NAME: $M | log $LOG"; exit 2
+    GL_NEXT=${GL_NEXT:-"bash $GL_HERE/golive_monitor.sh  (roi gui output nay cho MASTER; KHONG chay lai $GL_NAME)"}; say "KHAN: $M"; tg "[golive] KHAN TS=$TS $GL_NAME: $M | log $LOG"; exit 2
   fi
   WHY=$(echo "${RESULT:-$RS}" | grep '^FAIL\|^WAIT' | tr '\n' ' ' | cut -c1-200)
   say "hau kiem TRUOT ($WHY) => ROLLBACK ve C3_CAPITAL=$C0 (adapter live, so + vi the giu nguyen)"
@@ -1096,5 +1223,5 @@ envk LIVE_ADAPTER=live; envk C3_CAPITAL='"$SIZE"'; envk SHADOW_NO_PUSH=false; en
   fi
   s242 "cd $A && echo '$GL_NAME $TS rollback_loi' >> run/KILL_SWITCH && [ -e run/KILL_SWITCH ]" && say "run/KILL_SWITCH DANG DAT" || say "!! KHONG dat duoc run/KILL_SWITCH (ssh?)"
   M="ROLLBACK LOI / khong xac nhan adapter=live C3_CAPITAL=$C0 ($(echo "$RB" | grep '^FAIL' | head -2 | tr '\n' ' ')) => run/KILL_SWITCH; kiem bash $GL_HERE/golive_monitor.sh; env backup GOC $A/conf/env.sh.bak_${GL_NAME}_$TS"
-  say "KHAN: $M"; tg "[golive] KHAN TS=$TS $GL_NAME TRUOT ($WHY) VA $M | log $LOG"; exit 2
+  GL_NEXT="bash $GL_HERE/golive_monitor.sh  (roi gui output nay cho MASTER; KHONG chay lai $GL_NAME)"; say "KHAN: $M"; tg "[golive] KHAN TS=$TS $GL_NAME TRUOT ($WHY) VA $M | log $LOG"; exit 2
 }
