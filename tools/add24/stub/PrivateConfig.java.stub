@@ -1,0 +1,11 @@
+package com.binance.chuyennd.config;
+
+/**
+ * ADD24 STUB - KHONG CO KEY. Thay PrivateConfig that khi bien dich jar stub (prereg ADD24 s3 / P5 / P11).
+ * Truong non-final (khong inline hang so). Gia tri rong / URL khong toi duoc (127.0.0.1:9) => moi goi REST deu that bai.
+ */
+public class PrivateConfig {
+    public static String API_KEY = "";
+    public static String SECRET_KEY = "";
+    public static String UM_BASE_URL = "http://127.0.0.1:9";
+}
