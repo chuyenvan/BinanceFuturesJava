@@ -44,6 +44,11 @@ LABELS=${LABELS_1105:-$W/tools/e2e/labels_1105.csv}
 WTK=$(grep -oE '^[A-Z0-9_]+=' "$W/config.properties" | tr -d '=' | sort | tr '\n' ',')
 if [ "$FLAGS" = on ]; then AG=true; else AG=false; fi
 OVR="LIVE_ADAPTER,C3_CAPITAL,LIVE_APPLY_GRID_RATIO,LIVE_DCA_GRID_ENABLED,C3_EXCLUDE_LEGACY_HELD,LIVE_IS_SHADOW_HOST,LIVE_GATE_ROLLING_FILE,LIVE_TS_MKT_EXT"
+# [ADD24] override KHAI TRUOC bo sung (file ADD24_OVR_FILE, dong "export K=V"; ghi vao env_used SAU cac override chuan => thang)
+if [ -n "${ADD24_OVR_FILE:-}" ]; then
+  [ -f "$ADD24_OVR_FILE" ] || { echo "TU CHOI: thieu $ADD24_OVR_FILE"; exit 3; }
+  OVR="$OVR,$(grep -oE '^export [A-Z0-9_]+=' "$ADD24_OVR_FILE" | cut -c8- | tr -d '=' | paste -sd, -)"
+fi
 {
   echo "# env luot $NAME (danh sach trang 242 + override khai truoc) $(date -Is)"
   grep -E '^(export )?[A-Z0-9_]+=' "$ENV242"
@@ -60,6 +65,7 @@ OVR="LIVE_ADAPTER,C3_CAPITAL,LIVE_APPLY_GRID_RATIO,LIVE_DCA_GRID_ENABLED,C3_EXCL
   echo "export E2E_LEGACY_META=$LEGMETA E2E_LABELS_FILE=$LABELS"
   echo "export E2E_RUN=$NAME E2E_VENUE=$VENUE E2E_FX_DIR=$FX E2E_OUT=$OUT E2E_ENV242=$ENV242 E2E_OVERRIDES=$OVR"
   for kv in "$@"; do echo "export $kv"; done
+  [ -n "${ADD24_OVR_FILE:-}" ] && { echo "# ADD24 override khai truoc: $ADD24_OVR_FILE md5=$(md5sum < "$ADD24_OVR_FILE" | cut -c1-32)"; grep -E '^export [A-Z0-9_]+=' "$ADD24_OVR_FILE"; }
 } > "$D/env_used.sh"
 CP="$JAR:$W/target/test-classes"
 echo "luot=$NAME venue=$VENUE C3_CAPITAL=$CAP flags=$FLAGS fx=$FX out=$D"

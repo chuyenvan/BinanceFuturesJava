@@ -123,6 +123,11 @@ final class CrashDayRig {
         long sDcaAt = -1;                                // S-DCA: moc chon cum (xem SDCA_FACTORS)
         int sDcaN = 2;                                   // S-DCA: so cum ep gia (>= 2 theo prereg D1)
         long finInjAt = -1;                              // FIN-INJ: leg PREDICT PASS dau tien o phut >= moc nay bi bo khoi tap fin
+        /** [ADD24 R-LIVE] tiem MINUTE-INCOMPLETE / MINUTE-FIN-EXCL cua log live: phut quyet dinh b -> {"SYM|LEVEL","SYM|*","*|*"}.
+         *  "*|*" = guard ca phut (chan PREDICT + BIG_DOWN, KHONG chan DCA - "quan ly vi the giu nguyen"). Rong = tat. */
+        final Map<Long, Set<String>> liveBlock = new HashMap<>();
+        /** [ADD24 L0-FOLLOW-lite] cid lenh MUA that -> gia khop that (FILL avg). Rong = L0 tu do. */
+        final Map<String, BigDecimal> followPx = new HashMap<>();
     }
 
     final Opts o;
@@ -196,6 +201,7 @@ final class CrashDayRig {
     String finInjSym;
     long finInjBar = -1;
     int nFinExcl;
+    int nLiveInj;
     final List<String> fillRows = new ArrayList<>();                // khop c3 (su that san): ms,symbol,side,qty,price,cid
     final List<String> finRows = new ArrayList<>();
     final Map<String, Long> gapSince = new HashMap<>();
@@ -290,6 +296,7 @@ final class CrashDayRig {
             fake.now = t();
             fake.startEquity = new BigDecimal("200000");
             fake.expireDelayMs = o.expireDelayMs;
+            fake.followPx.putAll(o.followPx);   // [ADD24 L0-FOLLOW-lite]
             fake.ackWithoutAvgPrice = o.ackNoAvg;
             fake.rejectWouldTrigger = true;   // nhu Binance -2021 (sua san gia 11-05 sau lan chay 1: thieu => stop nam tren gia)
             fake.tap = this::onTruthEvent;
@@ -662,6 +669,13 @@ final class CrashDayRig {
             event("INJECT_FIN", sym, "bo khoi tap fin phut " + fmt(b));
         }
         if (finInjBar == b && sym.equals(finInjSym)) fin.remove(sym);
+        Set<String> lb = o.liveBlock.isEmpty() ? null : o.liveBlock.get(b);
+        if (lb != null && fin.contains(sym) && (lb.contains(sym + "|" + level) || lb.contains(sym + "|*")
+                || (!level.startsWith("DCA") && lb.contains("*|*")))) {
+            fin.remove(sym);
+            nLiveInj++;
+            event("INJECT_LIVE_FIN", sym, level + " phut " + fmt(b));
+        }
         boolean ok = com.binance.chuyennd.aerospike.MinuteCompletenessGuard.finAllows(fin, sym);
         if (!ok) {
             nFinExcl++;
@@ -1174,6 +1188,10 @@ final class CrashDayRig {
         inj.put("fin_inj_symbol", finInjSym);
         inj.put("fin_inj_bar", finInjBar);
         inj.put("fin_excl_legs", nFinExcl);
+        inj.put("live_block_minutes", o.liveBlock.size());
+        inj.put("live_block_legs", nLiveInj);
+        inj.put("follow_px_n", o.followPx.size());
+        inj.put("follow_hits", fake != null ? fake.followHits : -1);
         res.put("injections", inj);
         res.put("cfg_effective", cfgEffective());
         writeText(new File(out, "ks_lines.txt"), "", ksLines);

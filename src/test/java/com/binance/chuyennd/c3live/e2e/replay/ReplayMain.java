@@ -235,6 +235,26 @@ public final class ReplayMain {
         o.sDcaAt = envL("E2E_SDCA_AT", -1L);
         o.sDcaN = (int) envL("E2E_SDCA_N", 2L);
         o.finInjAt = envL("E2E_FIN_INJ_AT", -1L);
+        // [ADD24 R-LIVE] tiem chan phut tu log live (csv decision_ts,symbol,level,kind; symbol/level "*" = moi)
+        String lbf = env("E2E_LIVE_BLOCK_FILE", "");
+        if (!lbf.isEmpty()) {
+            for (String ln : Files.readAllLines(new File(lbf).toPath(), StandardCharsets.UTF_8)) {
+                String[] x = ln.trim().split(",");
+                if (x.length < 3 || !x[0].matches("\\d+")) continue;
+                o.liveBlock.computeIfAbsent(Long.parseLong(x[0]), k -> new java.util.TreeSet<>()).add(x[1] + "|" + x[2]);
+            }
+            LOG.warn("[ADD24] E2E_LIVE_BLOCK_FILE={} phut={}", lbf, o.liveBlock.size());
+        }
+        // [ADD24 L0-FOLLOW-lite] csv cid,avg (gia khop that lenh MUA) - chi co nghia voi venue FAKE
+        String fpf = env("E2E_FOLLOW_FILLS", "");
+        if (!fpf.isEmpty()) {
+            for (String ln : Files.readAllLines(new File(fpf).toPath(), StandardCharsets.UTF_8)) {
+                String[] x = ln.trim().split(",");
+                if (x.length < 2 || !x[0].startsWith("c3-")) continue;
+                o.followPx.put(x[0], new java.math.BigDecimal(x[1]));
+            }
+            LOG.warn("[ADD24] E2E_FOLLOW_FILLS={} n={}", fpf, o.followPx.size());
+        }
         CrashDayRig r = new CrashDayRig(o, d, outRoot);
         r.res.put("prereg", "PREREG_E2E_REPLAY_V12 (vz_e1_wt ea6c7a5b) + ERRATA1 (33633d41) + ERRATA2 (593e7f45) + ERRATA3 (409e1144)");
         // [ERRATA3 E11] md5 file gia tri env 242 da dung + md5 labels_1105.csv (khai truoc, commit truoc luot chinh thuc)

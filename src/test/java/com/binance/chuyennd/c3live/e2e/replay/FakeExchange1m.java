@@ -28,6 +28,9 @@ final class FakeExchange1m extends MockExchangeGateway {
     /** Duong giao xuong bot (stream scope -> FillAccounting) — null = mat ket noi. */
     volatile Consumer<String> downstream = null;
     volatile long expireDelayMs = 0L;
+    /** [ADD24 L0-FOLLOW-lite] cid -> gia khop that (rong = tat). */
+    final java.util.Map<String, BigDecimal> followPx = new java.util.HashMap<>();
+    int followHits;
     int expiredCount;
 
     private final Deque<String> queue = new ArrayDeque<>();
@@ -111,7 +114,15 @@ final class FakeExchange1m extends MockExchangeGateway {
 
     @Override
     public OrderInfo newMarketOrder(String symbol, Side side, BigDecimal qty, String cid, boolean reduceOnly) {
+        // [ADD24 L0-FOLLOW-lite] lenh MUA co cid trung lenh that => khop tai gia khop that (avg log FILL), roi tra gia nen
+        BigDecimal fp = side == Side.BUY && cid != null ? followPx.get(cid) : null;
+        BigDecimal old = fp != null ? price(symbol) : null;
+        if (fp != null) {
+            setPrice(symbol, fp);
+            followHits++;
+        }
         OrderInfo o = super.newMarketOrder(symbol, side, qty, cid, reduceOnly);
+        if (fp != null && old != null) setPrice(symbol, old);
         if (side == Side.SELL) afterSell(symbol);
         drain();
         return o;
