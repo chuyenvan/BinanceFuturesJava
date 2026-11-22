@@ -1,0 +1,19 @@
+{
+ "window": [
+  "2026-07-01 00:00",
+  "2026-09-16 00:00"
+ ],
+ "moments_sim": [
+  "2026-01-19 07:00",
+  "2026-02-06 04:00"
+ ],
+ "moments_match_printDone00": true,
+ "dca_eligible_minutes": 2,
+ "no_state": 0,
+ "TIER_DIV": 0,
+ "TIER_DIV_cums": 0,
+ "exclude": [],
+ "TIER_DIV_all_held": 0,
+ "events": [],
+ "status": "PASS_0"
+}

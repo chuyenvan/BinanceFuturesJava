@@ -1,0 +1,272 @@
+{
+ "RESULT": {
+  "result": "FAIL",
+  "bb": {
+   "S-G": "PASS",
+   "S-G2": "FAIL",
+   "S-SZ": "PASS",
+   "S-X": "FAIL",
+   "S-D": "INSUFFICIENT_CO_PHU"
+  },
+  "note": "PASS_CAN_OWNER = moi BB dat; cho owner chap nhan co SIM_TIER_STALE + BD_ORDER (+ N10 neu CAN_OWNER); S-D INSUFFICIENT_CO_PHU phu boi C0b S-DCA"
+ },
+ "main": {
+  "INSTALL": {
+   "L3": {
+    "ok": true,
+    "raw": "x14=swapped rig_t=1782838800000",
+    "START": 1782838800000
+   },
+   "L12": {
+    "ok": true,
+    "raw": "simtier=installed rig_t=1782838800000",
+    "START": 1782838800000
+   },
+   "status": "PASS"
+  },
+  "V_GATES": {
+   "V1": true,
+   "V2": true,
+   "V3": true,
+   "V5": true,
+   "V6": true,
+   "V9": true,
+   "status": "PASS"
+  },
+  "V-TIER": {
+   "status": "PASS_0",
+   "TIER_DIV": 0,
+   "excluded": [],
+   "verdict": "PASS"
+  },
+  "S-G": {
+   "decisions": 67,
+   "minutes": 16,
+   "fail": 0,
+   "fail_list": [],
+   "status": "PASS"
+  },
+  "S-G2": {
+   "quarter": "2026Q3",
+   "jar_pass": 101,
+   "sim_pass": 94,
+   "jar_seen": 3045377,
+   "sim_seen": 3041795,
+   "seen_rel": 0.001177594150822081,
+   "status": "FAIL"
+  },
+  "N10": {
+   "n": 0,
+   "share": 0.0,
+   "status": "OK"
+  },
+  "S-SZ": {
+   "n": 79,
+   "max": 2.2750540325289994e-05,
+   "share_le_1e3_incl_N11": 1.0,
+   "over_1e3": 0,
+   "N11_legs": 0,
+   "N11_minutes": 0,
+   "unexplained": [],
+   "no_stepsize": [],
+   "status": "PASS"
+  },
+  "S-X": {
+   "states": {
+    "SCORED": 79,
+    "DCA_CUM(S-D)": 2
+   },
+   "missing": [],
+   "n_exit": 79,
+   "n_time_stop": 12,
+   "n_trail": 67,
+   "sample_ok": true,
+   "a_reason": {
+    "eq": 79,
+    "n": 79,
+    "diff": [],
+    "status": "PASS"
+   },
+   "b_minute": {
+    "same": 65,
+    "n8": 14,
+    "n8_share": 0.17721518987341772,
+    "other": [],
+    "status": "FAIL"
+   },
+   "c_price": {
+    "mean": 0.005276568247963347,
+    "per_cum_fail": [],
+    "status": "FAIL"
+   },
+   "cums_status": "PASS",
+   "status": "FAIL"
+  },
+  "S-D": {
+   "n_events": 0,
+   "ok": 0,
+   "rig_extra": [],
+   "status": "INSUFFICIENT_CO_PHU"
+  },
+  "FLAGS": {
+   "SIM_TIER_STALE": true,
+   "BD_ORDER": true,
+   "N10_CAN_OWNER": false
+  },
+  "RESULT": {
+   "result": "FAIL",
+   "bb": {
+    "S-G": "PASS",
+    "S-G2": "FAIL",
+    "S-SZ": "PASS",
+    "S-X": "FAIL",
+    "S-D": "INSUFFICIENT_CO_PHU"
+   },
+   "note": "PASS_CAN_OWNER = moi BB dat; cho owner chap nhan co SIM_TIER_STALE + BD_ORDER (+ N10 neu CAN_OWNER); S-D INSUFFICIENT_CO_PHU phu boi C0b S-DCA"
+  }
+ },
+ "sens_report": {
+  "result": "FAIL",
+  "bb": {
+   "S-G": "PASS",
+   "S-G2": "FAIL",
+   "S-SZ": "PASS",
+   "S-X": "FAIL",
+   "S-D": "INSUFFICIENT_CO_PHU"
+  },
+  "note": "PASS_CAN_OWNER = moi BB dat; cho owner chap nhan co SIM_TIER_STALE + BD_ORDER (+ N10 neu CAN_OWNER); S-D INSUFFICIENT_CO_PHU phu boi C0b S-DCA"
+ },
+ "lane_diff": {
+  "n_common": 79,
+  "only_main": 0,
+  "only_sens": 0,
+  "exit_minute_changed": 23,
+  "delta_px_pct": {
+   "mean": -0.3031357974181544,
+   "p05": -2.750140792190725,
+   "p25": 0.0,
+   "median": 0.0,
+   "p75": 0.0,
+   "p95": 0.0,
+   "min": -6.191172439002105,
+   "max": 0.06571381632988069
+  },
+  "changed": [
+   [
+    "ACEUSDT",
+    "08-22 12:10",
+    -4
+   ],
+   [
+    "AKEUSDT",
+    "08-22 12:10",
+    -2
+   ],
+   [
+    "AKEUSDT",
+    "08-22 12:27",
+    -4
+   ],
+   [
+    "AKEUSDT",
+    "09-04 19:30",
+    -1
+   ],
+   [
+    "AVAAIUSDT",
+    "08-22 12:11",
+    -3
+   ],
+   [
+    "BOMEUSDT",
+    "08-22 12:12",
+    -1
+   ],
+   [
+    "BTRUSDT",
+    "08-28 23:25",
+    -2
+   ],
+   [
+    "BTWUSDT",
+    "08-22 12:09",
+    -2
+   ],
+   [
+    "CYSUSDT",
+    "08-22 12:11",
+    -4
+   ],
+   [
+    "MAGMAUSDT",
+    "08-22 12:11",
+    -1
+   ],
+   [
+    "MAGMAUSDT",
+    "08-22 12:13",
+    -5
+   ],
+   [
+    "MELANIAUSDT",
+    "08-22 12:10",
+    -1
+   ],
+   [
+    "MOVRUSDT",
+    "08-28 23:25",
+    -6
+   ],
+   [
+    "MUBARAKUSDT",
+    "08-22 12:10",
+    -1
+   ],
+   [
+    "NEIROUSDT",
+    "08-22 12:11",
+    -1
+   ],
+   [
+    "PEOPLEUSDT",
+    "08-22 12:11",
+    -4
+   ],
+   [
+    "SKRUSDT",
+    "09-04 19:30",
+    -5
+   ],
+   [
+    "STARUSDT",
+    "08-22 12:11",
+    -2
+   ],
+   [
+    "STARUSDT",
+    "08-22 12:18",
+    -4
+   ],
+   [
+    "TACUSDT",
+    "08-28 23:25",
+    -1
+   ],
+   [
+    "USELESSUSDT",
+    "08-22 12:11",
+    -1
+   ],
+   [
+    "ZAMAUSDT",
+    "08-22 12:11",
+    -1
+   ],
+   [
+    "ZECUSDT",
+    "08-28 23:25",
+    -162
+   ]
+  ]
+ }
+}

@@ -1,0 +1,360 @@
+{
+ "SIM_TIER_STALE": {
+  "flag": true,
+  "note": "ERRATA4 1c: sim HO5 cap nhat tier luoi; ADD24 chi PASS khi owner chap nhan bang van ban (OWNER_DECISION_*) hoac sim sua tier + HO5 chay lai"
+ },
+ "V-TIER": {
+  "status": "PASS_0",
+  "TIER_DIV": 0,
+  "TIER_DIV_cums": 0,
+  "excluded": [],
+  "dca_eligible_minutes": 2,
+  "TIER_DIV_all_held": 0,
+  "moments_sim": [
+   "2026-01-19 07:00",
+   "2026-02-06 04:00"
+  ],
+  "moments_match_printDone00": true
+ },
+ "S-G": {
+  "n_sim_predict": 67,
+  "n_minutes": 16,
+  "jar_pass": 67,
+  "fail": 0,
+  "jar_pass_non_sim_candidates": 7,
+  "minutes_with_non_sim_pass": 5,
+  "minutes_non_sim_pass_and_no_sim_entry": 1,
+  "gated_rows": 3045377,
+  "sample_ok": true,
+  "status": "PASS"
+ },
+ "S-G2_raw": {
+  "jar_pass": 101,
+  "sim_pass": 94,
+  "jar_seen": 3045377,
+  "sim_seen": 3041795,
+  "seen_rel": 0.001177594150822081,
+  "status": "FAIL"
+ },
+ "S-SZ": {
+  "status_EB2": "PASS",
+  "official_EB2_rounded": {
+   "n": 79,
+   "max": 2.2750540325289994e-05,
+   "p90": 7.601159960027858e-07,
+   "share_le_1e3": 1.0,
+   "share_le_5e3": 1.0
+  },
+  "N11": {
+   "max": 2.2750540325289994e-05,
+   "n": 79,
+   "legs_over_1e3": 0,
+   "n11_legs": 0,
+   "n11_minutes": 0,
+   "n11": [],
+   "unexplained": [],
+   "status": "PASS"
+  },
+  "verdict": "PASS"
+ },
+ "S-X_a_reason": {
+  "n": 79,
+  "reason_eq_share": 1.0,
+  "reason_diff": []
+ },
+ "S-X_b_minute": {
+  "n": 79,
+  "same_minute": 65,
+  "n8_ref_confirmed": 14,
+  "other_diff": [],
+  "ratio": 1.0,
+  "n8_share": 0.17721518987341772,
+  "gt1": 0,
+  "status": "FAIL"
+ },
+ "S-X_c_price": {
+  "mean_rel": 0.005276568247963347,
+  "band": [
+   -0.002,
+   0.002
+  ],
+  "per_cum_fail": [],
+  "status": "FAIL"
+ },
+ "S-X_sens_lane": {
+  "lane_diff": {
+   "n_common": 79,
+   "only_main": 0,
+   "only_sens": 0,
+   "exit_minute_changed": 23,
+   "delta_px_pct": {
+    "mean": -0.3031357974181544,
+    "p05": -2.750140792190725,
+    "p25": 0.0,
+    "median": 0.0,
+    "p75": 0.0,
+    "p95": 0.0,
+    "min": -6.191172439002105,
+    "max": 0.06571381632988069
+   },
+   "changed": [
+    [
+     "ACEUSDT",
+     "08-22 12:10",
+     -4
+    ],
+    [
+     "AKEUSDT",
+     "08-22 12:10",
+     -2
+    ],
+    [
+     "AKEUSDT",
+     "08-22 12:27",
+     -4
+    ],
+    [
+     "AKEUSDT",
+     "09-04 19:30",
+     -1
+    ],
+    [
+     "AVAAIUSDT",
+     "08-22 12:11",
+     -3
+    ],
+    [
+     "BOMEUSDT",
+     "08-22 12:12",
+     -1
+    ],
+    [
+     "BTRUSDT",
+     "08-28 23:25",
+     -2
+    ],
+    [
+     "BTWUSDT",
+     "08-22 12:09",
+     -2
+    ],
+    [
+     "CYSUSDT",
+     "08-22 12:11",
+     -4
+    ],
+    [
+     "MAGMAUSDT",
+     "08-22 12:11",
+     -1
+    ],
+    [
+     "MAGMAUSDT",
+     "08-22 12:13",
+     -5
+    ],
+    [
+     "MELANIAUSDT",
+     "08-22 12:10",
+     -1
+    ],
+    [
+     "MOVRUSDT",
+     "08-28 23:25",
+     -6
+    ],
+    [
+     "MUBARAKUSDT",
+     "08-22 12:10",
+     -1
+    ],
+    [
+     "NEIROUSDT",
+     "08-22 12:11",
+     -1
+    ],
+    [
+     "PEOPLEUSDT",
+     "08-22 12:11",
+     -4
+    ],
+    [
+     "SKRUSDT",
+     "09-04 19:30",
+     -5
+    ],
+    [
+     "STARUSDT",
+     "08-22 12:11",
+     -2
+    ],
+    [
+     "STARUSDT",
+     "08-22 12:18",
+     -4
+    ],
+    [
+     "TACUSDT",
+     "08-28 23:25",
+     -1
+    ],
+    [
+     "USELESSUSDT",
+     "08-22 12:11",
+     -1
+    ],
+    [
+     "ZAMAUSDT",
+     "08-22 12:11",
+     -1
+    ],
+    [
+     "ZECUSDT",
+     "08-28 23:25",
+     -162
+    ]
+   ]
+  },
+  "verdict_b": "FAIL",
+  "verdict_c": "FAIL",
+  "note": "bao cao, khong cham (ERRATA3 B6)"
+ },
+ "S-E": {
+  "n": 79,
+  "mean_bps": 0.0,
+  "p90_abs_bps": 0.0
+ },
+ "S-D": {
+  "n_events": 0,
+  "ok": 0,
+  "events": [],
+  "rig_dca_legs_in_window": 0,
+  "rig_extra": [],
+  "status": "INSUFFICIENT_CO_PHU"
+ },
+ "N10": {
+  "n": 0,
+  "n_predict": 0,
+  "share_of_sim_predict": 0.0,
+  "list": []
+ },
+ "V": {
+  "V1": {
+   "ok": true,
+   "fx_files_md5": {
+    "avail_manifest.json": "84dd515fd29e75202affaaaeef0b9502",
+    "bigdown.csv": "c8e09dcf53f282d760b04a2f3446b32d",
+    "cand.csv.gz": "d2ccba3ea1b5443f49664b9188c9941c",
+    "cand_bars.csv.gz": "b016773de9701a3e3b27d35e2e5d1d76",
+    "exinfo.json": "12e621447595870a2d2a2a8a056b3343",
+    "follow.csv": "76592ef450fafa7aa922ab0b6d4ad07e",
+    "klines.csv.gz": "6a01fe3e32be25e5baea5ad1be34748c",
+    "manifest.json": "72c4364cb1ebc1b1504f673183dc6485",
+    "manifest_conv.json": "d60766316ec0ca14307d29cb5520a8d0",
+    "mkt.csv.gz": "cff1c86b04cb13f382bf1ce563e1a835",
+    "sel.csv.gz": "4a4c2b4be1d928f6e28a59ba36025f08",
+    "sim_entries.csv": "86d16da6a4a3a3d7a9e27c1e2247f968",
+    "unavail.csv": "edded6432c3c905a4d49b9fc54e8a0d5",
+    "warm.csv.gz": "b7def51737f1369f7830c1babe91e067"
+   },
+   "conv_inputs": {
+    "predict_wf_20260401.bin": {
+     "md5": "0a41e2198b36020deead4eb37f49eb2a",
+     "sha256": "78e4e43788738a7c67355f6c7aba1c4a01d019654124c57a3e1a6c9a1d604bf5",
+     "n": 4952341,
+     "ts_min": 1774976400000,
+     "ts_max": 1782837900000
+    },
+    "predict_wf_20260701.bin": {
+     "md5": "ad60193f03f3d7b5a4dec7cd4d31a102",
+     "sha256": "9a9146931410ec1ca2ce6344547f3d360afa5e32c84b1a582931ac95847bf3f5",
+     "n": 5382633,
+     "ts_min": 1782838800000,
+     "ts_max": 1790786700000
+    },
+    "pred_2026.bin": {
+     "md5": "64f66a15e0c6d7268da805e3df428760",
+     "sha256": "c474ae93dcf0295783f543e743f34a2017d26d84d15e16855ac50d0ac038d156",
+     "n": 393120,
+     "ts_min": 1767200400000,
+     "ts_max": 1790787540000
+    },
+    "printDone.csv": {
+     "md5": "b8a77a46f34ce5c65e7abd33062536b2",
+     "sha256": "c5693122799ca9c0d943858f4d92d221935eb16fe9d584141ada2b4e3a7c2e48",
+     "n": 3941
+    }
+   },
+   "jar_md5": "cf0f479241265de68836716ee66a1866"
+  },
+  "V2": {
+   "ok": true,
+   "missing": []
+  },
+  "V3": {
+   "ok": true,
+   "klines_ts_max": 1790787540000
+  },
+  "V5": {
+   "ok": true,
+   "banners": {
+    "LIVE-SIZING": true,
+    "LIVE-DCA-GRID": true,
+    "GATE-RATIO": true
+   },
+   "harness": "LiveGridSizing.on=true LiveDcaGridC3.active=true fin=true TsMktExt.enabled=true",
+   "env_missing": [],
+   "env_differ": {}
+  },
+  "V6": {
+   "ok": true,
+   "minutes_processed": 132480,
+   "sel_minutes": 132480,
+   "errors": [],
+   "log_errors": [],
+   "exception_lines": 0,
+   "ks_any_latch": false,
+   "x14_meta": "simtier=installed rig_t=1782838800000 moments=[1768780800000, 1770325200000] gridDue_type=com.binance.chuyennd.c3live.entry.C3LiveEntry$GridDue calls=2 due_true=2 sim_t3_block=0 no_state=0\nx14=swapped rig_t=1782838800000 type=com.binance.chuyennd.c3live.exit.TrailingStopManager$TimeStopDefer\nfollow_true=6091055\nfollow_false=268089"
+  },
+  "V9": {
+   "ok": true,
+   "quarters": {
+    "2026Q2": {
+     "reconstructed": 3011221,
+     "sim_log": 3011221,
+     "ratio": 1.0,
+     "ok": true
+    }
+   },
+   "fed_by_quarter": {
+    "2026Q2": 3011221
+   },
+   "sim_log_seen": {
+    "2021Q3": 2788804,
+    "2021Q4": 2903314,
+    "2022Q1": 2813158,
+    "2022Q2": 2508134,
+    "2022Q3": 3008336,
+    "2022Q4": 2713227,
+    "2023Q1": 2751254,
+    "2023Q2": 2730303,
+    "2023Q3": 2886034,
+    "2023Q4": 2766068,
+    "2024Q1": 2744532,
+    "2024Q2": 2728161,
+    "2024Q3": 2919622,
+    "2024Q4": 2807935,
+    "2025Q1": 2738954,
+    "2025Q2": 2964297,
+    "2025Q3": 2964739,
+    "2025Q4": 2890695,
+    "2026Q1": 2938970,
+    "2026Q2": 3011221,
+    "2026Q3": 3041795
+   },
+   "warm_rows": 2976665,
+   "warm_from": 1775062800000
+  },
+  "ALL_OK": true
+ }
+}
