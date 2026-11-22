@@ -72,13 +72,13 @@ $H $LANE L0-FOLLOW FAKE $CAP $FLAGS $BLK E2E_FOLLOW_FILLS=$OUT/live/follow.csv |
 [ "$MODE" = official ] && $H $LANE L0-DRY DRY $CAP $FLAGS $BLK | tee -a $OUT/run_all.txt
 [ "$MODE" = official ] && $H $LANE L-10K FAKE 10000 $FLAGS $BLK | tee -a $OUT/run_all.txt
 LANES=$L0N,L0-FOLLOW; [ "$MODE" = official ] && LANES=$LANES,L0-DRY
-python3 $T/v10_buffer.py --rig-appended $OUT/$L0N/appended.csv.gz --live-buffer $LIVEBUF --start "$START" --end "$END" --out $OUT/V10.json > $OUT/v10.txt 2>&1
+python3 $T/v10_buffer.py --rig $OUT/$L0N --live $OUT/live --live-buffer $LIVEBUF --start "$START" --end "$END" --cap $CAP --out $OUT/V10.json > $OUT/v10.txt 2>&1
 python3 $T/rlive_gates.py --out-dir $OUT --fx $FX --live $OUT/live --start "$START" --end "$END" --v4-grep "$V4" --lanes $LANES --v8-lane $L0N \
   --live-banner $BANNER --v4b $OUT/v4b.json --v10 $OUT/V10.json --extra stub=$STUB env=$E2E_ENV242 ovr=$ADD24_OVR_FILE > $OUT/gates.txt 2>&1; GRC=$?
 cat $OUT/gates.txt
 if [ $GRC != 0 ] && [ "$MODE" = official ]; then echo "CONG V truot => KHONG cham (sua dau vao bang errata)"; exit 13; fi
 python3 $T/rlive_score.py --live $OUT/live --rig $OUT/$L0N --follow $OUT/L0-FOLLOW --fx $FX $MARK --cap $CAP --apply-ratio $APPLY \
-  --start "$START" --end "$END" --out $OUT/score_L0 | tee $OUT/score_L0.txt
+  --start "$START" --end "$END" --v10 $OUT/V10.json --out $OUT/score_L0 | tee $OUT/score_L0.txt
 DRYS=""
 if [ "$MODE" = official ]; then
   python3 $T/rlive_score.py --live $OUT/live --rig $OUT/L0-DRY --fx $FX $MARK --cap $CAP --apply-ratio $APPLY \

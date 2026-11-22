@@ -19,7 +19,8 @@ log = logging.getLogger('score')
 TZ7 = timezone(timedelta(hours=7))
 MIN = 60000
 PASS, FAIL, INS = 'PASS', 'FAIL', 'INSUFFICIENT'
-LABELS = ('N1', 'N2', 'N3', 'N4', 'N5', 'N6', 'N7', 'N8', 'N9')
+LABELS = ('N1', 'N2', 'N3', 'N4', 'N5', 'N6', 'N7', 'N8', 'N9', 'N12')   # N12 TIER3_DCA (ERRATA4 s2)
+ROOT_INH = ('N1', 'N2', 'N3', 'N4', 'N6', 'N9')   # ERRATA4 C1 (c): chi cac nhan goc nay duoc ke thua
 ROOT = ('N1', 'N2', 'N3', 'N4', 'N6', 'N9')
 RISKS = ['trang thai sau restart JVM (peak trailing, quota) KHONG tai hien trong rig (ERRATA3 A11)',
          'bang chung N9 thua: dong positions() loi bi throttle 10 phut (C3MainEquity:153-158)',
@@ -97,6 +98,8 @@ def main():
     ap.add_argument('--u-max', type=float, default=0.6); ap.add_argument('--arm', type=float, default=0.07)
     ap.add_argument('--fee-max', type=float, default=0.0005); ap.add_argument('--out', required=True)
     ap.add_argument('--px-bars', default='union')
+    ap.add_argument('--v10', default='', help='V10.json (v10_buffer.py): phut lech dem ngoai mien V10a -> V10b (ERRATA4 C3)')
+    ap.add_argument('--dca-levels', default='-0.5,-0.75,-0.9', help='banner [LIVE-DCA-GRID] levels (ERRATA4 L-D REF gia)')
     ap.add_argument('--no-tick-check', action='store_true', help='CHI test tong hop: khong co tick_dts.csv => N3 tat')
     a = ap.parse_args()
     S, E = ms7(a.start), ms7(a.end)
@@ -140,6 +143,10 @@ def main():
     skips = [(int(r['log_ms']), r.get('symbol', '')) for n in ('skip_paper.csv', 'skip_paper2.csv') for r in L(n)]
     blk = {(int(r['decision_ts']), r['symbol'], r['level']) for r in L('block.csv')}
     equn = [int(r['log_ms']) for r in L('eq_unavail.csv')]
+    # N12: dong '[C3-LIVE] skip SYM DCA_* TIER3_DCA ..' (C3LiveEntry:243 Outcome.TIER3_DCA -> :320 LOG.info skip, KHONG throttle)
+    t3 = [(int(r['log_ms']), r['symbol']) for n in ('skip.csv', 'khong_vao.csv') for r in L(n) if r.get('outcome') == 'TIER3_DCA']
+    def n12(sym, lvl, d):
+        return lvl.startswith('DCA') and any(s_ == sym and d <= t < d + 2 * MIN for t, s_ in t3)
     closes = sorted([(int(x['log_ms']), x['symbol'], x['reason'], fnum(x['exitAvg']), fnum(x['realized'], 0.0), fnum(x['fee'], 0.0))
                      for x in L('book_close.csv')])
     rig = [r for r in rd(a.rig + '/legs.csv') if r['outcome'] == 'SUBMITTED' and inwin(int(r['decision_ts']))]
@@ -164,6 +171,8 @@ def main():
             lb = lab(it, k, 'N3', 'live khong co dong tick "Btc ticker size .. -> dts"')
         elif side == 'rig_only' and any(x[1] == k[1] and x[0] // MIN * MIN in (k[0], k[0] + MIN) for x in skips):
             lb = lab(it, k, 'N6', 'skip so giay cung phut + symbol')
+        elif side == 'rig_only' and n12(k[1], k[2], k[0]):
+            lb = lab(it, k, 'N12', 'live skip TIER3_DCA cung symbol trong [dts, dts+120 s)')
         elif side == 'rig_only' and any(k[0] <= t < k[0] + 2 * MIN for t in equn):
             lb = lab(it, k, 'N9', "EQ_UNAVAIL positions() loi trong [dts, dts+120 s)")
         elif side == 'rig_only' and ((k[0], k[1], k[2]) in blk or (k[0], '*', '*') in blk or (k[0], k[1], '*') in blk):
@@ -196,7 +205,7 @@ def main():
     lm = {k[0] for k in LK}; rm = {k[0] for k in RK}
     ln_bad = [m for m in (lm ^ rm) if m in sel_min]
     ln_unexp = [m for m in ln_bad if any(x['decision_ts'] == m and x['label'] == 'UNEXPLAINED' and x['item'].startswith('L-E') for x in labels)]
-    s_ln = status(len(ln_unexp), len(sel_min), 1)
+    s_ln = status(len(ln_unexp), len(sel_min), 1)   # (cap nhat lai sau V10b)
 
     # cum live: symbol -> list cum {legs, t0, close}
     def live_clusters():
@@ -222,16 +231,39 @@ def main():
                 return c
         return None
 
-    def inherit(sym, t):
-        """nhan ke thua cua cum: cum live leg0 bi tu choi (N4 theo cid) hoac cum rig thua da gan nhan."""
-        c = cl_of(sym, t)
-        if c is not None:
-            cid0 = c['legs'][0]['cid']
-            if cid0 in rejected:
-                return 'N4', 'leg dau %s tu choi/het han/KHONG khop (%s)' % (cid0, rejected[cid0])
-        for (s, d0), lb in cl_label.items():
-            if s == sym and d0 <= t and lb in LABELS:
-                return lb, 'ke_thua cum %s@%d (%s)' % (s, d0, lb)
+    # ERRATA4 C1: cum goc = leg 0 lech L-E co nhan thuoc ROOT_INH; khoang ton tai: rig -> [dts leg0 ; khop SELL dau tien cua rig sau dts + 2'],
+    #   live -> [dts leg0 ; dong dong cum live dau tien sau leg0 + 2']; chua thoat => toi END. Muc chi ke thua khi CUNG symbol, CUNG phia,
+    #   thoi diem trong khoang (C1 a, b); cum co leg 0 khop KHONG ke thua (C1 e) - tru N4 truc tiep theo cid (ERRATA3 A3).
+    rsell = sorted((int(x['ms']), x['symbol']) for x in rd(a.rig + '/fills.csv') if x['side'] == 'SELL')
+    def span_end(side, sym, d0, t0):
+        if side == 'rig':
+            ts_ = [t for t, s_ in rsell if s_ == sym and t >= d0]
+        else:
+            ts_ = [c[0] for c in closes if c[1] == sym and c[0] >= t0]
+        return (ts_[0] + 2 * MIN) if ts_ else E
+    roots_c = []
+    for x in labels:
+        if x['item'].startswith('L-E') and x['leg'] == 0 and x['label'] in ROOT_INH:
+            side = 'rig' if 'rig_only' in x['item'] else 'live'
+            t0 = LK[(x['decision_ts'], x['symbol'], x['level'], 0)]['t'] if side == 'live' else x['decision_ts']
+            roots_c.append({'side': side, 'symbol': x['symbol'], 'd0': x['decision_ts'], 'end': span_end(side, x['symbol'], x['decision_ts'], t0),
+                            'label': x['label']})
+    rej_cl = []   # N4 truc tiep: leg 0 KHOP o L-E nhung lenh live bi tu choi theo cid => cum rig ton tai, live khong
+    for k in LK:
+        if k[3] == 0 and k in RK and LK[k]['cid'] in rejected:
+            rej_cl.append({'symbol': k[1], 'd0': k[0], 'end': span_end('rig', k[1], k[0], k[0]), 'ev': rejected[LK[k]['cid']], 'cid': LK[k]['cid']})
+    inh_n = {'ke_thua': 0, 'N4_cid': 0}
+
+    def inherit(sym, t, side):
+        if side == 'rig':
+            for c in rej_cl:
+                if c['symbol'] == sym and c['d0'] <= t <= c['end']:
+                    inh_n['N4_cid'] += 1
+                    return 'N4', 'leg dau %s tu choi/het han/KHONG khop (%s)' % (c['cid'], c['ev'])
+        for c in roots_c:
+            if c['symbol'] == sym and c['side'] == side and c['d0'] <= t <= c['end']:
+                inh_n['ke_thua'] += 1
+                return c['label'], 'ke_thua cum %s %s@%d..%d (%s)' % (c['side'], c['symbol'], c['d0'], c['end'], c['label'])
         return None, ''
     # ------------------------------------------------ L-S (bao s9.3, margin PENDING nhu Java - ERRATA3 A7)
     fund = L('funding.csv')
@@ -241,7 +273,7 @@ def main():
         if k[0] not in sel_min:
             continue
         t = r['t']
-        openl, realized, fee_closed_hi = [], 0.0, 0.0
+        openl, realized = [], 0.0
         for c in LC:
             if c['legs'][0]['t'] >= t:
                 continue
@@ -269,7 +301,7 @@ def main():
                 ulo += qq * (min(m[2] for m in ms) - avg); uhi += qq * (max(m[1] for m in ms) - avg)
         fl = [fnum(x.get('cum'), 0) for x in fund if int(x['log_ms']) < t]
         fsum = abs(fl[-1]) if fl else 0.0
-        E_lo = a.cap + realized - fee_closed_hi - fee_open - fsum + ulo
+        E_lo = a.cap + realized - fee_open - fsum + ulo
         E_hi = a.cap + realized + fsum + uhi
         U = fnum(r['U_before'], 0.0)
         bb = RS.bao(a.cap, E_lo, E_hi, U, r['leg'], **K)
@@ -334,7 +366,7 @@ def main():
         return pairs, lo, ro
 
     def unexp_or_inherit(item, sym, t, what):
-        lb, ev = inherit(sym, t)
+        lb, ev = inherit(sym, t, 'rig' if 'rig_only' in item else 'live')
         if lb:
             lab(item, (t // MIN * MIN, sym, what, -1), lb, ev); return 0
         lab(item, (t // MIN * MIN, sym, what, -1), 'UNEXPLAINED', what); return 1
@@ -346,8 +378,29 @@ def main():
     for x, y in pairs:
         if x[2] != y[2] or x[3] != y[3]:
             lab('L-D', (x[1], x[0], x[2], x[3]), 'UNEXPLAINED', 'bac/legIdx rig %s/%d' % (y[2], y[3]))
-    ld_bad += sum(unexp_or_inherit('L-D live_only', x[0], x[1], 'DCA') for x in lo) + sum(unexp_or_inherit('L-D rig_only', y[0], y[1], 'DCA') for y in ro)
-    ld = {'live': len(dl), 'rig': len(dr), 'pairs': len(pairs), 'live_only': len(lo), 'rig_only': len(ro), 'bad': ld_bad}
+    ld_bad += sum(unexp_or_inherit('L-D live_only', x[0], x[1], 'DCA') for x in lo)
+    n12_n = 0
+    for y in ro:
+        if n12(y[0], y[2], y[1]):
+            n12_n += 1; lab('L-D rig_only', (y[1], y[0], y[2], y[3]), 'N12', 'live skip TIER3_DCA')
+        else:
+            ld_bad += unexp_or_inherit('L-D rig_only', y[0], y[1], 'DCA')
+    # ERRATA4 L-D REF gia: moi leg DCA live bac k: close nen dts <= gia khop leg 0 x (1 + levels[k-1]) (banner [LIVE-DCA-GRID] levels)
+    lv_ = [float(x) for x in a.dca_levels.split(',')]
+    ref_bad = 0
+    for k in LK:
+        if k[3] > 0 and k[0] in sel_min:
+            c = cl_of(k[1], LK[k]['t'])
+            if c is None:
+                continue
+            l0 = c['legs'][0]; f0 = fill.get(l0['cid'])
+            p0 = f0[2] if f0 else (fnum(l0['notional'], 0.0) / fnum(l0['qty'], 1.0))
+            br = bars.get(k[1], k[0])
+            lvl = lv_[min(k[3], len(lv_)) - 1]
+            if br is None or not (br[3] <= p0 * (1 + lvl) * (1 + 1e-9)):
+                ref_bad += 1; lab('L-D REF', k, 'UNEXPLAINED', 'DCA bac %d truoc muc gia (close %s > p0 x (1%+g))' % (k[3], 'NA' if br is None else 'cao hon', lvl))
+    ld_bad += ref_bad
+    ld = {'live': len(dl), 'rig': len(dr), 'pairs': len(pairs), 'live_only': len(lo), 'rig_only': len(ro), 'N12': n12_n, 'ref_gia_bad': ref_bad, 'bad': ld_bad}
     s_ld = status(ld_bad, len(dl), 1)
     # ------------------------------------------------ L-T (arm, hai chieu, N8 chi REF-nhip)
     ev = rd(a.rig + '/events.csv')
@@ -382,21 +435,20 @@ def main():
     for x in L('trail_4130.csv'):
         e4130.setdefault(x['symbol'], []).append(int(x['log_ms']))
     lsl = {'n_live': len(sl_l), 'n_rig': len(sl_r), 'ok': 0, 'bad': 0, 'mode_N7': 0, 'arm_no_stop': 0}
+    # ERRATA4 C2: ghep 1-1 hai chieu: cap hop le = cung symbol, |dt| <= 2' VA gia trong 2 tick hoac 0,1 %; moi lan dat khong ghep = lech
     pairs, lo, ro = [], [], []
-    for s in set(x[0] for x in sl_l) | set(x[0] for x in sl_r):
-        A_ = [x for x in sl_l if x[0] == s]; B_ = [x for x in sl_r if x[0] == s]; usedB = set()
+    for s_ in set(x[0] for x in sl_l) | set(x[0] for x in sl_r):
+        A_ = sorted([x for x in sl_l if x[0] == s_], key=lambda z: z[1]); B_ = sorted([x for x in sl_r if x[0] == s_], key=lambda z: z[1])
+        tk = tick_sz.get(s_, 0); usedB = set()
+        okp = lambda x, y: abs(y[1] - x[1]) <= 2 * MIN and (abs(x[2] - y[2]) <= 2 * tk + 1e-12 or abs(x[2] - y[2]) / y[2] <= 1e-3)
         for x in A_:
-            c = [j for j, y in enumerate(B_) if abs(y[1] - x[1]) <= 2 * MIN]
+            c = [j for j, y in enumerate(B_) if j not in usedB and okp(x, y)]
             if not c:
                 lo.append(x); continue
-            j = min(c, key=lambda j: (abs(B_[j][2] - x[2]), abs(B_[j][1] - x[1]))); usedB.add(j); pairs.append((x, B_[j]))
-        ro += [y for j, y in enumerate(B_) if j not in usedB and not any(abs(y[1] - x[1]) <= 2 * MIN for x in A_)]
+            j = min(c, key=lambda j: (abs(B_[j][1] - x[1]), abs(B_[j][2] - x[2]))); usedB.add(j); pairs.append((x, B_[j]))
+        ro += [y for j, y in enumerate(B_) if j not in usedB]
     for x, y in pairs:
-        tk = tick_sz.get(x[0], 0)
-        if abs(x[2] - y[2]) <= 2 * tk + 1e-12 or abs(x[2] - y[2]) / y[2] <= 1e-3:
-            lsl['ok'] += 1
-        else:
-            lsl['bad'] += 1; lab('L-SL', (x[1] // MIN * MIN, x[0], 'STOP', -1), 'UNEXPLAINED', 'gia stop lech %.2e' % (abs(x[2] - y[2]) / y[2]))
+        lsl['ok'] += 1
         if x[3] != 'closePosition':
             if any(t <= x[1] for t in e4130.get(x[0], [])):
                 lsl['mode_N7'] += 1; lab('L-SL', (x[1] // MIN * MIN, x[0], 'MODE', -1), 'N7', '-4130 truoc do')
@@ -470,6 +522,18 @@ def main():
     s_lx = status(lx['bad'], len(x_l), 5)
     if len(x_l) >= 5 and lx['same_min'] < 0.9 * len(x_l):       # prereg s9: >= 90 % cung phut
         s_lx = FAIL
+    # ------------------------------------------------ V10b (ERRATA4 C3): phut lech dem r NGOAI mien V10a phai nam trong khoang ton tai
+    #   cua mot cum lech da co nhan (cum goc ROOT_INH hoac cum N4 theo cid); con lai = lech L-N KHONG GIAI THICH
+    v10b = {'checked': bool(a.v10), 'minutes': 0, 'explained': 0, 'unexplained': 0}
+    if a.v10:
+        vj = json.load(open(a.v10))
+        for m in vj.get('outside_domain_mismatch_minutes', []):
+            v10b['minutes'] += 1
+            if any(c['d0'] <= m <= c['end'] for c in roots_c) or any(c['d0'] <= m <= c['end'] for c in rej_cl):
+                v10b['explained'] += 1
+            else:
+                v10b['unexplained'] += 1; lab('L-N V10b', (m, '*', 'R_COUNT', -1), 'UNEXPLAINED', 'dem r buffer lech ngoai V10a, khong thuoc cum lech co nhan')
+        s_ln = status(len(ln_unexp) + v10b['unexplained'], len(sel_min), 1)
     # ------------------------------------------------ L-K
     res = json.load(open(a.rig + '/result.json'))
     rl = open(a.rig + '/run.log', errors='replace').read()
@@ -500,7 +564,8 @@ def main():
            'L-E': le, 'L-N': {'minutes_diff': len(ln_bad), 'unexplained': len(ln_unexp)}, 'L-S': ls, 'L-S2': ls2, 'L-P': lp, 'L-D': ld,
            'L-T': lt, 'L-SL': lsl, 'L-X': lx, 'L-K': lk, 'clusters_live': clusters,
            'labels_n': {lb: sum(1 for x in labels if x['label'] == lb) for lb in LABELS + ('UNEXPLAINED',)}, 'N9_phut': n9, 'warn': warn,
-           'follow': bool(a.follow), 'rui_ro_A11': RISKS}
+           'follow': bool(a.follow), 'rui_ro_A11': RISKS, 'V10b': v10b, 'inherit_n': inh_n,
+           'roots_clusters': [{k: c[k] for k in ('side', 'symbol', 'd0', 'end', 'label')} for c in roots_c]}
     json.dump(out, open(os.path.join(a.out, 'score.json'), 'w'), indent=1, default=str)
     with open(os.path.join(a.out, 'labels.csv'), 'w') as fh:
         w = csv.DictWriter(fh, fieldnames=['item', 'decision_ts', 'symbol', 'level', 'leg', 'label', 'evidence'], lineterminator='\n')

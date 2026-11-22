@@ -80,7 +80,9 @@ def main():
             if not (S <= int(r['decision_ts']) < E):
                 bad3.append(ln + ':' + r['cid'])
     g['V3'] = {'ok': not bad3 and man['START'] == S and man['END'] == E, 'violations': bad3[:20], 'fx_window': [man['START'], man['END']],
-               'lookback_allowed_ms': 86400000}
+               'lookback_allowed_ms': 86400000,
+               'lookback_from': datetime.fromtimestamp(lo / 1000, TZ7).strftime('%Y-%m-%d %H:%M +07'),
+               'ghi_chu': 'ERRATA4 s2: doc du lieu van hanh / thi truong tu START - 1 ngay (lich su cua so 15 phut, nen UTC dau ngay) toi T_cut'}
     nsub = len(sub)
     g['V4'] = {'ok': nsub == a.v4_grep, 'parsed': nsub, 'grep': a.v4_grep}
     v4b = json.load(open(a.v4b))
@@ -114,7 +116,8 @@ def main():
                         '--out', os.path.join(a.out_dir, 'V8.json')], capture_output=True, text=True)
     g['V8'] = {'ok': p.returncode == 0, 'file': os.path.join(a.out_dir, 'V8.json')}
     v10 = json.load(open(a.v10)) if a.v10 and os.path.exists(a.v10) else None
-    g['V10'] = {'ok': bool(v10 and v10.get('ok')), 'file': a.v10 or 'CHUA CHAY'}
+    g['V10a'] = {'ok': bool(v10 and v10.get('V10a_ok')), 'file': a.v10 or 'CHUA CHAY',
+                 'domain_minutes': (v10 or {}).get('domain_minutes'), 'V10a_mismatch_minutes': (v10 or {}).get('V10a_mismatch_minutes')}
     g['ok'] = all(v['ok'] for k, v in g.items() if isinstance(v, dict) and 'ok' in v)
     json.dump(g, open(os.path.join(a.out_dir, 'gates.json'), 'w'), indent=1)
     print(json.dumps({k: (v['ok'] if isinstance(v, dict) else v) for k, v in g.items()}))

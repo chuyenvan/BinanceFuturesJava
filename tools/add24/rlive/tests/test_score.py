@@ -145,6 +145,57 @@ def main():
         addrow(lv + '/submit.csv', [S + 50 * MIN + 66000, 'BBBUSDT', 'PREDICT_SYMBOL_TRADE', 'SUBMITTED', 'c3-BBBUSDT-%d-0' % ((S + 50 * MIN) // MIN), 100, 10, 0, 10, 0.05, 'f'])
         edit(lv + '/tick_dts.csv', lambda r: [x for x in r if int(x['dts']) != S + 50 * MIN])
     case('n3_khong_ap_cho_live_co_rig_khong', n3live, {'L-E': 'FAIL'})
+    # ---- luot 4: test cua A1 (r2/a1_tests.py) tai lap + ERRATA4 C1/C2 + N12 + L-D REF gia
+    def a1_1(fx, lv, rg):
+        addrow(rg + '/legs.csv', [S + 40 * MIN, S + 41 * MIN, 'BBBUSDT', 'DCA_LEVEL1', 'SUBMITTED', 'c3-BBBUSDT-z-1', 100, 10, 22, 1000, 0.1, 0.1, 1, 0.0001, '', 1000, 0, ''])
+    case('A1-1_rig_DCA_thua_mau_nho', a1_1, {'L-E': 'FAIL', 'L-D': 'FAIL'})
+    def a1_1b(fx, lv, rg):
+        addrow(lv + '/book_close.csv', [S + 95 * MIN + 3000, 'AAAUSDT', 'TRAIL', 1, 225, 0.1, 225, 0.1039, 0, 0, 'f'])
+        addrow(rg + '/fills.csv', [S + 98 * MIN, 'AAAUSDT', 'SELL', 225, 0.1039, 'c3s-AAAUSDT-1-1', 0, 0])
+    case('A1-1b_thoat_lech_3_phut_khong_REF', a1_1b, {'L-X': 'FAIL'})
+    case('A1-2_rig_thua_stop_trong_2p_cua_stop_live', lambda fx, lv, rg: addrow(rg + '/events.csv', [S + 32 * MIN, '-', 'TRAIL_STOP_PLACED', 'AAAUSDT', 0.105, 'MOVE']),
+         {'L-SL': 'FAIL'})
+    def n9c(fx, lv, rg):
+        addrow(rg + '/legs.csv', [S + 70 * MIN, S + 71 * MIN, 'BBBUSDT', 'PREDICT_SYMBOL_TRADE', 'SUBMITTED', 'c3-BBBUSDT-y-0', 100, 10, 22, 1000, 0.1, 0.1, 0, 0.0001, '', 1000, 0, ''])
+        open(lv + '/eq_unavail.csv', 'w').write('log_ms,file\n%d,f\n' % (S + 70 * MIN + 100000))
+    def a1_3(fx, lv, rg):        # cum rig N9 DONG luc S+75 => arm/stop rig BBB S+110 NGOAI cum => KHONG ke thua => FAIL
+        n9c(fx, lv, rg)
+        addrow(rg + '/fills.csv', [S + 75 * MIN, 'BBBUSDT', 'SELL', 100, 0.1, 'c3s-BBBUSDT-y-1', 0, 0])
+        addrow(rg + '/events.csv', [S + 110 * MIN, '-', 'TRAIL_ARM', 'BBBUSDT', 0, ''])
+        addrow(rg + '/events.csv', [S + 110 * MIN + 1000, '-', 'TRAIL_STOP_PLACED', 'BBBUSDT', 0.098, 'ARM'])
+    case('A1-3_arm_stop_rig_ngoai_cum_N9_FAIL', a1_3, {'L-T': 'FAIL', 'L-SL': 'FAIL'})
+    def c1_in(fx, lv, rg):       # cum rig N9 CHUA dong => arm + stop rig BBB trong cum => ke_thua N9 (khong FAIL)
+        n9c(fx, lv, rg)
+        addrow(rg + '/events.csv', [S + 90 * MIN, '-', 'TRAIL_ARM', 'BBBUSDT', 0, ''])
+        addrow(rg + '/events.csv', [S + 90 * MIN + 1000, '-', 'TRAIL_STOP_PLACED', 'BBBUSDT', 0.098, 'ARM'])
+    sc = case('C1_trong_cum_N9_ke_thua', c1_in, {'L-T': 'INSUFFICIENT', 'L-SL': 'INSUFFICIENT'})
+    check('C1_dem_ke_thua', sc['inherit_n']['ke_thua'] == 2, sc['inherit_n'])
+    case('A1-3b_arm_rig_truoc_cum_N9', lambda fx, lv, rg: (n9c(fx, lv, rg), addrow(rg + '/events.csv', [S + 50 * MIN, '-', 'TRAIL_ARM', 'BBBUSDT', 0, ''])),
+         {'L-T': 'FAIL'})
+    def c1_side(fx, lv, rg):     # sai phia: arm LIVE BBB trong khoang cum RIG N9 => khong ke thua
+        n9c(fx, lv, rg)
+        addrow(lv + '/trail_arm.csv', [S + 90 * MIN + 6000, 'BBBUSDT', 0.1, 0.1072, 0.1072, 0.104, 'f'])
+    case('C1_sai_phia_FAIL', c1_side, {'L-T': 'FAIL'})
+    def c1_root_unexp(fx, lv, rg):   # cum rig thua KHONG nhan (UNEXPLAINED) => arm cua no khong ke thua
+        addrow(rg + '/legs.csv', [S + 70 * MIN, S + 71 * MIN, 'BBBUSDT', 'PREDICT_SYMBOL_TRADE', 'SUBMITTED', 'c3-BBBUSDT-y-0', 100, 10, 22, 1000, 0.1, 0.1, 0, 0.0001, '', 1000, 0, ''])
+        addrow(rg + '/events.csv', [S + 90 * MIN, '-', 'TRAIL_ARM', 'BBBUSDT', 0, ''])
+    case('C1_goc_khong_nhan_khong_ke_thua', c1_root_unexp, {'L-T': 'FAIL', 'L-E': 'FAIL'})
+    def c1_matched(fx, lv, rg):  # (e) cum AAA leg 0 KHOP => arm rig thua tren AAA khong ke thua (co N9 o phut khac)
+        open(lv + '/eq_unavail.csv', 'w').write('log_ms,file\n%d,f\n' % (S + 10 * MIN + 30000))
+        addrow(rg + '/events.csv', [S + 60 * MIN, '-', 'TRAIL_ARM', 'AAAUSDT', 0, ''])
+    case('C1_cum_khop_khong_ke_thua', c1_matched, {'L-T': 'FAIL'})
+    def n12(fx, lv, rg):
+        addrow(rg + '/legs.csv', [S + 60 * MIN, S + 61 * MIN, 'AAAUSDT', 'DCA_LEVEL1', 'SUBMITTED', 'c3-AAAUSDT-x-1', 100, 10, 22, 1000, 0.1, 0.1, 1, 0.0001, '', 1000, 0, ''])
+        open(lv + '/skip.csv', 'w').write('log_ms,symbol,level,outcome,file\n%d,AAAUSDT,DCA_LEVEL1,TIER3_DCA,f\n' % (S + 61 * MIN + 6000))
+    s12 = case('N12_TIER3_DCA_co_dong_log', n12, {'L-D': 'INSUFFICIENT', 'L-E': 'INSUFFICIENT'})
+    check('N12_dem', s12['labels_n']['N12'] == 2, s12['labels_n'])
+    case('N12_khong_dong_log_FAIL', lambda fx, lv, rg: addrow(rg + '/legs.csv', [S + 60 * MIN, S + 61 * MIN, 'AAAUSDT', 'DCA_LEVEL1', 'SUBMITTED', 'c3-AAAUSDT-x-1', 100, 10, 22, 1000, 0.1, 0.1, 1, 0.0001, '', 1000, 0, '']),
+         {'L-D': 'FAIL'})
+    def ldref(fx, lv, rg):       # DCA live bac 1 khi gia CHUA giam 50 % => L-D REF FAIL (rig cung co leg => cap khop)
+        addrow(lv + '/submit.csv', [S + 60 * MIN + 66000, 'AAAUSDT', 'DCA_LEVEL1', 'SUBMITTED', 'c3-AAAUSDT-%d-1' % ((S + 60 * MIN) // MIN), 100, 10, 1, 10, 0.05, 'f'])
+        addrow(rg + '/legs.csv', [S + 60 * MIN, S + 61 * MIN, 'AAAUSDT', 'DCA_LEVEL1', 'SUBMITTED', 'c3-AAAUSDT-%d-1' % ((S + 60 * MIN) // MIN), 100, 10, 22, 1000, 0.1, 0.1, 1, 0.0001, '', 1000, 0, ''])
+    sr = case('L-D_REF_gia_DCA_truoc_bac_FAIL', ldref, {'L-D': 'FAIL'})
+    check('L-D_REF_dem', sr['L-D']['ref_gia_bad'] == 1, sr['L-D'])
     bad = [n for n, ok, _ in RES if not ok]
     json.dump({'n': len(RES), 'fail': bad, 'results': [{'test': n, 'ok': ok, 'detail': d} for n, ok, d in RES]},
               open(os.environ.get('TEST_OUT', '/dev/shm/add24/test_score.json'), 'w'), indent=1)

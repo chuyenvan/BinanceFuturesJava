@@ -25,6 +25,10 @@ for k in ok bad; do
   python3 -I $T/live_log_parse.py --log-files $D/$k.log --start '2026-01-01 00:00' --end '2026-01-01 02:00' --out $D/p_$k --mode full > /dev/null 2>&1
   bash $T/v4b.sh $D/p_$k/counts.json '2026-01-01 00:00' '2026-01-01 02:00' $D/v4b_$k.json $D/$k.log > $D/v4b_$k.txt 2>&1
 done
+# [ERRATA4 C4] --log-files tro vao pull242 + cua so sau 11-15 + KHONG co P1 => TU CHOI (exit 2) TRUOC khi doc file
+PF=$(ls $HOME/claude_master/pull242/2026-11-21/logs/full.log@*.gz | head -1)
+env -u ADD24_P1_APPROVED python3 -I $T/live_log_parse.py --log-files $PF --start '2026-11-19 09:31' --end '2026-11-23 07:00' --out $D/p_c4 --mode full > $D/c4.txt 2>&1
+echo $? > $D/c4.rc
 python3 - "$D" "$OUTJ" <<'PY'
 import json, sys, csv
 d, o = sys.argv[1:3]
@@ -34,6 +38,7 @@ c = json.load(open(d + '/p_ok/counts.json'))['counts']
 res = {'v4b_ok_PASS': ok['ok'] is True, 'v4b_bad_FAIL': bad['ok'] is False and bad['unmatched_c3live_lines'] == 1,
        'parsed_each_rule_once': all(c[k]['parsed'] == 1 for k in ('SUBMIT', 'EXEC_ACK', 'FILL_STREAM', 'KHONG_VAO', 'TRAIL_arm', 'TRAIL_STOP', 'EXIT_2021', 'BOOK_CLOSE', 'INC_MIN', 'TICK', 'EQ_UNAVAIL')),
        'block_star_dts': len(blk) == 1 and blk[0]['symbol'] == '*' and int(blk[0]['decision_ts']) == int(tick[0]['dts'])}
+res['c4_pull242_tu_choi_exit2'] = open(d + '/c4.rc').read().strip() == '2' and not __import__('os').path.exists(d + '/p_c4/counts.json')
 res['ok'] = all(res.values())
 json.dump(res, open(o, 'w'), indent=1); print(json.dumps(res))
 sys.exit(0 if res['ok'] else 1)

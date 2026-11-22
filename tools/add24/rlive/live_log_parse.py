@@ -132,7 +132,9 @@ def main():
         print(json.dumps([{'name': n, 'tags': list(t), 'src': s} for n, t, _, _, s in RULES]))
         return
     S, E = ms7(a.start, '%Y-%m-%d %H:%M'), ms7(a.end, '%Y-%m-%d %H:%M')
-    if a.mode == 'full' and not a.log_files and E > ms7('2026-11-15 07:00', '%Y-%m-%d %H:%M'):
+    # [ERRATA4 C4] --log-files KHONG bo qua P1 khi file nam duoi pull242 (realpath) va cua so ket thuc sau 2026-11-15
+    under_pull = (not a.log_files) or any(os.path.realpath(f).startswith(os.path.realpath(PULL) + os.sep) for f in files_of(a))
+    if a.mode == 'full' and under_pull and E > ms7('2026-11-15 07:00', '%Y-%m-%d %H:%M'):
         log.info('P1: %s', require_p1())
     os.makedirs(a.out, exist_ok=True)
     cnt = {n: {'tag_lines': 0, 'parsed': 0} for n, *_ in RULES}
