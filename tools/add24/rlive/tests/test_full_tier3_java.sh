@@ -1,5 +1,5 @@
 #!/bin/bash
-# ADD24 test ERRATA5 (Java, STUB + bwrap): D1 (a) so c3 rig day (SIM_U_MAX=0.05 CHI trong test) ma live khong day (E2E_FULL_FROM_LIVE=1,
+# ADD24 test ERRATA5 (Java, STUB + bwrap): D1 (a) so c3 rig day (SIM_U_MAX=0.001 CHI trong test) ma live khong day (E2E_FULL_FROM_LIVE=1,
 # khong dong FULL) => gate KHONG bao day (bookfull=0), rig van nap r; (b) live FULL o phut M1 => gate bookfull=1, 0 r, 0 SUBMIT o M1;
 # tier3: chan (dts, SYM, DCA_LEVEL1) theo vet => leg DCA do bien mat. Ket qua: $1 (json).
 set -u
@@ -15,8 +15,8 @@ print(r[0]['decision_ts'], r[0]['symbol'], r[0]['level'])")
 printf 'decision_ts,symbol,level,kind\n' > $D/empty.csv
 printf 'decision_ts,symbol,level,kind\n%s,FULL,*,GATE_SKIPFULL\n' $M1 > $D/full.csv
 printf 'decision_ts,symbol,level,kind\n%s,%s,%s,TIER3_DCA\n' $DD $DS $DL > $D/t3.csv
-$H $T/../run_lane_stub.sh A0 FAKE 10000 on SIM_U_MAX=0.05 E2E_LIVE_BLOCK_FILE=$D/empty.csv > $D/a0.txt 2>&1
-$H $T/../run_lane_stub.sh A1 FAKE 10000 on SIM_U_MAX=0.05 E2E_LIVE_BLOCK_FILE=$D/empty.csv E2E_FULL_FROM_LIVE=1 > $D/a1.txt 2>&1
+$H $T/../run_lane_stub.sh A0 FAKE 10000 on SIM_U_MAX=0.001 E2E_LIVE_BLOCK_FILE=$D/empty.csv > $D/a0.txt 2>&1
+$H $T/../run_lane_stub.sh A1 FAKE 10000 on SIM_U_MAX=0.001 E2E_LIVE_BLOCK_FILE=$D/empty.csv E2E_FULL_FROM_LIVE=1 > $D/a1.txt 2>&1
 $H $T/../run_lane_stub.sh B1 FAKE 10000 on E2E_LIVE_BLOCK_FILE=$D/full.csv E2E_FULL_FROM_LIVE=1 > $D/b1.txt 2>&1
 $H $T/../run_lane_stub.sh T3 FAKE 10000 on E2E_SDCA_AT=1793894400000 E2E_LIVE_BLOCK_FILE=$D/t3.csv E2E_FULL_FROM_LIVE=1 > $D/t3.txt 2>&1
 python3 - "$D" "$OUTJ" $M1 $DD $DS <<'PY'
