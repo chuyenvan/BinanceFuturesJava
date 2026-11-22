@@ -26,6 +26,9 @@ AD_SYSTEMCTL=${AD_SYSTEMCTL:-systemctl}; AD_CT242=${AD_CT242:-crontab}
 TS=$(TZ=Asia/Ho_Chi_Minh date +%Y%m%d_%H%M%S)
 W5=$(md5sum < "$_OPS/c3_autodrain_prestart.sh" | cut -c1-32); B64=$(base64 -w0 < "$_OPS/c3_autodrain_prestart.sh")
 say "=== install_242_autodrain MODE=$MODE DRY=$DRY HEAD=${_HC:0:12} wrapper_md5=$W5"
+trap 'gl_exit_report $?' EXIT   # [luot4 muc 9iii]
+# [luot4 R2-M1] wrapper cai len 242 PHAI = hang GL_AD_MD5 (monitor / gl_bootguard242 so voi hang nay)
+[ "$MODE" = rollback ] || [ "$W5" = "$GL_AD_MD5" ] || die "c3_autodrain_prestart.sh repo md5 $W5 != GL_AD_MD5 $GL_AD_MD5 (golive_lib.sh) - ban khong nhat quan, KHONG cai"
 # script chay tren 242 (buoc plan = CHI DOC; apply = ghi, chay DUNG 1 LAN qua s242in_once)
 RSCRIPT=$(cat <<'EOR'
 STEP=$1; MODE=$2; TS=$3; SB=$4; WD=$5; SD=$6; SC=$7; CT=$8; W5=$9; APP=${10}; B64=${11}

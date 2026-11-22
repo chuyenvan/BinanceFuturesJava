@@ -1299,7 +1299,7 @@ mkgm() { local c=${2:-$(( $(date +%s) * 1000 ))} d="DAT ev=$W/ev_test.txt ev_sha
     printf "$ov"; } | grep -v "^${3:-KHONGBO}=" > $GD/GOLIVE_GATE_MICRO.ok; gmbody; }
 # [OPS6 T12b/T20] gate PILOT hop le (body_sha256, han, size 5000|10000, mien X14/B2/C1, boot_guard, owner_decision) + boot guard 242 GIA da cai
 # [OPS6 luot3 m-7] repo prereg GIA cho gate PILOT: ref (g_exec/g_exit/mien/owner_decision) phai la commit CHAM docs/prereg/OWNER_DECISION_*
-PRP=$W/prereg_pilot; mkdir -p $PRP/docs/prereg; git -C $PRP init -q; echo "owner decision pilot (test)" > $PRP/docs/prereg/OWNER_DECISION_PILOT_1121_ADD1.md
+PRP=$W/prereg_pilot; mkdir -p $PRP/docs/prereg; git -C $PRP init -q; printf 'owner decision pilot (test)\nQ3 g_exec g_exit = Q4_OWNER\nX14 MIEN\nB2 MIEN\nC1 MIEN\n' > $PRP/docs/prereg/OWNER_DECISION_PILOT_1121_ADD1.md   # [luot4 R2-m5] dong Q4_OWNER / MIEN + ma muc
 git -C $PRP -c user.name=t -c user.email=t@t add -A; git -C $PRP -c user.name=t -c user.email=t@t commit -qm od; PODC=$(git -C $PRP rev-parse HEAD)
 PODS=$(git -C $PRP show $PODC:docs/prereg/OWNER_DECISION_PILOT_1121_ADD1.md | sha256sum | cut -c1-64)
 printf 'golive_check_lev SUB t key_sha8=x KET QUA: DAT\nvon_kiem=10000\n' > $W/lev_pg.txt; PLEVS=$(sha256sum < $W/lev_pg.txt | cut -c1-64)
@@ -1308,9 +1308,10 @@ python3 - "$5/GOLIVE_GATE_PILOT.ok" "$1" "$2" "$3" "$4" "$PODC" "$PODS" "$W/lev_
 import hashlib, sys, time
 f, jar, size, gx, gt, od, ods, lev, levs, ms = sys.argv[1:11]
 r = " n=5 ref=" + od[:8]
+rx = (" n=150 ref=" + od[:8]) if gx.split(" ")[0] in ("GREEN", "AMBER", "RED_SIZE") else r   # [luot4 R2-m5b] verdict g_exec can |E| >= 100
 now = int(time.time() * 1000)
 b = "\n".join(["# G-PILOT gate test_fake242", "jar_md5=" + jar, "size=" + size, "created_ms=%d" % now, "expires_ms=%d" % (now + 172800000),
-    "g_exec=" + gx + ("" if "ref=" in gx else r), "g_exit=" + gt + ("" if "ref=" in gt else r),
+    "g_exec=" + gx + ("" if "ref=" in gx else rx), "so_lenh_that_luc_tao=vao_FILLED:5 thoat_FILLED:5 (test)", "g_exit=" + gt + ("" if "ref=" in gt else r),
     "mien_x14=MIEN ref=%s test" % od[:8], "mien_b2=MIEN ref=%s test" % od[:8], "mien_c1=MIEN ref=%s test" % od[:8],
     "owner_decision=%s file=docs/prereg/OWNER_DECISION_PILOT_1121_ADD1.md sha256=%s" % (od, ods),
     "lev_ev=%s sha256=%s" % (lev, levs), "test=1", "micro_start=%s micro_days=9 micro7=DU (>= 7 ngay)" % ms,

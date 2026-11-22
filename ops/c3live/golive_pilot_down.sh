@@ -40,6 +40,10 @@ F=0; chk() { if eval "$2"; then say "OK   $1"; else say "FAIL $1"; F=1; fi; }
 C0=$(sv ENV_C3_CAPITAL)
 chk "C3_CAPITAL hien tai ($C0) > dich $SIZE (script CHI HA von)" "[[ '$C0' =~ ^[0-9]+$ ]] && [ '$C0' -gt $SIZE ]"
 chk "[m-1] C3_CAPITAL DONG CUOI env.sh ('$(sv ENVSH_C3_CAPITAL)') la so tron = process ($C0) (khong doc duoc / lech => KHONG ha von)" "[[ '$(sv ENVSH_C3_CAPITAL)' =~ ^[0-9]+$ ]] && [ '$C0' = '$(sv ENVSH_C3_CAPITAL)' ]"
+chk "[luot4 R2-m2] DA DRAIN truoc: run/KILL_SWITCH co dong 'golive_live_off drain' cua owner (co $(sv KILLSW_LO))" "[ '$(sv KILLSW_LO)' -ge 1 ] 2>/dev/null"
+[ "$(sv KILLSW_LO)" -ge 1 ] 2>/dev/null || GL_NEXT="MODE=drain bash $GL_HERE/golive_live_off.sh  (roi cho phang, chay lai DRY=1 bash $_OPS/golive_pilot_down.sh $SIZE toi khi PASS)"
+chk "[luot4 n7] run/KILL_SWITCH KHONG co dong KHAN cua golive_monitor (co $(sv KILLSW_MON); xu ly nguyen nhan KHAN truoc)" "[ '$(sv KILLSW_MON)' = 0 ]"
+[ "$(sv KILLSW_MON)" = 0 ] || GL_NEXT="bash $GL_HERE/golive_monitor.sh  (xu ly nguyen nhan KHAN cung MASTER truoc khi ha von)"
 chk "run/KILL_SWITCH KHONG co dong c3_autodrain (co $(sv KILLSW_AD); boot guard da chan khoi dong ngoai quy trinh => owner dieu tra + golive_boot_undrain.sh truoc)" "[ '$(sv KILLSW_AD)' = 0 ]"
 [ "$(sv KILLSW_AD)" -ge 1 ] 2>/dev/null && GL_NEXT="DRY=1 bash $GL_HERE/golive_boot_undrain.sh  (SAU khi dieu tra vi sao bot khoi dong NGOAI quy trinh)"
 chk "1 process bot" "[ '$(sv NPROC)' = 1 ]"
@@ -88,8 +92,7 @@ fi
 say "--- [D-01] budget leg du kien voi C3_CAPITAL=$SIZE:"
 D01=$(gl_d01_plan "$SIZE"); D01RC=$?; echo "$D01" | sed 's/^/   /'
 chk "D-01 leg0 du kien >= $MIN_LEG_BUDGET" "[ '$D01RC' = 0 ]"
-if [ "$(sv KILLSW_FILE)" = 1 ]; then GL_CAP_KS=0; say "INFO run/KILL_SWITCH CO SAN (token $(sv KILLSW_TOK)) => GIU NGUYEN, bot VAN DRAIN sau ha von (mo lai co chu dich: $(gl_ks_hint))"
-else GL_CAP_KS=1; say "INFO khong co run/KILL_SWITCH => KS token golive_pilot_down TRUOC stop, hau kiem 2 pha (go KS cua minh => PUSH ON)"; fi
+GL_CAP_KS=0; say "INFO run/KILL_SWITCH drain cua owner GIU NGUYEN, bot VAN DRAIN sau ha von (mo lai co chu dich: MODE=undrain bash $GL_HERE/golive_live_off.sh)"   # [luot4 R2-m2] luon drain truoc => khong co khe mo cum moi
 [ "$F" = 0 ] || die "kiem truoc co muc FAIL (xem tren)"
 ENV_ADD="# [v1.2 OPS6 golive_pilot_down $TS] HA VON $ACCT_TXT $C0 -> $SIZE
 export C3_CAPITAL=$SIZE"
@@ -101,7 +104,7 @@ gl_time
 gl_yes "HA VON: C3_CAPITAL $C0 -> $SIZE tren $ACCT_TXT (dung -40 % moi ~ ${EQN:+$(printf '%s\n' "$R" | sed -n 's/^STOP=//p')} USDT equity c3)." "YES HA VON $SIZE"
 gl_no_canary || die "co tien trinh $CANARY_PAT tren Oracle (vua xuat hien)"
 gl_read_state
-[ "$(sv BOOK_CUM)" = 0 ] && [ "$(sv ENV_C3_CAPITAL)" = "$C0" ] && [ "$(sv ENVSH_C3_CAPITAL)" = "$C0" ] && [ "$(sv NPROC)" = 1 ] && [ "$(sv KILLSW_AD)" = 0 ] || die "trang thai doi sau YES (so c3 $(sv BOOK_CUM) cum, von $(sv ENV_C3_CAPITAL) / env.sh $(sv ENVSH_C3_CAPITAL), process $(sv NPROC), c3_autodrain $(sv KILLSW_AD)) - khong ha von"
+[ "$(sv BOOK_CUM)" = 0 ] && [ "$(sv ENV_C3_CAPITAL)" = "$C0" ] && [ "$(sv ENVSH_C3_CAPITAL)" = "$C0" ] && [ "$(sv NPROC)" = 1 ] && [ "$(sv KILLSW_AD)" = 0 ] && [ "$(sv KILLSW_LO)" -ge 1 ] 2>/dev/null && [ "$(sv KILLSW_MON)" = 0 ] || die "trang thai doi sau YES (so c3 $(sv BOOK_CUM) cum, von $(sv ENV_C3_CAPITAL) / env.sh $(sv ENVSH_C3_CAPITAL), process $(sv NPROC), c3_autodrain $(sv KILLSW_AD)) - khong ha von"
 gl_mon_flag_set || die "KHONG ghi duoc co monitor $GL_MON_FLAG"
 gl_mon_repin || die "pin lai cron golive_monitor LOI"
 API=$(gl_api242 mon) || die "ssh toi 242 loi (doc tmb)"

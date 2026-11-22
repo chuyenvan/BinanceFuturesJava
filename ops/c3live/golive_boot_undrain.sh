@@ -52,9 +52,14 @@ if [ "$NO" -le 0 ]; then say "--- SAU (du kien): file CHI co dong c3_autodrain =
 else say "--- SAU (du kien): con $NO dong NGUOI KHAC (giu nguyen) => bot VAN DRAIN; chi go $(kv "$K0" KS_AD) dong c3_autodrain"; fi
 [ "$DRY" = 1 ] && { say "DRY=1: KHONG ghi gi len 242. (DRY PASS)"; exit 0; }
 gl_yes "MO LAI sau boot guard: go $(kv "$K0" KS_AD) dong c3_autodrain khoi run/KILL_SWITCH ($( [ "$NO" -le 0 ] && echo 'bot se MO LENH MOI' || echo "con $NO dong khac => van drain"))." "YES MO LAI"
-R=$(s242in_once "RX='$GL_AD_RX' bash -s -- $A $TS" <<'EOR'
+R=$(s242in_once "RX='$GL_AD_RX' PP='$(gl_rx "$PROC_PAT")' NJ=$NJ_MD5 bash -s -- $A $TS" <<'EOR'
 A=$1; TS=$2; cd "$A" || { echo "KSU=LOI_cd"; echo END_KSU; exit 0; }
 K=run/KILL_SWITCH
+# [OPS6 luot4 R2-m3] kiem LAI NGAY truoc khi go (owner co the do du o prompt): dung 1 JVM, adapter process live, jar = pin; sai => KHONG go
+NP=$(pgrep -fc "$PP"); P=$(pgrep -f "$PP" | head -1)
+[ "$NP" = 1 ] || { echo "KSU=LOI_NPROC_$NP"; echo END_KSU; exit 0; }
+AD=$(tr '\0' '\n' < /proc/$P/environ 2>/dev/null | sed -n 's/^LIVE_ADAPTER=//p' | tail -1); [ "$AD" = live ] || { echo "KSU=LOI_ADAPTER_$(printf '%s' "$AD" | tr -cd 'a-z')"; echo END_KSU; exit 0; }
+JM=$(md5sum < target/binance-java-sdk-1.2.4.jar 2>/dev/null | cut -c1-32); [ "$JM" = "$NJ" ] || { echo "KSU=LOI_JAR"; echo END_KSU; exit 0; }
 if [ ! -e $K ]; then echo "KSU=KHONG_CO_FILE"; echo END_KSU; exit 0; fi
 cp -p $K $K.bu_$TS || { echo "KSU=LOI_backup"; echo END_KSU; exit 0; }
 NA=$(grep -cxE "$RX" $K.bu_$TS); NO=$(grep -cvxE "$RX" $K.bu_$TS)
@@ -90,6 +95,9 @@ case "$U" in
     else GL_NEXT="MODE=undrain bash $_OPS/golive_live_off.sh"; fi
     M="CHUA MO: da go dong c3_autodrain nhung run/KILL_SWITCH CON $(kv "$R" SAU_N) dong cua ${LOAI:-?} (giu nguyen) => bot VAN DRAIN"
     say "KET QUA: $M. Log: $LOG"; tg "[golive] BOOT UNDRAIN TS=$TS: $M. Log $LOG" || :; exit 1 ;;
+  LOI_NPROC_*|LOI_ADAPTER*|LOI_JAR)   # [luot4 R2-m3] trang thai doi trong luc cho YES => KHONG go
+    GL_NEXT="DRY=1 bash $_OPS/golive_boot_undrain.sh  (doc lai trang thai; $U)"
+    say "TU CHOI: trang thai 242 DOI sau YES ($U: so JVM / adapter / jar) - run/KILL_SWITCH KHONG doi. Log: $LOG"; exit 1 ;;
   KHONG_CO_FILE|KHONG_CO_DONG_AUTODRAIN) say "KET QUA: KHONG CAN ($U) - khong doi gi. Log: $LOG"; exit 0 ;;
   *) M="go dong boot guard LOI / khong ro (${U:-ssh?}) - run/KILL_SWITCH KHONG doi (hoac khong xac nhan). Chay lai lenh."
     GL_NEXT="DRY=1 bash $_OPS/golive_boot_undrain.sh  (doc lai run/KILL_SWITCH roi moi chay lai)"; say "KHAN: $M"; tg "[golive] KHAN TS=$TS boot_undrain: $M | log $LOG" || :; exit 2 ;;

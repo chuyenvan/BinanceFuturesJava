@@ -100,6 +100,7 @@ fi
 MODE=${MODE:-}
 DRY_CAPITAL=${DRY_CAPITAL:-10000}
 gl_init golive_live_off
+[ "$MODE" = drain ] && [ "${DRY:-0}" != 1 ] || trap 'gl_exit_report $?' EXIT   # [luot4 muc 9iii] drain that giu trap _lo_exit rieng
 if [ -n "$_PW$_MW" ]; then   # chi toi day khi drain that (fail-open)
   say "!!!!!!!!!! CANH BAO: golive_live_off drain chay voi ban CHUA duoc pin/duyet - VAN CHAY (lenh giam rui ro, quyet dinh MASTER) !!!!!!!!!!"
   [ -n "$_PW" ] && say "!!! CANH BAO [m1]: $_PW"

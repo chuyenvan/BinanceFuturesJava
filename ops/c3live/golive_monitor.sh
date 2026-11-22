@@ -222,10 +222,14 @@ if [ -f "$GL_MON_FLAG" ] || [ "$(sv ENV_LIVE_ADAPTER)" = live ]; then
     # [OPS6 luot3 m-4] boot guard 242 MOI luot (CHI DOC: md5 + quyen x wrapper, cron WD_PRESTART, drop-in systemd) khi bot live: mat => KHAN
     #   (bot crash/reboot luc do se len MO LENH MOI). Test gia: MON_BG_CHECK=0 CHI hieu luc khi GL_TEST=1.
     if [ "$(sv ENV_LIVE_ADAPTER)" = live ] && { [ "${GL_TEST:-0}" != 1 ] || [ "${MON_BG_CHECK:-1}" = 1 ]; }; then
-      gl_bootguard242
+      # [luot4 R2-m6] CHUA_CAI phai lap 2 luot LIEN TIEP moi KHAN (luot dau WARN; 1 lan crontab -l loi tam / tra rong khong bao dong);
+      #   LOI (ssh) => WARN, khong doi bo dem. Bo dem $LOGDIR/c3_monitor_bg.txt (ghi ca khi DRY - chi la bo dem Oracle).
+      gl_bootguard242; BGF=$LOGDIR/c3_monitor_bg.txt; BGN=$(sed -n 's/^n=//p' "$BGF" 2>/dev/null | head -1); [[ "$BGN" =~ ^[0-9]+$ ]] || BGN=0
       case "$BG" in
-        CAI) ;;
-        CHUA_CAI) KA="$KA boot_guard_MAT($(printf '%s' "$BG_DETAIL" | tr ' ' ','))";;
+        CAI) printf 'n=0\nts=%s\n' "$TS" > "$BGF" 2>/dev/null ;;
+        CHUA_CAI) BGN=$((BGN + 1)); printf 'n=%s\nts=%s\n' "$BGN" "$TS" > "$BGF" 2>/dev/null
+          if [ "$BGN" -ge 2 ]; then KA="$KA boot_guard_MAT($(printf '%s' "$BG_DETAIL" | tr ' ' ','))_${BGN}_luot"
+          else say "WARN boot guard 242 CHUA_CAI lan $BGN/2 ($BG_DETAIL) - luot sau con mat => KHAN"; fi ;;
         *) say "WARN boot guard 242: khong doc duoc ($BG_DETAIL) - luot sau kiem lai";;
       esac
     fi

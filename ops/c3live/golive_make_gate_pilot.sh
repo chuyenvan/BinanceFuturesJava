@@ -12,6 +12,9 @@
 # [OPS6 luot3] m-7: G_EXEC / G_EXIT MOI dang (ke ca GREEN/AMBER/DAT) bat buoc n=<so nguyen >= 1> va ref=<commit>; MOI ref (G_*, MIEN_*, MIEN_MICRO7,
 #   OWNER_DECISION) phai la commit trong PREREG_REPO co CHAM file docs/prereg/OWNER_DECISION_* (git log -- path). Ghi de GL_MICRO_START /
 #   PREREG_REPO / OWNER_DECISION_FILE / NJ_MD5 / GATE_MAX_AGE_S CHI hieu luc khi GL_TEST=1 (golive_lib) => gate ghi test=1 (pilot_on that TU CHOI).
+#   [luot4 R2-m5] MIEN_<X> ref = commit OWNER_DECISION co DONG "MIEN" + ma muc <X>; Q4_OWNER ref = commit OWNER_DECISION co dong "Q4_OWNER" va
+#   n = DUNG so dem that (N_VAO g_exec / N_THOAT g_exit); GREEN/AMBER/RED_SIZE (g_exec, ADD2 s2.2: verdict |E| >= 100) / DAT (g_exit, ADD3) giu
+#   theo van ban, ref = commit prereg, n >= so dem that.
 #   n-6: LEV_EV bat buoc: file ton tai, "KET QUA: DAT", von_kiem=<PILOT_SIZE>, tuoi < 48 h; sha256 ghi vao gate (lev_ev=). m-8: dem lenh = timeout 120
 #   + nice 19 + ionice -c3 (neu co), CHI logs/full.log (+ full.log.1 neu xoay SAU moc micro). body_sha256 CHI chong sua nham (khong phai chu ky).
 # TU CHOI (exit 1, khong ghi) khi:
@@ -60,13 +63,13 @@ for v in "$GX" "$GT" "$MX" "$MB" "$MC" "$M7"; do one "$v" || need "tham so co ky
 if ! [[ "$GX" =~ ^(GREEN|AMBER|RED_SIZE|Q4_OWNER)\ [^\ ] ]]; then need "G_EXEC='$GX' thieu / sai (GREEN|AMBER|RED_SIZE|Q4_OWNER n=<so> ref=<commit> <dan chung>)"
 else
   [[ " $GX " =~ \ n=[1-9][0-9]*\  ]] || need "G_EXEC ${GX%% *} thieu n=<so leg that thuc te, so nguyen >= 1>"
-  iscommit "$(refof "$GX")" || need "G_EXEC ${GX%% *} thieu ref=<commit quyet dinh owner (cham docs/prereg/OWNER_DECISION_*) trong $PREREG_REPO>"
+  gl_iscommit_any "$(refof "$GX")" || need "G_EXEC ${GX%% *} thieu ref=<commit trong $PREREG_REPO: Q4_OWNER => commit OWNER_DECISION co dong Q4_OWNER>"
 fi
 if [[ "$GT" =~ ^TRUOT ]]; then need "G_EXIT=TRUOT (ADD3: G-EXIT TRUOT => KHONG pilot)"
 elif ! [[ "$GT" =~ ^(DAT|Q4_OWNER)\ [^\ ] ]]; then need "G_EXIT='$GT' thieu / sai (DAT|Q4_OWNER n=<so> ref=<commit> <median> <R> <dan chung>)"
 else
   [[ " $GT " =~ \ n=[1-9][0-9]*\  ]] || need "G_EXIT ${GT%% *} thieu n=<so lenh thoat thuc te, so nguyen >= 1>"
-  iscommit "$(refof "$GT")" || need "G_EXIT ${GT%% *} thieu ref=<commit quyet dinh owner (cham docs/prereg/OWNER_DECISION_*) trong $PREREG_REPO>"
+  gl_iscommit_any "$(refof "$GT")" || need "G_EXIT ${GT%% *} thieu ref=<commit trong $PREREG_REPO: Q4_OWNER => commit OWNER_DECISION co dong Q4_OWNER>"
 fi
 evsha() { [ -n "$1" ] && [ -s "$1" ] && [ -r "$1" ] && sha256sum < "$1" | cut -c1-64; }
 GXS=$(evsha "$GXE") || need "G_EXEC_EV='$GXE' (file bang chung g_exec) thieu / rong"
@@ -74,7 +77,7 @@ GTS=$(evsha "$GTE") || need "G_EXIT_EV='$GTE' (file bang chung g_exit) thieu / r
 for p in "MIEN_X14:$MX" "MIEN_B2:$MB" "MIEN_C1:$MC"; do
   n=${p%%:*}; v=${p#*:}
   if ! [[ "$v" =~ ^(MIEN|DA_SUA)\ ref=[0-9a-f]{7,40}(\ .*)?$ ]]; then need "$n='$v' thieu / sai - CHUA co quyet dinh owner (MIEN|DA_SUA ref=<commit> <ghi chu>), KHONG mac dinh"
-  elif ! iscommit "$(refof "$v")"; then need "$n ref=$(refof "$v") khong phai commit cham docs/prereg/OWNER_DECISION_* trong $PREREG_REPO"; fi
+  elif ! gl_od_kw "$(refof "$v")" "${v%% *}" "${n#MIEN_}"; then need "$n ref=$(refof "$v") khong phai commit cham docs/prereg/OWNER_DECISION_* co DONG '${v%% *}' + '${n#MIEN_}' (luot4 R2-m5a: commit phai ghi quyet dinh cua DUNG muc nay; vd f22e5db8) trong $PREREG_REPO"; fi
 done
 ODF=""; ODS=""
 if ! iscommit "$OD"; then need "OWNER_DECISION='$OD' khong phai commit cham docs/prereg/OWNER_DECISION_* trong $PREREG_REPO (quyet dinh owner pilot, vd 8cc2704f)"
@@ -116,6 +119,10 @@ printf '%s\n' "$NO" | grep -qx END_NO || need "242: dem lenh that (log [C3-LIVE-
 NV=$(printf '%s\n' "$NO" | sed -n 's/^N_VAO=//p'); NT=$(printf '%s\n' "$NO" | sed -n 's/^N_THOAT=//p')
 echo "   242 lenh that FILLED (log, uniq cid): vao=${NV:-?} thoat=${NT:-?} ($(printf '%s\n' "$NO" | sed -n 's/^LOGS=//p'))"
 [ "$(printf '%s\n' "$NO" | sed -n 's/^RC_GREP=//p')" = 124 ] && need "242: dem lenh qua 120 s (timeout) - so khong tron ven"
+# [luot4 R2-m5b/c] noi dung G_EXEC / G_EXIT doi chieu van ban + so dem that (gl_gx_check: Q4_OWNER => ref co dong Q4_OWNER, n = DUNG so dem;
+#   GREEN/AMBER/RED_SIZE (ADD2 s2.2, verdict |E| >= 100) / DAT (ADD3) => n >= so dem)
+if [[ "$GX" =~ ^(GREEN|AMBER|RED_SIZE|Q4_OWNER)\ [^\ ] ]]; then x=$(gl_gx_check g_exec "$GX" "${NV:-x}"); [ -z "$x" ] || need "G_EXEC: $x (n trong G_EXEC=$(printf ' %s ' "$GX" | grep -oE ' n=[0-9]+ ' | head -1 | tr -dc '0-9'); so leg vao THAT dem tu log 242: ${NV:-?})"; fi
+if [[ "$GT" =~ ^(DAT|Q4_OWNER)\ [^\ ] ]]; then x=$(gl_gx_check g_exit "$GT" "${NT:-x}"); [ -z "$x" ] || need "G_EXIT: $x (n trong G_EXIT=$(printf ' %s ' "$GT" | grep -oE ' n=[0-9]+ ' | head -1 | tr -dc '0-9'); so lenh thoat THAT dem tu log 242: ${NT:-?})"; fi
 DTS=$(sed -n 's/^dry_ts=//p' "$GL_MON_FLAG" 2>/dev/null | head -1)
 [ -z "$WHY" ] || no "thieu / sai dieu kien G-PILOT:$WHY"
 NOW=$(( NOWS * 1000 )); EXP=$(( NOW + GATE_MAX_AGE_S * 1000 ))

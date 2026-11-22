@@ -97,7 +97,7 @@ git -C "$PREREG_REPO" merge-base --is-ancestor "$PRC" HEAD 2>/dev/null || no "pr
 # [OPS-MICRO3 n3] limits_file GHIM CUNG phai co tai prereg_commit (MASTER viet + commit), khong rong, chi LF
 git -C "$PREREG_REPO" cat-file -e "$PRC:$LIMF" 2>/dev/null || no "prereg_commit $PRC KHONG co $LIMF (MASTER viet + commit file gioi han da biet truoc khi tao gate)"
 [ -n "$(git -C "$PREREG_REPO" show "$PRC:$LIMF" | tr -d '[:space:]')" ] || no "$LIMF tai $PRC RONG (phai liet ke MOI gioi han / khac biet da biet)"
-! git -C "$PREREG_REPO" show "$PRC:$LIMF" | grep -q $'\r' || no "$LIMF tai $PRC co ky tu CR (phai LF)"
+_LIMC=$(git -C "$PREREG_REPO" show "$PRC:$LIMF" 2>/dev/null); [[ $_LIMC != *$'\r'* ]] || no "$LIMF tai $PRC co ky tu CR (phai LF)"   # [luot4 n1] khong pipe grep -q (SIGPIPE => fail-open)
 # [OPS-MICRO3 n2] tu prereg_commit toi HEAD KHONG commit nao doi addendum / PREREG_E2E_REPLAY_V12*.md (ke ca ERRATA moi) / limits_file
 PCHG=$(git -C "$PREREG_REPO" diff --name-only "$PRC" HEAD -- "$PREREG_FILE" "$LIMF" 'docs/prereg/PREREG_E2E_REPLAY_V12*.md' 2>&1) && [ -z "$PCHG" ] \
   || no "tu prereg_commit $PRC toi HEAD $PREREG_REPO co thay doi prereg/limits: $(echo "$PCHG" | tr '\n' ' ' | cut -c1-200)- gate phai dua tren prereg_commit MOI (HEAD)"

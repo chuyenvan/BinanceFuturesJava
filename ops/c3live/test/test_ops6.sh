@@ -100,6 +100,7 @@ cd "$(dirname "$0")/.."
 PN=$(cat FAKE_PN)
 case "$1" in
   stop) [ -f FAKE_NOSTOP ] && exit 0
+    [ -f FAKE_BOOK_ON_STOP ] && { rm -f FAKE_BOOK_ON_STOP; echo '{"clusters":[{"symbol":"C09USDT","legs":[]}]}' > run/c3live_book.json; }
     [ -f FAKE_PAUSE_PATH ] && echo "STOP PAUSE=$(head -c 40 "$(cat FAKE_PAUSE_PATH)" 2>/dev/null | tr -d '\n')" >> run/stop_trace.txt
     pkill -f "$PN"; sleep 0.3; pkill -9 -f "$PN"; :
     [ -f FAKE_DRAIN_ON_STOP ] && { rm -f FAKE_DRAIN_ON_STOP; echo "golive_live_off drain 20990101_000002" > run/KILL_SWITCH; }
@@ -108,7 +109,8 @@ case "$1" in
   start)
     if [ -f FAKE_KILL_ON_START ]; then rm -f FAKE_KILL_ON_START
       [ -f FAKE_DRAIN_ON_KILL ] && { rm -f FAKE_DRAIN_ON_KILL; echo "golive_live_off drain 20990101_000003" > run/KILL_SWITCH; }
-      [ -f FAKE_WD_START_ON_KILL ] && { rm -f FAKE_WD_START_ON_KILL; bash bin/daemon.sh start >/dev/null 2>&1; }   # "watchdog" start TRUOC khi ssh chet
+      [ -f FAKE_WD_START_ON_KILL ] && { rm -f FAKE_WD_START_ON_KILL; bash bin/daemon.sh start >/dev/null 2>&1; }
+      [ -f FAKE_LOCK_ON_KILL ] && { rm -f FAKE_LOCK_ON_KILL; nohup python3 -c "import fcntl,time; f=open('$(dirname "$(cat FAKE_PAUSE_PATH)")/.lock','a'); fcntl.flock(f,fcntl.LOCK_EX); time.sleep(40)" >/dev/null 2>&1 < /dev/null & sleep 0.5; }   # "watchdog" start TRUOC khi ssh chet
       kill -9 $PPID; exit 0; fi
     set -a; . conf/env.sh; set +a; export PN
     D=$(TZ=Asia/Ho_Chi_Minh date '+%d/%m/%Y %H:%M:%S.000')
@@ -192,7 +194,7 @@ printf '*/2 * * * * %s/h242_watchdog.sh >> /var/lib/h242_watchdog/cron.out 2>&1\
 PR=$W/prereg; mkdir -p "$PR/docs/prereg"; git -C "$PR" init -q
 echo "Q1 10000 Q2 jar hotfix Q3 g_exec/g_exit Q4_OWNER Q4 boot guard" > "$PR/docs/prereg/OWNER_DECISION_PILOT_1121_ADD1.md"
 git -C "$PR" add -A; git -C "$PR" -c user.name=t -c user.email=t@t commit -qm od; ODC=$(git -C "$PR" rev-parse HEAD)
-echo "mien X14 B2 C1 (test)" > "$PR/docs/prereg/OWNER_DECISION_MIEN_TEST.md"; git -C "$PR" add -A; git -C "$PR" -c user.name=t -c user.email=t@t commit -qm mien; MRC=$(git -C "$PR" rev-parse --short HEAD)
+echo "MIEN X14 B2 C1 (test)" > "$PR/docs/prereg/OWNER_DECISION_MIEN_TEST.md"; git -C "$PR" add -A; git -C "$PR" -c user.name=t -c user.email=t@t commit -qm mien; MRC=$(git -C "$PR" rev-parse --short HEAD)
 printf 'golive_check_lev SUB t key_sha8=x KET QUA: DAT\nvon_kiem=10000\n' > "$W/lev10000.txt"
 echo "bang chung g_exec (test): 73 leg" > "$W/ev_gexec.md"; echo "bang chung g_exit (test): 12 lenh thoat" > "$W/ev_gexit.md"
 export SSH_242="bash $W/fakessh.sh" FAKESSH_PLAN=$W/sshplan SCP_242=false RHOST="" APP_DIR=$F PROC_PAT="$PN" WD_PAUSE=$W/PAUSE WD_PAUSE_MAX_S=300 \
@@ -224,10 +226,11 @@ reset242() {   # $1 = C3_CAPITAL dinh trong file dinh (mo phong JVM micro da cha
   (cd "$F" && bin/daemon.sh start >/dev/null 2>&1); sleep 0.5
 }
 reset242 1005
+for c in c3-T1USDT-1-0 c3-T2USDT-1-0 c3-T3USDT-1-0 c3x-T1USDT-1 c3s-T2USDT-1; do echo "01/01/2026 00:00:00.000 INFO x [C3-LIVE-ORDER] status=FILLED cid=$c" >> $F/logs/full.log; done   # [luot4 R2-m5c] so lenh that: vao 3, thoat 2
 # =============================================================================== T20 boot guard: cai (DRY / that / lan 2)
 echo "== T20 boot guard: install_242_autodrain (242 gia)"
-MGE() { env PILOT_SIZE=10000 OWNER_DECISION=$ODC G_EXEC="Q4_OWNER n=73 ref=$MRC 73/100 leg that (test)" G_EXEC_EV=$W/ev_gexec.md \
-  G_EXIT="Q4_OWNER n=12 ref=$MRC thieu mau thoat (test)" G_EXIT_EV=$W/ev_gexit.md MIEN_X14="MIEN ref=$MRC owner mien X14 (test)" \
+MGE() { env PILOT_SIZE=10000 OWNER_DECISION=$ODC G_EXEC="Q4_OWNER n=3 ref=$ODC 73/100 leg that (test)" G_EXEC_EV=$W/ev_gexec.md \
+  G_EXIT="Q4_OWNER n=2 ref=$ODC thieu mau thoat (test)" G_EXIT_EV=$W/ev_gexit.md MIEN_X14="MIEN ref=$MRC owner mien X14 (test)" \
   MIEN_B2="MIEN ref=$MRC owner mien B2 (test)" MIEN_C1="MIEN ref=$MRC owner mien C1 (test)" "$@"; }   # GL_MICRO_START: export chung (8 ngay truoc)
 OUT=$(MGE DRY=1 bash "$HERE/golive_make_gate_pilot.sh" 2>&1); RC=$?
 chk "T12b make_gate_pilot: boot guard CHUA cai => TU CHOI (T20 bat buoc)" '[ $RC = 1 ] && echo "$OUT" | grep -q "boot guard T20 CHUA CAI"'
@@ -245,9 +248,9 @@ echo "== T12b golive_make_gate_pilot.sh"
 G=$W/gates/GOLIVE_GATE_PILOT.ok
 OUT=$(MGE DRY=1 bash "$HERE/golive_make_gate_pilot.sh" 2>&1); RC=$?
 chk "make_gate DRY: du bang chung => in gate, KHONG ghi file" '[ $RC = 0 ] && echo "$OUT" | grep -q "^boot_guard=CAI" && echo "$OUT" | grep -q "DRY=1: KHONG ghi" && [ ! -e $G ]'
-OUT=$(env PILOT_SIZE=10000 OWNER_DECISION=$ODC G_EXEC="Q4_OWNER n=73 ref=$MRC x" G_EXEC_EV=$W/ev_gexec.md G_EXIT="Q4_OWNER n=12 ref=$MRC x" G_EXIT_EV=$W/ev_gexit.md MIEN_X14="MIEN ref=$MRC t" MIEN_B2="MIEN ref=$MRC t" MIEN_C1="MIEN ref=$MRC t" GL_MICRO_START="2026-11-19 09:31:00 +07" bash "$HERE/golive_make_gate_pilot.sh" 2>&1); RC=$?
+OUT=$(env PILOT_SIZE=10000 OWNER_DECISION=$ODC G_EXEC="Q4_OWNER n=3 ref=$ODC x" G_EXEC_EV=$W/ev_gexec.md G_EXIT="Q4_OWNER n=2 ref=$ODC x" G_EXIT_EV=$W/ev_gexit.md MIEN_X14="MIEN ref=$MRC t" MIEN_B2="MIEN ref=$MRC t" MIEN_C1="MIEN ref=$MRC t" GL_MICRO_START="2026-11-19 09:31:00 +07" bash "$HERE/golive_make_gate_pilot.sh" 2>&1); RC=$?
 chk "make_gate: moc micro THAT 2026-11-19 09:31 +07 (hom nay < 7 ngay), khong MIEN_MICRO7 => TU CHOI, khong ghi" '[ $RC = 1 ] && echo "$OUT" | grep -q "micro moi .* ngay < 7 ke tu 2026-11-19 09:31:00 +07" && [ ! -e $G ]'
-OUT=$(env PILOT_SIZE=10000 OWNER_DECISION=$ODC G_EXEC="Q4_OWNER n=73 ref=$MRC x" G_EXEC_EV=$W/ev_gexec.md G_EXIT="Q4_OWNER n=12 ref=$MRC x" G_EXIT_EV=$W/ev_gexit.md MIEN_X14="MIEN ref=$MRC t" MIEN_B2="MIEN ref=$MRC t" MIEN_C1="MIEN ref=$MRC t" MIEN_MICRO7="MIEN ref=$MRC owner mien 7 ngay (test)" GL_MICRO_START="2026-11-19 09:31:00 +07" DRY=1 bash "$HERE/golive_make_gate_pilot.sh" 2>&1); RC=$?
+OUT=$(env PILOT_SIZE=10000 OWNER_DECISION=$ODC G_EXEC="Q4_OWNER n=3 ref=$ODC x" G_EXEC_EV=$W/ev_gexec.md G_EXIT="Q4_OWNER n=2 ref=$ODC x" G_EXIT_EV=$W/ev_gexit.md MIEN_X14="MIEN ref=$MRC t" MIEN_B2="MIEN ref=$MRC t" MIEN_C1="MIEN ref=$MRC t" MIEN_MICRO7="MIEN ref=$MRC owner mien 7 ngay (test)" GL_MICRO_START="2026-11-19 09:31:00 +07" DRY=1 bash "$HERE/golive_make_gate_pilot.sh" 2>&1); RC=$?
 chk "make_gate: micro < 7 ngay + MIEN_MICRO7 owner (ref commit) => chap nhan, ghi micro7=MIEN_OWNER" '[ $RC = 0 ] && echo "$OUT" | grep -q "micro7=MIEN_OWNER MIEN ref=$MRC"'
 for v in MIEN_X14 MIEN_B2 MIEN_C1; do
   OUT=$(MGE $v= DRY=1 bash "$HERE/golive_make_gate_pilot.sh" 2>&1); RC=$?
@@ -355,6 +358,7 @@ chk "A-02 SAU sua: cung kich ban 10000 -> 5000 => a02 truoc start, dd = 0, KHONG
 up10k; rm -f $W/py/bin/python3; sed -i 's/"latch":"NONE"/"latch":"NO_NEW_ENTRY"/' $F/run/killsw_latch.json; OUT=$(a02drv $HERE); ln -s "$(command -v python3)" $W/py/bin/python3
 chk "A-02 SAU sua: khong python + latch != NONE (khong dat lai duoc) => KHONG ha von: env.sh ve 10000 (khop dinh), start lai 10000, FAIL ro" 'echo "$OUT" | grep -q "FAIL a02_doi_von_khong_dat_lai_duoc_dinh" && [ "$(envcap)" = 10000 ] && penv | grep -qx C3_CAPITAL=10000 && grep -q "eq=10000.00 dd_C6=0.0000" $F/run/ksim_last.txt'
 up10k; rm -f $W/py/bin/python3; OUT=$(a02drv $HERE); ln -s "$(command -v python3)" $W/py/bin/python3
+up10kd() { up10k; printf 'golive_live_off drain 20261122_9\n' > $F/run/KILL_SWITCH; }   # [luot4 R2-m2] pilot_down bat buoc drain truoc
 chk "A-02 SAU sua: khong python + latch NONE => killsw_reset.req reset_peak=1 (co che jar) => JVM 5000 dd = 0" 'echo "$OUT" | grep -q "OK a02_yeu_cau_reset_peak" && simok 5000.00 && ls $F/run/killsw_reset.req.done_sim >/dev/null 2>&1'
 echo "== N1: ssh dut sau khi bot DA dung + owner drain chen giua"
 reset242 1005; cp -p $W/gate_ok $G; touch $F/FAKE_KILL_ON_START $F/FAKE_DRAIN_ON_KILL; yp $OH
@@ -480,9 +484,9 @@ chk "B1 doi chung: dong cron TRUOC khi cai (khong WD_PRESTART) => watchdog dung 
 echo "== LUOT 2 B2: golive_pilot_down.sh (ha von, chi khi phang)"
 pdn() { LN0=$(wc -l < "$F/logs/full.log"); OUT=$(printf '%s\n' "${2:-}" | bash "$HERE/golive_pilot_down.sh" $1 2>&1); RC=$?; }
 rstart() { bash $F/bin/daemon.sh stop >/dev/null 2>&1; (cd $F && bin/daemon.sh start >/dev/null 2>&1); sleep 0.5; }
-up10k; OUT=$(DRY=1 bash "$HERE/golive_pilot_down.sh" 5000 2>&1); RC=$?
+up10kd; OUT=$(DRY=1 bash "$HERE/golive_pilot_down.sh" 5000 2>&1); RC=$?
 chk "pilot_down DRY 10000 -> 5000 (phang): DRY PASS, IN von cu->moi, equity c3, du kien 5000, dinh dat lai, dung -40 % = 3000 USDT (lo 2000), so vi the; 242 khong doi" '[ $RC = 0 ] && echo "$OUT" | grep -q "DRY PASS" && echo "$OUT" | grep -q "von C3_CAPITAL: 10000 -> 5000" && echo "$OUT" | grep -q "so c3 0 cum, san 0 vi the" && echo "$OUT" | grep -q "equity c3 hien tai .*eq=10000.00" && echo "$OUT" | grep -q "du kien sau ha = 5000 + 0.00 = 5000.00" && echo "$OUT" | grep -q "dinh C6/A40 se DAT LAI" && echo "$OUT" | grep -q "equity c3 <= 3000.00 USDT (lo them 2000.00" && [ "$(envcap)" = 10000 ]'
-up10k; echo -300 > $F/FAKE_PNL; rstart; OUT=$(DRY=1 bash "$HERE/golive_pilot_down.sh" 5000 2>&1); RC=$?
+up10kd; echo -300 > $F/FAKE_PNL; rstart; OUT=$(DRY=1 bash "$HERE/golive_pilot_down.sh" 5000 2>&1); RC=$?
 chk "pilot_down DRY: realized cong don -300 (ledger KHONG reset - quyet dinh MASTER) => IN ro: du kien 5000 + -300.00 = 4700.00, dung -40 % <= 2820.00" '[ $RC = 0 ] && echo "$OUT" | grep -q "realized + funding cong don .*: -300.00 USDT" && echo "$OUT" | grep -q "= 5000 + -300.00 = 4700.00" && echo "$OUT" | grep -q "equity c3 <= 2820.00"'
 for t in 7000 10000 ""; do up10k; OUT=$(DRY=1 bash "$HERE/golive_pilot_down.sh" $t 2>&1); RC=$?
   chk "pilot_down: von dich '$t' (chi 5000|1000) => TU CHOI" '[ $RC = 1 ] && echo "$OUT" | grep -q "von dich"'; done
@@ -493,17 +497,17 @@ OUT=$(DRY=1 bash "$HERE/golive_pilot_down.sh" 5000 2>&1); RC=$?; rm -f $F/run/c3
 chk "pilot_down: so c3 con 1 cum (chua phang) => TU CHOI + huong dan drain" '[ $RC = 1 ] && echo "$OUT" | grep -q "FAIL so c3 PHANG: 0 cum (co 1; con vi the => MODE=drain"'
 up10k; api positionRisk '[{"symbol":"C01USDT","positionAmt":"10"}]'; OUT=$(DRY=1 bash "$HERE/golive_pilot_down.sh" 5000 2>&1); RC=$?; api positionRisk '[]'
 chk "pilot_down: tk con con vi the tren san => TU CHOI" '[ $RC = 1 ] && echo "$OUT" | grep -q "FAIL tk con PHANG"'
-up10k; P0=$(pid); pdn 5000 "YES"
+up10kd; P0=$(pid); pdn 5000 "YES"
 chk "pilot_down: go 'YES' (khong phai 'YES HA VON 5000') => huy, khong doi" '[ $RC = 0 ] && echo "$OUT" | grep -q "Huy. Khong doi gi." && [ "$(envcap)" = 10000 ] && [ "$(pid)" = "$P0" ]'
 up10k; pdn 5000 "YES HA VON 5000"
-chk "pilot_down XONG 10000 -> 5000 (khong KS): env + process 5000, a02 dinh dat lai (dd 0, khong FLATTEN), KS script go, PUSH ON, moc tmb0 c3_capital=5000, Telegram" '[ $RC = 0 ] && echo "$OUT" | grep -q "XONG: HA VON C3_CAPITAL=5000" && [ "$(envcap)" = 5000 ] && penv | grep -qx C3_CAPITAL=5000 && echo "$OUT" | grep -q "INFO a02: DOI VON C3_CAPITAL 10000 -> 5000" && simok 5000.00 && [ ! -e $F/run/KILL_SWITCH ] && newlog | grep -q "PUSH doi trang thai -> ON" && grep -qx c3_capital=5000 $W/deploy/c3sub_eq_base.txt && grep -q "HA VON XONG" $W/tg.txt'
+chk "[luot4 R2-m2] pilot_down khi CHUA drain (khong KS) => TU CHOI truoc YES, khong doi (env 10000)" '[ $RC = 1 ] && echo "$OUT" | grep -q "DA DRAIN truoc" && [ "$(envcap)" = 10000 ]'
 up10k; printf 'golive_live_off drain 20261121_5\n' > $F/run/KILL_SWITCH; pdn 1000 "YES HA VON 1000"
 chk "pilot_down dich 1000 voi tham so grid MAC DINH code (F_BASE 0.03, weights 1,1,3,8: leg0 2.31 < 5) => D-01 TU CHOI (dung kiem chung pilot_on)" '[ $RC = 1 ] && echo "$OUT" | grep -q "FAIL D-01 leg0 du kien >= 5" && [ "$(envcap)" = 10000 ]'
 up10k; printf 'golive_live_off drain 20261121_5\n' > $F/run/KILL_SWITCH; pdn 5000 "YES HA VON 5000"
 chk "pilot_down XONG khi owner DRAIN co san (10000 -> 5000): KS owner GIU NGUYEN byte, bot VAN DRAIN (khong PUSH ON), env + process 5000, dd 0" '[ $RC = 0 ] && echo "$OUT" | grep -q "VAN DRAIN" && [ "$(cat $F/run/KILL_SWITCH)" = "golive_live_off drain 20261121_5" ] && [ "$(envcap)" = 5000 ] && penv | grep -qx C3_CAPITAL=5000 && simok 5000.00 && ! newlog | grep -q "PUSH doi trang thai -> ON"'
-up10k; echo 5000 > $F/FAKE_KHAN_IF_CAP; pdn 5000 "YES HA VON 5000"
+up10kd; echo 5000 > $F/FAKE_KHAN_IF_CAP; pdn 5000 "YES HA VON 5000"
 chk "pilot_down hau kiem TRUOT (KHAN o von 5000) => ROLLBACK ve 10000 rc1, a02 lai (JVM 5000 da chay) dd 0, moc tmb0 tra lai" '[ $RC = 1 ] && echo "$OUT" | grep -q "Da ROLLBACK xong: live C3_CAPITAL=10000" && [ "$(envcap)" = 10000 ] && penv | grep -qx C3_CAPITAL=10000 && simok 10000.00 && cmp -s $W/eqbase0 $W/deploy/c3sub_eq_base.txt'
-up10k; printf 'RESTART after 1\n' > $W/sshplan; pdn 5000 "YES HA VON 5000"
+up10kd; printf 'RESTART after 1\n' > $W/sshplan; pdn 5000 "YES HA VON 5000"
 chk "pilot_down ssh dut SAU khoi restart (1 lan) => doc pha, chay lai idempotent, XONG 5000" '[ $RC = 0 ] && echo "$OUT" | grep -q "pha_da_xong_truoc" && [ "$(envcap)" = 5000 ] && simok 5000.00'
 # =============================================================================== LUOT 3 (A1 audit cbcea237: M-1, m-1..m-9, n-2, n-4, n-6, muc 14)
 echo "== LUOT 3"
@@ -547,7 +551,7 @@ up10k; touch $F/FAKE_KILL_ON_START; OUT=$(a02cut); sleep 0.5
 chk "n-4 HA VON cat LUC start (sau a02 + env 5000): bot dung, env 5000, dinh da go (.a02_)" '[ "$(np)" = 0 ] && [ "$(envcap)" = 5000 ] && [ ! -e $F/run/c3live_killsw_peak ] && ls $F/run/c3live_killsw_peak.a02_* >/dev/null 2>&1'
 (cd $F && bin/daemon.sh start >/dev/null 2>&1); sleep 0.5
 chk "n-4 ... watchdog start luc do => JVM 5000 dinh lay lai tu equity 5000: dd 0, KHONG FLATTEN" 'grep -q "eq=5000.00 dd_C6=0.0000 dd_A40=0.0000 OK" $F/run/ksim_last.txt && [ "$(latch)" = NONE ]'
-up10k; touch $F/FAKE_KILL_ON_START $F/FAKE_WD_START_ON_KILL; pdn 5000 "YES HA VON 5000"
+up10kd; touch $F/FAKE_KILL_ON_START $F/FAKE_WD_START_ON_KILL; pdn 5000 "YES HA VON 5000"
 chk "m-2 pilot_down: ssh chet luc start + 'watchdog' start JVM giua chung (pha stopped) => chay lai: thay process DANG CHAY => dung LAI roi moi start, 1 JVM 5000, dd 0" '[ $RC = 0 ] && echo "$OUT" | grep -q "WARN pha_stopped_nhung_process_DANG_CHAY" && [ "$(np)" = 1 ] && penv | grep -qx C3_CAPITAL=5000 && simok 5000.00'
 echo "-- m-3 watchdog: flock, PAUSE rollback, khong start lan 2"
 lockh() { python3 -c "import fcntl,time; f=open('$W/.lock','a'); fcntl.flock(f,fcntl.LOCK_EX); time.sleep($1)" & LKP=$!; sleep 0.3; }
@@ -575,9 +579,9 @@ printf 'export LIVE_ADAPTER=live\n' > $WA/conf/env.sh; printf '#!/bin/bash\n[ -e
 chk "m-4 wrapper: token ghi TRUOC prestart goc (goc thay KS), goc rc 1 => rc 1 + token GIU" '[ "$R" = 1 ] && grep -qx KS_TRUOC_GOC=1 $W/orig_saw && [ -e $WA/run/KILL_SWITCH ]'
 reset242 1005; OUT=$(DRY=1 bash "$HERE/golive_monitor.sh" 2>&1)
 chk "m-4 monitor: boot guard DA CAI => khong canh bao boot_guard" '! echo "$OUT" | grep -q "boot_guard_MAT"'
-chmod 644 $SB/h242-prestart-c3.sh; OUT=$(DRY=1 bash "$HERE/golive_monitor.sh" 2>&1); RC=$?; chmod 755 $SB/h242-prestart-c3.sh
+chmod 644 $SB/h242-prestart-c3.sh; OUT=$(DRY=1 bash "$HERE/golive_monitor.sh" 2>&1); OUT=$(DRY=1 bash "$HERE/golive_monitor.sh" 2>&1); RC=$?; chmod 755 $SB/h242-prestart-c3.sh; DRY=1 bash "$HERE/golive_monitor.sh" >/dev/null 2>&1
 chk "m-4 monitor: wrapper MAT quyen x => KHAN boot_guard_MAT (x=0), rc 2" '[ $RC = 2 ] && echo "$OUT" | grep -q "KHAN (canh bao, KHONG dat KILL_SWITCH):.*boot_guard_MAT(.*x=0"'
-cp $DF $W/df.bak; rm -f $DF; OUT=$(DRY=1 bash "$HERE/golive_monitor.sh" 2>&1); RC=$?; cp $W/df.bak $DF
+cp $DF $W/df.bak; rm -f $DF; OUT=$(DRY=1 bash "$HERE/golive_monitor.sh" 2>&1); OUT=$(DRY=1 bash "$HERE/golive_monitor.sh" 2>&1); RC=$?; cp $W/df.bak $DF; DRY=1 bash "$HERE/golive_monitor.sh" >/dev/null 2>&1
 chk "m-4 monitor: drop-in systemd MAT => KHAN boot_guard_MAT (dropin=0)" '[ $RC = 2 ] && echo "$OUT" | grep -q "boot_guard_MAT(.*dropin=0"'
 echo "-- m-5 installer: systemctl show xac nhan"
 OUT=$(echo YES | MODE=rollback bash "$HERE/install_242_autodrain.sh" 2>&1); cp $W/ct242 $W/ct242_m5
@@ -612,7 +616,7 @@ chk "m-7 make_gate KHONG GL_TEST=1: ghi de GL_MICRO_START / PREREG_REPO / NJ_MD5
 grep -qx test=1 $W/gate_ok; T1=$?
 reset242 1005; cp -p $W/gate_ok $G; OUT=$(GL_TEST=0 DRY=1 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?
 chk "m-7 gate test=1 (tao voi GL_TEST=1) => pilot_on KHONG GL_TEST=1 TU CHOI" '[ $T1 = 0 ] && [ $RC = 1 ] && echo "$OUT" | grep -q "gate_TEST(test=1)_KHONG_dung_cho_242_that"'
-for op in "g_exec=Q4_OWNER n=0 ref=$MRC x:g_exec_thieu_n" "g_exit=DAT n=5 ref=$KRC x:g_exit_ref_khong_phai_commit_OWNER_DECISION" "owner_decision=$ODC file=docs/prereg/OWNER_DECISION_PILOT_1121_ADD1.md sha256=$(printf '%064d' 0):owner_decision_sha256_lech" "micro_start=2026-11-01 00:00:00 +07 micro_days=21 micro7=DU (>= 7 ngay):micro_start_lech" "test=DEL:thieu_dong_test" "lev_ev=DEL:lev_ev_thieu"; do
+for op in "g_exec=Q4_OWNER n=0 ref=$MRC x:g_exec_thieu_n" "g_exit=Q4_OWNER n=2 ref=$KRC x:g_exit_ref_khong_phai_commit_OWNER_DECISION_co_Q4_OWNER" "owner_decision=$ODC file=docs/prereg/OWNER_DECISION_PILOT_1121_ADD1.md sha256=$(printf '%064d' 0):owner_decision_sha256_lech" "micro_start=2026-11-01 00:00:00 +07 micro_days=21 micro7=DU (>= 7 ngay):micro_start_lech" "test=DEL:thieu_dong_test" "lev_ev=DEL:lev_ev_thieu"; do
   regate $W/gate_ok $G "${op%:*}"; pd
   chk "m-7 gl_gate_pilot kiem LAI: ${op%%=*} sai => pilot_on TU CHOI (${op##*:})" '[ $RC = 1 ] && echo "$OUT" | grep -q "${op##*:}"'
 done
@@ -640,6 +644,81 @@ chk "m-9 a02 python ghi killsw_latch.json nguyen tu (tmp cung thu muc + replace)
 echo "-- n-2 KS c3_autodrain => TU CHOI"
 up10k; printf 'c3_autodrain 20261121_101500 caller=h242_watchdog.sh\n' > $F/run/KILL_SWITCH; OUT=$(DRY=1 bash "$HERE/golive_pilot_down.sh" 5000 2>&1); RC=$?
 chk "n-2 pilot_down: KS co dong c3_autodrain => TU CHOI, lenh tiep theo = golive_boot_undrain.sh (sau dieu tra)" '[ $RC = 1 ] && echo "$OUT" | grep -q "FAIL run/KILL_SWITCH KHONG co dong c3_autodrain" && echo "$OUT" | grep -q "LENH OWNER (dung 1): DRY=1 bash .*golive_boot_undrain.sh"'
+# =============================================================================== LUOT 4 (A1 R2 b596ed60: R2-M1, R2-m1..m6, n1/n2/n7)
+echo "== LUOT 4"
+chk "R2-M1 hang GL_AD_MD5 (golive_lib.sh) = md5 c3_autodrain_prestart.sh trong repo (lech => sua hang)" '[ "$(bash -c ". $HERE/golive_lib.sh >/dev/null 2>&1; echo \$GL_AD_MD5")" = "$(md5sum < $HERE/c3_autodrain_prestart.sh | cut -c1-32)" ]'
+M12P=$(cat "$HERE/golive_monitor.sh" "$HERE/golive_lib.sh" | md5sum | cut -c1-12); bash "$HERE/install_cron_golive_monitor.sh" > $W/ic4.out 2>&1; PMON=$W/pinned/golive_monitor_$M12P
+chk "R2-M1 thu muc PIN (install_cron_golive_monitor.sh tao) CHI co monitor + lib (khong co wrapper)" '[ -f $PMON/golive_monitor.sh ] && [ -f $PMON/golive_lib.sh ] && [ ! -e $PMON/c3_autodrain_prestart.sh ]'
+reset242 1005; rm -f $W/deploy/c3_monitor_bg.txt; OUT=$(DRY=1 bash $PMON/golive_monitor.sh 2>&1)
+chk "R2-M1 monitor chay TU THU MUC PIN, boot guard da cai => KHONG bao boot_guard (khong WARN CHUA_CAI)" '! echo "$OUT" | grep -q "boot_guard_MAT\|CHUA_CAI" && echo "$OUT" | grep -q "TOM TAT"'
+cp $DF $W/df.bak; rm -f $DF; OUT=$(DRY=1 bash $PMON/golive_monitor.sh 2>&1); RC1=$?; OUT2=$(DRY=1 bash $PMON/golive_monitor.sh 2>&1); RC=$?; cp $W/df.bak $DF
+chk "R2-M1/R2-m6 monitor TU PIN, drop-in mat: luot 1 WARN (lan 1/2, khong KHAN boot guard), luot 2 lien tiep => KHAN boot_guard_MAT rc 2" 'echo "$OUT" | grep -q "WARN boot guard 242 CHUA_CAI lan 1/2" && ! echo "$OUT" | grep -q "boot_guard_MAT" && [ $RC = 2 ] && echo "$OUT2" | grep -q "boot_guard_MAT(.*dropin=0.*_2_luot"'
+OUT=$(DRY=1 bash $PMON/golive_monitor.sh 2>&1); printf 'BG before 99\n' > $W/sshplan; OUT3=$(DRY=1 bash $PMON/golive_monitor.sh 2>&1); : > $W/sshplan
+chk "R2-m6 boot guard lai CAI => bo dem ve 0; loi ssh doc boot guard => WARN (khong KHAN, bo dem giu 0)" '! echo "$OUT" | grep -q "boot_guard_MAT" && echo "$OUT3" | grep -q "WARN boot guard 242: khong doc duoc" && ! echo "$OUT3" | grep -q "boot_guard_MAT" && grep -qx n=0 $W/deploy/c3_monitor_bg.txt'
+echo "-- R2-m1 chay lai: a02 LAI truoc moi start (JVM chen giua voi env cu)"
+mkdir -p $W/hookbin
+cat > $W/hookbin/diff <<EOH
+#!/bin/bash
+if [ -f $W/hook_diff ] && [ "\$2" = conf/env.sh ] && grep -qx a02_ok $F/run/.golive_golive_pilot_down_*.phase 2>/dev/null; then
+  rm -f $W/hook_diff; (cd $F && bash bin/daemon.sh start >/dev/null 2>&1); pkill -9 -f "bash -s -- $F " ; exit 1
+fi
+exec /usr/bin/diff "\$@"
+EOH
+cat > $W/hookbin/cp <<EOH
+#!/bin/bash
+if [ -f $W/hook_cp ] && [ "\$3" = conf/env.sh ] && [[ "\$2" == conf/env.sh.bak_* ]] && grep -qx rb_a02 $F/run/.golive_*.rbphase 2>/dev/null; then
+  rm -f $W/hook_cp; (cd $F && bash bin/daemon.sh start >/dev/null 2>&1); pkill -9 -f "bash -s -- $F " ; exit 1
+fi
+exec /usr/bin/cp "\$@"
+EOH
+chmod +x $W/hookbin/diff $W/hookbin/cp
+up10kd; touch $W/hook_diff; PATH=$W/hookbin:$PATH pdn 5000 "YES HA VON 5000"
+chk "R2-m1 pilot_down: cat NGAY SAU a02 (truoc ghi env) + JVM chen voi env CU 10000 (ghi lai dinh 10000) => chay lai: dung LAI, a02 LAI, env 5000 => JVM 5000 dd 0, latch NONE" '[ ! -e $W/hook_diff ] && echo "$OUT" | grep -q "pha_stopped_nhung_process_DANG_CHAY" && [ "$(np)" = 1 ] && penv | grep -qx C3_CAPITAL=5000 && simok 5000.00'
+reset242 1005; cp -p $W/gate_ok $G; echo 10000 > $F/FAKE_KHAN_IF_CAP; touch $W/hook_cp; PATH=$W/hookbin:$PATH yp
+chk "R2-m1 rollback pilot_on: cat NGAY SAU rb a02 (truoc tra env) + JVM chen voi env 10000 => chay lai rollback: a02 LAI => JVM 1000 dd 0, latch NONE, rc1" '[ ! -e $W/hook_cp ] && [ $RC = 1 ] && echo "$OUT" | grep -q "Da ROLLBACK xong: live C3_CAPITAL=1000" && [ "$(np)" = 1 ] && penv | grep -qx C3_CAPITAL=1000 && simok 1000.00'
+echo "-- R2-m2 / n7 pilot_down bat buoc drain, kiem phang sau stop"
+up10k; OUT=$(DRY=1 bash "$HERE/golive_pilot_down.sh" 5000 2>&1); RC=$?
+chk "R2-m2 pilot_down CHUA drain (khong KS) => TU CHOI, 1 lenh owner MODE=drain golive_live_off.sh" '[ $RC = 1 ] && echo "$OUT" | grep -q "FAIL \[luot4 R2-m2\] DA DRAIN truoc" && echo "$OUT" | grep -q "LENH OWNER (dung 1): MODE=drain bash .*golive_live_off.sh"'
+up10kd; printf 'golive_monitor 20261122_3 KHAN x\n' >> $F/run/KILL_SWITCH; OUT=$(DRY=1 bash "$HERE/golive_pilot_down.sh" 5000 2>&1); RC=$?
+chk "n7 pilot_down: KS co dong KHAN golive_monitor => TU CHOI (xu ly KHAN truoc)" '[ $RC = 1 ] && echo "$OUT" | grep -q "FAIL \[luot4 n7\]"'
+up10kd; touch $F/FAKE_BOOK_ON_STOP; pdn 5000 "YES HA VON 5000"; rm -f $F/run/c3live_book.json
+chk "R2-m2 pilot_down: so c3 KHONG phang sau khi dung bot => KHONG a02 / KHONG ghi env, start lai von cu, FAIL => rollback rc1: env + process 10000, KS drain giu" '[ $RC = 1 ] && echo "$OUT" | grep -q "FAIL so_c3_KHONG_phang_sau_stop" && [ "$(envcap)" = 10000 ] && penv | grep -qx C3_CAPITAL=10000 && grep -q "^golive_live_off drain " $F/run/KILL_SWITCH && ! ls $F/run/c3live_killsw_peak.a02_* >/dev/null 2>&1'
+echo "-- R2-m3 boot_undrain kiem lai trong heredoc + YES co han"
+reset242 1005; cp $W/ks_ad $F/run/KILL_SWITCH
+( sleep 2; (cd $F; nohup bash -c 'exec -a "$(cat FAKE_PN)" sleep 120' >/dev/null 2>&1 < /dev/null &) >/dev/null 2>&1 ) &
+OUT=$( (sleep 5; echo 'YES MO LAI') | bash "$HERE/golive_boot_undrain.sh" 2>&1); RC=$?
+chk "R2-m3 boot_undrain: JVM thu 2 xuat hien trong luc cho YES => heredoc dem lai => KHONG go KS, rc1, lenh tiep theo DRY=1 boot_undrain" '[ $RC = 1 ] && echo "$OUT" | grep -q "trang thai 242 DOI sau YES (LOI_NPROC_2" && cmp -s $W/ks_ad $F/run/KILL_SWITCH && echo "$OUT" | grep -q "LENH OWNER (dung 1): DRY=1 bash .*golive_boot_undrain.sh"'
+reset242 1005; cp $W/ks_ad $F/run/KILL_SWITCH; OUT=$( (sleep 6) | GL_YES_TIMEOUT_S=2 bash "$HERE/golive_boot_undrain.sh" 2>&1); RC=$?
+chk "R2-m3 boot_undrain: khong ai go YES trong GL_YES_TIMEOUT_S => Huy rc1, KS khong doi" '[ $RC = 1 ] && echo "$OUT" | grep -q "Het thoi gian cho xac nhan (2 s)" && cmp -s $W/ks_ad $F/run/KILL_SWITCH'
+echo "-- R2-m4 resume + pha stopped + JVM chen + watchdog giu lock"
+reset242 1005; cp -p $W/gate_ok $G; touch $F/FAKE_KILL_ON_START $F/FAKE_WD_START_ON_KILL $F/FAKE_LOCK_ON_KILL; LN0=$(wc -l < "$F/logs/full.log")
+OUT=$(echo 'YES PILOT' | GL_WD_LOCK_WAIT_S=2 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?; pkill -f "fcntl.flock" 2>/dev/null
+chk "R2-m4 chay lai: pha stopped + JVM dang chay + watchdog giu lock qua han => KHAN rc2 (KHONG bao 'bot khong bi dung'), KS cua script giu, in trang thai that, 1 lenh monitor" '[ $RC = 2 ] && echo "$OUT" | grep -q "FAIL KHAN resume_watchdog_giu_lock" && ! echo "$OUT" | grep -q "bot live KHONG bi dung" && grep -q "^golive_pilot_on " $F/run/KILL_SWITCH && echo "$OUT" | grep -q "trang thai THAT tren 242" && echo "$OUT" | grep -q "LENH OWNER (dung 1): bash .*golive_monitor.sh"'
+echo "-- R2-m5 noi dung ref + so dem that"
+printf 'B2 MIEN (chi B2)\n' > $PR/docs/prereg/OWNER_DECISION_ONLY_B2.md; git -C $PR add -A; git -C $PR -c user.name=t -c user.email=t@t commit -qm onlyb2; B2C=$(git -C $PR rev-parse --short HEAD)
+OUT=$(MGE MIEN_X14="MIEN ref=$B2C x" DRY=1 bash "$HERE/golive_make_gate_pilot.sh" 2>&1); RC=$?
+chk "R2-m5a MIEN_X14 ref = commit OWNER_DECISION chi mien B2 => TU CHOI" '[ $RC = 1 ] && echo "$OUT" | grep -q "MIEN_X14 ref=$B2C khong phai commit cham docs/prereg/OWNER_DECISION_\* co DONG .MIEN. + .X14."'
+OUT=$(MGE MIEN_B2="MIEN ref=$B2C x" DRY=1 bash "$HERE/golive_make_gate_pilot.sh" 2>&1); RC=$?
+chk "R2-m5a MIEN_B2 ref = commit co dong 'B2 MIEN' => chap nhan (DRY)" '[ $RC = 0 ]'
+OUT=$(MGE MIEN_C1="MIEN ref=$ODC x" DRY=1 bash "$HERE/golive_make_gate_pilot.sh" 2>&1); RC=$?
+chk "R2-m5a MIEN_C1 ref = commit OWNER_DECISION KHONG co dong MIEN (chi Q4_OWNER) => TU CHOI" '[ $RC = 1 ] && echo "$OUT" | grep -q "MIEN_C1 ref="'
+OUT=$(MGE G_EXEC="Q4_OWNER n=4 ref=$ODC x" DRY=1 bash "$HERE/golive_make_gate_pilot.sh" 2>&1); RC=$?
+chk "R2-m5c G_EXEC Q4_OWNER n=4 khac so leg THAT dem tu log (3) => TU CHOI, in ca hai so" '[ $RC = 1 ] && echo "$OUT" | grep -q "g_exec_n=4_khac_so_dem_that_3" && echo "$OUT" | grep -q "n trong G_EXEC=4; so leg vao THAT dem tu log 242: 3"'
+OUT=$(MGE G_EXEC="Q4_OWNER n=3 ref=$MRC x" DRY=1 bash "$HERE/golive_make_gate_pilot.sh" 2>&1); RC=$?
+chk "R2-m5b G_EXEC Q4_OWNER ref = commit OWNER_DECISION KHONG co dong Q4_OWNER => TU CHOI" '[ $RC = 1 ] && echo "$OUT" | grep -q "g_exec_ref_khong_phai_commit_OWNER_DECISION_co_Q4_OWNER"'
+OUT=$(MGE G_EXEC="GREEN n=50 ref=$MRC verdict" DRY=1 bash "$HERE/golive_make_gate_pilot.sh" 2>&1); RC=$?
+chk "R2-m5b G_EXEC GREEN (verdict PREREG_EXEC_PROBE) can |E| >= 100 => n=50 TU CHOI" '[ $RC = 1 ] && echo "$OUT" | grep -q "g_exec_verdict_GREEN_can_E>=100"'
+OUT=$(MGE G_EXEC="GREEN n=150 ref=$MRC verdict" DRY=1 bash "$HERE/golive_make_gate_pilot.sh" 2>&1); RC=$?
+chk "R2-m5b G_EXEC GREEN n=150 >= 100 va >= so dem, ref commit prereg => chap nhan (theo ADD2 s2.2)" '[ $RC = 0 ]'
+for op in "g_exec=Q4_OWNER n=4 ref=$ODC x:g_exec_n=4_khac_so_dem_that_3" "mien_x14=MIEN ref=$ODC x:mien_x14_thieu/ref_khong_co_dong_MIEN_X14" "so_lenh_that_luc_tao=DEL:g_exec_khong_co_so_dem_that"; do
+  regate $W/gate_ok $G "${op%:*}"; pd
+  chk "R2-m5 gl_gate_pilot kiem LAI: ${op%%=*} => pilot_on TU CHOI (${op##*:})" '[ $RC = 1 ] && echo "$OUT" | grep -q "${op##*:}"'
+done
+cp -p $W/gate_ok $G
+echo "-- n1 / n2 / muc 9iii (tinh)"
+chk "n1 gl_mon_pin_cur + golive_make_gate.sh kiem CR: KHONG con '| grep -q' (pipefail+SIGPIPE)" '! grep -n "^gl_mon_pin_cur.*| grep -q" $HERE/golive_lib.sh && ! grep -q "LIMF\" | grep -q" $HERE/golive_make_gate.sh'
+chk "n2 gl_exit_report: ssh GL_SSH_TRIES=1 GL_SSH_TIMEOUT_S=20 (<= 25 s)" 'grep -q "o=\$(GL_SSH_TRIES=1 GL_SSH_TIMEOUT_S=20 s242" $HERE/golive_lib.sh'
+chk "9iii install_242_autodrain / check_lev / live_off co trap gl_exit_report" 'grep -q "trap .gl_exit_report" $HERE/install_242_autodrain.sh && grep -q "trap .gl_exit_report" $HERE/golive_check_lev.sh && grep -q "trap .gl_exit_report" $HERE/golive_live_off.sh'
 # =============================================================================== tong
 chk "AN TOAN: KHONG co lenh ssh/scp THAT nao duoc goi trong toan bo test" '[ ! -s $W/guard_blocked.log ]'
 chk "khong lo key/secret (log deploy, gate, Telegram)" 'nosec "$OUT"'

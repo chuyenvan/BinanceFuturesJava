@@ -20,6 +20,7 @@ if [ -z "${_LV_MASKED:-}" ]; then export _LV_MASKED=1; bash "$0" "$@" 2>&1 | sed
 . "$_OPS/golive_lib.sh"
 gl_manifest_check "$0" || exit 1
 gl_init golive_check_lev
+trap 'gl_exit_report $?' EXIT   # [luot4 muc 9iii] rc != 0 (ke ca 3 CANH BAO) => VIEC TIEP THEO
 LEV_EXPECT=${LEV_EXPECT:-1}; LEV_MARGIN_EXPECT=${LEV_MARGIN_EXPECT:-CROSSED}; LEV_SHOW=${LEV_SHOW:-30}
 gl_read_state
 CAP=$(sv ENV_C3_CAPITAL); [ -n "$CAP" ] || CAP=$(sv ENVSH_C3_CAPITAL)
