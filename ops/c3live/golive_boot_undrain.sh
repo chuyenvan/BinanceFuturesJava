@@ -9,11 +9,11 @@
 #   "c3_autodrain <YYYYmmdd_HHMMSS>[ caller=..]"). Ban truoc => run/KILL_SWITCH.bu_<TS>.
 #   - file CHI co dong c3_autodrain => doi ten run/KILL_SWITCH.bootok_<TS> => jar doc lai (moi lenh / 10 s) => PUSH ON.
 #   - co dong NGUOI KHAC (owner drain / monitor KHAN / script go-live) => GIU NGUYEN cac dong do (file ghi lai khong con dong c3_autodrain),
-#     bot VAN DRAIN (xu ly dong kia theo quy trinh cua no, vd MODE=undrain golive_live_off.sh).
+#     [luot3] ma thoat 1 'CHUA MO: con dong cua <loai>' + VIEC TIEP THEO; bot VAN DRAIN (xu ly dong kia theo quy trinh cua no, vd MODE=undrain golive_live_off.sh).
 #   - khong co dong c3_autodrain => khong lam gi.
 # In TRUOC / SAU: so dong KS (noi dung loc ky tu), latch, process, adapter, C3_CAPITAL. Telegram (token doc tu file, khong in).
 # Gioi han: neu nguoi khac ghi run/KILL_SWITCH DUNG LUC giua doc va thay file => script so (cmp) ban sao ngay truoc khi thay; khac => KHONG
-#   thay, KHAN (chay lai). Ma thoat: 0 XONG / DRY / khong co gi de go | 1 TU CHOI | 2 KHAN.
+#   thay, KHAN (chay lai). Ma thoat: 0 XONG (da MO) / DRY / khong co gi de go | 1 TU CHOI / CHUA MO (con dong KS khac) | 2 KHAN.
 # [OPS6 luot3 M-1] TU CHOI (die, KHONG go KS, ke ca DRY) khi: so process bot != 1 | LIVE_ADAPTER process != live | jar DANG chay != NJ_MD5 |
 #   latch kill-switch != NONE (ke ca chua co file) => in ly do + DUNG 1 lenh tiep theo (khoi VIEC TIEP THEO).
 # =============================================================================
@@ -83,8 +83,13 @@ case "$U" in
     if [ "$PON" = 1 ]; then M="DA MO: dong c3_autodrain go, run/KILL_SWITCH khong con, bot bao PUSH ON"
     else M="DA go run/KILL_SWITCH (chi co dong c3_autodrain) nhung CHUA thay 'PUSH doi trang thai -> ON' sau $((POST_ROUNDS * POST_WAIT_S))s (bot tat? latch? SHADOW_NO_PUSH?) - kiem golive_monitor.sh"; fi
     say "=== XONG: $M. Log: $LOG"; tg "[golive] BOOT UNDRAIN TS=$TS: $M. Log $LOG" || :; exit 0 ;;
-  CON_DONG_KHAC) M="da go dong c3_autodrain; run/KILL_SWITCH CON $(kv "$R" SAU_N) dong NGUOI KHAC (giu nguyen) => bot VAN DRAIN. Xu ly dong kia theo quy trinh cua no"
-    say "=== XONG (mot phan): $M. Log: $LOG"; tg "[golive] BOOT UNDRAIN TS=$TS: $M. Log $LOG" || :; exit 0 ;;
+  CON_DONG_KHAC)   # [OPS6 luot3 MASTER] thong nhat voi live_off undrain: con dong KS khac => CHUA MO => rc 1 + VIEC TIEP THEO + 1 lenh owner
+    LOAI=$(printf '%s\n' "${K1:-}" | sed -n 's/^KS_L=//p' | awk 'NF{print $1}' | sort | uniq -c | awk '{printf "%s%s x%s", s, $2, $1; s=", "}')
+    if [ -z "$LOAI" ] || printf '%s\n' "${K1:-}" | sed -n 's/^KS_L=//p' | awk 'NF{print $1}' | grep -qvxE 'golive_live_off|c3live_boot|golive_monitor'; then GL_NEXT="khong chay gi them, gui output nay cho MASTER (con dong KS cua script/nguoi khac)"
+    elif printf '%s\n' "${K1:-}" | grep -q '^KS_L=golive_monitor '; then GL_NEXT="XOA_DONG_MONITOR=YES MODE=undrain bash $_OPS/golive_live_off.sh  (CHI sau khi da xu ly nguyen nhan KHAN monitor)"
+    else GL_NEXT="MODE=undrain bash $_OPS/golive_live_off.sh"; fi
+    M="CHUA MO: da go dong c3_autodrain nhung run/KILL_SWITCH CON $(kv "$R" SAU_N) dong cua ${LOAI:-?} (giu nguyen) => bot VAN DRAIN"
+    say "KET QUA: $M. Log: $LOG"; tg "[golive] BOOT UNDRAIN TS=$TS: $M. Log $LOG" || :; exit 1 ;;
   KHONG_CO_FILE|KHONG_CO_DONG_AUTODRAIN) say "KET QUA: KHONG CAN ($U) - khong doi gi. Log: $LOG"; exit 0 ;;
   *) M="go dong boot guard LOI / khong ro (${U:-ssh?}) - run/KILL_SWITCH KHONG doi (hoac khong xac nhan). Chay lai lenh."
     GL_NEXT="DRY=1 bash $_OPS/golive_boot_undrain.sh  (doc lai run/KILL_SWITCH roi moi chay lai)"; say "KHAN: $M"; tg "[golive] KHAN TS=$TS boot_undrain: $M | log $LOG" || :; exit 2 ;;
