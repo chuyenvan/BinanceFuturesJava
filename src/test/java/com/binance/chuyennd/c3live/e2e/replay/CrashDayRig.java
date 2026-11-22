@@ -124,7 +124,8 @@ final class CrashDayRig {
         int sDcaN = 2;                                   // S-DCA: so cum ep gia (>= 2 theo prereg D1)
         long finInjAt = -1;                              // FIN-INJ: leg PREDICT PASS dau tien o phut >= moc nay bi bo khoi tap fin
         /** [ADD24 R-LIVE] tiem MINUTE-INCOMPLETE / MINUTE-FIN-EXCL cua log live: phut quyet dinh b -> {"SYM|LEVEL","SYM|*","*|*"}.
-         *  "*|*" = guard ca phut (chan PREDICT + BIG_DOWN, KHONG chan DCA - "quan ly vi the giu nguyen"). Rong = tat. */
+         *  "*|*" = guard ca phut: chan MOI leg (PREDICT / BIG_DOWN / DCA) nhu production DetectEntrySignal2TradeNormal:1270-1276
+         *  (minuteIncomplete chan o dau createOrderBuyRequest0, DCA goi cung ham :1246). Rong = tat. [ERRATA1 E-A10] */
         final Map<Long, Set<String>> liveBlock = new HashMap<>();
         /** [ADD24 L0-FOLLOW-lite] cid lenh MUA that -> gia khop that (FILL avg). Rong = L0 tu do. */
         final Map<String, BigDecimal> followPx = new HashMap<>();
@@ -671,7 +672,7 @@ final class CrashDayRig {
         if (finInjBar == b && sym.equals(finInjSym)) fin.remove(sym);
         Set<String> lb = o.liveBlock.isEmpty() ? null : o.liveBlock.get(b);
         if (lb != null && fin.contains(sym) && (lb.contains(sym + "|" + level) || lb.contains(sym + "|*")
-                || (!level.startsWith("DCA") && lb.contains("*|*")))) {
+                || lb.contains("*|*"))) {
             fin.remove(sym);
             nLiveInj++;
             event("INJECT_LIVE_FIN", sym, level + " phut " + fmt(b));

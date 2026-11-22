@@ -32,10 +32,13 @@ RX = [
     ('TRAIL_STOP', ' stop=', re.compile(r'\[C3-LIVE-TRAIL\] (\S+) (ARM|MOVE) stop=(\S+) cid=(\S+) mode=(\S+)')),
     ('TRAIL_4130', 'san tu choi stop closePosition', re.compile(r'\[C3-LIVE-TRAIL\] (\S+) san tu choi stop closePosition')),
     ('TIME_STOP', '[C3-LIVE-TRAIL] TIME-STOP', re.compile(r'\[C3-LIVE-TRAIL\] TIME-STOP (\S+) entry=(\S+) px=(\S+) gio_giu=(\d+)')),
-    ('ORDER_4130', '[C3-LIVE-ORDER]', re.compile(r'\[C3-LIVE-ORDER\] .*?cid=(\S+) .*?sym=(\S+) .*?status=ERROR .*?err=\S*-4130')),
-    ('INC_MIN', '[MINUTE-INCOMPLETE] phut=', re.compile(r'\[MINUTE-INCOMPLETE\] phut=(\d{8} \d\d:\d\d) .*?ly_do=(\S+)')),
+    ('ORDER_4130', ('[C3-LIVE-ORDER]', '-4130'), re.compile(r'\[C3-LIVE-ORDER\] .*?cid=(\S+) .*?sym=(\S+) .*?status=ERROR .*?err=\S*-4130')),
+    # [ERRATA1 E-A10] 2 dang guard ca phut (MinuteCompletenessGuard:423 FIN co ly_do=, :482 dem khong co ly_do); phut= = endMinute =
+    #   nen vua chot (LiveTickerWindow:355-356) = ticker.startTime nen quyet dinh (dts), GMT+7 (Utils:44-49)
+    ('INC_MIN', '[MINUTE-INCOMPLETE] phut=', re.compile(r'\[MINUTE-INCOMPLETE\] phut=(\d{8} \d\d:\d\d) (?:.*?ly_do=(\S+))?')),
     ('INC_LEG', '[MINUTE-INCOMPLETE] chan lenh moi', re.compile(r'\[MINUTE-INCOMPLETE\] chan lenh moi (\S+) (\S+) \(phut (\d{8} \d\d:\d\d)')),
-    ('FIN_EXCL', '[MINUTE-FIN-EXCL]', re.compile(r'\[MINUTE-FIN-EXCL\] chan leg (\S+) (\S+) \(phut (\d{8} \d\d:\d\d)')),
+    ('FIN_EXCL', '[MINUTE-FIN-EXCL] chan leg', re.compile(r'\[MINUTE-FIN-EXCL\] chan leg (\S+) (\S+) \(phut (\d{8} \d\d:\d\d)')),   # DetectEntrySignal2TradeNormal:1352
+    ('FIN_EXCL_MIN', '[MINUTE-FIN-EXCL] phut=', re.compile(r'\[MINUTE-FIN-EXCL\] phut=(\d{8} \d\d:\d\d) loai=(\d+) .*? ds=(\S+) =>')),   # MinuteCompletenessGuard:415
     ('JVM_START', 'MainClass: com.binance.chuyennd.trading.BinanceOrderTradingManager', re.compile(r'MainClass: (\S+)')),
     ('SKIP_PAPER', 'skipFull', re.compile(r'(skipFull|liveBookFull|U_MAX)\S*.*?([A-Z0-9]{2,}USDT)')),
     ('SKIP_PAPER2', 'liveBookFull', re.compile(r'(liveBookFull).*?([A-Z0-9]{2,}USDT)')),
@@ -88,7 +91,7 @@ def main():
             continue
         minutes_seen.add(t // 60000)
         for n, tag, rx in RX:
-            if tag in ln:
+            if (all(x in ln for x in tag) if isinstance(tag, tuple) else tag in ln):
                 cnt[n]['tag_lines'] += 1
                 g = rx.search(ln)
                 if g:
@@ -106,7 +109,7 @@ def main():
                'ALGO': 'log_ms,symbol,caid,X,file', 'TRAIL_arm': 'log_ms,symbol,entry,px,peak,SL,file',
                'TRAIL_STOP': 'log_ms,symbol,act,stop,cid,mode,file', 'TRAIL_4130': 'log_ms,symbol,file',
                'TIME_STOP': 'log_ms,symbol,entry,px,hours,file', 'ORDER_4130': 'log_ms,cid,symbol,file',
-               'INC_MIN': 'log_ms,phut,ly_do,file', 'INC_LEG': 'log_ms,level,symbol,phut,file', 'FIN_EXCL': 'log_ms,level,symbol,phut,file',
+               'INC_MIN': 'log_ms,phut,ly_do,file', 'FIN_EXCL_MIN': 'log_ms,phut,loai,ds,file', 'INC_LEG': 'log_ms,level,symbol,phut,file', 'FIN_EXCL': 'log_ms,level,symbol,phut,file',
                'JVM_START': 'log_ms,main,file'}
         for n, r in rows.items():
             with open(os.path.join(a.out, n.lower() + '.csv'), 'w') as fh:
@@ -118,6 +121,10 @@ def main():
             blk.add((ms7(r[1], '%Y%m%d %H:%M'), '*', '*', 'MINUTE-INCOMPLETE'))
         for r in rows['INC_LEG']:
             blk.add((ms7(r[3], '%Y%m%d %H:%M'), r[2], r[1], 'MINUTE-INCOMPLETE-LEG'))
+        for r in rows['FIN_EXCL_MIN']:
+            for sym in r[3].split(','):
+                if sym.endswith('USDT') and not sym.startswith('...'):
+                    blk.add((ms7(r[1], '%Y%m%d %H:%M'), sym, '*', 'MINUTE-FIN-EXCL-MIN'))
         for r in rows['FIN_EXCL']:
             blk.add((ms7(r[3], '%Y%m%d %H:%M'), r[2], r[1], 'MINUTE-FIN-EXCL'))
         with open(os.path.join(a.out, 'block.csv'), 'w') as fh:

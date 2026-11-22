@@ -16,7 +16,7 @@ log = logging.getLogger('score')
 TZ7 = timezone(timedelta(hours=7))
 MIN = 60000
 PASS, FAIL, INS = 'PASS', 'FAIL', 'INSUFFICIENT'
-LABELS = ('N1', 'N2', 'N3', 'N4', 'N5', 'N6', 'N7', 'N8')
+LABELS = ('N1', 'N2', 'N3', 'N4', 'N5', 'N6', 'N7', 'N8', 'N9')   # N9 EQ_UNAVAIL = ERRATA1 E-A8
 
 
 def ms7(s):
@@ -112,6 +112,8 @@ def main():
     tuchoi = [(int(r['log_ms']), r.get('g1', '')) for r in L('tuchoi_cid.csv')]
     skips = [(int(r['log_ms']), r.get('g2', '')) for n in ('skip_paper.csv', 'skip_paper2.csv') for r in L(n)]
     blk = {(int(r['decision_ts']), r['symbol'], r['level']) for r in L('block.csv')}
+    equn = [int(r['log_ms']) for r in L('eq_unavail.csv')]
+    n9_ext = []   # thong tin: dong EQ loi trong (dts+1', dts+2') (giay ~6 phut sau) - KHONG gan nhan, hoi MASTER
     labels = []
 
     def lab(item, k, lb, ev):
@@ -142,8 +144,10 @@ def main():
         side = 'live_only' if k in LK else 'rig_only'
         if k[0] not in sel_min:
             lb = lab('L-E ' + side, k, 'N1', 'khong co sel_dump phut nay'); le['N1'] += 1
+            dev_first = k[0] if dev_first is None else dev_first
         elif k[0] in down:
             lb = lab('L-E ' + side, k, 'N3', 'JVM khoi dong / khoang trong log')
+            dev_first = k[0] if dev_first is None else dev_first
         else:
             le['scorable'] += 1 if side == 'live_only' else 0
             ev4 = n4(k, LK[k]['t'], LK[k]['cid']) if side == 'live_only' else None
@@ -152,14 +156,18 @@ def main():
                 lb = lab('L-E ' + side, k, 'N4', ev4)
             elif ev6:
                 lb = lab('L-E ' + side, k, 'N6', ev6)
-            elif side == 'rig_only' and ((k[0], k[1], k[2]) in blk or (k[0], '*', '*') in blk):
+            elif side == 'rig_only' and any(k[0] <= t <= k[0] + MIN for t in equn):
+                lb = lab('L-E ' + side, k, 'N9', 'EQ_UNAVAIL [C3-LIVE-EQ] positions() loi trong [dts, dts+1\']')
+            elif side == 'rig_only' and ((k[0], k[1], k[2]) in blk or (k[0], '*', '*') in blk or (k[0], k[1], '*') in blk):
                 lb = lab('L-E ' + side, k, 'N2', 'live chan MINUTE-* nhung tiem khong hieu luc')
             elif dev_first is not None and FK is not None and ((k in FK) == (k in LK)):
                 lb = lab('L-E ' + side, k, 'N5', 'L0-FOLLOW khong lech; lech dau tien da gan nhan luc %d' % dev_first)
             else:
                 lb = lab('L-E ' + side, k, 'UNEXPLAINED', '')
                 le['unexplained'] += 1
-            if lb in ('N4', 'N6', 'N2') and dev_first is None:
+                if side == 'rig_only' and any(k[0] + MIN < t < k[0] + 2 * MIN for t in equn):
+                    n9_ext.append(list(k))
+            if lb in ('N4', 'N6', 'N2', 'N9') and dev_first is None:
                 dev_first = k[0]
         le['by_label'][lb] = le['by_label'].get(lb, 0) + 1
     # thu tu trong phut (chi cac khoa khop)
@@ -221,7 +229,9 @@ def main():
                 continue
             lo, hi = min(m[2] for m in ms), max(m[1] for m in ms)
             ulo += q * lo - c; uhi += q * hi - c
-        fsum = sum(abs(fnum(x.get('g3'), 0)) for x in fund if int(x['log_ms']) < r['t'])
+        # [ERRATA1 E-A12] funding: +-|funding c3 cong don| = gia tri cong don MOI NHAT truoc SUBMIT (C3MainEquity:245-247)
+        fl = [fnum(x.get('g3'), 0) for x in fund if int(x['log_ms']) < r['t']]
+        fsum = abs(fl[-1]) if fl else 0.0
         fee_open = a.fee_max * sum(x[1] * x[2] for v in openc.values() for x in v)
         E_lo = a.cap + realized - fee_hi - fee_open - fsum + ulo
         E_hi = a.cap + realized + fsum + uhi
@@ -401,6 +411,9 @@ def main():
     if clusters and n8 > 0.1 * clusters:
         warn.append('N8 > 10%% cum => tieu chi tuong ung FAIL'); s_lt = FAIL if any(x['item'] == 'L-T' and x['label'] == 'N8' for x in labels) else s_lt
         s_lx = FAIL if any(x['item'] == 'L-X' and x['label'] == 'N8' for x in labels) else s_lx
+    n9 = len({x['decision_ts'] for x in labels if x['label'] == 'N9'})
+    if n9 > 2:
+        warn.append('N9 > 2 phut-SUBMIT => MASTER bao owner (loi doc equity chan lenh that)')
     if n6 > 3 or (rig and n6 > 0.1 * len(rig)):
         warn.append('N6 > 3 cum hoac > 10% SUBMIT rig => MASTER bao owner')
     out = {'window': [S, E], 'px_bars': a.px_bars, 'cap': a.cap, 'apply_ratio': a.apply_ratio, 'u_max': a.u_max, 'minutes_with_sel': len(sel_min), 'minutes_down_N3': len(down),
@@ -408,7 +421,8 @@ def main():
            'L-E': le, 'L-N': {'minutes_diff': len(ln_bad), 'unexplained': len(ln_unexp)}, 'L-S': {k: v for k, v in ls.items() if k != 'fail'},
            'L-S_fail_n': len(ls['fail']), 'L-S2': ls2, 'L-P': lp, 'L-D': ld, 'L-T': lt, 'L-SL': lsl, 'L-X': lx, 'L-K': lk,
            'labels_n': {lb: sum(1 for x in labels if x['label'] == lb) for lb in LABELS + ('UNEXPLAINED',)}, 'warn': warn,
-           'follow': bool(a.follow), 'dry': bool(a.dry)}
+           'follow': bool(a.follow), 'dry': bool(a.dry), 'N9_phut': n9, 'eq_unavail_dts1_dts2_info': n9_ext[:50],
+           'u_max_source': 'Configs.java:177 U_MAX=0.60f mac dinh; :924 SIM_U_MAX (242: khong dat - ERRATA1 E-A2)'}
     json.dump(out, open(os.path.join(a.out, 'score.json'), 'w'), indent=1, default=str)
     with open(os.path.join(a.out, 'labels.csv'), 'w') as fh:
         w = csv.DictWriter(fh, fieldnames=['item', 'decision_ts', 'symbol', 'level', 'leg', 'label', 'evidence'], lineterminator='\n')
