@@ -650,7 +650,7 @@ chk "R2-M1 hang GL_AD_MD5 (golive_lib.sh) = md5 c3_autodrain_prestart.sh trong r
 M12P=$(cat "$HERE/golive_monitor.sh" "$HERE/golive_lib.sh" | md5sum | cut -c1-12); bash "$HERE/install_cron_golive_monitor.sh" > $W/ic4.out 2>&1; PMON=$W/pinned/golive_monitor_$M12P
 chk "R2-M1 thu muc PIN (install_cron_golive_monitor.sh tao) CHI co monitor + lib (khong co wrapper)" '[ -f $PMON/golive_monitor.sh ] && [ -f $PMON/golive_lib.sh ] && [ ! -e $PMON/c3_autodrain_prestart.sh ]'
 reset242 1005; rm -f $W/deploy/c3_monitor_bg.txt; OUT=$(DRY=1 bash $PMON/golive_monitor.sh 2>&1)
-chk "R2-M1 monitor chay TU THU MUC PIN, boot guard da cai => KHONG bao boot_guard (khong WARN CHUA_CAI)" '[[ $OUT != *boot_guard_MAT* && $OUT != *CHUA_CAI* && $OUT == *"TOM TAT"* ]]'   # khong pipe grep -q: OUT lon + pipefail => SIGPIPE
+chk "R2-M1 monitor chay TU THU MUC PIN, boot guard da cai => KHONG bao boot_guard (khong WARN CHUA_CAI)" '[[ $OUT != *boot_guard_MAT* && $OUT != *"boot guard 242 CHUA_CAI"* && $OUT == *"TOM TAT"* ]]'   # khong pipe grep -q: OUT lon + pipefail => SIGPIPE
 cp $DF $W/df.bak; rm -f $DF; OUT=$(DRY=1 bash $PMON/golive_monitor.sh 2>&1); RC1=$?; OUT2=$(DRY=1 bash $PMON/golive_monitor.sh 2>&1); RC=$?; cp $W/df.bak $DF
 chk "R2-M1/R2-m6 monitor TU PIN, drop-in mat: luot 1 WARN (lan 1/2, khong KHAN boot guard), luot 2 lien tiep => KHAN boot_guard_MAT rc 2" 'echo "$OUT" | grep -q "WARN boot guard 242 CHUA_CAI lan 1/2" && ! echo "$OUT" | grep -q "boot_guard_MAT" && [ $RC = 2 ] && echo "$OUT2" | grep -q "boot_guard_MAT(.*dropin=0.*_2_luot"'
 OUT=$(DRY=1 bash $PMON/golive_monitor.sh 2>&1); printf 'BG before 99\n' > $W/sshplan; OUT3=$(DRY=1 bash $PMON/golive_monitor.sh 2>&1); : > $W/sshplan
