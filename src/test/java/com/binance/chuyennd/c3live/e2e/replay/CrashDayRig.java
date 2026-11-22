@@ -129,6 +129,8 @@ final class CrashDayRig {
         final Map<Long, Set<String>> liveBlock = new HashMap<>();
         /** [ADD24 L0-FOLLOW-lite] cid lenh MUA that -> gia khop that (FILL avg). Rong = L0 tu do. */
         final Map<String, BigDecimal> followPx = new HashMap<>();
+        /** [ADD24 ERRATA5 D1] true => so day cua gate theo vet live (khong bookFull() so c3 rig). */
+        boolean fullFromLive = false;
     }
 
     final Opts o;
@@ -803,7 +805,9 @@ final class CrashDayRig {
 
                     @Override
                     public void gate(String symbol, ReplayData.Bar tk, Float sp) {
-                        boolean full = o.exec && bookFull();
+                        // [ADD24 ERRATA5 D1] so day cua gate = SO GIAY production (DetectEntrySignal2TradeNormal:1201-1211, :1300-1302):
+                        //   fullFromLive => THEO VET dong [GATE] n_skipfull > 0 cua live ("FULL|*" trong E2E_LIVE_BLOCK_FILE), khong dung so c3 rig
+                        boolean full = o.exec && (o.fullFromLive ? o.liveBlock.getOrDefault(b, Collections.emptySet()).contains("FULL|*") : bookFull());
                         float q = E2eGateSupport.qPeek(b, p15, sp);
                         qByHour.putIfAbsent(b / H * H, q);
                         AIRejectFilter.FilterResult fr = gate.entryGate(new AiPredictionData(b, p15, 0f), sp, true, full);
@@ -1202,6 +1206,7 @@ final class CrashDayRig {
         inj.put("live_block_minutes", o.liveBlock.size());
         inj.put("live_block_legs", nLiveInj);
         inj.put("live_guard_minutes_skipped", nLiveGuardMin);
+        inj.put("full_from_live", o.fullFromLive);
         inj.put("follow_px_n", o.followPx.size());
         inj.put("follow_hits", fake != null ? fake.followHits : -1);
         res.put("injections", inj);

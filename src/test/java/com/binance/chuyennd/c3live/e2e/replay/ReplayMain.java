@@ -245,6 +245,7 @@ public final class ReplayMain {
             }
             LOG.warn("[ADD24] E2E_LIVE_BLOCK_FILE={} phut={}", lbf, o.liveBlock.size());
         }
+        o.fullFromLive = "1".equals(env("E2E_FULL_FROM_LIVE", "0"));   // [ADD24 ERRATA5 D1]
         // [ADD24 L0-FOLLOW-lite] csv cid,avg (gia khop that lenh MUA) - chi co nghia voi venue FAKE
         String fpf = env("E2E_FOLLOW_FILLS", "");
         if (!fpf.isEmpty()) {

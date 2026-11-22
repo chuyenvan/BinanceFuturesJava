@@ -184,13 +184,25 @@ def main():
         open(lv + '/eq_unavail.csv', 'w').write('log_ms,file\n%d,f\n' % (S + 10 * MIN + 30000))
         addrow(rg + '/events.csv', [S + 60 * MIN, '-', 'TRAIL_ARM', 'AAAUSDT', 0, ''])
     case('C1_cum_khop_khong_ke_thua', c1_matched, {'L-T': 'FAIL'})
-    def n12(fx, lv, rg):
+    # ---- luot 5 (ERRATA5): tier3 TIEM theo vet => rig van DCA = KHONG GIAI THICH; > 3 cum tiem => L-D INSUFFICIENT khong phu; N6 = [GATE] n_skipfull
+    def t3_rig_dca(fx, lv, rg):
         addrow(rg + '/legs.csv', [S + 60 * MIN, S + 61 * MIN, 'AAAUSDT', 'DCA_LEVEL1', 'SUBMITTED', 'c3-AAAUSDT-x-1', 100, 10, 22, 1000, 0.1, 0.1, 1, 0.0001, '', 1000, 0, ''])
         open(lv + '/skip.csv', 'w').write('log_ms,symbol,level,outcome,file\n%d,AAAUSDT,DCA_LEVEL1,TIER3_DCA,f\n' % (S + 61 * MIN + 6000))
-    s12 = case('N12_TIER3_DCA_co_dong_log', n12, {'L-D': 'INSUFFICIENT', 'L-E': 'INSUFFICIENT'})
-    check('N12_dem', s12['labels_n']['N12'] == 2, s12['labels_n'])
-    case('N12_khong_dong_log_FAIL', lambda fx, lv, rg: addrow(rg + '/legs.csv', [S + 60 * MIN, S + 61 * MIN, 'AAAUSDT', 'DCA_LEVEL1', 'SUBMITTED', 'c3-AAAUSDT-x-1', 100, 10, 22, 1000, 0.1, 0.1, 1, 0.0001, '', 1000, 0, '']),
-         {'L-D': 'FAIL'})
+    case('tier3_rig_van_DCA_FAIL', t3_rig_dca, {'L-D': 'FAIL'})
+    def t3_many(fx, lv, rg):
+        open(lv + '/skip.csv', 'w').write('log_ms,symbol,level,outcome,file\n' + ''.join('%d,%s,DCA_LEVEL1,TIER3_DCA,f\n' % (S + (61 + i) * MIN + 6000, s_)
+                                                                                    for i, s_ in enumerate(['CCCUSDT', 'DDDUSDT', 'EEEUSDT', 'FFFUSDT'])))
+    st = case('tier3_4_cum_L-D_INS_khong_phu', t3_many, {'L-D': 'INSUFFICIENT'})
+    check('tier3_no_cover', st['L-D_no_cover'] is True, {'no_cover': st['L-D_no_cover']})
+    def n6(fx, lv, rg):
+        addrow(rg + '/legs.csv', [S + 70 * MIN, S + 71 * MIN, 'BBBUSDT', 'PREDICT_SYMBOL_TRADE', 'SUBMITTED', 'c3-BBBUSDT-y-0', 100, 10, 22, 1000, 0.1, 0.1, 0, 0.0001, '', 1000, 0, ''])
+        open(lv + '/gate.csv', 'w').write('log_ms,n_cand,n_rej,n_pass,n_skipfull,u,file\n%d,5,5,0,3,0.6100,f\n' % (S + 71 * MIN + 6000))
+    s6 = case('N6_GATE_n_skipfull', n6, {'L-E': 'INSUFFICIENT'})
+    check('N6_label', s6['labels_n']['N6'] == 1, s6['labels_n'])
+    def n6_no(fx, lv, rg):
+        addrow(rg + '/legs.csv', [S + 70 * MIN, S + 71 * MIN, 'BBBUSDT', 'PREDICT_SYMBOL_TRADE', 'SUBMITTED', 'c3-BBBUSDT-y-0', 100, 10, 22, 1000, 0.1, 0.1, 0, 0.0001, '', 1000, 0, ''])
+        open(lv + '/gate.csv', 'w').write('log_ms,n_cand,n_rej,n_pass,n_skipfull,u,file\n%d,5,5,0,0,0.1000,f\n' % (S + 71 * MIN + 6000))
+    case('N6_n_skipfull_0_FAIL', n6_no, {'L-E': 'FAIL'})
     def ldref(fx, lv, rg):       # DCA live bac 1 khi gia CHUA giam 50 % => L-D REF FAIL (rig cung co leg => cap khop)
         addrow(lv + '/submit.csv', [S + 60 * MIN + 66000, 'AAAUSDT', 'DCA_LEVEL1', 'SUBMITTED', 'c3-AAAUSDT-%d-1' % ((S + 60 * MIN) // MIN), 100, 10, 1, 10, 0.05, 'f'])
         addrow(rg + '/legs.csv', [S + 60 * MIN, S + 61 * MIN, 'AAAUSDT', 'DCA_LEVEL1', 'SUBMITTED', 'c3-AAAUSDT-%d-1' % ((S + 60 * MIN) // MIN), 100, 10, 22, 1000, 0.1, 0.1, 1, 0.0001, '', 1000, 0, ''])

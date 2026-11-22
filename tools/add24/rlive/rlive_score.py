@@ -140,7 +140,8 @@ def main():
     for n in ('exec_khong_khop.csv', 'leg_khong_khop.csv', 'order_rejected.csv', 'order_expired.csv', 'tuchoi_cid.csv'):
         for x in L(n):
             rejected.setdefault(x['cid'], '%s %s' % (n[:-4], x['log_ms']))
-    skips = [(int(r['log_ms']), r.get('symbol', '')) for n in ('skip_paper.csv', 'skip_paper2.csv') for r in L(n)]
+    # [ERRATA5 D1] bang chung N6 = dong [GATE] n_skipfull > 0 cua tick dts (so GIAY day); chuoi 'skipFull' cu khong dung nua
+    full_dts = {(int(r['log_ms']) // MIN - 1) * MIN for r in L('gate.csv') if r.get('n_skipfull') and int(r['n_skipfull']) > 0}
     blk = {(int(r['decision_ts']), r['symbol'], r['level']) for r in L('block.csv')}
     equn = [int(r['log_ms']) for r in L('eq_unavail.csv')]
     # N12: dong '[C3-LIVE] skip SYM DCA_* TIER3_DCA ..' (C3LiveEntry:243 Outcome.TIER3_DCA -> :320 LOG.info skip, KHONG throttle)
@@ -169,10 +170,8 @@ def main():
             lb = lab(it, k, 'N1', 'khong co sel_dump phut nay')
         elif side == 'rig_only' and no_tick(k[0]):
             lb = lab(it, k, 'N3', 'live khong co dong tick "Btc ticker size .. -> dts"')
-        elif side == 'rig_only' and any(x[1] == k[1] and x[0] // MIN * MIN in (k[0], k[0] + MIN) for x in skips):
-            lb = lab(it, k, 'N6', 'skip so giay cung phut + symbol')
-        elif side == 'rig_only' and n12(k[1], k[2], k[0]):
-            lb = lab(it, k, 'N12', 'live skip TIER3_DCA cung symbol trong [dts, dts+120 s)')
+        elif side == 'rig_only' and k[0] in full_dts:
+            lb = lab(it, k, 'N6', '[GATE] n_skipfull > 0 cung phut (so giay day)')
         elif side == 'rig_only' and any(k[0] <= t < k[0] + 2 * MIN for t in equn):
             lb = lab(it, k, 'N9', "EQ_UNAVAIL positions() loi trong [dts, dts+120 s)")
         elif side == 'rig_only' and ((k[0], k[1], k[2]) in blk or (k[0], '*', '*') in blk or (k[0], k[1], '*') in blk):
@@ -379,12 +378,11 @@ def main():
         if x[2] != y[2] or x[3] != y[3]:
             lab('L-D', (x[1], x[0], x[2], x[3]), 'UNEXPLAINED', 'bac/legIdx rig %s/%d' % (y[2], y[3]))
     ld_bad += sum(unexp_or_inherit('L-D live_only', x[0], x[1], 'DCA') for x in lo)
-    n12_n = 0
+    # [ERRATA5 B(i)] tier3 TIEM vao rig theo vet (block.csv); rig van DCA = lech KHONG GIAI THICH (khong con nhan N12 sau su kien)
     for y in ro:
-        if n12(y[0], y[2], y[1]):
-            n12_n += 1; lab('L-D rig_only', (y[1], y[0], y[2], y[3]), 'N12', 'live skip TIER3_DCA')
-        else:
-            ld_bad += unexp_or_inherit('L-D rig_only', y[0], y[1], 'DCA')
+        ld_bad += unexp_or_inherit('L-D rig_only', y[0], y[1], 'DCA')
+    t3_cl = {(s_, (cl_of(s_, t) or {}).get('dts0')) for t, s_ in t3}
+    n12_n = len(t3_cl)
     # ERRATA4 L-D REF gia: moi leg DCA live bac k: close nen dts <= gia khop leg 0 x (1 + levels[k-1]) (banner [LIVE-DCA-GRID] levels)
     lv_ = [float(x) for x in a.dca_levels.split(',')]
     ref_bad = 0
@@ -400,8 +398,11 @@ def main():
             if br is None or not (br[3] <= p0 * (1 + lvl) * (1 + 1e-9)):
                 ref_bad += 1; lab('L-D REF', k, 'UNEXPLAINED', 'DCA bac %d truoc muc gia (close %s > p0 x (1%+g))' % (k[3], 'NA' if br is None else 'cao hon', lvl))
     ld_bad += ref_bad
-    ld = {'live': len(dl), 'rig': len(dr), 'pairs': len(pairs), 'live_only': len(lo), 'rig_only': len(ro), 'N12': n12_n, 'ref_gia_bad': ref_bad, 'bad': ld_bad}
+    ld = {'live': len(dl), 'rig': len(dr), 'pairs': len(pairs), 'live_only': len(lo), 'rig_only': len(ro), 'tier3_cum_tiem (N12 ten bao cao)': n12_n, 'ref_gia_bad': ref_bad, 'bad': ld_bad}
     s_ld = status(ld_bad, len(dl), 1)
+    ld_no_cover = n12_n > 3          # ERRATA5 B(i): > 3 cum bi tiem tier3 => L-D INSUFFICIENT KHONG PHU
+    if ld_no_cover and s_ld != FAIL:
+        s_ld = INS
     # ------------------------------------------------ L-T (arm, hai chieu, N8 chi REF-nhip)
     ev = rd(a.rig + '/events.csv')
     arm_l = [(x['symbol'], int(x['log_ms']) // MIN * MIN, float(x['entry'])) for x in L('trail_arm.csv')]
@@ -564,7 +565,7 @@ def main():
            'L-E': le, 'L-N': {'minutes_diff': len(ln_bad), 'unexplained': len(ln_unexp)}, 'L-S': ls, 'L-S2': ls2, 'L-P': lp, 'L-D': ld,
            'L-T': lt, 'L-SL': lsl, 'L-X': lx, 'L-K': lk, 'clusters_live': clusters,
            'labels_n': {lb: sum(1 for x in labels if x['label'] == lb) for lb in LABELS + ('UNEXPLAINED',)}, 'N9_phut': n9, 'warn': warn,
-           'follow': bool(a.follow), 'rui_ro_A11': RISKS, 'V10b': v10b, 'inherit_n': inh_n,
+           'L-D_no_cover': ld_no_cover, 'follow': bool(a.follow), 'rui_ro_A11': RISKS + ['nguon so day / K3: chi bang chung qua dong [GATE] n_skipfull (ERRATA5)'], 'V10b': v10b, 'inherit_n': inh_n,
            'roots_clusters': [{k: c[k] for k in ('side', 'symbol', 'd0', 'end', 'label')} for c in roots_c]}
     json.dump(out, open(os.path.join(a.out, 'score.json'), 'w'), indent=1, default=str)
     with open(os.path.join(a.out, 'labels.csv'), 'w') as fh:

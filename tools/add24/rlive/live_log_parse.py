@@ -65,6 +65,8 @@ RULES = [
     ('FIN_EXCL', ('[MINUTE-FIN-EXCL] chan leg',), r'\[MINUTE-FIN-EXCL\] chan leg (\S+) (\S+) \(phut ' + P, 'level,symbol,phut', 'DetectEntrySignal2TradeNormal:1352'),
     ('FIN_EXCL_MIN', ('[MINUTE-FIN-EXCL] phut=',), r'\[MINUTE-FIN-EXCL\] phut=' + P + r' loai=(\d+) .*? ds=(\S+) =>', 'phut,loai,ds', 'MinuteCompletenessGuard:415'),
     ('JVM_START', ('MainClass: com.binance.chuyennd.trading.BinanceOrderTradingManager',), r'MainClass: (\S+)', 'main', 'Utils (khoi dong)'),
+    ('GATE', ('[GATE] scale=',), r'\[GATE\] scale=\S+ topk=\d+ base=\S+ thr=\[\S*\] n_cand=(\d+) n_rej=(\d+) n_pass=(-?\d+)(?: n_skipfull=(\d+) u=(\S+))?',
+     'n_cand,n_rej,n_pass,n_skipfull,u', 'DetectEntrySignal2TradeNormal:670 LiveBookU.gateLine (so day = SO GIAY, ERRATA5 D1)'),
     ('TICK', ('Btc ticker size',), r'Btc ticker size: .*-> ' + P, 'dts', 'DetectEntrySignal2TradeNormal:266'),
     ('SKIP_PAPER', ('skipFull',), r'(skipFull).*?([A-Z0-9]{2,}USDT)', 'kind,symbol', 'ShadowBookC3'),
     ('SKIP_PAPER2', ('liveBookFull',), r'(liveBookFull).*?([A-Z0-9]{2,}USDT)', 'kind,symbol', 'ShadowBookC3'),
@@ -184,6 +186,15 @@ def main():
             for sym in r[3].split(','):
                 if sym.endswith('USDT'):
                     blk.add((ms7(r[1], '%Y%m%d %H:%M'), sym, '*', 'MINUTE-FIN-EXCL-MIN'))
+        # [ERRATA5 D1] so day THEO VET: dong [GATE] in o tick phut dts+1 (cung tick voi 'Btc ticker -> dts') => dts = phut log - 1'
+        for r in rows['GATE']:
+            if r[4] and int(r[4]) > 0:
+                blk.add(((int(r[0]) // 60000 - 1) * 60000, 'FULL', '*', 'GATE_SKIPFULL'))
+        # [ERRATA5 B(i)] tier3 THEO VET: '[C3-LIVE] skip SYM DCA_* TIER3_DCA' (C3LiveEntry:243 -> :320) in o tick dts+1 => chan (dts, SYM, level)
+        for n in ('SKIP', 'KHONG_VAO'):
+            for r in rows[n]:
+                if r[3] == 'TIER3_DCA':
+                    blk.add(((int(r[0]) // 60000 - 1) * 60000, r[1], r[2], 'TIER3_DCA'))
         for r in rows['FIN_EXCL']:
             blk.add((ms7(r[3], '%Y%m%d %H:%M'), r[2], r[1], 'MINUTE-FIN-EXCL'))
         with open(os.path.join(a.out, 'block.csv'), 'w') as fh:

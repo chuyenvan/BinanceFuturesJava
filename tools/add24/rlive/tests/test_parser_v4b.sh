@@ -17,6 +17,8 @@ cat > $D/ok.log <<'L'
 01/01/2026 00:21:06.000 INFO  [x] c.b.c.t.DetectEntrySignal2TradeNormal: Btc ticker size: 1000 20251231 07:41 -> 20260101 00:20
 01/01/2026 00:22:00.000 WARN  [x] c.b.c.c.r.C3MainEquity: [C3-LIVE-EQ] positions() loi IO => khong co equity c3 (chan mo moi, A40 giu trang thai)
 01/01/2026 00:23:00.000 INFO  [x] c.b.c.c.r.C3LiveRuntime: [C3-LIVE] HOURLY cum=1 margin=1 pending=0
+01/01/2026 00:31:06.000 INFO  [x] c.b.c.t.DetectEntrySignal2TradeNormal: [GATE] scale=1.5500 topk=24 base=0.00800 thr=[0.01000..0.02000] n_cand=5 n_rej=5 n_pass=0 n_skipfull=3 u=0.6100
+01/01/2026 00:32:06.000 INFO  [x] c.b.c.c.e.C3LiveEntry: [C3-LIVE] skip AAAUSDT DCA_LEVEL1 TIER3_DCA TIER_3 chan DCA
 L
 cp $D/ok.log $D/bad.log
 echo '01/01/2026 00:30:00.000 WARN  [x] c.b.c.c.r.Foo: [C3-LIVE] dong moi khong co quy tac XYZ' >> $D/bad.log
@@ -37,7 +39,10 @@ blk = list(csv.DictReader(open(d + '/p_ok/block.csv'))); tick = list(csv.DictRea
 c = json.load(open(d + '/p_ok/counts.json'))['counts']
 res = {'v4b_ok_PASS': ok['ok'] is True, 'v4b_bad_FAIL': bad['ok'] is False and bad['unmatched_c3live_lines'] == 1,
        'parsed_each_rule_once': all(c[k]['parsed'] == 1 for k in ('SUBMIT', 'EXEC_ACK', 'FILL_STREAM', 'KHONG_VAO', 'TRAIL_arm', 'TRAIL_STOP', 'EXIT_2021', 'BOOK_CLOSE', 'INC_MIN', 'TICK', 'EQ_UNAVAIL')),
-       'block_star_dts': len(blk) == 1 and blk[0]['symbol'] == '*' and int(blk[0]['decision_ts']) == int(tick[0]['dts'])}
+       'block_star_dts': any(b['symbol'] == '*' and int(b['decision_ts']) == int(tick[0]['dts']) for b in blk),
+       'block_FULL_dts': any(b['symbol'] == 'FULL' and int(b['decision_ts']) == int(tick[0]['dts']) + 10 * 60000 for b in blk),
+       'block_TIER3': any(b['kind'] == 'TIER3_DCA' and b['symbol'] == 'AAAUSDT' and b['level'] == 'DCA_LEVEL1' and int(b['decision_ts']) == int(tick[0]['dts']) + 11 * 60000 for b in blk),
+       'gate_parsed': c['GATE']['parsed'] == 1}
 res['c4_pull242_tu_choi_exit2'] = open(d + '/c4.rc').read().strip() == '2' and not __import__('os').path.exists(d + '/p_c4/counts.json')
 res['ok'] = all(res.values())
 json.dump(res, open(o, 'w'), indent=1); print(json.dumps(res))

@@ -66,7 +66,7 @@ for x in r:
 open('$OUT/live/follow.csv','w').write('cid,avg\n'+''.join(out))
 PY
 export E2E_FX_DIR=$FX E2E_OUT=$OUT E2E_ENV242=$HOME/claude_master/e2e_v12/env242_whitelist.raw ADD24_OVR_FILE=$T/overrides_rlive.env
-BLK=E2E_LIVE_BLOCK_FILE=$OUT/live/block.csv
+BLK="E2E_LIVE_BLOCK_FILE=$OUT/live/block.csv E2E_FULL_FROM_LIVE=1"   # ERRATA5 D1: so day gate theo vet [GATE]
 $H $LANE $L0N ${L0LANE[@]} $BLK | tee -a $OUT/run_all.txt
 $H $LANE L0-FOLLOW FAKE $CAP $FLAGS $BLK E2E_FOLLOW_FILLS=$OUT/live/follow.csv | tee -a $OUT/run_all.txt
 [ "$MODE" = official ] && $H $LANE L0-DRY DRY $CAP $FLAGS $BLK | tee -a $OUT/run_all.txt
@@ -77,6 +77,9 @@ python3 $T/rlive_gates.py --out-dir $OUT --fx $FX --live $OUT/live --start "$STA
   --live-banner $BANNER --v4b $OUT/v4b.json --v10 $OUT/V10.json --extra stub=$STUB env=$E2E_ENV242 ovr=$ADD24_OVR_FILE > $OUT/gates.txt 2>&1; GRC=$?
 cat $OUT/gates.txt
 if [ $GRC != 0 ] && [ "$MODE" = official ]; then echo "CONG V truot => KHONG cham (sua dau vao bang errata)"; exit 13; fi
+# [ERRATA5 B(ii)] V10a truot = KHONG CHAM, exit rieng 14, khong ket luan; A1 phan xu tu V10_diag.json
+if [ "$MODE" = official ] && ! python3 -c "import json,sys; sys.exit(0 if json.load(open('$OUT/V10.json')).get('V10a_ok') else 1)"; then
+  cp $OUT/V10.json $OUT/V10_diag.json $A/ 2>/dev/null; echo "V10a truot => KHONG CHAM (exit 14) - A1 phan xu V10_diag.json"; exit 14; fi
 python3 $T/rlive_score.py --live $OUT/live --rig $OUT/$L0N --follow $OUT/L0-FOLLOW --fx $FX $MARK --cap $CAP --apply-ratio $APPLY \
   --start "$START" --end "$END" --v10 $OUT/V10.json --out $OUT/score_L0 | tee $OUT/score_L0.txt
 DRYS=""

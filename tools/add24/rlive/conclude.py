@@ -42,7 +42,9 @@ def main():
             out['items']['L0-DRY'] = 'INSUFFICIENT'      # thieu luot DRY
         for k, cv in COVER.items():
             v = s[k]
-            if v == 'INSUFFICIENT':
+            if v == 'INSUFFICIENT' and k == 'L-D' and json.load(open(a.score)).get('L-D_no_cover'):
+                out['items'][k] = 'INSUFFICIENT'   # ERRATA5 B(i): > 3 cum tiem tier3 => khong phu
+            elif v == 'INSUFFICIENT':
                 ok = all(cov.get(c) == 'PASS' for c in cv)
                 out['items'][k] = 'INSUFFICIENT-CO-PHU' if ok else 'INSUFFICIENT'
             else:

@@ -5,4 +5,5 @@ T=$(cd "$(dirname "$0")" && pwd); A=$HOME/claude_master/w3/add24/a/tests_$(date 
 TEST_OUT=$A/test_score.json python3 $T/test_score.py > $A/test_score.txt 2>&1; R1=$?
 bash $T/test_parser_v4b.sh $A/test_parser_v4b.json > $A/test_parser_v4b.txt 2>&1; R2=$?
 bash $T/test_guard_gate.sh $A/test_guard_gate.json > $A/test_guard_gate.txt 2>&1; R3=$?
-echo "test_score(a,b,c,e)=$R1 test_parser_v4b(f)=$R2 test_guard_gate(d)=$R3 out=$A"; [ $R1$R2$R3 = 000 ]
+bash $T/test_full_tier3_java.sh $A/test_full_tier3.json > $A/test_full_tier3.txt 2>&1; R4=$?
+echo "test_score(a,b,c,e)=$R1 test_parser_v4b(f)=$R2 test_guard_gate(d)=$R3 test_full_tier3(D1,tier3)=$R4 out=$A"; [ $R1$R2$R3$R4 = 0000 ]

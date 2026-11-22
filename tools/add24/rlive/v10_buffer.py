@@ -75,6 +75,8 @@ def main():
             if c:
                 c['tc'] = x[0]
     # lech L-E dau tien (khoa (dts, symbol, level, legIdx))
+    gp = os.path.join(a.live, 'gate.csv')
+    lfull_g = {(int(x['log_ms']) // MIN - 1) * MIN for x in csv.DictReader(open(gp)) if x.get('n_skipfull') and int(x['n_skipfull']) > 0} if os.path.exists(gp) else None
     lk = {(int(x['cid'].split('-')[-2]) * MIN, x['symbol'], x['level'], int(x['legIdx'] or x['cid'].split('-')[-1])) for x in sub}
     rk = {(int(x['decision_ts']), x['symbol'], x['level'], int(x['leg_idx'])) for x in csv.DictReader(open(a.rig + '/legs.csv')) if x['outcome'] == 'SUBMITTED'}
     dif = [k[0] for k in lk ^ rk if S <= k[0] < E]
@@ -84,21 +86,30 @@ def main():
         tg = t + MIN
         lheld = {c['symbol'] for c in cl if c['t0'] < tg and (c['tc'] is None or c['tc'] > tg)}
         lfull = sum(n for c in cl if c['t0'] < tg and (c['tc'] is None or c['tc'] > tg) for (tt, n) in c['legs'] if tt < tg) / a.cap >= a.u_max
+        if lfull_g is not None:
+            lfull = t in lfull_g          # [ERRATA5 D1] so day = SO GIAY theo dong [GATE] n_skipfull > 0
         same = (lheld & cand.get(t, set())) == rheld.get(t, set()) and lfull == rfull.get(t, False)
         A_, B_ = sorted(live.get(t, [])), sorted(rig.get(t, []))
         if t < first_dev or same:
             n_dom += 1
             if A_ != B_:
                 in_bad += 1; dom.append(t)
+                # chan doan (ERRATA5 B(ii)): tap r lech theo phut (bit), trang thai giu / so day hai ben - khong gia / kich thuoc lenh
+                diag.append({'ts': t, 'n_live': len(A_), 'n_rig': len(B_), 'r_bits_chi_live': sorted(set(A_) - set(B_))[:30],
+                             'r_bits_chi_rig': sorted(set(B_) - set(A_))[:30], 'held_live': sorted(lheld & cand.get(t, set())),
+                             'held_rig': sorted(rheld.get(t, set())), 'full_live': lfull, 'full_rig': rfull.get(t, False)})
         elif len(A_) != len(B_) or A_ != B_:
             out_bad.append(t)
     n_l = sum(len(v) for v in live.values()); n_r = sum(len(v) for v in rig.values())
+    diag = []
     res = {'window': [S, E], 'live_records': n_l, 'rig_records': n_r, 'first_L_E_dev': first_dev, 'domain_minutes': n_dom,
            'V10a_mismatch_minutes': in_bad, 'V10a_first': dom[:20], 'outside_domain_mismatch_minutes': out_bad,
            'live_buffer_bad_frames': bad, 'live_buffer': a.live_buffer}
     res['V10a_ok'] = in_bad == 0 and bad == 0
     res['ok'] = res['V10a_ok']
     json.dump(res, open(a.out, 'w'), indent=1)
+    json.dump(diag, open(a.out.replace('.json', '') + '_diag.json', 'w'), indent=0)
+    res['diag_file'] = a.out.replace('.json', '') + '_diag.json'
     print(json.dumps({k: res[k] for k in ('V10a_ok', 'live_records', 'rig_records', 'domain_minutes', 'V10a_mismatch_minutes')} | {'outside_n': len(out_bad)}))
     return 0 if res['ok'] else 1
 
