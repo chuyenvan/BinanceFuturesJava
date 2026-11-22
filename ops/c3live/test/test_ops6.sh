@@ -650,7 +650,7 @@ chk "R2-M1 hang GL_AD_MD5 (golive_lib.sh) = md5 c3_autodrain_prestart.sh trong r
 M12P=$(cat "$HERE/golive_monitor.sh" "$HERE/golive_lib.sh" | md5sum | cut -c1-12); bash "$HERE/install_cron_golive_monitor.sh" > $W/ic4.out 2>&1; PMON=$W/pinned/golive_monitor_$M12P
 chk "R2-M1 thu muc PIN (install_cron_golive_monitor.sh tao) CHI co monitor + lib (khong co wrapper)" '[ -f $PMON/golive_monitor.sh ] && [ -f $PMON/golive_lib.sh ] && [ ! -e $PMON/c3_autodrain_prestart.sh ]'
 reset242 1005; rm -f $W/deploy/c3_monitor_bg.txt; OUT=$(DRY=1 bash $PMON/golive_monitor.sh 2>&1)
-chk "R2-M1 monitor chay TU THU MUC PIN, boot guard da cai => KHONG bao boot_guard (khong WARN CHUA_CAI)" '! echo "$OUT" | grep -q "boot_guard_MAT\|CHUA_CAI" && echo "$OUT" | grep -q "TOM TAT"'
+chk "R2-M1 monitor chay TU THU MUC PIN, boot guard da cai => KHONG bao boot_guard (khong WARN CHUA_CAI)" '[[ $OUT != *boot_guard_MAT* && $OUT != *CHUA_CAI* && $OUT == *"TOM TAT"* ]]'   # khong pipe grep -q: OUT lon + pipefail => SIGPIPE
 cp $DF $W/df.bak; rm -f $DF; OUT=$(DRY=1 bash $PMON/golive_monitor.sh 2>&1); RC1=$?; OUT2=$(DRY=1 bash $PMON/golive_monitor.sh 2>&1); RC=$?; cp $W/df.bak $DF
 chk "R2-M1/R2-m6 monitor TU PIN, drop-in mat: luot 1 WARN (lan 1/2, khong KHAN boot guard), luot 2 lien tiep => KHAN boot_guard_MAT rc 2" 'echo "$OUT" | grep -q "WARN boot guard 242 CHUA_CAI lan 1/2" && ! echo "$OUT" | grep -q "boot_guard_MAT" && [ $RC = 2 ] && echo "$OUT2" | grep -q "boot_guard_MAT(.*dropin=0.*_2_luot"'
 OUT=$(DRY=1 bash $PMON/golive_monitor.sh 2>&1); printf 'BG before 99\n' > $W/sshplan; OUT3=$(DRY=1 bash $PMON/golive_monitor.sh 2>&1); : > $W/sshplan
@@ -695,6 +695,7 @@ reset242 1005; cp -p $W/gate_ok $G; touch $F/FAKE_KILL_ON_START $F/FAKE_WD_START
 OUT=$(echo 'YES PILOT' | GL_WD_LOCK_WAIT_S=2 bash "$HERE/golive_pilot_on.sh" 2>&1); RC=$?; pkill -f "fcntl.flock" 2>/dev/null
 chk "R2-m4 chay lai: pha stopped + JVM dang chay + watchdog giu lock qua han => KHAN rc2 (KHONG bao 'bot khong bi dung'), KS cua script giu, in trang thai that, 1 lenh monitor" '[ $RC = 2 ] && echo "$OUT" | grep -q "FAIL KHAN resume_watchdog_giu_lock" && ! echo "$OUT" | grep -q "bot live KHONG bi dung" && grep -q "^golive_pilot_on " $F/run/KILL_SWITCH && echo "$OUT" | grep -q "trang thai THAT tren 242" && echo "$OUT" | grep -q "LENH OWNER (dung 1): bash .*golive_monitor.sh"'
 echo "-- R2-m5 noi dung ref + so dem that"
+reset242 1005   # von 1000 (< size) nhu luc tao gate
 printf 'B2 MIEN (chi B2)\n' > $PR/docs/prereg/OWNER_DECISION_ONLY_B2.md; git -C $PR add -A; git -C $PR -c user.name=t -c user.email=t@t commit -qm onlyb2; B2C=$(git -C $PR rev-parse --short HEAD)
 OUT=$(MGE MIEN_X14="MIEN ref=$B2C x" DRY=1 bash "$HERE/golive_make_gate_pilot.sh" 2>&1); RC=$?
 chk "R2-m5a MIEN_X14 ref = commit OWNER_DECISION chi mien B2 => TU CHOI" '[ $RC = 1 ] && echo "$OUT" | grep -q "MIEN_X14 ref=$B2C khong phai commit cham docs/prereg/OWNER_DECISION_\* co DONG .MIEN. + .X14."'
