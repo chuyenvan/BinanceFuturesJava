@@ -203,6 +203,7 @@ final class CrashDayRig {
     long finInjBar = -1;
     int nFinExcl;
     int nLiveInj;
+    int nLiveGuardMin;
     final List<String> fillRows = new ArrayList<>();                // khop c3 (su that san): ms,symbol,side,qty,price,cid
     final List<String> finRows = new ArrayList<>();
     final Map<String, Long> gapSince = new HashMap<>();
@@ -723,6 +724,15 @@ final class CrashDayRig {
         marketRows.add(b + "," + p15 + "," + (dip ? 1 : 0) + "," + (mk == null ? ",,,,,,," : mk.down + "," + mk.down15 + ","
                 + mk.up + "," + (mk.level == null ? "" : mk.level.name()) + "," + (mk.level != null ? 1 : 0) + ","
                 + (mk.dcaAlt ? 1 : 0) + "," + mk.n + "," + mk.n15));
+        // [ADD24 ERRATA3 A4] guard CA PHUT cua live ("*|*"): production return O DAU createOrderBuyRequest0
+        //   (DetectEntrySignal2TradeNormal:1270-1276) TRUOC AIRejectFilter (nap r) => rig bo qua MOI gate + leg moi phut nay
+        //   (BIG_DOWN, DCA, selector); quan ly vi the / trailing / stop van chay o ops().
+        Set<String> lbm = o.liveBlock.isEmpty() ? null : o.liveBlock.get(b);
+        if (lbm != null && lbm.contains("*|*")) {
+            nLiveGuardMin++;
+            event("INJECT_LIVE_GUARD_MIN", "*", "phut " + fmt(b) + " bo qua gate + leg moi");
+            return;
+        }
         if (o.exec) {
             // [ERRATA1] thu tu = production (DetectEntrySignal2TradeNormal:433-516): BIG_DOWN -> DCA "level" -> DCA "dcaAlt" -> selector
             // 1. nhanh BIG_DOWN (shadow log)
@@ -1191,6 +1201,7 @@ final class CrashDayRig {
         inj.put("fin_excl_legs", nFinExcl);
         inj.put("live_block_minutes", o.liveBlock.size());
         inj.put("live_block_legs", nLiveInj);
+        inj.put("live_guard_minutes_skipped", nLiveGuardMin);
         inj.put("follow_px_n", o.followPx.size());
         inj.put("follow_hits", fake != null ? fake.followHits : -1);
         res.put("injections", inj);

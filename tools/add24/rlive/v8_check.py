@@ -1,70 +1,92 @@
 #!/usr/bin/env python3
-"""ADD24 cong V8 (P6): banner cau hinh cua rig phai TRUNG banner bot live in luc khoi dong 2026-11-20 06:17 (log pull242),
-tru truong KHAI TRUOC la khac (adapter, duong dan, host, trang thai file KILL_SWITCH luc swap).
-- Tag co ca o rig va live: so tung cap key=value (+ phan chu sau khi bo truong khai truoc).
-- Tag live KHONG in o rig (vong main / ops khong chay trong rig): so gia tri banner voi env rig (whitelist + override) qua bang anh xa.
-- Hang so bao size s9.3 (P7): F_BASE, SCALE, weights, ratio(leg0), sizeCap, U_MAX - lay tu banner; thieu => liet ke bien.
-Chi doc: file banner da trich (add24/a/v8_live_banner_*), run.log + result.json + env_used.sh cua luot rig. Khong doc env.sh that.
-usage: v8_check.py --rig <dir luot> --live-main <txt> --live-other <txt> --out v8.json
+"""ADD24 cong V8 (P6 + ERRATA3 A9 - danh sach khai truoc CHOT). MOI dong banner live in luc khoi dong 2026-11-20 06:17 (file trich
+add24/a/v8_live_banner_full_1120_0617.txt) phai thuoc dung MOT muc bang PHAN_LOAI duoi; khong thuoc => CHUA_PHAN_LOAI => V8 FAIL.
+  RIG  : so tung khoa=gia tri voi dong cung tag cua rig; khoa khac / chi-co-o-live => LECH tru khoa khai truoc (A9) cua tag do.
+  ENV  : moi khoa phai duoc so (env rig = whitelist 11-16 + override, hoac su kien rig trong result.json) / khai truoc / la khoa TRANG THAI
+         liet ke; khoa khac => LECH.
+  NGOAI_RIG : duong production KHONG chay trong rig (vong feature / ops / san that) - liet ke cho A1 (cho khac production #1/#2).
+  TRANG_THAI: dong trang thai luc khoi dong (dem, nap file, ket noi) - khong phai cau hinh; liet ke cho A1.
+Khai truoc A9: moi gia tri la duong dan (chua '/'); PUSH/killSwitch/exists; [UNIVERSE-A1] sha256/serverTime/so symbol; [TS-EXT]
+LIVE_TS_MKT_EXT + truong suy (X14, file, days_loaded); adapter; host.
+usage: v8_check.py --rig <dir luot> --live <banner full txt> --out V8.json
 """
-import argparse, json, logging, re, sys
+import argparse, json, re, sys
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
-log = logging.getLogger('v8')
-TAGS = ['LIVE-SIZING', 'LIVE_PROFILE=c3_live', 'C3-LEGACY', 'LIVE-DCA-GRID', 'UNIVERSE-A1', 'MINUTE-GUARD', 'MINUTE-FIN', 'GATE-RATIO',
-        'GATE-QUOTA', 'TS-EXT', 'KILLSW', 'OPS', 'CADENCE-SPLIT', 'CADENCE-SPLIT-V2', 'R4-1M', 'FEAT-PIPE', 'SELECTOR_TIER1_NET015=true',
-        'GATE-PRE', 'C3-LIVE', 'SHADOW', 'C3-RATE']
-# truong khai truoc la khac (adapter / duong dan / host / trang thai file luc swap) - prereg P6
-DECLARED = {'file', 'killSwitch', 'exists', 'adapter', 'gateway', 'book', 'tai_khoan', 'stream', 'ledger', 'state', 'dinh_luu', 'size',
-            'firstTs', 'sha256', 'serverTime', 'days_loaded', 'open', 'realized',
-            'PUSH',            # = ham cua killSwitch exists (file KILL_SWITCH do script swap dat luc khoi dong), khong phai cau hinh
-            'LIVE_TS_MKT_EXT'}  # override khai truoc rig (X14 can ALT_EW Aerospike; K2: X14 khong kich trong OW2) - ERRATA_PROPOSED_A E-A4
 KV = re.compile(r'([A-Za-z0-9_().]+)=(\[[^\]]*\]|[^\s,;|)]+)')
-# tag live khong in o rig -> (regex trich gia tri live, ten env, ham so)
-ENVMAP = [
-    ('UNIVERSE-A1', r'\[UNIVERSE-A1\] BAT', 'UNIVERSE_A1', lambda m, v: v == '1'),
-    ('GATE-QUOTA', r'SKIP_WHEN_FULL=ON', 'GATE_QUOTA_SKIP_WHEN_FULL', lambda m, v: v == 'true'),
-    ('KILLSW', r'\[KILLSW\] BAT mode=(\w+)', 'LIVE_KILLSW_MODE', lambda m, v: v == m.group(1)),
-    ('KILLSW', r'C2 signed=(\d)', 'LIVE_KILLSW_C2_SIGNED', lambda m, v: v == m.group(1)),
-    ('OPS', r'LIVE_PERIODIC_RESET_HOURS=(\d+)h', 'LIVE_PERIODIC_RESET_HOURS', lambda m, v: v == m.group(1)),
-    ('CADENCE-SPLIT', r'MARKET_SCAN_MIN=(\d+)', 'MARKET_SCAN_MIN', lambda m, v: v == m.group(1)),
-    ('CADENCE-SPLIT-V2', r'MARKET_SCAN_PRIORITY=(\d+)', 'MARKET_SCAN_PRIORITY', lambda m, v: v == m.group(1)),
-    ('R4-1M', r'LIVE_ENTRY_GRID_MIN=(\d+)', 'LIVE_ENTRY_GRID_MIN', lambda m, v: v == m.group(1)),
-    ('FEAT-PIPE', r'LIVE_SEED_EXCLUDE_DECISION_MIN=(\d+)', 'LIVE_SEED_EXCLUDE_DECISION_MIN', lambda m, v: v == m.group(1)),
-    ('SELECTOR_TIER1_NET015=true', r'SELECTOR_TIER1_NET015=(\w+)', 'SELECTOR_TIER1_NET015', lambda m, v: v == m.group(1)),
-    ('TS-EXT', r'\[TS-EXT\] BAT LIVE_TS_MKT_EXT=(\d)', 'LIVE_TS_MKT_EXT', lambda m, v: v == m.group(1)),
-    ('C3-LIVE', r'c3_capital=([0-9.]+)', 'C3_CAPITAL', lambda m, v: float(v) == float(m.group(1))),
-    ('C3-LIVE', r'X14=(\w+)', 'LIVE_TS_MKT_EXT', lambda m, v: (v == '1') == (m.group(1) == 'true')),
-    ('GATE-RATIO', r'pct=([0-9.]+)', 'LIVE_GATE_ROLLING_PCT', lambda m, v: abs(float(v) - float(m.group(1))) < 1e-8),
-    ('GATE-RATIO', r'window=(\d+)d', 'LIVE_GATE_ROLLING_DAYS', lambda m, v: v == m.group(1)),
-    ('GATE-RATIO', r'mode=(\w+)', 'LIVE_GATE_ROLLING_MODE', lambda m, v: v == m.group(1)),
+DECL_ANY = {'adapter', 'host', 'PUSH', 'killSwitch', 'exists'}
+DECL_TAG = {'UNIVERSE-A1': {'sha256', 'serverTime', '(TradFi', 'TradFi', 'INDEX', 'PREMARKET', 'symbol', 'unclassified'},
+            'TS-EXT': {'LIVE_TS_MKT_EXT', 'X14', 'file', 'days_loaded'}, 'C3-LIVE': {'X14'}}
+# (tag, chuoi con nhan dang dong, lop, dac ta)
+# dac ta ENV: {khoa: ('env', TEN, ham) | ('res', khoa_result, ham) | ('state',)}; khoa '_' = kiem tren ca dong
+B = lambda x: (lambda v: str(v).lower() in x)
+TABLE = [
+    ('LIVE-SIZING', '', 'RIG', {}),
+    ('LIVE_PROFILE=c3_live', '', 'RIG', {}),
+    ('C3-LEGACY', '', 'RIG', {}),
+    ('LIVE-DCA-GRID', '', 'RIG', {}),
+    ('GATE-RATIO', 'LIVE BAT', 'RIG', {}),
+    ('GATE-RATIO', 'n?p buffer', 'TRANG_THAI', 'buffer gate - noi dung so o V10'),
+    ('GATE-RATIO', 'buffer', 'TRANG_THAI', 'buffer gate - noi dung so o V10'),
+    ('MINUTE-FIN', '', 'ENV', {'_': ('rigline', 'MINUTE-FIN', lambda live, rig: ('BAT' in live) == ('BAT' in (rig or ''))),
+                              'LIVE_FIN_GUARD': ('state',)}),   # khoa trong dong live la HUONG DAN rollback, khong phai gia tri
+    ('MINUTE-GUARD', '', 'ENV', {'_': ('env', 'LIVE_MINUTE_GUARD', lambda live, v: ('BAT' in live) == (v is None or v.strip() != '0'))}),
+    ('UNIVERSE-A1', 'BAT', 'ENV', {'UNIVERSE_A1': ('env', 'UNIVERSE_A1', lambda lv, v: v == lv)}),
+    ('UNIVERSE-A1', 'RELOAD', 'TRANG_THAI', 'nap lai exchangeInfo (sha256 khai truoc A9)'),
+    ('GATE-QUOTA', '', 'ENV', {'SKIP_WHEN_FULL': ('env', 'GATE_QUOTA_SKIP_WHEN_FULL', lambda lv, v: (lv == 'ON') == (v == 'true'))}),
+    ('CADENCE-SPLIT', 'MARKET_SCAN_MIN', 'ENV', {'MARKET_SCAN_MIN': ('env', 'MARKET_SCAN_MIN', lambda lv, v: lv == v)}),
+    ('CADENCE-SPLIT-V2', '', 'ENV', {'MARKET_SCAN_PRIORITY': ('env', 'MARKET_SCAN_PRIORITY', lambda lv, v: lv == v)}),
+    ('R4-1M', '', 'ENV', {'LIVE_ENTRY_GRID_MIN': ('env', 'LIVE_ENTRY_GRID_MIN', lambda lv, v: lv == v)}),
+    ('SELECTOR_TIER1_NET015=true', '', 'ENV', {'_': ('env', 'SELECTOR_TIER1_NET015', lambda live, v: v == 'true')}),
+    ('KILLSW', 'BAT mode=', 'ENV', {'mode': ('env', 'LIVE_KILLSW_MODE', lambda lv, v: lv == v), 'signed': ('env', 'LIVE_KILLSW_C2_SIGNED', lambda lv, v: lv == v),
+                                    'file': ('state',)}),
+    ('KILLSW', 'nap dinh equity', 'TRANG_THAI', 'dinh equity KS (trang thai file)'),
+    ('KILLSW', 'nap file latch', 'TRANG_THAI', 'latch KS'),
+    ('KILLSW', 'gan EquitySource', 'TRANG_THAI', 'gan nguon equity KS'),
+    ('OPS', 'LIVE_PERIODIC_RESET_HOURS', 'ENV', {'LIVE_PERIODIC_RESET_HOURS': ('env', 'LIVE_PERIODIC_RESET_HOURS', lambda lv, v: lv.rstrip('h') == v),
+                                                 'LIVE_KILLSW_MODE': ('env', 'LIVE_KILLSW_MODE', lambda lv, v: lv == v),
+                                                 'profile': ('env', 'LIVE_PROFILE', lambda lv, v: lv == v),
+                                                 'LIVE_HEARTBEAT': ('ngoai_rig',), 'file': ('state',), 'luc': ('state',), '(0': ('state',)}),
+    ('GATE-PRE', "nguon 'dang giu'", 'ENV', {'_': ('res', 'held_mode', lambda live, v: ('C3_LIVE_BOOK' in live) == (v == 'OWN_BOOK'))}),
+    ('GATE-PRE', 'nguon=', 'TRANG_THAI', 'dem theo phut (bo_dang_giu, a1_bo, ...)'),
+    ('C3-LIVE', 'khoi dong adapter=', 'ENV', {'c3_capital': ('env', 'C3_CAPITAL', lambda lv, v: float(lv) == float(v)),
+                                             'killSwitchArmed': ('rigfact', 'ks_armed_rig_entry', lambda lv, v: lv == 'true'),
+                                             'tai_khoan': ('env_default', 'C3_ACCOUNT', lambda lv, v: v is None and lv.startswith('CHINH')),
+                                             'gateway': ('adapter_derived',), 'stream': ('adapter_derived',), 'book': ('state',), 'cum': ('state',),
+                                             'leg_treo': ('state',)}),
+    ('C3-LIVE', 'UNIVERSE_A1=', 'ENV', {'UNIVERSE_A1': ('env', 'UNIVERSE_A1', lambda lv, v: lv.rstrip(',') == v)}),
+    ('C3-LIVE', 'PUSH doi trang thai', 'TRANG_THAI', 'PUSH/killSwitch (khai truoc A9)'),
+    ('C3-LIVE', 'client san sang', 'NGOAI_RIG', 'client REST san that (stub: 127.0.0.1:9)'),
+    ('C3-LIVE', 'nap SymbolRules', 'TRANG_THAI', ''), ('C3-LIVE', 'khoi phuc sau restart', 'TRANG_THAI', ''),
+    ('C3-LIVE', 'reconcile khoi dong', 'TRANG_THAI', ''),
+    ('TS-EXT', 'BAT LIVE_TS_MKT_EXT', 'RIG', {}),
+    ('TS-EXT', 'nap ', 'TRANG_THAI', 'nap co ngay (X14 tat o rig - K2)'), ('TS-EXT', 'status now=', 'TRANG_THAI', ''),
+    ('TS-EXT', 'flag day=', 'TRANG_THAI', ''),
+    ('FEAT-PIPE', 'LIVE_SEED_EXCLUDE_DECISION_MIN', 'ENV', {'LIVE_SEED_EXCLUDE_DECISION_MIN': ('env', 'LIVE_SEED_EXCLUDE_DECISION_MIN', lambda lv, v: lv.rstrip(':') == v)}),
+    ('FEAT-PIPE', '', 'NGOAI_RIG', 'vong feature -> p15 (rig doc sel_dump live)'),
+    ('LEGACY', '', 'TRANG_THAI', 'danh sach LEGACY (C3_EXCLUDE_LEGACY_HELD=false => khong anh huong c3)'),
+    ('V11', '', 'NGOAI_RIG', 'funding fee manager (vong main)'),
+    ('OPS-REFRESH', '', 'NGOAI_RIG', 'lam moi tai cho'), ('OPS-RESET', '', 'NGOAI_RIG', ''), ('OPS-PROC', '', 'TRANG_THAI', ''),
+    ('SHADOW', '', 'TRANG_THAI', 'so giay (K3)'), ('C3-RATE', '', 'NGOAI_RIG', 'rate limit san that (rig dem X9)'),
+    ('C3-LIVE-BOOK', '', 'TRANG_THAI', ''), ('C3-LIVE-EQ', '', 'TRANG_THAI', 'trang thai equity c3 (moc, funding)'),
+    ('C5', '', 'NGOAI_RIG', 'AccountModeGuard san that'), ('C3-RULES', '', 'TRANG_THAI', ''), ('C3-LIVE-SCOPE', '', 'TRANG_THAI', ''),
+    ('C3-LIVE-RECON', '', 'TRANG_THAI', ''), ('HEARTBEAT', '', 'NGOAI_RIG', ''), ('OI-LIVE', '', 'NGOAI_RIG', 'feature OI'),
+    ('LIVE-KLINE', '', 'NGOAI_RIG', 'S1 ranker live'),
 ]
-# override khai truoc cua rig R-LIVE (prereg s5 + P6) - lech o day KHONG tinh la truot V8
-DECL_ENV = {'LIVE_ADAPTER', 'LIVE_IS_SHADOW_HOST', 'LIVE_GATE_ROLLING_FILE', 'LIVE_TS_MKT_EXT'}
+# khoa la HANG SO CODE trong class jar (khong env): bang nhau giua live va rig khi class giong byte (C0 (b): 0 entry khong-key khac).
+#   TS-EXT: extH = TsMktExt.EXT_HOURS (TsMktExt.java:50), thr = AltEwIndex.DD_THRESHOLD, minN, profile (chuoi literal :153).
+CODE_CONST = {'TS-EXT': {'profile', 'extH', 'thr', 'minN'}}
+# khoa so voi khoa KHAC cua rig: TS-EXT baseH = LiveProfileC3.TIME_STOP_HOURS (TsMktExt.java:48) <-> rig [LIVE_PROFILE] timeStop
+CROSS = {('TS-EXT', 'baseH'): ('LIVE_PROFILE=c3_live', 'timeStop', lambda lv, rv: rv == lv + 'h')}
+C0_JSON = '/home/ubuntu/claude_master/w3/add24/a/C0.json'
+TAGRX = re.compile(r'\] ([a-zA-Z.0-9]+): [^A-Za-z0-9]*\[([A-Za-z0-9_ =.-]+)\](.*)$')
 
 
-def strip(line):
-    m = re.search(r'\] [a-zA-Z.0-9]+: (.*)$', line)
-    return (m.group(1) if m else line).strip()
-
-
-def tag_of(body):
-    for t in sorted(TAGS, key=len, reverse=True):
-        if '[' + t + ']' in body:
-            return t
-    return None
-
-
-def banners(path, startup_only=False):
-    out = {}
+def parse_lines(path):
+    out = []
     for ln in open(path, errors='replace'):
-        b = strip(ln)
-        t = tag_of(b)
-        if not t:
-            continue
-        if any(x in b for x in (' SUBMIT ', 'C3-LIVE-TRAIL', 'C3-LIVE-FILL', 'HOURLY', 'TIME-STOP', 'DA DONG', 'status now=')):
-            continue
-        out.setdefault(t, []).append(b)
+        m = TAGRX.search(ln.rstrip('\n'))
+        if m:
+            out.append((m.group(2), m.group(3)))
     return out
 
 
@@ -75,90 +97,91 @@ def load_env(p):
         if s.startswith('export '):
             s = s[7:]
         s = s.split('#', 1)[0].strip()
-        if '=' in s and re.match(r'^[A-Z0-9_]+=', s):
+        if re.match(r'^[A-Z0-9_]+=', s):
             k, v = s.split('=', 1)
-            for part in [s] if ' ' not in v else [s]:
-                pass
-            e[k] = v.split()[0] if v else ''
+            e[k] = v.split()[0] if v.strip() else ''
     return e
-
-
-def kvs(b):
-    return {k: v for k, v in KV.findall(b)}
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--rig', required=True); ap.add_argument('--live-main', required=True); ap.add_argument('--live-other', required=True)
-    ap.add_argument('--out', required=True)
+    ap.add_argument('--rig', required=True); ap.add_argument('--live', required=True); ap.add_argument('--out', required=True)
     a = ap.parse_args()
-    live = banners(a.live_main)
-    for t, v in banners(a.live_other).items():
-        live.setdefault(t, []).extend(v)
-    rig = banners(a.rig + '/run.log')
+    live = parse_lines(a.live)
+    rigl = [x for x in parse_lines(a.rig + '/run.log') if not re.search(r' SUBMIT |TRAIL|FILL|TIME-STOP|DA DONG|HOURLY|status now=', x[1])]
     env = load_env(a.rig + '/env_used.sh')
-    res = {'live_tags': sorted(live), 'rig_tags': sorted(rig), 'both': [], 'env_map': [], 'mismatch': [], 'declared_diff': [],
-           'size_constants': {}, 'missing_for_v8': []}
-    for t in sorted(set(live) & set(rig)):
-        L = {}
-        for b in live[t]:
-            L.update(kvs(b))
-        R = {}
-        for b in rig[t]:
-            R.update(kvs(b))
-        row = {'tag': t, 'equal': [], 'diff': [], 'declared': [], 'live_only': [], 'rig_only': []}
-        for k in sorted(set(L) | set(R)):
-            if k in L and k in R:
-                if L[k] == R[k]:
-                    row['equal'].append(k)
-                elif k in DECLARED:
-                    row['declared'].append('%s: live=%s rig=%s' % (k, L[k], R[k]))
-                else:
-                    row['diff'].append('%s: live=%s rig=%s' % (k, L[k], R[k]))
-            elif k in L:
-                row['live_only'].append(k)
-            else:
-                row['rig_only'].append(k)
-        res['both'].append(row)
-        res['mismatch'] += ['%s %s' % (t, d) for d in row['diff']]
-        res['declared_diff'] += ['%s %s' % (t, d) for d in row['declared']]
-    alltxt = {t: ' || '.join(v) for t, v in live.items()}
-    for t, rx, name, f in ENVMAP:
-        txt = alltxt.get(t, '')
-        m = re.search(rx, txt)
-        v = env.get(name)
-        row = {'tag': t, 'env': name, 'live': m.group(0) if m else None, 'rig_env': v}
-        if m is None:
-            row['st'] = 'LIVE_KHONG_IN'
-        elif v is None:
-            row['st'] = 'RIG_THIEU_BIEN'
-            res['missing_for_v8'].append(name)
-        else:
-            ok = f(m, v)
-            row['st'] = 'OK' if ok else ('KHAI_TRUOC' if name in DECL_ENV else 'LECH')
-            if not ok and name not in DECL_ENV:
-                res['mismatch'].append('%s env %s: live "%s" rig %s=%s' % (t, name, m.group(0), name, v))
-            elif not ok:
-                res['declared_diff'].append('%s env %s: live "%s" rig %s=%s' % (t, name, m.group(0), name, v))
-        res['env_map'].append(row)
-    s = alltxt.get('LIVE-SIZING', '') + ' ' + alltxt.get('LIVE-DCA-GRID', '') + ' ' + alltxt.get('LIVE_PROFILE=c3_live', '')
-    for k, rx in (('F_BASE', r'F_BASE=([0-9.]+)'), ('DCA_GRID_SCALE', r'DCA_GRID_SCALE=([0-9.]+)'), ('weights', r'weights=(\[[^\]]*\])'),
-                  ('ratio_leg0', r'ratio\(leg0\)=([0-9.]+)'), ('sizeCap', r'sizeCap=([0-9.]+%)'), ('levels', r'levels=(\[[^\]]*\])'),
-                  ('arm', r'arm=([0-9.]+)'), ('timeStop', r'timeStop=(\d+h)'), ('U_MAX', r'U_MAX=([0-9.]+)')):
-        m = re.search(rx, s)
-        res['size_constants'][k] = m.group(1) if m else None
-        if m is None:
-            res['missing_for_v8'].append('hang_so_bao_size:' + k)
+    res = json.load(open(a.rig + '/result.json'))
+    rigfact = {'ks_armed_rig_entry': 'true'}       # CrashDayRig: C3LiveEntry.KsGate.armed() = true (rig luon armed)
+    rows, lech, unclassified = [], [], []
     try:
-        cfg = json.load(open(a.rig + '/result.json')).get('cfg_effective', {})
-        res['rig_cfg_effective'] = cfg
+        c0 = json.load(open(C0_JSON)); c0_nonkey_same = c0['jar']['b_nonkey_diff'] == 0 and c0['jar']['stub_md5'] == 'cf0f479241265de68836716ee66a1866'
     except Exception:
-        res['rig_cfg_effective'] = None
-    res['ok'] = not res['mismatch'] and not [x for x in res['missing_for_v8'] if not x.startswith('hang_so_bao_size:U_MAX')]
-    res['verdict'] = 'PASS' if res['ok'] else 'FAIL'
-    json.dump(res, open(a.out, 'w'), indent=1)
-    print(json.dumps({k: res[k] for k in ('verdict', 'mismatch', 'declared_diff', 'missing_for_v8', 'size_constants')}, indent=1))
-    return 0 if res['ok'] else 1
+        c0_nonkey_same = False
+    for tag, body in live:
+        ent = next((e for e in TABLE if e[0] == tag and e[1] in body), None)
+        row = {'tag': tag, 'class': ent[2] if ent else 'CHUA_PHAN_LOAI', 'checks': [], 'lech': []}
+        if ent is None:
+            unclassified.append(tag); rows.append(row); continue
+        kv = {k: v.rstrip(':,') for k, v in KV.findall(body)}
+        if ent[2] == 'RIG':
+            rv = {}
+            rb = [b for t, b in rigl if t == tag]
+            for b in rb:
+                rv.update({k: v.rstrip(':,') for k, v in KV.findall(b)})
+            if not rb:
+                row['lech'].append('rig KHONG in tag')
+            for k, v in kv.items():
+                decl = k in DECL_ANY or k in DECL_TAG.get(tag, set()) or '/' in v
+                if k not in rv and k in CODE_CONST.get(tag, set()):
+                    ok = c0_nonkey_same
+                    (row['checks'] if ok else row['lech']).append('%s hang so code (C0 b_nonkey_diff=0: %s)' % (k, ok))
+                elif k not in rv and (tag, k) in CROSS:
+                    t2, k2, fn = CROSS[(tag, k)]
+                    r2 = {}
+                    for t, b in rigl:
+                        if t == t2:
+                            r2.update({kk: vv.rstrip(':,') for kk, vv in KV.findall(b)})
+                    ok = fn(v, r2.get(k2, ''))
+                    (row['checks'] if ok else row['lech']).append('%s live=%s rig[%s].%s=%s' % (k, v, t2, k2, r2.get(k2)))
+                elif k not in rv:
+                    (row['checks'] if decl else row['lech']).append('%s chi-co-o-live%s' % (k, ' (khai truoc)' if decl else ''))
+                elif rv[k] != v:
+                    (row['checks'] if decl else row['lech']).append('%s live=%s rig=%s%s' % (k, v, rv[k], ' (khai truoc)' if decl else ''))
+                else:
+                    row['checks'].append('%s =' % k)
+        elif ent[2] == 'ENV':
+            spec = ent[3]
+            for k, v in list(kv.items()) + ([('_', body)] if '_' in spec else []):
+                sp = spec.get(k)
+                decl = k in DECL_ANY or k in DECL_TAG.get(tag, set()) or ('/' in v and k != '_')
+                if sp is None:
+                    (row['checks'] if decl else row['lech']).append('%s khong anh xa%s' % (k, ' (khai truoc)' if decl else ''))
+                    continue
+                kind = sp[0]
+                if kind in ('state', 'adapter_derived', 'ngoai_rig'):
+                    row['checks'].append('%s %s' % (k, kind)); continue
+                if kind in ('env', 'env_default'):
+                    ok = sp[2](v, env.get(sp[1]))
+                    src = '%s=%s' % (sp[1], env.get(sp[1]))
+                elif kind == 'res':
+                    ok = sp[2](v, res.get(sp[1])); src = 'result.%s=%s' % (sp[1], res.get(sp[1]))
+                elif kind == 'rigline':
+                    rb = ' || '.join(b for t, b in rigl if t == sp[1]); ok = sp[2](v, rb); src = 'rig [%s]' % sp[1]
+                else:
+                    ok = sp[2](v, rigfact.get(sp[1])); src = sp[1]
+                (row['checks'] if ok else row['lech']).append('%s %s %s' % (k, 'OK' if ok else 'LECH', src))
+        else:
+            row['note'] = ent[3]
+        lech += ['[%s] %s' % (tag, x) for x in row['lech']]
+        rows.append(row)
+    out = {'live_lines': len(live), 'rows': rows, 'lech': lech, 'chua_phan_loai': unclassified,
+           'ok': not lech and not unclassified, 'class_count': {}}
+    for r in rows:
+        out['class_count'][r['class']] = out['class_count'].get(r['class'], 0) + 1
+    out['verdict'] = 'PASS' if out['ok'] else 'FAIL'
+    json.dump(out, open(a.out, 'w'), indent=1)
+    print(json.dumps({'verdict': out['verdict'], 'lech': lech, 'chua_phan_loai': unclassified, 'class_count': out['class_count']}, indent=0))
+    return 0 if out['ok'] else 1
 
 
 if __name__ == '__main__':
