@@ -82,6 +82,7 @@ def main():
     dif = [k[0] for k in lk ^ rk if S <= k[0] < E]
     first_dev = min(dif) if dif else E
     dom, in_bad, out_bad, n_dom = [], 0, [], 0
+    diag = []
     for t in sorted(set(live) | set(rig) | set(cand)):
         tg = t + MIN
         lheld = {c['symbol'] for c in cl if c['t0'] < tg and (c['tc'] is None or c['tc'] > tg)}
@@ -101,7 +102,6 @@ def main():
         elif len(A_) != len(B_) or A_ != B_:
             out_bad.append(t)
     n_l = sum(len(v) for v in live.values()); n_r = sum(len(v) for v in rig.values())
-    diag = []
     res = {'window': [S, E], 'live_records': n_l, 'rig_records': n_r, 'first_L_E_dev': first_dev, 'domain_minutes': n_dom,
            'V10a_mismatch_minutes': in_bad, 'V10a_first': dom[:20], 'outside_domain_mismatch_minutes': out_bad,
            'live_buffer_bad_frames': bad, 'live_buffer': a.live_buffer}

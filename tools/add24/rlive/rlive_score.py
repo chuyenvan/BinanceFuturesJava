@@ -526,7 +526,9 @@ def main():
     # ------------------------------------------------ V10b (ERRATA4 C3): phut lech dem r NGOAI mien V10a phai nam trong khoang ton tai
     #   cua mot cum lech da co nhan (cum goc ROOT_INH hoac cum N4 theo cid); con lai = lech L-N KHONG GIAI THICH
     v10b = {'checked': bool(a.v10), 'minutes': 0, 'explained': 0, 'unexplained': 0}
-    if a.v10:
+    if a.v10 and not os.path.exists(a.v10):
+        v10b['checked'] = False; v10b['loi'] = 'thieu V10.json'
+    if a.v10 and os.path.exists(a.v10):
         vj = json.load(open(a.v10))
         for m in vj.get('outside_domain_mismatch_minutes', []):
             v10b['minutes'] += 1
