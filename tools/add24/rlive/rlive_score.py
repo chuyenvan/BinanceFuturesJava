@@ -170,7 +170,7 @@ def main():
             lb = lab(it, k, 'N1', 'khong co sel_dump phut nay')
         elif side == 'rig_only' and no_tick(k[0]):
             lb = lab(it, k, 'N3', 'live khong co dong tick "Btc ticker size .. -> dts"')
-        elif side == 'rig_only' and k[0] in full_dts:
+        elif side == 'rig_only' and k[2] == 'PREDICT_SYMBOL_TRADE' and k[0] in full_dts:   # [A1 R4 E1] so giay day chi chan PREDICT (AIRejectFilter:105)
             lb = lab(it, k, 'N6', '[GATE] n_skipfull > 0 cung phut (so giay day)')
         elif side == 'rig_only' and any(k[0] <= t < k[0] + 2 * MIN for t in equn):
             lb = lab(it, k, 'N9', "EQ_UNAVAIL positions() loi trong [dts, dts+120 s)")

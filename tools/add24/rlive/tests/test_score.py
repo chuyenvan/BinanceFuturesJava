@@ -203,6 +203,11 @@ def main():
         addrow(rg + '/legs.csv', [S + 70 * MIN, S + 71 * MIN, 'BBBUSDT', 'PREDICT_SYMBOL_TRADE', 'SUBMITTED', 'c3-BBBUSDT-y-0', 100, 10, 22, 1000, 0.1, 0.1, 0, 0.0001, '', 1000, 0, ''])
         open(lv + '/gate.csv', 'w').write('log_ms,n_cand,n_rej,n_pass,n_skipfull,u,file\n%d,5,5,0,0,0.1000,f\n' % (S + 71 * MIN + 6000))
     case('N6_n_skipfull_0_FAIL', n6_no, {'L-E': 'FAIL'})
+    def n6_bd(fx, lv, rg):       # [A1 R4 E1] BIG_DOWN rig_only o phut FULL => KHONG N6 => FAIL
+        addrow(rg + '/legs.csv', [S + 70 * MIN, S + 71 * MIN, 'BBBUSDT', 'BIG_DOWN', 'SUBMITTED', 'c3-BBBUSDT-y-0', 100, 10, 22, 1000, 0.1, 0.1, 0, 0.0001, '', 1000, 0, ''])
+        open(lv + '/gate.csv', 'w').write('log_ms,n_cand,n_rej,n_pass,n_skipfull,u,file\n%d,5,5,0,3,0.6100,f\n' % (S + 71 * MIN + 6000))
+    sb = case('E1_BIG_DOWN_phut_FULL_khong_N6_FAIL', n6_bd, {'L-E': 'FAIL'})
+    check('E1_BIG_DOWN_N6_0', sb['labels_n']['N6'] == 0, sb['labels_n'])
     def ldref(fx, lv, rg):       # DCA live bac 1 khi gia CHUA giam 50 % => L-D REF FAIL (rig cung co leg => cap khop)
         addrow(lv + '/submit.csv', [S + 60 * MIN + 66000, 'AAAUSDT', 'DCA_LEVEL1', 'SUBMITTED', 'c3-AAAUSDT-%d-1' % ((S + 60 * MIN) // MIN), 100, 10, 1, 10, 0.05, 'f'])
         addrow(rg + '/legs.csv', [S + 60 * MIN, S + 61 * MIN, 'AAAUSDT', 'DCA_LEVEL1', 'SUBMITTED', 'c3-AAAUSDT-%d-1' % ((S + 60 * MIN) // MIN), 100, 10, 22, 1000, 0.1, 0.1, 1, 0.0001, '', 1000, 0, ''])
