@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# cleanup_oracle_disk.sh v2 — don dia ORACLE (/dev/sda1). MAC DINH DRY; --apply chay pha 1 roi pha 2.
+# cleanup_oracle_disk.sh v6 — don dia ORACLE (/dev/sda1). MAC DINH DRY; --apply chay pha 1 roi pha 2.
 #   bash ~/claude_master/v12/c3live/ops/c3live/cleanup_oracle_disk.sh            # DRY
 #   bash ~/claude_master/v12/c3live/ops/c3live/cleanup_oracle_disk.sh --apply    # owner chay
 # PHA 1 (XOA, danh sach co dinh):
@@ -35,9 +35,14 @@
 #      sh/txt/properties/sha256. GIU tuyet doi: r1_s1/kl, r3_wt, 1004/gqd/cand_base.npz, file .sh co key/token (khong bao gio khop).
 #      Van kiem: grep script/crontab tham chieu (loi => ABORT), /proc mo file.
 #   KHONG dua vao: pull242 cu, kaggle_sim, aerospike-data. Cuoi script IN goi y 'sudo journalctl --vacuum-size=200M' (khong chay).
-# PHA 2 (NEN): WHITELIST CUNG = ~/claude_master/1006 (A1: 0 tham chieu). Thu muc co .git => ABORT.
-#   tar | zstd -T2 -> archive/<ten>.tar.zst, zstd -t + so file thuong, TAT CA trong 1 lan 'flock -w 3600 oracle_heavy.lock nice -n 10'
-#   (khong long); free >= 4000 MB; dia trong >= max(5 GB, kich thuoc thu muc) — khong thi DUNG.
+# PHA 2 (NEN LOSSLESS) [v6]: WHITELIST CUNG = 1006 + audit_1030b + ~/net015_repro + ~/kg015x26_2021 (kiem ke v12/CLEANUP_V6_DEV.md muc 1).
+#   Muc whitelist trung FORBID (neu co) chi duoc mien FORBID cho pha 2; pha 1 van cam. Tu nho den lon; MOI thu muc trong 1 lan
+#   'flock -w 3600 oracle_heavy.lock nice -n 10' (khong long): kiem lai (.git => ABORT, symlink => ABORT, muc moi >= 2026-11-01 => BO QUA,
+#   grep tham chieu crontab + *.sh/py/properties/json/yaml/yml/java/md5/ok trong claude_master ops tools kaggle_sim java src* + file cap 1
+#   cua ~ + systemd user (loi => ABORT; co => BO QUA; docs/*.md|json chi ghi log), /proc => BO QUA), free >= 4000 MB, dia >= max(5 GB,
+#   kich thuoc); tar | zstd -3 -T2 -> archive/<ten>.tar.zst.part; zstd -t; so file thuong + tong byte (tar -tv) voi find goc truoc+sau;
+#   .sha256 + .manifest.tsv; .part -> .tar.zst; CHI khi khop moi rm -rf goc. Lech => xoa .part, giu goc, exit 1 cuoi script.
+#   Da co archive cung ten => BO QUA. Dia trong < 15.3 GiB truoc/sau bat ky thu muc nao => DUNG pha 2. DRY in bang GB thu uoc.
 # Moi muc dich ma TRUNG / NAM TRONG / CHUA mot muc CAM DUNG => ABORT. KHONG dung: res1109/, r3_wt, vz_e1, kaggle_sim.
 # =============================================================================
 set -euo pipefail
@@ -108,7 +113,7 @@ guard_pf() {   # [v2 f] $1 file: PHAI la file thuong (khong symlink), ten trong 
     case "$rp" in "$f"|"$f"/*) fail "CAM DUNG: $rp (thuoc $f)";; esac
   done
 }
-say "=== cleanup_oracle_disk v5 APPLY=$APPLY (cam dung: ${#FORBID[@]} muc) ==="
+say "=== cleanup_oracle_disk v6 APPLY=$APPLY (cam dung: ${#FORBID[@]} muc) ==="
 say "df TRUOC: $(df -h / | tail -1)"
 P1=0; P2=0; declare -A G=(); D_PLAN=()   # D_PLAN: worktree 1c/1d se go ca thu muc (1g bo qua de khong tinh 2 lan)
 add() { G[$1]=$(( ${G[$1]:-0} + $2 )); P1=$((P1 + $2)); }
@@ -331,31 +336,177 @@ mapfile -d '' FL < <(find "$RS/r5_quality" -maxdepth 1 -type f -name 'sig_*.npz'
 [ "${#FL[@]}" = 0 ] || rs_one "res1109/r5_quality/sig_" "${FL[@]}"
 rm -f "$PATF2" "$PATF2.hit" "$PATF2.err"
 say "=== PHA 1: $([ "$APPLY" = 1 ] && echo 'da giai phong' || echo 'du kien') $(gb "$P1") | $(for k in 1a 1b 1c 1d 1e 1f 1g 1h 1i; do printf '%s=%s ' "$k" "$(gb "${G[$k]:-0}")"; done)"
-# ================================================================ PHA 2: whitelist cung
-say "--- PHA 2: nen WHITELIST cung (1006)"
-for d in "$CM/1006"; do
-  [ -d "$d" ] || { say "  BO QUA (khong co / da nen) $d"; continue; }
-  guard "$d"
-  if [ -n "$(find "$d" -name .git -print -quit)" ] || git -C "$d" rev-parse --is-inside-work-tree >/dev/null 2>&1; then fail "$d chua .git/worktree — pha 2 khong bao gio dung"; fi
-  n=$(basename -- "$d"); s=$(dsz "$d"); nf=$(find "$d" -type f | wc -l)
-  if [ "$APPLY" = 0 ]; then say "  SE nen $n ($(gb "$s"), $nf file) -> archive/$n.tar.zst roi xoa ban goc sau khi kiem"; P2=$((P2 + s)); continue; fi
-  mem=$(free -m | awk '/^Mem:/{print $7}'); avail=$(df -B1 --output=avail / | tail -1 | tr -dc 0-9)
-  [ "$mem" -ge 4000 ] || fail "free ${mem} MB < 4000 truoc $n"
-  need=$(( s > 5368709120 ? s : 5368709120 )); [ "$avail" -ge "$need" ] || fail "dia trong $(gb "$avail") < $(gb "$need") truoc $n"
-  mkdir -p "$ARC"; out="$ARC/$n.tar.zst"
-  [ -e "$out" ] && fail "da co $out — kiem tay"
-  flock -w 3600 "$LOCK" nice -n 10 bash -c '
-    set -euo pipefail
-    tar -C "$1" -cf - "$2" | zstd -q -T2 -o "$3.tmp"
-    zstd -q -t -- "$3.tmp"
-    na=$(zstd -q -dc -- "$3.tmp" | tar -tvf - | grep -c "^-" || true)
-    [ "$na" = "$4" ] || { echo "so file lech: goc $4, archive $na"; exit 1; }
-    mv -f -- "$3.tmp" "$3"' _ "$(dirname "$d")" "$n" "$out" "$nf" || { rm -f -- "$out.tmp"; fail "nen/kiem $n loi"; }
-  rm -rf -- "$(realpath -e -- "$d")" || fail "xoa goc $n"
-  zs=$(stat -c %s -- "$out"); P2=$((P2 + s - zs))
-  say "  DA nen $n: $(gb "$s") -> $(gb "$zs") ($nf file khop)"
+# ================================================================ PHA 2 [v6]: nen LOSSLESS whitelist cung (tu nho den lon)
+# Moi thu muc: KIEM LAI toan bo tieu chi + nen + kiem + xoa goc trong MOT lan 'flock -w 3600 oracle_heavy.lock nice -n 10' (khong long).
+# Kiem ke + ly do chon: ~/claude_master/v12/CLEANUP_V6_DEV.md muc 1 (1003/1005/1009/1012/1013/1016... LOAI: con tham chieu / co .git).
+P2_WL=("$CM/1006" "$CM/audit_1030b" "$H/net015_repro" "$H/kg015x26_2021")
+declare -A P2_RATIO=([1006]=1.00 [audit_1030b]=0.53 [net015_repro]=0.25 [kg015x26_2021]=0.23)   # ti le zstd -3 uoc tu mau - CHI de in DRY
+P2_DENY_H="aerospike-data collect java kaggle_sim vz vz_e1 wfo_ds_x1_2021 ops ledger .openclaw envs xgb-env .local .npm-global sel_models_net015 val_pred_net015 predwf_G015_v2 predwf_t1_f4 claude_master tools"
+P2_DENY_C="pull242 parity_v11w parity_v12w vz_e1_wt v12 w3 gvz deploy locks health242 res1109 r3_wt e2e1105 ing1030 archive cleanup_logs 1004"
+P2_CUT="2026-11-01"
+P2_MINFREE=16428249907   # 15.3 GiB: R-LIVE can dia trong >= 15.3 GB; duoi nguong sau bat ky buoc nao => DUNG pha 2
+if [ -n "${CLEAN_H:-}" ]; then P2_MINFREE=${CLEAN_P2_MINFREE:-$P2_MINFREE}; fi   # chi sandbox test
+p2_res() { printf '%s\t%s\t%s\t%s\t%s\n' "$@" >> "$P2_RES"; }   # ten trang_thai byte_goc so_file byte_thu
+guard_p2() {   # $1: DUNG 1 muc P2_WL; thu muc that (khong symlink); cap 1 duoi $CM hoac $H; khong LOAI CUNG; FORBID chi mien muc TRUNG chinh no
+  local d=$1 rp f n par ok=0
+  for f in "${P2_WL[@]}"; do if [ "$f" = "$d" ]; then ok=1; fi; done
+  [ "$ok" = 1 ] || fail "pha 2: ngoai whitelist: $d"
+  [ -L "$d" ] && fail "pha 2: symlink: $d"
+  rp=$(realpath -e -- "$d") || fail "khong ton tai: $d"
+  [ "$rp" = "$d" ] || fail "pha 2: realpath khac: $d -> $rp"
+  [ -d "$rp" ] || fail "pha 2: khong phai thu muc: $rp"
+  n=$(basename -- "$rp"); par=$(dirname -- "$rp")
+  [ "$par" = "$CM" ] || [ "$par" = "$H" ] || fail "pha 2: khong phai cap 1 duoi ~ hoac claude_master: $rp"
+  case "$n" in .*|src*|shadow_c3*) fail "pha 2: LOAI CUNG: $rp";; esac
+  if [ "$par" = "$H" ]; then case " $P2_DENY_H " in *" $n "*) fail "pha 2: LOAI CUNG: $rp";; esac
+  else case " $P2_DENY_C " in *" $n "*) fail "pha 2: LOAI CUNG: $rp";; esac; fi
+  for f in "${FORBID[@]}"; do
+    [ "$f" = "$rp" ] && continue   # mien FORBID CHI cho pha 2 (nen) cua dung muc nay; pha 1 van cam
+    case "$rp" in "$f"/*) fail "CAM DUNG: $rp (thuoc $f)";; esac
+    case "$f" in "$rp"/*) fail "CAM DUNG: $rp chua $f";; esac
+  done
+}
+p2_proc() {   # $1 thu muc. rc 0 = khong process nao dung; 10 = co (cwd/fd/cmdline). Fail-closed nhu 1g.
+  local d=$1 p pu c fl cm of np=0 nown=0 uid
+  uid=$(id -u); of=$(mktemp)
+  for p in /proc/[0-9]*; do
+    [ -d "$p" ] || continue; np=$((np + 1))
+    pu=$(stat -c %u "$p" 2>/dev/null) || continue
+    if [ "$pu" = "$uid" ]; then
+      if c=$(readlink "$p/cwd" 2>/dev/null) && fl=$(ls -l "$p/fd" 2>/dev/null); then
+        { echo "$c"; sed -n 's/.* -> //p' <<< "$fl"; tr '\0' '\n' 2>/dev/null < "$p/cmdline" || true; } >> "$of" 2>/dev/null; nown=$((nown + 1))
+      elif [ -d "$p" ]; then
+        cm=$(cat "$p/comm" 2>/dev/null || true)
+        case "$cm" in "(sd-pam)"|sshd) ;;
+          *) if [ -d "$p" ]; then rm -f "$of"; fail "/proc: khong doc duoc cwd/fd cua process cung user pid ${p#/proc/} comm=$cm - fail-closed"; fi;; esac
+      fi
+    else
+      { readlink "$p/cwd" 2>/dev/null; ls -l "$p/fd" 2>/dev/null | sed -n 's/.* -> //p'; tr '\0' '\n' 2>/dev/null < "$p/cmdline"; } >> "$of" 2>/dev/null || true
+    fi
+  done
+  if [ "$np" -lt 5 ] || [ "$nown" -lt 1 ]; then rm -f "$of"; fail "/proc: liet ke duoc $np process ($nown cua user nay) - fail-closed"; fi
+  if grep -qF -- "$d" "$of"; then rm -f "$of"; return 10; fi
+  rm -f "$of"; return 0
+}
+p2_refs() {   # $1 thu muc. rc 0 = khong tham chieu; 10 = co. grep / crontab loi => ABORT.
+  local d=$1 n ne he p hits err f nb=0 g1 g2 ct crc s R=() HF=()
+  n=$(basename -- "$d"); ne=$(sed 's/[][\.*^$+?(){}|]/\\&/g' <<< "$n")
+  case "$d" in
+    "$CM"/*) p="claude_master/$ne([^A-Za-z0-9_-]|\$)";;
+    *) he=$(sed 's/[][\.*^$+?(){}|]/\\&/g' <<< "$H"); p="($he|~|[\$]HOME|[\$][{]HOME[}])/$ne([^A-Za-z0-9_-]|\$)";;
+  esac
+  for s in "$CM" "$H/ops" "$H/tools" "$H/kaggle_sim" "$H/java" "$H"/src*; do if [ -d "$s" ] && [ ! -L "$s" ]; then R+=("$s"); fi; done
+  mapfile -d '' HF < <(find "$H" -maxdepth 1 -type f \( -name '*.sh' -o -name '*.py' -o -name '*.properties' -o -name '*.json' -o -name '*.yaml' \
+      -o -name '*.yml' -o -name '*.java' -o -name '*.md5' -o -name '*.ok' -o -name .bashrc -o -name .profile -o -name .bash_profile \) \
+      ! -name '*.env' ! -name 'env.local' ! -name 'PrivateConfig*' ! -name 'keys*' ! -name 'env.sh' ! -name 'kaggle.json' ! -name 'chd_env.sh' \
+      ! -name 'cleanup_oracle_disk.sh' ! -name 'test_cleanup_oracle_disk.sh' -print0
+    if [ -d "$H/.config/systemd/user" ]; then find "$H/.config/systemd/user" -type f -print0; fi)
+  hits=$(mktemp); err=$(mktemp)
+  set +e
+  grep -rlE --exclude-dir=.git --include='*.sh' --include='*.py' --include='*.properties' --include='*.json' --include='*.yaml' --include='*.yml' \
+    --include='*.java' --include='*.md5' --include='*.ok' --exclude='*.env' --exclude='tg.env' --exclude='env.local' --exclude='PrivateConfig*' \
+    --exclude='keys*' --exclude='env.sh' --exclude='kaggle.json' --exclude='chd_env.sh' --exclude=cleanup_oracle_disk.sh --exclude=test_cleanup_oracle_disk.sh \
+    -e "$p" "${R[@]}" > "$hits" 2> "$err"; g1=$?
+  g2=1; if [ "${#HF[@]}" -gt 0 ]; then grep -lE -e "$p" -- "${HF[@]}" >> "$hits" 2>> "$err"; g2=$?; fi
+  ct=$(crontab -l 2>&1); crc=$?
+  set -e
+  if [ "$g1" -gt 1 ] || [ "$g2" -gt 1 ]; then say "  grep loi: $(head -3 "$err" | tr '\n' ' ')"; rm -f "$hits" "$err"; fail "grep tham chieu pha 2 loi (rc=$g1/$g2) - fail-closed"; fi
+  if [ "$crc" != 0 ] && ! grep -qi 'no crontab' <<< "$ct"; then rm -f "$hits" "$err"; fail "crontab -l loi (rc=$crc) - fail-closed"; fi
+  while IFS= read -r f; do
+    case "$f" in "$d"/*) continue;; esac                                                  # file trong chinh thu muc
+    case "$f" in */docs/*.md|*/docs/*.json) say "    ghi chep docs (khong chan): $f"; continue;; esac
+    nb=$((nb + 1)); if [ "$nb" -le 5 ]; then say "    tham chieu: $f"; fi
+  done < "$hits"
+  if [ "$crc" = 0 ] && grep -qE -e "$p" <<< "$ct"; then nb=$((nb + 1)); say "    tham chieu: crontab"; fi
+  rm -f "$hits" "$err"
+  if [ "$nb" = 0 ]; then return 0; fi
+  if [ "$nb" -gt 5 ]; then say "    ... tong $nb nguon tham chieu"; fi
+  return 10
+}
+p2_pack() {   # $1 thu muc, $2 .part, $3 so file thuong, $4 tong byte (find truoc nen). Moi buoc loi => return 1 (KHONG xoa goc).
+  local d=$1 part=$2 nf=$3 sb=$4 n par v na sa nf2 sb2 h out
+  n=$(basename -- "$d"); par=$(dirname -- "$d"); out=${part%.part}
+  rm -f -- "$part" "$part.manifest" "$part.sha256" || return 1
+  tar -C "$par" -cf - -- "$n" | zstd -q -3 -T2 -o "$part" || { say "    tar | zstd loi"; return 1; }
+  zstd -q -t -- "$part" || { say "    zstd -t loi"; return 1; }
+  v=$(zstd -q -dc -- "$part" | tar -tvf - | awk '$1 ~ /^-/ {n++; t+=$3} END{printf "%d %.0f\n", n+0, t+0}') || { say "    doc lai archive loi"; return 1; }
+  read -r na sa <<< "$v"
+  v=$(find "$d" -type f -printf '%s\n' | awk '{n++; t+=$1} END{printf "%d %.0f\n", n+0, t+0}') || return 1
+  read -r nf2 sb2 <<< "$v"
+  if [ "$na" != "$nf" ] || [ "$nf2" != "$nf" ] || [ "$sa" != "$sb" ] || [ "$sb2" != "$sb" ]; then
+    say "    LECH: goc truoc $nf file/$sb B, goc sau $nf2 file/$sb2 B, archive $na file/$sa B"; return 1; fi
+  find "$d" -type f -printf '%s\t%P\n' | LC_ALL=C sort -t "$(printf '\t')" -k2 > "$part.manifest" || return 1
+  [ "$(wc -l < "$part.manifest")" = "$nf" ] || { say "    manifest lech so dong"; return 1; }
+  h=$(sha256sum < "$part" | cut -c1-64) || return 1
+  [ "${#h}" = 64 ] || return 1
+  printf '%s  %s\n' "$h" "$n.tar.zst" > "$part.sha256" || return 1
+  mv -f -- "$part.manifest" "$ARC/$n.manifest.tsv" || return 1
+  mv -f -- "$part.sha256" "$out.sha256" || return 1
+  mv -f -- "$part" "$out" || return 1
+  say "    kiem OK: $nf file thuong / $sb B khop (goc truoc = goc sau = archive); sha256 ${h:0:16}"
+}
+p2_one() {   # env P2_D thu muc, P2_RES file ket qua, P2_R ti le uoc. rc 0 = xong / du kien / bo qua; 30 = kiem lech (giu goc); 40 = DUNG pha 2; khac = ABORT
+  local d=$P2_D n out part s nf sb v rc mem avail need est zs
+  n=$(basename -- "$d"); out=$ARC/$n.tar.zst; part=$out.part
+  if [ ! -e "$d" ] && [ ! -L "$d" ]; then say "  BO QUA (khong co / da nen) $d"; p2_res "$n" BO_QUA_khong_co 0 0 0; return 0; fi
+  guard_p2 "$d"
+  if [ -e "$out" ]; then say "  BO QUA (da co archive/$n.tar.zst - kiem tay) $d"; p2_res "$n" BO_QUA_da_co_archive 0 0 0; return 0; fi
+  if [ -n "$(find "$d" -name .git -print -quit)" ] || git -C "$d" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    fail "$d chua .git/worktree - pha 2 khong bao gio dung"; fi
+  v=$(find "$d" -newermt "$P2_CUT" -print -quit)
+  if [ -n "$v" ]; then say "  BO QUA (co muc moi >= $P2_CUT: ${v#"$d"/}) $d"; p2_res "$n" BO_QUA_moi 0 0 0; return 0; fi
+  rc=0; p2_proc "$d" || rc=$?
+  if [ "$rc" = 10 ]; then say "  BO QUA (process dang dung file / cwd / cmdline trong) $d"; p2_res "$n" BO_QUA_process 0 0 0; return 0; fi
+  [ "$rc" = 0 ] || fail "p2_proc rc=$rc"
+  rc=0; p2_refs "$d" || rc=$?
+  if [ "$rc" = 10 ]; then say "  BO QUA (co script/config/crontab tham chieu) $d"; p2_res "$n" BO_QUA_tham_chieu 0 0 0; return 0; fi
+  [ "$rc" = 0 ] || fail "p2_refs rc=$rc"
+  s=$(du -sb -- "$d" | cut -f1)
+  v=$(find "$d" -type f -printf '%s\n' | awk '{n++; t+=$1} END{printf "%d %.0f\n", n+0, t+0}'); read -r nf sb <<< "$v"
+  if [ "$APPLY" = 0 ]; then
+    est=$(awk -v s="$s" -v r="${P2_R:-1}" 'BEGIN{printf "%.0f", s * (1 - r)}')
+    say "  SE nen $n ($(gb "$s"), $nf file, ti le uoc ${P2_R:-1} => thu uoc $(gb "$est")) -> archive/$n.tar.zst (+ .sha256, .manifest.tsv); kiem khop roi moi xoa goc"
+    p2_res "$n" SE_nen "$s" "$nf" "$est"; return 0
+  fi
+  mem=$(free -m | awk '/^Mem:/{print $7}'); avail=$(df -B1 --output=avail "$CM" | tail -1 | tr -dc 0-9)
+  if [ "$mem" -lt 4000 ]; then say "  DUNG PHA 2: free ${mem} MB < 4000 truoc $n"; p2_res "$n" DUNG_ram "$s" "$nf" 0; return 40; fi
+  need=$(( s > 5368709120 ? s : 5368709120 ))
+  if [ "$avail" -lt "$need" ]; then say "  DUNG PHA 2: dia trong $(gb "$avail") < $(gb "$need") truoc $n"; p2_res "$n" DUNG_dia "$s" "$nf" 0; return 40; fi
+  mkdir -p "$ARC"
+  if ! p2_pack "$d" "$part" "$nf" "$sb"; then
+    rm -f -- "$part" "$part.manifest" "$part.sha256"
+    say "  LOI nen/kiem $n - da xoa .part, GIU NGUYEN ban goc"; p2_res "$n" LOI_giu_goc "$s" "$nf" 0; return 30
+  fi
+  rm -rf -- "$d" || fail "xoa goc $n"
+  zs=$(stat -c %s -- "$out")
+  say "  DA nen $n: $(gb "$s") -> $(gb "$zs") ($nf file khop) + archive/$n.tar.zst.sha256 + archive/$n.manifest.tsv"
+  p2_res "$n" DA_nen "$s" "$nf" "$((s - zs))"; return 0
+}
+say "--- PHA 2 [v6]: nen lossless WHITELIST cung (${#P2_WL[@]} muc) tu nho den lon; kiem lai tieu chi trong 1 lan flock / thu muc; DUNG neu dia trong < $(gb "$P2_MINFREE")"
+P2S=$(mktemp); P2_RES=$(mktemp); trap 'rm -f "$OPENF" "${GREPF:-}" "${PATF:-}" "${P2S:-}" "${P2_RES:-}"' EXIT
+{ declare -p H CM ARC APPLY P2_CUT FORBID P2_WL P2_DENY_H P2_DENY_C
+  declare -f say fail gb p2_res guard_p2 p2_proc p2_refs p2_pack p2_one
+  echo 'set -euo pipefail'; echo 'p2_one'; } > "$P2S"
+mapfile -t P2_ORD < <(for d in "${P2_WL[@]}"; do if [ -d "$d" ] && [ ! -L "$d" ]; then printf '%s\t%s\n' "$(dsz "$d")" "$d"; else printf '0\t%s\n' "$d"; fi; done | sort -n -k1,1 | cut -f2-)
+P2ERR=0
+for d in "${P2_ORD[@]}"; do
+  av=$(df -B1 --output=avail "$CM" | tail -1 | tr -dc 0-9)
+  if [ "$av" -lt "$P2_MINFREE" ]; then
+    if [ "$APPLY" = 1 ]; then say "  DUNG PHA 2: dia trong $(gb "$av") < $(gb "$P2_MINFREE") (truoc $(basename -- "$d"))"; break; fi
+    say "  CANH BAO (DRY): dia trong $(gb "$av") < $(gb "$P2_MINFREE") - APPLY se DUNG pha 2 tai day"
+  fi
+  rc=0; r=${P2_RATIO[$(basename -- "$d")]:-1}
+  if [ "$APPLY" = 1 ]; then P2_D=$d P2_RES=$P2_RES P2_R=$r flock -w 3600 "$LOCK" nice -n 10 bash "$P2S" || rc=$?
+  else P2_D=$d P2_RES=$P2_RES P2_R=$r nice -n 10 bash "$P2S" || rc=$?; fi
+  case "$rc" in 0) ;; 30) P2ERR=1;; 40) break;; *) fail "pha 2 $(basename -- "$d"): tien trinh con rc=$rc (ABORT o tren / flock het gio)";; esac
+  av=$(df -B1 --output=avail "$CM" | tail -1 | tr -dc 0-9)
+  if [ "$APPLY" = 1 ] && [ "$av" -lt "$P2_MINFREE" ]; then say "  DUNG PHA 2: dia trong $(gb "$av") < $(gb "$P2_MINFREE") (sau $(basename -- "$d"))"; break; fi
 done
-say "=== PHA 2: $([ "$APPLY" = 1 ] && echo 'da giai phong' || echo 'du kien (truoc nen)') $(gb "$P2")"
+P2_TAG=$([ "$APPLY" = 1 ] && echo 'GB thu thuc' || echo 'GB thu uoc')
+say "  BANG PHA 2: ten | GB goc | so file | $P2_TAG | trang thai"
+while IFS=$'\t' read -r n st s nf sv; do say "    $n | $(gb "$s") | $nf | $(gb "$sv") | $st"; P2=$((P2 + sv)); done < "$P2_RES"
+say "=== PHA 2: $([ "$APPLY" = 1 ] && echo 'da giai phong' || echo 'du kien (uoc theo ti le mau)') $(gb "$P2")"
 say "df SAU: $(df -h / | tail -1)"
 say "Goi y (owner tu chay, can sudo; script KHONG chay): sudo journalctl --vacuum-size=200M   (journal hien: $(journalctl --disk-usage 2>/dev/null | grep -oE '[0-9.]+[KMGT]' | tail -1))"
 say "Log: $LOG"
+if [ "$P2ERR" != 0 ]; then say "LOI pha 2: co thu muc nen/kiem lech (da GIU goc) - xem LOI o tren"; exit 1; fi

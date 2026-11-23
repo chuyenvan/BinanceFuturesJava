@@ -105,5 +105,60 @@ chk "fail-closed: grep tham chieu khong doc duoc 1 file *.sh => ABORT truoc khi 
 mk; mkdir -p $CM/parity_v12w/d/2026-11-01/work/cache; echo x > $CM/parity_v12w/d/2026-11-01/work/cache/feat45_live.csv.gz
 OUT=$(CLEAN_H=$H bash $S --apply 2>&1); RC=$?
 chk "1f chi 3 ten: 'cache/' va feat45 trong cache khong bi dung" "[ $RC = 0 ] && [ -f $CM/parity_v12w/d/2026-11-01/work/cache/feat45_live.csv.gz ]"
+# ======================================================================= [v6] PHA 2: nen lossless whitelist cung (sandbox)
+XA=$CM/audit_1030b; XN=$H/net015_repro; XK=$H/kg015x26_2021; ARCH=$CM/archive
+mk2() {   # sandbox v5 + 3 muc whitelist pha 2 (cu, khong git, khong tham chieu); kich thuoc K < N < A
+  mk
+  mkdir -p $XA/head/src $XN $XK/g/sub
+  for i in 1 2 3; do head -c 20000 /dev/zero > $XA/head/src/f$i.txt; done; echo 'class A {}' > $XA/head/src/A.java
+  head -c 30000 /dev/urandom > $XN/predict.bin; echo log > $XN/reproA.log; : > $XN/mon.out
+  seq 1 2000 > $XK/g/sub/d.csv; echo x > "$XK/g/ten co dau cach.txt"; ln -s sub/d.csv $XK/g/link
+  find $XA $XN $XK -exec touch -h -d '2026-10-20 12:00' {} +
+  rm -rf $W/ref; mkdir -p $W/ref; cp -a $XA $XN $XK $W/ref/
+}
+arc_ok() { [ -f $ARCH/$1.tar.zst ] && [ -f $ARCH/$1.tar.zst.sha256 ] && [ -f $ARCH/$1.manifest.tsv ] && [ ! -e $ARCH/$1.tar.zst.part ]; }
+no_arc() { [ ! -e $ARCH/$1.tar.zst ] && [ ! -e $ARCH/$1.tar.zst.part ] && [ ! -e $ARCH/$1.tar.zst.part.manifest ] && [ ! -e $ARCH/$1.tar.zst.part.sha256 ]; }
+lossless() {   # sha256 -c, giai nen ra thu muc tam, so sanh tung byte + symlink voi ban chep truoc khi nen
+  local n=$1 x=$W/x_$1; rm -rf $x; mkdir -p $x
+  (cd $ARCH && sha256sum -c --quiet $n.tar.zst.sha256) || return 1
+  zstd -q -dc $ARCH/$n.tar.zst | tar -C $x -xf - || return 1
+  diff -r --no-dereference $W/ref/$n $x/$n >/dev/null || return 1
+  [ "$(wc -l < $ARCH/$n.manifest.tsv)" = "$(find $W/ref/$n -type f | wc -l)" ]
+}
+run2() { OUT=$(CLEAN_H=$H CLEAN_P2_MINFREE=${XMF:-0} bash $S "$@" 2>&1); RC=$?; echo "$OUT" | grep -E 'ABORT|DA nen|LECH|DUNG PHA 2' | head -4; }
+echo "== [v6] pha 2 (sandbox)"
+mk2; run2
+chk "P2 DRY: rc0, 3 muc 'SE nen' + bang du kien, KHONG tao archive, goc nguyen" "[ $RC = 0 ] && [ -d $XA ] && [ -d $XN ] && [ -d $XK ] && [ ! -d $ARCH ] && [ \$(echo \"\$OUT\" | grep -c 'SE nen') = 3 ] && echo \"\$OUT\" | grep -q 'BANG PHA 2' && echo \"\$OUT\" | grep -q '=== PHA 2: du kien'"
+run2 --apply
+chk "P2 APPLY: 3 archive + .sha256 + .manifest.tsv, goc da xoa, thu tu nho -> lon (kg < net < audit)" "[ $RC = 0 ] && arc_ok audit_1030b && arc_ok net015_repro && arc_ok kg015x26_2021 && [ ! -e $XA ] && [ ! -e $XN ] && [ ! -e $XK ] && [ \"\$(echo \"\$OUT\" | grep -o 'DA nen [a-z0-9_]*' | tr '\n' ' ')\" = 'DA nen kg015x26_2021 DA nen net015_repro DA nen audit_1030b ' ]"
+chk "P2 lossless: sha256 -c OK; giai nen == ban chep (diff -r, ca symlink + ten co dau cach); manifest du dong" "lossless audit_1030b && lossless net015_repro && lossless kg015x26_2021"
+mkdir -p $XN; echo moi > $XN/z; touch -d '2026-10-20' $XN/z $XN
+run2 --apply
+chk "P2 chay lai: da nen => BO QUA (khong co); da co archive cung ten => BO QUA, goc moi giu nguyen" "[ $RC = 0 ] && [ -f $XN/z ] && echo \"\$OUT\" | grep -q 'BO QUA (da co archive/net015_repro.tar.zst' && echo \"\$OUT\" | grep -q 'BO QUA (khong co / da nen) $XA'"
+mk2; mkdir -p $XN/sub/.git; echo x > $XN/sub/.git/HEAD; touch -h -d '2026-10-20' $XN/sub/.git/HEAD $XN/sub/.git $XN/sub $XN
+run2 --apply
+chk "P2 .git: muc co .git => ABORT (rc!=0); net015_repro nguyen, khong archive/.part; audit_1030b (sau) chua bi dung" "[ $RC != 0 ] && echo \"\$OUT\" | grep -q 'ABORT: .*net015_repro chua .git' && [ -f $XN/predict.bin ] && no_arc net015_repro && [ -d $XA ] && no_arc audit_1030b"
+mk2; mkdir -p $CM/vz_e1_wt/docs/result; echo "P=~/net015_repro/predict.bin" > $H/ops/use_n.sh
+echo "bash \$HOME/kg015x26_2021/g/run.sh" > $H/L2_99.sh
+echo '{"src":"/x/claude_master/audit_1030b/head"}' > $CM/vz_e1_wt/docs/result/r.json
+run2 --apply
+chk "P2 tham chieu: ~/ops/*.sh => BO QUA net015_repro; ~/L2_99.sh (file cap 1 cua ~) => BO QUA kg015x26_2021; docs/*.json chi ghi log => audit_1030b VAN nen" "[ $RC = 0 ] && [ -f $XN/predict.bin ] && no_arc net015_repro && [ -f $XK/g/sub/d.csv ] && no_arc kg015x26_2021 && arc_ok audit_1030b && [ ! -e $XA ] && echo \"\$OUT\" | grep -q 'tham chieu: $H/ops/use_n.sh' && echo \"\$OUT\" | grep -q 'tham chieu: $H/L2_99.sh' && echo \"\$OUT\" | grep -q 'ghi chep docs (khong chan)'"
+mk2; touch $XA/head/src/f2.txt
+run2 --apply
+chk "P2 mtime: co file moi (>= 2026-11-01) => BO QUA audit_1030b; 2 muc con lai nen" "[ $RC = 0 ] && [ -f $XA/head/src/f2.txt ] && no_arc audit_1030b && arc_ok net015_repro && arc_ok kg015x26_2021 && echo \"\$OUT\" | grep -q 'BO QUA (co muc moi >= 2026-11-01'"
+mk2; ln $XK/g/sub/d.csv $XK/g/hl.csv; touch -h -d '2026-10-20' $XK/g $XK/g/hl.csv
+run2 --apply
+chk "P2 kiem lech (hardlink => tar 'h' => so file thuong lech): xoa .part, GIU goc kg015x26_2021; muc khac van nen; exit 1 cuoi" "[ $RC != 0 ] && [ -f $XK/g/hl.csv ] && [ -f $XK/g/sub/d.csv ] && no_arc kg015x26_2021 && arc_ok net015_repro && arc_ok audit_1030b && echo \"\$OUT\" | grep -q 'LECH:' && echo \"\$OUT\" | grep -q 'GIU NGUYEN ban goc' && echo \"\$OUT\" | grep -q 'LOI pha 2'"
+mk2; bash -c "exec 3<$XN/predict.bin; exec sleep 300" & BUSY=$!; sleep 0.5
+run2 --apply; kill $BUSY 2>/dev/null
+chk "P2 /proc: process mo file trong net015_repro => BO QUA, giu goc; muc khac nen" "[ $RC = 0 ] && [ -f $XN/predict.bin ] && no_arc net015_repro && arc_ok kg015x26_2021 && echo \"\$OUT\" | grep -q 'BO QUA (process dang dung'"
+mk2; XMF=999999999999999 run2 --apply
+chk "P2 dia trong < nguong 15.3 GiB (gia lap) => DUNG pha 2 truoc muc dau, khong nen gi" "[ $RC = 0 ] && [ -d $XA ] && [ -d $XN ] && [ -d $XK ] && [ ! -d $ARCH ] && echo \"\$OUT\" | grep -q 'DUNG PHA 2: dia trong'"
+mk2; rm -rf $XN; mkdir -p $H/vz_e1/raw; ln -s $H/vz_e1 $XN
+run2 --apply
+chk "P2 fail-closed: net015_repro la symlink (vao vz_e1) => ABORT, dich nguyen ven" "[ $RC != 0 ] && echo \"\$OUT\" | grep -q 'ABORT: pha 2: symlink' && [ -d $H/vz_e1/raw ]"
+mk2; mkdir -p $H/java; echo x > $H/java/bad.sh; chmod 000 $H/java/bad.sh
+run2 --apply; chmod 644 $H/java/bad.sh
+chk "P2 fail-closed: grep tham chieu pha 2 khong doc duoc 1 file (~/java/bad.sh) => ABORT, khong nen gi" "[ $RC != 0 ] && echo \"\$OUT\" | grep -q 'grep tham chieu pha 2 loi' && [ -d $XA ] && [ -d $XN ] && [ -d $XK ] && no_arc kg015x26_2021"
 echo "TEST $( [ $FAILN = 0 ] && echo PASS || echo FAIL ) $PASS/$((PASS+FAILN))"
 [ $FAILN = 0 ]
