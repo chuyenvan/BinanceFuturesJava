@@ -7,7 +7,7 @@
 4) mark.csv.gz (symbol,t,o,h,l,c) tu markPriceKlines; manifest_ow2.json (sha256 moi dau vao, V1).
 usage: rlive_fixture.py --out /dev/shm/add24/fx_ow2 --live <parse dir> --exinfo <json.gz> [--tcut-override 'YYYY-MM-DD HH:MM' (chi errata)]
 """
-import argparse, csv, glob, gzip, hashlib, io, json, logging, os, sys, time, urllib.request, zipfile
+import argparse, csv, glob, gzip, hashlib, io, json, logging, os, sys, time, urllib.parse, urllib.request, zipfile
 from datetime import datetime, timedelta, timezone
 
 H = os.path.dirname(os.path.abspath(__file__))
@@ -47,6 +47,20 @@ def exinfo_gz(src, dst):
     return dst, sha
 
 
+def onboard_map(ex):
+    """[ERRATA6 B1] symbol -> (onboardDate, deliveryDate, status) tu EXINFO (0 = khong co)."""
+    return {x['symbol']: (int(x.get('onboardDate') or 0), int(x.get('deliveryDate') or 0), x.get('status')) for x in ex.get('symbols', [])}
+
+
+def vision_explained(item, onb):
+    """[ERRATA6 B1] 'SYM@YYYY-MM-DD' (ngay UTC) thieu tren Vision la GIAI THICH DUOC (tat dinh, chi tu EXINFO) khi: symbol niem yet
+    (onboardDate) SAU khi ngay do ket thuc, hoac symbol khong TRADING va deliveryDate <= dau ngay do (huy niem yet truoc ngay)."""
+    s, d = item.rsplit('@', 1)
+    d0 = int(datetime.strptime(d, '%Y-%m-%d').replace(tzinfo=timezone.utc).timestamp() * 1000); d1 = d0 + 86400000
+    o, dl, st = onb.get(s, (0, 0, None))
+    return bool((o and o >= d1) or (st is not None and st != 'TRADING' and dl and dl <= d0))
+
+
 def ms7(s):
     return int(datetime.strptime(s, '%Y-%m-%d %H:%M').replace(tzinfo=TZ7).timestamp() * 1000)
 
@@ -56,7 +70,8 @@ def fetch(kind, sym, day, root):
     if os.path.exists(p):
         return p
     os.makedirs(os.path.dirname(p), exist_ok=True)
-    url = '%s/%s/%s/1m/%s-1m-%s.zip' % (VBASE, kind, sym, sym, day)
+    q = urllib.parse.quote(sym)   # [ERRATA6 B1] symbol khong ASCII (5 symbol TRADING trong EXINFO) => URL ma hoa %, truoc day loi im lang
+    url = '%s/%s/%s/1m/%s-1m-%s.zip' % (VBASE, kind, q, q, day)
     for i in range(3):
         try:
             with urllib.request.urlopen(url, timeout=60) as r:
@@ -111,6 +126,14 @@ def main():
         for d in udays:
             if not fetch('markPriceKlines', s, d, vroot):
                 miss['markPriceKlines'].append(s + '@' + d)
+    # [ERRATA6 B1] Vision thieu (404 / loi mang sau 3 lan) ma KHONG giai thich duoc tu EXINFO => DUNG truoc prep / lane / cham
+    onb = onboard_map(ex)
+    unexp = {k: [x for x in v if not vision_explained(x, onb)] for k, v in miss.items()}
+    if any(unexp.values()):
+        jf = a.out.rstrip('/') + '_vision_missing.json'
+        json.dump({'missing': miss, 'unexplained': unexp}, open(jf, 'w'), indent=1)
+        raise SystemExit('TU CHOI (ERRATA6 B1): Vision thieu khong giai thich: klines %d markPriceKlines %d (%s)'
+                         % (len(unexp['klines']), len(unexp['markPriceKlines']), jf))
     import prep_fixture as P
     P.VIS = vroot + '/klines'
     sys.argv = ['prep_fixture.py', '--out', a.out, '--start', OW2_START, '--end', end, '--buffer-day', '2026-11-19', '--exinfo', exi]
@@ -131,7 +154,7 @@ def main():
                             w.writerow([s, int(x[0]), x[1], x[2], x[3], x[4]]); n += 1
     man = {'p1': why, 'START': S, 'END': E, 'tcut': end, 'tcut_from_complete_day': dcomp, 'udays': udays, 'symbols_klines': len(allsym),
            'exinfo_src': a.exinfo, 'exinfo_src_sha256': exsha, 'exinfo_passed_to_prep': exi,
-           'symbols_mark': len(cand) + 1, 'mark_rows': n, 'missing': miss,
+           'symbols_mark': len(cand) + 1, 'mark_rows': n, 'missing': miss, 'missing_unexplained': unexp,
            'sha256': {f: hashlib.sha256(open(os.path.join(a.out, f), 'rb').read()).hexdigest() for f in sorted(os.listdir(a.out))}}
     json.dump(man, open(a.out + '/manifest_ow2.json', 'w'), indent=1)
     log.info('fixture OW2 xong tcut=%s miss_k=%d miss_m=%d', end, len(miss['klines']), len(miss['markPriceKlines']))

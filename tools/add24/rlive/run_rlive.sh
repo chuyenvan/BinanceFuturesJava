@@ -25,12 +25,7 @@ if [ "$MODE" = official ]; then
   [ -z "$(git -C $W status --porcelain --untracked-files=no)" ] || { echo "TU CHOI: worktree co thay doi chua commit"; exit 2; }
   python3 -c "import sys; sys.path.insert(0,'$T'); import p1_gate; print(p1_gate.require_p1())" || exit 2
   [ -n "${EXINFO:-}" ] && [ -f "$EXINFO" ] || { echo "TU CHOI: thieu EXINFO (ERRATA1 E-A7)"; exit 2; }
-  LOCK=$A/OFFICIAL_ADD24_RLIVE.lock
-  [ -e $LOCK ] && [ -z "${E2E_ERRATA:-}" ] && { echo "TU CHOI: da chay chinh thuc (khoa $LOCK); mo lai CHI voi E2E_ERRATA moi"; exit 2; }
-  [ -n "${E2E_ERRATA:-}" ] && grep -q "errata=${E2E_ERRATA} " $LOCK 2>/dev/null && { echo "TU CHOI: errata da dung"; exit 2; }
-  echo "$(date -Is) head=$HEAD a1=$A1_APPROVED p1=$ADD24_P1_APPROVED errata=${E2E_ERRATA:-} exinfo_sha256=$(sha256sum < $EXINFO | cut -c1-64) out=$OUT " >> $LOCK
-  bash $T/../build_wt.sh || { echo "TU CHOI: build test-classes"; exit 9; }
-  # [ERRATA6 P1] T_cut co dau cach => in bang '|' + assert fail-closed (exit 15) truoc moi doc du lieu
+  # [ERRATA6 P1] T_cut co dau cach => in bang '|' + assert fail-closed (exit 15); [ERRATA6 B1] tinh TRUOC dong ghi khoa (chi kiem COMPLETE)
   IFS='|' read -r TCUT TDAY < <(python3 -c "import sys; sys.path.insert(0,'$T'); import rlive_fixture as F; print('|'.join(F.tcut()))")
   [[ "${TCUT:-}" =~ ^2026-11-2[0-4]\ 07:00$ ]] || { echo "TU CHOI (ERRATA6): TCUT='${TCUT:-}' sai dang"; exit 15; }
   [[ "${TDAY:-}" =~ ^2026-11-(19|2[0-3])$ ]] || { echo "TU CHOI (ERRATA6): TDAY='${TDAY:-}' sai dang"; exit 15; }
@@ -41,10 +36,23 @@ from datetime import date,timedelta; d=date(2026,11,19); e=date.fromisoformat('$
   case "${DAYS:-}" in 2026-11-19*) ;; *) echo "TU CHOI (ERRATA6): DAYS='${DAYS:-}' khong bat dau 2026-11-19"; exit 15;; esac
   case "$DAYS" in *"$TDAY") ;; *) echo "TU CHOI (ERRATA6): DAYS='$DAYS' khong ket thuc $TDAY"; exit 15;; esac
   echo "ERRATA6 TCUT=$TCUT TDAY=$TDAY DAYS=$DAYS"
+  # [ERRATA6 B1] Vision ngay UTC cuoi OW2 (= TDAY) phai da phat hanh (HTTP HEAD, khong tai) - khong => exit 16, KHONG ghi khoa
+  VB=https://data.binance.vision/data/futures/um/daily
+  for KD in klines markPriceKlines; do
+    HC=$(curl -s -o /dev/null -I -w '%{http_code}' --max-time 30 "$VB/$KD/BTCUSDT/1m/BTCUSDT-1m-$TDAY.zip")
+    [ "$HC" = 200 ] || { echo "TU CHOI (ERRATA6 B1): Vision chua phat hanh $KD BTCUSDT $TDAY (HTTP $HC) - KHONG ghi khoa"; exit 16; }
+  done
+  LOCK=$A/OFFICIAL_ADD24_RLIVE.lock
+  [ -e $LOCK ] && [ -z "${E2E_ERRATA:-}" ] && { echo "TU CHOI: da chay chinh thuc (khoa $LOCK); mo lai CHI voi E2E_ERRATA moi"; exit 2; }
+  [ -n "${E2E_ERRATA:-}" ] && grep -q "errata=${E2E_ERRATA} " $LOCK 2>/dev/null && { echo "TU CHOI: errata da dung"; exit 2; }
+  echo "$(date -Is) head=$HEAD a1=$A1_APPROVED p1=$ADD24_P1_APPROVED errata=${E2E_ERRATA:-} exinfo_sha256=$(sha256sum < $EXINFO | cut -c1-64) out=$OUT " >> $LOCK
+  bash $T/../build_wt.sh || { echo "TU CHOI: build test-classes"; exit 9; }
   LIVEBUF=$HOME/claude_master/pull242/$TDAY/run/gate_ratio_live.bin.gz
   python3 -I $T/live_log_parse.py --days $DAYS --start "$START" --end "$END" --out $OUT/live --mode full || exit 11
   python3 $T/rlive_fixture.py --out $OUT/fx --live $OUT/live --exinfo $EXINFO || exit 12
   FX=$OUT/fx; MARK="--mark $FX/mark.csv.gz"; export E2E_OFFICIAL=1
+  # [ERRATA6 M1] buffer seed cua rig (ts < START) == dung ban ghi live co truoc START (anh LIVEBUF), khong bi init() cat theo dong ho that
+  python3 $T/buf_check.py pre --fx-buf $FX/gate_ratio_live.bin --live-buf $LIVEBUF --start "$START" --out $OUT/buf_pre.json || { echo "TU CHOI (ERRATA6 M1): buffer seed"; exit 17; }
   L0N=L0; L0LANE=(FAKE $CAP $FLAGS)
 else
   START='2026-11-05 07:00'; END='2026-11-14 07:00'; CAP=10000; FLAGS=off; APPLY=off
@@ -78,6 +86,9 @@ $H $LANE $L0N ${L0LANE[@]} $BLK | tee -a $OUT/run_all.txt
 $H $LANE L0-FOLLOW FAKE $CAP $FLAGS $BLK E2E_FOLLOW_FILLS=$OUT/live/follow.csv | tee -a $OUT/run_all.txt
 [ "$MODE" = official ] && $H $LANE L0-DRY DRY $CAP $FLAGS $BLK | tee -a $OUT/run_all.txt
 [ "$MODE" = official ] && $H $LANE L-10K FAKE 10000 $FLAGS $BLK | tee -a $OUT/run_all.txt
+if [ "$MODE" = official ]; then   # [ERRATA6 M1] moi lane nap du seed (khong cat)
+  python3 $T/buf_check.py post --pre $OUT/buf_pre.json --lanes $OUT/$L0N,$OUT/L0-FOLLOW,$OUT/L0-DRY,$OUT/L-10K > $OUT/buf_post.txt 2>&1 || { cat $OUT/buf_post.txt; echo "TU CHOI (ERRATA6 M1): buffer lane"; exit 17; }
+fi
 LANES=$L0N,L0-FOLLOW; [ "$MODE" = official ] && LANES=$LANES,L0-DRY
 python3 $T/v10_buffer.py --rig $OUT/$L0N --live $OUT/live --live-buffer $LIVEBUF --start "$START" --end "$END" --cap $CAP --out $OUT/V10.json > $OUT/v10.txt 2>&1
 python3 $T/rlive_gates.py --out-dir $OUT --fx $FX --live $OUT/live --start "$START" --end "$END" --v4-grep "$V4" --lanes $LANES --v8-lane $L0N \
@@ -97,7 +108,7 @@ if [ "$MODE" = official ]; then
 fi
 python3 $T/conclude.py --gates $OUT/gates.json --score $OUT/score_L0/score.json $DRYS --c0b $A/C0B.json ${RSIM_JSON:+--rsim $RSIM_JSON} --out $OUT/conclusion.json
 K=$A/rlive_${MODE}_$TS; mkdir -p $K
-cp -r $OUT/score_L0* $OUT/gates.json $OUT/gates.txt $OUT/V8.json $OUT/V10.json $OUT/v4b.json $OUT/conclusion.json $OUT/run_all.txt $K/ 2>/dev/null
+cp -r $OUT/score_L0* $OUT/gates.json $OUT/gates.txt $OUT/V8.json $OUT/V10.json $OUT/v4b.json $OUT/conclusion.json $OUT/run_all.txt $OUT/buf_pre.json $OUT/buf_post.txt $K/ 2>/dev/null
 cp $OUT/live/counts.json $K/live_counts.json
 for L in ${LANES//,/ } L-10K; do [ -d $OUT/$L ] && python3 $T/sanitize.py $OUT/$L $K/$L; done
 echo "R-LIVE $MODE xong head=$HEAD out=$OUT keep=$K gates_rc=$GRC"
