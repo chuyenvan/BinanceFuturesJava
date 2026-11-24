@@ -33,6 +33,20 @@ def tcut():
     return d.strftime('%Y-%m-%d') + ' 07:00', days[-1]
 
 
+def exinfo_gz(src, dst):
+    """[ERRATA6 P2] prep_fixture.py (def1f034) doc --exinfo bang gzip.open; EXINFO (ERRATA1 E-A7) la .json THO => nen ban sao
+    (mtime=0) cho prep; noi dung giai nen = NGUYEN BYTE goc (assert). Tra (duong dan cho prep, sha256 goc)."""
+    raw = open(src, 'rb').read()
+    sha = hashlib.sha256(raw).hexdigest()
+    if raw[:2] == b'\x1f\x8b':
+        return src, hashlib.sha256(gzip.decompress(raw)).hexdigest()
+    with open(dst, 'wb') as fh, gzip.GzipFile(filename='', mode='wb', fileobj=fh, mtime=0) as fo:
+        fo.write(raw)
+    if gzip.open(dst, 'rb').read() != raw:
+        raise SystemExit('TU CHOI (ERRATA6): ban gzip exinfo khac nguyen ban')
+    return dst, sha
+
+
 def ms7(s):
     return int(datetime.strptime(s, '%Y-%m-%d %H:%M').replace(tzinfo=TZ7).timestamp() * 1000)
 
@@ -66,6 +80,7 @@ def main():
     if not a.out.startswith('/dev/shm/add24/'):
         raise SystemExit('TU CHOI: fixture chi o /dev/shm/add24')
     end, dcomp = (a.tcut_override, 'override') if a.tcut_override else tcut()
+    exi, exsha = exinfo_gz(a.exinfo, a.out.rstrip('/') + '_exinfo.json.gz')
     S, E = ms7(OW2_START), ms7(end)
     vroot = '/dev/shm/add24/vision'
     d0 = datetime.fromtimestamp(S / 1000, timezone.utc).date(); d1 = datetime.fromtimestamp((E - 1) / 1000, timezone.utc).date()
@@ -98,8 +113,10 @@ def main():
                 miss['markPriceKlines'].append(s + '@' + d)
     import prep_fixture as P
     P.VIS = vroot + '/klines'
-    sys.argv = ['prep_fixture.py', '--out', a.out, '--start', OW2_START, '--end', end, '--buffer-day', '2026-11-19', '--exinfo', a.exinfo]
+    sys.argv = ['prep_fixture.py', '--out', a.out, '--start', OW2_START, '--end', end, '--buffer-day', '2026-11-19', '--exinfo', exi]
     P.main()
+    if hashlib.sha256(open(a.out + '/exinfo.json', 'rb').read()).hexdigest() != exsha:
+        raise SystemExit('TU CHOI (ERRATA6): fx/exinfo.json khac sha256 EXINFO goc')
     n = 0
     with gzip.open(a.out + '/mark.csv.gz', 'wt') as fo:
         w = csv.writer(fo, lineterminator='\n'); w.writerow(['symbol', 't', 'o', 'h', 'l', 'c'])
@@ -113,6 +130,7 @@ def main():
                         if x and x[0][:1].isdigit() and S - 5 * 60000 <= int(x[0]) < E:
                             w.writerow([s, int(x[0]), x[1], x[2], x[3], x[4]]); n += 1
     man = {'p1': why, 'START': S, 'END': E, 'tcut': end, 'tcut_from_complete_day': dcomp, 'udays': udays, 'symbols_klines': len(allsym),
+           'exinfo_src': a.exinfo, 'exinfo_src_sha256': exsha, 'exinfo_passed_to_prep': exi,
            'symbols_mark': len(cand) + 1, 'mark_rows': n, 'missing': miss,
            'sha256': {f: hashlib.sha256(open(os.path.join(a.out, f), 'rb').read()).hexdigest() for f in sorted(os.listdir(a.out))}}
     json.dump(man, open(a.out + '/manifest_ow2.json', 'w'), indent=1)

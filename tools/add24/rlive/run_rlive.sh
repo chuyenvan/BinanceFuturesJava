@@ -30,10 +30,17 @@ if [ "$MODE" = official ]; then
   [ -n "${E2E_ERRATA:-}" ] && grep -q "errata=${E2E_ERRATA} " $LOCK 2>/dev/null && { echo "TU CHOI: errata da dung"; exit 2; }
   echo "$(date -Is) head=$HEAD a1=$A1_APPROVED p1=$ADD24_P1_APPROVED errata=${E2E_ERRATA:-} exinfo_sha256=$(sha256sum < $EXINFO | cut -c1-64) out=$OUT " >> $LOCK
   bash $T/../build_wt.sh || { echo "TU CHOI: build test-classes"; exit 9; }
-  read TCUT TDAY < <(python3 -c "import sys; sys.path.insert(0,'$T'); import rlive_fixture as F; print(*F.tcut())")
+  # [ERRATA6 P1] T_cut co dau cach => in bang '|' + assert fail-closed (exit 15) truoc moi doc du lieu
+  IFS='|' read -r TCUT TDAY < <(python3 -c "import sys; sys.path.insert(0,'$T'); import rlive_fixture as F; print('|'.join(F.tcut()))")
+  [[ "${TCUT:-}" =~ ^2026-11-2[0-4]\ 07:00$ ]] || { echo "TU CHOI (ERRATA6): TCUT='${TCUT:-}' sai dang"; exit 15; }
+  [[ "${TDAY:-}" =~ ^2026-11-(19|2[0-3])$ ]] || { echo "TU CHOI (ERRATA6): TDAY='${TDAY:-}' sai dang"; exit 15; }
+  [ "$(date -d "$TDAY +1 day" +%F) 07:00" = "$TCUT" ] || { echo "TU CHOI (ERRATA6): TCUT $TCUT != TDAY $TDAY + 1 ngay 07:00"; exit 15; }
   START='2026-11-19 09:31'; END="$TCUT"; CAP=1000; FLAGS=on; APPLY=on
   DAYS=$(python3 -c "
 from datetime import date,timedelta; d=date(2026,11,19); e=date.fromisoformat('$TDAY'); print(','.join(str(d+timedelta(i)) for i in range((e-d).days+1)))")
+  case "${DAYS:-}" in 2026-11-19*) ;; *) echo "TU CHOI (ERRATA6): DAYS='${DAYS:-}' khong bat dau 2026-11-19"; exit 15;; esac
+  case "$DAYS" in *"$TDAY") ;; *) echo "TU CHOI (ERRATA6): DAYS='$DAYS' khong ket thuc $TDAY"; exit 15;; esac
+  echo "ERRATA6 TCUT=$TCUT TDAY=$TDAY DAYS=$DAYS"
   LIVEBUF=$HOME/claude_master/pull242/$TDAY/run/gate_ratio_live.bin.gz
   python3 -I $T/live_log_parse.py --days $DAYS --start "$START" --end "$END" --out $OUT/live --mode full || exit 11
   python3 $T/rlive_fixture.py --out $OUT/fx --live $OUT/live --exinfo $EXINFO || exit 12
