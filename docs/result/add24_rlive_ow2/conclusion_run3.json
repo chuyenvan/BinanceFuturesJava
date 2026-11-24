@@ -1,0 +1,31 @@
+{
+ "gates_ok": true,
+ "items": {
+  "L0 L-E": "PASS",
+  "L0 L-N": "PASS",
+  "L0 L-S": "PASS",
+  "L0 L-S2": "FAIL",
+  "L0 L-K": "PASS",
+  "L0-DRY L-E": "PASS",
+  "L0-DRY L-N": "PASS",
+  "L0-DRY L-S": "PASS",
+  "L0-DRY L-S2": "FAIL",
+  "L-D": "INSUFFICIENT",
+  "L-T": "FAIL",
+  "L-SL": "FAIL",
+  "L-X": "FAIL"
+ },
+ "cover": {
+  "C0b": "PASS"
+ },
+ "R_LIVE": "FAIL",
+ "warn": [],
+ "rui_ro_A11": [
+  "trang thai sau restart JVM (peak trailing, quota) KHONG tai hien trong rig (ERRATA3 A11)",
+  "bang chung N9 thua: dong positions() loi bi throttle 10 phut (C3MainEquity:153-158)",
+  "K7 (availableBalance + margin) KHONG kiem phia live (chi dem dong CANH BAO ky quy)",
+  "mau nho: R-LIVE ~1 ngay vao lenh",
+  "U_MAX = 0,60 (Configs.java:177) dua tren 242 khong dat SIM_U_MAX / TRADING_PROFILE (MASTER kiem)",
+  "nguon so day / K3: chi bang chung qua dong [GATE] n_skipfull (ERRATA5)"
+ ]
+}
