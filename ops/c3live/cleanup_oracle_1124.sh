@@ -1,22 +1,29 @@
 #!/usr/bin/env bash
 # =============================================================================
-# cleanup_oracle_1124.sh - don dia ORACLE (5 muc, kiem ke 2026-11-24). MAC DINH DRY; --apply moi lam.
+# cleanup_oracle_1124.sh v2 - don dia ORACLE (kiem ke 2026-11-24; v2 sua theo A1_CLEANUP_1124.md). MAC DINH DRY; --apply moi lam.
 #   bash ~/claude_master/v12/c3live/ops/c3live/cleanup_oracle_1124.sh              # DRY ca 5 muc
 #   bash ~/claude_master/v12/c3live/ops/c3live/cleanup_oracle_1124.sh --apply      # owner chay
-#   --only=1,3,5        chi chay cac muc chon
+#   --only=LIST         chi chay cac muc chon; LIST gom 1 2 2b 3 4 5 5a 5b 5c 5d ('5' = 5a..5d; '2' KHONG gom 2b). Gia tri la => exit 1
+#                       Mac dinh: tat ca (1,2,2b,3,4,5).
 #   --min-gain-pct=N    (mac dinh 10) CHI nen khi uoc thu (tinh ca hardlink) >= N % kich thuoc (ti le tu mau tar 100 MB dau)
 # MUC 1 swap: /swapfile -> 4G, chi khi (swap dang dung + 2000 MB) < RAM available; fstab giu nguyen (cung duong dan).
-# MUC 2 parity_v11w: ung vien nen {d, work, regr_d1, regr_d3, tsx, logs}. GIU (CAM DUNG): vision (kho Vision dung chung cua
+# MUC 2b parity_v11w/d: XOA THANG thu muc con 2026-MM-DD[_ops] (owner xac nhan v1.1 het gia tri; tong ket da commit vz_e1_wt 09622c01),
+#        CHI khi: 268 file docs/result/parity_v11_daily_* tracked + sach; khong process dung d; khong co watch_daily.sh (v1.1); manifest
+#        archive/parity_v11w_d_manifest_<ts>.txt truoc khi xoa. GIU d/logs, d/run_*.out.
+# MUC 2 parity_v11w: ung vien nen {work, regr_d1, regr_d3, tsx, logs}. GIU (CAM DUNG): vision (kho Vision dung chung cua
 #        parity v1.2 run_day.sh / pv_cfg.py VIS), live (deploy/check_242_failopen.sh), runs + univ (w3/c3_ops6/ops/verify/harness_*.sh),
 #        build, file cap 1. Ung vien bi CHAN neu file harness song co 'parity_v11w' va nhac '/<ten>'.
-# MUC 3 res1109: XOA file .bin/.jar/.npz/.gz/.gzdat trong whitelist v5 (r1_s1/{a2_bins,a3_bins,g015x26}, r3_gate/{jar,jar_m,jar_q,
-#        jar_s,asdump,ds_as,ds_as2,pred}, r3_gate/orch_m2r/ds_sim-jar-*, r5_quality/sig_*.npz). GIU r1_s1/kl, r3_wt, 1004/gqd/cand_base.npz,
+# MUC 3 res1109: XOA file .bin/.jar/.npz/.gz/.gzdat trong whitelist (r1_s1/a2_bins, r3_gate/{jar,jar_m,jar_q,
+#        jar_s,asdump,ds_as,ds_as2,pred}, r3_gate/orch_m2r/ds_sim-jar-*, r5_quality/sig_*.npz). GIU (FORBID, v2 A1 MAJOR-1): r1_s1/g015x26
+#        (artifact DONG BANG khong tai lap), r1_s1/a3_bins (REF HO5 P1); GIU r1_s1/kl, r3_wt, 1004/gqd/cand_base.npz,
 #        moi file khac (json/md/py/log/...). CHAN = tham chieu SONG (harness/deploy/ops/crontab) hoac process; tham chieu tu script
 #        nghien cuu da dong CHI GHI LOG (A1 xet).
 # MUC 4 pull242: nen TUNG ngay < 2026-11-18 -> archive/pull242/<ngay>.tar.zst. BO QUA: ngay duoc file harness song co 'pull242' nhac ten,
 #        2026-11-04..2026-11-14 (run_rlive.sh dev1105), ngay parity v1.2 (>= START) ma D hoac D-1 chua DONE, khong COMPLETE, co .work.
 # MUC 5 a) 'git worktree remove' 6 worktree phu sach: src_wt_{c3live2,geom,gqsf,nowrite,nsel,shadow2} (HEAD thuoc >= 1 nhanh; --force CHI
-#        khi thu duy nhat chua commit la PrivateConfig*). b) nen ~/java/devrun. c) nen ~/vz/pilot_upload (khong co bang chung ban Kaggle trung
+#        khi thu duy nhat chua commit la DUNG src/main/java/com/binance/chuyennd/config/PrivateConfig.java; file ignored/untracked se mat in
+#        vao log, co thu ngoai target/ logs/ PrivateConfig.java ledger.csv => BO QUA). b) nen ~/java/devrun (v2: bi CHAN vi
+#        w3/add24_wt/tools/{run_c2b_dev,parity_clean,run_ticklog_*}.sh dung lam baseline). c) nen ~/vz/pilot_upload (khong co bang chung ban Kaggle trung
 #        byte). d) sudo journalctl --vacuum-size=200M.
 # KHONG BAO GIO DUNG: java/fsrun (CLOSES_1H.bin hard-code trong tradecore VolTargetSizing/PacingSizing), src_wt_pxcache, src_wt_bcd,
 #   src_nup3, wt_crashpen, aerospike-data, collect, ledger, gvz, w3, v12, deploy, locks, health242, ing1030, vz_e1_wt, parity_v12w,
@@ -25,13 +32,15 @@
 #   goc khong doi trong luc nen ; ghi .sha256 + .sha256list ; doi ten ; ROI MOI rm -rf goc. Lech => xoa .part, GIU goc, exit 1.
 # Thu tu apply: 1 -> xoa thang (3, 5a) -> nen tu nho den lon (2, 4, 5b, 5c) trong MOT lan 'flock -w 3600 oracle_heavy.lock nice -n 10'
 #   (truoc moi muc: khong co run_rlive, RAM available >= 4000 MB, dia trong >= max(6 GiB, kich thuoc muc), kiem lai tham chieu/process/DONE)
-#   -> 5d journal. TU CHOI --apply khi co process khop 'run_rlive'.
+#   -> 5d journal. TU CHOI --apply khi co process khop 'run_rlive'; v2: kiem lai run_rlive NGAY TRUOC moi thao tac pha huy
+#   (swapoff, moi rm, worktree remove, vacuum) - co thi ABORT muc.
+# Thu tu xoa thang: 3 -> 2b -> 5a.
 # Exit: 0 OK | 1 co ABORT/lech (da giu goc) | 2 dung phan nen do dieu kien (dia/RAM/run_rlive) | 3 tu choi (run_rlive dang chay)
 # Log: ~/claude_master/cleanup_logs/cleanup_1124_<ts>[_dry].log . Kiem ke + ly do: ~/claude_master/v12/CLEANUP_1124_DEV.md
 # =============================================================================
 set -euo pipefail
 export LC_ALL=C
-APPLY=0; ONLY=1,2,3,4,5; MINGAIN=10
+APPLY=0; ONLY=1,2,2b,3,4,5; MINGAIN=10
 for a in "$@"; do
   case "$a" in
     --apply) APPLY=1;;
@@ -41,9 +50,13 @@ for a in "$@"; do
     *) echo "Dung: $0 [--apply] [--only=1,2,3,4,5] [--min-gain-pct=N]"; exit 1;;
   esac
 done
-[[ "$ONLY" =~ ^[1-5](,[1-5])*$ ]] || { echo "--only sai: $ONLY"; exit 1; }
+[[ "$ONLY" =~ ^(1|2|2b|3|4|5|5a|5b|5c|5d)(,(1|2|2b|3|4|5|5a|5b|5c|5d))*$ ]] || { echo "--only sai: $ONLY (cho phep: 1 2 2b 3 4 5 5a 5b 5c 5d)"; exit 1; }
 [[ "$MINGAIN" =~ ^[0-9]{1,2}$ ]] || { echo "--min-gain-pct sai: $MINGAIN"; exit 1; }
-want() { case ",$ONLY," in *",$1,"*) return 0;; esac; return 1; }
+want() {   # '5' bao gom 5a..5d; '2' KHONG bao gom 2b
+  case ",$ONLY," in *",$1,"*) return 0;; esac
+  case "$1" in 5a|5b|5c|5d) case ",$ONLY," in *",5,"*) return 0;; esac;; esac
+  return 1
+}
 SBX=0
 if [ -n "${CLEAN_H:-}" ]; then   # CHI cho test sandbox
   SBX=1
@@ -77,7 +90,7 @@ FORBID=(
   "$CM/gvz" "$CM/w3" "$CM/v12" "$CM/deploy" "$CM/locks" "$CM/health242" "$CM/ing1030" "$CM/vz_e1_wt" "$CM/parity_v12w" "$CM/r3_wt"
   "$CM/archive" "$CM/cleanup_logs" "$CM/collect" "$CM/ledger"
   "$CM/parity_v11w/vision" "$CM/parity_v11w/live" "$CM/parity_v11w/runs" "$CM/parity_v11w/univ" "$CM/parity_v11w/build"
-  "$CM/res1109/r1_s1/kl" "$CM/1004/gqd/cand_base.npz"
+  "$CM/res1109/r1_s1/kl" "$CM/1004/gqd/cand_base.npz" "$CM/res1109/r1_s1/g015x26" "$CM/res1109/r1_s1/a3_bins"
 )
 guard() {   # $1 duong dan: ton tai, khong symlink (ca thanh phan), trong $H, khong trung/nam trong/chua FORBID, pull242 chi ngay < 11-18
   local p=$1 rp f d
@@ -98,7 +111,7 @@ guard() {   # $1 duong dan: ton tai, khong symlink (ca thanh phan), trong $H, kh
   return 0
 }
 # ---------------------------------------------------------------- tham chieu SONG (iv): harness/deploy/ops/crontab
-LIVE_DIRS=("$CM/deploy" "$H/ops" "$CM/w3/add24_wt/tools/add24" "$CM/w3/add24_wt/tools/e2e" "$CM/w3/c3_ops6/ops" "$CM/vz_e1_wt/research/parity_v12")
+LIVE_DIRS=("$CM/deploy" "$H/ops" "$CM/w3/add24_wt/tools" "$CM/w3/c3_ops6/ops" "$CM/vz_e1_wt/research/parity_v12")   # v2: ca cay add24_wt/tools
 GINC=(--include='*.sh' --include='*.py' --include='*.json' --include='*.properties' --include='*.yml' --include='*.yaml' --include='*.java' --include='*.md5' --include='*.ok')
 GEXC=(--exclude-dir=.git --exclude-dir=__pycache__ --exclude='*.env' --exclude='tg.env' --exclude='env.local' --exclude='PrivateConfig*' --exclude='keys*'
       --exclude='env.sh' --exclude='kaggle.json' --exclude='chd_env.sh' --exclude='cleanup_*' --exclude='test_cleanup_*' --exclude-dir='cleanup_*_sandbox')
@@ -180,6 +193,7 @@ m1() {
     say "  SE: swapoff -> rm -> fallocate -l 4G (loi => dd 4096 MiB) -> chmod 600 -> mkswap -> swapon -> kiem 4G; loi giua chung => co bat lai"
     res 1 swap SE_doi_4G "$size" $((size - want)); return 0
   fi
+  if rlive_on; then ab "run_rlive dang chay - khong swapoff"; fi
   SW swapoff "$SWAPF" || ab "swapoff loi (swap van bat, khong doi gi)"
   if ! { SW rm -f "$SWAPF" && { SW fallocate -l 4G "$SWAPF" || { say "    fallocate loi -> dd"; SW dd if=/dev/zero of="$SWAPF" bs=1M count=4096 status=none; }; } \
          && SW chmod 600 "$SWAPF" && SW mkswap "$SWAPF" && SW swapon "$SWAPF"; }; then
@@ -198,7 +212,7 @@ m3() {
   local RS=$CM/res1109 w rel re rc hits o f s s0 nf RS_WL=() FL=() T=() OTH PATF
   if [ ! -d "$RS" ]; then say "  BO QUA (khong co res1109)"; res 3 res1109 BO_QUA_khong_co 0 0; return 0; fi
   if [ -L "$RS" ]; then ab "res1109 la symlink"; fi
-  RS_WL=("$RS/r1_s1/a2_bins" "$RS/r1_s1/a3_bins" "$RS/r1_s1/g015x26" "$RS/r3_gate/jar" "$RS/r3_gate/jar_m" "$RS/r3_gate/jar_q" "$RS/r3_gate/jar_s"
+  RS_WL=("$RS/r1_s1/a2_bins" "$RS/r3_gate/jar" "$RS/r3_gate/jar_m" "$RS/r3_gate/jar_q" "$RS/r3_gate/jar_s"
          "$RS/r3_gate/asdump" "$RS/r3_gate/ds_as" "$RS/r3_gate/ds_as2" "$RS/r3_gate/pred")
   for w in "$RS"/r3_gate/orch_m2r/ds_sim-jar-*; do if [ -d "$w" ] && [ ! -L "$w" ]; then RS_WL+=("$w"); fi; done
   # tham chieu ngoai harness song: CHI GHI LOG (script nghien cuu da dong) - *.sh/*.py trong ~/claude_master, ~/ops, ~/tools
@@ -222,7 +236,7 @@ m3() {
       [[ "$(basename -- "$f")" =~ \.(bin|jar|npz|gz|gzdat)$ ]] || ab "duoi khong cho phep: $f"
       case "$f" in "$RS/r1_s1/kl"/*|"$CM/r3_wt"/*) ab "GIU tuyet doi: $f";; esac
       s=$(stat -c %s -- "$f"); s0=$((s0 + s)); nf=$((nf + 1))
-      if [ "$APPLY" = 1 ]; then rm -f -- "$f" || ab "rm $f"; fi
+      if [ "$APPLY" = 1 ]; then if rlive_on; then ab "run_rlive dang chay - dung truoc rm"; fi; rm -f -- "$f" || ab "rm $f"; fi
     done
     if [ "$nf" = 0 ]; then say "  (khong co file nhi phan) $rel"; return 0; fi
     if [ "$APPLY" = 1 ]; then say "  DA xoa $rel: $nf file ($(gb "$s0"))"; res 3 "$rel" DA_xoa "$s0" "$s0"
@@ -241,7 +255,8 @@ m3() {
 # ================================================================ MUC 5a: worktree phu
 m5a() {
   CUR=5a; say "--- MUC 5a: git worktree remove worktree phu sach (khong rm -rf)"
-  local MAIN=$H/src/BinanceFuturesJava d top gd cg head nb all other npc rc hits s j m KEEPS V12J ref FORCE
+  local MAIN=$H/src/BinanceFuturesJava d top gd cg head nb all other npc rc hits s j m KEEPS V12J ref FORCE ign bad
+  local PCP=src/main/java/com/binance/chuyennd/config/PrivateConfig.java PCRE='src/main/java/com/binance/chuyennd/config/PrivateConfig\.java' 
   KEEPS=$( { grep -ho '[0-9a-f]\{32\}' "$CM/parity_v12w/jars.json" "$CM/parity_v12w/gmicro_target.json" 2>/dev/null || true
              for t in "$CM/deploy" "$H/ops" "$CM/v12/c3live/ops"; do
                if [ -d "$t" ]; then find "$t" -type f -size -5M \( -name '*.sh' -o -name '*.py' -o -name '*.json' -o -name '*.md5' -o -name '*.ok' \) -print0 \
@@ -260,8 +275,12 @@ m5a() {
     nb=$(git -C "$d" for-each-ref --contains "$head" --format='%(refname)' refs/heads refs/remotes 2>/dev/null | grep -c . || true)
     if [ "${nb:-0}" -lt 1 ]; then say "  BO QUA (HEAD ${head:0:8} khong thuoc nhanh nao) $d"; res 5a "$(basename "$d")" BO_QUA_head_mo_coi 0 0; continue; fi
     all=$(git --no-optional-locks -C "$d" status --porcelain --untracked-files=all --ignored=no 2>/dev/null) || ab "git status loi $d"
-    other=$(grep -v 'PrivateConfig' <<< "$all" | grep -c . || true); npc=$(grep -c 'PrivateConfig' <<< "$all" || true)
-    if [ "${other:-0}" != 0 ]; then say "  BO QUA ($other file chua commit/untracked ngoai PrivateConfig) $d"; res 5a "$(basename "$d")" BO_QUA_ban 0 0; continue; fi
+    other=$(grep -vE "^.. $PCRE\$" <<< "$all" | grep -c . || true); npc=$(grep -cE "^.. $PCRE\$" <<< "$all" || true)
+    if [ "${other:-0}" != 0 ]; then say "  BO QUA ($other file chua commit/untracked ngoai $PCP) $d"; res 5a "$(basename "$d")" BO_QUA_ban 0 0; continue; fi
+    ign=$(git --no-optional-locks -C "$d" status --porcelain --untracked-files=all --ignored=matching 2>/dev/null | sed -n 's/^!! //p') || ab "git status --ignored loi $d"
+    if [ -n "$ign" ]; then say "    file ignored se MAT khi worktree remove ($d): $(tr '\n' ' ' <<< "$ign" | cut -c1-600)"; fi
+    bad=$(grep -vE "^($PCRE|(.*/)?target/.*|(.*/)?target/|(.*/)?logs/.*|(.*/)?logs/|(.*/)?ledger\.csv)\$" <<< "$ign" | grep -c . || true)
+    if [ "${bad:-0}" != 0 ]; then say "  BO QUA ($bad muc ignored ngoai target/ logs/ PrivateConfig.java ledger.csv: $(grep -vE "^($PCRE|(.*/)?target/.*|(.*/)?target/|(.*/)?logs/.*|(.*/)?logs/|(.*/)?ledger\.csv)\$" <<< "$ign" | head -5 | tr '\n' ' ')) $d"; res 5a "$(basename "$d")" BO_QUA_ignored_khac 0 0; continue; fi
     rc=0; hits=$(live_grep "$(basename -- "$d")([^A-Za-z0-9_]|\$)") || rc=$?
     case "$rc" in 0) ;; 10) say "  BO QUA $d - tham chieu SONG: $(tr '\n' ' ' <<< "$hits")"; res 5a "$(basename "$d")" BO_QUA_tham_chieu_song 0 0; continue;; *) ab "kiem tham chieu loi";; esac
     rc=0; proc_uses "$d" || rc=$?
@@ -275,6 +294,7 @@ m5a() {
     FORCE=(); if [ "${npc:-0}" != 0 ]; then FORCE=(--force); fi
     s=$(dsz "$d")
     if [ "$APPLY" = 1 ]; then
+      if rlive_on; then ab "run_rlive dang chay - dung truoc worktree remove"; fi
       git -C "$MAIN" worktree remove "${FORCE[@]}" -- "$d" || ab "git worktree remove ${FORCE[*]} $d"
       if [ -e "$d" ]; then ab "sau worktree remove van con $d"; fi
       say "  DA git worktree remove ${FORCE[*]} $d ($(gb "$s"))"; res 5a "$(basename "$d")" DA_go "$s" "$s"
@@ -388,6 +408,7 @@ comp_one() {   # $1 muc $2 nhan $3 thu muc $4 archive. rc 0 xong/bo qua; 30 lech
     say "  LOI nen/kiem $lab - da xoa .part, GIU NGUYEN goc"; res "$m" "$lab" LOI_giu_goc "$sb" 0; return 30
   fi
   guard "$d"
+  if rlive_on; then say "  run_rlive xuat hien sau khi nen $lab - GIU goc (archive da kiem, xoa tay sau)"; res "$m" "$lab" DUNG_rlive_giu_goc "$sb" 0; return 40; fi
   rm -rf -- "$d" || ab "xoa goc $d"
   zs=$(stat -c %s -- "$out")
   say "  DA nen $lab: $(gb "$sb") -> $(gb "$zs") + .sha256 + .sha256list; da xoa goc"; res "$m" "$lab" DA_nen "$sb" $((s1 - zs)); return 0
@@ -408,12 +429,54 @@ m5d() {
   ub=$(numfmt --from=iec "${u:-0}" 2>/dev/null || echo 0); g=$(( ub > 209715200 ? ub - 209715200 : 0 ))
   if [ "$APPLY" = 0 ]; then say "  SE: sudo journalctl --vacuum-size=200M (journal hien ${u:-?})"; res 5d journal SE_vacuum "$ub" "$g"; return 0; fi
   if [ "$SBX" = 1 ]; then say "    [sandbox, KHONG chay] sudo journalctl --vacuum-size=200M"; res 5d journal DA_vacuum_sandbox "$ub" 0; return 0; fi
+  if rlive_on; then ab "run_rlive dang chay - khong vacuum"; fi
   sudo journalctl --vacuum-size=200M || ab "journalctl vacuum loi"
   say "  DA vacuum: $(journalctl --disk-usage 2>/dev/null | tail -1)"; res 5d journal DA_vacuum "$ub" "$g"
+}
+# ================================================================ MUC 2b: XOA THANG parity_v11w/d/2026-* (v2)
+m2b() {
+  CUR=2b; say "--- MUC 2b: XOA THANG parity_v11w/d/2026-MM-DD[_ops] (parity v1.1 het gia tri - owner; tong ket da commit vz_e1_wt 09622c01)"
+  local P11=$CM/parity_v11w D=$CM/parity_v11w/d V=$CM/vz_e1_wt n st rc x s tot=0 L=() man NDOC=${CLEAN_D2B_NDOCS:-268}
+  if [ "$SBX" = 0 ]; then NDOC=268; fi
+  if [ ! -e "$D" ] && [ ! -L "$D" ]; then say "  BO QUA (khong co $D)"; res 2b parity_v11w/d BO_QUA_khong_co 0 0; return 0; fi
+  if [ -L "$P11" ] || [ -L "$D" ]; then ab "parity_v11w hoac d la symlink"; fi
+  [ "$(realpath -e -- "$D")" = "$D" ] || ab "realpath $D khac"
+  # (i) tong ket ngay da commit + sach
+  n=$(git -C "$V" ls-files -- 'docs/result/parity_v11_daily_*' | wc -l) || ab "git ls-files loi"
+  st=$(git --no-optional-locks -C "$V" status --porcelain -- 'docs/result/parity_v11_daily_*') || ab "git status loi"
+  if [ "$n" -lt "$NDOC" ] || [ -n "$st" ]; then say "  BO QUA: docs/result/parity_v11_daily_* tracked $n (< $NDOC) hoac chua sach: $(head -3 <<< "$st" | tr '\n' ' ')"; res 2b parity_v11w/d BO_QUA_docs_chua_commit 0 0; return 0; fi
+  say "  docs/result/parity_v11_daily_*: $n file tracked, sach"
+  # (ii) process
+  rc=0; pgrep -f 'watch_daily[.]sh( |$)' >/dev/null 2>&1 || rc=$?
+  if [ "$rc" = 0 ]; then say "  BO QUA: co process watch_daily.sh (watcher v1.1) dang chay"; res 2b parity_v11w/d BO_QUA_watcher_v11 0 0; return 0; fi
+  [ "$rc" = 1 ] || ab "pgrep loi rc=$rc"
+  rc=0; proc_uses "$D" || rc=$?
+  if [ "$rc" = 10 ]; then say "  BO QUA: process dang dung $D"; res 2b parity_v11w/d BO_QUA_process 0 0; return 0; fi
+  # (iii) chi thu muc con truc tiep ten 2026-MM-DD[_ops], khong symlink
+  while IFS= read -r -d '' x; do
+    if [[ ! "$(basename -- "$x")" =~ ^2026-[0-9]{2}-[0-9]{2}(_ops)?$ ]]; then continue; fi
+    if [ -L "$x" ]; then ab "symlink ten ngay trong d: $x"; fi
+    [ -d "$x" ] || continue
+    guard "$x"; [ "$(dirname -- "$x")" = "$D" ] || ab "khong phai con truc tiep cua $D: $x"
+    L+=("$x")
+  done < <(find "$D" -mindepth 1 -maxdepth 1 -print0 | sort -z)
+  if [ "${#L[@]}" = 0 ]; then say "  BO QUA: khong con thu muc ngay"; res 2b parity_v11w/d BO_QUA_rong 0 0; return 0; fi
+  for x in "${L[@]}"; do s=$(dsz "$x"); tot=$((tot + s)); done
+  say "  ${#L[@]} thu muc ngay ($(basename -- "${L[0]}") .. $(basename -- "${L[${#L[@]}-1]}")), $(gb "$tot"); GIU: $(find "$D" -mindepth 1 -maxdepth 1 ! -regex '.*/2026-[0-9][0-9]-[0-9][0-9]\(_ops\)?' -printf '%f ' | cut -c1-300)"
+  if [ "$APPLY" = 0 ]; then say "  SE xoa thang ${#L[@]} thu muc (manifest -> archive/parity_v11w_d_manifest_<ts>.txt truoc)"; res 2b parity_v11w/d SE_xoa "$tot" "$tot"; return 0; fi
+  mkdir -p -- "$ARC"; man=$ARC/parity_v11w_d_manifest_$TS.txt
+  { echo "# parity_v11w/d truoc khi xoa ($(date -Is)); size<TAB>type<TAB>path"; for x in "${L[@]}"; do find "$x" -printf '%s\t%y\t%p\n'; done; } > "$man" || ab "ghi manifest loi"
+  say "  manifest: $man ($(wc -l < "$man") dong)"
+  for x in "${L[@]}"; do
+    if rlive_on; then ab "run_rlive dang chay - dung truoc rm"; fi
+    guard "$x"; rm -rf -- "$x" || ab "rm $x"
+  done
+  say "  DA xoa ${#L[@]} thu muc ($(gb "$tot"))"; res 2b parity_v11w/d DA_xoa "$tot" "$tot"
 }
 # ================================================================ MAIN
 run_item() {   # chay 1 muc trong subshell (ABORT chi dung muc do)
   local rc=0
+  if [ "$SBX" = 1 ] && [ -n "${CLEAN_TEST_DELAY:-}" ]; then sleep "$CLEAN_TEST_DELAY"; fi   # chi test sandbox (MINOR-3)
   set +e; ( set -e; "$@" ) < /dev/null; rc=$?; set -e
   if [ "$rc" != 0 ]; then say "  => muc ${1#m}: ABORT (rc=$rc) - cac muc khac van tiep tuc"; res "${1#m}" "$1" ABORT 0 0; ERR=1; fi
   return 0
@@ -425,13 +488,14 @@ if [ "$APPLY" = 1 ] && rlive_on; then say "TU CHOI --apply: co process khop '$RL
 ERR=0; STOP=0
 if want 1; then run_item m1; fi
 if want 3; then run_item m3; fi
-if want 5; then run_item m5a; fi
+if want 2b; then run_item m2b; fi
+if want 5a; then run_item m5a; fi
 CAND=$TMPD/cand.tsv; : > "$CAND"
-if want 2 || want 4 || want 5; then
+if want 2 || want 4 || want 5b || want 5c; then
   say "--- NEN LOSSLESS (muc 2, 4, 5b, 5c) - tu nho den lon"
   U=$TMPD/cand.u; : > "$U"
   addc() { local s=0; if [ -d "$3" ] && [ ! -L "$3" ]; then s=$(dsz "$3"); fi; printf '%s\t%s\t%s\t%s\t%s\n' "${s:-0}" "$1" "$2" "$3" "$4" >> "$U"; }
-  if want 2; then for s in d work regr_d1 regr_d3 tsx logs; do addc 2 "parity_v11w/$s" "$CM/parity_v11w/$s" "$ARC/parity_v11w__$s.tar.zst"; done; fi
+  if want 2; then for s in work regr_d1 regr_d3 tsx logs; do addc 2 "parity_v11w/$s" "$CM/parity_v11w/$s" "$ARC/parity_v11w__$s.tar.zst"; done; fi
   if want 4; then
     for p in "$CM"/pull242/20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]; do
       [ -e "$p" ] || continue
@@ -439,7 +503,8 @@ if want 2 || want 4 || want 5; then
       addc 4 "pull242/$dd" "$p" "$ARC/pull242/$dd.tar.zst"
     done
   fi
-  if want 5; then addc 5b java/devrun "$H/java/devrun" "$ARC/java__devrun.tar.zst"; addc 5c vz/pilot_upload "$H/vz/pilot_upload" "$ARC/vz__pilot_upload.tar.zst"; fi
+  if want 5b; then addc 5b java/devrun "$H/java/devrun" "$ARC/java__devrun.tar.zst"; fi
+  if want 5c; then addc 5c vz/pilot_upload "$H/vz/pilot_upload" "$ARC/vz__pilot_upload.tar.zst"; fi
   sort -n -k1,1 "$U" | cut -f2- > "$CAND"
   say "  ung vien: $(wc -l < "$CAND")"
   CH=$TMPD/child.sh
@@ -457,7 +522,7 @@ if want 2 || want 4 || want 5; then
   fi
   case "$rc" in 0) ;; 1) ERR=1;; 40) STOP=1; say "  DA DUNG phan nen (dieu kien) - cac muc con lai giu nguyen";; *) ERR=1; say "  phan nen: rc=$rc (flock het gio / loi)";; esac
 fi
-if want 5; then run_item m5d; fi
+if want 5d; then run_item m5d; fi
 TAG="du kien"; if [ "$APPLY" = 1 ]; then TAG="thuc"; fi
 say "=== BANG ($TAG): muc | ten | trang thai | GiB goc | GiB thu"
 TOT=0
@@ -465,7 +530,7 @@ while IFS=$'\t' read -r m n st s g; do
   say "    $m | $n | $st | $(gb "$s") | $(gb "$g")"
   case "$st" in SE_*|DA_*) TOT=$((TOT + g));; esac
 done < "$RES"
-for m in 1 2 3 4 5a 5b 5c 5d; do
+for m in 1 2 2b 3 4 5a 5b 5c 5d; do
   t=$(awk -F'\t' -v m="$m" '$1 == m && ($3 ~ /^SE_/ || $3 ~ /^DA_/) {s += $5} END{printf "%.0f", s + 0}' "$RES")
   say "  muc $m: $TAG thu $(gb "$t")"
 done
