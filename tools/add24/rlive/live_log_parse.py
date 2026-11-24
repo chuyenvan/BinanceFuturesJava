@@ -75,6 +75,8 @@ RULES = [
     ('EQ_ACCOUNT', ('[C3-LIVE-EQ] account() loi',), r'\[C3-LIVE-EQ\] account\(\) loi', '', 'C3MainEquity:199'),
     ('EQ_KYQUY', ('[C3-LIVE-EQ] CANH BAO ky quy',), r'\[C3-LIVE-EQ\] CANH BAO ky quy', '', 'C3MainEquity:174 (K7)'),
     ('FUNDING', ('[C3-LIVE-EQ] funding c3',), r'\[C3-LIVE-EQ\] funding c3 (\S+) \((\d+) dong\) => cong don (\S+)', 'add,n,cum', 'C3MainEquity:247'),
+    # [ERRATA7 V4b] loi doc income => thu lai lan poll sau (khong mat funding, chi tre <= FUNDING_POLL_MS); CHI dem, khong dung cho cham
+    ('EQ_INCOME_ERR', ('[C3-LIVE-EQ] doc income FUNDING_FEE loi',), r'\[C3-LIVE-EQ\] doc income FUNDING_FEE loi', '', 'C3MainEquity:218'),
     ('KHAN', ('KHAN',), r'KHAN', '', 'alerts'),
     ('KS_LATCH', ('[KILLSW]', 'LATCH'), r'\[KILLSW\].*LATCH', '', 'OpsHooks'),
 ]

@@ -6,4 +6,5 @@ TEST_OUT=$A/test_score.json python3 $T/test_score.py > $A/test_score.txt 2>&1; R
 bash $T/test_parser_v4b.sh $A/test_parser_v4b.json > $A/test_parser_v4b.txt 2>&1; R2=$?
 bash $T/test_guard_gate.sh $A/test_guard_gate.json > $A/test_guard_gate.txt 2>&1; R3=$?
 bash $T/test_full_tier3_java.sh $A/test_full_tier3.json > $A/test_full_tier3.txt 2>&1; R4=$?
-echo "test_score(a,b,c,e)=$R1 test_parser_v4b(f)=$R2 test_guard_gate(d)=$R3 test_full_tier3(D1,tier3)=$R4 out=$A"; [ $R1$R2$R3$R4 = 0000 ]
+python3 $T/test_errata7.py > $A/test_errata7.txt 2>&1; R5=$?   # [ERRATA7] V10a (2) / V6 / V4b
+echo "test_score(a,b,c,e)=$R1 test_parser_v4b(f)=$R2 test_guard_gate(d)=$R3 test_full_tier3(D1,tier3)=$R4 test_errata7=$R5 out=$A"; [ $R1$R2$R3$R4$R5 = 00000 ]

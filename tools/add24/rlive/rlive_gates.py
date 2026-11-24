@@ -26,6 +26,14 @@ def ms7(s):
     return int(datetime.strptime(s, '%Y-%m-%d %H:%M').replace(tzinfo=TZ7).timestamp() * 1000)
 
 
+def v6_lane(minutes, errors, n_sel, n_window):
+    """[ERRATA7 V6] expect = n_sel (phut co input); dat khi minutes in {expect, expect-1} (E-A11 phut cuoi) va 0 exception.
+    expect_window = do dai cua so; n_N1 = phut khong co sel (N1); n_last = expect - minutes (0 hoac 1 khi dat)."""
+    ok = minutes is not None and minutes in (n_sel, n_sel - 1) and errors == 0
+    return {'minutes': minutes, 'expect': n_sel, 'errors': errors, 'expect_window': n_window, 'n_N1': n_window - n_sel,
+            'n_last': (n_sel - minutes) if minutes is not None else None, 'ok': ok}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--out-dir', required=True); ap.add_argument('--fx', required=True); ap.add_argument('--live', required=True)
@@ -92,12 +100,19 @@ def main():
     g['V5'] = {'ok': all(x['banners'] and all(x['banners'].values()) and x['env_missing_n'] == 0 and x['net_lines'] == 0
                          and x['jar_check_ok'] is True for x in v5.values()),
                'lanes': v5}
+    # [ERRATA7 V6] expect = so phut CO INPUT = so ts phan biet cua fx/sel.csv.gz trong [S, E) (prereg s11 "so phut xu ly == so phut input";
+    #   s5: phut khong co sel_dump = N1 NO_INPUT); truoc day expect = do dai cua so (sai so voi prereg)
+    selm = set()
+    for r in csv.DictReader(gzip.open(a.fx + '/sel.csv.gz', 'rt')):
+        t = int(r['ts'])
+        if S <= t < E:
+            selm.add(t)
     v6 = {}
     for ln in lanes:
         res = json.load(open(os.path.join(a.out_dir, ln, 'result.json')))
-        v6[ln] = {'minutes': (res.get('market') or {}).get('minutes'), 'expect': (E - S) // 60000, 'errors': len(res.get('errors', []))}
-    # rig 11-17 (fx1105) cung xu ly 12959/12960 phut: phut cuoi [END-1', END) khong co nen sau de quyet dinh => chap nhan expect-1 (ghi ro)
-    g['V6'] = {'ok': all(x['minutes'] in (x['expect'], x['expect'] - 1) and x['errors'] == 0 for x in v6.values()), 'lanes': v6}
+        v6[ln] = v6_lane((res.get('market') or {}).get('minutes'), len(res.get('errors', [])), len(selm), (E - S) // 60000)
+    # rig 11-17 (fx1105) cung xu ly 12959/12960 phut: phut cuoi [END-1', END) khong co nen sau de quyet dinh => chap nhan expect-1 (E-A11)
+    g['V6'] = {'ok': all(x['ok'] for x in v6.values()), 'lanes': v6}
     import ast   # V7: REF + bo cham KHONG import cau noi Java / chay tien trinh (kiem AST, khong theo chu trong comment)
     BADMOD = {'jpype', 'py4j', 'jnius', 'subprocess'}
     def java_hint(f):
@@ -118,6 +133,8 @@ def main():
     v10 = json.load(open(a.v10)) if a.v10 and os.path.exists(a.v10) else None
     g['V10a'] = {'ok': bool(v10 and v10.get('V10a_ok')), 'file': a.v10 or 'CHUA CHAY',
                  'domain_minutes': (v10 or {}).get('domain_minutes'), 'V10a_mismatch_minutes': (v10 or {}).get('V10a_mismatch_minutes')}
+    for k in ('V10a_rule', 'V10a_pass_eq', 'V10a_pass_subset', 'V10a_pass_subset_trans', 'V10a_not_bitexact_minutes', 'V10a_fail'):
+        g['V10a'][k] = (v10 or {}).get(k)
     g['ok'] = all(v['ok'] for k, v in g.items() if isinstance(v, dict) and 'ok' in v)
     json.dump(g, open(os.path.join(a.out_dir, 'gates.json'), 'w'), indent=1)
     print(json.dumps({k: (v['ok'] if isinstance(v, dict) else v) for k, v in g.items()}))
