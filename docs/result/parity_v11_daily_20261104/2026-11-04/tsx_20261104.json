@@ -1,0 +1,172 @@
+{
+ "day": "2026-11-04",
+ "universe_union": 752,
+ "S_files": [
+  "/home/ubuntu/claude_master/v11_tsx/off/out/2026-09_days64.csv",
+  "/home/ubuntu/claude_master/v11_tsx/off/outv/2026-10_days64.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-20.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-21.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-22.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-23.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-24.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-25.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-26.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-27.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-29.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-30.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-31.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-11-01.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-11-02.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-11-03.csv"
+ ],
+ "flags_cmd_out": "2026-11-06 08:39:59.711 INFO  [main] t.TsxLiveOffline: flags /home/ubuntu/claude_master/parity_v11w/tsx/flags_20261104.csv 2026-09-20..2026-11-05 on=0",
+ "flag_2026-11-04": {
+  "vision": {
+   "flag_day": 20761,
+   "date": "2026-11-04",
+   "state": NaN,
+   "dd": NaN,
+   "p": NaN,
+   "max_p": NaN,
+   "max_day": -1,
+   "min_n": 0,
+   "reason": "missing 2026-10-28"
+  },
+  "live_lines": [
+   {
+    "flag": "OFF",
+    "dd": -0.226242,
+    "minN": 1403,
+    "src": "aero:1d",
+    "final": "false"
+   }
+  ],
+  "live_final_states": [
+   "OFF"
+  ],
+  "live_status_flagToday": [
+   "OFF"
+  ]
+ },
+ "flag_2026-11-05": {
+  "vision": {
+   "flag_day": 20762,
+   "date": "2026-11-05",
+   "state": NaN,
+   "dd": NaN,
+   "p": NaN,
+   "max_p": NaN,
+   "max_day": -1,
+   "min_n": 0,
+   "reason": "missing 2026-10-28"
+  },
+  "live_lines": [
+   {
+    "flag": "OFF",
+    "dd": -0.211878,
+    "minN": 1403,
+    "src": "aero:1d",
+    "final": "false"
+   }
+  ],
+  "live_final_states": [
+   "OFF"
+  ],
+  "live_status_flagToday": []
+ },
+ "flag_match": null,
+ "flag_status": "KHONG DO DUOC (vision=nan, live=['OFF'])",
+ "S_D": {
+  "vision64": null,
+  "vision32": null,
+  "n_min_vision": null,
+  "live": 0.018393644219109488,
+  "n_min_live": 1440
+ },
+ "S_hist_new": {
+  "2026-10-20": {
+   "vision64": 0.0296780470884635,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-21": {
+   "vision64": 0.0079043547080325,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-22": {
+   "vision64": -0.0507035627657561,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-23": {
+   "vision64": 0.0066995385759033,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-24": {
+   "vision64": -0.0024848684143467,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-25": {
+   "vision64": -0.0219989295972263,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-26": {
+   "vision64": 0.0137804881588385,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-27": {
+   "vision64": 0.0166657030167768,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-29": {
+   "vision64": -0.0736537936381133,
+   "n_min": 1439,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-30": {
+   "vision64": 0.0119684029766403,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-31": {
+   "vision64": -0.0063837838315841,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-11-01": {
+   "vision64": -0.0032730628289251,
+   "n_min": 1439,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-11-02": {
+   "vision64": -0.0354283024105064,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-11-03": {
+   "vision64": 0.0101908162972038,
+   "n_min": 1440,
+   "live": 0.008400861410368107,
+   "n_min_live": 1440
+  }
+ }
+}

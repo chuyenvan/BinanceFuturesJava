@@ -1,0 +1,53 @@
+{
+ "cache": "cache_1793642460000_1794009540000.ser.gz",
+ "cache_log_tail": [
+  "2026-11-08 08:31:39.613 INFO  [main] c.b.c.a.VisionCacheBuilder: day 2026-11-06 files=738 missing=0",
+  "2026-11-08 08:32:01.441 INFO  [main] c.b.c.a.VisionCacheBuilder: cache cache_1793642460000_1794009540000.ser.gz minutes=6119 cells=4515822 syms=738 first=1793642460000 last=1794009540000 holes=0 missing_files={}"
+ ],
+ "BT": {
+  "rc": 0,
+  "strace": {
+   "connect": 4,
+   "to_242": 0,
+   "af_inet": 0,
+   "af_inet_non_loopback": 0
+  },
+  "suspicious_log_lines": []
+ },
+ "NEW2": [
+  {
+   "rc": 0,
+   "strace": {
+    "connect": 4,
+    "to_242": 0,
+    "af_inet": 0,
+    "af_inet_non_loopback": 0
+   },
+   "suspicious_log_lines": [],
+   "seg": {
+    "restart": 1793875312000,
+    "first": 1793875260000,
+    "last": 1793977740000,
+    "keep_from": 1793923200000
+   }
+  },
+  {
+   "rc": 0,
+   "strace": {
+    "connect": 4,
+    "to_242": 0,
+    "af_inet": 0,
+    "af_inet_non_loopback": 0
+   },
+   "suspicious_log_lines": [],
+   "seg": {
+    "restart": 1793977835000,
+    "first": 1793977800000,
+    "last": 1794009540000,
+    "keep_from": 1793977800000
+   }
+  }
+ ],
+ "CTL_gate": "2026-11-08 08:37:09,185 INFO gate /home/ubuntu/claude_master/parity_v11w/d/2026-11-06/runs/out_NEW2.csv.gz rows ref=1440 new=1440 both=1440 only_ref=0 only_new=0 | nonfund bit=1.000000 tol=1.000000 bad_min=0 | diff_nonfund={} | diff_fund={}",
+ "CTL_fund": "2026-11-08 08:37:12,377 INFO fund /home/ubuntu/claude_master/parity_v11w/d/2026-11-06/runs/fund_NEW2.csv.gz rows ref=45572 new=45572 both=45572 only_ref=0 only_new=0 | nonfund bit=0.965088 tol=1.000000 bad_min=48 | diff_nonfund={'f3': 1591} | diff_fund={}"
+}

@@ -1,0 +1,73 @@
+{
+ "json": {
+  "gate": {
+   "identical": true,
+   "n_diff": 0,
+   "first": []
+  },
+  "fund": {
+   "identical": true,
+   "n_diff": 0,
+   "first": []
+  },
+  "net": {
+   "identical": true,
+   "n_diff": 0,
+   "first": []
+  },
+  "s1": {
+   "identical": true,
+   "n_diff": 0,
+   "first": []
+  },
+  "gv_p2": {
+   "identical": true,
+   "n_diff": 0,
+   "first": []
+  },
+  "p3": {
+   "identical": true,
+   "n_diff": 0,
+   "first": []
+  },
+  "labels": {
+   "identical": true,
+   "n_diff": 0,
+   "first": []
+  },
+  "s1v (vs work/s1v_d1.json cua D1)": {
+   "identical": true,
+   "n_diff": 0,
+   "first": []
+  }
+ },
+ "intermediate": {
+  "join_gate.csv.gz": {
+   "identical": true
+  },
+  "join_fund.csv.gz": {
+   "identical": true
+  },
+  "net_pw.csv.gz": {
+   "identical": true
+  },
+  "net_live_all.csv.gz": {
+   "identical": true
+  },
+  "p2_pairs.csv.gz": {
+   "identical": true
+  },
+  "s1v_rows.csv.gz": {
+   "identical": true
+  },
+  "p3_q.csv": {
+   "identical": true
+  }
+ },
+ "tsx_ew_engine": {
+  "days64_identical": true,
+  "days32_identical": true
+ },
+ "ALL_JSON_IDENTICAL": true,
+ "ALL_INTERMEDIATE_IDENTICAL": true
+}

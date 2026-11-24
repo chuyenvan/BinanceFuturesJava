@@ -1,0 +1,13 @@
+{
+ "marks": [
+  {
+   "symbol": "PREDICTUSDT",
+   "kind": "delist",
+   "day": "2026-11-06",
+   "t": 1793923140000,
+   "p07": "11-06 06:59"
+  }
+ ],
+ "groups": [],
+ "minute_group": {}
+}

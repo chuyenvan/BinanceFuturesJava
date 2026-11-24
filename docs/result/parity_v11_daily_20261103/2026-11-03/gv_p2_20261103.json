@@ -1,0 +1,86 @@
+{
+ "sel_minutes": 1440,
+ "skipped_minutes_no_net_live": [],
+ "GV_I": {
+  "n": 34560,
+  "n_minutes": 1440,
+  "frac_le1e-6": 1.0,
+  "n_diff": 0,
+  "bad_minutes": []
+ },
+ "GV_O": {
+  "n": 34560,
+  "n_minutes": 1440,
+  "frac_le1e-6": 0.4230902777777778,
+  "n_diff": 19938,
+  "bad_minutes": [
+   "11-03 10:34",
+   "11-03 10:35",
+   "11-03 10:36",
+   "11-03 10:37",
+   "11-03 10:38",
+   "11-03 10:39",
+   "11-03 10:40",
+   "11-03 10:41",
+   "11-03 10:42",
+   "11-03 10:43",
+   "11-03 10:44",
+   "11-03 10:45",
+   "11-03 10:46",
+   "11-03 10:47",
+   "11-03 10:48",
+   "11-03 10:49",
+   "11-03 10:50",
+   "11-03 10:51",
+   "11-03 10:52",
+   "11-03 10:53",
+   "11-03 10:54",
+   "11-03 10:55",
+   "11-03 10:56",
+   "11-03 10:57",
+   "11-03 10:58",
+   "11-03 10:59",
+   "11-03 11:00",
+   "11-03 11:01",
+   "11-03 11:02",
+   "11-03 11:03"
+  ]
+ },
+ "P2": {
+  "n_pairs": 34560,
+  "n_minutes": 1440,
+  "minutes_dropped": {},
+  "q_src_minutes": {
+   "log": 1407,
+   "replay_pre_restart": 33
+  },
+  "q_live_eq_q_off_frac": 0.022916666666666665,
+  "n_pass_live": 0,
+  "n_pass_off": 0,
+  "n_flip": 0,
+  "n_flip_minutes": 0,
+  "n_flip_heavy": 0,
+  "flip_detail": [],
+  "max_rq_live": 0.3445429801940918,
+  "max_rq_off": 0.5075878500938416,
+  "n_rq_ge_09_live": 0,
+  "n_rq_ge_09_off": 0,
+  "n_rq_ge_08_live": 0,
+  "PASS": true
+ },
+ "GATE_LOG": {
+  "n_lines": 1510,
+  "n_minutes_join": 1440,
+  "map_tick_check": {
+   "n_lines_with_MAP": 1510,
+   "n_tick_eq": 1510
+  },
+  "n_match": 1440,
+  "sum_log": 0,
+  "sum_calc": 0,
+  "thr_range_match_base0008": 1440,
+  "thr_range_mismatch": [],
+  "mismatch": [],
+  "gate_lines_not_joined": []
+ }
+}

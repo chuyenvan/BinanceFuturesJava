@@ -1,0 +1,73 @@
+{
+ "round": "daily_20261105",
+ "prereg": "481701b2 + ADDENDUM1 fea9fb97",
+ "days": {
+  "2026-11-05": {
+   "status": {
+    "P1": "TRUOT",
+    "P1m": "DAT",
+    "S1_I": "XAM",
+    "S1_m": "DAT",
+    "GV_I": "DAT",
+    "P2": "TRUOT",
+    "GATE_LOG_n_pass": "1436/1440",
+    "P3": "DAT",
+    "TSX": "KHONG DO DUOC (vision=nan, live=['OFF'])",
+    "CTL": "DAT",
+    "K5_Kprime": 1440,
+    "K5_official": 1440,
+    "K5_rule": "ADDENDUM2 4eef2788 + ADDENDUM3 67ce404a (chinh thuc)",
+    "pull_incomplete": false,
+    "ket_luan": "TRUOT (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)"
+   },
+   "rq": {
+    "ge09_live": 117,
+    "ge09_off": 192,
+    "ge08_live": 155,
+    "ge08_off": 273,
+    "max_live": 1.6491286,
+    "max_off": 1.6558635,
+    "n_pairs": 34560
+   }
+  }
+ },
+ "cumulative": {
+  "P2_pairs_both_sides_measured": {
+   "n_pairs": 67824,
+   "ge09_live": 117,
+   "ge09_off": 192,
+   "ge08_live": 161,
+   "ge08_off": 279
+  },
+  "P2_pairs_live_side_all_days": {
+   "n_pairs": 67824,
+   "ge09_live": 117,
+   "ge08_live": 161
+  },
+  "P2_max_rq": {
+   "live": 1.6491286,
+   "off": 1.6558635
+  },
+  "days_measured": [
+   "2026-10-21",
+   "2026-11-05"
+  ],
+  "verdicts": {
+   "2026-10-21": "DAT (so bo cho phan funding: phan quyet chinh thuc P1/P2-funding o luot M)",
+   "2026-11-05": "TRUOT (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)"
+  }
+ },
+ "D1": {
+  "status_official_add1": "DAT (so bo cho phan funding: phan quyet chinh thuc P1/P2-funding o luot M)",
+  "K5_Kprime_relabel_only": 375,
+  "rq": {
+   "ge09_live": 0,
+   "ge09_off": 0,
+   "ge08_live": 6,
+   "ge08_off": 6,
+   "max_live": 0.8913219,
+   "max_off": 0.8913218,
+   "n_pairs": 33264
+  }
+ }
+}

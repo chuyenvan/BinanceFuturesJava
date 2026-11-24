@@ -1,0 +1,160 @@
+{
+ "day": "2026-11-01",
+ "universe_union": 752,
+ "S_files": [
+  "/home/ubuntu/claude_master/v11_tsx/off/out/2026-09_days64.csv",
+  "/home/ubuntu/claude_master/v11_tsx/off/outv/2026-10_days64.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-20.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-21.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-22.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-23.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-24.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-25.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-26.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-27.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-29.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-30.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-10-31.csv",
+  "/home/ubuntu/claude_master/parity_v11w/tsx/S_2026-11-01.csv"
+ ],
+ "flags_cmd_out": "2026-11-03 09:59:26.197 INFO  [main] t.TsxLiveOffline: flags /home/ubuntu/claude_master/parity_v11w/tsx/flags_20261101.csv 2026-09-20..2026-11-02 on=0",
+ "flag_2026-11-01": {
+  "vision": {
+   "flag_day": 20758,
+   "date": "2026-11-01",
+   "state": NaN,
+   "dd": NaN,
+   "p": NaN,
+   "max_p": NaN,
+   "max_day": -1,
+   "min_n": 0,
+   "reason": "missing 2026-10-28"
+  },
+  "live_lines": [
+   {
+    "flag": "OFF",
+    "dd": -0.205985,
+    "minN": 1403,
+    "src": "aero:1d",
+    "final": "false"
+   }
+  ],
+  "live_final_states": [
+   "OFF"
+  ],
+  "live_status_flagToday": [
+   "OFF"
+  ]
+ },
+ "flag_2026-11-02": {
+  "vision": {
+   "flag_day": 20759,
+   "date": "2026-11-02",
+   "state": NaN,
+   "dd": NaN,
+   "p": NaN,
+   "max_p": NaN,
+   "max_day": -1,
+   "min_n": 0,
+   "reason": "missing 2026-10-28"
+  },
+  "live_lines": [
+   {
+    "flag": "OFF",
+    "dd": -0.208579,
+    "minN": 1403,
+    "src": "aero:1d",
+    "final": "false"
+   }
+  ],
+  "live_final_states": [
+   "OFF"
+  ],
+  "live_status_flagToday": []
+ },
+ "flag_match": null,
+ "flag_status": "KHONG DO DUOC (vision=nan, live=['OFF'])",
+ "S_D": {
+  "vision64": -0.0032730628289251,
+  "vision32": -0.0032730686474992,
+  "n_min_vision": 1439,
+  "live": -0.0032730686474992817,
+  "n_min_live": 1439,
+  "absdiff64": 5.81857418149867e-09,
+  "absdiff32": 8.153200337090993e-17
+ },
+ "S_hist_new": {
+  "2026-10-20": {
+   "vision64": 0.0296780470884635,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-21": {
+   "vision64": 0.0079043547080325,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-22": {
+   "vision64": -0.0507035627657561,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-23": {
+   "vision64": 0.0066995385759033,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-24": {
+   "vision64": -0.0024848684143467,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-25": {
+   "vision64": -0.0219989295972263,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-26": {
+   "vision64": 0.0137804881588385,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-27": {
+   "vision64": 0.0166657030167768,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-29": {
+   "vision64": -0.0736537936381133,
+   "n_min": 1439,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-30": {
+   "vision64": 0.0119684029766403,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-31": {
+   "vision64": -0.0063837838315841,
+   "n_min": 1440,
+   "live": -0.006383785413483719,
+   "n_min_live": 1440
+  },
+  "2026-11-01": {
+   "vision64": -0.0032730628289251,
+   "n_min": 1439,
+   "live": -0.0032730686474992817,
+   "n_min_live": 1439
+  }
+ }
+}

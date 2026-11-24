@@ -1,0 +1,17 @@
+{
+ "0": {
+  "rc": 0,
+  "strace": {
+   "connect": 4,
+   "to_242": 0,
+   "af_inet": 0,
+   "af_inet_non_loopback": 0
+  },
+  "suspicious_log_lines": [],
+  "drop": [
+   "BACUSDT",
+   "CEGUSDT",
+   "IBKRUSDT"
+  ]
+ }
+}

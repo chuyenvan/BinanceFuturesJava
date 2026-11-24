@@ -1,0 +1,28 @@
+{
+ "cand": 739,
+ "U_D": 739,
+ "frac_cand": 1.0,
+ "live_syms": 513,
+ "frac_live_with_vision": 1.0,
+ "missing_cand": [],
+ "missing_live": [],
+ "plan": {
+  "segs": [
+   {
+    "restart": 1793676866000,
+    "first": 1793676840000,
+    "last": 1793836740000,
+    "keep_from": 1793750400000
+   }
+  ],
+  "cache_from": 1793444040000,
+  "cache_to": 1793836740000,
+  "vision_days_cache": [
+   "2026-10-31",
+   "2026-11-01",
+   "2026-11-02",
+   "2026-11-03",
+   "2026-11-04"
+  ]
+ }
+}

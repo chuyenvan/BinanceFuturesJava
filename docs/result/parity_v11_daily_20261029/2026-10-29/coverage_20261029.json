@@ -1,0 +1,100 @@
+{
+ "day": "2026-10-29",
+ "T0": 1793232000000,
+ "T1": 1793318340000,
+ "pull_dirs": {
+  "/home/ubuntu/claude_master/pull242/2026-10-29": {
+   "exists": true,
+   "COMPLETE": true
+  },
+  "/home/ubuntu/claude_master/pull242/2026-10-30": {
+   "exists": true,
+   "COMPLETE": true
+  }
+ },
+ "pull_incomplete": false,
+ "log": {
+  "files": [
+   {
+    "file": "/home/ubuntu/claude_master/pull242/2026-10-29/logs/full.log@1793323391_84911116.gz",
+    "lines": 473640,
+    "how": "first"
+   },
+   {
+    "file": "/home/ubuntu/claude_master/pull242/2026-10-30/logs/full.log@1793409780_91933049.gz",
+    "lines": 512577,
+    "how": "prefix-extend"
+   }
+  ],
+  "merged_lines": 512577,
+  "window_lines": 43525,
+  "first": "2026-10-29T06:00:00+07:00",
+  "last": "2026-10-30T07:10:00+07:00",
+  "covers_from": true,
+  "covers_to": true,
+  "minutes_with_lines_in_window": 1440,
+  "markers": {
+   "[GATE] ": 1510,
+   "[GATE-RATIO] q_t=": 26,
+   "[MAP] tick=": 1510,
+   "[LIVE-KLINE]": 177,
+   "[FEAT-PIPE] ticks=": 25,
+   "[TS-EXT] day ": 2,
+   "[TS-EXT] flag day=": 2,
+   "MainClass:": 0,
+   "[LEGACY] managed": 1507
+  },
+  "gate_ticks_in_window": 1440,
+  "gate_ratio_hours_in_window": 24
+ },
+ "restarts": {
+  "last_before_T0": 1793082395000,
+  "in_day": [],
+  "p07": [
+   "2026-10-27T13:26:35+07:00"
+  ]
+ },
+ "buffer": {
+  "src": "/home/ubuntu/claude_master/pull242/2026-10-30/run/gate_ratio_live.bin.gz",
+  "bytes": 7271403
+ },
+ "psym": {
+  "files_in_window": 1440,
+  "expected": 1440,
+  "decode_stdout": "files=1440 rows=999313",
+  "decode_stderr_tail": "",
+  "rc": 0,
+  "rows": 999313,
+  "minutes_decoded": 1440,
+  "rows_per_min_min": 550
+ },
+ "dumps": {
+  "feat_minutes": 1440,
+  "feat_bad_files": 0,
+  "sel_minutes": 1440,
+  "sel_bad_files": 0,
+  "s1_minutes": 1440,
+  "s1_bad_files": 0
+ },
+ "ucand": {
+  "n": 752,
+  "u_cache1017": 738,
+  "live_syms": 747,
+  "live_not_in_cache": [
+   "ABBVUSDT",
+   "AMGNUSDT",
+   "BACUSDT",
+   "CEGUSDT",
+   "EIDOUSDT",
+   "EQTUSDT",
+   "EWZSUSDT",
+   "IBKRUSDT",
+   "MELIUSDT",
+   "OXYUSDT",
+   "PFEUSDT",
+   "PREDICTUSDT",
+   "SMRUSDT",
+   "STMUSDT"
+  ]
+ }
+}
