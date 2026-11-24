@@ -7,7 +7,7 @@
 4) mark.csv.gz (symbol,t,o,h,l,c) tu markPriceKlines; manifest_ow2.json (sha256 moi dau vao, V1).
 usage: rlive_fixture.py --out /dev/shm/add24/fx_ow2 --live <parse dir> --exinfo <json.gz> [--tcut-override 'YYYY-MM-DD HH:MM' (chi errata)]
 """
-import argparse, csv, glob, gzip, hashlib, io, json, logging, os, sys, time, urllib.parse, urllib.request, zipfile
+import argparse, csv, glob, gzip, hashlib, io, json, logging, os, re, sys, time, urllib.parse, urllib.request, zipfile
 from datetime import datetime, timedelta, timezone
 
 H = os.path.dirname(os.path.abspath(__file__))
@@ -45,6 +45,14 @@ def exinfo_gz(src, dst):
     if gzip.open(dst, 'rb').read() != raw:
         raise SystemExit('TU CHOI (ERRATA6): ban gzip exinfo khac nguyen ban')
     return dst, sha
+
+
+def live_ingest_ok(sym):
+    """[ERRATA6 U1] CHEP NGUYEN dieu kien ingest live TickerIngestor2AerospikeNew.java:134 (symbol = getString("symbol").toUpperCase();
+    symbol.endsWith("USDT") && symbol.matches("^[A-Z0-9]+$") && !Constants.diedSymbol.contains(symbol)); cung regex o :517, :557.
+    diedSymbol KHONG ap o day: rig tu loai (MarketReplay:107, Constants.diedSymbol production)."""
+    u = sym.upper()
+    return u.endswith('USDT') and re.fullmatch('[A-Z0-9]+', u) is not None
 
 
 def onboard_map(ex):
@@ -117,6 +125,9 @@ def main():
     ex = json.load(gzip.open(a.exinfo, 'rt') if a.exinfo.endswith('.gz') else open(a.exinfo))
     allsym |= {x['symbol'] for x in ex.get('symbols', []) if x.get('contractType') == 'PERPETUAL' and x.get('quoteAsset') == 'USDT'
                and x.get('status') == 'TRADING'}
+    # [ERRATA6 U1] universe rig = universe ingest live: symbol live khong ingest (vd 5 symbol ten khong ASCII) => LOAI, khong tai
+    noingest = sorted(x for x in allsym | cand if not live_ingest_ok(x))
+    allsym -= set(noingest); cand -= set(noingest)
     miss = {'klines': [], 'markPriceKlines': []}
     for s in sorted(allsym):
         for d in udays:
@@ -154,7 +165,7 @@ def main():
                             w.writerow([s, int(x[0]), x[1], x[2], x[3], x[4]]); n += 1
     man = {'p1': why, 'START': S, 'END': E, 'tcut': end, 'tcut_from_complete_day': dcomp, 'udays': udays, 'symbols_klines': len(allsym),
            'exinfo_src': a.exinfo, 'exinfo_src_sha256': exsha, 'exinfo_passed_to_prep': exi,
-           'symbols_mark': len(cand) + 1, 'mark_rows': n, 'missing': miss, 'missing_unexplained': unexp,
+           'symbols_mark': len(cand) + 1, 'mark_rows': n, 'missing': miss, 'missing_unexplained': unexp, 'excluded_not_live_ingest': noingest,
            'sha256': {f: hashlib.sha256(open(os.path.join(a.out, f), 'rb').read()).hexdigest() for f in sorted(os.listdir(a.out))}}
     json.dump(man, open(a.out + '/manifest_ow2.json', 'w'), indent=1)
     log.info('fixture OW2 xong tcut=%s miss_k=%d miss_m=%d', end, len(miss['klines']), len(miss['markPriceKlines']))
