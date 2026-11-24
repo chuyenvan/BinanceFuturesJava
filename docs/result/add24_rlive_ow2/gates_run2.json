@@ -1,0 +1,209 @@
+{
+ "V1": {
+  "ok": true,
+  "n": 64,
+  "sha256": {
+   "/dev/shm/add24/rlive_official_1124_180454/fx/bigdown.csv": "3f23539a7eb164a29a63d818fbab525ff7a65fb753c03d012f009e16bdff04f6",
+   "/dev/shm/add24/rlive_official_1124_180454/fx/exinfo.json": "dcfa03c72c38a658e7de7df812e876bbca903f9e0dfd81ab02b1aeb61f3a1684",
+   "/dev/shm/add24/rlive_official_1124_180454/fx/gate_ratio_live.bin": "17f997e897f2e776e439c72d88e7123b68b9eb87f7f38f47d4097f7e55537f25",
+   "/dev/shm/add24/rlive_official_1124_180454/fx/klines.csv.gz": "fe8fea1155a1e17afe64e035eed74811132e54ea81904bfea5ea8e16300ce77a",
+   "/dev/shm/add24/rlive_official_1124_180454/fx/manifest.json": "bc217f040cd9912e9d217706c22539423ba9c7df325566a4077ff73f39a2e452",
+   "/dev/shm/add24/rlive_official_1124_180454/fx/manifest_ow2.json": "d5d8910749c96ca1a306438de9146bf49c079c6ca7676004db348d71719735ef",
+   "/dev/shm/add24/rlive_official_1124_180454/fx/mark.csv.gz": "7b8b59dba8012b41c0481d0da6882ca29181ce68972a2e0fe6a9a76ab9c47338",
+   "/dev/shm/add24/rlive_official_1124_180454/fx/mkt.csv.gz": "65bce5b8c1d6ec03800fde33cabb22010fcf4eb25cc1a6451670becaf1532d44",
+   "/dev/shm/add24/rlive_official_1124_180454/fx/sel.csv.gz": "f13ce8aaddfee4b24ccacae2ac4fd03b586bad7b36a6875c19535fc1ec8bcc3a",
+   "/dev/shm/add24/rlive_official_1124_180454/fx/ts_ext.csv": "b3923eb75106687d769f9ba8ae865782cf6f898d505bcb1ebab50909fb0ecb55",
+   "/dev/shm/add24/rlive_official_1124_180454/live/algo.csv": "669a8180e8b51f31d312df025ae86c41b39572058d853684e104e2512963ffa7",
+   "/dev/shm/add24/rlive_official_1124_180454/live/block.csv": "2d8bd5399e4d1de6bcb7520c7429ff8918435be2196e853dcfabedc2874bfc72",
+   "/dev/shm/add24/rlive_official_1124_180454/live/book_close.csv": "cb074b3b59315a63dcb0bc7bdccf6b38932096805361a880490688828d762c05",
+   "/dev/shm/add24/rlive_official_1124_180454/live/close_da_dong.csv": "68bf22127bef644380ee700aa797ac599939333cab0e700c637ae89723f7579c",
+   "/dev/shm/add24/rlive_official_1124_180454/live/close_khong_khop.csv": "9e66c4ec40b7e4b49469292f18ebf7698ef22fe2b52818ff3a952ac087e54479",
+   "/dev/shm/add24/rlive_official_1124_180454/live/counts.json": "96f98c969baf5817119bf2967f8c13940f00d8858f8aa77efd55b7a00d4b027f",
+   "/dev/shm/add24/rlive_official_1124_180454/live/cum_da_dong.csv": "f11888ac5d63c24d93692d91f865216815d92eff9f39800049d317837589b02b",
+   "/dev/shm/add24/rlive_official_1124_180454/live/eq_account.csv": "b9be102a6435c33b7e0b92fbd65f179c77d7e816f1505fc4d05cce8e462fcb4a",
+   "/dev/shm/add24/rlive_official_1124_180454/live/eq_kyquy.csv": "b9be102a6435c33b7e0b92fbd65f179c77d7e816f1505fc4d05cce8e462fcb4a",
+   "/dev/shm/add24/rlive_official_1124_180454/live/eq_noeq.csv": "f368bb557228fd6e268cad2393c97dfc831afc38e4f7b08910acaa50d426c8d5",
+   "/dev/shm/add24/rlive_official_1124_180454/live/eq_unavail.csv": "2d5da2193afc9b77383a4d79ae3995b15e782edd630c42a58da293f413ae62b8",
+   "/dev/shm/add24/rlive_official_1124_180454/live/exec_ack.csv": "e62b494526e8285547115ec95028e7ebe0bdcb869d9b28a6b8329c6c37dae476",
+   "/dev/shm/add24/rlive_official_1124_180454/live/exec_bu_phi.csv": "daca8b72fcdfa9af173bd7849fb3dca2573aa8ba650b6bcd1d714f4857abc6dc",
+   "/dev/shm/add24/rlive_official_1124_180454/live/exec_fill.csv": "99975286903dc8af1ee335aba9e1b3d2775d862bfceb102de1827e480245d90a",
+   "/dev/shm/add24/rlive_official_1124_180454/live/exec_khong_khop.csv": "879e42fa27d518e4711fc3b2708666c2752adf8620af11e0c6f24b7568fdd67d",
+   "/dev/shm/add24/rlive_official_1124_180454/live/exit_2021.csv": "9e66c4ec40b7e4b49469292f18ebf7698ef22fe2b52818ff3a952ac087e54479",
+   "/dev/shm/add24/rlive_official_1124_180454/live/fill_rest.csv": "26fe6f0874363b4c8fbfa313b5329b1d2b7811f8082aebafb21e5cf60f0c9183",
+   "/dev/shm/add24/rlive_official_1124_180454/live/fill_stop.csv": "c66f0f9b631dd938025a85265a92d5271f887502fb880042cc0c9b43878c185d",
+   "/dev/shm/add24/rlive_official_1124_180454/live/fill_stream.csv": "b3b06a7a8cab1fb2995e1e65690ef6d980bd02e0b506e5c48891a8d958118dfc",
+   "/dev/shm/add24/rlive_official_1124_180454/live/fin_excl.csv": "4cc965db18597b29fff2c15a1037e7fcba50a9a9a0973efd88c1bc21ab806870",
+   "/dev/shm/add24/rlive_official_1124_180454/live/fin_excl_min.csv": "e331dffd429d3c83bce893c3cd9e698a0213e46d8698f32eb863a34db47b7028",
+   "/dev/shm/add24/rlive_official_1124_180454/live/follow.csv": "eabe4c3cb5dd9f5868bec3eac46cb931c1fdb2cedc0c793014a18b45546720bf",
+   "/dev/shm/add24/rlive_official_1124_180454/live/funding.csv": "780fe139b39e178355410a03483e103add1c195ca11be8d47a4f1114c779c0ec",
+   "/dev/shm/add24/rlive_official_1124_180454/live/gaps.csv": "f2bd331cbc6a705eca686707f8b39f965ccb1d3db823195f833b792365d2d110",
+   "/dev/shm/add24/rlive_official_1124_180454/live/gate.csv": "86e43e4c823404f42ff03db674032229d8fe9e2181327d7cfab6d83bf87b5b01",
+   "/dev/shm/add24/rlive_official_1124_180454/live/inc_leg.csv": "1e70646135b7ad50be087df48b2da3957ab68d33f326acf18c702984c60ab84f",
+   "/dev/shm/add24/rlive_official_1124_180454/live/inc_min.csv": "8710d6183b80ce69b095b77dd88b3a29cdabe7a781f71b35a66d70524f8226ae",
+   "/dev/shm/add24/rlive_official_1124_180454/live/jvm_start.csv": "5c79c8b9260a118a91a849e2135c647ecc8815acae1245e34fab5d84914ab6e6",
+   "/dev/shm/add24/rlive_official_1124_180454/live/khan.csv": "b9be102a6435c33b7e0b92fbd65f179c77d7e816f1505fc4d05cce8e462fcb4a",
+   "/dev/shm/add24/rlive_official_1124_180454/live/khong_vao.csv": "48152484cbb02263d2baaec55ce89c1cb84fd05b5a73bd281ab8526dd891f450",
+   "/dev/shm/add24/rlive_official_1124_180454/live/ks_latch.csv": "b9be102a6435c33b7e0b92fbd65f179c77d7e816f1505fc4d05cce8e462fcb4a",
+   "/dev/shm/add24/rlive_official_1124_180454/live/leg_khong_khop.csv": "f147c8894378a596b3a176a45a9141ff2113b7232922bbe284e78281e7a7d894",
+   "/dev/shm/add24/rlive_official_1124_180454/live/order.csv": "a7e2be9adaa81dc4cfabb43df875b53fd0470d39cbdbe90350c43bfaf456cbf7",
+   "/dev/shm/add24/rlive_official_1124_180454/live/order_4130.csv": "2d0c4097d195130e7f01ac46f8fe3a7eadd38e0c0fb835c9b3a55de1fd6e50bf",
+   "/dev/shm/add24/rlive_official_1124_180454/live/order_expired.csv": "d09a44eb2a2a37c94f14d4a77926849292ce67698dd25d66952a706b25574c2b",
+   "/dev/shm/add24/rlive_official_1124_180454/live/order_rejected.csv": "d09a44eb2a2a37c94f14d4a77926849292ce67698dd25d66952a706b25574c2b",
+   "/dev/shm/add24/rlive_official_1124_180454/live/scope_tuchoi.csv": "8b03c8660e075afa2bbb904992d3f34cd32bf4ff457354c8325072b6af16f2ab",
+   "/dev/shm/add24/rlive_official_1124_180454/live/skip.csv": "48152484cbb02263d2baaec55ce89c1cb84fd05b5a73bd281ab8526dd891f450",
+   "/dev/shm/add24/rlive_official_1124_180454/live/skip_paper.csv": "003a816b0f94e8b9ada519bc6319134ad354abb1c43c5213b4e61084f4764ab9",
+   "/dev/shm/add24/rlive_official_1124_180454/live/skip_paper2.csv": "003a816b0f94e8b9ada519bc6319134ad354abb1c43c5213b4e61084f4764ab9",
+   "/dev/shm/add24/rlive_official_1124_180454/live/stopguard.csv": "62faf676700af738870c067a1a35ecf506871b5c0395f001e60d270a13ebaaab",
+   "/dev/shm/add24/rlive_official_1124_180454/live/submit.csv": "95c1120c8068d8e59fa4d98dcbdd622786ca9361039fcd029060949adba3f26d",
+   "/dev/shm/add24/rlive_official_1124_180454/live/tick.csv": "9c3322774db30923c7d60576e3cb617c356c3f76a4c205b924651a7077cde6be",
+   "/dev/shm/add24/rlive_official_1124_180454/live/tick_dts.csv": "7c214dbfe53683b24a04027cc46114e0859caf4011e33490983fbb186fc31240",
+   "/dev/shm/add24/rlive_official_1124_180454/live/time_stop.csv": "9f576d1bb1ca68608644b4d848ddcb80e3f2fc31d2877b29dec47af0addc6f7f",
+   "/dev/shm/add24/rlive_official_1124_180454/live/trail_4130.csv": "0c8419cf997ec9f55e2b59155237ee958feee314a33414ea97e6d69e7a9cda86",
+   "/dev/shm/add24/rlive_official_1124_180454/live/trail_arm.csv": "1edbf86842d65e8b3a4cac40e4a0de655247f3c9f9cac2424826d907211251d0",
+   "/dev/shm/add24/rlive_official_1124_180454/live/trail_stop.csv": "1f201f192697321fcf1fd9e33673f6eb13a7eeb6cecce035ed675d7e4a08bd10",
+   "/dev/shm/add24/rlive_official_1124_180454/live/trail_stop_err.csv": "2fd9b13a057486f6a4f0fa67407e9ea1241a5b7459c949387312caaf487ade08",
+   "/dev/shm/add24/rlive_official_1124_180454/live/tuchoi_cid.csv": "f0e8eee4fa37775a9b369ac27a79979296232aeae2fc457fc4b66264b13b4847",
+   "/dev/shm/add24/rlive_official_1124_180454/live/unarm.csv": "733bdfc7825d1702b5ad5f25c000dcae8890176ede77a0d23f8d687e8afc81ae",
+   "stub:/dev/shm/add24/jar/binance-java-sdk-1.2.4.jar_add24_stub_01cfbb43": "929a9dd30ad473d925cc4811a3f1d0799fb55cff27c14882633e0aa9790cfb5e",
+   "env:/home/ubuntu/claude_master/e2e_v12/env242_whitelist.raw": "b07e9d5bf8e51cb81414ab33a5b85b98527c539d979d744c33cebc969d737ea8",
+   "ovr:/home/ubuntu/claude_master/w3/add24_wt/tools/add24/rlive/overrides_rlive.env": "cff76e010e6b2df74764442d72d0439fc75c35ac570c96b376cd435c6d409048"
+  }
+ },
+ "V2": {
+  "ok": true,
+  "missing_n": 0,
+  "missing": [],
+  "note": "thieu => cum lien quan INSUFFICIENT"
+ },
+ "V3": {
+  "ok": true,
+  "violations": [],
+  "fx_window": [
+   1795055460000,
+   1795478400000
+  ],
+  "lookback_allowed_ms": 86400000,
+  "lookback_from": "2026-11-18 09:31 +07",
+  "ghi_chu": "ERRATA4 s2: doc du lieu van hanh / thi truong tu START - 1 ngay (lich su cua so 15 phut, nen UTC dau ngay) toi T_cut"
+ },
+ "V4": {
+  "ok": true,
+  "parsed": 24,
+  "grep": 24
+ },
+ "V4b": {
+  "ok": false,
+  "file": "/dev/shm/add24/rlive_official_1124_180454/v4b.json",
+  "unmatched": 1,
+  "bad_rules": []
+ },
+ "V5": {
+  "ok": true,
+  "lanes": {
+   "L0": {
+    "banners": {
+     "LIVE-SIZING": true,
+     "LIVE-DCA-GRID": true,
+     "MINUTE-FIN": true,
+     "GATE-RATIO": true
+    },
+    "net_lines": 0,
+    "jar_check_ok": true,
+    "jar_md5": "cf0f479241265de68836716ee66a1866",
+    "classes_from_jar": 10,
+    "env_missing_fields": {
+     "missing_names_not_overridden": []
+    },
+    "env_missing_n": 0,
+    "env_check_ok": null,
+    "errors": 0,
+    "log_errors": 0,
+    "violations": 0,
+    "env_shadow_true": true,
+    "env_adapter_dry": true,
+    "ok": true
+   },
+   "L0-FOLLOW": {
+    "banners": {
+     "LIVE-SIZING": true,
+     "LIVE-DCA-GRID": true,
+     "MINUTE-FIN": true,
+     "GATE-RATIO": true
+    },
+    "net_lines": 0,
+    "jar_check_ok": true,
+    "jar_md5": "cf0f479241265de68836716ee66a1866",
+    "classes_from_jar": 10,
+    "env_missing_fields": {
+     "missing_names_not_overridden": []
+    },
+    "env_missing_n": 0,
+    "env_check_ok": null,
+    "errors": 0,
+    "log_errors": 0,
+    "violations": 0,
+    "env_shadow_true": true,
+    "env_adapter_dry": true,
+    "ok": true
+   },
+   "L0-DRY": {
+    "banners": {
+     "LIVE-SIZING": true,
+     "LIVE-DCA-GRID": true,
+     "MINUTE-FIN": true,
+     "GATE-RATIO": true
+    },
+    "net_lines": 0,
+    "jar_check_ok": true,
+    "jar_md5": "cf0f479241265de68836716ee66a1866",
+    "classes_from_jar": 10,
+    "env_missing_fields": {
+     "missing_names_not_overridden": []
+    },
+    "env_missing_n": 0,
+    "env_check_ok": null,
+    "errors": 0,
+    "log_errors": 0,
+    "violations": 0,
+    "env_shadow_true": true,
+    "env_adapter_dry": true,
+    "ok": true
+   }
+  }
+ },
+ "V6": {
+  "ok": false,
+  "lanes": {
+   "L0": {
+    "minutes": 6773,
+    "expect": 7049,
+    "errors": 0
+   },
+   "L0-FOLLOW": {
+    "minutes": 6773,
+    "expect": 7049,
+    "errors": 0
+   },
+   "L0-DRY": {
+    "minutes": 6773,
+    "expect": 7049,
+    "errors": 0
+   }
+  }
+ },
+ "V7": {
+  "ok": true,
+  "files_with_java_hint": []
+ },
+ "V8": {
+  "ok": true,
+  "file": "/dev/shm/add24/rlive_official_1124_180454/V8.json"
+ },
+ "V10a": {
+  "ok": false,
+  "file": "/dev/shm/add24/rlive_official_1124_180454/V10.json",
+  "domain_minutes": 6770,
+  "V10a_mismatch_minutes": 555
+ },
+ "ok": false
+}
