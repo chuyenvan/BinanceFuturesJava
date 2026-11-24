@@ -1,0 +1,421 @@
+{
+ "prereg": "ADD1 55b146c8 + ERRATA1 591b3382 (luot 2, recipe PROD)",
+ "H9999": [
+  0.856,
+  1.143
+ ],
+ "H99995": [
+  0.858,
+  1.127
+ ],
+ "validity": {
+  "v1p": {
+   "pearson": 0.9999999999999403,
+   "max_abs_d": 1.4901161193847656e-08,
+   "ok": true
+  },
+  "v2p": {
+   "pearson": 0.99999999999892,
+   "max_abs_d": 2.2351741790771484e-08,
+   "ok": true
+  },
+  "v3": {
+   "R9999": 1.1919660545843103,
+   "R99995": 1.508689844286064,
+   "Rmax": 1.5756205307607951,
+   "n_q3": 132480,
+   "ok": true
+  },
+  "v4p": {
+   "info": {
+    "cut": "20260701",
+    "seed": 42,
+    "random_state": 42,
+    "train_rows": 2889607,
+    "train_ts_max": 1782837840000,
+    "train_ts_max_loc": "2026-06-30 23:44:00+07",
+    "booster_sha256": "71e825723e494fe05e4bad62e281782a81103f86c1c9d11dbb81a2d0b958f582",
+    "onnx_sha256": "68e4377aacc864f40f0bdc3adaa12fbe5a7bb3881cc7b59a709d682c6d55de59",
+    "secs": 32.8
+   },
+   "pearson_onnx_vs_T1booster": 0.9999999999989407,
+   "pearson_booster_vs_T1booster": 0.9999999999999999,
+   "max_abs_d": 0.0,
+   "booster_sha_equal_T1": true,
+   "train_rows_T1": 2889607,
+   "train_ts_max_T1": 1782837840000,
+   "ok": true
+  }
+ },
+ "STATUS": "HOP LE (v1' v2' v3 v4')",
+ "m0101": {
+  "cut": "20260101",
+  "seed": 42,
+  "random_state": 42,
+  "train_rows": 2629005,
+  "train_ts_max": 1767199440000,
+  "train_ts_max_loc": "2025-12-31 23:44:00+07",
+  "booster_sha256": "2ceeb8a7ef70fb40575a053cd4ec5814c0ee8a6123dd95dc1aa354715d11ddbd",
+  "onnx_sha256": "026c8b07377d62a1590debff9546c5aebfc6ab8d9e38f0a55d03c249b433f264",
+  "secs": 30.3
+ },
+ "E1p": {
+  "n_dev_q2": 131002,
+  "n_vision_q2": 131040,
+  "n_common": 131002,
+  "common_range": [
+   "2026-04-01 00:00:00+07",
+   "2026-06-30 23:59:00+07"
+  ],
+  "frac_cells_equal": 0.3620132100689649,
+  "frac_rows_all_equal": 0.0,
+  "frac_equal_by_col": {
+   "momentum1M": 0.094051999206119,
+   "momentum5M": 0.7129204134288026,
+   "momentum15M": 0.13974595807697593,
+   "momentum1H": 0.7107296071815697,
+   "momentum4H": 0.7084242988656662,
+   "momentum24H": 0.7088059724279019,
+   "momentumAcceleration": 0.1397306911344865,
+   "trendStrengthETH": 0.5739988702462557,
+   "trendConsistency": 0.9935344498557274,
+   "volatility1M": 0.6228225523274454,
+   "volatility15M": 0.3484145280224729,
+   "volatility1H": 0.29825498847345844,
+   "volatility24H": 0.2719424130929299,
+   "volatilityTermStructure": 0.2483702538892536,
+   "advanceDeclineRatio": 0.017992091723790477,
+   "percentAboveMA20": 0.03652615990595563,
+   "volumeRatioUpDown": 2.2900413734141464e-05,
+   "marketBreadthStrength": 0.027663699790842888,
+   "btcDominance": 1.5266942489427644e-05,
+   "rsi14": 0.41849742752019053,
+   "volumeSpike": 0.3038732233095678,
+   "distMA20": 0.3593914596723714,
+   "fundingRateRaw": 0.07905986168150105,
+   "fundingRateAvg24H": 0.06253339643669563,
+   "fundingRateTrend": 0.06891497839727638,
+   "hourOfDay": 1.0,
+   "dayOfWeek": 1.0,
+   "weekOfMonth": 1.0,
+   "monthOfYear": 1.0,
+   "basketMomentum15M": 0.00011450206867070731,
+   "basketMomentum1H": 6.870124120242439e-05,
+   "basketRsi14": 1.5266942489427644e-05,
+   "basketVolSpike": 0.0
+  },
+  "DEV": {
+   "R9999": 0.9480537998277848,
+   "R99995": 0.9343148783419317,
+   "Rmax": 1.0032247234609797,
+   "R9999_in": true,
+   "R99995_in": true
+  },
+  "Vision": {
+   "R9999": 1.0198645938250028,
+   "R99995": 1.0128228636937442,
+   "Rmax": 0.859812999288467,
+   "R9999_in": true,
+   "R99995_in": true
+  },
+  "X": {
+   "0101": {
+    "q9999": 1.0859001289085013,
+    "q99995": 1.0773291003642955
+   },
+   "0401": {
+    "q9999": 1.1681521598299172,
+    "q99995": 1.1678541890587815
+   }
+  },
+  "pearson_Vision_vs_DEV": {
+   "0101": 0.501505516484635,
+   "0401": 0.5048457871409028
+  },
+  "label": "S-NO"
+ },
+ "E2p": {
+  "A_0710_0930": {
+   "R9999": 1.2105743578172399,
+   "R99995": 1.542843399163236,
+   "Rmax": 1.5756206926017948,
+   "R9999_in": false,
+   "R99995_in": false,
+   "n": 119520,
+   "LODO": {
+    "n_days": 83,
+    "R9999_min": 1.140235437663587,
+    "R9999_max": 1.2292743127986008,
+    "R99995_min": 1.1292757314344926,
+    "R99995_max": 1.5464673725078162
+   }
+  },
+  "B_0710_0930": {
+   "R9999": 1.2134322812260272,
+   "R99995": 1.4957668775476087,
+   "Rmax": 1.5756206926017948,
+   "R9999_in": false,
+   "R99995_in": false,
+   "n": 119520,
+   "LODO": {
+    "n_days": 83,
+    "R9999_min": 1.131114134269403,
+    "R9999_max": 1.228504125674132,
+    "R99995_min": 1.1304309935314705,
+    "R99995_max": 1.5050762431415425
+   }
+  },
+  "A_Q3_full": {
+   "R9999": 1.191965973236866,
+   "R99995": 1.5086895165947594,
+   "Rmax": 1.5756206926017948,
+   "R9999_in": false,
+   "R99995_in": false,
+   "n": 132480,
+   "LODO": {
+    "n_days": 92,
+    "R9999_min": 1.1056091652351145,
+    "R9999_max": 1.1990453932353409,
+    "R99995_min": 1.111763064448609,
+    "R99995_max": 1.5124957497606266
+   }
+  },
+  "A_0701_0709": {
+   "R9999": 1.0403294339484714,
+   "R99995": 1.0505820613585737,
+   "Rmax": 1.068929455755504,
+   "R9999_in": true,
+   "R99995_in": true,
+   "n": 12960,
+   "LODO": {
+    "n_days": 9,
+    "R9999_min": 1.0140199856541217,
+    "R9999_max": 1.0402638012639684,
+    "R99995_min": 1.0526692689997699,
+    "R99995_max": 1.0698219324723737
+   }
+  },
+  "label": "mapper KHONG giai thich"
+ },
+ "E3p": {
+  "models": {
+   "0401_42": {
+    "cut": "20260401",
+    "seed": 42,
+    "random_state": 42,
+    "train_rows": 2758605,
+    "train_ts_max": 1774975440000,
+    "train_ts_max_loc": "2026-03-31 23:44:00+07",
+    "booster_sha256": "e8953035e8321e1ee3a76e291cc9f7f0af6ebdc2c1f822217d087107b8c0989d",
+    "onnx_sha256": "634dfe1a9ea907a49219cb8508f60224a5aa9eb470cac3ef4fd0d2301775ee74",
+    "secs": 30.9
+   },
+   "0701_7": {
+    "cut": "20260701",
+    "seed": 7,
+    "random_state": 7,
+    "train_rows": 2889607,
+    "train_ts_max": 1782837840000,
+    "train_ts_max_loc": "2026-06-30 23:44:00+07",
+    "booster_sha256": "ae3510dd67806396dd02d8da3013cb8dc86cec5ae022c60f44c949c589130874",
+    "onnx_sha256": "7f77ee7bbfc909c81f4be5003536ecb4e6a04e9fb120781bdae30aebf4baf612",
+    "secs": 32.4
+   },
+   "0401_7": {
+    "cut": "20260401",
+    "seed": 7,
+    "random_state": 7,
+    "train_rows": 2758605,
+    "train_ts_max": 1774975440000,
+    "train_ts_max_loc": "2026-03-31 23:44:00+07",
+    "booster_sha256": "bbaebaa74d5b8c608855177d66bcd1a56f2e128bc845d4ed1b330e48e01372e4",
+    "onnx_sha256": "411b916273256d0b32e6180e075f2fb9aaa9fadc8245e853751de48148eb841d",
+    "secs": 31.9
+   },
+   "0701_123": {
+    "cut": "20260701",
+    "seed": 123,
+    "random_state": 123,
+    "train_rows": 2889607,
+    "train_ts_max": 1782837840000,
+    "train_ts_max_loc": "2026-06-30 23:44:00+07",
+    "booster_sha256": "9b8a92034e3437020526151b5af41ef63e80c324957e4d4da83ae93c8e18dd12",
+    "onnx_sha256": "3a9d8338f75b065cb951fdc10af22a7c772a99430c3149db965254c88e852372",
+    "secs": 32.8
+   },
+   "0401_123": {
+    "cut": "20260401",
+    "seed": 123,
+    "random_state": 123,
+    "train_rows": 2758605,
+    "train_ts_max": 1774975440000,
+    "train_ts_max_loc": "2026-03-31 23:44:00+07",
+    "booster_sha256": "0061f49b9fc59d61ea1717b77204a56398693d2d88c06aa3b7fd84fecbb32363",
+    "onnx_sha256": "9c7cf380ddeea1908b41eb95d06e901a5810bf83964b8326d4e9fe75bab8331a",
+    "secs": 32.0
+   },
+   "0701_13": {
+    "cut": "20260701",
+    "seed": 13,
+    "random_state": 13,
+    "train_rows": 2889607,
+    "train_ts_max": 1782837840000,
+    "train_ts_max_loc": "2026-06-30 23:44:00+07",
+    "booster_sha256": "84b6f8a3ad6db5f1db6387592f0c5a90d89e16a76b99f7153e822bb32f94243c",
+    "onnx_sha256": "1422aa22c43f1c3a3ac2fc335d4494a2fe0f4f06690e544fff7317c030bc958e",
+    "secs": 32.3
+   },
+   "0401_13": {
+    "cut": "20260401",
+    "seed": 13,
+    "random_state": 13,
+    "train_rows": 2758605,
+    "train_ts_max": 1774975440000,
+    "train_ts_max_loc": "2026-03-31 23:44:00+07",
+    "booster_sha256": "7f8f745afdc7fe2547f11c8d3dbabe187449a64e88429932834a495171c61c3c",
+    "onnx_sha256": "248b3b8550f8b66ec13ed95499048e15cb62625a7387dfdb212108de30ade6ab",
+    "secs": 31.9
+   },
+   "0701_2024": {
+    "cut": "20260701",
+    "seed": 2024,
+    "random_state": 2024,
+    "train_rows": 2889607,
+    "train_ts_max": 1782837840000,
+    "train_ts_max_loc": "2026-06-30 23:44:00+07",
+    "booster_sha256": "a7ae58826e70868a8d0b289675c6e71eae1558ddd4d1d3ad1f54c4075e979966",
+    "onnx_sha256": "2f9e00871fe9953643119733e23b5c11ae29760e95eed3ac420a031366aefb98",
+    "secs": 32.4
+   },
+   "0401_2024": {
+    "cut": "20260401",
+    "seed": 2024,
+    "random_state": 2024,
+    "train_rows": 2758605,
+    "train_ts_max": 1774975440000,
+    "train_ts_max_loc": "2026-03-31 23:44:00+07",
+    "booster_sha256": "0127ec0816adedcb29629b11cc30a03ed4b5b5af0d658859d469e322116fac0f",
+    "onnx_sha256": "1bc63294c58f8efd7ca24b48ea207850a053371f27cc8d22b051ecd4e1dd56af",
+    "secs": 31.6
+   },
+   "0701_21": {
+    "cut": "20260701",
+    "seed": 21,
+    "random_state": 21,
+    "train_rows": 2889607,
+    "train_ts_max": 1782837840000,
+    "train_ts_max_loc": "2026-06-30 23:44:00+07",
+    "booster_sha256": "30e2955223484eea5fc1c6f2c5af77437b0b1d5a035f76fb8eeaf291c94ab02b",
+    "onnx_sha256": "c2b89688f90b2f0ff289198ef03cb90f020ac3eaabbf4dcc5536cd5e22e0686d",
+    "secs": 32.3
+   },
+   "0401_21": {
+    "cut": "20260401",
+    "seed": 21,
+    "random_state": 21,
+    "train_rows": 2758605,
+    "train_ts_max": 1774975440000,
+    "train_ts_max_loc": "2026-03-31 23:44:00+07",
+    "booster_sha256": "9301023fed8ff36b762f974c74a81422ae69dba536ff0b791e07c260936a25c8",
+    "onnx_sha256": "0eac33b2b5994b528d2d7566d4c508d5ce4f68e0e568470a4001389a023af792",
+    "secs": 32.3
+   },
+   "0701_777": {
+    "cut": "20260701",
+    "seed": 777,
+    "random_state": 777,
+    "train_rows": 2889607,
+    "train_ts_max": 1782837840000,
+    "train_ts_max_loc": "2026-06-30 23:44:00+07",
+    "booster_sha256": "6509be70dcf4a927a76322aa8a3869cd984e637ba83c75547a92bbcee4a09dfc",
+    "onnx_sha256": "93faec5bdefd60eb19a77b2439fa5c5091f8231a8a86067f0b6c3ba41e15e591",
+    "secs": 34.1
+   },
+   "0401_777": {
+    "cut": "20260401",
+    "seed": 777,
+    "random_state": 777,
+    "train_rows": 2758605,
+    "train_ts_max": 1774975440000,
+    "train_ts_max_loc": "2026-03-31 23:44:00+07",
+    "booster_sha256": "6a2bf73f997c584d033787894ad699d099c5aeea405bf357714bdba63cd0c393",
+    "onnx_sha256": "b5fde30e656bfd62c6d099460eba7467538a3b276f482c38fc0371f62b4afe82",
+    "secs": 32.4
+   },
+   "0701_99": {
+    "cut": "20260701",
+    "seed": 99,
+    "random_state": 99,
+    "train_rows": 2889607,
+    "train_ts_max": 1782837840000,
+    "train_ts_max_loc": "2026-06-30 23:44:00+07",
+    "booster_sha256": "582be21ed8cf17a4dafcd42ce6a704f4acae6468195cd015f96f1bed43074efe",
+    "onnx_sha256": "63abe706332cb93f5765839be25e6eb59a4f1c6b54bdb625e8c841c35fc16734",
+    "secs": 34.2
+   },
+   "0401_99": {
+    "cut": "20260401",
+    "seed": 99,
+    "random_state": 99,
+    "train_rows": 2758605,
+    "train_ts_max": 1774975440000,
+    "train_ts_max_loc": "2026-03-31 23:44:00+07",
+    "booster_sha256": "079411d90feac505c78bfc42c893d98301925a35b346cfa2a73a80339758d8d1",
+    "onnx_sha256": "3bb9eec5a6cf93b32d06f9fb43b287687fc8682679b6f65f0f7ad053bec44145",
+    "secs": 35.7
+   },
+   "0701_42": {
+    "cut": "20260701",
+    "seed": 42,
+    "random_state": 42,
+    "train_rows": 2889607,
+    "train_ts_max": 1782837840000,
+    "train_ts_max_loc": "2026-06-30 23:44:00+07",
+    "booster_sha256": "71e825723e494fe05e4bad62e281782a81103f86c1c9d11dbb81a2d0b958f582",
+    "onnx_sha256": "68e4377aacc864f40f0bdc3adaa12fbe5a7bb3881cc7b59a709d682c6d55de59",
+    "secs": 32.8
+   }
+  },
+  "all_seed_pred_identical_0701": false,
+  "all_seed_pred_identical_0401": false,
+  "note": "W seed 42 = booster T1 (v4' tai lap); L seed 42 = PROD cut 0401 (mep +07, KHONG phai fold_20)",
+  "STATUS": "LAM",
+  "n_pairs": 64,
+  "R99995": {
+   "min": 0.6441359229475099,
+   "median": 0.9418464508057804,
+   "max": 2.094260431951573
+  },
+  "R9999": {
+   "min": 0.7409334128657475,
+   "median": 0.9939432886595738,
+   "max": 1.3944308010499242
+  },
+  "pos_1509": "trong",
+  "pctrank_1509": 92.1875,
+  "frac_pairs_R99995_ge_1509": 0.078125,
+  "pos_1192": "trong",
+  "pctrank_1192": 82.8125,
+  "read": "trong nhieu seed tai 2026",
+  "pearson_vs_seed42_0701": {
+   "42": 0.9999999999999999,
+   "7": 0.9800680307765475,
+   "123": 0.9804619287620234,
+   "13": 0.9906544587407177,
+   "2024": 0.9904834947983914,
+   "21": 0.9804307588684436,
+   "777": 0.9923150067414738,
+   "99": 0.9872288417626816
+  },
+  "pearson_vs_seed42_0401": {
+   "42": 1.0,
+   "7": 0.9790550252886094,
+   "123": 0.985560645835853,
+   "13": 0.9770110777445888,
+   "2024": 0.9831739960244992,
+   "21": 0.972959591562102,
+   "777": 0.9798192131256614,
+   "99": 0.9787975437414997
+  }
+ }
+}
