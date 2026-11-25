@@ -1,0 +1,8 @@
+ef40a055a4ac01010290f8e30f60b92f42d7be15135de63b0bfdc9ca580a4138  code/build_hourly.py
+346fddc8a33bb7f0acc64b9f37b4df5a64512f2c22fba144963b16c5d9069b04  code/checks.py
+ec0de0c19b185500f5fb03d3033f32ca9b4fba9569cc9c3a7dcf72af4e117214  code/common.py
+ce9863fab971105678858ff1d96d39ab289b1e5f03d12c51c0b563b447dd601a  code/diag_explore.py
+92a6e80ee3025b1454d480ed3e3697fa5bc48c7cf690e8c276f607b6698d65b3  code/levz.py
+54abbacb66a9c06ab24fdbfe38f24cf2d0557668a1f79d2a5b17901efa21d818  code/score.py
+25eda6e8c0bca08716cd11b24a6211a9dffbae1448b94adfdf7d11fdffa5c2cb  code/v0.py
+frozen_utc 2026-11-25T10:17:41Z before CONFIRM run; confirm cmd: python3 code/levz.py confirm && python3 code/score.py all
