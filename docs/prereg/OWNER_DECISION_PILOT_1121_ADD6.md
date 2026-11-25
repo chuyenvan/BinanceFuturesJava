@@ -1,7 +1,7 @@
 # OWNER_DECISION_PILOT_1121_ADD6 - owner GHI DE ket qua R-LIVE FAIL, uu tien pilot 5.000
-Ghi boi MASTER, 2026-11-25 08:20 (+07). Bo sung cho OWNER_DECISION_PILOT_1121 (c3a9f01b) + ADD1..ADD5 (ADD5 = 7b80604e).
+Ghi boi MASTER, 2026-11-25 09:07 (+07). Bo sung cho OWNER_DECISION_PILOT_1121 (c3a9f01b) + ADD1..ADD5 (ADD5 = 7b80604e).
 
-## 1. Quyet dinh cua owner (nguyen van, 2026-11-25 ~08:15 +07, trong phien lam viec voi MASTER)
+## 1. Quyet dinh cua owner (nguyen van, 2026-11-25 ~09:05 +07, trong phien lam viec voi MASTER)
 "ghi de va uu tien pilot 5k vua lay them duoc du lieu verify/audit voi backtest cung nhu kiem cac khau va lam min dan"
 Boi canh da trinh owner truoc khi quyet (24/11 21:15 va 25/11 sang): R-LIVE luot #3 = FAIL (cc4a4339, MASTER_CONCLUSION_RLIVE_1124.md) ; ba lua chon (hoan de kiem
 bang log live ; ghi de va pilot ; cho jar moi) ; rui ro cua lua chon ghi de (7 bat bien la phan tich SAU ket qua ; time-stop va DCA chua tung chay that).
