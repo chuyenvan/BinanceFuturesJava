@@ -1,0 +1,155 @@
+{
+ "prereg": "PREREG_P15_STAB dea45002 muc 4 (Tang S2)",
+ "candidate": "E8",
+ "control": "C0-PROD",
+ "lanes": {
+  "C0": [
+   "c0s42",
+   "c0s7",
+   "c0s123",
+   "c0s13"
+  ],
+  "E8": [
+   "e8g1",
+   "e8g2",
+   "e8g3",
+   "e8g4"
+  ]
+ },
+ "e": {
+  "DISP_C0": 0.9812836924860295,
+  "DISP_E8": 0.7121568975060378,
+  "ratio": 0.7257400718662985,
+  "threshold": 0.5887702154916177,
+  "PASS": false,
+  "n_q_E8_lt_C0": 13,
+  "median_ratio_by_q": 0.592631226775884
+ },
+ "f": {
+  "families": {
+   "C0": {
+    "cagr22_mean": 37.50796694014241,
+    "cagr22_min": 35.046342202140224,
+    "cagr22_max": 39.841795687213065,
+    "cagr22_sd": 2.1863609495062684,
+    "dd22_mean": -22.520190438091365,
+    "dd22_min": -23.489242289789413,
+    "dd22_max": -20.690202678084546,
+    "calmar22_mean": 1.6732681475666886,
+    "calmar22_min": 1.4920167185373447,
+    "calmar22_max": 1.9256358338825867,
+    "n_trades": [
+     3462,
+     3585,
+     3570,
+     3452
+    ],
+    "roi_all_pp": [
+     232.33345293625166,
+     245.67990547155705,
+     282.07554017759924,
+     270.40317727765074
+    ]
+   },
+   "E8": {
+    "cagr22_mean": 35.48038552972781,
+    "cagr22_min": 33.81575899258999,
+    "cagr22_max": 36.304458624537325,
+    "cagr22_sd": 1.1357166723865137,
+    "dd22_mean": -23.50531414745715,
+    "dd22_min": -24.241709623446596,
+    "dd22_max": -22.365396143716765,
+    "calmar22_mean": 1.510910639311896,
+    "calmar22_min": 1.4572692272933523,
+    "calmar22_max": 1.6133233408460381,
+    "n_trades": [
+     3607,
+     3526,
+     3534,
+     3596
+    ],
+    "roi_all_pp": [
+     244.88315295469783,
+     220.39275646232502,
+     238.99690254944005,
+     242.6448913611943
+    ]
+   }
+  },
+  "d_cagr22_pp": -2.027581410414598,
+  "d_dd22_pp": -0.9851237093657836,
+  "cagr_ok": false,
+  "dd_ok": true,
+  "PASS": false
+ },
+ "S2_PASS": false,
+ "verdict": {
+  "e": "KHONG DAT",
+  "f_cagr": "KHONG DAT",
+  "f_dd": "DAT",
+  "f": "KHONG DAT",
+  "S2": "KHONG DAT"
+ },
+ "toolcheck": {
+  "roi_vs_M5": {
+   "n_eq": 18,
+   "n": 18
+  },
+  "mtm_vs_iso": {
+   "ref": {
+    "tag": "gqsf-s7",
+    "cagr22": 35.63534864128219,
+    "dd_mtm22": -22.748916107732363
+   },
+   "got": {
+    "cagr22": 35.63534864128219,
+    "dd_mtm22": -22.748916107732363
+   },
+   "d_cagr22": 0.0,
+   "d_dd": 0.0,
+   "PASS": true
+  }
+ },
+ "baseline_published": {
+  "src": "docs/result/ISO_RISK.md OFF K24+skipFull 8 seed (jar bcd, seed p15 cu)",
+  "cagr22": 36.98440663306043,
+  "dd22": -22.546415137865246,
+  "calmar22": 1.6486847639747368
+ },
+ "entry_diff": {
+  "C0": {
+   "median_q_of_pairmean": 126.41666666666666,
+   "median_q_entries": 166.875,
+   "median_q_per_pair": {
+    "c0s42-c0s7": 121.0,
+    "c0s42-c0s123": 140.0,
+    "c0s42-c0s13": 124.5,
+    "c0s7-c0s123": 119.0,
+    "c0s7-c0s13": 122.0,
+    "c0s123-c0s13": 124.5
+   }
+  },
+  "E8": {
+   "median_q_of_pairmean": 76.75,
+   "median_q_entries": 174.125,
+   "median_q_per_pair": {
+    "e8g1-e8g2": 73.0,
+    "e8g1-e8g3": 78.0,
+    "e8g1-e8g4": 92.0,
+    "e8g2-e8g3": 70.0,
+    "e8g2-e8g4": 86.5,
+    "e8g3-e8g4": 71.5
+   }
+  }
+ },
+ "inputs_sha256": {
+  "S0_verify.json": "7fead5928afe5c0dc662d5e91bdf279d4b060091f245e4de8674c1794dc411fd",
+  "S1_roi.json": "af061da71a2c7c278d78739b4114ae57cf1280c3cb54e0eaacb0b24998b12aed",
+  "S3_mtm.json": "ec88b3dd0a777e93d4d00a4d27fbb2a4d9b8c67310eff706713fc8b6bd8cd770"
+ },
+ "limits": [
+  "4 lap moi ho, luc thong ke thap (ghi truoc)",
+  "c0s42/c0s7/c0s123/c0s13 la thanh vien e8g1 (khong doc lap hoan toan)",
+  "MTM legacy 00:00 UTC khong bu (nhu baseline)"
+ ]
+}
