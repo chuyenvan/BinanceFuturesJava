@@ -52,3 +52,59 @@ Duong DCA, TIME-STOP, defer-START [C3LIVE-OPS], PX_CORRECTED, lop B / LECH / leo
 ## Lenh MASTER cham chinh thuc 1 ngay (sau A1)
 ~/claude_master/vz_e1_wt/tools/pilot_m/pilot_m_daily.sh 2026-11-24 --official
 (ngay 26/11: them --pilot-on-start "2026-11-26 HH:MM")
+
+# VONG 2 - sua theo A1_PILOT_M_TOOL (T1-T12) + ERRATA1 c0f35f3c (2026-11-25 ~14:55 +07). CHUA COMMIT.
+## File (sha256)
+- pilot_m_daily.py b6e5cd8117a0cc025949580c53a70decb1ed8710b1eddb20232fab3e83c20c18 (cong_cu=b6e5cd8117a0)
+- pilot_m_daily.sh 4c8a84a9b7fb933ff5697144dff9559c892a12113cded1058b221e289dc96c3f (khong doi)
+- README_PILOT_M.md 09c6b681b945b68547377255399a3870c5178e4fb5103508eb85e727b82692c6
+- test/test_pilot_m_daily.sh 8d02ec25eba678e5d71027403c9321abc2d5942d05fbb1362d7172c5047cefd5 (khong doi)
+- test/pm_tests.py 1ae9b6732b16d0c941b31b4e470ab63568e9e058685b6a400e3f82228d6dc84c
+- test/run_mutants.py d1639a76c484037bb840ab2c8e61c15d68f4ef124bb1503a5cf6c9cf82c8c111 ; test/run_mutants.sh 0e60e19f402078c12077b87fa340d74c2923e87e45d38bd575d2a33fa7fc8ebe
+## Sua: T1 tien to A1 + OTHER_TPL (125 mau literal tu code) => gia-ho PFX; T2/E6 cum dong = CLOS/BOOK/SFIL du qty, BOOK<->CLOS +-600 s;
+T3/E2 K2 dong hop le, .log.1, khoang trong dau/cuoi ngay; T4/E3; T5/E1/E5 S1-S9 (S3 VANG EQ_DUOI); T6/E4 --delist-noted; T7/E7; T8/E8;
+T9/E13; T10/E9 0 dung sai (tru MKT/AIPASS/SKIPORD/DCAGRID); T11 san() (WALLET/BALANCE, so_du, equity_so, upl*, chot, moc, chuyen, dinh,
+tmb*, eq*, "eq = C3_CAPITAL + (..)"); E10/E11/E12 da dung; dong dau prereg=2a21fe35+E1.
+## Test: 330/330 PASS (~11 s). Mutant: 17/17 GIET (run_mutants.sh, log v12/pilot_m_devtest/mutants.log)
+| Mutant A1 | Ca giet |
+|---|---|
+| I4(a) bo | b_I4a_STOP_ARM_sau_61s |
+| I4(b) bo han 61 s | b_I4b_ALGO_NEW_sau_61s |
+| I4(c) luon DAT | b_I4c_thieu_CANCELED_stop_cu |
+| I4(d) bo | b_I4d_khong_TRIGGER, b_I4d_TRIGGERED_sau_70s |
+| I8 bo SFIL truoc ARM | b_I8_SFIL_truoc_arm |
+| I10 bo ly do BOOK=CLOS | b_I10_BOOK_ly_do_khac_CLOS |
+| I11(b) bo leo thang | b_I11b_leo_thang |
+| I12(d) bo tong SFIL | b_I12d_tong_SFIL |
+| M-T bo yeu cau CLOS | b_MT_khong_CLOS |
+| M-T bo "som hon due" | b_MT_TS_som_hon_due |
+| D1(a) bo level | b_D1a_level |
+| M-S bo (6)=S7 | b_S7_budget_nho |
+| M-E0 bo (c) | b_ME0c_leg0_khi_dang_giu |
+| K2 bo khoang trong 10' | K2_khoang_trong_20_phut, E2_doc_hong_12_phut, B10, B11_thieu_log1 |
+| K3 bo streak | b_K3_streak_nhay |
+| K4 bo "chua co co ngay" | b_K4_chua_co_co_ngay |
+| K5 bo log_minutes | b_K5_log_minutes |
+Ca pha A1 (cong cu moi): B1 => I10 VI_PHAM; B2 => I10 KHONG_CHAM_DUOC (PFX); B10 => K2 VI_PHAM; B11 => K2 DAT (doc .log.1), thieu .log.1 => VI_PHAM;
+B12 => I10 VI_PHAM. Ca ERRATA1: S1, S2, S3 EQ_DUOI/AVAIL, TIER, S4, S7, S8, S9, khong HOURLY cung JVM (KCD), S5/S6 KCD_CAU_TRUC; K2 1 / 2
+luot doc hong DAT, doc hong 12' => VI_PHAM; I4(d) chi TRIGGERED sau CLOS 1 ms DAT; DELIST co/khong ghi chep; RST roi time-stop DAT,
+arm khong RST => KCSK; flag NA => M-T DAT; E8 DCA khong khop DAT; E9 dong TRAIL/SUBMIT cat => KCD; E12 khung 60'; ro tien 0 o moi ca.
+## Chay thu 21/22/23 (--max-ts 2026-11-24 07:00): 0 dong khong parse. M-E0 DAT/KCSK/KCSK; I3 I4 I8 I9 I10 I11 I12 DAT ca 3 ngay;
+M-T, D1 KCSK; M-S DAT 24/24 (21, het DO - E1); M-X DAT/KCSK/KCSK; K1 K3 K4 K5 K6 DAT; K2: luot doc hong 2/3/3 KHONG con vi pham;
+21, 22 = KHONG_CHAM_DUOC (dong TOM TAT truoc 22/11 17:24 chua co truong deadman=) => qua D+3 nen bac VANG; 23 = DAT. Bac 21 VANG, 22 VANG, 23 XANH.
+Thoi gian 1,3 / 2,3 / 3,5 s.
+## DE NGHI ERRATA2
+1. E2 "thoi diem cuoi cua cron log da doc": neu la dong cuoi trong file => monitor chet khong bao gio sinh khoang trong (B10 lot).
+   Cong cu dung thoi diem DOC (cham_luc, chan --max-ts). Can MASTER xac nhan cau chu.
+2. E1 S1 khong co ngoai le TIER: leg tierMul 1,2 that => r_cap 1,2 => S1 VI_PHAM DO, trong khi S2 TIER = VANG. Cai dung chu (ca test
+   S1_tierMul_1_2_ra_DO_theo_chu).
+3. E13 chi cho M-T: K4 van doi flag=(ON|OFF) => ngay co dong NA(->OFF) K4 VI_PHAM (VANG).
+## A1 can soi: README "Lua chon cai dat" 1-13 (8-13 moi); OTHER_TPL (co dung loai het chuoi cua ho cham?); E2 (b) ap ca dong
+khong hop le voi latch rong; dong hop le thieu deadman => KCD.
+
+# VONG 3 - ERRATA2 efc4f9c1 (F1 chan gio --official < D+1 07:10; F2 S1 > 1,2(1+1e-6) DO, S1b VANG TIER). CHUA COMMIT.
+sha256: pilot_m_daily.py 8bc4da418d25be674d49b1cc28f792db60d6f609b0f199163c10014daacaecdd; README f8da0e125a1ae666ac6cb8936109b9adf195cf1e3b668b7dbf10b9241547b30c;
+test/pm_tests.py, test/run_mutants.py: xem sha256sum (bao cao vong 3). Test 351/351; mutant 20/20 (M18 S1 nguong, M19 bo S1b, M20 bo chan gio).
+Test r_cap 1,0 DAT; 1,01 VANG TIER; 1,1 DO (kem S2 vi r_hi >= r_cap); 1,2 VANG; 1,21 DO. Chan gio official kiem bang ham thuan official_time_ok
+(gio tiem) + kiem main goi ham; KHONG chay --official that trong test/mutant. Dong dau prereg=2a21fe35+E1+E2.
+Thu 21/22/23: khong doi so voi vong 2 (VANG/VANG/XANH; M-S 21 DAT 24/24; K2 21-22 KCD thieu truong deadman, 23 DAT).
