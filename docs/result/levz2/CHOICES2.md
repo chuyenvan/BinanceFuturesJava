@@ -5,7 +5,7 @@ Muc "CAN MASTER QUYET" o cuoi: da cai mac dinh nhung MASTER phai xac nhan truoc 
 ## Du lieu / nhan gio
 1. Luoi gio: chi so k <-> T_k = 2021-12-01 + k gio = gio quyet dinh `h` cua tang 1 (thong tin den het T_k). Gia: hang k = nen store
    [T_k - 1h, T_k) (store ts_h = gio DONG = T_k). Quy uoc xac dinh BANG DU LIEU (S2): store t == panel h + 1h khop 99.999 %, store t == h chi 10.6 %.
-2. Gia vao = close nen [t-1h, t) cua store (prereg "close gio t"). Tang 1 dung close nen 1m mo luc t (som hon ~1 phut sau) => lech nho
+2. [ADDENDUM2 G4: ghi nhan, GIU] Gia vao = close nen [t-1h, t) cua store (prereg "close gio t"). Tang 1 dung close nen 1m mo luc t (som hon ~1 phut sau) => lech nho
    (smoke: median |lech gia vao| 0.16 %, max 7.3 %).
 3. Reader store: assert gio MO nen < 2026-01-01 (nen dong luc 2026-01-01 00:00 = du lieu 2025-12-31 23:xx, duoc phep doc nhung sim KHONG
    dung vi luoi ket thuc o T = 2025-12-31 23:00). Funding / tin hieu: reader tang 1 (assert ts < 2026-01-01).
@@ -19,10 +19,11 @@ Muc "CAN MASTER QUYET" o cuoi: da cai mac dinh nhung MASTER phai xac nhan truoc 
    nhu tang 1 CHOICES 17).
 8. E1 (xem CAN MASTER QUYET #A): moc = gio LEV GAN NHAT s trong [t-24, t-1]; ung vien neu z_r(t) <= -2 va KHONG co gio nao trong (s, t) co
    z_r <= -2; diem s = min(z_oi, z_f) tai gio s.
-9. Cooldown: vao lai chi khi k - k_vao_truoc > 72 (dung 72 h van chan, nhu tang 1 CHOICES 9); coin dang co vi the thi bo qua.
+9. [ADDENDUM2 G4: ghi nhan, GIU] Cooldown: vao lai chi khi k - k_vao_truoc > 72 (dung 72 h van chan, nhu tang 1 CHOICES 9); coin dang co vi the thi bo qua.
 
 ## Thu tu trong moi buoc gio k (nen k = [T_k - 1h, T_k))
-10. (i) voi tung vi the (thu tu chi so coin): thoat trong nen (a) SL -> (b) DCA -> (c) trailing; (ii) funding tai moc T_k cho vi the con mo;
+10. [DA DOI theo ADDENDUM2 G2/G3] (i) voi tung vi the (thu tu chi so coin): open >= stop => thoat tai open; neu khong: (b) DCA (tru khi trail da
+    kich hoat tu truoc va high >= muc nen truoc) -> (a) SL cham tren khoi luong moi -> (c) trailing; (ii) funding tai moc T_k cho vi the con mo;
     (iii) time-stop / thieu gia / cuoi ky tai close T_k; (iv) equity MTM; (v) vao lenh moi tai close T_k. Thoat truoc vao => cho trong cung gio
     duoc dung ngay.
 11. Size = equity MTM tai close T_k (sau thoat + funding, TRUOC phi vao) x 0.60 / K_max; moi lenh vao trong cung gio dung cung size. Phi vao tru ngay.
@@ -32,12 +33,14 @@ Muc "CAN MASTER QUYET" o cuoi: da cai mac dinh nhung MASTER phai xac nhan truoc 
 
 ## Co che thoat
 13. SL: muc = gia vao DAU x (1+SL) ca khi da DCA; open >= muc => thoat tai open (khong cong truot); high >= muc => muc x 1.005.
-14. DCA: chi 1 lan; them notional = size0 (USD cua lenh dau) tai p0 x 1.10 KE CA khi open nhay qua (bat loi: short gia thap hon). Tran: (notional cac
+14. [DA DOI theo ADDENDUM2 G2/G3] DCA: chi 1 lan; them notional = size0 (USD cua lenh dau) tai p0 x 1.10 KE CA khi open nhay qua (bat loi: short gia thap hon). Tran: (notional cac
     vi the KHAC theo close truoc + qty_hien_tai x p0 x 1.10 + size0) <= 0.60 x equity_now, equity_now = tien mat + lai/lo chua thuc hien cac vi
-    the khac theo close truoc + vi the nay danh gia tai p0 x 1.10. Phi 0.07 %. SL cham trong nen => KHONG DCA (thu tu prereg).
+    the khac theo close truoc + vi the nay danh gia tai p0 x 1.10. Phi 0.07 %. (CU: SL cham trong nen => KHONG DCA - da bo.) MOI (G2): open >= stop => thoat tai open, KHONG DCA;
+    open < stop va high >= p0 x 1.10 => DCA TRUOC (neu tran cho phep) roi kiem SL cham tren khoi luong moi. (G3): trailing da kich hoat tu nen
+    truoc va high >= muc trail nen truoc => thoat trailing, KHONG DCA trong nen do. (Open trong [1.10 p0, stop) => van DCA tai p0 x 1.10 - nhu cu.)
 15. Trailing: day = LOW thap nhat tu nen sau nen vao (khoi tao +inf); kich hoat khi low nen hien tai <= gia binh quan hien tai x 0.90 (sau DCA cung
     nen neu co); da kich hoat thi giu; muc = day x 1.05 cap nhat SAU khi kiem. Thoat khi high >= muc cua nen truoc, gia = max(open, muc x 1.001)
-    (open nhay qua muc => thoat tai open: bat loi; prereg chi noi muc x 1.001).
+    (open nhay qua muc => thoat tai open: bat loi; prereg chi noi muc x 1.001). [ADDENDUM2 G4: ghi nhan, GIU]
 16. Time-stop: tai close nen k = k_vao + H (sau a-c). Nen do thieu => dong tai close cuoi co ('time_sub', gan co).
 17. Thieu gia: dem so nen thieu LIEN TIEP; khi > 24 (nen thieu thu 25) => dong tai close cuoi co ('gap', gan co). Trong gio thieu: khong kiem thoat,
     van cong funding theo close cuoi.
@@ -54,12 +57,16 @@ Muc "CAN MASTER QUYET" o cuoi: da cai mac dinh nhung MASTER phai xac nhan truoc 
 
 ## Luat chon (muc 5) / doi chung (muc 6)
 22. Hoa diem: cfg_id tang dan. Hang xom khong can hop le; "loi nhuan > 0 o ca 3 fold" = ret fold > 0. Cao nguyen: frac >= 0.60 qua, < 0.60 loai.
-23. Ngau nhien: so ung vien THO (truoc loc vi the/cooldown/top-K) cua cau hinh chon theo thang lich trong DEV; pool = (coin, gio) co universe
+23. [DA DOI theo ADDENDUM2 G1] Ngau nhien: so (coin, gio) rut moi thang = so DOT cua cau hinh chon bat dau trong thang (dot = gio dau cua moi
+    coin sau khi gop cac gio ung vien cach nhau <= 72 h; gop tren toan chuoi tu 2021-12, dem theo thang cua gio dau dot, chi thang DEV);
+    (CU: so ung vien THO - da bo); pool = (coin, gio) co universe
     VA gia store trong thang; rut KHONG hoan lai; s ~ U(0,1); cung tap ngau nhien dung cho DEV va 3 fold cua lan rut do; tinh diem cho MOI lan
     (ke ca khong hop le); p_rand = ti le diem >= diem chon (hoa tinh la >=). Seed 20261126, lan r: default_rng([seed, r]).
     Voi cau hinh E1: pool yeu cau universe tai gio vao (E1 that khong yeu cau) - khac biet nho.
 
-## CAN MASTER QUYET (da cai mac dinh, CHUA chay luoi)
+24. [ADDENDUM2 G5] grid.py assert bat bien ke toan (|acct_err| <= 1e-6) cho DEV, F1, F2, F3 (ham check_acct).
+
+## CAN MASTER QUYET -> DA QUYET: ADDENDUM1 (f6157c87) CHAP NHAN ca A, B, C, D nhu da cai. Muc 7 prereg het hieu luc (ADDENDUM1 muc 2).
 A. Dinh nghia E1 "lan dau ke tu dot LEV do": cai = moc la gio LEV GAN NHAT trong 24 h truoc (muc 8). Phuong an khac: moc = gio LEV DAU dot (vd
    dot tach bang cooldown 72 h nhu tang 1) => it ung vien lap hon. Anh huong chua do (khong duoc chay cau hinh E1 that).
 B. Tran phoi nhiem 60 % khi VAO LENH MOI: prereg chi gioi han bang K_max (size = 0.60 x equity / K). Cai: KHONG kiem tran khi vao lenh moi (chi kiem

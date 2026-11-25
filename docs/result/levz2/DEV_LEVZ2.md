@@ -42,3 +42,12 @@ Smoke that: 0.05 s/lan, run_all (DEV+3 fold) 0.10 s. Bench tong hop kich thuoc t
 - Khong chay cau hinh that nao khac smoke => hanh vi E1 / trail / DCA / K3-5 / H72-168 tren du lieu that chi kiem bang test tong hop.
 - Thu tu that trong nen gio (gia dinh HIGH truoc LOW theo prereg). Truot thuc te. Gia mark cho funding (dung close nen).
 - grid.py / rand.py chua chay end-to-end tren du lieu that (chi ham loi duoc test); select.py chi test tren luoi gia.
+
+## VONG 2 (2026-11-25, theo A1_LEVZ2_SIM + ADDENDUM1 f6157c87 + ADDENDUM2 c10a681b)
+- G1 rand.py: episode_starts() gop gio ung vien cung coin cach nhau <= 72 h (toan chuoi), build_pools dem so DOT bat dau moi thang; draw rut dung so do.
+- G2 sim.py: open >= stop => thoat tai open (khong DCA); nguoc lai DCA truoc (neu tran cho phep) roi kiem SL cham tren khoi luong moi.
+- G3 sim.py: trail da kich hoat va high >= muc nen truoc => thoat trailing, khong DCA trong nen.
+- G5 grid.py: check_acct() assert DEV/F1/F2/F3. G4: chi cap nhat CHOICES2 (khong doi code).
+- Test: 52/52 PASS (bo test_dca_not_when_sl - mau thuan G2; them 7: g2 x3, g3 x2, g1, g5). S1 chay lai: PASS. KHONG chay lai smoke/luoi/rand.
+- Luu y: smoke vong 1 (K10 H24 khong DCA/trail) khong bi anh huong boi G2/G3. Hai diem ngau nhien cung coin trong 72 h van co the roi vao
+  cung 1 luot (rut deu, khong loai tru) - cooldown cua sim xu ly; khong sua.
