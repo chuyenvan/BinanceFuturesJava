@@ -1,0 +1,49 @@
+{
+ "n_hours_expected": 24,
+ "n_hours_measured": 24,
+ "hours_missing_utc": [],
+ "n_rel_gt_1e-6": 0,
+ "max_rel": 3.750832713714043e-10,
+ "med_rel": 8.280352260457326e-11,
+ "n_m_eq_buf_minus_eval": 24,
+ "restart_hours_utc": [],
+ "buffer": {
+  "n": 1806402,
+  "bad_chunks": 0,
+  "sorted_in_file": true,
+  "first": "10-01 13:00",
+  "last": "11-26 05:49"
+ },
+ "pre_window_lines": [
+  {
+   "h_utc": "11-23 22:00",
+   "log_at_p07": "11-24 06:01",
+   "q_log": 0.00969709735,
+   "q_rep": 0.009697097353637218,
+   "m": 1741379,
+   "buffer_log": 1742631,
+   "eval_log": 1252,
+   "m_eq_buf_minus_eval": true,
+   "mode": "normal",
+   "restart_p07": "",
+   "in_window": false,
+   "rel": 3.750832713714043e-10
+  },
+  {
+   "h_utc": "11-23 23:00",
+   "log_at_p07": "11-24 07:01",
+   "q_log": 0.00969709735,
+   "q_rep": 0.009697097353637218,
+   "m": 1742631,
+   "buffer_log": 1743836,
+   "eval_log": 1205,
+   "m_eq_buf_minus_eval": true,
+   "mode": "normal",
+   "restart_p07": "",
+   "in_window": false,
+   "rel": 3.750832713714043e-10
+  }
+ ],
+ "mismatch": [],
+ "PASS": true
+}

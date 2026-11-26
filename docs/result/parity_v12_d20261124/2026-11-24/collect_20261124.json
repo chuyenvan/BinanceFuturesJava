@@ -1,0 +1,20 @@
+{
+ "day": "2026-11-24",
+ "n_lines": 9506,
+ "first": 1795478404080,
+ "last": 1795564772484,
+ "restart_too_many": 0,
+ "mainclass": 0,
+ "kline_cover_lines": 1440,
+ "kline_cover_chua_chot_minutes": 0,
+ "kline_cover_suspects": 0,
+ "rest_budget_lines": 1432,
+ "http429_max": 0,
+ "http418_max": 0,
+ "denied_max": 0,
+ "price_age_warn": 0,
+ "price_age_max_ms": 0,
+ "covers_day": true,
+ "collectData_restart_le2": true,
+ "src": "/home/ubuntu/claude_master/parity_v12w/collect/collect_2026-11-24.log.gz"
+}

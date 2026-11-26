@@ -265,3 +265,62 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ---------------------------------------------------------------- gates
+def _med(x):
+    return float(np.nanmedian(x))
+
+
+def gates(rows, b0, seeds):
+    """Cham G1-G5 theo PREREG_NUP4 §5-6 (median seed; B0 DEV = tsx-x14-<seed>)."""
+    res = {}
+    for a in [x for x in ARMS if x != "b0union"]:
+        ts = [tag(a, s) for s in seeds if tag(a, s) in rows]
+        if len(ts) < 3:
+            continue
+        r = [rows[t] for t in ts]
+        ss = [s for s in seeds if tag(a, s) in rows]
+        xcl = [rows[tag(a, s)]["n_cl"] / b0[s]["n_cl"] for s in ss]
+        xpnl = [rows[tag(a, s)]["pnl"] / b0[s]["pnl"] for s in ss]
+        xyr = {str(y): _med([rows[tag(a, s)]["yr"][str(y)]["n_cl"] / b0[s]["yr"][str(y)]["n_cl"] for s in ss])
+               for y in YEARS}
+        dd = [rows[tag(a, s)]["dd_dev"]["dd"] for s in ss]
+        u = [rows[tag(a, s)]["sim"]["u_total_max"] for s in ss if rows[tag(a, s)].get("sim")]
+        slst = [rows[tag(a, s)]["sl"]["stress"] for s in ss]
+        slyr = {str(y): _med([rows[tag(a, s)]["sl"]["yr"][str(y)]["stress"] for s in ss]) for y in YEARS}
+        base_ratio = [rows[tag(a, s)]["base_owner_pnl"] / b0[s]["pnl"] for s in ss]
+        g1 = _med(xcl) >= 1.30 and all(xyr[str(y)] >= 1.15 for y in YEARS)
+        g2 = _med(xpnl) >= 1.00 and sum(1 for y in YEARS if slyr[str(y)] > 0) >= 3 and \
+            sum(1 for v in slst if v > 0) >= (3 if len(ss) <= 4 else 6)
+        g3 = _med(dd) >= -32.0 and min(dd) >= -36.0 and (not u or max(u) <= 1.0)
+        g5 = _med(base_ratio) >= 0.97
+        g4 = None
+        if len(ss) >= 8:
+            h = [rows[tag(a, s)]["sl_2026"] for s in ss]
+            g4 = (sum(1 for x in h if x["stress"] > 0) >= 6 and _med([x["roi_stress"] for x in h]) >= 0.5
+                  and _med([rows[tag(a, s)]["dd_2026"]["dd"] for s in ss]) >= -15.0)
+        res[a] = dict(n_seed=len(ss), seeds=[SEED_NAME[s] for s in ss],
+                      g1=bool(g1), g2=bool(g2), g3=bool(g3), g5=bool(g5), g4=g4,
+                      xcl=_med(xcl), xpnl=_med(xpnl), xyr=xyr,
+                      dd_med=_med(dd), dd_worst=min(dd), u_max=max(u) if u else None,
+                      sl_stress_pos=sum(1 for v in slst if v > 0),
+                      sl_yr=slyr, base_ratio=_med(base_ratio),
+                      calmar=_med([rows[t]["cagr22"] / abs(rows[t]["dd_dev"]["dd"]) for t in ts
+                                   if rows[t]["cagr22"] == rows[t]["cagr22"]]),
+                      cagr22=_med([rows[t]["cagr22"] for t in ts]))
+        res[a]["pass_all"] = bool(g1 and g2 and g3 and g5 and (g4 is not False))
+    return res
+
+
+def quarters_2026(rows):
+    out = {}
+    for t, r in rows.items():
+        d = load(t)
+        h = win(d, HO_A, HO_B)
+        if not len(h):
+            continue
+        q = (h[["pnl", "notional", "cl"]].assign(q=h["te"].dt.quarter.values).groupby("q")
+             .agg(pnl=("pnl", "sum"), n_cl=("cl", "nunique"), notional=("notional", "sum")))
+        out[t] = {int(k): dict(pnl=float(v.pnl), n_cl=int(v.n_cl)) for k, v in q.iterrows()}
+    return out

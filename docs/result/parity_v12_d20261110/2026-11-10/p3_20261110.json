@@ -1,0 +1,107 @@
+{
+ "n_hours_expected": 20,
+ "n_hours_measured": 20,
+ "hours_missing_utc": [],
+ "n_rel_gt_1e-6": 0,
+ "max_rel": 3.750832713714043e-10,
+ "med_rel": 3.750832713714043e-10,
+ "n_m_eq_buf_minus_eval": 20,
+ "restart_hours_utc": [
+  "11-10 04:00"
+ ],
+ "buffer": {
+  "n": 1372336,
+  "bad_chunks": 0,
+  "sorted_in_file": true,
+  "first": "10-01 13:00",
+  "last": "11-12 08:14"
+ },
+ "pre_window_lines": [
+  {
+   "h_utc": "11-09 22:00",
+   "log_at_p07": "11-10 06:01",
+   "q_log": 0.00978007354,
+   "q_rep": 0.009780073538422585,
+   "m": 1307252,
+   "buffer_log": 1308512,
+   "eval_log": 1260,
+   "m_eq_buf_minus_eval": true,
+   "mode": "normal",
+   "restart_p07": "",
+   "in_window": false,
+   "rel": 1.6128869333457973e-10
+  },
+  {
+   "h_utc": "11-09 23:00",
+   "log_at_p07": "11-10 07:01",
+   "q_log": 0.00978007354,
+   "q_rep": 0.009780073538422585,
+   "m": 1308512,
+   "buffer_log": 1309772,
+   "eval_log": 1260,
+   "m_eq_buf_minus_eval": true,
+   "mode": "normal",
+   "restart_p07": "",
+   "in_window": false,
+   "rel": 1.6128869333457973e-10
+  },
+  {
+   "h_utc": "11-10 00:00",
+   "log_at_p07": "11-10 08:01",
+   "q_log": 0.00978007354,
+   "q_rep": 0.009780073538422585,
+   "m": 1309772,
+   "buffer_log": 1310972,
+   "eval_log": 1200,
+   "m_eq_buf_minus_eval": true,
+   "mode": "normal",
+   "restart_p07": "",
+   "in_window": false,
+   "rel": 1.6128869333457973e-10
+  },
+  {
+   "h_utc": "11-10 01:00",
+   "log_at_p07": "11-10 09:01",
+   "q_log": 0.00978007354,
+   "q_rep": 0.009780073538422585,
+   "m": 1310972,
+   "buffer_log": 1312232,
+   "eval_log": 1260,
+   "m_eq_buf_minus_eval": true,
+   "mode": "normal",
+   "restart_p07": "",
+   "in_window": false,
+   "rel": 1.6128869333457973e-10
+  },
+  {
+   "h_utc": "11-10 02:00",
+   "log_at_p07": "11-10 10:01",
+   "q_log": 0.00978007354,
+   "q_rep": 0.009780073538422585,
+   "m": 1312232,
+   "buffer_log": 1313432,
+   "eval_log": 1200,
+   "m_eq_buf_minus_eval": true,
+   "mode": "normal",
+   "restart_p07": "",
+   "in_window": false,
+   "rel": 1.6128869333457973e-10
+  },
+  {
+   "h_utc": "11-10 03:00",
+   "log_at_p07": "11-10 11:01",
+   "q_log": 0.00978007354,
+   "q_rep": 0.009780073538422585,
+   "m": 1313432,
+   "buffer_log": 1314632,
+   "eval_log": 1200,
+   "m_eq_buf_minus_eval": true,
+   "mode": "normal",
+   "restart_p07": "",
+   "in_window": false,
+   "rel": 1.6128869333457973e-10
+  }
+ ],
+ "mismatch": [],
+ "PASS": true
+}

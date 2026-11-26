@@ -1,0 +1,265 @@
+{
+ "day": "2026-11-14",
+ "universe_union": 518,
+ "S_files": [
+  "/home/ubuntu/claude_master/v11_tsx/off/out/2026-09_days64.csv",
+  "/home/ubuntu/claude_master/v11_tsx/off/outv/2026-10_days64.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-10-20.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-10-21.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-10-22.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-10-23.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-10-24.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-10-25.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-10-26.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-10-27.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-10-28.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-10-29.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-10-30.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-10-31.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-11-01.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-11-02.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-11-03.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-11-04.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-11-05.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-11-06.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-11-07.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-11-08.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-11-09.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-11-10.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-11-11.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-11-12.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-11-13.csv",
+  "/home/ubuntu/claude_master/parity_v12w/tsx/S_2026-11-14.csv"
+ ],
+ "flags_cmd_out": "2026-11-16 08:55:40.822 INFO  [main] t.TsxLiveOffline: flags /home/ubuntu/claude_master/parity_v12w/tsx/flags_20261114.csv 2026-09-20..2026-11-15 on=0",
+ "flag_2026-11-14": {
+  "vision": {
+   "flag_day": 20771,
+   "date": "2026-11-14",
+   "state": "OFF",
+   "dd": -0.2178465005660539,
+   "p": -0.2446842441576955,
+   "max_p": 0.0010200227054076,
+   "max_day": 20741,
+   "min_n": 1439,
+   "reason": "ok"
+  },
+  "live_lines": [
+   {
+    "flag": "OFF",
+    "dd": -0.222188,
+    "minN": 1403,
+    "src": "aero:1d",
+    "final": "false"
+   },
+   {
+    "flag": "OFF",
+    "dd": -0.222188,
+    "minN": 1403,
+    "src": "file",
+    "final": "true"
+   }
+  ],
+  "live_final_states": [
+   "OFF"
+  ],
+  "live_status_flagToday": [
+   "OFF"
+  ]
+ },
+ "flag_2026-11-15": {
+  "vision": {
+   "flag_day": 20772,
+   "date": "2026-11-15",
+   "state": "OFF",
+   "dd": -0.2950362103981668,
+   "p": -0.3496088397558581,
+   "max_p": 0.0,
+   "max_day": 20741,
+   "min_n": 1439,
+   "reason": "ok"
+  },
+  "live_lines": [
+   {
+    "flag": "OFF",
+    "dd": -0.297102,
+    "minN": 1403,
+    "src": "aero:1d",
+    "final": "false"
+   }
+  ],
+  "live_final_states": [
+   "OFF"
+  ],
+  "live_status_flagToday": []
+ },
+ "flag_match": true,
+ "flag_status": "DAT",
+ "S_D": {
+  "vision64": -0.1039045728927549,
+  "vision32": -0.1039045668915176,
+  "n_min_vision": 1440,
+  "live": -0.10390456689151761,
+  "n_min_live": 1440,
+  "absdiff64": 6.0012372848916584e-09,
+  "absdiff32": 1.3877787807814457e-17
+ },
+ "S_hist_new": {
+  "2026-10-20": {
+   "vision64": 0.0330913062072737,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-21": {
+   "vision64": 0.013506118142664,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-22": {
+   "vision64": -0.0503499224474869,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-23": {
+   "vision64": 0.0047448746657252,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-24": {
+   "vision64": -0.0022878344759967,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-25": {
+   "vision64": -0.0239646320647058,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-26": {
+   "vision64": 0.0130010553474722,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-27": {
+   "vision64": 0.0149906531367439,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-28": {
+   "vision64": 0.0057001763100958,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-29": {
+   "vision64": -0.0833530238451902,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-30": {
+   "vision64": 0.0241567793537976,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-10-31": {
+   "vision64": -0.0061409206728674,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-11-01": {
+   "vision64": -0.0045843546808615,
+   "n_min": 1439,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-11-02": {
+   "vision64": -0.0331805964871179,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-11-03": {
+   "vision64": 0.0084008658646307,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-11-04": {
+   "vision64": 0.0183936356718052,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-11-05": {
+   "vision64": -0.0742243108641528,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-11-06": {
+   "vision64": 0.0318473925306092,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-11-07": {
+   "vision64": -0.0110083878460175,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-11-08": {
+   "vision64": -0.0510104485756144,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-11-09": {
+   "vision64": 0.0203573731126317,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-11-10": {
+   "vision64": -0.0098054193749604,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-11-11": {
+   "vision64": -0.0173924095206631,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-11-12": {
+   "vision64": -0.0070562070351986,
+   "n_min": 1440,
+   "live": null,
+   "n_min_live": null
+  },
+  "2026-11-13": {
+   "vision64": -0.0128964002381622,
+   "n_min": 1440,
+   "live": -0.012896397573786883,
+   "n_min_live": 1440
+  },
+  "2026-11-14": {
+   "vision64": -0.1039045728927549,
+   "n_min": 1440,
+   "live": -0.10390456689151761,
+   "n_min_live": 1440
+  }
+ }
+}

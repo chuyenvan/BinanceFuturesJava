@@ -1,0 +1,113 @@
+{
+ "round": "d20261115",
+ "prereg": "PREREG_PARITY_V12_DRY 3c7dae05 + ADD1..ADD12",
+ "window_start_ms": 1793676840000,
+ "days": {
+  "2026-11-15": {
+   "v11_status": {
+    "P1": "DAT",
+    "P1m": "DAT",
+    "S1_I": "DAT",
+    "S1_m": "DAT",
+    "GV_I": "DAT",
+    "P2": "DAT (yeu: 0 cap r/q>=0,9)",
+    "GATE_LOG_n_pass": "1440/1440",
+    "P3": "DAT",
+    "TSX": "DAT",
+    "CTL": "DAT",
+    "K5_Kprime": 0,
+    "K5_official": 0,
+    "K5_rule": "ADDENDUM2 4eef2788 + ADDENDUM3 67ce404a (chinh thuc)",
+    "pull_incomplete": false,
+    "ket_luan": "DAT (so bo cho phan funding; phan quyet chinh thuc P1/P2-funding o luot M)"
+   },
+   "universe_A1": "co",
+   "held_check": {
+    "book_anchor": "snap_20261116T014903Z.txt",
+    "gate_pre_lines": 1510,
+    "minutes_join": 1440,
+    "minutes_eq": 1440,
+    "mismatch": [],
+    "held_pairs_dropped": 1440
+   },
+   "jar": "r4u3fin",
+   "premarket_excl": true,
+   "swap_day": false,
+   "restart_in_day": [],
+   "deploy_day": false,
+   "log_counts": {
+    "OI-GUARD": 0,
+    "KLINE_STALE": 0,
+    "MAPPER_local": 0,
+    "MAPPER_REFRESH": 0,
+    "MAPPER_DUP": 0,
+    "LATCH": 0,
+    "EXINFO_STALE": 0,
+    "GATE_SEED": 0,
+    "FEAT_DUMP_budget": 0,
+    "MainClass": 0,
+    "MAPPER_DUP_sets": [],
+    "FEAT_PIPE_bad": 0
+   },
+   "KPI_TBOOK": "KHONG SO DUOC (truoc re-seed, ADD6 \u00a71)",
+   "clean_checks": {
+    "pull_complete": true,
+    "no_restart": true,
+    "no_oi_guard": true,
+    "no_kline_stale": true,
+    "no_featpipe_bad": true,
+    "mapper_ok": true,
+    "no_latch": true,
+    "no_exinfo_stale": true,
+    "featdump_budget_ok": true,
+    "collectData_restart_le2": true
+   },
+   "ngay_sach": "SACH",
+   "collect": {
+    "day": "2026-11-15",
+    "n_lines": 9457,
+    "first": 1794700804075,
+    "last": 1794787170288,
+    "restart_too_many": 0,
+    "mainclass": 0,
+    "kline_cover_lines": 1440,
+    "kline_cover_chua_chot_minutes": 0,
+    "kline_cover_suspects": 0,
+    "rest_budget_lines": 1432,
+    "http429_max": 0,
+    "http418_max": 0,
+    "denied_max": 0,
+    "price_age_warn": 0,
+    "price_age_max_ms": 0,
+    "covers_day": true,
+    "collectData_restart_le2": true,
+    "src": "/home/ubuntu/claude_master/parity_v12w/collect/collect_2026-11-15.log.gz"
+   },
+   "R4_R6": {
+    "R4": true,
+    "R5": true,
+    "R6": true
+   },
+   "s1v_kdd_hours": 0,
+   "BIG_DOWN_SEL": "KHONG AP DUNG (0 su kien)",
+   "bigdown_events": 0,
+   "ket_luan": "DAT",
+   "ghi_chu": [],
+   "nhom_H_tinh": true,
+   "nhom_K_tinh": false,
+   "SACH_ADD11": true,
+   "SACH_T_checks": {
+    "co_hoc_DAT": true,
+    "gate_log_du": true,
+    "tsx_DAT_hoac_vision_nan": true,
+    "K5_bang_0": true,
+    "ngay_sach_SACH": true,
+    "pull_complete": true,
+    "khong_lop_phu_V12": true,
+    "khong_TRUOT": true
+   },
+   "SACH_T": false,
+   "needs_M_regrade": true
+  }
+ }
+}

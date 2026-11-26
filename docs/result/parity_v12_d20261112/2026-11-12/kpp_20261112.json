@@ -1,0 +1,53 @@
+{
+ "addendum": "ADDENDUM2 4eef2788 + ADDENDUM3 67ce404a (chinh thuc)",
+ "day": "2026-11-12",
+ "official_mode": "add3",
+ "n_bad_minutes": 0,
+ "official": {
+  "minutes_with_label": {},
+  "K5": 0,
+  "K5_minutes": [],
+  "K5_by_source": {
+   "P1F": 0,
+   "P1": 0,
+   "MD": 0,
+   "FUND": 0,
+   "NET": 0,
+   "GV_O": 0,
+   "S1V": 0
+  },
+  "K5_nonS1V_minutes": []
+ },
+ "alternative": {
+  "minutes_with_label": {},
+  "K5": 0,
+  "K5_minutes": [],
+  "K5_by_source": {
+   "P1F": 0,
+   "P1": 0,
+   "MD": 0,
+   "FUND": 0,
+   "NET": 0,
+   "GV_O": 0,
+   "S1V": 0
+  },
+  "K5_nonS1V_minutes": []
+ },
+ "live_kline_windows_reread_gt0": [],
+ "k1pp_validation": {
+  "targets": 0
+ },
+ "k1pp_minutes": [],
+ "S1V": {
+  "minutes": 0,
+  "K6p_add2": 0,
+  "K6p_add3": 0,
+  "not_K6p_add3_reason": {
+   "top24_khac": 0,
+   "feature_khac": 0,
+   "khong_doi_tac": 0
+  },
+  "score_only_max_absdiff": 0
+ },
+ "rows": []
+}

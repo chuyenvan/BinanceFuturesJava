@@ -1,0 +1,93 @@
+{
+ "day": "2026-11-16",
+ "T0": 1794787200000,
+ "T1": 1794873540000,
+ "pull_dirs": {
+  "/home/ubuntu/claude_master/pull242/2026-11-16": {
+   "exists": true,
+   "COMPLETE": true
+  },
+  "/home/ubuntu/claude_master/pull242/2026-11-17": {
+   "exists": true,
+   "COMPLETE": true
+  }
+ },
+ "pull_incomplete": false,
+ "log": {
+  "files": [
+   {
+    "file": "/home/ubuntu/claude_master/pull242/2026-11-16/logs/full.log@1794795666_209715749.gz",
+    "lines": 1165091,
+    "how": "first"
+   },
+   {
+    "file": "/home/ubuntu/claude_master/pull242/2026-11-16/logs/full.log@1794878580_7139775.gz",
+    "lines": 39381,
+    "how": "time-splice(+39363)"
+   },
+   {
+    "file": "/home/ubuntu/claude_master/pull242/2026-11-17/logs/full.log@1794964980_14404641.gz",
+    "lines": 79378,
+    "how": "time-splice(+39997)"
+   }
+  ],
+  "merged_lines": 1244451,
+  "window_lines": 42976,
+  "first": "2026-11-16T06:00:00+07:00",
+  "last": "2026-11-17T07:10:00+07:00",
+  "covers_from": true,
+  "covers_to": true,
+  "minutes_with_lines_in_window": 1440,
+  "markers": {
+   "[GATE] ": 1509,
+   "[GATE-RATIO] q_t=": 26,
+   "[MAP] tick=": 1509,
+   "[LIVE-KLINE]": 178,
+   "[FEAT-PIPE] ticks=": 25,
+   "[TS-EXT] day ": 2,
+   "[TS-EXT] flag day=": 3,
+   "MainClass:": 1,
+   "[LEGACY] managed": 1510
+  },
+  "gate_ticks_in_window": 1439,
+  "gate_ratio_hours_in_window": 24
+ },
+ "restarts": {
+  "last_before_T0": 1794676225000,
+  "in_day": [
+   1794813510000
+  ],
+  "p07": [
+   "2026-11-15T00:10:25+07:00",
+   "2026-11-16T14:18:30+07:00"
+  ]
+ },
+ "buffer": {
+  "src": "/home/ubuntu/claude_master/pull242/2026-11-17/run/gate_ratio_live.bin.gz",
+  "bytes": 11424028
+ },
+ "psym": {
+  "files_in_window": 1440,
+  "expected": 1440,
+  "decode_stdout": "files=1440 rows=732500",
+  "decode_stderr_tail": "",
+  "rc": 0,
+  "rows": 732500,
+  "minutes_decoded": 1440,
+  "rows_per_min_min": 466
+ },
+ "dumps": {
+  "feat_minutes": 1440,
+  "feat_bad_files": 0,
+  "sel_minutes": 1440,
+  "sel_bad_files": 0,
+  "s1_minutes": 1440,
+  "s1_bad_files": 0
+ },
+ "ucand": {
+  "n": 738,
+  "u_cache1017": 738,
+  "live_syms": 512,
+  "live_not_in_cache": []
+ }
+}

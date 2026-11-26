@@ -1,0 +1,20 @@
+{
+ "n_rows": 733932,
+ "n_hours": 1440,
+ "kdd_hours": 0,
+ "kdd_syms": [],
+ "ADD13": true,
+ "f0": 1.0,
+ "f1": 1.0,
+ "f2": 1.0,
+ "f3": 1.0,
+ "f4": 1.0,
+ "f5": 1.0,
+ "f6": 1.0,
+ "score_le1e-6": 1.0,
+ "score_max_abs": 5.9577941913246946e-08,
+ "spearman": 1.0,
+ "top24_jaccard_mean": 1.0,
+ "top24_same_order_frac": 1.0,
+ "top24_jaccard_min": 1.0
+}

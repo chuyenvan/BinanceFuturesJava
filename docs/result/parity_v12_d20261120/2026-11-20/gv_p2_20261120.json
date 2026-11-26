@@ -1,0 +1,100 @@
+{
+ "sel_minutes": 1440,
+ "skipped_minutes_no_net_live": [],
+ "held_check_V12": {
+  "book_anchor": "snap_20261122T012913Z.txt",
+  "gate_pre_lines": 1,
+  "minutes_join": 0,
+  "minutes_eq": 0,
+  "mismatch": [],
+  "held_pairs_dropped": 0
+ },
+ "GV_I": {
+  "n": 34560,
+  "n_minutes": 1440,
+  "frac_le1e-6": 1.0,
+  "n_diff": 0,
+  "bad_minutes": []
+ },
+ "GV_O": {
+  "n": 34560,
+  "n_minutes": 1440,
+  "frac_le1e-6": 0.9985532407407407,
+  "n_diff": 50,
+  "bad_minutes": [
+   "11-20 21:45",
+   "11-20 21:46",
+   "11-20 21:47",
+   "11-20 21:48",
+   "11-20 21:49",
+   "11-20 21:50",
+   "11-20 21:51",
+   "11-20 21:52",
+   "11-20 21:53",
+   "11-20 21:54",
+   "11-20 21:55",
+   "11-20 21:56",
+   "11-20 21:57",
+   "11-20 23:36",
+   "11-20 23:37",
+   "11-20 23:38"
+  ]
+ },
+ "P2": {
+  "n_pairs": 34560,
+  "n_minutes": 1440,
+  "minutes_dropped": {},
+  "q_src_minutes": {
+   "log": 1440
+  },
+  "q_live_eq_q_off_frac": 0.0,
+  "n_pass_live": 0,
+  "n_pass_off": 0,
+  "n_flip": 0,
+  "n_flip_minutes": 0,
+  "n_flip_heavy": 0,
+  "flip_detail": [],
+  "max_rq_live": 0.9086942672729492,
+  "max_rq_off": 0.9086941480636597,
+  "n_rq_ge_09_live": 1,
+  "n_rq_ge_09_off": 1,
+  "n_rq_ge_08_live": 8,
+  "PASS": true
+ },
+ "GATE_LOG": {
+  "n_lines": 1510,
+  "n_minutes_join": 1440,
+  "map_tick_check": {
+   "n_lines_with_MAP": 1510,
+   "n_tick_eq": 1510
+  },
+  "n_match": 1436,
+  "sum_log": 96,
+  "sum_calc": 0,
+  "thr_range_match_base0008": 1440,
+  "thr_range_mismatch": [],
+  "mismatch": [
+   {
+    "min": "11-20 21:44",
+    "n_pass_log": 24,
+    "pass_calc": 0
+   },
+   {
+    "min": "11-20 21:45",
+    "n_pass_log": 24,
+    "pass_calc": 0
+   },
+   {
+    "min": "11-20 23:36",
+    "n_pass_log": 24,
+    "pass_calc": 0
+   },
+   {
+    "min": "11-20 23:38",
+    "n_pass_log": 24,
+    "pass_calc": 0
+   }
+  ],
+  "gate_lines_not_joined": []
+ }
+}

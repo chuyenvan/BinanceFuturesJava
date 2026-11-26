@@ -1,0 +1,31 @@
+{
+ "addendum": "PREREG_PARITY_V11_WINDOW_ADDENDUM1 (fea9fb97)",
+ "day": "2026-11-11",
+ "n_bad_minutes": 0,
+ "minutes_with_label": {},
+ "minute_source_pairs_with_label": {},
+ "n_minute_source_pairs": 0,
+ "K5_minutes": [],
+ "K5_by_source": {
+  "P1F": 0,
+  "P1": 0,
+  "MD": 0,
+  "FUND": 0,
+  "NET": 0,
+  "GV_O": 0,
+  "S1V": 0
+ },
+ "K5_nonS1V_minutes": [],
+ "S1V_K5_minutes_by_class_desc": {
+  "tie_split": 0,
+  "score_only": 0,
+  "other": 0
+ },
+ "S1V_K5_minutes_mixed_class": 0,
+ "membership_marks": [],
+ "drop_groups": [],
+ "k1p_evidence_lines": 0,
+ "k1p_evidence_first": [],
+ "old_K1_minutes_count_based": 0,
+ "rows": []
+}
