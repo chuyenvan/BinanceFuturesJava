@@ -638,6 +638,22 @@ OUT=$(MGE DRY=1 bash "$HERE/golive_make_gate_pilot.sh" 2>&1); V0=$(echo "$OUT" |
 touch $F/logs/full.log.1; OUT2=$(MGE DRY=1 bash "$HERE/golive_make_gate_pilot.sh" 2>&1); V1=$(echo "$OUT2" | sed -n 's/.*FILLED (log, uniq cid): vao=\([0-9]*\).*/\1/p'); rm -f $F/logs/full.log.1
 chk "m-8 make_gate dem lenh: CHI full.log (+ full.log.1 khi xoay SAU moc micro): .1 cu => bo, .1 moi => tinh (+1)" 'echo "$OUT" | grep -q "(logs/full.log)" && echo "$OUT2" | grep -q "(logs/full.log.1 logs/full.log)" && [ $((V0 + 1)) = "$V1" ]'
 chk "m-8 make_gate: lenh dem = timeout 120 + nice 19 (+ ionice neu co)" 'grep -q "timeout 120 nice -n 19 \\\\\$IO grep" $HERE/golive_make_gate_pilot.sh && grep -q "ionice -c3" $HERE/golive_make_gate_pilot.sh'
+# =============================================================================== OPS7: N_THOAT dem c3s-/c3x- status=FILL|FILLED (jar ghi stop khop = FILL)
+echo "-- OPS7 dem lenh thoat that: c3s- status=FILL (user stream), uniq cid"
+cp -p $F/logs/full.log $W/full.log.o7
+ol() { echo "01/01/2026 00:00:00.000 INFO [ust] c.b.c.c.l.OrderAuditLog: [C3-LIVE-ORDER] ts=1 cid=$1 oid=9 sym=X side=SELL type=STOP_MARKET qty=1 px=1 status=$2 lat_ms=5 err=- reason=$3" >> $F/logs/full.log; }
+ol c3s-T3USDT-2-1 FILL stream_X=PARTIALLY_FILLED; ol c3s-T3USDT-2-1 FILL stream_X=FILLED; ol c3s-T4USDT-2-1 NEW new_stop; ol c3s-T4USDT-2-1 CANCELED cancel_stop; ol c3s-T5USDT-2-1 ERROR new_stop; ol c3-T9USDT-1-0 FILL stream_X=FILLED; ol c3s-T6USDT-2-1 FILLED x
+OUT=$(MGE G_EXIT="Q4_OWNER n=4 ref=$ODC thoat that (test)" DRY=1 bash "$HERE/golive_make_gate_pilot.sh" 2>&1); RC=$?
+chk "OPS7 make_gate: c3s- FILL (2 dong cung cid = 1) + c3s- FILLED + c3x- FILLED + c3s- FILLED cu; NEW/CANCELED/ERROR khong tinh; c3- chi FILL khong tinh vao => vao=3 thoat=4, G_EXIT n=4 => chap nhan" '[ $RC = 0 ] && echo "$OUT" | grep -q "(log, uniq cid): vao=3 thoat=4 " && echo "$OUT" | grep -q "^so_lenh_that_luc_tao=vao_FILLED:3 thoat_FILLED:4 "'
+OUT=$(MGE DRY=1 bash "$HERE/golive_make_gate_pilot.sh" 2>&1); RC=$?
+chk "OPS7 make_gate: G_EXIT Q4_OWNER n=2 != so dem that 4 (co c3s- FILL) => TU CHOI" '[ $RC = 1 ] && echo "$OUT" | grep -q "g_exit_n=2_khac_so_dem_that_4"'
+for c in c3-T1USDT-1-0 c3-T2USDT-1-0 c3-T3USDT-1-0; do echo "01/01/2026 00:00:00.000 INFO x [C3-LIVE-ORDER] cid=$c status=FILLED" ; echo "01/01/2026 00:00:00.000 INFO x [C3-LIVE-ORDER] cid=$c status=FILL"; done > $F/logs/full.log
+OUT=$(MGE G_EXIT="Q4_OWNER n=1 ref=$ODC x" DRY=1 bash "$HERE/golive_make_gate_pilot.sh" 2>&1); RC=$?
+chk "OPS7 make_gate: log CHI co c3- (FILLED + FILL) => thoat=0 => TU CHOI nhu cu" '[ $RC = 1 ] && echo "$OUT" | grep -q "(log, uniq cid): vao=3 thoat=0 " && echo "$OUT" | grep -q "g_exit_n=1_khac_so_dem_that_0"'
+echo "01/01/2026 00:00:00.000 INFO x [C3-LIVE-ORDER] cid=c3x-T1USDT-7 status=FILLED" >> $F/logs/full.log
+OUT=$(MGE G_EXIT="Q4_OWNER n=1 ref=$ODC x" DRY=1 bash "$HERE/golive_make_gate_pilot.sh" 2>&1); RC=$?
+chk "OPS7 make_gate: c3x- status=FILLED van duoc tinh (thoat=1), G_EXIT n=1 => chap nhan" '[ $RC = 0 ] && echo "$OUT" | grep -q "(log, uniq cid): vao=3 thoat=1 "'
+cp -p $W/full.log.o7 $F/logs/full.log
 echo "-- m-9 a02 python giu quyen file latch"
 up10k; chmod 640 $F/run/killsw_latch.json; OUT=$(a02drv $HERE)
 chk "m-9 a02 python ghi killsw_latch.json nguyen tu (tmp cung thu muc + replace) GIU mode 640, khong con .a02tmp" 'echo "$OUT" | grep -q "OK a02_acct_peak_A40_go" && [ "$(stat -c %a $F/run/killsw_latch.json)" = 640 ] && ! ls $F/run/*.a02tmp >/dev/null 2>&1'

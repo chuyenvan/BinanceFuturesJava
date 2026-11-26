@@ -22,5 +22,5 @@ ddc97c2e3714c956ae2448d57a1940fc  c3_autodrain_prestart.sh
 f521c970e2094c2f6ac2a2dcf04c04f5  c3_oracle_seen_242.sh
 d7355a59ba757e50125f754caf17233f  golive_swap_jar.sh
 a3c35bb6bd80f2f419c93204550feedc  golive_boot_undrain.sh
-871f788a3e25b62babf84bceafcc64ed  golive_make_gate_pilot.sh
+894ad8a7417cb1e3d104621b8bd40a3d  golive_make_gate_pilot.sh
 dab56b9768dd9f4556b2d2fe625603a9  golive_pilot_down.sh

@@ -26,8 +26,11 @@
 #     C3_CAPITAL dang chay >= size; boot guard T20 CHUA CAI (gl_bootguard242: md5 wrapper = c3_autodrain_prestart.sh repo + cron watchdog
 #     WD_PRESTART + drop-in systemd).
 # Lenh doc 242 (de audit): gl_state242 (pgrep, md5sum jar, /proc/<pid>/environ CHI cac khoa liet ke, sed env.sh, latch json, ls KS/PAUSE...),
-#   gl_bootguard242 (md5sum wrapper, crontab -l, grep drop-in), dem lenh: nice grep -ah '[C3-LIVE-ORDER]' logs/full.log* | status=FILLED |
-#   cid c3- (vao) / c3x- c3s- (thoat), uniq theo cid. KHONG ghi gi len 242.
+#   gl_bootguard242 (md5sum wrapper, crontab -l, grep drop-in), dem lenh: nice grep -ah '[C3-LIVE-ORDER]' logs/full.log* | uniq theo cid:
+#   vao = cid c3- co status=FILLED; thoat = cid c3x- / c3s- co status=FILLED HOAC status=FILL. KHONG ghi gi len 242.
+#   [OPS7] jar 4fdda6f8 ghi audit: REST lenh MARKET (c3- / c3x-) status = trang thai san (FILLED...) - C3LiveClient.auditOk; user stream
+#   TRADE (khop, ke ca khop mot phan, MOI cid) status=FILL - FillAccounting:151-153; stop algo c3s- dat/huy = NEW/CANCELED, khi khop CHI co
+#   dong FILL (ALGO_UPDATE khong ghi [C3-LIVE-ORDER]). Ban truoc chi dem FILLED => bo sot c3s- khop (TRAILING_STOP) => N_THOAT=0 sai.
 # Ghi (umask 077, ban cu => .bak_<ts>): jar_md5, size, created_ms, expires_ms (+GATE_MAX_AGE_S 48 h), g_exec (+ev sha256), g_exit (+ev sha256),
 #   mien_x14/b2/c1, owner_decision (commit 40 hex + sha256 file), micro_start/micro_days/micro7, so lenh that vao/thoat luc tao, latch, boot_guard,
 #   c3_capital_luc_tao, dry_ts, by + ops_head, body_sha256 (dong CUOI = sha256 moi dong tren). golive_pilot_on.sh kiem bang gl_gate_pilot.
@@ -114,10 +117,10 @@ gl_bootguard242
 echo "   242 boot guard: BG=$BG $BG_DETAIL"
 [ "$BG" = CAI ] || need "boot guard T20 CHUA CAI ($BG: $BG_DETAIL) - owner: bash $_OPS/install_242_autodrain.sh"
 # [luot3 m-8] dem lenh nhe: timeout 120 + nice 19 + ionice -c3 (neu co); CHI full.log (+ full.log.1 neu xoay SAU moc micro - ban xoay cu hon khong co lenh micro)
-NO=$(s242 "cd $A && F=logs/full.log; [ -f logs/full.log.1 ] && [ \$(stat -c %Y logs/full.log.1) -ge $MS ] && F=\"logs/full.log.1 \$F\"; IO=''; command -v ionice >/dev/null 2>&1 && IO='ionice -c3'; echo LOGS=\$F; timeout 120 nice -n 19 \$IO grep -ah '\[C3-LIVE-ORDER\]' \$F 2>/dev/null | grep -a 'status=FILLED' | grep -aoE 'cid=c3[xs]?-[^ ]+' | sort -u | awk '/^cid=c3-/{e++} /^cid=c3[xs]-/{x++} END{printf \"N_VAO=%d\\nN_THOAT=%d\\n\", e, x}'; echo RC_GREP=\${PIPESTATUS[0]}; echo END_NO") || NO=""
+NO=$(s242 "cd $A && F=logs/full.log; [ -f logs/full.log.1 ] && [ \$(stat -c %Y logs/full.log.1) -ge $MS ] && F=\"logs/full.log.1 \$F\"; IO=''; command -v ionice >/dev/null 2>&1 && IO='ionice -c3'; echo LOGS=\$F; timeout 120 nice -n 19 \$IO grep -ah '\[C3-LIVE-ORDER\]' \$F 2>/dev/null | grep -a 'status=FILL' | awk '{c=\"\"; s=\"\"; for(i=1;i<=NF;i++){if(\$i~/^cid=/)c=substr(\$i,5); else if(\$i~/^status=/)s=substr(\$i,8)} if(c~/^c3-/&&s==\"FILLED\")e[c]=1; else if(c~/^c3[xs]-/&&(s==\"FILLED\"||s==\"FILL\"))x[c]=1} END{for(k in e)ne++; for(k in x)nx++; printf \"N_VAO=%d\\nN_THOAT=%d\\n\", ne, nx}'; echo RC_GREP=\${PIPESTATUS[0]}; echo END_NO") || NO=""
 printf '%s\n' "$NO" | grep -qx END_NO || need "242: dem lenh that (log [C3-LIVE-ORDER]) loi / khong tron ven"
 NV=$(printf '%s\n' "$NO" | sed -n 's/^N_VAO=//p'); NT=$(printf '%s\n' "$NO" | sed -n 's/^N_THOAT=//p')
-echo "   242 lenh that FILLED (log, uniq cid): vao=${NV:-?} thoat=${NT:-?} ($(printf '%s\n' "$NO" | sed -n 's/^LOGS=//p'))"
+echo "   242 lenh that da khop: vao=c3- status=FILLED, thoat=c3x-/c3s- status=FILL|FILLED (log, uniq cid): vao=${NV:-?} thoat=${NT:-?} ($(printf '%s\n' "$NO" | sed -n 's/^LOGS=//p'))"
 [ "$(printf '%s\n' "$NO" | sed -n 's/^RC_GREP=//p')" = 124 ] && need "242: dem lenh qua 120 s (timeout) - so khong tron ven"
 # [luot4 R2-m5b/c] noi dung G_EXEC / G_EXIT doi chieu van ban + so dem that (gl_gx_check: Q4_OWNER => ref co dong Q4_OWNER, n = DUNG so dem;
 #   GREEN/AMBER/RED_SIZE (ADD2 s2.2, verdict |E| >= 100) / DAT (ADD3) => n >= so dem)
@@ -142,7 +145,7 @@ owner_decision=$ODF file=$OWNER_DECISION_FILE sha256=$ODS
 lev_ev=$LEV sha256=$LEVS
 test=$([ "${GL_TEST:-0}" = 1 ] && echo 1 || echo 0)
 micro_start=$GL_MICRO_START micro_days=$MD micro7=$M7L
-so_lenh_that_luc_tao=vao_FILLED:$NV thoat_FILLED:$NT (log [C3-LIVE-ORDER] tren 242, uniq cid; tham khao - log co the da xoay)
+so_lenh_that_luc_tao=vao_FILLED:$NV thoat_FILLED:$NT (log [C3-LIVE-ORDER] tren 242, uniq cid; thoat = c3x-/c3s- status FILL|FILLED; tham khao - log co the da xoay)
 latch=$(sv LATCH)
 boot_guard=$BG $BG_DETAIL
 c3_capital_luc_tao=$C0 dry_ts=${DTS:-khong_co}
