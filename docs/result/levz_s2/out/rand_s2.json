@@ -1,0 +1,106 @@
+{
+ "seed": 20261128,
+ "nrep": 100,
+ "res": {
+  "REF": {
+   "nrep": 100,
+   "real_max_dev_insample": 6.495959688513099,
+   "real_wfo_sum": NaN,
+   "real_n_scored": 0,
+   "real_scored_years": [],
+   "p_max_insample": 0.13,
+   "p_wfo": NaN,
+   "rand_n_scored_counts": {
+    "0": 100
+   },
+   "rand_wfo_q": null
+  },
+  "P5": {
+   "nrep": 100,
+   "real_max_dev_insample": 1.1539721453612224,
+   "real_wfo_sum": -0.391793368142853,
+   "real_n_scored": 1,
+   "real_scored_years": [
+    "2023"
+   ],
+   "p_max_insample": 0.99,
+   "p_wfo": 0.96,
+   "rand_n_scored_counts": {
+    "1": 50,
+    "3": 34,
+    "2": 16
+   },
+   "rand_wfo_q": [
+    -0.3939168392257519,
+    -0.16611397937262656,
+    0.31608228163620894
+   ]
+  },
+  "P5b": {
+   "nrep": 100,
+   "real_max_dev_insample": 1.6175497458115926,
+   "real_wfo_sum": -0.4046324119859079,
+   "real_n_scored": 2,
+   "real_scored_years": [
+    "2023",
+    "2024"
+   ],
+   "p_max_insample": 0.96,
+   "p_wfo": 0.59,
+   "rand_n_scored_counts": {
+    "3": 49,
+    "1": 41,
+    "2": 10
+   },
+   "rand_wfo_q": [
+    -0.36127293295424384,
+    -0.12691521576794593,
+    0.42046835456470527
+   ]
+  },
+  "P6a": {
+   "nrep": 100,
+   "real_max_dev_insample": 1.6025642086434717,
+   "real_wfo_sum": -0.5202337182450798,
+   "real_n_scored": 2,
+   "real_scored_years": [
+    "2023",
+    "2024"
+   ],
+   "p_max_insample": 0.97,
+   "p_wfo": 0.43,
+   "rand_n_scored_counts": {
+    "1": 56,
+    "3": 27,
+    "2": 17
+   },
+   "rand_wfo_q": [
+    -0.5231951779951693,
+    -0.28051264791559044,
+    0.3020811249940622
+   ]
+  },
+  "P6b": {
+   "nrep": 100,
+   "real_max_dev_insample": 2.3917883802196584,
+   "real_wfo_sum": -0.4544924027130839,
+   "real_n_scored": 2,
+   "real_scored_years": [
+    "2023",
+    "2024"
+   ],
+   "p_max_insample": 0.89,
+   "p_wfo": 0.32,
+   "rand_n_scored_counts": {
+    "1": 62,
+    "2": 22,
+    "3": 16
+   },
+   "rand_wfo_q": [
+    -0.5242904580835364,
+    -0.303607331348393,
+    0.1516868188402941
+   ]
+  }
+ }
+}
