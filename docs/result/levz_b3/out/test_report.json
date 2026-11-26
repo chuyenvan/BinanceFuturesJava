@@ -1,0 +1,298 @@
+{
+ "c_purge": {
+  "status": "PASS",
+  "sec": 0.00042128562927246094,
+  "detail": {
+   "checks": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "pass_": true
+  }
+ },
+ "d_dots": {
+  "status": "PASS",
+  "sec": 0.005104780197143555,
+  "detail": {
+   "synthetic": true,
+   "real_weight_sum_per_dot_is_1": true,
+   "pass_": true
+  }
+ },
+ "e_groupkfold": {
+  "status": "PASS",
+  "sec": 0.5222892761230469,
+  "detail": {
+   "n_checks": 34,
+   "pass_": true
+  }
+ },
+ "a_px_timing": {
+  "status": "PASS",
+  "sec": 0.18123865127563477,
+  "detail": {
+   "n": 500,
+   "match_close_at_Tk": 500,
+   "match_close_at_Tk_plus_1h": 15,
+   "pass_": true
+  }
+ },
+ "a_causal": {
+  "status": "PASS",
+  "sec": 33.051231145858765,
+  "detail": {
+   "n": 200,
+   "mismatch_after_perturb": {
+    "z_oi": 0,
+    "z_f": 0,
+    "s": 0,
+    "zdiff": 0,
+    "f": 0,
+    "z_r": 0,
+    "lr1": 0,
+    "lr4": 0,
+    "lr24": 0,
+    "lr72": 0,
+    "lr168": 0,
+    "rv24": 0,
+    "rv168": 0,
+    "rng24": 0,
+    "dhi168": 0,
+    "dlo168": 0,
+    "lqv24": 0,
+    "qvratio": 0,
+    "liqrank": 0,
+    "age": 0,
+    "levrun": 0,
+    "ncand7d": 0,
+    "doi24": 0,
+    "doi72": 0,
+    "df24": 0,
+    "ew3": 0,
+    "ew7": 0,
+    "ew14": 0,
+    "btc7": 0,
+    "btc20": 0,
+    "btcvol7": 0,
+    "frac_lev": 0,
+    "frac_pool": 0,
+    "ncand_hour": 0
+   },
+   "mismatch_slice_vs_full": {
+    "z_oi": 0,
+    "z_f": 0,
+    "s": 0,
+    "zdiff": 0,
+    "f": 0,
+    "z_r": 0,
+    "lr1": 0,
+    "lr4": 0,
+    "lr24": 0,
+    "lr72": 0,
+    "lr168": 0,
+    "rv24": 0,
+    "rv168": 0,
+    "rng24": 0,
+    "dhi168": 0,
+    "dlo168": 0,
+    "lqv24": 0,
+    "qvratio": 0,
+    "liqrank": 0,
+    "age": 0,
+    "levrun": 0,
+    "ncand7d": 0,
+    "doi24": 0,
+    "doi72": 0,
+    "df24": 0,
+    "ew3": 0,
+    "ew7": 0,
+    "ew14": 0,
+    "btc7": 0,
+    "btc20": 0,
+    "btcvol7": 0,
+    "frac_lev": 0,
+    "frac_pool": 0,
+    "ncand_hour": 0
+   },
+   "pass_": true
+  }
+ },
+ "b_regression": {
+  "status": "PASS",
+  "sec": 105.41739654541016,
+  "detail": {
+   "pool": {
+    "W7_E0_2.5": {
+     "n_pool_subset": 4792,
+     "n_b1": 4792,
+     "equal": true
+    },
+    "W7_E0_3.0": {
+     "n_pool_subset": 1965,
+     "n_b1": 1965,
+     "equal": true
+    },
+    "W7_E0_3.5": {
+     "n_pool_subset": 838,
+     "n_b1": 838,
+     "equal": true
+    }
+   },
+   "exits_vs_b1": {
+    "j": true,
+    "rs": true,
+    "xr": true,
+    "fund": true,
+    "mx": true,
+    "mxh": true,
+    "flag": true,
+    "mk": true,
+    "hm": true,
+    "fh": true,
+    "fc": true
+   },
+   "n_overlap": 7936,
+   "fresh_recompute": {
+    "j": true,
+    "rs": true,
+    "xr": true,
+    "fund": true,
+    "mx": true,
+    "mxh": true,
+    "flag": true,
+    "mk": true,
+    "hm": true,
+    "fh": true,
+    "fc": true
+   },
+   "n_fresh": 300,
+   "label_vs_port_net": true,
+   "pass_": true
+  }
+ },
+ "g_determinism": {
+  "status": "PASS",
+  "sec": 29.496322870254517,
+  "detail": {
+   "wfo_json_equal": true,
+   "scores_equal": true,
+   "cv_oof_equal": true,
+   "features_equal": true,
+   "pass_": true
+  }
+ },
+ "f_fake_pipeline": {
+  "status": "PASS",
+  "sec": 167.08574962615967,
+  "detail": {
+   "planted": {
+    "n": 9180,
+    "Q": {
+     "Q1": true,
+     "Q2": true,
+     "Q3": true,
+     "Q4": true,
+     "Q5": true,
+     "Q6": true,
+     "Q7": true,
+     "Q8": true
+    },
+    "rand_p": 0.0,
+    "ic_m1": 0.6562718145112988,
+    "ic_m2": 0.6574040591745061,
+    "main_ret": 0.9778541620730321,
+    "rand_median": 0.043668734191001035,
+    "C1": true,
+    "C1_n_pos": 12,
+    "C2": true,
+    "C3": true,
+    "verdict": "B3 DAT MUC YEU (1 nam WFO + CV)",
+    "top_gain": "z_oi",
+    "report_has_tags": true
+   },
+   "noise": {
+    "n": 9180,
+    "Q": {
+     "Q1": true,
+     "Q2": true,
+     "Q3": false,
+     "Q4": true,
+     "Q5": false,
+     "Q6": false,
+     "Q7": true,
+     "Q8": true
+    },
+    "rand_p": 0.37,
+    "ic_m1": 0.018931537267157673,
+    "ic_m2": 0.01761355491718938,
+    "main_ret": 0.026130380419821853,
+    "rand_median": 0.006652304065181136,
+    "C1": false,
+    "C1_n_pos": 4,
+    "C2": false,
+    "C3": false,
+    "verdict": "B3 KHONG DAT",
+    "top_gain": "levrun",
+    "report_has_tags": true
+   },
+   "pass_planted": true,
+   "pass_noise": true,
+   "pass_": true
+  }
+ },
+ "j_cv_formulas": {
+  "status": "PASS",
+  "sec": 0.0004570484161376953,
+  "detail": {
+   "span_threshold": true,
+   "c1_count": true,
+   "c2": true,
+   "c3": true,
+   "pass_": true
+  }
+ },
+ "h_weights": {
+  "status": "PASS",
+  "sec": 7.65166711807251,
+  "detail": {
+   "w_formula": true,
+   "pred_m1": -0.9900497510040406,
+   "pred_m2": -0.9900497512437811,
+   "weighted_mean": -0.9900497512437811,
+   "fit_uses_w": true,
+   "wfo_passes_w": true,
+   "wfo_groups_quarter": true,
+   "cv_passes_w": true,
+   "pass_": true
+  }
+ },
+ "i_wfo_formulas": {
+  "status": "PASS",
+  "sec": 6.578265190124512,
+  "detail": {
+   "thresholds": true,
+   "select": true,
+   "bl_s20": true,
+   "bl_z30": true,
+   "p_keep": true,
+   "pvalue": true,
+   "q5": true,
+   "split": true,
+   "wire_thr": true,
+   "wire_select": true,
+   "wire_bl": true,
+   "wire_p_keep": true,
+   "wire_pvalue": true,
+   "wire_q5": true,
+   "pass_": true
+  }
+ }
+}

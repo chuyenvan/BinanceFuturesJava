@@ -1,0 +1,87 @@
+{
+ "n_pool": 28864,
+ "regression": {
+  "W7_E0_2.5": {
+   "n_pool_subset": 4792,
+   "n_b1": 4792,
+   "equal": true
+  },
+  "W7_E0_3.0": {
+   "n_pool_subset": 1965,
+   "n_b1": 1965,
+   "equal": true
+  },
+  "W7_E0_3.5": {
+   "n_pool_subset": 838,
+   "n_b1": 838,
+   "equal": true
+  }
+ },
+ "n_in_b1_union": 7936,
+ "n_dots": 2730,
+ "by_year": {
+  "2021": {
+   "n_cand": 16,
+   "n_dots_touching": 1,
+   "n_dots_starting": 1
+  },
+  "2022": {
+   "n_cand": 200,
+   "n_dots_touching": 25,
+   "n_dots_starting": 25
+  },
+  "2023": {
+   "n_cand": 6686,
+   "n_dots_touching": 644,
+   "n_dots_starting": 644
+  },
+  "2024": {
+   "n_cand": 18431,
+   "n_dots_touching": 1632,
+   "n_dots_starting": 1632
+  },
+  "2025": {
+   "n_cand": 3531,
+   "n_dots_touching": 429,
+   "n_dots_starting": 428
+  }
+ },
+ "dot_size": {
+  "median": 8.0,
+  "max": 77,
+  "mean": 10.572893772893773
+ },
+ "C0": {
+  "2023": {
+   "Y": 2023,
+   "H_exit": 720,
+   "purge_last_k": 8760,
+   "n_train_cand": 200,
+   "n_train_dots": 25,
+   "n_lastyear_cand": 200,
+   "n_lastyear_dots": 25,
+   "C0": false,
+   "note": "exit_2023 khong tinh duoc dung luat; C0 tinh voi H = 720 (purge lon nhat) chi de tham khao"
+  },
+  "2024": {
+   "Y": 2024,
+   "H_exit": 336,
+   "purge_last_k": 17904,
+   "n_train_cand": 4968,
+   "n_train_dots": 500,
+   "n_lastyear_cand": 4768,
+   "n_lastyear_dots": 475,
+   "C0": false
+  },
+  "2025": {
+   "Y": 2025,
+   "H_exit": 24,
+   "purge_last_k": 27000,
+   "n_train_cand": 25294,
+   "n_train_dots": 2297,
+   "n_lastyear_cand": 18408,
+   "n_lastyear_dots": 1628,
+   "C0": true
+  }
+ }
+}

@@ -1,0 +1,24 @@
+{
+ "verdict": "B3 KHONG DAT",
+ "Q": {
+  "Q1": false,
+  "Q2": false,
+  "Q3": false,
+  "Q4": true,
+  "Q5": false,
+  "Q6": false,
+  "Q7": false,
+  "Q8": false
+ },
+ "C": {
+  "C1": false,
+  "C2": false,
+  "C3": true
+ },
+ "tags": {
+  "cv": "[CV - co nhin truoc]",
+  "wfo2024": "[DUOI NGUONG MAU - CHI MO TA]",
+  "insample": "[in-sample]"
+ },
+ "n_trials": "9 bien the x 2 model + 3 doi chung = 21 (+ 10 model mot-seed, + CV C1..C3)"
+}
