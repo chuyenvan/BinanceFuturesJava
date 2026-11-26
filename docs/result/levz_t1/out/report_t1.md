@@ -1,0 +1,28 @@
+# report_t1 - LEVZ T1 (PREREG_LEVZ_T1 + ADD1) - CHUA AUDIT
+
+Tong so cau hinh: 9468. Moc B1 (da audit): {"wfo2024_top20_median": -0.23, "wfo2025_top20_median": 0.061, "frac_pos_F1": 0.64, "frac_pos_F2": 0.2, "frac_pos_F3": 0.84}
+
+| ho / gate | nhan | lai% F1 | F2 | F3 | DEV | tv ret F1 | F2 | F3 | WFO24 top1 | WFO24 top20 tv | WFO25 top1 | WFO25 top20 tv | p ngau nhien | T-a | T-b | T-c | T-d | T-e | ket luan |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| BRK / NONE | - | 0.741 | 0.463 | 0.496 | 0.586 | 0.038 | -0.007 | -0.003 | 0.146 | 0.062 | -0.068 | -0.037 | 0.010 | False | False | True | True | False | KHONG HON B1 |
+| BRK / G_EW14 | gate hau kiem | 0.730 | 0.922 | 0.457 | 0.674 | 0.005 | 0.048 | -0.008 | - | khong cham duoc 2024 | - | khong cham duoc 2025 | 0.030 | - | - | - | - | - | mo ta (gate hau kiem) |
+| VOL / NONE | - | 0.750 | 0.472 | 0.701 | 0.775 | 0.037 | -0.005 | 0.050 | 0.053 | -0.054 | 0.038 | 0.035 | 0.000 | False | False | True | True | False | KHONG HON B1 |
+| VOL / G_EW14 | gate hau kiem | 0.701 | 0.924 | 0.938 | 0.991 | 0.006 | 0.037 | 0.132 | - | khong cham duoc 2024 | - | khong cham duoc 2025 | 0.010 | - | - | - | - | - | mo ta (gate hau kiem) |
+| PART / NONE | - | 0.611 | 0.528 | 0.778 | 0.708 | 0.010 | 0.010 | 0.045 | 0.180 | 0.028 | 0.026 | 0.041 | 0.000 | True | True | True | True | False | CO CAI THIEN, CHUA DU |
+| PART / G_EW14 | gate hau kiem | 0.917 | 0.958 | 0.569 | 0.819 | 0.010 | 0.054 | 0.004 | - | khong cham duoc 2024 | - | khong cham duoc 2025 | 0.060 | - | - | - | - | - | mo ta (gate hau kiem) |
+| STATE / NONE | - | 1.000 | 0.472 | 1.000 | 1.000 | 0.047 | -0.001 | 0.220 | -0.003 | 0.001 | 0.457 | 0.353 | 0.000 | True | False | True | True | False | CO CAI THIEN, CHUA DU |
+| STATE / G_EW14 | gate hau kiem | 0.667 | 0.750 | 1.000 | 1.000 | 0.001 | 0.014 | 0.181 | - | khong cham duoc 2024 | - | khong cham duoc 2025 | 0.130 | - | - | - | - | - | mo ta (gate hau kiem) |
+| HEDGE / NONE | - | 0.596 | 0.558 | 0.447 | 0.547 | 0.007 | 0.005 | -0.009 | 0.186 | 0.043 | -0.074 | -0.056 | 0.070 | False | False | False | True | False | KHONG HON B1 |
+| HEDGE / G_EW14 | gate hau kiem | 0.731 | 0.864 | 0.417 | 0.607 | 0.003 | 0.019 | -0.009 | - | khong cham duoc 2024 | - | khong cham duoc 2025 | 0.160 | - | - | - | - | - | mo ta (gate hau kiem) |
+
+## Tap trung / ly do thoat THAT (top-1 WFO, fold kiem)
+- BRK / NONE 2024 {"fam": "BRK", "xi": 12, "zmin": 2.5, "K": 3, "gate": "NONE", "s": 0.03, "R": 3.0, "H": 24.0, "a": NaN, "zo": NaN, "base": null, "bxi": NaN, "inst": null, "h": NaN}: n=268, bo 5% lenh loi nhat con -1474.4 (tong 1463.7, hedge 0.0), lenh te nhat -0.059, lenh/nam 267.5, ly do {"eod": 1, "sl": 147, "time": 76, "tp": 44}
+- BRK / NONE 2025 {"fam": "BRK", "xi": 21, "zmin": 2.5, "K": 3, "gate": "NONE", "s": 0.05, "R": 1.5, "H": 24.0, "a": NaN, "zo": NaN, "base": null, "bxi": NaN, "inst": null, "h": NaN}: n=156, bo 5% lenh loi nhat con -1837.0 (tong -680.1, hedge 0.0), lenh te nhat -0.086, lenh/nam 156.1, ly do {"sl": 74, "time": 28, "tp": 54}
+- VOL / NONE 2024 {"fam": "VOL", "xi": 12, "zmin": 2.5, "K": 10, "gate": "NONE", "s": NaN, "R": 1.0, "H": 24.0, "a": 1.5, "zo": NaN, "base": null, "bxi": NaN, "inst": null, "h": NaN}: n=356, bo 5% lenh loi nhat con -1180.5 (tong 528.7, hedge 0.0), lenh te nhat -0.241, lenh/nam 355.3, ly do {"eod": 1, "sl": 84, "time": 197, "tp": 74}
+- VOL / NONE 2025 {"fam": "VOL", "xi": 12, "zmin": 3.0, "K": 5, "gate": "NONE", "s": NaN, "R": 1.0, "H": 24.0, "a": 1.5, "zo": NaN, "base": null, "bxi": NaN, "inst": null, "h": NaN}: n=87, bo 5% lenh loi nhat con -1189.6 (tong 381.3, hedge 0.0), lenh te nhat -0.435, lenh/nam 87.1, ly do {"sl": 28, "time": 31, "tp": 28}
+- PART / NONE 2024 {"fam": "PART", "xi": 4, "zmin": 2.5, "K": 3, "gate": "NONE", "s": 0.12, "R": NaN, "H": 72.0, "a": NaN, "zo": NaN, "base": null, "bxi": NaN, "inst": null, "h": NaN}: n=131, bo 5% lenh loi nhat con -964.5 (tong 1796.6, hedge 0.0), lenh te nhat -0.141, lenh/nam 130.7, ly do {"be": 7, "eod": 1, "sl": 36, "time": 86, "tp": 1}
+- PART / NONE 2025 {"fam": "PART", "xi": 2, "zmin": 2.5, "K": 5, "gate": "NONE", "s": 0.08, "R": NaN, "H": 72.0, "a": NaN, "zo": NaN, "base": null, "bxi": NaN, "inst": null, "h": NaN}: n=157, bo 5% lenh loi nhat con -1317.1 (tong 259.4, hedge 0.0), lenh te nhat -0.185, lenh/nam 157.1, ly do {"be": 27, "eod": 1, "sl": 68, "time": 41, "tp": 20}
+- STATE / NONE 2024 {"fam": "STATE", "xi": 4, "zmin": 3.0, "K": 5, "gate": "NONE", "s": 0.15, "R": NaN, "H": 168.0, "a": NaN, "zo": 1.0, "base": null, "bxi": NaN, "inst": null, "h": NaN}: n=180, bo 5% lenh loi nhat con -1407.8 (tong -32.5, hedge 0.0), lenh te nhat -0.219, lenh/nam 179.6, ly do {"eod": 1, "sl": 15, "state": 164}
+- STATE / NONE 2025 {"fam": "STATE", "xi": 2, "zmin": 3.0, "K": 5, "gate": "NONE", "s": 0.3, "R": NaN, "H": 168.0, "a": NaN, "zo": 0.0, "base": null, "bxi": NaN, "inst": null, "h": NaN}: n=87, bo 5% lenh loi nhat con 1239.1 (tong 4567.7, hedge 0.0), lenh te nhat -0.355, lenh/nam 87.1, ly do {"sl": 9, "state": 77, "time": 1}
+- HEDGE / NONE 2024 {"fam": "HEDGE", "xi": 198, "zmin": 2.5, "K": 3, "gate": "NONE", "s": NaN, "R": NaN, "H": NaN, "a": NaN, "zo": NaN, "base": "BRK", "bxi": 49.0, "inst": "BTCETH", "h": 0.5}: n=144, bo 5% lenh loi nhat con 340.1 (tong 1857.7, hedge -67.4), lenh te nhat -0.141, lenh/nam 143.7, ly do {"eod": 1, "sl": 40, "time": 55, "tp": 48}
+- HEDGE / NONE 2025 {"fam": "HEDGE", "xi": 84, "zmin": 2.5, "K": 3, "gate": "NONE", "s": NaN, "R": NaN, "H": NaN, "a": NaN, "zo": NaN, "base": "BRK", "bxi": 21.0, "inst": "BTC", "h": 0.5}: n=156, bo 5% lenh loi nhat con -1521.0 (tong -741.2, hedge -315.7), lenh te nhat -0.086, lenh/nam 156.1, ly do {"sl": 74, "time": 28, "tp": 54}

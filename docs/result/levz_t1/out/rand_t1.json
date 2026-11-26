@@ -1,0 +1,136 @@
+{
+ "seed": 20261128,
+ "zmin": 3.0,
+ "res": {
+  "BRK|NONE": {
+   "real_max_score": 0.713976919398709,
+   "real_n_valid": 32,
+   "nrep": 100,
+   "p": 0.01,
+   "rand_max_q": [
+    -0.75046755115815,
+    -0.4872301035326321,
+    -0.02269768123305277
+   ],
+   "rand_n_valid_median": 0.0,
+   "label": ""
+  },
+  "BRK|G_EW14": {
+   "real_max_score": 1.2580058727404704,
+   "real_n_valid": 0,
+   "nrep": 100,
+   "p": 0.03,
+   "rand_max_q": [
+    -0.5915004057760811,
+    -0.10482076665899213,
+    0.7947234389306121
+   ],
+   "rand_n_valid_median": 0.0,
+   "label": "gate hau kiem"
+  },
+  "VOL|NONE": {
+   "real_max_score": 0.8792498289779643,
+   "real_n_valid": 42,
+   "nrep": 100,
+   "p": 0.0,
+   "rand_max_q": [
+    -0.7814646151483496,
+    -0.5320827368708214,
+    -0.028091578117313252
+   ],
+   "rand_n_valid_median": 0.0,
+   "label": ""
+  },
+  "VOL|G_EW14": {
+   "real_max_score": 1.1534853596227965,
+   "real_n_valid": 0,
+   "nrep": 100,
+   "p": 0.01,
+   "rand_max_q": [
+    -0.6873363597988095,
+    -0.26089392336568895,
+    0.7079635358811057
+   ],
+   "rand_n_valid_median": 0.0,
+   "label": "gate hau kiem"
+  },
+  "PART|NONE": {
+   "real_max_score": 0.2269867086427487,
+   "real_n_valid": 3,
+   "nrep": 100,
+   "p": 0.0,
+   "rand_max_q": [
+    -0.8552396446956035,
+    -0.6758684882476749,
+    -0.25776999994463895
+   ],
+   "rand_n_valid_median": 0.0,
+   "label": ""
+  },
+  "PART|G_EW14": {
+   "real_max_score": 0.4093301317310103,
+   "real_n_valid": 0,
+   "nrep": 100,
+   "p": 0.06,
+   "rand_max_q": [
+    -0.8395648133322767,
+    -0.4187600489201141,
+    0.4273520551576762
+   ],
+   "rand_n_valid_median": 0.0,
+   "label": "gate hau kiem"
+  },
+  "STATE|NONE": {
+   "real_max_score": 0.8794427745191324,
+   "real_n_valid": 12,
+   "nrep": 100,
+   "p": 0.0,
+   "rand_max_q": [
+    -0.9523460830950118,
+    -0.7711018417253421,
+    -0.3610465810354471
+   ],
+   "rand_n_valid_median": 0.0,
+   "label": ""
+  },
+  "STATE|G_EW14": {
+   "real_max_score": -0.36183262989025594,
+   "real_n_valid": 0,
+   "nrep": 100,
+   "p": 0.13,
+   "rand_max_q": [
+    -0.9817354175273258,
+    -0.7973173891527772,
+    -0.1402215581667685
+   ],
+   "rand_n_valid_median": 0.0,
+   "label": "gate hau kiem"
+  },
+  "HEDGE|NONE": {
+   "real_max_score": 0.7856035410363571,
+   "real_n_valid": 161,
+   "nrep": 100,
+   "p": 0.07,
+   "rand_max_q": [
+    -0.469317249716792,
+    0.019032893349941585,
+    0.8584728089838569
+   ],
+   "rand_n_valid_median": 1.0,
+   "label": ""
+  },
+  "HEDGE|G_EW14": {
+   "real_max_score": 1.0472107695859718,
+   "real_n_valid": 0,
+   "nrep": 100,
+   "p": 0.16,
+   "rand_max_q": [
+    -0.34170427053912733,
+    0.326864820820789,
+    1.3476296432655455
+   ],
+   "rand_n_valid_median": 0.0,
+   "label": "gate hau kiem"
+  }
+ }
+}
