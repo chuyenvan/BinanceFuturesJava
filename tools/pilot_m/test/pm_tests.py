@@ -195,23 +195,42 @@ def clean(o=None):
         s.add(d6, L(ta, '[C3-LIVE-TRAIL] arm SYMTUSDT entry=0.5 px=0.536 peak=0.072 SL=0.52', 'C3LIVE-OPS', TSM))
         if o.get('mt_arm_rst'):
             s.add(d6, L(ta + H, '[C3-LIVE-TRAIL] SYMTUSDT khong con arm (DCA reset) => huy stop null', 'C3LIVE-OPS', TSM))
+    if o.get('mt_arm_rst_arm') or o.get('mt_arm_rst_same_ms'):
+        d6 = d7 + dt.timedelta(days=1)
+        ta = P.day_lo(d6) + 2 * H
+        s.add(d6, L(ta, '[C3-LIVE-TRAIL] arm SYMTUSDT entry=0.5 px=0.536 peak=0.072 SL=0.52', 'C3LIVE-OPS', TSM))
+        tr = ta if o.get('mt_arm_rst_same_ms') else ta + H     # cung ms: dong RST in SAU dong ARM
+        s.add(d6, L(tr, '[C3-LIVE-TRAIL] SYMTUSDT khong con arm (DCA reset) => huy stop null', 'C3LIVE-OPS', TSM))
+        if o.get('mt_arm_rst_arm'):
+            s.add(d6, L(ta + 2 * H, '[C3-LIVE-TRAIL] arm SYMTUSDT entry=0.5 px=0.536 peak=0.072 SL=0.52', 'C3LIVE-OPS', TSM))
     due = t0 + 168 * H
     flag = o.get('flag', 'OFF')
     s.add(D, L(due + 5000, '[TS-EXT] defer-START SYMTUSDT age_h=168 flag=ON day=%s' % D, 'pool-3-thread-1', 'c.b.c.t.s.TsMktExt'))
     if flag in ('OFF', 'NA'):
         tts = due + (300000 if o.get('mt_late') else (-60000 if o.get('mt_early') else 10000))
-        s.add(D, L(tts, '[C3-LIVE-TRAIL] TIME-STOP SYMTUSDT entry=0.5 px=0.45 gio_giu=168 => dong MARKET reduce-only', 'C3LIVE-OPS', TSM, 'WARN'))
+        if not o.get('mt_no_ts'):
+            s.add(D, L(tts, '[C3-LIVE-TRAIL] TIME-STOP SYMTUSDT entry=0.5 px=0.45 gio_giu=168 => dong MARKET reduce-only', 'C3LIVE-OPS', TSM, 'WARN'))
+        if o.get('mt_arm_between'):
+            s.add(D, L(tts + 2000, '[C3-LIVE-TRAIL] arm SYMTUSDT entry=0.5 px=0.536 peak=0.072 SL=0.52', 'C3LIVE-OPS', TSM))
+        dly = int(o.get('mt_clos_delay', 5) * 1000)
         if not o.get('mt_no_clos'):
-            s.add(D, L(tts + 5000, '[C3-LIVE-BOOK] dong cum SYMTUSDT ly do=TIME_STOP_168H legs=1 qty=40 avg=0.5 exitQty=40 exitAvg=0.449 '
+            s.add(D, L(tts + dly, '[C3-LIVE-BOOK] dong cum SYMTUSDT ly do=TIME_STOP_168H legs=1 qty=40 avg=0.5 exitQty=40 exitAvg=0.449 '
                        'realized=-2.0400 phi=0.0090', OK, 'c.b.c.c.b.LiveBookC3'))
-            s.add(D, L(tts + 5100, '[C3-LIVE] cum SYMTUSDT DA DONG tren san (TIME_STOP_168H) qty=40 avg=0.5 => da cap nhat so', OK, FA))
-            s.iv.append((t0 + 500, tts + 5000))
+            s.add(D, L(tts + dly + 100, '[C3-LIVE] cum SYMTUSDT DA DONG tren san (TIME_STOP_168H) qty=40 avg=0.5 => da cap nhat so', OK, FA))
+            s.iv.append((t0 + 500, tts if dly > 60000 else tts + dly))
         else:
             s.iv.append((t0 + 500, tts))
     else:
         s.iv.append((t0 + 500, P.FAR))
         if o.get('mt_ops_defer'):
             s.add(D, L(due + 6000, '[TS-EXT] defer-START SYMTUSDT age_h=168 flag=ON day=%s' % D, 'C3LIVE-OPS', 'c.b.c.t.s.TsMktExt'))
+        if o.get('mt_arm_after_due'):   # A1 Y05: arm SAU due roi TIME-STOP => H1
+            s.iv[-1] = (t0 + 500, lo + 6 * H)
+            s.add(D, L(lo + 5 * H, '[C3-LIVE-TRAIL] arm SYMTUSDT entry=0.5 px=0.536 peak=0.072 SL=0.52', 'C3LIVE-OPS', TSM))
+            s.add(D, L(lo + 6 * H, '[C3-LIVE-TRAIL] TIME-STOP SYMTUSDT entry=0.5 px=0.45 gio_giu=171 => dong MARKET reduce-only', 'C3LIVE-OPS', TSM, 'WARN'))
+            s.add(D, L(lo + 6 * H + 5000, '[C3-LIVE-BOOK] dong cum SYMTUSDT ly do=TIME_STOP_168H legs=1 qty=40 avg=0.5 exitQty=40 exitAvg=0.449 '
+                       'realized=-2.0400 phi=0.0090', OK, 'c.b.c.c.b.LiveBookC3'))
+            s.add(D, L(lo + 6 * H + 5100, '[C3-LIVE] cum SYMTUSDT DA DONG tren san (TIME_STOP_168H) qty=40 avg=0.5 => da cap nhat so', OK, FA))
     # ---- cum A
     dtsA = lo + H
     tA = dtsA + (200000 if o.get('me0_late') else 67100)
@@ -252,22 +271,48 @@ def clean(o=None):
     trig = o.get('trig', 'both')
     if trig == 'both':
         s.add(D, L(tX + 90, '[C3-LIVE-FILL] ALGO_UPDATE SYMAUSDT caid=%s X=TRIGGERING ai=' % cid2, OK, FA))
-    s.add(D, L(tX + 100, '[C3-LIVE-FILL] SYMAUSDT stop khop 100@%.4f (stop=%.4f truot=0.00085)' % (P2 - 0.0002, P2), OK, FA))
+    if not o.get('no_sfil'):
+        s.add(D, L(tX + 100, '[C3-LIVE-FILL] SYMAUSDT stop khop 100@%.4f (stop=%.4f truot=0.00085)' % (P2 - 0.0002, P2), OK, FA))
     if o.get('sfil_extra'):
         s.add(D, L(tX + 150, '[C3-LIVE-FILL] SYMAUSDT stop khop 100@%.4f (stop=%.4f truot=0.00085)' % (P2 - 0.0002, P2), OK, FA))
     if not o.get('b12'):
-        s.add(D, L(tX + 190, '[C3-LIVE-BOOK] dong cum SYMAUSDT ly do=%s legs=1 qty=100 avg=0.225 exitQty=100 exitAvg=%.4f realized=1.0800 '
-                   'phi=0.0236' % (o.get('book_reason', R), P2 - 0.0002), OK, 'c.b.c.c.b.LiveBookC3'))
+        for kb in range(2 if o.get('dup_book') else 1):
+            s.add(D, L(tX + (700000 if o.get('close_late_both') else 190) + kb * 50, '[C3-LIVE-BOOK] dong cum SYMAUSDT ly do=%s legs=1 qty=100 avg=0.225 '
+                       'exitQty=100 exitAvg=%.4f realized=1.0800 phi=0.0236' % (o.get('book_reason', R), P2 - 0.0002), OK, 'c.b.c.c.b.LiveBookC3'))
+        if o.get('dup_clos'):
+            s.add(D, L(tX + 400, '[C3-LIVE] cum SYMAUSDT DA DONG tren san (%s) qty=100 avg=0.225 => da cap nhat so, xu ly 1 stop' % R, OK, FA))
         if o.get('b2'):
             s.add(D, L(tX + 298, '[C3-LIVE] cum SYMAUSDT DA DO', OK, FA))
         elif not o.get('b1'):
-            s.add(D, L(tX + 298, '[C3-LIVE] cum SYMAUSDT DA DONG tren san (%s) qty=100 avg=0.225 => da cap nhat so, xu ly 1 stop' % R, OK, FA))
+            s.add(D, L(tX + (190 + int(o['clos_late'] * 1000) if o.get('clos_late') else (700100 if o.get('close_late_both') else 298)), '[C3-LIVE] cum SYMAUSDT DA DONG tren san (%s) qty=100 avg=0.225 => da cap nhat so, xu ly 1 stop' % R, OK, FA))
     if trig in ('both', 'only_triggered'):
         s.add(D, L(tX + 299, '[C3-LIVE-FILL] ALGO_UPDATE SYMAUSDT caid=%s X=TRIGGERED ai=1' % cid2, OK, FA))
     if trig == 'late':
         s.add(D, L(tX + 70000, '[C3-LIVE-FILL] ALGO_UPDATE SYMAUSDT caid=%s X=TRIGGERED ai=1' % cid2, OK, FA))
     s.add(D, L(tX + 299, '[C3-LIVE-FILL] ALGO_UPDATE SYMAUSDT caid=%s X=FINISHED ai=1' % cid2, OK, FA))
-    s.iv.append((tA + 400, tX + 100 if o.get('b12') else tX + 190))
+    s.iv.append((tA + 400, tX + 100 if (o.get('b12') or o.get('close_late_both')) else tX + 190))
+    for tm in o.get('extra_mkt', ()):   # dong trig them de dat horizon (--max-ts) giua 2 moc han
+        s.add(D, L(tm, 'Market level change: %s level: null symbols:500' % P.minute_str(tm - 66000), lg=DET))
+    if o.get('mkt_bad'):
+        s.add(D, L(lo + 9 * H + 30000, 'Market level change: hong', lg=DET))
+    if o.get('n12'):   # cum A2 cung symbol mo + dong < 600 s sau cum A (ERRATA3 H3)
+        dts2 = tX + M
+        b2 = dts2 // M
+        s.sel.setdefault(D, []).append((dts2, 'SYMAUSDT', 4))
+        s.add(D, L(dts2 + 67000, '[C3-LIVE] SUBMIT SYMAUSDT PREDICT_SYMBOL_TRADE SUBMITTED cid=c3-SYMAUSDT-%d-0 qty=100 budget=22.5 legIdx=0 '
+                   'notional=22.45 U_before=0.0' % b2))
+        s.add(D, L(dts2 + 67400, '[C3-LIVE-FILL] xac nhan qua stream SYMAUSDT c3-SYMAUSDT-%d-0 qty=100 avg=0.2250 ref=0.2245' % b2, OK, FA))
+        s.add(D, L(tX + 5 * M, '[C3-LIVE-BOOK] dong cum SYMAUSDT ly do=EXTERNAL legs=1 qty=100 avg=0.225 exitQty=100 exitAvg=0.2251 '
+                   'realized=0.0100 phi=0.0236', OK, 'c.b.c.c.b.LiveBookC3'))
+        s.add(D, L(tX + 5 * M + 100, '[C3-LIVE] cum SYMAUSDT DA DONG tren san (EXTERNAL) qty=100 avg=0.225 => da cap nhat so', OK, FA))
+        s.iv.append((dts2 + 67400, tX + 5 * M))
+    if o.get('book_mo_coi'):
+        s.add(D, L(lo + 15 * H, '[C3-LIVE-BOOK] dong cum SYMQUSDT ly do=TRAILING_STOP legs=1 qty=5 avg=1.0 exitQty=5 exitAvg=1.1 '
+                   'realized=0.5000 phi=0.0010', OK, 'c.b.c.c.b.LiveBookC3'))
+    if o.get('algo_flood'):   # > 1000 dong ho ALGO + 1 dong hong => E9 0 dung sai
+        for i in range(1100):
+            s.add(D, L(lo + 13 * H + i * 1000, '[C3-LIVE-FILL] ALGO_UPDATE SYMZUSDT caid=c3s-SYMZUSDT-1-%d X=NEW ai=' % i, OK, FA))
+        s.add(D, L(lo + 14 * H, '[C3-LIVE-FILL] ALGO_UPDATE SYMAUSDT hong', OK, FA))
     if o.get('leo_thang'):
         s.add(D, L(tX + 2 * H, '[C3-LIVE-RECON] SYMAUSDT: cum so da chot > 600000 ms ma san VAN con vi the 100 => leo thang UNKNOWN toan he',
                    'C3LIVE-OPS', 'c.b.c.c.r.Reconciler', 'ERROR'))
@@ -345,6 +390,9 @@ def clean(o=None):
     heartbeat(s, D, flag=(None if o.get('no_flag') else flag), recon_skip=o.get('recon_skip', ()), restart=restart,
               n_off=o.get('n_off'), tt=tt, eq_fn=o.get('eq_fn'), ks_none=o.get('ks_none', False),
               streak_jump=o.get('streak_jump'), tt_drop=o.get('tt_drop'))
+    if o.get('tt_bad'):   # 2 dong 'TOM TAT:' sai dinh dang / 720 (0,28 %)
+        for tb in (lo + 9 * H + 30000, lo + 10 * H + 30000):
+            s.cron.append((tb, '[%s] xx TOM TAT: hong' % dt.datetime.fromtimestamp(tb / 1000.0, P.TZ7).strftime('%Y-%m-%d %H:%M:%S')))
     if o.get('tt_stop_after') is not None:
         s.cron = [x for x in s.cron if x[0] < o['tt_stop_after']]
     if o.get('cron_split') is not None:
@@ -468,7 +516,7 @@ def main():
     for k in items:
         R.check('a_sach_%s_DAT' % k, st(j, k) == 'DAT', '%s=%s %s' % (k, st(j, k), j and json.dumps(j['muc'][k])[:400]))
     R.check('a_sach_bac_XANH', j and j['bac'] == 'XANH', j and j['bac'])
-    R.check('a_dong_dau_md', md is not None and re.match(r'^PILOT-M D=2026-11-25 cham_luc=\S+ bac=XANH prereg=2a21fe35\+E1\+E2 cong_cu=[0-9a-f]{12}\n', md) is not None)
+    R.check('a_dong_dau_md', md is not None and re.match(r'^PILOT-M D=2026-11-25 cham_luc=\S+ bac=XANH prereg=2a21fe35\+E1\+E2\+E3 cong_cu=[0-9a-f]{12}\n', md) is not None)
     R.check('a_ALGO_NEW_truoc_STOP_20ms_DAT', st(j, 'I4') == 'DAT')
     R.check('a_BIG_DOWN_leg0_ME0_DAT', st(j, 'M-E0') == 'DAT' and j['muc']['M-E0']['mau'] == 3)
     R.check('a_defer_so_giay_bo_qua_MT_DAT', st(j, 'M-T') == 'DAT' and j['muc']['M-T']['mau'] == 1)
@@ -508,7 +556,33 @@ def main():
         ('MT_flag_ON_defer_C3LIVE_OPS', {'flag': 'ON', 'mt_ops_defer': 1}, 'M-T', 'DAT', None, [], True),
         ('E13_MT_flag_NA_la_OFF', {'flag': 'NA'}, 'M-T', 'DAT', None, [], False),
         ('E7_MT_arm_roi_RST_van_time_stop', {'mt_arm_rst': 1}, 'M-T', 'DAT', None, [], True),
-        ('E7_MT_arm_khong_RST_khong_cham', {'mt_arm_only': 1}, 'M-T', 'KHONG_CO_SU_KIEN', None, [], True),
+        ('H1_MT_cum_dang_arm_bi_TIME_STOP', {'mt_arm_only': 1}, 'M-T', 'VI_PHAM', 'DO', [], True),
+        ('H1_MT_cum_dang_arm_chi_CLOS_TIME_STOP', {'mt_arm_only': 1, 'mt_no_ts': 1}, 'M-T', 'VI_PHAM', 'DO', [], True),
+        ('H3_N12_2_cum_cung_symbol_dong_cach_5_phut', {'n12': 1}, 'I10', 'DAT', None, ['--external-noted', 'SYMAUSDT'], True),
+        ('H3_BOOK_mo_coi', {'book_mo_coi': 1}, 'I10', 'VI_PHAM', 'DO', [], False),
+        ('X01_CLOS_sau_BOOK_890s', {'clos_late': 890}, 'I10', 'VI_PHAM', 'DO', [], False),
+        ('Y12_CLOS_sau_BOOK_601s', {'clos_late': 601, 'no_sfil': 1}, 'I10', 'VI_PHAM', 'DO', [], False),
+        ('Y12_CLOS_sau_BOOK_599s_DAT', {'clos_late': 599, 'no_sfil': 1}, 'I10', 'DAT', None, [], False),
+        ('Y13_BOOK_khong_CLOS_het_du_lieu_KCD', {'b1': 1, 'extra_mkt': (lo + 4 * H + 240000,)}, 'I10', 'KHONG_CHAM_DUOC', None,
+         ['--max-ts', '2026-11-25 11:05'], False),
+        ('Y14_2_BOOK_1_cum', {'dup_book': 1}, 'I10', 'VI_PHAM', 'DO', [], False),
+        ('Y15_2_CLOS_1_cum', {'dup_clos': 1}, 'I10', 'VI_PHAM', 'DO', [], False),
+        ('Y19_SFIL_du_qty_CLOS_sau_600s', {'close_late_both': 1}, 'I10', 'VI_PHAM', 'DO', [], False),
+        ('Y01_C1_arm_RST_arm_TIME_STOP', {'mt_arm_rst_arm': 1}, 'M-T', 'VI_PHAM', 'DO', [], True),
+        ('C3d_Y20_ARM_RST_cung_ms_roi_TS_DAT', {'mt_arm_rst_same_ms': 1}, 'M-T', 'DAT', None, [], True),
+        ('Y03_C3b_ARM_giua_TS_va_CLOS', {'mt_arm_between': 1}, 'M-T', 'VI_PHAM', 'DO', [], False),
+        ('Y05_arm_sau_due_roi_TIME_STOP', {'flag': 'ON', 'mt_ops_defer': 1, 'mt_arm_after_due': 1}, 'M-T', 'VI_PHAM', 'DO', [], False),
+        ('Y07_CLOS_TIME_STOP_moc_601s', {'mt_clos_delay': 601}, 'M-T', 'VI_PHAM', 'DO', [], False),
+        ('Y08_CLOS_sau_het_du_lieu_KCD', {'mt_clos_delay': 900, 'extra_mkt': (lo + 3 * H + 300000,)}, 'M-T', 'KHONG_CHAM_DUOC', None,
+         ['--max-ts', '2026-11-25 10:10'], False),
+        ('Y17_1_dong_MKT_hong_0_7pc', {'mkt_bad': 1}, 'M-E0', 'KHONG_CHAM_DUOC', None, [], False),
+        ('Y18_2_dong_TOM_TAT_hong', {'tt_bad': 1}, 'K2', 'KHONG_CHAM_DUOC', None, [], False),
+        ('C11_khan_rong_2_dong_hop_le', {'tt': lambda t: {'khan': ''} if lo + 6 * H <= t <= lo + 6 * H + 2 * M else None}, 'K2', 'DAT', None, [], True),
+        ('C12_khan_canh_bao_rong_2_dong_hop_le', {'tt': lambda t: {'khan_canh_bao': ''} if lo + 6 * H <= t <= lo + 6 * H + 2 * M else None},
+         'K2', 'DAT', None, [], True),
+        ('X04_1_dong_ALGO_hong_tren_1100', {'algo_flood': 1}, 'I4', 'KHONG_CHAM_DUOC', None, [], False),
+        ('H2_N6_luot_ssh_hong_toan_bo', {'tt': lambda t: {'_invalid': 1, 'latch': '', 'khan': '', 'jar': '', 'deadman': ''}
+                                         if t == lo + 6 * H else None}, 'K2', 'DAT', None, [], True),
         ('D1a_level', {'dca_ref': '1.5'}, 'D1', 'VI_PHAM', 'DO', [], True),
         ('D1e_thieu_AI_PASS', {'no_aipass': 1}, 'D1', 'VI_PHAM', 'DO', [], True),
         ('E8_D1_leg_DCA_khong_khop', {'dca_nofill': 1}, 'D1', 'DAT', None, [], True),
@@ -580,6 +654,13 @@ def main():
             code = '(' + name.split('_')[0] + ')'
             R.check('%s_ly_do_%s' % (name, code), any(code in v['ly_do'] for v in j['muc']['M-S']['su_kien_vi_pham']),
                     [v['ly_do'] for v in j['muc']['M-S']['su_kien_vi_pham']])
+        if name == 'Y03_C3b_ARM_giua_TS_va_CLOS' and j:
+            vv = j['muc']['M-T']['su_kien_vi_pham']
+            R.check('Y03_dung_1_VP_H1_cua_CLOS', len(vv) == 1 and 'H1' in vv[0]['ly_do'], vv)
+        if name == 'Y05_arm_sau_due_roi_TIME_STOP' and j:
+            R.check('Y05_co_VP_H1', any('H1' in v['ly_do'] for v in j['muc']['M-T']['su_kien_vi_pham']), j['muc']['M-T'])
+        if name == 'H2_N6_luot_ssh_hong_toan_bo':
+            R.check('H2_N6_dem_luot_doc_hong', j and j['muc']['K2']['mo_ta']['so_luot_doc_hong'] == 1)
         if name == 'E2_K2_1_luot_doc_hong_DAT':
             R.check('E2_dem_luot_doc_hong', j and j['muc']['K2']['mo_ta']['so_luot_doc_hong'] == 1)
     # (c) ngay rong

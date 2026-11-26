@@ -22,7 +22,7 @@ import time
 from decimal import Decimal, InvalidOperation
 
 LOG = logging.getLogger('pilot_m')
-PREREG_SHA = '2a21fe35+E1+E2'   # prereg 2a21fe35 + ERRATA1 c0f35f3c + ERRATA2 efc4f9c1
+PREREG_SHA = '2a21fe35+E1+E2+E3'   # prereg 2a21fe35 + ERRATA1 c0f35f3c + ERRATA2 efc4f9c1 + ERRATA3 230efcef
 TZ7 = dt.timezone(dt.timedelta(hours=7))
 DAT, VP, KCSK, KCD, KCDC = 'DAT', 'VI_PHAM', 'KHONG_CO_SU_KIEN', 'KHONG_CHAM_DUOC', 'KCD_CAU_TRUC'
 PRIO = {VP: 4, KCD: 3, KCDC: 2, KCSK: 1, DAT: 0}
@@ -721,7 +721,7 @@ def run_state(events):
             if cl is not None:
                 ev['dup_arm'] = cl.ph_armed
                 cl.ph_armed = True
-                cl.arm_ts.append(t)
+                cl.arm_ts.append((t, ev['seq']))      # (ms, thu tu dong) - A1 V3 m1
                 if cl.first_arm is None:
                     cl.first_arm = t
         elif f == 'STOP':
@@ -738,7 +738,7 @@ def run_state(events):
             cl = S.open.get(g[0])
             ev['cl'] = cl
             if cl is not None:
-                cl.rst_ts.append(t)
+                cl.rst_ts.append((t, ev['seq']))
                 cl.phase += 1
                 cl.ph_armed = False
                 cl.ph_lastP = None
@@ -1163,6 +1163,7 @@ def win_clusters(C):
 
 
 def chk_I10(C):
+    """ERRATA1 E6 + ERRATA3 H3: ghep BOOK / CLOS / SFIL theo CUM (cl.clos, cl.books); BOOK/CLOS mo coi => VI_PHAM."""
     it = Item('I10')
     if state_guard(C, it, ['CLOS', 'BOOK', 'SFIL']):
         return it
@@ -1170,36 +1171,29 @@ def chk_I10(C):
     for ev, cl in win_clusters(C):
         sym = ev['g'][0]
         if cl is None:
-            it.add(VP, ev['t'], sym, 'su kien dong cum (%s) khong thuoc cum mo nao' % ev['f'], ev['raw'])
+            it.add(VP, ev['t'], sym, 'H3: %s mo coi (khong gan duoc vao cum mo nao)' % ev['f'], ev['raw'])
             continue
         v, kc = [], []
         clos, books = cl.clos, cl.books
-        for b in books:   # E6: moi BOOK dung 1 CLOS cung symbol trong +-600 s
-            n = [c for c in symidx(C, 'CLOS', sym) if abs(c['t'] - b['t']) <= 600000]
-            if len(n) != 1:
-                if not n and b['t'] + 600000 > hz:
-                    kc.append('BOOK: het du lieu tim CLOS +600 s')
-                else:
-                    v.append('BOOK co %d dong CLOS trong +-600 s' % len(n))
-        for c in clos:    # va nguoc lai
-            n = [b for b in symidx(C, 'BOOK', sym) if abs(b['t'] - c['t']) <= 600000]
-            if len(n) != 1:
-                if not n and c['t'] + 600000 > hz:
-                    kc.append('CLOS: het du lieu tim BOOK +600 s')
-                else:
-                    v.append('CLOS co %d dong BOOK trong +-600 s' % len(n))
-        if cl.sfil_full is not None:
-            sfe = cl.sfil_full
-            n = [c for c in symidx(C, 'CLOS', sym) if abs(c['t'] - sfe['t']) <= 600000]
-            if not n:
-                if sfe['t'] + 600000 > hz:
-                    kc.append('SFIL du qty: het du lieu tim CLOS 600 s')
-                else:
-                    v.append('SFIL du qty cum ma khong co CLOS trong 600 s')
+        last = max([e['t'] for e in clos + books] + ([cl.sfil_full['t']] if cl.sfil_full else []))
         if len(clos) > 1:
             v.append('%d dong CLOS cho 1 cum' % len(clos))
         if len(books) > 1:
             v.append('%d dong BOOK cho 1 cum' % len(books))
+        if not clos or not books:
+            if last + 600000 > hz:
+                kc.append('het du lieu tim %s cua cum (+600 s)' % ('CLOS' if not clos else 'BOOK'))
+            else:
+                v.append('cum dong thieu %s (E6)' % ('CLOS' if not clos else 'BOOK'))
+        else:
+            for b in books:
+                if not any(abs(c['t'] - b['t']) <= 600000 for c in clos):
+                    v.append('BOOK khong co CLOS CUNG CUM trong +-600 s')
+            for c in clos:
+                if not any(abs(b['t'] - c['t']) <= 600000 for b in books):
+                    v.append('CLOS khong co BOOK CUNG CUM trong +-600 s')
+        if cl.sfil_full is not None and clos and not any(abs(c['t'] - cl.sfil_full['t']) <= 600000 for c in clos):
+            v.append('SFIL du qty cum ma khong co CLOS cung cum trong 600 s')
         r = clos[0]['g'][1] if clos else (books[0]['g'][1] if books else None)
         if clos and books and books[0]['g'][1] != clos[0]['g'][1]:
             v.append('BOOK ly do=%s khac CLOS (%s)' % (books[0]['g'][1], clos[0]['g'][1]))
@@ -1212,7 +1206,7 @@ def chk_I10(C):
             if r in DO_REASONS:
                 it.tags.add('CLOS_' + r)
         raws = [e['raw'] for e in clos] + [e['raw'] for e in books] + ([cl.sfil_full['raw']] if cl.sfil_full else [])
-        it.add(VP if v else (KCD if kc else DAT), ev['t'], sym, '; '.join(v + kc), raws)
+        it.add(VP if v else (KCD if kc else DAT), ev['t'], sym, '; '.join(sorted(set(v)) + kc), raws)
     return it
 
 
@@ -1333,11 +1327,16 @@ def chk_MT(C):
         v = e['g'][1]
         return 'OFF' if v.startswith('NA') else v     # E13: NA(->OFF) = OFF
 
+    def armed_at(cl, key):                            # ERRATA3 H1: ARM cuoi <= dong do, khong co RST sau no (so (ms, thu tu dong))
+        arms = [a for a in cl.arm_ts if a <= key]
+        return bool(arms) and not any(arms[-1] < r <= key for r in cl.rst_ts)
+
     def unarmed_at(cl, due):                          # E7
-        arms = [a for a in cl.arm_ts if a <= due]
+        key = (due, FAR)
+        arms = [a for a in cl.arm_ts if a <= key]
         if not arms:
             return True
-        return any(arms[-1] < r <= due for r in cl.rst_ts)
+        return any(arms[-1] < r <= key for r in cl.rst_ts)
 
     def pending_ok(t):
         u = dt.datetime.fromtimestamp(t / 1000.0, dt.timezone.utc)
@@ -1408,13 +1407,15 @@ def chk_MT(C):
         if cl.cancelled:
             continue
         due = cl.t0 + 168 * H
+        for e in cl.ts + [c for c in cl.clos if c['g'][1] == 'TIME_STOP_168H']:
+            if e['w'] and armed_at(cl, (e['t'], e['seq'])):
+                it.add(VP, e['t'], cl.sym, 'H1: TIME-STOP / CLOS TIME_STOP_168H khi cum dang co pha arm hieu luc', e['raw'])
+            elif e['w'] and e['t'] <= due - 2000:
+                it.add(VP, e['t'], cl.sym, 'TIME-STOP / CLOS TIME_STOP_168H som hon due-2s (due=%s)' % fmt(due), e['raw'])
         if due >= C.hi:
             continue
         if not unarmed_at(cl, due):
             continue
-        for e in cl.ts + [c for c in cl.clos if c['g'][1] == 'TIME_STOP_168H']:
-            if e['w'] and e['t'] <= due - 2000:
-                it.add(VP, e['t'], cl.sym, 'TIME-STOP / CLOS TIME_STOP_168H som hon due-2s (due=%s)' % fmt(due), e['raw'])
         if cl.closed is not None and cl.closed <= due - 2000:
             continue
         if C.lo <= due < C.hi:
@@ -1953,10 +1954,10 @@ def chk_K2(C):
         if exempt(t):
             continue
         v, kc = [], []
-        if kv.get('latch') != 'NONE':                         # (b) moi dong
+        if kv.get('latch') and kv.get('latch') != 'NONE':    # (b) moi dong, chi khi truong khong rong (ERRATA3 H2)
             v.append('latch=%s' % kv.get('latch'))
             latch_bad = True
-        if kv.get('khan') == 'KHAN':
+        if kv.get('khan') and kv.get('khan') == 'KHAN':
             v.append('khan=KHAN')
         if kv.get('jar') and kv.get('jar') != JAR:
             v.append('jar=%s' % kv.get('jar'))
@@ -1976,7 +1977,7 @@ def chk_K2(C):
             if pv is not None and not exempt(pv[0]):          # (c) 2 dong HOP LE lien tiep
                 for fld in ('khan_canh_bao', 'khan'):
                     a, bb = kv.get(fld), pv[1].get(fld)
-                    if a not in (None, '0') and a == bb:
+                    if a not in (None, '', '0') and a == bb:
                         v.append('%s=%s o 2 dong hop le lien tiep' % (fld, a))
         it.add(VP if v else (KCD if kc else DAT), t, None, '; '.join(v + kc), raw)
         if ok:

@@ -108,3 +108,28 @@ test/pm_tests.py, test/run_mutants.py: xem sha256sum (bao cao vong 3). Test 351/
 Test r_cap 1,0 DAT; 1,01 VANG TIER; 1,1 DO (kem S2 vi r_hi >= r_cap); 1,2 VANG; 1,21 DO. Chan gio official kiem bang ham thuan official_time_ok
 (gio tiem) + kiem main goi ham; KHONG chay --official that trong test/mutant. Dong dau prereg=2a21fe35+E1+E2.
 Thu 21/22/23: khong doi so voi vong 2 (VANG/VANG/XANH; M-S 21 DAT 24/24; K2 21-22 KCD thieu truong deadman, 23 DAT).
+
+# VONG 4 - A1_PILOT_M_TOOL_V2 m1-m5 + ERRATA3 230efcef (2026-11-26 ~12:20 +07). Sua tai cho tren ban da commit 989a2531, CHUA COMMIT.
+sha256: pilot_m_daily.py 0ab2edded6db7ed12e2a3a30b2ca456546728d88cc9decc702e5f6a5554871c7 (cong_cu=0ab2edded6db);
+README 54598698fb965711eb3ed01e368fc5ccfcf1c5de9e27e35300573bbe2a3d68cf; test/pm_tests.py 68f98deb952e74d7f8425e869fdf10c420a9008ca3ede8d7f23940891a39cb56;
+test/run_mutants.py 3319407a95b15e90678f22020fe617987cc027c5396719244a66a85c7816f3bd.
+Sua: H1 chk_MT (TIME-STOP / CLOS TIME_STOP_168H khi cum dang arm => VI_PHAM; kiem ca khi due >= cuoi ngay); H2 chk_K2 latch/khan/jar chi
+xet khi khong rong; H3 chk_I10 ghep theo cum (1 CLOS + 1 BOOK cung cum, +-600 s; SFIL du qty can CLOS cung cum; mo coi => VI_PHAM);
+dong dau prereg=2a21fe35+E1+E2+E3; README lua chon 9, 10 + bang muc.
+Test 371/371: them H1 (cum dang arm bi TIME-STOP => DO; chi CLOS TIME_STOP_168H => DO), arm->RST->time-stop DAT (giu), H2 N6 (luot ssh hong
+toan bo => DAT, so_luot_doc_hong=1), H3 N12 (2 cum SYMA dong cach 5 phut => DAT), BOOK mo coi => DO, X01 (CLOS sau BOOK 890 s => I10 VI_PHAM),
+X04 (1 dong ALGO hong / 1101 => I4 KHONG_CHAM_DUOC).
+Mutant 25/25 GIET (them X01 [bo moi han 600 s cua E6, ca 3 cho], X04, H1_bo, H2_latch_rong_van_xet, H3_mo_coi_thanh_DAT).
+Hoi quy: 21/22/23 (--max-ts 24/11 07:00) VANG/VANG/XANH khong doi; 24 (khong max-ts) va 25 (--max-ts 2026-11-26 07:00, khong doc du lieu D=26)
+TRUNG 100 % trang thai + mau tung muc voi ban chinh thuc v12/pilot_m/D_2026112{4,5}.json (bac XANH/XANH).
+
+# VONG 5 - A1_PILOT_M_TOOL_V3 (2026-11-26 ~12:40 +07). Sua tai cho, CHUA COMMIT.
+364ee37d866e5b2a1514d285fd4253ad75ce602629f38d98dbcd9370a9dd01f7  pilot_m_daily.py
+7c70dac1128463a1250214ce7985b05cff58d280f4a3a6e65d9b8a5c954b05bf  README_PILOT_M.md
+9f68aac7aab6db6c0346c1209a993dc5e0ed530e295aa7db5ca789dfc8add5b4  test/pm_tests.py
+47cdc68f67b532b7455f0a75886f1042fcf4742af662a66122cd9340248018f7  test/run_mutants.py
+- B1: chk_K2 (c) `a not in (None, '', '0')` (H2: khan / khan_canh_bao rong o dong hop le khong VI_PHAM); test C11, C12 => DAT.
+- m1/C3d: armed_at / unarmed_at so theo (ms, thu tu dong); ARM va RST cung ms (RST in sau) roi TS => DAT (test).
+- m4: nhat ky (README "Nhat ky thay doi"): khoi "TS som hon due-2 s" doi len truoc due >= C.hi / unarmed_at tu vong 4. m2: C6 vao README gioi han.
+- Test 417/417. Mutant 39/39 GIET (them B1 + Y01 Y03 Y05 Y20 Y07 Y08 Y12 Y13 Y14 Y15 Y19 Y17 Y18; Y20 dung lai theo code moi = so chi theo ms).
+- Hoi quy D=24 (khong max-ts), D=25 (--max-ts 2026-11-26 07:00): 31/31 muc trung trang_thai/mau/so_vi_pham/so_khong_cham_duoc voi ban chinh thuc; bac XANH/XANH.

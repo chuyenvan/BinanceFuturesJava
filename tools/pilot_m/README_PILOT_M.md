@@ -1,4 +1,4 @@
-# README_PILOT_M - bo cham hang ngay phan CHI LOG cua PREREG_PILOT_M (prereg 2a21fe35 + ERRATA1 c0f35f3c + ERRATA2 efc4f9c1)
+# README_PILOT_M - bo cham hang ngay phan CHI LOG cua PREREG_PILOT_M (prereg 2a21fe35 + ERRATA1 c0f35f3c + ERRATA2 efc4f9c1 + ERRATA3 230efcef)
 Trang thai: CHUA COMMIT, CHUA qua A1. Ket qua chi dung sau khi A1 duyet (prereg muc 12).
 
 ## Chay
@@ -11,19 +11,19 @@ Trang thai: CHUA COMMIT, CHUA qua A1. Ket qua chi dung sau khi A1 duyet (prereg 
 - Thu / go loi: `pilot_m_daily.sh <D> --out-dir <dir> --max-ts "2026-11-24 07:00"` (`--max-ts` bo MOI dong log/cron >= moc,
   dong bi bo khong parse, khong dem, khong in).
 - Test: `test/test_pilot_m_daily.sh` (du lieu tong hop trong `mktemp -d`, xoa sau khi chay) => "KET QUA x/y".
-  Mutant: `test/run_mutants.sh` (17 mutant song cua A1 dung lai, chay ca bo test tren tung mutant) => "MUTANT GIET x/20" (17 cua A1 + S1, S1b, chan gio official).
+  Mutant: `test/run_mutants.sh` (17 mutant song cua A1 dung lai, chay ca bo test tren tung mutant) => "MUTANT GIET x/39" (17 A1 v1 + S1, S1b, chan gio + X01, X04, H1, H2, H3 + B1 + 13 Y cua A1 v3).
 - Dau vao: `pull242/<D>/{COMPLETE,check.txt,logs/full.log*.gz,dumps/sel_dump_*.csv.gz}` + pull cac ngay tu `--state-start`
   (mac dinh 2026-11-21, prereg muc 0) toi D-1 (chi cua so tung ngay, dung trang thai cum) + `golive_monitor_cron.log.1` va
   `golive_monitor_cron.log` (dong TOM TAT, E2).
   Cua so D = [D 07:00; D+1 07:00) +07; doc them <= 2 h SAU cua so trong CHINH file pull D (lookahead cho han 61 s/300 s/600 s).
   Banner khoi dong / [KILLSW] HOURLY / RECON HOURLY / C2_WARN / CANH BAO ky quy lay tu moi dong cua cac file da doc (ke ca truoc cua so)
   de biet JVM dang chay (C3_CAPITAL), eq_lo, streak.
-- Dau ra: dong dau md `PILOT-M D=.. cham_luc=.. bac=.. prereg=2a21fe35+E1+E2 cong_cu=<sha256[:12] pilot_m_daily.py>`; bang 1 dong/muc
+- Dau ra: dong dau md `PILOT-M D=.. cham_luc=.. bac=.. prereg=2a21fe35+E1+E2+E3 cong_cu=<sha256[:12] pilot_m_daily.py>`; bang 1 dong/muc
   (M-E, M-E0, M-I, M-T, M-D, M-S, M-X, M-G, M-K); dong equity chi ti le (dd, acct_dd); dong kiem_cheo de MASTER dien.
   json: moi muc {trang_thai, mau, so_vi_pham, su_kien_vi_pham[t, symbol, ly_do, dong_log da loc], su_kien_khong_cham_duoc, ...},
   bac_muc, hai_ngay_vang_lien_tiep_cung_muc (doc D_<D-1>.json cung thu muc), du_lieu (dong parse / khong parse theo mau).
 
-## Muc -> ham -> dieu khoan (prereg 2a21fe35 + ERRATA1 c0f35f3c + ERRATA2 efc4f9c1)
+## Muc -> ham -> dieu khoan (prereg 2a21fe35 + ERRATA1 c0f35f3c + ERRATA2 efc4f9c1 + ERRATA3 230efcef)
 | Muc | Ham | Prereg / ERRATA1 |
 |---|---|---|
 | M-E0 (a)(b)(c)(d) | chk_ME0 | 1.3 (dong 69-76); E10 (level leg 0 khac => VI_PHAM) |
@@ -32,23 +32,23 @@ Trang thai: CHUA COMMIT, CHUA qua A1. Ket qua chi dung sau khi A1 duyet (prereg 
 | I4 (d) | chk_I4 | E3 (TRIGGERING/TRIGGERED cua cid STOP cuoi, +-61 s) |
 | I8 | chk_I8 | 2.2 dong 114-116; E4 (DELIST_SETTLE chi khi --delist-noted) |
 | I9 (a)=I3,(b) F float32,(c) | chk_I9 + trail_sl | 2.1 dong 89-93, 2.2 dong 117-119 |
-| I10 | chk_I10 + win_clusters | dong 120-125; E4; E6 (cum dong = CLOS / BOOK / SFIL du qty; BOOK<->CLOS +-600 s) |
+| I10 | chk_I10 + win_clusters | dong 120-125; E4; E6 + ERRATA3 H3 (ghep BOOK/CLOS/SFIL theo CUM, +-600 s; BOOK/CLOS mo coi => VI_PHAM) |
 | I11 (a)(b)(c) | chk_I11 | dong 126-133 (moc = su kien dong dau tien theo E6) |
 | I12 (a)(b)(c)(d) | chk_I12 | dong 134-135; E11 |
-| M-T (A)(B) | chk_MT | muc 3 dong 138-169; E7 (RST sau ARM => lai thuoc time-stop); E13 (NA = OFF) |
+| M-T (A)(B) | chk_MT | muc 3 dong 138-169; E7; E13 (NA = OFF); ERRATA3 H1 (TIME-STOP / CLOS TIME_STOP_168H khi cum dang arm => VI_PHAM) |
 | M-D D1 (a)-(e) + ghi 15M | chk_D1 | muc 4 dong 192-195; E8 (leg DCA khong khop: bo (a)) |
 | M-S S1-S9 | chk_MS | muc 5 + E1/E5 + ERRATA2 F2 (S1 r_cap > 1,2(1+1e-6) DO; S1b (1+1e-6; 1,2(1+1e-6)] VANG TIER; S3 VANG EQ_DUOI; S5/S6 KCD_CAU_TRUC) |
 | M-X | chk_MX | muc 6 dong 235-248 |
 | K1 | chk_K1 | muc 8 dong 262-265; E12 (khung [pilot_on; +60']) |
-| K2 | read_cron + chk_K2 | E2 (thay noi dung) + ERRATA2 F1 (cuoi ngay = min(D+1 07:00, thoi diem cham)) + R4 |
+| K2 | read_cron + chk_K2 | E2 (thay noi dung) + ERRATA3 H2 + ERRATA2 F1 (cuoi ngay = min(D+1 07:00, thoi diem cham)) + R4 |
 | K3..K6 | chk_K3..chk_K6 | muc 8 dong 272-282 (+R2) |
 | fail-closed | classify / fam_bad | E9 (0 dung sai, tru MKT/AIPASS/SKIPORD/DCAGRID 0,1 %); A1 T1 (tien to + OTHER_TPL) |
-| bac | bac_of / render | muc 10 dong 296-311 + E5; muc 9 dong 287-294; dong dau prereg=2a21fe35+E1+E2 |
+| bac | bac_of / render | muc 10 dong 296-311 + E5; muc 9 dong 287-294; dong dau prereg=2a21fe35+E1+E2+E3 |
 | KCD_CAU_TRUC | KCDC_ITEMS | M-E, I1, I2, I5, I6, I7, D2, D3, D4, L-S, L-S2, M-G, K7 (Q4), M-S S5/S6 (R3) |
 
 ## Mau dong log (FAMS trong pilot_m_daily.py) - code c3_hotfix 4fdda6f8, P = src/main/java/com/binance/chuyennd
 Header: `^dd/MM/yyyy HH:mm:ss.SSS LEVEL [thread] logger: msg` (HDR). Dong co tien to quan tam ma khong khop mau chat => "khong parse".
-Dong dau md: `PILOT-M D=.. cham_luc=.. bac=.. prereg=2a21fe35+E1+E2 cong_cu=<sha256[:12]>`.
+Dong dau md: `PILOT-M D=.. cham_luc=.. bac=.. prereg=2a21fe35+E1+E2+E3 cong_cu=<sha256[:12]>`.
 
 | Ho | Mau (tom tat) | Code |
 |---|---|---|
@@ -92,10 +92,10 @@ Dem chuoi con (khong parse): " ERROR ", "KHAN", "LECH QTY", "van lech qty", "CHA
 8. (moi, T1) Dong bat dau bang tien to A1 khong khop ho nao: neu khop mau OTHER_TPL (chuoi literal trich tu code 4fdda6f8 co tien to
    do, KHONG gom chuoi cua ho cham, so khop tien to, {} = bat ky; +3 mau ghep chuoi TrailingStopManager :307, Reconciler :276,
    KillSwitchEngine :1157) => bo qua; khong khop => khong parse cua gia-ho "PFX:<tien to>" (tinh cho moi ho co tien to do).
-9. (moi, E6) BOOK dong cum trong trang thai (cum mo bi go tai BOOK neu CLOS chua toi). "SFIL du qty ma khong co CLOS trong 600 s"
-   xet CLOS cung symbol trong [t_SFIL - 600 s ; t_SFIL + 600 s].
-10. (moi, E2) Dong TOM TAT hop le thieu truong deadman= => KHONG_CHAM_DUOC dong do (log thieu truong, muc 0) - chi gap o cron truoc
-   22/11 17:24. Dong khong hop le: (b) van xet latch != NONE (ke ca rong), khan=KHAN, jar (khi khong rong).
+9. (E6 + H3) BOOK dong cum trong trang thai (cum mo bi go tai BOOK neu CLOS chua toi; CLOS/BOOK toi sau gan vao cum vua dong).
+   Ghep theo CUM: moi cum dung 1 CLOS + 1 BOOK cach nhau <= 600 s; SFIL du qty can CLOS cung cum trong +-600 s.
+10. (E2 + ERRATA3 H2) Dong TOM TAT hop le thieu truong deadman= => KHONG_CHAM_DUOC dong do (log thieu truong, muc 0) - chi gap o cron
+   truoc 22/11 17:24. (b) latch / khan / jar chi xet khi truong KHONG rong (luot doc hong chi dem so_luot_doc_hong).
 11. (ERRATA2 F1 xac nhan) moc cuoi doan cuoi ngay = min(D+1 07:00, thoi diem DOC cron = cham_luc, --max-ts), khong phai dong cuoi
    trong file (neu hieu la dong cuoi thi monitor chet khong bao gio sinh khoang trong - ca pha B10).
 12. (ERRATA2 F3 xac nhan) flag=NA(->OFF) = OFF chi cho M-T; K4 van doi flag=(ON|OFF) => NA => K4 VI_PHAM (VANG).
@@ -107,8 +107,17 @@ peak= trong dong [KILLSW]/TOM TAT, moi key chua WALLET/BALANCE, so_du*/equity_so
 noi dung ngoac sau "eq = C3_CAPITAL + (", dd=/key= trong TOM TAT, toan bo noi dung [C3-LIVE-EQ] va "Telegram respon", signature= => <SIG>,
 token `[0-9]{8,10}:[A-Za-z0-9_-]{30,}` => <TOKEN>. eq= chi dung trong bo nho (M-S). Bao cao chi in ti le (r, dd, bps), khong so tien.
 
+## Nhat ky thay doi
+- Vong 4 (ERRATA3): khoi "TIME-STOP / CLOS TIME_STOP_168H som hon due - 2 s" duoc doi len TRUOC `if due >= C.hi` va `unarmed_at`
+  (cung vong lap H1) => nay bat ca TS som khi due con o tuong lai / cum dang arm tai due (truoc day lot). A1 V3 xac nhan dung huong E7.
+- Vong 5 (A1 V3): B1 K2 (c) bo qua khan / khan_canh_bao RONG o dong hop le (H2); armed_at / unarmed_at so theo (ms, thu tu dong)
+  thay vi chi ms (ARM va RST cung ms: dong in sau thang); them test giet B1, Y01, Y03, Y05, Y07, Y08, Y12-Y15, Y17-Y20.
+
 ## Gioi han
 Khong kiem duoc: gia tri env hieu luc (TS_MAX_GAP, giveback, C2*, MIN_MOMENTUM_15M) - I9(b) gia dinh GAP 0,03 / GIVEBACK 1 theo prereg;
 stepSize/tickSize (khong co exchangeInfo); oracle_seen (K7); moi phan can Vision/rig. Lookahead chi trong file pull D (~83 phut).
 Chua co du lieu that cho: DCA, TIME-STOP, defer-START [C3LIVE-OPS], PX_CORRECTED, lop B, LECH, LATCH, restart trong ngay - cac mau nay
 chi kiem bang test tong hop + doi chieu chuoi code.
+C6 (gioi han da biet, A1 V3): dong BOOK / CLOS khong mang id cum; neu CLOS cum 1, cum 2 mo, CLOS cum 2 roi moi toi BOOK cum 1, BOOK cum 2
+=> cong cu gan BOOK cum 1 vao cum 2 (lan dong gan nhat cua symbol) => I10 VI_PHAM gia. Thuc te BOOK/CLOS cung luong closedOnExchange
+cach ~100 ms nen kho xay ra; neu gap, MASTER doi chieu tay.
