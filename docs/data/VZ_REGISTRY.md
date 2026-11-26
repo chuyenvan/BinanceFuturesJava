@@ -283,3 +283,21 @@ KHÔNG có tháng nào cần bù trước khi chạy tiếp; job tiếp tục �
 
 ## P1b basis1m (2021)
 - slug `chuyendinh/vz-basis1m-2021`; files 12; bytes 1723111935; rows 61117704; syms~138; gov DEV
+
+## P1b kline1m (2026)
+- slug `chuyendinh/vz-kline1m-2026`; files 9; bytes 5628655681; rows 281625751; syms~869; gov HOLDOUT DA DUNG (HO4) - khong dung de chon/tune
+
+## P1b basis1m (2026)
+- slug `chuyendinh/vz-basis1m-2026`; files 9; bytes 5083020242; rows 241569258; syms~738; gov HOLDOUT DA DUNG (HO4) - khong dung de chon/tune
+
+## P1b kline1m (2026)
+- slug `chuyendinh/vz-kline1m-2026`; files 9; bytes 5628655681; rows 281625751; syms~869; gov HOLDOUT DA DUNG (HO4) - khong dung de chon/tune
+
+## P1b basis1m (2026)
+- slug `chuyendinh/vz-basis1m-2026`; files 9; bytes 5083020242; rows 241569258; syms~738; gov HOLDOUT DA DUNG (HO4) - khong dung de chon/tune
+
+## P1b kline1m (2026)
+- slug `chuyendinh/vz-kline1m-2026`; files 9; bytes 5628655681; rows 281625751; syms~869; gov HOLDOUT DA DUNG (HO4) - khong dung de chon/tune
+
+## P1b basis1m (2026)
+- slug `chuyendinh/vz-basis1m-2026`; files 9; bytes 5083020242; rows 241569258; syms~738; gov HOLDOUT DA DUNG (HO4) - khong dung de chon/tune
