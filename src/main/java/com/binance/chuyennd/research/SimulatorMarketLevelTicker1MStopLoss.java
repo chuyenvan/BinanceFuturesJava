@@ -493,6 +493,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                             logByProcessTime(startTimeRun, "Done budget data", time);
                             // [NUP3-SLEEVE] pha sleeve CUOI tick, SAU toan bo so nen (nen khong doc state sleeve). TAT => bo qua.
                             if (sleeveBook != null) sleevePhase(time, symbol2Ticker, marketData, levelChange, predict, tickBlocked);
+                            // [NUP4] do luong equity MTM GOP (nen+sleeve) moi tick — chi DOC, khong doi quyet dinh.
+                            measureEquityAll(time, symbol2Ticker);
                             // [TICKLOG] read-only: tong hop moc 15 phut (equity mark-to-market + pool).
                             if (TickDecisionLog.ON) {
                                 TickDecisionLog.ctxRank = -1;
@@ -592,6 +594,7 @@ public class SimulatorMarketLevelTicker1MStopLoss {
                 Storage.writeObject2File("storage/BalanceIndex.data", BudgetManagerSimple.getInstance().balanceIndex);
                 TraceOrderDone.printOrderTestDone("storage/printDone.csv", allOrderDone);
                 if (sleeveBook != null) sleeveWriteOutputs();   // [NUP3-SLEEVE] noi dong book=sleeve SAU moi dong nen
+                writeEquityOutputs();                            // [NUP4] equity_day.csv + equity_summary.json
                 if (Configs.LOSER_TS_EXT_HOURS > 0) {
                     LOG.info("[TSX] extHours={} extDays={} deferTicks={} deferClusters={} cutAfterDefer={}",
                             Configs.LOSER_TS_EXT_HOURS, Configs.LOSER_TS_EXT_DAYS.size(), tsxDeferTicks, tsxDeferClusters,
@@ -1814,6 +1817,59 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         sleeveCandLog.append(time).append(',').append(c.sid).append(',').append(c.rank).append(',').append(c.sp)
                 .append(',').append(c.p15).append(',').append(c.bookFull ? 1 : 0).append(',').append(burst)
                 .append(',').append(flag ? 1 : 0).append(',').append(dec).append('\n');
+    }
+
+    // ===== [NUP4 2026-10-31] do luong equity MTM GOP cho MOI run (ke ca B0 khong sleeve) =====
+    //  Khong tham gia quyet dinh; de cham G3 (maxDD) khi cache gia parquet khong con tren Oracle.
+    float eqPeakLow = Float.NaN, eqMaxDD = 0f, eqMaxDDPct = 0f;
+    long eqMaxDDT = 0L, eqDayCur = Long.MIN_VALUE;
+    float eqDayLow = Float.NaN, eqDayClose = Float.NaN;
+    final StringBuilder eqDays = new StringBuilder();
+
+    private void measureEquityAll(long time, KlineObjectSimple[] tk) {
+        float[] acc = new float[3];
+        accBook(symbol2OrderRunning, activeRunningIds, activeRunningCount, tk, acc);
+        if (sleeveBook != null) accBook(sleeveBook.symbol2OrderRunning, sleeveBook.activeRunningIds,
+                sleeveBook.activeRunningCount, tk, acc);
+        BudgetManagerSimple b = BudgetManagerSimple.getInstance();
+        float realized = b.balanceBasic + b.profit + (sleeveBook != null ? sleeveBook.bm.profit : 0f);
+        float eqClose = realized + acc[1];
+        float eqLow = realized + acc[2];
+        if (Float.isNaN(eqPeakLow) || eqLow > eqPeakLow) eqPeakLow = eqLow;
+        float dd = eqPeakLow - eqLow;
+        if (dd > eqMaxDD) {
+            eqMaxDD = dd;
+            eqMaxDDPct = eqPeakLow > 0f ? dd / eqPeakLow : 0f;
+            eqMaxDDT = time;
+        }
+        long day = Math.floorDiv(time, Utils.TIME_DAY);
+        if (eqDayCur == Long.MIN_VALUE) {
+            eqDayCur = day;
+            eqDayLow = eqLow;
+        } else if (day != eqDayCur) {
+            eqDays.append(eqDayCur * Utils.TIME_DAY).append(',').append(eqDayClose).append(',')
+                    .append(eqDayLow).append('\n');
+            eqDayCur = day;
+            eqDayLow = eqLow;
+        } else if (Float.isNaN(eqDayLow) || eqLow < eqDayLow) {
+            eqDayLow = eqLow;
+        }
+        eqDayClose = eqClose;
+    }
+
+    private void writeEquityOutputs() throws IOException {
+        if (eqDayCur != Long.MIN_VALUE && !Float.isNaN(eqDayLow)) {
+            eqDays.append(eqDayCur * Utils.TIME_DAY).append(',').append(eqDayClose).append(',')
+                    .append(eqDayLow).append('\n');
+        }
+        java.nio.file.Files.write(java.nio.file.Paths.get("storage/equity_day.csv"),
+                ("tMs,eq_close,eq_low\n" + eqDays).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        String js = String.format(java.util.Locale.ROOT,
+                "{\"maxdd_mtm_low_usd\":%.2f,\"maxdd_mtm_low_pct\":%.6f,\"maxdd_t\":\"%s\",\"peak_low\":%.2f}",
+                eqMaxDD, eqMaxDDPct, Utils.normalizeDateYYYYMMDDHHmm(eqMaxDDT), eqPeakLow);
+        java.nio.file.Files.write(java.nio.file.Paths.get("storage/equity_summary.json"),
+                js.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        LOG.info("[NUP4-EQ] {}", js);
     }
 
     /** Do luong moi tick (doc 2 so, khong quyet dinh): U tong, maxDD MTM gop @bar.low, so vi the. */
