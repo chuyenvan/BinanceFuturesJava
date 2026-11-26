@@ -60,7 +60,14 @@ public class AIRejectFilter {
      */
     public FilterResult entryGate(AiPredictionData prediction, Float symbolPred, boolean predictSymbolTrade) {
         Float sp = predictSymbolTrade ? symbolPred : null;
-        return evaluate(prediction.predReturn15M, EntryGate.threshold(Configs.MIN_MOMENTUM_15M, sp));
+        // [GD92-RECHECK 2026-09-15] phuc hoi nguong TRUOT theo phan vi (docs/PREREG_GD92_RECHECK.md).
+        //   Ban cu f1c43a3^ bom o AIRejectFilter.thres15M = DUNG cho nguong CO SO nay.
+        //   Key SIM_GATE_ROLLING_PCT khong khai bao -> isOn()=false -> bieu thuc y het HEAD
+        //   -> byte-identical (cong parity GD_PARITY_C3).
+        float thrBase = GateRollingThreshold.isOn()
+                ? GateRollingThreshold.threshold(prediction.timestamp)
+                : Configs.MIN_MOMENTUM_15M;
+        return evaluate(prediction.predReturn15M, EntryGate.threshold(thrBase, sp));
     }
 
     /** Giu signature cu de khong vo caller (BackTestEngineCombined/MarketThresholds/BenchmarkSpeedTest) —
