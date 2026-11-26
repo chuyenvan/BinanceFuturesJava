@@ -594,6 +594,8 @@ public class SimulatorMarketLevelTicker1MStopLoss {
         LOG.info("[GATE] scale={} base={} n_cand={} n_pass={}",
                 com.binance.chuyennd.tradecore.EntryGate.GATE_DYN_SCALE,
                 Configs.MIN_MOMENTUM_15M, ablationSignalSeen, ablationPassCount);
+        // [GDV2-EVEN 2026-09-29] thuan LOG (rho + per-quarter), khong doi printDone => parity byte-identical.
+        LOG.info("[GATE-RATIO] {}", com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.stats());
         // [GATE-RECAL 2026-09-26] docs/prereg/PREREG_GATE_RECAL.md §1 — thuan LOG, khong doi printDone.
         if (com.binance.chuyennd.tradecore.EntryGate.P15_Q > 0f) {
             LOG.info("[GATE-RECAL] W={}d Q={} sampleMin={} (thr_rolling = phan vi cuon p15 cua chinh nguon sim)",
@@ -941,6 +943,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
             }
         }
         // 3. CHẠY PRE-CALCULATE (SORT SẴN FUNDING FEE MỘT LẦN DUY NHẤT)
+        // [GD92-RECHECK 2026-09-15] gate nguong truot theo phan vi. Key khong khai bao -> no-op.
+        com.binance.chuyennd.ai_ml.onnx.entry.GateRollingThreshold.init(predictionMap);
+        // [GDV2-EVEN 2026-09-29] quantile cuon tren TY SO r (MODE=ratio). Key vang -> no-op.
+        com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.init();
         preprocessFundingData(time2SymbolPred);
         aiRejectFilter = new AIRejectFilter();
 
@@ -1575,6 +1581,10 @@ public class SimulatorMarketLevelTicker1MStopLoss {
 
         this.time2MarketData = time2MarketData;
         this.predictionMap = predictionMap;
+        // [GD92-RECHECK 2026-09-15] gate nguong truot theo phan vi. Key khong khai bao -> no-op.
+        com.binance.chuyennd.ai_ml.onnx.entry.GateRollingThreshold.init(predictionMap);
+        // [GDV2-EVEN 2026-09-29] quantile cuon tren TY SO r (MODE=ratio). Key vang -> no-op.
+        com.binance.chuyennd.ai_ml.onnx.entry.GateRollingRatio.init();
         this.time2SymbolPred = time2FundingPre;
         // 3. CHẠY PRE-CALCULATE (SORT SẴN FUNDING FEE MỘT LẦN DUY NHẤT)
         preprocessFundingData(this.time2SymbolPred);
