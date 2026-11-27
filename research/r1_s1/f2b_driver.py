@@ -16,6 +16,10 @@ Usage (seed chi A1 | S7; cwd bat ky):
   grid [--max-slots N]         MOT vong: fetch o COMPLETE, push o chua push (thu tu bang prereg; dung khi FREE=0 hoac
                                so kernel f2b dang chay >= N), in bang 48 o roi THOAT. Kernel loi: ghi nhan, KHONG push lai.
   status                       in bang 48 o + parity/smoke (khong push, khong fetch)
+  score [--out DIR]            cham muc 5 prereg tu output DA fetch (KHONG goi mang): CAGR / maxDD (equity cuoi ngay b+unP
+                               trong sim.out) / Calmar / so lenh / PnL 2022-2025 / ly do thoat; ghi F2B_SCORE.md + .json
+A1 V3: parity_ok kiem overlay_result_errs tren dia (N1); fetch tung o luoi kiem overlay sha + dong cam + JAR + mapper (N2),
+khong dat -> LOI; ghi so lenh tren symbol funding chi-co-trong-v3 vao marker o (N2b).
 OVERLAY: moi cau hinh (NEN, smoke, 24 o) chay qua patch ho5_k2+ho5_k3 (snapshot symbol mapper + funding_data, khong
 ket noi Aerospike Oracle 3222 - cong dong tu 2026-11-11); dataset_sources them ho5-a3-mapper-snap, ho5-a3-funding-snap.
 fetch: chi tai log + result.json + printDone.csv + sim.out.gz + full/error.log (khong a3_ds/funding.bin 4.4 GB).
@@ -40,6 +44,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from datetime import datetime
 from decimal import Decimal
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -498,6 +503,7 @@ def parity_ok(seed, why=None):
         why.append("result.json tag %r != %s" % (res.get("tag"), tag))
     if res.get("jar_sha256") != rref.get("jar_sha256"):
         why.append("jar_sha256 %r != r1-a3" % res.get("jar_sha256"))
+    why.extend("overlay: " + e for e in overlay_result_errs(res))   # A1 V3 N1
     if why:
         log.warning("PARITY_OK %s KHONG hop le: %s", seed, "; ".join(why))
         return False
@@ -855,7 +861,120 @@ def cmd_fetch(cell, seed, smoke=False):
         if fails:
             raise SmokeFail("SMOKE_FAIL %s: %s" % (tag, "; ".join(fails)), fails)
         log.info("SMOKE_CHECKS_PASS %s (con doc tay: profit TP, HARD SL) - A1/MASTER phan xet", tag)
+        return fr
+    errs = check_cell_fetch(ks, tag, seed, fr)
+    if errs:
+        raise KernelError("CELL_CHECK_FAIL %s: %s" % (tag, "; ".join(errs)), errs)
     return fr
+
+
+# ---- A1 V3 N2: kiem TUNG o sau fetch (grid / fetch) ----
+def cell_output_errs(fr, jar_ref, java_rc_ref):
+    """Loi output 1 o (rong = dat): result.json co sha overlay ghim (ho5_mapper / ho5_funding); KHONG co dong cam
+    (OVL_FORBIDDEN + PAT_PARSE_ERR) trong moi log; JAR_SHA256 (log + result.json) co va == jar r1-a3 (cc0f9d11...);
+    mapper (log + result.json) co va >= 800; result.ok == true; co printDone.csv; java_rc == java_rc run tham chieu
+    r1-a3 cung seed (hien = 1: SimulatorMarketLevelTicker1MStopLoss.main luon goi System.exit(1) sau khi sim xong)."""
+    res = fr.get("result") or {}
+    d = fr.get("dir")
+    per = scan_logs(_log_files(d)) if d and os.path.isdir(d) else {}
+    tot = lambda k: sum(v[k] for v in per.values())  # noqa: E731
+    errs = ["overlay: " + e for e in overlay_result_errs(res)]
+    if res.get("ok") is not True:
+        errs.append("result.ok %r != true" % (res.get("ok"),))
+    if not fr.get("print_done") or not os.path.exists(fr["print_done"]):
+        errs.append("khong co printDone.csv")
+    if res.get("java_rc") != java_rc_ref:
+        errs.append("java_rc %r != run tham chieu %r" % (res.get("java_rc"), java_rc_ref))
+    if tot("parse_err") > 0:
+        errs.append("co '%s' (%d)" % (PAT_PARSE_ERR, tot("parse_err")))
+    for k in OVL_FORBIDDEN:
+        if tot("ovl:" + k) > 0:
+            errs.append("co dong cam '%s' (%d)" % (k, tot("ovl:" + k)))
+    jars = set().union(*[v["jar"] for v in per.values()]) if per else set()
+    if res.get("jar_sha256"):
+        jars.add(res["jar_sha256"])
+    if not jars:
+        errs.append("khong thay JAR_SHA256")
+    elif any(not j.startswith(JAR_SHA_PREFIX) or j != jar_ref for j in jars):
+        errs.append("JAR_SHA256 %s != %s" % (sorted(jars), jar_ref))
+    mappers = [m for v in per.values() for m in v["mapper"]]
+    if isinstance(res.get("symbol_mapper"), int):
+        mappers.append(res["symbol_mapper"])
+    if not mappers:
+        errs.append("khong thay so mapper")
+    elif min(mappers) < 800:
+        errs.append("mapper %s < 800" % sorted(set(mappers)))
+    return errs
+
+
+# ---- A1 V3 N2b / ERRATA2 P4: symbol co moc funding 2025 CHI co trong snapshot v3 ----
+V3_GATE = os.path.join(HO5_DIR, "fund", "ds3", "gate2025.json")
+V3_GATE_SHA = "c66396e45e9015da0d6711306a5166ab0df47eca78b779f32319b3147a95cc3f"
+UNKNOWN_V3 = "khong xac dinh duoc"
+
+
+def v3_only_syms():
+    """Tap symbol (bo hau to USDT) tu gate2025.json (ghim sha): only_crawl_top, tong so moc phai == only_crawl (3 420).
+    Khong doc duoc / sha khac / tong lech -> None (KHONG doan)."""
+    try:
+        if _sha256f(V3_GATE) != V3_GATE_SHA:
+            return None
+        g = _jload(V3_GATE)
+        top = g.get("only_crawl_top") or []
+        if not top or sum(int(n) for _s, n in top) != int(g.get("only_crawl", -1)):
+            return None
+    except (OSError, ValueError, TypeError):
+        return None
+    return frozenset(_bare(s) for s, _n in top)
+
+
+def _bare(sym):
+    sym = (sym or "").strip()
+    return sym[:-4] if sym.endswith("USDT") else sym
+
+
+def v3_only_counts(pd_path):
+    """So lenh printDone + so lenh tren symbol v3-only (va so lenh giu qua mot phan nam 2025)."""
+    syms = v3_only_syms()
+    if syms is None:
+        return {"v3_only": UNKNOWN_V3}
+    n, n3, n3y, per = 0, 0, 0, collections.Counter()
+    with open(pd_path, newline="") as f:
+        for row in csv.DictReader(f):
+            n += 1
+            s = _bare(row.get("sym"))
+            if s in syms:
+                n3 += 1
+                per[s] += 1
+                st, en = (row.get("start") or "").strip(), (row.get("end") or "").strip()
+                if st[:8] < "20260101" and en[:8] >= "20250101":
+                    n3y += 1
+    return {"n_trades_printdone": n, "v3_only_syms": sorted(syms), "n_trades_v3_only": n3,
+            "n_trades_v3_only_hold_2025": n3y, "v3_only_per_sym": dict(per)}
+
+
+def check_cell_fetch(ks, tag, seed, fr):
+    """Sau fetch 1 o: cell_output_errs -> marker cell_check = 'OK' | [loi] (+ error -> LOI, KHONG tu push lai);
+    ghi them v3_only (N2b). Tra list loi."""
+    _, rref = ref_md5(ks, seed_ok(seed))
+    errs = cell_output_errs(fr, rref["jar_sha256"], rref.get("java_rc"))
+    m = _marker(tag) or {"tag": tag, "seed": seed}
+    res = fr.get("result") or {}
+    m.update(java_rc=res.get("java_rc"), java_rc_ref=rref.get("java_rc"), ok=res.get("ok"),
+             has_printdone=bool(fr.get("print_done")))
+    pd = fr.get("print_done")
+    m["v3_only"] = v3_only_counts(pd) if pd else {"v3_only": "khong co printDone"}
+    if errs:
+        m["cell_check"] = errs
+        m["error"] = "cell_check: " + "; ".join(errs)
+        log.error("CELL_CHECK_FAIL %s: %s", tag, "; ".join(errs))
+    else:
+        m["cell_check"] = "OK"
+        if str(m.get("error") or "").startswith("cell_check"):
+            del m["error"]
+        log.info("CELL_CHECK_OK %s v3_only=%s", tag, json.dumps(m["v3_only"]))
+    _save_marker(tag, m)
+    return errs
 
 
 # ---- N5: grid ----
@@ -864,28 +983,36 @@ def grid_order():
     return [(c, s) for c in CELLS if c != NEN for s in SEEDS]
 
 
-def _row_state(ks, tag, act):
-    """Trang thai 1 o: CHUA_PUSH | DANG_CHAY | XONG | LOI | CHO_FETCH. act=True: COMPLETE chua fetch -> fetch moi."""
+def _done_state(m):
+    """XONG <=> cell_check == OK (N2: gom result.ok true, co printDone, java_rc == run tham chieu cung seed, overlay, JAR,
+    mapper, khong dong cam). MASTER 2026-11-27: KHONG dung java_rc == 0 (run tham chieu r1-a3 / ho5 rep4 deu java_rc 1)."""
+    if m.get("cell_check") != "OK":
+        return "LOI", dict(m, error=m.get("error") or "chua kiem o (A1 N2) -> chay lai 'fetch <cell> <seed>'")
+    return ("XONG" if m.get("ok") is True and m.get("has_printdone") else "LOI"), m
+
+
+def _row_state(ks, tag, act, seed=None):
+    """Trang thai 1 o: CHUA_PUSH | DANG_CHAY | XONG | LOI | CHO_FETCH. act=True: COMPLETE chua fetch -> fetch moi + kiem o (N2)."""
     m = _marker(tag)
     if m is None:
         return "CHUA_PUSH", None
     if m.get("error"):
         return "LOI", m
     if m.get("ts_fetch"):
-        return ("XONG" if m.get("ok") and m.get("java_rc") == 0 else "LOI"), m
+        return _done_state(m)
     st = _status_of(ks, m)
     if st == "COMPLETE":
         if not act:
             return "CHO_FETCH", m
         try:
-            _fresh_fetch(ks, tag)
+            fr = _fresh_fetch(ks, tag)
+            check_cell_fetch(ks, tag, seed or m.get("seed"), fr)
         except F2BError as e:
             m = _marker(tag)
-            m["error"] = "fetch: %s" % e
+            m["error"] = m.get("error") or "fetch: %s" % e
             _save_marker(tag, m)
             return "LOI", m
-        m = _marker(tag)
-        return ("XONG" if m.get("ok") and m.get("java_rc") == 0 else "LOI"), m
+        return _done_state(_marker(tag))
     if st in TERMINAL_BAD:
         if act:
             m["error"] = st
@@ -900,7 +1027,7 @@ def grid_round(max_slots=5, act=True):
     rows = collections.OrderedDict()
     for cell, seed in grid_order():
         tag = tag_of(cell, seed)
-        rows[(cell, seed)] = [tag] + list(_row_state(ks, tag, act))
+        rows[(cell, seed)] = [tag] + list(_row_state(ks, tag, act, seed))
     nrun = sum(1 for r in rows.values() if r[1] == "DANG_CHAY")
     pushed = 0
     if act:
@@ -937,6 +1064,221 @@ def grid_round(max_slots=5, act=True):
     return rows
 
 
+# ---- score: prereg muc 5 (KHONG goi mang; doc output da fetch) ----
+# Equity cuoi ngay = b + unP o dong "Update YYYYMMDD HH:MM => b: .. unP: .." cua sim.out (BudgetManagerSimple), GIU dong CUOI moi
+# ngay - y het research/analysis/reset_rule_score.py load_daily (RX_DAILY dong 82). CAGR / maxDD nhu core_metrics (cung file):
+# years = (ngay cuoi - ngay dau).days / 365.25; CAGR = (eq_cuoi / eq_dau) ^ (1 / years) - 1; maxDD = min(eq / cummax - 1).
+# Khong cong them chi phi (gia tri sim tho, nhu nhau cho moi o va NEN). PnL nam = tong cot pnl printDone theo NAM ngay dong (end),
+# loc dong nhu load_legs (pnl, margin la so; start, end parse duoc) - nhu n700_driver.arm_metrics per_year.
+RX_DAILY = re.compile(r"Update (\d{8}) \d\d:\d\d => b:\s*(-?\d+).*?unP:\s*(-?\d+)")
+# m = marginRunning cuoi ngay (BudgetManagerSimple.java:268 "Update {} => b:{} pD:{}\tm:{}..."); sim.out KHONG in U -> proxy m/(b+unP)
+RX_MRUN = re.compile(r"Update (\d{8}) \d\d:\d\d => b:\s*(-?\d+)\s+pD:\s*-?\d+\s+m:\s*(-?\d+).*?unP:\s*(-?\d+)")
+SCORE_YEARS = (2022, 2023, 2024, 2025)
+NA = "chua co"
+
+
+def load_daily_equity(sim_out):
+    d = {}
+    op = gzip.open if sim_out.endswith(".gz") else open
+    with op(sim_out, "rt", errors="ignore") as f:
+        for ln in f:
+            mm = RX_DAILY.search(ln)
+            if mm:
+                d[mm.group(1)] = int(mm.group(2)) + int(mm.group(3))
+    return sorted(d.items())
+
+
+def margin_proxy(sim_out):
+    """U proxy (MO TA, khong phai U cua sizing): margin dang chay / equity (b+unP), cuoi ngay, dong cuoi moi ngay."""
+    d = {}
+    op = gzip.open if sim_out.endswith(".gz") else open
+    with op(sim_out, "rt", errors="ignore") as f:
+        for ln in f:
+            mm = RX_MRUN.search(ln)
+            if mm:
+                d[mm.group(1)] = (int(mm.group(3)), int(mm.group(2)) + int(mm.group(4)))
+    u = [m / e for m, e in d.values() if e > 0]
+    if not u:
+        return {"u_proxy_mean": None, "u_proxy_max": None}
+    return {"u_proxy_mean": sum(u) / len(u), "u_proxy_max": max(u)}
+
+
+def equity_metrics(daily):
+    if len(daily) < 2:
+        raise F2BError("chuoi equity ngay < 2 diem")
+    d0, d1 = datetime.strptime(daily[0][0], "%Y%m%d"), datetime.strptime(daily[-1][0], "%Y%m%d")
+    years = (d1 - d0).days / 365.25
+    e0, e1 = float(daily[0][1]), float(daily[-1][1])
+    if years <= 0 or e0 <= 0:
+        raise F2BError("chuoi equity khong hop le (years %s, eq dau %s)" % (years, e0))
+    cagr = ((e1 / e0) ** (1.0 / years) - 1) * 100 if e1 > 0 else -100.0
+    peak, mdd = float("-inf"), 0.0
+    for _d, e in daily:
+        peak = max(peak, float(e))
+        if peak > 0:
+            mdd = min(mdd, (float(e) / peak - 1) * 100)
+    calmar = cagr / abs(mdd) if mdd < 0 else float("inf")
+    return {"day_first": daily[0][0], "day_last": daily[-1][0], "n_days": len(daily), "eq_first": e0, "eq_last": e1,
+            "years": years, "cagr": cagr, "maxdd": mdd, "calmar": calmar}
+
+
+def printdone_stats(pd_path):
+    n, st, nwin, nprof, tot = 0, collections.Counter(), 0, 0, 0.0
+    yr = {y: 0.0 for y in SCORE_YEARS}
+    with open(pd_path, newline="") as f:
+        rd = csv.DictReader(f)
+        rd.fieldnames = [c.strip() for c in (rd.fieldnames or [])]
+        for row in rd:
+            try:
+                pnl = float(row.get("pnl"))
+                float(row.get("margin"))
+                datetime.strptime((row.get("start") or "").strip(), "%Y%m%d %H:%M")
+                end = datetime.strptime((row.get("end") or "").strip(), "%Y%m%d %H:%M")
+            except (TypeError, ValueError):
+                continue
+            if pnl != pnl:
+                continue
+            n += 1
+            tot += pnl
+            st[(row.get("status") or "").strip()] += 1
+            try:
+                pr = float(row.get("profit"))
+                nprof += 1
+                nwin += pr > 0
+            except (TypeError, ValueError):
+                pass
+            if end.year in yr:
+                yr[end.year] += pnl
+    return {"n_trades": n, "pnl_total": tot, "pnl_per_trade": (tot / n if n else None),
+            "win_pct": (100.0 * nwin / nprof if nprof else None), "pnl_year": {str(y): v for y, v in yr.items()},
+            "pos_years": [y for y in SCORE_YEARS if yr[y] > 0], "exit_status": dict(st)}
+
+
+def score_one(ks, tag):
+    d = out_dir(ks, tag)
+    pd = _find(d, "printDone.csv") if os.path.isdir(d) else None
+    so = (_find(d, "sim.out") or _find(d, "sim.out.gz")) if os.path.isdir(d) else None
+    if not pd or not so:
+        return {"tag": tag, "have": False, "why": NA + (" (thieu printDone.csv)" if not pd else " (thieu sim.out)")}
+    try:
+        r = {"tag": tag, "have": True}
+        r.update(equity_metrics(load_daily_equity(so)))
+        r.update(printdone_stats(pd))
+        r.update(margin_proxy(so))
+        r["v3_only_pd"] = v3_only_counts(pd)
+        return r
+    except (F2BError, OSError, ValueError, ZeroDivisionError) as e:
+        return {"tag": tag, "have": False, "why": "LOI tinh: %s" % e}
+
+
+def _verdict(rows, cell):
+    """Muc 5: DAT <=> moi seed: Calmar > NEN, maxDD >= maxDD NEN (khong sau hon), CAGR >= 0.5 x CAGR NEN; VA so nam 2022-2025
+    co PnL > 0 o CA 2 seed (cung nam) >= 3. Thieu / chua hop le -> khong ket luan."""
+    for s in SEEDS:
+        c, b = rows[(cell, s)], rows[(NEN, s)]
+        if not b["have"]:
+            return "chua co NEN %s" % s, []
+        if not c["have"]:
+            return "%s (%s)" % (NA, s), []
+        if not b["valid"]:
+            return "NEN %s chua hop le (parity)" % s, []
+        if not c["valid"]:
+            return "o %s chua hop le (%s)" % (s, c.get("state")), []
+    fails = []
+    for s in SEEDS:
+        c, b = rows[(cell, s)], rows[(NEN, s)]
+        if not c["calmar"] > b["calmar"]:
+            fails.append("%s Calmar %.4f <= NEN %.4f" % (s, c["calmar"], b["calmar"]))
+        if not c["maxdd"] >= b["maxdd"]:
+            fails.append("%s maxDD %.2f%% sau hon NEN %.2f%%" % (s, c["maxdd"], b["maxdd"]))
+        if not c["cagr"] >= 0.5 * b["cagr"]:
+            fails.append("%s CAGR %.2f%% < 0.5 x NEN %.2f%%" % (s, c["cagr"], b["cagr"]))
+    both = [y for y in SCORE_YEARS if all(y in rows[(cell, s)]["pos_years"] for s in SEEDS)]
+    if len(both) < 3:
+        fails.append("nam PnL>0 o ca 2 seed = %s (%d/4 < 3)" % (both, len(both)))
+    return ("KHONG DAT" if fails else "DAT"), fails
+
+
+def _f(x, fmt="%.2f"):
+    return NA if x is None else ("inf" if x == float("inf") else fmt % x)
+
+
+def cmd_score(out=None):
+    ks = R.GA.ks_mod()
+    par = {}
+    for s in SEEDS:
+        try:
+            par[s] = parity_ok(s)
+        except (F2BError, OSError, ValueError, KeyError) as e:
+            log.warning("parity_ok %s: %s", s, e)
+            par[s] = False
+    rows = collections.OrderedDict()
+    for cell in CELLS:
+        for s in SEEDS:
+            tag = tag_of(cell, s)
+            r = score_one(ks, tag)
+            m = _marker(tag) or {}
+            if cell == NEN:
+                r["state"] = "PARITY_OK" if par[s] else "chua parity"
+                r["valid"] = par[s]
+            else:
+                ok = m.get("cell_check") == "OK" and not m.get("error")
+                r["state"] = "OK" if ok else (m.get("error") or ("chua kiem o" if m else "chua push"))
+                r["valid"] = ok
+            r["v3_only"] = m.get("v3_only")
+            rows[(cell, s)] = r
+    verd = collections.OrderedDict((c, _verdict(rows, c)) for c in CELLS if c != NEN)
+    out = out or os.path.join(STATE_DIR, "score")
+    os.makedirs(out, exist_ok=True)
+    js = {"prereg": PREREG, "criteria": "muc 5", "parity_ok": par,
+          "rows": {"%s|%s" % k: v for k, v in rows.items()},
+          "verdict": {c: {"verdict": v, "fails": f} for c, (v, f) in verd.items()},
+          "n_dat": sum(1 for v, _f2 in verd.values() if v == "DAT")}
+    with open(os.path.join(out, "F2B_SCORE.json"), "w") as f:
+        json.dump(js, f, indent=1, sort_keys=False, default=str)
+    L = ["# F2B score (prereg %s muc 5) - tu output da fetch, khong goi mang" % PREREG,
+         "maxDD/CAGR/Calmar: chuoi equity MTM cuoi ngay cua sim (b+unP, sim.out; = reset_rule_score.load_daily/core_metrics),"
+         " toan cua so 2021-07..2025-12 (nhu NEN); KHONG cong chi phi legacy 0,008 (so sanh tuong doi voi NEN cung quy trinh).",
+         "Tieu chi nam: so nam 2022-2025 ma CA HAI seed cung PnL > 0 >= 3 (MASTER 2026-11-27).",
+         "PARITY_OK: %s" % json.dumps(par), "",
+         "| o | seed | trang thai | n lenh | CAGR % | maxDD % | Calmar | PnL 2022 | PnL 2023 | PnL 2024 | PnL 2025 | thoat | v3-only (n / giu 2025) |",
+         "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    for (cell, s), r in rows.items():
+        v3 = r.get("v3_only") or {}
+        v3s = ("%s / %s" % (v3.get("n_trades_v3_only"), v3.get("n_trades_v3_only_hold_2025"))
+               if "n_trades_v3_only" in v3 else (v3.get("v3_only") or "-"))
+        if r["have"]:
+            py = r["pnl_year"]
+            ex = ", ".join("%s %d" % kv for kv in sorted(r["exit_status"].items(), key=lambda kv: -kv[1]))
+            L.append("| %s | %s | %s | %d | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (
+                cell, s, r["state"], r["n_trades"], _f(r["cagr"]), _f(r["maxdd"]), _f(r["calmar"], "%.3f"),
+                _f(py["2022"], "%.0f"), _f(py["2023"], "%.0f"), _f(py["2024"], "%.0f"), _f(py["2025"], "%.0f"), ex, v3s))
+        else:
+            L.append("| %s | %s | %s | %s |  |  |  |  |  |  |  |  | %s |" % (cell, s, r["state"], r["why"], v3s))
+    L += ["", "## Mo ta (khong phai tieu chi)",
+          "Ly do thoat = cot status printDone: TAKE_PROFIT_DONE = TP; STOP_LOSS_DONE / STOP_MARKET_DONE GOP SL / time-stop / trailing /"
+          " X14 (status khong tach duoc - can log PREARM_SL / TAKEPROFIT / [TSX]). U proxy = margin dang chay / (b+unP) cuoi ngay"
+          " (sim.out khong in U).",
+          "| o | seed | n lenh | win % | PnL/lenh | U proxy TB | U proxy max | v3-only n / giu 2025 |", "|---|---|---|---|---|---|---|---|"]
+    for (cell, s), r in rows.items():
+        if not r["have"]:
+            continue
+        v3 = r.get("v3_only_pd") or {}
+        L.append("| %s | %s | %d | %s | %s | %s | %s | %s |" % (
+            cell, s, r["n_trades"], _f(r["win_pct"]), _f(r["pnl_per_trade"]), _f(r["u_proxy_mean"], "%.3f"),
+            _f(r["u_proxy_max"], "%.3f"), ("%s / %s" % (v3["n_trades_v3_only"], v3["n_trades_v3_only_hold_2025"])
+                                           if "n_trades_v3_only" in v3 else v3.get("v3_only", "-"))))
+    L += ["", "| o | ket luan | ly do |", "|---|---|---|"]
+    for c, (v, fl) in verd.items():
+        L.append("| %s | %s | %s |" % (c, v, "; ".join(fl) or "-"))
+    L.append("")
+    L.append("So o DAT: %d / %d" % (js["n_dat"], len(verd)))
+    with open(os.path.join(out, "F2B_SCORE.md"), "w") as f:
+        f.write("\n".join(L) + "\n")
+    log.info("SCORE ghi %s (F2B_SCORE.md/.json); DAT %d/%d", out, js["n_dat"], len(verd))
+    return js
+
+
 def cmd_list():
     log.info("%-10s | %-62s | %-30s | %s", "cell", "overrides THEM", "BO", "extra_env")
     for n, c in CELLS.items():
@@ -947,14 +1289,15 @@ def cmd_list():
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=["list", "dry", "smoke", "parity", "push", "status", "fetch", "grid"])
+    ap.add_argument("cmd", choices=["list", "dry", "smoke", "parity", "push", "status", "fetch", "grid", "score"])
     ap.add_argument("args", nargs="*")
     ap.add_argument("--wait", action="store_true", help="parity: cho kernel xong (mac dinh KHONG cho)")
     ap.add_argument("--repush", action="store_true")
     ap.add_argument("--smoke", action="store_true", help="fetch/dry tag smoke")
     ap.add_argument("--max-slots", type=int, default=5)
+    ap.add_argument("--out", default=None, help="score: thu muc ghi F2B_SCORE.md/.json (mac dinh $F2B_STATE_DIR/score)")
     a = ap.parse_args(argv)
-    need = {"list": 0, "status": 0, "grid": 0, "parity": 1, "dry": 2, "smoke": 2, "push": 2, "fetch": 2}[a.cmd]
+    need = {"list": 0, "status": 0, "grid": 0, "score": 0, "parity": 1, "dry": 2, "smoke": 2, "push": 2, "fetch": 2}[a.cmd]
     if len(a.args) != need:
         log.error("lenh %s can %d tham so, nhan %s", a.cmd, need, a.args)
         return 2
@@ -965,6 +1308,8 @@ def main(argv=None):
             grid_round(a.max_slots, act=False)
         elif a.cmd == "grid":
             grid_round(a.max_slots, act=True)
+        elif a.cmd == "score":
+            cmd_score(a.out)
         elif a.cmd == "parity":
             cmd_parity(a.args[0], wait=a.wait, repush=a.repush)
         elif a.cmd == "dry":

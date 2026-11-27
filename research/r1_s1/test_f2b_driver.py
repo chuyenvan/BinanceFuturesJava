@@ -183,6 +183,31 @@ class Base(unittest.TestCase):
                 json.dump(res, f)
         return w
 
+    def cell_src(self, tag, logs=None, res_over=None, rows=None, mapper=863, jar_log=True):
+        """Output 1 o luoi HOP LE (A1 V3 N2): log co mapper + JAR, result.json co sha overlay; tuy chon lam hong."""
+        jar = ref_res("A1")["jar_sha256"]
+
+        def w(dest):
+            os.makedirs(os.path.join(dest, "storage"), exist_ok=True)
+            os.makedirs(os.path.join(dest, "logs"), exist_ok=True)
+            lines = (["Loaded Symbol Mapper: %d symbols from SNAPSHOT x" % mapper] if mapper is not None else []) + \
+                (["INFO JAR_SHA256=%s" % jar] if jar_log else []) + list(logs or [])
+            with open(os.path.join(dest, "logs", "full.log"), "w") as f:
+                f.write("\n".join(lines) + "\n")
+            with open(os.path.join(dest, "storage", "printDone.csv"), "w") as f:
+                f.write("sym,status,start,end,pnl,margin\n")
+                for r in (rows if rows is not None else ["AAA,STOP_LOSS_DONE,20220101 00:00,20220102 00:00,-1,10"]):
+                    f.write(r + "\n")
+            res = {"tag": tag, "ok": True, "java_rc": ref_res("A1")["java_rc"], "n_trades": 7, "equity_final": 1.0,
+                   "jar_sha256": jar}
+            if mapper is not None:
+                res["symbol_mapper"] = mapper
+            res.update(HO5_RES)
+            res.update(res_over or {})
+            with open(os.path.join(dest, "result.json"), "w") as f:
+                json.dump(res, f)
+        return w
+
     def make_parity(self, seed):
         """Tao PARITY_OK hop le cho seed qua duong that (push -> COMPLETE -> fetch -> so)."""
         self.free = 5
@@ -763,8 +788,7 @@ class TestGrid(Base):
         # vong 2: o 1 COMPLETE (fetch), o 2 ERROR (ghi nhan, KHONG push lai) -> push 2 o ke tiep
         for t in ("f2b-A05R05-S1-a1",):
             self.status[KS.kernel_ref(t)] = "COMPLETE"
-            self.fetch_src[t] = lambda dest, t=t: json.dump({"tag": t, "ok": True, "java_rc": 0, "n_trades": 7,
-                                                             "equity_final": 1.0}, open(os.path.join(dest, "result.json"), "w"))
+            self.fetch_src[t] = self.cell_src(t)                  # A1 V3 N2: output o phai qua kiem o
         self.status[KS.kernel_ref("f2b-A05R05-S2-a1")] = "ERROR"
         del self.pushes[:]
         rows = F.grid_round(max_slots=2)
@@ -783,6 +807,287 @@ class TestGrid(Base):
     def test_grid_cli_one_round(self):
         self.assertEqual(F.main(["grid", "--max-slots", "1"]), 0)
         self.assertEqual(self.pushes, [])                        # chua parity -> khong push
+
+
+
+class TestA1V3(Base):
+    """A1_F2B_DRIVER_V3: N1 (parity_ok kiem overlay tren dia), N2 (kiem tung o), N2b (v3-only), N6 (3 mutant LOT)."""
+
+    def _mut(self, name, fn):
+        """Thay F.<name> = fn(ban GOC) (moi lan goi tinh tu ban goc, khong chong mutant); tu khoi phuc."""
+        if not hasattr(self, "_orig"):
+            self._orig = {}
+        if name not in self._orig:
+            self._orig[name] = getattr(F, name)
+            self.addCleanup(setattr, F, name, self._orig[name])
+        setattr(F, name, fn(self._orig[name]))
+
+    def _errs(self, cell="A10R1-S1", seed="A1"):
+        b = F.build_f2b(seed, cell, write=False)
+        with self.assertRaises(F.F2BError) as cm:
+            F.check_f2b(b)
+        return cm.exception.errs
+
+    # ---- N1 ----
+    def test_n1_parity_ok_checks_overlay_on_disk(self):
+        self.make_parity("A1")
+        rj = os.path.join(KS.OUTDIR, "f2b-nen-a1", "result.json")
+        res = json.load(open(rj))
+        res.pop("ho5_funding")
+        json.dump(res, open(rj, "w"))
+        why = []
+        self.assertFalse(F.parity_ok("A1", why))
+        self.assertTrue(any("ho5_funding" in w for w in why), why)
+        self.assertEqual(len(why), 1, why)                    # md5 / jar / tag van dung -> chi loi overlay
+        with self.assertRaises(F.ParityMissing):
+            F.cmd_push("A10R1-S1", "A1")
+        self.make_parity("S7")
+        rj = os.path.join(KS.OUTDIR, "f2b-nen-s7", "result.json")
+        res = json.load(open(rj))
+        res["ho5_mapper"] = dict(res["ho5_mapper"], snap_sha256="0" * 64)
+        json.dump(res, open(rj, "w"))
+        self.assertFalse(F.parity_ok("S7"))
+
+    # ---- N6: 3 lop phong thu, tach rieng (cac kiem khac tu-nhat-quan) ----
+    def test_n6_overlay_gone_isolated(self):
+        for g in F.OVERLAY_GONE:
+            self._mut("overlay_patch", lambda o, g=g: (lambda c: o(c) + "\n" + g))
+            errs = self._errs()
+            self.assertEqual(len(errs), 1, errs)
+            self.assertIn("PREFLIGHT", errs[0])
+
+    def test_n6_overlay_markers_isolated(self):
+        for mk in F.OVERLAY_MARKERS:
+            for how in ("bo", "lap"):
+                if how == "bo":
+                    self._mut("overlay_patch", lambda o, mk=mk: (lambda c: o(c).replace(mk, "")))
+                else:
+                    self._mut("overlay_patch", lambda o, mk=mk: (lambda c: o(c) + "\n" + mk))
+                errs = self._errs("B10-S2", "S7")
+                self.assertEqual(len(errs), 1, (mk, how, errs))
+                self.assertIn("thieu dau overlay", errs[0])
+
+    def test_n6_regex_2026_isolated(self):
+        for nm in ("vz-x-2026", "wfo-ticker-l26", "abc-data26", "foo-26"):
+            self._mut("overlay_dss", lambda o, nm=nm: (lambda d, ks: o(d, ks) + [ks.USER + "/" + nm]))
+            errs = self._errs()
+            self.assertEqual(len(errs), 1, (nm, errs))
+            self.assertIn("2026", errs[0])
+
+    # ---- N2 ----
+    def _fr(self, **kw):
+        d = tempfile.mkdtemp(dir=self.tmp)
+        self.cell_src("f2b-A10R1-S1-a1", **kw)(d)
+        return {"dir": d, "result": json.load(open(os.path.join(d, "result.json"))),
+                "print_done": os.path.join(d, "storage", "printDone.csv")}
+
+    def test_n2_cell_output_errs_each_signal(self):
+        jar = ref_res("A1")["jar_sha256"]
+        rc = ref_res("A1")["java_rc"]
+        self.assertEqual(rc, 1)                                   # run tham chieu r1-a3-a1 (System.exit(1) cuoi main)
+        self.assertEqual(F.cell_output_errs(self._fr(), jar, rc), [])
+        bad = [(dict(res_over={"ho5_mapper": {}}), "overlay: ho5_mapper"),
+               (dict(res_over={"ho5_funding": None}), "overlay: ho5_funding"),
+               (dict(logs=["x SYMBOL_MAPPER_PREFLIGHT_FAIL y"]), "SYMBOL_MAPPER_PREFLIGHT_FAIL"),
+               (dict(logs=["java.net.ConnectException: Connection refused"]), "Connection refused"),
+               (dict(logs=["SIM env override parse error: K=V"]), "parse error"),
+               (dict(logs=["HO5_FUNDING_SNAPSHOT_FAIL"]), "HO5_FUNDING_SNAPSHOT_FAIL"),
+               (dict(res_over={"jar_sha256": "0" * 64}), "JAR_SHA256"),
+               (dict(res_over={"jar_sha256": None}, jar_log=False), "khong thay JAR_SHA256"),
+               (dict(mapper=799), "mapper"),
+               (dict(mapper=None), "khong thay so mapper"),
+               (dict(res_over={"java_rc": 0}), "java_rc 0 != run tham chieu 1"),
+               (dict(res_over={"java_rc": 137}), "java_rc 137"),
+               (dict(res_over={"ok": False}), "result.ok"),
+               (dict(res_over={"ok": "true"}), "result.ok")]
+        for kw, want in bad:
+            errs = F.cell_output_errs(self._fr(**kw), jar, rc)
+            self.assertEqual(len(errs), 1, (kw, errs))
+            self.assertIn(want, errs[0], (kw, errs))
+        fr = self._fr()
+        os.remove(fr["print_done"])
+        self.assertEqual(F.cell_output_errs(fr, jar, rc), ["khong co printDone.csv"])
+
+    def test_java_rc_xong_rule(self):
+        """MASTER 2026-11-27: XONG = ok true + printDone + cell_check OK + java_rc == tham chieu (1); java_rc 0 -> LOI."""
+        t, rows = self._grid_one({})
+        self.assertEqual(rows[("A05R05-S1", "A1")][1], "XONG")
+        m = F._marker(t)
+        self.assertEqual((m["java_rc"], m["java_rc_ref"], m["ok"], m["has_printdone"]), (1, 1, True, True))
+
+    def test_java_rc_zero_is_loi(self):
+        t, rows = self._grid_one(dict(res_over={"java_rc": 0}))
+        self.assertEqual(rows[("A05R05-S1", "A1")][1], "LOI")
+        self.assertIn("java_rc 0", F._marker(t)["error"])
+
+    def _grid_one(self, src_kw):
+        self.make_parity("A1")
+        self.free = 1
+        F.grid_round(max_slots=1)
+        self.assertEqual(self.pushes, ["f2b-a05r05-s1-a1"])
+        t = "f2b-A05R05-S1-a1"
+        self.status[KS.kernel_ref(t)] = "COMPLETE"
+        self.fetch_src[t] = self.cell_src(t, **src_kw)
+        self.free = 0
+        del self.pushes[:]
+        rows = F.grid_round(max_slots=5)
+        return t, rows
+
+    def test_n2_grid_bad_cell_loi_no_repush(self):
+        t, rows = self._grid_one(dict(logs=["Connection refused"]))
+        self.assertEqual(rows[("A05R05-S1", "A1")][1], "LOI")
+        m = F._marker(t)
+        self.assertTrue(m["error"].startswith("cell_check"), m)
+        self.assertNotEqual(m["cell_check"], "OK")
+        self.free = 5
+        rows = F.grid_round(max_slots=5)
+        self.assertEqual(rows[("A05R05-S1", "A1")][1], "LOI")
+        self.assertNotIn("f2b-a05r05-s1-a1", self.pushes)          # khong tu push lai
+        self.assertEqual(self.calls.count("fetch"), 1)             # chi 1 lan fetch o (vong 2); khong fetch lai
+
+    def test_n2_grid_good_cell_xong_v3_counts(self):
+        rows_pd = ["BTCST,STOP_LOSS_DONE,20250301 00:00,20250302 00:00,-1,10",
+                   "SNTUSDT,TAKE_PROFIT_DONE,20220301 00:00,20220302 00:00,1,10",
+                   "AAA,STOP_LOSS_DONE,20250301 00:00,20250302 00:00,-1,10"]
+        t, rows = self._grid_one(dict(rows=rows_pd))
+        self.assertEqual(rows[("A05R05-S1", "A1")][1], "XONG")
+        v = F._marker(t)["v3_only"]
+        self.assertEqual((v["n_trades_printdone"], v["n_trades_v3_only"], v["n_trades_v3_only_hold_2025"]), (3, 2, 1))
+        self.assertEqual(v["v3_only_per_sym"], {"BTCST": 1, "SNT": 1})
+
+    def test_n2_fetch_cli_exit7_then_ok(self):
+        t = "f2b-A10R1-S2-s7"
+        self.fetch_src[t] = self.cell_src(t, logs=["SYMBOL_MAPPER_PREFLIGHT_FAIL"])
+        self.assertEqual(F.main(["fetch", "A10R1-S2", "S7"]), 7)
+        self.assertTrue(F._marker(t)["error"].startswith("cell_check"))
+        self.fetch_src[t] = self.cell_src(t)
+        self.assertEqual(F.main(["fetch", "A10R1-S2", "S7"]), 0)
+        m = F._marker(t)
+        self.assertEqual(m["cell_check"], "OK")
+        self.assertNotIn("error", m)
+
+    def test_n2_fetched_without_check_is_not_xong(self):
+        os.makedirs(os.path.join(F.STATE_DIR, "pushed"))
+        t = "f2b-B05-S1-a1"
+        F._save_marker(t, {"tag": t, "ref": KS.kernel_ref(t), "ts_fetch": 1.0, "ok": True, "java_rc": 0})
+        rows = F.grid_round(act=False)
+        self.assertEqual(rows[("B05-S1", "A1")][1], "LOI")
+        self.assertNotIn("_status", self.calls)
+
+    # ---- N2b ----
+    def test_n2b_v3_only_syms_from_ho5(self):
+        self.assertEqual(F.v3_only_syms(), frozenset({"BTCST", "SNT", "STPT", "PLANCK"}))
+
+    def test_n2b_unknown_when_file_unverified(self):
+        p = os.path.join(self.tmp, "gate2025.json")
+        json.dump({"only_crawl": 1, "only_crawl_top": [["XUSDT", 1]]}, open(p, "w"))
+        self._mut("V3_GATE", lambda o: p)
+        self.assertIsNone(F.v3_only_syms())                         # sha khac ghim -> khong doan
+        pd = os.path.join(self.tmp, "pd.csv")
+        open(pd, "w").write("sym,start,end\nX,20250101 00:00,20250102 00:00\n")
+        self.assertEqual(F.v3_only_counts(pd), {"v3_only": F.UNKNOWN_V3})
+
+
+class TestScore(Base):
+    """score voi du lieu GIA, dap an tinh tay. years = 20210101..20250101 = 1461 ngay / 365.25 = 4.0."""
+    NEN_EQ = [("20210101", 100, 0), ("20220101", 110, 10), ("20230101", 999, 0), ("20230101", 90, 0), ("20250101", 150, 50)]
+    GOOD_EQ = [("20210101", 100, 0), ("20220101", 110, 0), ("20230101", 99, 0), ("20250101", 170, 10)]
+    BAD_EQ = [("20210101", 100, 0), ("20220101", 200, 0), ("20230101", 100, 0), ("20250101", 300, 0)]
+
+    def put(self, cell, seed, eq, pnl, check="OK"):
+        tag = F.tag_of(cell, seed)
+        d = F.out_dir(KS, tag)
+        os.makedirs(os.path.join(d, "logs"))
+        os.makedirs(os.path.join(d, "storage"))
+        with open(os.path.join(d, "logs", "sim.out"), "w") as f:
+            f.write("2026-11-10 x INFO noise\n")
+            for day, b, u in eq:
+                mr = 55 if day == "20220101" else 0
+                f.write("2026-11-10 12:52:48 INFO  [main] c.b.c.r.BudgetManagerSimple: Update %s 07:00 => b:%d pD:   0\t"
+                        "m:%4d\tmax:    0\t0\tunP:%5d\tunPMin:-6060\t0\n" % (day, b, mr, u))
+        with open(os.path.join(d, "storage", "printDone.csv"), "w") as f:
+            f.write("sym,side,entry,tp,profit,status,start,time_start_format,end,level,margin,pnl,\n")
+            f.write("Q,BUY,1,1,1,TAKE_PROFIT_DONE,20210601 00:00,x,20210602 00:00,P,10,7,\n")
+            f.write("Q,BUY,1,1,1,TAKE_PROFIT_DONE,20220601 00:00,x,bad,P,10,99,\n")        # end hong -> bo
+            for y, p in sorted(pnl.items()):
+                st = "TAKE_PROFIT_DONE" if p > 0 else "STOP_LOSS_DONE"
+                f.write("Q,BUY,1,1,1,%s,%d0601 00:00,x,%d0602 00:00,P,10,%s,\n" % (st, y, y, p))
+        if cell != F.NEN and check is not None:
+            m = {"tag": tag, "cell_check": check}
+            if check != "OK":
+                m["error"] = "cell_check: x"
+            os.makedirs(os.path.join(F.STATE_DIR, "pushed"), exist_ok=True)
+            F._save_marker(tag, m)
+
+    def setUp(self):
+        super(TestScore, self).setUp()
+        self.par = True
+        orig = F.parity_ok
+        F.parity_ok = lambda s, why=None: self.par
+        self.addCleanup(setattr, F, "parity_ok", orig)
+        P4 = {2022: 1, 2023: 1, 2024: 1, 2025: 1}
+        G = {2022: 5, 2023: 5, 2024: -1, 2025: 5}
+        for s in ("A1", "S7"):
+            self.put("NEN", s, self.NEN_EQ, P4)
+            self.put("A10R1-S1", s, self.GOOD_EQ, G)                      # DAT
+            self.put("A10R1-S2", s, self.BAD_EQ, P4)                      # maxDD sau hon + Calmar thap
+        self.put("B10-S1", "A1", self.GOOD_EQ, G)
+        self.put("B10-S1", "S7", self.GOOD_EQ, {2022: 5, 2023: -5, 2024: -1, 2025: 5})   # ca 2 seed duong: 2022, 2025
+        self.put("B10-S2", "A1", self.GOOD_EQ, G)                         # S7 chua co
+        self.put("A05R05-S1", "A1", self.GOOD_EQ, G)
+        self.put("A05R05-S1", "S7", self.GOOD_EQ, G, check=["x"])         # o S7 kiem N2 LOI
+
+    def test_score_hand_values_and_verdicts(self):
+        out = os.path.join(self.tmp, "sc")
+        js = F.cmd_score(out)
+        r = js["rows"]
+        nen = r["NEN|A1"]
+        self.assertAlmostEqual(nen["years"], 4.0, places=12)
+        self.assertAlmostEqual(nen["cagr"], 18.920711500272, places=6)     # (200/100)^(1/4)-1 ; dong 20230101 lay dong CUOI
+        self.assertAlmostEqual(nen["maxdd"], -25.0, places=9)               # 90/120-1
+        self.assertAlmostEqual(nen["calmar"], 0.75682846001, places=6)
+        g = r["A10R1-S1|S7"]
+        self.assertAlmostEqual(g["cagr"], 15.8292185, places=4)             # 1.8^(1/4)-1
+        self.assertAlmostEqual(g["maxdd"], -10.0, places=9)
+        self.assertAlmostEqual(g["calmar"], 1.58292185, places=5)
+        self.assertEqual(g["n_trades"], 5)                                  # 2021 + 4 nam; dong end hong bi bo
+        self.assertEqual(g["pnl_year"], {"2022": 5.0, "2023": 5.0, "2024": -1.0, "2025": 5.0})
+        self.assertEqual(g["exit_status"], {"TAKE_PROFIT_DONE": 4, "STOP_LOSS_DONE": 1})
+        self.assertAlmostEqual(g["pnl_per_trade"], (7 + 5 + 5 - 1 + 5) / 5.0, places=9)   # 21/5
+        self.assertAlmostEqual(g["win_pct"], 100.0, places=9)                           # cot profit = 1 moi dong
+        self.assertAlmostEqual(g["u_proxy_max"], 0.5, places=9)                         # m 55 / eq 110 (20220101)
+        self.assertAlmostEqual(g["u_proxy_mean"], (0 + 0.5 + 0 + 0) / 4.0, places=9)
+        self.assertEqual(g["v3_only_pd"]["n_trades_v3_only"], 0)
+        b = r["A10R1-S2|A1"]
+        self.assertAlmostEqual(b["maxdd"], -50.0, places=9)
+        v = js["verdict"]
+        self.assertEqual(v["A10R1-S1"]["verdict"], "DAT")
+        self.assertEqual(v["A10R1-S2"]["verdict"], "KHONG DAT")
+        self.assertTrue(any("maxDD" in x for x in v["A10R1-S2"]["fails"]))
+        self.assertTrue(any("Calmar" in x for x in v["A10R1-S2"]["fails"]))
+        self.assertEqual(v["B10-S1"]["verdict"], "KHONG DAT")
+        self.assertEqual(len(v["B10-S1"]["fails"]), 1, v["B10-S1"])
+        self.assertIn("[2022, 2025]", v["B10-S1"]["fails"][0])
+        self.assertTrue(v["B10-S2"]["verdict"].startswith("chua co"), v["B10-S2"])
+        self.assertIn("chua hop le", v["A05R05-S1"]["verdict"])
+        self.assertTrue(v["A20R2-S2"]["verdict"].startswith("chua co"))
+        self.assertEqual(js["n_dat"], 1)
+        self.assertFalse(r["A20R2-S2|A1"]["have"])
+        md = open(os.path.join(out, "F2B_SCORE.md")).read()
+        self.assertIn("| A10R1-S1 | DAT | - |", md)
+        self.assertIn("So o DAT: 1 / 24", md)
+        self.assertEqual(json.load(open(os.path.join(out, "F2B_SCORE.json")))["n_dat"], 1)
+        self.assertEqual(self.calls, [])                                     # khong goi mang
+
+    def test_score_needs_parity(self):
+        self.par = False
+        js = F.cmd_score(os.path.join(self.tmp, "sc"))
+        self.assertIn("NEN A1 chua hop le", js["verdict"]["A10R1-S1"]["verdict"])
+        self.assertEqual(js["n_dat"], 0)
+
+    def test_score_cli_partial(self):
+        self.assertEqual(F.main(["score", "--out", os.path.join(self.tmp, "sc2")]), 0)
+        self.assertEqual(F.main(["score", "x"]), 2)
 
 
 if __name__ == "__main__":

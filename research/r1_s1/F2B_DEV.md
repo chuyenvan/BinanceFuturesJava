@@ -110,3 +110,49 @@ overlay, ghim sha funding v2.
 Rui ro: (1) v3 them 3 420 moc funding 2025 so voi store r1-a3 da doc -> neu symbol do co lenh trong A1/S7 thi md5 lech (s123 khong
 lech); khi do can MASTER quyet (vd dataset funding v2 b39b63ed - Kaggle chi giu ban moi nhat). (2) driver phu thuoc file ngoai repo
 ~/claude_master/w3/ho5/ho5_k2.py, ho5_k3.py + mapper/SNAP_SHA, fund/OVL_SHA (ghim sha, doi -> dung). (3) overlay la ma CFR decompile.
+
+## 11. Ban 4 (2026-11-27, sua loi nho A1_F2B_DRIVER_V3 truoc LUOI; bang 25 o / overlay / whitelist / tieu chi KHONG doi)
+Lam tren ban copy ~/claude_master/w3/levz_rev/f2b_v4/ (MASTER chep vao worktree + commit). Test: 58 (57 OK + 1 ERROR ky vong
+test_real_git_state_readonly vi ban copy khong phai git repo); 14 mutant moi deu BAT.
+- N1: parity_ok() them why += overlay_result_errs(result.json TREN DIA).
+- N2: check_cell_fetch() sau moi fetch o (grid: _row_state COMPLETE; lenh `fetch <cell> <seed>` khong --smoke):
+  cell_output_errs = sha overlay trong result.json + dong cam (OVL_FORBIDDEN + "SIM env override parse error") trong moi log
+  + JAR_SHA256 (log + result) co va == r1-a3 cc0f9d11... + mapper co va >= 800. Loi -> marker cell_check=[loi], error="cell_check: ..."
+  -> LOI (KHONG push lai); `fetch` exit 7. XONG chi khi cell_check == "OK" (va ok, java_rc 0 nhu cu); da fetch ma chua kiem -> LOI.
+- N2b: marker o ghi v3_only = {n_trades_printdone, n_trades_v3_only, n_trades_v3_only_hold_2025, v3_only_per_sym}. Tap symbol tu
+  ~/claude_master/w3/ho5/fund/ds3/gate2025.json (sha ghim c66396e4...): only_crawl_top = BTCST, SNT, STPT, PLANCK, tong 3 420 ==
+  only_crawl (khop ERRATA2 P4). Sha khac / tong lech -> "khong xac dinh duoc" (khong doan). r1-a3-a1/s7: 0 lenh tren 4 symbol nay.
+- N6: test tach rieng OVERLAY_GONE / OVERLAY_MARKERS (bo + lap) / regex 2026 (vz-x-2026, -l26, data26, -26) voi overlay_patch /
+  overlay_dss tu-nhat-quan -> moi test chi con DUNG 1 loi cua lop dang kiem.
+- score: muc 5 prereg, KHONG goi mang, chay voi so o tuy y (o thieu -> "chua co"). Equity cuoi ngay = b + unP dong "Update YYYYMMDD
+  HH:MM => b: .. unP: .." trong sim.out, giu dong cuoi moi ngay (= research/analysis/reset_rule_score.py load_daily, RX_DAILY);
+  years = ngay/365.25; CAGR = (eq_cuoi/eq_dau)^(1/years)-1; maxDD = min(eq/cummax-1); Calmar = CAGR/|maxDD| (= core_metrics).
+  Toan cua so sim (2021-07-01..2025-12-30), KHONG cong chi phi legacy. PnL nam = tong pnl printDone theo nam ngay dong (loc nhu
+  load_legs). Ly do thoat = dem cot status. Hop le: NEN can parity_ok(seed); o can cell_check OK. DAT <=> moi seed Calmar > NEN,
+  maxDD >= maxDD NEN, CAGR >= 0.5 x CAGR NEN; VA so nam 2022-2025 co PnL > 0 o CA 2 seed (cung nam) >= 3.
+  Ghi $F2B_STATE_DIR/score/F2B_SCORE.md + .json (hoac --out DIR).
+  Doi chieu that (chi doc): r1-a3-a1 CAGR 37.24 % maxDD -16.85 % Calmar 2.21, n 3 622, eq 145 391; r1-a3-s7 35.67 / -17.69 / 2.02.
+- Can MASTER xac nhan: (a) maxDD dung equity ngay cua sim (b+unP), khong phai MTM kline Vision (dd_mtm22 cua r1_score.py);
+  (b) cua so toan bo thay vi 2022+; (c) "3/4 nam o ca 2 seed" doc la cung nam (chat hon doc tung seed);
+  (d) LUU Y: r1-a3-a1/s7 va ho5 rep4 deu co java_rc = 1 (ok = true) -> grid cu (va ban nay) se gan LOI cho moi o neu kernel f2b
+  cung tra java_rc 1; score KHONG dung java_rc.
+
+### Lenh mot dong (ban 4)
+D=~/claude_master/vz_e1_wt/research/r1_s1
+python3 $D/f2b_driver.py parity A1 --repush                # marker cu con (A1 N4); S7 tuong tu; sau do goi 'parity A1' toi khi xong
+python3 $D/f2b_driver.py grid --max-slots 5                # MOT vong: fetch + kiem o (N2) + push o ke tiep
+python3 $D/f2b_driver.py status                            # chi doc
+python3 $D/f2b_driver.py score                             # cham muc 5 -> $F2B_STATE_DIR/score/F2B_SCORE.md/.json
+
+### Ban 4b - quyet dinh MASTER 2026-11-27 (5 diem)
+1. java_rc: XONG = result.ok == true VA co printDone.csv VA cell_check == "OK" VA java_rc == java_rc run tham chieu r1-a3-<seed>
+   (doc ho so; hien = 1). java_rc khac -> LOI. Marker ghi java_rc, java_rc_ref, ok, has_printdone.
+   Ly do java_rc = 1: SimulatorMarketLevelTicker1MStopLoss.main() goi System.exit(1) sau simulatorWithInitEntry + sleep 5 s
+   (src/main/java/com/binance/chuyennd/research/SimulatorMarketLevelTicker1MStopLoss.java:161, worktree vz_e1_wt) => rc 1 la ket thuc
+   binh thuong; error.log r1-a3-a1 rong; tools/kaggle_sim.py:402 tinh ok = co dong cuoi + n_trades > 0.
+2. maxDD = chuoi equity MTM cuoi ngay cua sim (b + unP) - CHAP NHAN (prereg muc 5). 3. Toan cua so 2021-07..2025-12; PnL nam
+   2022-2025 cho tieu chi nam. 4. Nam duong = CA HAI seed cung duong, >= 3. 5. Khong cong chi phi legacy 0,008.
+Score in kem (mo ta): so lenh, win % (cot profit > 0), PnL/lenh, status printDone (TAKE_PROFIT_DONE = TP; STOP_LOSS_DONE /
+STOP_MARKET_DONE GOP SL / time-stop / trailing / X14 - khong tach duoc tu status), U proxy TB / max = m / (b+unP) cuoi ngay
+(sim.out khong in U; m = marginRunning, BudgetManagerSimple.java:268), so lenh v3-only tinh truc tiep tu printDone moi o (ca NEN).
+Test: 60 (59 OK + 1 ERROR ky vong git).

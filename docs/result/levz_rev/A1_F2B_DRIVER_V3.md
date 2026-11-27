@@ -64,3 +64,33 @@ R2 Parity NEN dat KHONG chung minh 24 o: o khac tap lenh co the giu symbol co mo
    (3 420/~2.3M moc, symbol it thanh khoan). Doi chieu duoc: lenh o luoi co symbol thuoc tap v3-only - de nghi bao cao so lenh do.
 R3 Overlay la class CFR decompile (SimpleSymbolMapper / FundingFeeManager) dat truoc jar tren classpath; s123 trung byte -> rui ro thap,
    nhung code-path TP/SL/no-DCA chua duoc trung-byte (khong co tham chieu Aerospike cho chung).
+
+## Vong v4 (DELTA, 2026-11-27) - ban copy ~/claude_master/w3/levz_rev/f2b_v4
+f2b_driver.py    8310d262804c5572282d9c3ce1e12b3596d065cc7dafe9ec95ad8f612a6ed79c
+test_f2b_driver.py 8d93d6280a604a264b37debbb4f2ccd73ee56b4619917b0bc611b5d4742de37b
+KET LUAN v4: PASS-WITH-MINOR (khong loi CHAN).
+
+(1) diff vs worktree (ddf97c3c): chi THEM (docstring, import datetime, N1 dong 506, N2/N2b 871-979, _done_state/_row_state,
+    score 1067-1281, argparse). Bang / overlay / whitelist / git_guard / parity md5 / seed / sim_end KHONG doi.
+    Chay tren ban copy (mktemp, cau truc r1_s1 day du): `list` md5 trung worktree; `dry` 6 o x A1/S7: cfg+metadata trung byte (12/12 SAME);
+    proxy gia, cay f2b_state truoc/sau trung -> khong mang, khong ghi trang thai.
+(2) N1 dung (parity_ok them overlay_result_errs tren dia). N2: cell_output_errs kiem overlay sha, OVL_FORBIDDEN + parse error,
+    JAR == r1-a3, mapper >= 800, ok is True, co printDone, java_rc == run tham chieu (r1-a3-a1/s7 result.json java_rc = 1).
+    _done_state: XONG chi khi cell_check == OK; o LOI khong bi grid push lai (grid chi push CHUA_PUSH; mutant V13 bat).
+    Java a8690d46 SimulatorMarketLevelTicker1MStopLoss.java: `System.exit(1)` sau simulatorWithInitEntry + sleep -> o DONG 145
+    (DEV ghi 161 - sai so dong, noi dung dung). Ban v3 cu dung java_rc == 0 => moi o se la LOI; v4 sua dung.
+    N2b: tap v3-only = {BTCST, SNT, STPT, PLANCK} tu gate2025.json (sha ghim c66396e4, tong 3 420 khop only_crawl). r1-a3-a1: 0 lenh.
+(3) score: du lieu THAT r1-a3-a1: CAGR 37.2429 %, maxDD -16.8465 %, Calmar 2.2107, n 3 622, eq 35 000 -> 145 391, 1 644 ngay
+    20210701..20251230; tinh doc lap tren cung chuoi trung. PnL nam 2022..2025 = 2 518 / 34 231 / 34 194 / 32 502 (ca 4 duong).
+    Du lieu gia: giu dong CUOI moi ngay (b+unP), CAGR 41.4549 % == tay ((2)^(365.25/730)-1), maxDD -25 % dung, PnL theo nam ngay DONG
+    (lenh mo 2022 dong 2023-01-01 -> 2023), bo dong start khong parse. _verdict: maxDD so `c >= nen` (am: -15 tot hon -17) DUNG chieu;
+    CAGR >= 0.5 x nen; Calmar strict >; nam = so nam CA 2 seed cung duong >= 3 - khop prereg muc 5. score khong goi mang, o thieu -> "chua co".
+(4) Test ban copy: 60 chay, 59 OK + 1 ERROR du kien (khong phai git repo). 25 mutant phan moi: BAT 23, LOT 2:
+    - LOT V7 PnL nam theo ngay MO (code dung, test khong phan biet) -> NHO: them test lenh mo 2022 dong 2023.
+    - LOT V14 Calmar `>` -> `>=` (bien bang nhau) -> NHO: them test Calmar bang nen = KHONG DAT.
+    BAT: parity_ok bo overlay; bo java_rc; _done_state bo cell_check; bo ok; bo printDone; dao maxDD; CAGR >= nen; nam theo any-seed;
+    N2b thieu / them symbol / khong bo USDT; fetch .bin; bo dong cam; bo JAR; mapper 0; grid push lai LOI; cmd_fetch khong raise;
+    equity dong DAU ngay; bo overlay sha o luoi; NEN khong can parity; nam >= 2.
+NHO v4: V7/V14 (test), so dong Java 161 -> 145 trong docstring / F2B_DEV. N3 (FETCH_MAX vo hieu khi totalBytes None) van nhu cu.
+MASTER: chep 3 file f2b_v4 vao research/r1_s1/, kiem lai sha 2 file tren, chay test (60 OK trong worktree), commit; sau do
+`parity A1 --repush`, `parity S7 --repush`.
