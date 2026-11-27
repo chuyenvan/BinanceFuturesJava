@@ -1,0 +1,37 @@
+--- report_b4.py.A1
++++ report_b4.py.E1
+@@ -31,13 +31,16 @@
+ 
+ 
+ def criteria(sel_d, sel_none):
+-    """A6 for one DCA kind. A year a kind (or NONE) cannot score => that criterion False (conservative, as T2)."""
++    """A6 for one DCA kind. Kind cannot score year Y => V-a (and V-b) False for Y. NONE cannot score Y => V-b baseline 0 for Y
++    (PREREG_X3_1127_ERRATA1 E1)."""
+     a, a0 = t20(sel_d), t20(sel_none)
+     d = sel_d['describe']
+     conc = sel_d.get('conc', {})
+     V = {}
+     V['V-a'] = all(np.isfinite(a[Y]) and a[Y] > 0 for Y in YS)
+-    V['V-b'] = all(np.isfinite(a[Y]) and np.isfinite(a0[Y]) and a[Y] > a0[Y] for Y in YS)
++    # ERRATA1 E1: NONE cannot score year Y (rule empty) => V-b baseline for Y = 0 (no trades); NONE scored => top-20 vs top-20
++    base = {Y: a0[Y] if np.isfinite(a0[Y]) else 0.0 for Y in YS}
++    V['V-b'] = all(np.isfinite(a[Y]) and a[Y] > base[Y] for Y in YS)
+     V['V-c'] = all(d[f]['frac_pos'] >= 0.5 for f in ('F1', 'F2', 'F3'))
+     V['V-d'] = all(Y in conc and conc[Y]['net_without_best5'] > 0 for Y in YS)
+     V['V-e'] = all(Y in conc and conc[Y]['worst_slot'] is not None and -conc[Y]['worst_slot'] <= 1.5 * conc[Y]['s'] for Y in YS)
+@@ -47,8 +50,13 @@
+         v = V_PART
+     else:
+         v = V_NO
+-    notes = ['%s khong cham duoc nam %s' % (n, Y) for n, x in (('kieu', a), ('NONE', a0)) for Y in YS if not np.isfinite(x[Y])]
+-    return dict(V=V, verdict=v, top20=a, top20_NONE=a0, notes=notes)
++    notes = ['kieu DCA khong cham duoc nam %s => V-a False' % Y for Y in YS if not np.isfinite(a[Y])]
++    for Y in YS:
++        if not np.isfinite(a0[Y]):
++            notes.append('KHONG DCA khong cham duoc nam %s => moc V-b nam %s = 0 (ERRATA1 E1); mo ta (khong dung trong tieu chi): '
++                         'trung vi loi suat nam %s cua toan bo %d cau hinh KHONG DCA = %s'
++                         % (Y, Y, Y, int(sel_none.get('n_cfg', C.N_PER_DCA)), sel_none['wfo'][Y].get('kind_median_test')))
++    return dict(V=V, verdict=v, top20=a, top20_NONE=a0, vb_base=base, notes=notes)
+ 
+ 
+ def build(sel):
