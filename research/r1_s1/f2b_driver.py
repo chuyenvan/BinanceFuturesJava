@@ -16,6 +16,9 @@ Usage (seed chi A1 | S7; cwd bat ky):
   grid [--max-slots N]         MOT vong: fetch o COMPLETE, push o chua push (thu tu bang prereg; dung khi FREE=0 hoac
                                so kernel f2b dang chay >= N), in bang 48 o roi THOAT. Kernel loi: ghi nhan, KHONG push lai.
   status                       in bang 48 o + parity/smoke (khong push, khong fetch)
+OVERLAY: moi cau hinh (NEN, smoke, 24 o) chay qua patch ho5_k2+ho5_k3 (snapshot symbol mapper + funding_data, khong
+ket noi Aerospike Oracle 3222 - cong dong tu 2026-11-11); dataset_sources them ho5-a3-mapper-snap, ho5-a3-funding-snap.
+fetch: chi tai log + result.json + printDone.csv + sim.out.gz + full/error.log (khong a3_ds/funding.bin 4.4 GB).
 Moi push: tu choi neu f2b_driver.py / test_f2b_driver.py chua commit / da sua sau commit (git status --porcelain);
 ghi git HEAD + sha256 f2b_driver.py vao pushed/<tag>.json.
 Log bang logging (r1_a3_driver da basicConfig stdout); bang cung qua logging.
@@ -60,6 +63,63 @@ WL_ADD = frozenset({"SIM_PRE_ARM_SL", "SIM_TAKE_PROFIT_RATE", "SIM_TAKE_PROFIT_O
 WL_ENV = frozenset({"WFO_DISABLE_DCA"})
 FORBIDDEN = ("DCA_GRID_ENABLED",)
 STATE_DIR = os.environ.get("F2B_STATE_DIR", "/home/ubuntu/kaggle_sim/f2b_state")
+
+# ---- OVERLAY SNAPSHOT (cong Aerospike 3222 Oracle dong tu 2026-11-11, AS3222_CLOSE) ----
+# Ap DUNG patch cua ~/claude_master/w3/ho5/ho5_k2.py (mapper) + ho5_k3.py (funding_data) cho MOI cau hinh (NEN, smoke, 24 o).
+# Kiem chung 2026-11-19/20: sim-ho5-a3-rep3/rep4-s123 tai lap r1-a3-s123 TRUNG BYTE (md5 printDone a11ce5f9), rep4 = funding v3.
+HO5_DIR = "/home/ubuntu/claude_master/w3/ho5"
+HO5_FILE_SHA = {"ho5_k2.py": "e13a449b5bf3c93c915a1efd70a8a2811c900b856fb02b11e86984ffafc94841",
+                "ho5_k3.py": "5539c193da422266c4f36aac3fbb5dd01fab955232ee8cf93785cf132d96e3be"}
+SNAP_DS = "ho5-a3-mapper-snap"
+FSNAP_DS = "ho5-a3-funding-snap"
+HO5_CFG = {"want_snap_sha": "5c436e65a1314118ba9e19e79185f9f22e11d1d76e3f8bf1ebf898d782de665d",   # mapper_snapshot.tsv
+           "want_ovl_sha": "6143fa754a1f595ed1c4810289ed4882d7f8e17d1ea3ce01854ea2c2d347a96b",    # ho5_mapper_overlay.jar
+           "want_fsnap_sha": "fb024c404c840a786742bacb3e6b46075ed8c057db9a425ac8550b62aff8491c",  # funding_snapshot.tsvgz.bin v3
+           "want_fovl_sha": "207e7c60388dca1f48cfd578c97c50eaec311c6c49e0a92581a948c89a39f300"}   # ho5_funding_overlay.jar
+OVERLAY_MARKERS = ('LOG.info("HO5 mapper snapshot OK', 'LOG.info("HO5 funding snapshot OK',
+                   '"-cp", HO5_FOVL + ":" + HO5_OVL + ":" + jar,', '"SYMBOL_MAPPER_SNAPSHOT": HO5_SNAP,',
+                   '"FUNDING_SNAPSHOT": HO5_FSNAP,', "_ho5_ax.register(_ho5_clean)")
+OVERLAY_GONE = ("import socket as _socket\n", 'LOG.info("PREFLIGHT mapper host %s:%s TCP OK"')
+_HO5 = {}
+
+
+def ho5_mods():
+    """(K2, K3) - import ho5_k2/ho5_k3 SAU khi kiem sha256 file (ghim). Khong doi file nao."""
+    if "k" not in _HO5:
+        for fn, want in HO5_FILE_SHA.items():
+            got = _sha256f(os.path.join(HO5_DIR, fn))
+            if got != want:
+                raise F2BError("%s sha256 %s != ghim %s" % (fn, got, want))
+        if HO5_DIR not in sys.path:
+            sys.path.insert(0, HO5_DIR)
+        lv = logging.getLogger().level
+        import ho5_k2 as K2  # noqa: E402
+        import ho5_k3 as K3  # noqa: E402
+        logging.getLogger().setLevel(lv)
+        if K2.R is not R:
+            raise F2BError("ho5_k2 import r1_a3_driver KHAC ban nay")
+        if (K2.SNAP_SHA, K2.OVL_SHA) != (HO5_CFG["want_snap_sha"], HO5_CFG["want_ovl_sha"]):
+            raise F2BError("ho5 mapper sha khac ghim")
+        if K3.FOVL_SHA != HO5_CFG["want_fovl_sha"]:
+            raise F2BError("ho5 funding overlay sha khac ghim")
+        if (K2.SNAP_DS, K3.FDS) != (SNAP_DS, FSNAP_DS):
+            raise F2BError("ten dataset snapshot khac ghim")
+        _HO5["k"] = (K2, K3)
+    return _HO5["k"]
+
+
+def overlay_patch(code):
+    """Dung NGUYEN patch ho5: K3.fpatch(K2.patch(code))."""
+    K2, K3 = ho5_mods()
+    return K3.fpatch(K2.patch(code))
+
+
+def overlay_dss(dss0, ks):
+    """dataset_sources r1-a3 + 2 dataset snapshot, dat TRUOC pred_ds (thu tu nhu ho5_k2.build/ho5_k3)."""
+    add = [ks.USER + "/" + SNAP_DS, ks.USER + "/" + FSNAP_DS]
+    base = list(dss0)
+    i = base.index(ks.USER + "/" + R.A3_DS) + 1
+    return base[:i] + add + base[i:]
 
 # ---- BANG DUY NHAT (prereg muc 4) ----
 SL_LEVELS = (("05", "-0.05"), ("10", "-0.10"), ("20", "-0.20"))      # SIM_PRE_ARM_SL
@@ -209,16 +269,18 @@ def build_f2b(seed, cell, smoke=False, write=True):
     cfg["tag"] = tag
     cfg["overrides"] = ov
     cfg["extra_env"] = dict(c.env)
+    cfg.update(HO5_CFG)
     if cfg["sim_end_date"] != SIM_END or int(cfg["sim_end_date"]) > SIM_END_MAX:
         raise F2BError("sim_end_date %r vuot / khac %s" % (cfg["sim_end_date"], SIM_END))
     old_js, new_js = repr(json.dumps(cfg0)), repr(json.dumps(cfg))
     if code0.count(old_js) != 1:
         raise F2BError("run.py r1-a3: khong tim thay dung 1 lan CFG json")
-    code = code0.replace(old_js, new_js)
+    code = overlay_patch(code0.replace(old_js, new_js))
     ref = ks.kernel_ref(tag)
     md = dict(md0)
     md["id"] = ref
     md["title"] = ref.split("/")[1]
+    md["dataset_sources"] = overlay_dss(md0["dataset_sources"], ks)
     folder = os.path.join(ks.WORKDIR, ks.slug(tag))
     if write:
         os.makedirs(folder, exist_ok=True)
@@ -241,7 +303,8 @@ def _s(d):
 def check_f2b(b):
     """(a) OV r1-a3 tru drop == tsx-x14-<seed> (va r1-a3-<seed>) tru drop; (b) key them trong whitelist;
     (c) extra_env chi WFO_DISABLE_DCA; (d) jar sim-jar-tsx; (e) sim_end_date == 20251231; (f) phan con lai cfg/md
-    trung r1-a3 tru tag/id/title. Loi -> F2BError."""
+    trung r1-a3 tru tag/id/title; (g) overlay snapshot: want_* ghim, dataset_sources = r1-a3 + 2 snapshot (khong 2026),
+    run.py == overlay_patch(r1-a3), co dau overlay, khong con PREFLIGHT TCP. Loi -> F2BError."""
     ks, cfg, md, seed = b["ks"], b["cfg"], b["md"], b["seed"]
     c = CELLS[b["cell"]]
     err = []
@@ -277,16 +340,31 @@ def check_f2b(b):
         err.append("(d) jar_ds %r != %s" % (cfg.get("jar_ds"), JAR_DS))
     if cfg.get("sim_end_date") != SIM_END or int(cfg["sim_end_date"]) > SIM_END_MAX:
         err.append("(e) sim_end_date %r" % cfg.get("sim_end_date"))
-    rest = {k: v for k, v in cfg.items() if k not in ("tag", "overrides", "extra_env")}
+    rest = {k: v for k, v in cfg.items() if k not in ("tag", "overrides", "extra_env") and k not in HO5_CFG}
     rest0 = {k: v for k, v in b["base_cfg"].items() if k not in ("tag", "overrides", "extra_env")}
     if rest != rest0:
-        err.append("(f) cfg ngoai overrides/extra_env/tag khac r1-a3")
+        err.append("(f) cfg ngoai overrides/extra_env/tag/want_* overlay khac r1-a3")
+    if {k: cfg.get(k) for k in HO5_CFG} != HO5_CFG:
+        err.append("(g) cfg want_* overlay khac ghim")
     if b["base_cfg"].get("extra_env"):
         err.append("(f) r1-a3 extra_env khong rong")
-    m1 = {k: v for k, v in md.items() if k not in ("id", "title")}
-    m0 = {k: v for k, v in b["base_md"].items() if k not in ("id", "title")}
+    m1 = {k: v for k, v in md.items() if k not in ("id", "title", "dataset_sources")}
+    m0 = {k: v for k, v in b["base_md"].items() if k not in ("id", "title", "dataset_sources")}
     if m1 != m0:
-        err.append("(f) kernel-metadata khac r1-a3 ngoai id/title")
+        err.append("(f) kernel-metadata khac r1-a3 ngoai id/title/dataset_sources")
+    if md["dataset_sources"] != overlay_dss(b["base_md"]["dataset_sources"], ks):
+        err.append("(g) dataset_sources != r1-a3 + [%s, %s]" % (SNAP_DS, FSNAP_DS))
+    if any(re.search(r"(2026|26$|-l26|data26)", d.split("/")[-1]) for d in md["dataset_sources"]):
+        err.append("(g) dataset_sources co dataset 2026: %s" % md["dataset_sources"])
+    old_js = repr(json.dumps(b["base_cfg"]))
+    if b["base_code"].count(old_js) != 1 or b["code"] != overlay_patch(b["base_code"].replace(old_js, repr(json.dumps(cfg)))):
+        err.append("(g) run.py != overlay_patch(run.py r1-a3 voi cfg nay)")
+    miss = [m for m in OVERLAY_MARKERS if b["code"].count(m) != 1]
+    if miss:
+        err.append("(g) run.py thieu dau overlay: %s" % miss)
+    left = [m for m in OVERLAY_GONE if m in b["code"]]
+    if left:
+        err.append("(g) run.py con PREFLIGHT TCP 3222: %s" % left)
     if err:
         for e in err:
             log.error("CHECK_FAIL %s: %s", b["tag"], e)
@@ -426,6 +504,17 @@ def parity_ok(seed, why=None):
     return True
 
 
+def overlay_result_errs(res):
+    """result.json phai co ho5_mapper / ho5_funding voi sha == ghim (overlay that su chay)."""
+    e = []
+    hm, hf = res.get("ho5_mapper") or {}, res.get("ho5_funding") or {}
+    if (hm.get("snap_sha256"), hm.get("overlay_sha256")) != (HO5_CFG["want_snap_sha"], HO5_CFG["want_ovl_sha"]):
+        e.append("ho5_mapper sha %s != ghim" % (hm,))
+    if (hf.get("snap_sha256"), hf.get("overlay_sha256")) != (HO5_CFG["want_fsnap_sha"], HO5_CFG["want_fovl_sha"]):
+        e.append("ho5_funding sha %s != ghim" % (hf,))
+    return e
+
+
 def parity_compare(ks, seed, fr):
     """fr = ks.fetch(...) cua f2b-nen-<seed> (vua fetch). Dat -> ghi PARITY_OK_<seed>.json; lech -> ParityMismatch."""
     want, rref = ref_md5(ks, seed)
@@ -446,6 +535,7 @@ def parity_compare(ks, seed, fr):
         bad.append("md5 file printDone %s != r1-a3 %s" % (filemd5, want))
     if res.get("jar_sha256") != rref.get("jar_sha256"):
         bad.append("jar_sha256 %s != r1-a3 %s" % (res.get("jar_sha256"), rref.get("jar_sha256")))
+    bad += overlay_result_errs(res)
     if bad:
         p = parity_file(seed)
         if os.path.exists(p):
@@ -480,6 +570,59 @@ def _push(b, allow_repush=False):
     return b["ref"]
 
 
+FETCH_WANT = ("result.json", "printDone.csv", "sim.out.gz", "sim.out", "full.log", "error.log", "a3_funding.json",
+              "prof_run.properties", "config.properties")
+FETCH_MAX_BYTES = 600 * 1024 * 1024
+
+
+def select_output_files(files):
+    """Loc file output kernel can tai: chi ten trong FETCH_WANT, KHONG funding.bin / a3_ds / a3_bins / *.bin, <= 600 MB.
+    files: list dict (fileName, totalBytes|size, url). Tra (chon, bo)."""
+    pick, skip = [], []
+    for it in files:
+        fn = it.get("fileName") or ""
+        base = os.path.basename(fn)
+        nb = it.get("totalBytes") or it.get("size") or 0
+        try:
+            nb = int(nb)
+        except (TypeError, ValueError):
+            nb = 0
+        bad = (base not in FETCH_WANT or fn.endswith(".bin") or "funding" in base and base != "a3_funding.json"
+               or fn.startswith(("a3_ds/", "a3_bins/", "wfo_ds_pred/")) or ".." in fn.split("/") or fn.startswith("/")
+               or nb > FETCH_MAX_BYTES)
+        (skip if bad else pick).append(it)
+    return pick, skip
+
+
+def fetch_selective(ks, tag, dest):
+    """Thay ks.fetch (tai TOAN BO output vao RAM, treo voi a3_ds/funding.bin 4.4 GB): lay danh sach + log qua
+    kernel_output_with_http_info, chi tai file select_output_files; log ghi <slug>.log. Tra dict nhu ks.fetch."""
+    import requests
+    api = ks._api()
+    owner, kslug = ks.kernel_ref(tag).split("/")
+    resp = api.process_response(api.kernel_output_with_http_info(owner, kslug))
+    pick, skip = select_output_files(resp.get("files") or [])
+    log.info("output %d file: tai %s ; BO %s", len(pick) + len(skip), [p["fileName"] for p in pick],
+             [s["fileName"] for s in skip])
+    os.makedirs(dest, exist_ok=True)
+    for it in pick:
+        p = os.path.join(dest, it["fileName"])
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        r = requests.get(it["url"], timeout=600)
+        r.raise_for_status()
+        with open(p, "wb") as f:
+            f.write(r.content)
+        if p.endswith("sim.out.gz") and not os.path.exists(p[:-3]):
+            with gzip.open(p, "rb") as fi, open(p[:-3], "wb") as fo:
+                shutil.copyfileobj(fi, fo)
+    if resp.get("log"):
+        with open(os.path.join(dest, kslug + ".log"), "w") as f:
+            f.write(resp["log"])
+    rj, pd = _find(dest, "result.json"), _find(dest, "printDone.csv")
+    return {"ref": ks.kernel_ref(tag), "dir": dest, "print_done": pd, "sim_out": _find(dest, "sim.out"),
+            "result": _jload(rj) if rj else None, "log": os.path.join(dest, kslug + ".log")}
+
+
 def _fresh_fetch(ks, tag):
     """N6: CHUYEN tuong minh out cu sang out/_stale/<slug>.<ts> (khong xoa) roi fetch MOI; kiem result.tag."""
     slug = ks.slug(tag)
@@ -492,7 +635,7 @@ def _fresh_fetch(ks, tag):
         dst = os.path.join(st, "%s.%d" % (slug, int(time.time() * 1000)))
         os.rename(d, dst)
         log.info("out cu %s -> %s", d, dst)
-    fr = ks.fetch(tag)
+    fr = fetch_selective(ks, tag, d)
     res = fr.get("result") or {}
     if res.get("tag") != tag:
         raise KernelError("fetch %s: result.json tag %r (thieu / khong phai lan chay nay)" % (tag, res.get("tag")))
@@ -578,6 +721,10 @@ PAT_PARSE_ERR = "SIM env override parse error"
 PAT_TP = "TAKEPROFIT sym="
 PAT_SL = "PREARM_SL sym="
 PAT_HARD = "HARD SL"
+# overlay (ho5): phai thay; loi Aerospike / snapshot: FAIL
+OVL_REQUIRED = ("HO5 mapper snapshot OK", "HO5 funding snapshot OK", "from SNAPSHOT", "Init funding fee data:")
+OVL_FORBIDDEN = ("SYMBOL_MAPPER_PREFLIGHT_FAIL", "SYMBOL_MAPPER_FAIL", "HO5_MAPPER_SNAPSHOT_FAIL", "HO5_FUNDING_SNAPSHOT_FAIL",
+                 "Error Scanning all Funding data", "Connection refused")
 
 
 def _log_files(d):
@@ -597,6 +744,7 @@ def scan_logs(paths):
     per = {}
     for p in paths:
         c = {"parse_err": 0, "tp": 0, "prearm_sl": 0, "hard_sl": 0, "tsx_ext_pos": 0, "jar": set(), "mapper": []}
+        c.update({"ovl:" + k: 0 for k in OVL_REQUIRED + OVL_FORBIDDEN})
         op = gzip.open if p.endswith(".gz") else open
         with op(p, "rt", errors="replace") as f:
             for ln in f:
@@ -608,6 +756,9 @@ def scan_logs(paths):
                     c["prearm_sl"] += 1
                 if PAT_HARD in ln:
                     c["hard_sl"] += 1
+                for k in OVL_REQUIRED + OVL_FORBIDDEN:
+                    if k in ln:
+                        c["ovl:" + k] += 1
                 for mm in RX_TSX.finditer(ln):
                     if int(mm.group(1)) > 0:
                         c["tsx_ext_pos"] += 1
@@ -668,6 +819,13 @@ def smoke_check(cell, fr, jar_ref):
         fails.append("0 dong '%s'" % PAT_TP)
     if set(X14_KEYS) <= set(c.drop) and tot("tsx_ext_pos") > 0:
         fails.append("nhanh A nhung co %d dong '[TSX] extHours=' > 0 (X14 con bat)" % tot("tsx_ext_pos"))
+    for k in OVL_FORBIDDEN:
+        if tot("ovl:" + k) > 0:
+            fails.append("overlay: co '%s' (%d)" % (k, tot("ovl:" + k)))
+    for k in OVL_REQUIRED:
+        if tot("ovl:" + k) == 0:
+            fails.append("overlay: thieu dong '%s'" % k)
+    fails += ["overlay: " + e for e in overlay_result_errs(res)]
     info = {"per_file": {p: {k: (sorted(v) if isinstance(v, set) else v) for k, v in d.items()} for p, d in per.items()},
             "mapper": mappers, "jar": sorted(jars), "dca_legs": dca, "status_count": dict(st),
             "take_profit_done_first5": tps, "tp_rate": c.add.get("SIM_TAKE_PROFIT_RATE"),

@@ -25,6 +25,16 @@ REAL_OUT = KS.OUTDIR
 X14 = ("SIM_LOSER_TS_EXT_HOURS", "SIM_LOSER_TS_EXT_DAYS")
 S2 = {"DCA_GRID_WEIGHTS": "1,0,0,0", "SIM_F_BASE": "0.0075"}
 ENV = {"WFO_DISABLE_DCA": "1"}
+HO5_HAND = {"want_snap_sha": "5c436e65a1314118ba9e19e79185f9f22e11d1d76e3f8bf1ebf898d782de665d",
+            "want_ovl_sha": "6143fa754a1f595ed1c4810289ed4882d7f8e17d1ea3ce01854ea2c2d347a96b",
+            "want_fsnap_sha": "fb024c404c840a786742bacb3e6b46075ed8c057db9a425ac8550b62aff8491c",
+            "want_fovl_sha": "207e7c60388dca1f48cfd578c97c50eaec311c6c49e0a92581a948c89a39f300"}
+HO5_RES = {"ho5_mapper": {"snap_sha256": HO5_HAND["want_snap_sha"], "overlay_sha256": HO5_HAND["want_ovl_sha"]},
+           "ho5_funding": {"snap_sha256": HO5_HAND["want_fsnap_sha"], "overlay_sha256": HO5_HAND["want_fovl_sha"]}}
+TICK = ["chuyendinh/wfo-ticker-" + y for y in ("2021", "2022", "2023", "2024h1", "2024h2", "2025h1", "2025h2")]
+DSS_A1 = (["chuyendinh/sim-x1-2021-bundle"] + TICK + ["chuyendinh/sim-jar-tsx", "chuyendinh/s3-moc-2021bins",
+          "chuyendinh/r1-a3-bins", "chuyendinh/ho5-a3-mapper-snap", "chuyendinh/ho5-a3-funding-snap"])
+DSS_S7 = DSS_A1 + ["chuyendinh/gate-abl-seed7"]
 WL_HAND = {"SIM_PRE_ARM_SL", "SIM_TAKE_PROFIT_RATE", "SIM_TAKE_PROFIT_ONLY", "DCA_GRID_WEIGHTS", "SIM_F_BASE"}
 
 # ---- go tay tu prereg muc 4: ten -> (SIM_PRE_ARM_SL, SIM_TAKE_PROFIT_RATE, SIM_TAKE_PROFIT_ONLY, bo X14?) ----
@@ -87,7 +97,8 @@ class Base(unittest.TestCase):
     def setUp(self):
         self.calls, self.pushes, self.free, self.status, self.fetch_src = [], [], 0, {}, {}
         self.saved = {nm: getattr(KS, nm) for nm in ("_api", "free_slots", "_status", "wait", "fetch", "submit")}
-        self.saved.update(WORKDIR=KS.WORKDIR, OUTDIR=KS.OUTDIR, STATE=F.STATE_DIR, GIT=F._git_state)
+        self.saved.update(WORKDIR=KS.WORKDIR, OUTDIR=KS.OUTDIR, STATE=F.STATE_DIR, GIT=F._git_state,
+                          FSEL=F.fetch_selective)
         self.tmp = tempfile.mkdtemp(prefix="f2b_test_")
         KS.WORKDIR = os.path.join(self.tmp, "work")
         KS.OUTDIR = os.path.join(self.tmp, "out")
@@ -124,8 +135,11 @@ class Base(unittest.TestCase):
             return {r: "COMPLETE" for r in refs}
 
         def fetch(tag, out_dir=None):
+            me.calls.append("ks.fetch")   # ks.fetch (tai toan bo) KHONG duoc dung nua
+            raise NetSpy("ks.fetch")
+
+        def fsel(ks, tag, dest):
             me.calls.append("fetch")
-            dest = os.path.join(KS.OUTDIR, KS.slug(tag))
             os.makedirs(dest, exist_ok=True)
             me.fetch_src[tag](dest)
             pd = os.path.join(dest, "storage", "printDone.csv")
@@ -139,16 +153,18 @@ class Base(unittest.TestCase):
         for nm, fn in (("_api", _api), ("free_slots", free_slots), ("_status", _status), ("wait", wait),
                        ("fetch", fetch), ("submit", submit)):
             setattr(KS, nm, fn)
+        F.fetch_selective = fsel
 
     def tearDown(self):
         for nm in ("_api", "free_slots", "_status", "wait", "fetch", "submit"):
             setattr(KS, nm, self.saved[nm])
         KS.WORKDIR, KS.OUTDIR = self.saved["WORKDIR"], self.saved["OUTDIR"]
         F.STATE_DIR, F._git_state = self.saved["STATE"], self.saved["GIT"]
+        F.fetch_selective = self.saved["FSEL"]
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     # --- output gia lap ---
-    def nen_src(self, seed, printdone=None, jar=None, tag=None):
+    def nen_src(self, seed, printdone=None, jar=None, tag=None, ho5=True):
         """Ghi output parity: printDone (mac dinh = ban that r1-a3) + result.json."""
         def w(dest):
             os.makedirs(os.path.join(dest, "storage"), exist_ok=True)
@@ -161,6 +177,8 @@ class Base(unittest.TestCase):
             rr = ref_res(seed)
             res = {"tag": tag or F.tag_of("NEN", seed), "ok": True, "java_rc": 0, "n_trades": rr["n_trades"],
                    "jar_sha256": jar or rr["jar_sha256"], "r1_a3": {"md5_printdone": md5f(pd)}}
+            if ho5:
+                res.update(HO5_RES)
             with open(os.path.join(dest, "result.json"), "w") as f:
                 json.dump(res, f)
         return w
@@ -223,22 +241,81 @@ class TestTable(Base):
 
 
 class TestNen(Base):
-    def test_nen_bytes_equal_r1a3(self):
+    def test_nen_overrides_and_cfg(self):
         for seed in ("A1", "S7"):
             b = F.build_f2b(seed, "NEN", write=False)
             self.assertEqual(json.dumps(b["cfg"]["overrides"]), json.dumps(b["base_cfg"]["overrides"]))
             self.assertEqual(json.dumps(R.OV), json.dumps(b["cfg"]["overrides"]))
-            self.assertEqual(json.dumps(b["cfg"]), json.dumps(dict(b["base_cfg"], tag=b["tag"])))
-            t0, t1 = '"tag": "r1-a3-%s"' % seed.lower(), '"tag": "f2b-nen-%s"' % seed.lower()
-            self.assertEqual(b["code"], b["base_code"].replace(t0, t1))
-            stored = os.path.join(self.saved["WORKDIR"], "r1-a3-" + seed.lower())  # ban da push that (chi doc)
+            self.assertEqual(b["cfg"]["extra_env"], {})
+            exp = dict(b["base_cfg"], tag=b["tag"])
+            exp.update(HO5_HAND)
+            self.assertEqual(json.dumps(b["cfg"]), json.dumps(exp))
+
+    def test_nen_runpy_is_overlay_of_pushed_r1a3(self):
+        """run.py NEN == ho5_k3.fpatch(ho5_k2.patch(run.py r1-a3 DA PUSH voi cfg NEN)) - tung byte."""
+        K2, K3 = F.ho5_mods()
+        for seed in ("A1", "S7"):
+            b = F.build_f2b(seed, "NEN", write=False)
+            stored = os.path.join(self.saved["WORKDIR"], "r1-a3-" + seed.lower())
             with open(os.path.join(stored, "run.py")) as f:
-                self.assertEqual(b["code"], f.read().replace(t0, t1), seed)
+                orig = f.read()
+            old_js = repr(json.dumps(b["base_cfg"]))
+            self.assertEqual(orig.count(old_js), 1)
+            self.assertEqual(b["code"], K3.fpatch(K2.patch(orig.replace(old_js, repr(json.dumps(b["cfg"]))))))
             with open(os.path.join(stored, "kernel-metadata.json")) as f:
                 md0 = json.load(f)
-            self.assertEqual({k: v for k, v in b["md"].items() if k not in ("id", "title")},
-                             {k: v for k, v in md0.items() if k not in ("id", "title")})
+            self.assertEqual({k: v for k, v in b["md"].items() if k not in ("id", "title", "dataset_sources")},
+                             {k: v for k, v in md0.items() if k not in ("id", "title", "dataset_sources")})
+            self.assertEqual(b["md"]["dataset_sources"], DSS_A1 if seed == "A1" else DSS_S7)
             self.assertEqual(b["md"]["id"], "chuyendinh/sim-f2b-nen-" + seed.lower())
+
+    def test_overlay_every_config(self):
+        for seed in ("A1", "S7"):
+            for cell in ALL:
+                b = F.build_f2b(seed, cell, write=False)
+                for m in F.OVERLAY_MARKERS:
+                    self.assertEqual(b["code"].count(m), 1, (seed, cell, m))
+                self.assertNotIn("import socket as _socket\n", b["code"])
+                self.assertEqual(b["md"]["dataset_sources"], DSS_A1 if seed == "A1" else DSS_S7)
+                self.assertEqual({k: b["cfg"][k] for k in HO5_HAND}, HO5_HAND)
+                self.assertNotIn("HOLDOUT_UNSEAL", b["code"].replace(b["base_code"], ""))
+        self.assertEqual(self.calls, [])
+
+    def test_forgot_overlay_one_branch_caught(self):
+        for cell in ("B10-S1", "A20R2-S2", "NEN"):
+            b = F.build_f2b("A1", cell, write=False)
+            old_js = repr(json.dumps(b["base_cfg"]))
+            b["code"] = b["base_code"].replace(old_js, repr(json.dumps(b["cfg"])))   # quen overlay
+            with self.assertRaises(F.F2BError) as cm:
+                F.check_f2b(b)
+            self.assertTrue(any(e.startswith("(g)") for e in cm.exception.errs), cm.exception.errs)
+            b = F.build_f2b("A1", cell, write=False)
+            b["md"]["dataset_sources"] = [d for d in b["md"]["dataset_sources"] if "funding-snap" not in d]
+            with self.assertRaises(F.F2BError):
+                F.check_f2b(b)
+            b = F.build_f2b("A1", cell, write=False)
+            b["cfg"]["want_fsnap_sha"] = "b39b63ed0abb5259053820879148308b823044ccc5848378d69bfea54c03b024"  # v2 cu
+            with self.assertRaises(F.F2BError):
+                F.check_f2b(b)
+
+    def test_ho5_pinned(self):
+        self.assertEqual(F.HO5_CFG, HO5_HAND)
+        orig = dict(F.HO5_FILE_SHA)
+        F._HO5.clear()
+        F.HO5_FILE_SHA["ho5_k3.py"] = "0" * 64
+        try:
+            with self.assertRaises(F.F2BError):
+                F.ho5_mods()
+        finally:
+            F.HO5_FILE_SHA.update(orig)
+            F._HO5.clear()
+        F.ho5_mods()
+
+    def test_dataset_2026_blocked(self):
+        b = F.build_f2b("S7", "A10R1-S1", write=False)
+        b["md"]["dataset_sources"] = b["md"]["dataset_sources"] + ["chuyendinh/ho5-a3-data26"]
+        with self.assertRaises(F.F2BError):
+            F.check_f2b(b)
 
 
 class TestGuards(Base):
@@ -438,10 +515,20 @@ class TestParity(Base):
         self.assertEqual(F.main(["parity", "A1"]), 7)
         self.assertEqual(self.pushes, ["f2b-nen-a1"])
 
+    def test_parity_requires_overlay_in_result(self):
+        self.free = 5
+        self.fetch_src["f2b-nen-a1"] = self.nen_src("A1", ho5=False)
+        F.cmd_parity("A1")
+        self.status[KS.kernel_ref("f2b-nen-a1")] = "COMPLETE"
+        with self.assertRaises(F.ParityMismatch) as cm:
+            F.cmd_parity("A1")
+        self.assertTrue(any("ho5_" in e for e in cm.exception.errs), cm.exception.errs)
+        self.assertNotIn("ks.fetch", self.calls)
+
     def test_parity_compare_jar_mismatch_caught(self):
         """Mutant M17: bo so jar_sha256 -> test nay phai do."""
         want = ref_res("S7")["r1_a3"]["md5_printdone"]
-        fr = {"result": {"tag": "f2b-nen-s7", "r1_a3": {"md5_printdone": want}, "jar_sha256": "0" * 64},
+        fr = {"result": dict(HO5_RES, tag="f2b-nen-s7", r1_a3={"md5_printdone": want}, jar_sha256="0" * 64),
               "print_done": ref_printdone("S7")}
         with self.assertRaises(F.ParityMismatch) as cm:
             F.parity_compare(KS, "S7", fr)
@@ -484,13 +571,18 @@ class TestSmoke(Base):
             f.write("sym,side,entry,tp,profit,status,start,time_start_format,end,level\n")
             for r in pd_rows:
                 f.write(r + "\n")
-        return {"dir": d, "print_done": pd, "result": {"jar_sha256": ref_res("A1")["jar_sha256"], "symbol_mapper": mapper}}
+        res = {"jar_sha256": ref_res("A1")["jar_sha256"], "symbol_mapper": mapper}
+        res.update(HO5_RES)
+        return {"dir": d, "print_done": pd, "result": res}
 
     def good(self, cell="A10R1-S1", extra_logs=None, rows=None, mapper=863):
         jar = ref_res("A1")["jar_sha256"]
-        logs = {"logs/full.log": ["x PREARM_SL sym=AAA", "x TAKEPROFIT sym=BBB", "Loaded Symbol Mapper: 863 symbols",
-                                  "DumpConfig HARD SL -10.00%"],
-                "sim-f2b-smk-a10r1-s1-a1.log": ['{"data":"INFO JAR_SHA256=%s"}' % jar]}
+        logs = {"logs/full.log": ["x PREARM_SL sym=AAA", "x TAKEPROFIT sym=BBB",
+                                  "Loaded Symbol Mapper: 863 symbols from SNAPSHOT /kaggle/input/x/mapper_snapshot.tsv",
+                                  "Init funding fee data: 834 symbols", "DumpConfig HARD SL -10.00%"],
+                "sim-f2b-smk-a10r1-s1-a1.log": ['{"data":"INFO JAR_SHA256=%s"}' % jar,
+                                                '{"data":"INFO HO5 mapper snapshot OK {...}"}',
+                                                '{"data":"INFO HO5 funding snapshot OK {...}"}']}
         for k, v in (extra_logs or {}).items():
             logs.setdefault(k, []).extend(v)
         rows = rows if rows is not None else [
@@ -517,6 +609,9 @@ class TestSmoke(Base):
             "dca": dict(rows=["AAA,BUY,1,1,1,STOP_MARKET_DONE,s,t,e,DCA_LEVEL1",
                               "BBB,BUY,1.0,1.1,10.0,TAKE_PROFIT_DONE,s,t,e,PREDICT_SYMBOL_TRADE"]),
             "x14": dict(extra_logs={"logs/full.log": ["[TSX] extHours=336 extDays=214 deferTicks=5"]}),
+            "preflight": dict(extra_logs={"logs/full.log": ["ERROR SYMBOL_MAPPER_PREFLIGHT_FAIL: khong toi duoc"]}),
+            "aero": dict(extra_logs={"logs/full.log": ["Error Scanning all Funding data x: Connection refused"]}),
+            "fsnapfail": dict(extra_logs={"logs/full.log": ["HO5_FUNDING_SNAPSHOT_FAIL sha khong khop"]}),
         }
         for name, kw in cases.items():
             fails, _ = self.check(self.good(**kw))
@@ -529,6 +624,24 @@ class TestSmoke(Base):
             open(p, "w").write(txt)
             fails, _ = self.check(fr)
             self.assertTrue(any(drop in f for f in fails), (drop, fails))
+
+    def test_overlay_required_lines(self):
+        for drop in ("HO5 mapper snapshot OK", "HO5 funding snapshot OK", "from SNAPSHOT", "Init funding fee data:"):
+            fr = self.good()
+            for root, _d, files in os.walk(fr["dir"]):
+                for fn in files:
+                    p = os.path.join(root, fn)
+                    if fn.endswith(".log"):
+                        with open(p) as f:
+                            txt = f.read().replace(drop, "zz")
+                        with open(p, "w") as f:
+                            f.write(txt)
+            fails, _ = self.check(fr)
+            self.assertTrue(any(drop in x for x in fails), (drop, fails))
+        fr = self.good()
+        del fr["result"]["ho5_funding"]
+        fails, _ = self.check(fr)
+        self.assertTrue(any("ho5_funding" in x for x in fails), fails)
 
     def test_tsx_zero_not_counted_and_branch_b(self):
         fails, info = self.check(self.good(extra_logs={"logs/full.log": ["[TSX] extHours=0 extDays=0"]}))
@@ -554,6 +667,77 @@ class TestSmoke(Base):
                 json.dump(dict(bad["result"], tag=tag, ok=True, java_rc=0), f)
         self.fetch_src[tag] = src
         self.assertEqual(F.main(["fetch", "A10R1-S1", "A1", "--smoke"]), 6)
+
+
+class TestFetchSelective(unittest.TestCase):
+    FILES = [{"fileName": "a3_ds/funding.bin", "totalBytes": 4446783456, "url": "u1"},
+             {"fileName": "a3_ds/manifest.txt", "totalBytes": 3000, "url": "u2"},
+             {"fileName": "result.json", "totalBytes": 900, "url": "u3"},
+             {"fileName": "storage/printDone.csv", "totalBytes": 910781, "url": "u4"},
+             {"fileName": "logs/sim.out.gz", "totalBytes": 107055, "url": "u5"},
+             {"fileName": "logs/full.log", "totalBytes": 1000, "url": "u6"},
+             {"fileName": "logs/error.log", "totalBytes": 10, "url": "u7"},
+             {"fileName": "a3_bins/predict_wf_20220101.bin", "totalBytes": 29220204, "url": "u8"},
+             {"fileName": "wfo_ds_pred/manifest.txt", "totalBytes": 3000, "url": "u9"},
+             {"fileName": "a3_funding.json", "totalBytes": 9000, "url": "u10"},
+             {"fileName": "storage/OrderTestDone.data", "totalBytes": 10, "url": "u11"},
+             {"fileName": "logs/full.log.huge", "totalBytes": 10, "url": "u12"},
+             {"fileName": "../result.json", "totalBytes": 10, "url": "u13"},
+             {"fileName": "big/full.log", "totalBytes": 700 * 1024 * 1024, "url": "u14"}]
+
+    def test_select(self):
+        pick, skip = F.select_output_files(self.FILES)
+        self.assertEqual([p["fileName"] for p in pick], ["result.json", "storage/printDone.csv", "logs/sim.out.gz",
+                                                       "logs/full.log", "logs/error.log", "a3_funding.json"])
+        self.assertEqual(len(pick) + len(skip), len(self.FILES))
+        self.assertFalse(any("funding.bin" in p["fileName"] for p in pick))
+
+    def test_fetch_selective_fake_api(self):
+        import gzip as _gz
+        import types
+        tmp = tempfile.mkdtemp(prefix="f2b_fsel_")
+        got = []
+        files = list(self.FILES)
+        payload = {"u3": json.dumps({"tag": "f2b-nen-a1"}).encode(), "u4": b"sym,status\n",
+                   "u5": _gz.compress(b"hello\n"), "u6": b"x\n", "u7": b"", "u10": b"{}"}
+
+        class Api(object):
+            def kernel_output_with_http_info(self, owner, slug):
+                got.append(("meta", owner, slug))
+                return {"files": files, "log": '[{"data":"HO5 mapper snapshot OK"}]'}
+
+            def process_response(self, r):
+                return r
+
+        class Resp(object):
+            def __init__(self, c):
+                self.content = c
+
+            def raise_for_status(self):
+                pass
+
+        fake_req = types.ModuleType("requests")
+        fake_req.get = lambda url, timeout=None: (got.append(url), Resp(payload[url]))[1]
+        saved_req, saved_api = sys.modules.get("requests"), KS._api
+        sys.modules["requests"] = fake_req
+        KS._api = lambda: Api()
+        try:
+            fr = F.fetch_selective(KS, "f2b-nen-a1", os.path.join(tmp, "o"))
+        finally:
+            if saved_req is not None:
+                sys.modules["requests"] = saved_req
+            else:
+                del sys.modules["requests"]
+            KS._api = saved_api
+        self.assertEqual(got[0], ("meta", "chuyendinh", "sim-f2b-nen-a1"))
+        self.assertEqual(sorted(got[1:]), sorted(["u3", "u4", "u5", "u6", "u7", "u10"]))
+        self.assertEqual(fr["result"], {"tag": "f2b-nen-a1"})
+        self.assertTrue(fr["print_done"].endswith("storage/printDone.csv"))
+        with open(os.path.join(tmp, "o", "logs", "sim.out")) as f:
+            self.assertEqual(f.read(), "hello\n")
+        self.assertTrue(os.path.exists(os.path.join(tmp, "o", "sim-f2b-nen-a1.log")))
+        self.assertFalse(os.path.exists(os.path.join(tmp, "o", "a3_ds")))
+        shutil.rmtree(tmp)
 
 
 class TestGrid(Base):

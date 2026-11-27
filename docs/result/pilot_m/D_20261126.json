@@ -1,0 +1,393 @@
+{
+ "D": "2026-11-26",
+ "bac": "XANH",
+ "bac_muc": {
+  "D1": "XANH",
+  "D2": "XANH",
+  "D3": "XANH",
+  "D4": "XANH",
+  "I1": "XANH",
+  "I10": "XANH",
+  "I11": "XANH",
+  "I12": "XANH",
+  "I2": "XANH",
+  "I3": "XANH",
+  "I4": "XANH",
+  "I5": "XANH",
+  "I6": "XANH",
+  "I7": "XANH",
+  "I8": "XANH",
+  "I9": "XANH",
+  "K1": "XANH",
+  "K2": "XANH",
+  "K3": "XANH",
+  "K4": "XANH",
+  "K5": "XANH",
+  "K6": "XANH",
+  "K7": "XANH",
+  "L-S": "XANH",
+  "L-S2": "XANH",
+  "M-E": "XANH",
+  "M-E0": "XANH",
+  "M-G": "XANH",
+  "M-S": "XANH",
+  "M-T": "XANH",
+  "M-X": "XANH"
+ },
+ "bao_owner_ngay": [],
+ "cham_luc": "2026-11-27T10:17:32+07:00",
+ "cong_cu_sha256_12": "364ee37d866e",
+ "dau": "PILOT-M D=2026-11-26 cham_luc=2026-11-27T10:17:32+07:00 bac=XANH prereg=2a21fe35+E1+E2+E3 cong_cu=364ee37d866e",
+ "du_lieu": {
+  "dong_khong_parse_theo_mau": {},
+  "dong_parse_theo_mau": {
+   "BANNER": 1,
+   "KS_HOURLY": 24,
+   "MAINCLASS": 1,
+   "MKT": 1440,
+   "RECON_H": 24,
+   "RECON_START": 1,
+   "RECOV": 1,
+   "TSX_FLAG": 2,
+   "TSX_STATUS": 25
+  },
+  "dong_trung_bo": 0,
+  "files": [
+   "full.log@1795742580_80495359.gz"
+  ],
+  "gio_khong_co_dong": [],
+  "horizon": "2026-11-27 08:23:06.185",
+  "ly_do_pull": "",
+  "ly_do_trang_thai": "",
+  "max_ts": null,
+  "pull_ok": true,
+  "so_dong_cua_so": 39784,
+  "thoi_gian_chay_s": 8.4,
+  "trang_thai_cum_ok": true,
+  "vi_du_khong_parse": {}
+ },
+ "hai_ngay_vang_lien_tiep_cung_muc": [],
+ "muc": {
+  "D1": {
+   "mau": 0,
+   "mo_ta": {
+    "gia_tri_15M_leg_DCA": [],
+    "so_dong_SKIP_ORDER_DCA_REJECT": 0
+   },
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KHONG_CO_SU_KIEN"
+  },
+  "D2": {
+   "ly_do": "chua co cong cu Vision/rig duoc A1 duyet",
+   "mau": 0,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KCD_CAU_TRUC"
+  },
+  "D3": {
+   "ly_do": "chua co cong cu Vision/rig duoc A1 duyet",
+   "mau": 0,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KCD_CAU_TRUC"
+  },
+  "D4": {
+   "ly_do": "chua co cong cu Vision/rig duoc A1 duyet",
+   "mau": 0,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KCD_CAU_TRUC"
+  },
+  "I1": {
+   "ly_do": "chua co cong cu Vision/rig duoc A1 duyet",
+   "mau": 0,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KCD_CAU_TRUC"
+  },
+  "I10": {
+   "mau": 0,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KHONG_CO_SU_KIEN"
+  },
+  "I11": {
+   "mau": 2,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "DAT"
+  },
+  "I12": {
+   "mau": 0,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KHONG_CO_SU_KIEN"
+  },
+  "I2": {
+   "ly_do": "chua co cong cu Vision/rig duoc A1 duyet",
+   "mau": 0,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KCD_CAU_TRUC"
+  },
+  "I3": {
+   "mau": 0,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KHONG_CO_SU_KIEN"
+  },
+  "I4": {
+   "mau": 0,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KHONG_CO_SU_KIEN"
+  },
+  "I5": {
+   "ly_do": "chua co cong cu Vision/rig duoc A1 duyet",
+   "mau": 0,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KCD_CAU_TRUC"
+  },
+  "I6": {
+   "ly_do": "chua co cong cu Vision/rig duoc A1 duyet",
+   "mau": 0,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KCD_CAU_TRUC"
+  },
+  "I7": {
+   "ly_do": "chua co cong cu Vision/rig duoc A1 duyet",
+   "mau": 0,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KCD_CAU_TRUC"
+  },
+  "I8": {
+   "mau": 0,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KHONG_CO_SU_KIEN"
+  },
+  "I9": {
+   "mau": 0,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KHONG_CO_SU_KIEN"
+  },
+  "K1": {
+   "mau": 1,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "DAT"
+  },
+  "K2": {
+   "mau": 720,
+   "mo_ta": {
+    "cron_cuoi": "2026-11-27 10:16:11.000",
+    "so_dong_TOM_TAT": 720,
+    "so_luot_doc_hong": 0
+   },
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "DAT"
+  },
+  "K3": {
+   "mau": 25,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "DAT"
+  },
+  "K4": {
+   "mau": 2,
+   "mo_ta": {
+    "flag": "OFF",
+    "so_dong_status": 25
+   },
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "DAT"
+  },
+  "K5": {
+   "mau": 1,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "DAT"
+  },
+  "K6": {
+   "mau": 3,
+   "mo_ta": {
+    "ERROR": 0,
+    "KHAN": 0,
+    "LATCH": 0
+   },
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "DAT"
+  },
+  "K7": {
+   "ly_do": "Q4: oracle_seen chi ghi tren 242; bang chung gian tiep = K2 deadman=OK",
+   "mau": 0,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KCD_CAU_TRUC"
+  },
+  "L-S": {
+   "ly_do": "chua co cong cu Vision/rig duoc A1 duyet",
+   "mau": 0,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KCD_CAU_TRUC"
+  },
+  "L-S2": {
+   "ly_do": "chua co cong cu Vision/rig duoc A1 duyet",
+   "mau": 0,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KCD_CAU_TRUC"
+  },
+  "M-E": {
+   "ly_do": "chua co cong cu Vision/rig duoc A1 duyet",
+   "mau": 0,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KCD_CAU_TRUC"
+  },
+  "M-E0": {
+   "mau": 0,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KHONG_CO_SU_KIEN"
+  },
+  "M-G": {
+   "ly_do": "chua co cong cu Vision/rig duoc A1 duyet",
+   "mau": 0,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KCD_CAU_TRUC"
+  },
+  "M-S": {
+   "mau": 0,
+   "mo_ta": {
+    "S5_S6": "KCD_CAU_TRUC (R3: chua co quy trinh chep exchangeInfo hang ngay)",
+    "hard_VI_PHAM": 0,
+    "so_leg_S1b_TIER": 0,
+    "theo_doi_C_ngam_tren_C3CAP_tru_1": {
+     "n": 0
+    },
+    "theo_doi_L_S_L_S2": "KCD_CAU_TRUC (chua co cong cu Vision/rig duoc A1 duyet)"
+   },
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KHONG_CO_SU_KIEN"
+  },
+  "M-T": {
+   "mau": 0,
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KHONG_CO_SU_KIEN"
+  },
+  "M-X": {
+   "mau": 0,
+   "mo_ta": {
+    "dem": {
+     "C2_WARN": 0,
+     "E2021": 0,
+     "E4130": 0,
+     "GUI_LAI": 0,
+     "KHONG_KHOP": 0,
+     "LATCH": 0,
+     "TU_CHOI": 0,
+     "UNKNOWN": 0
+    },
+    "nguong": {
+     "c2Slip": 0.025,
+     "c2Warn": 0.017,
+     "nguon": "mac dinh code (CHUA XAC NHAN, chua co dong C2_WARN)"
+    },
+    "so_leg_s_in_gt_0.017": 0,
+    "so_leg_s_in_gt_0.025": 0,
+    "so_su_kien_gt_c2Slip_24h_truot_max": 0,
+    "truot_ra_time_stop": {
+     "n": 0
+    },
+    "truot_ra_trailing": {
+     "n": 0
+    },
+    "truot_vao_luy_ke_tu_2026-11-24": {
+     "n": 0
+    },
+    "truot_vao_ngay": {
+     "n": 0
+    }
+   },
+   "so_khong_cham_duoc": 0,
+   "so_vi_pham": 0,
+   "su_kien_khong_cham_duoc": [],
+   "su_kien_vi_pham": [],
+   "trang_thai": "KHONG_CO_SU_KIEN"
+  }
+ },
+ "prereg": "2a21fe35+E1+E2+E3"
+}

@@ -81,3 +81,32 @@ Them: muc 9 "TAKE_PROFIT_DONE profit = +10 %" chua biet co tru phi -> doc tay.
 
 ## 9. Con no
 - Chua chay that smoke / parity / luoi (sau khi MASTER commit). Chua cham diem muc 5.
+
+## 10. Overlay snapshot (ban 3, 2026-11-27) - f2b_driver.py ddf97c3c..., test_f2b_driver.py bcce884e... (44/44 OK)
+Ly do: iptables Oracle AS3222_CLOSE (owner, 2026-11-11) chan Kaggle -> Aerospike 161.118.212.3:3222 => parity NEN f2b-nen-a1/s7
+chet "SYMBOL_MAPPER_PREFLIGHT_FAIL" (~/claude_master/w3/levz_kg/PARITY_DIAG.md). MASTER chon A: overlay snapshot, KHONG mo cong.
+Nguon: ~/claude_master/w3/ho5/ho5_k2.py (sha e13a449b...) + ho5_k3.py (5539c193...), import truc tiep SAU khi kiem sha (ghim).
+Co che (moi cau hinh NEN/smoke/24 o, cung mot ham overlay_patch = K3.fpatch(K2.patch(run.py))):
+- Bo khoi PREFLIGHT TCP 3222; kiem sha mapper_snapshot.tsv 5c436e65 + ho5_mapper_overlay.jar 6143fa75 (ds ho5-a3-mapper-snap),
+  funding_snapshot.tsvgz.bin fb024c40 (v3) + ho5_funding_overlay.jar 207e7c60 (ds ho5-a3-funding-snap); sai -> exit 2.
+- Ban copy WORK config.properties: AEROSPIKE_HOST_226 -> 127.0.0.1 (moi truy cap Aerospike con sot se loi ngay).
+- java -cp fund_overlay:mapper_overlay:sim.jar (jar sim cc0f9d11 KHONG doi; overlay = SimpleSymbolMapper / FundingFeeManager CFR,
+  chi doi init doc file). Env SYMBOL_MAPPER_SNAPSHOT, FUNDING_SNAPSHOT dat TRONG run.py (KHONG qua extra_env; whitelist extra_env giu
+  {WFO_DISABLE_DCA}). atexit xoa a3_ds/a3_bins. result.json them ho5_mapper/ho5_funding.
+- cfg them 4 key want_snap_sha/want_ovl_sha/want_fsnap_sha/want_fovl_sha (ghim HO5_CFG). dataset_sources = r1-a3 + 2 ds snapshot
+  (truoc pred_ds), chan ten 2026.
+Snapshot: mapper 863 symbol (= "Loaded Symbol Mapper: 863" cua run r1-a3). Funding v3 = dump Aerospike test.funding_data (831 sym, toi
+2026-08-05) U crawl fapi 2025-01-01..2026-10-01 (them 291 314 ban ghi, 3 420 trong 2025: BTCST/SNT/STPT/PLANCK...; cong chong lan 2025:
+878 241 moc chung trung bit 100 %). Co ban ghi 2026 (sim dung o SIM_END_DATE 20251231). Dataset Kaggle hien = v3 (16 483 167 B).
+Bang chung: sim-ho5-a3-rep3-s123 (v2) va rep4-s123 (v3) md5 printDone a11ce5f9 == r1-a3-s123, equity 144 003, 3 584 lenh.
+CHUA kiem cho A1 / S7 => parity NEN f2b (md5 8986d332 / 083e3de0) la phep thu quyet dinh.
+smoke_check them: bat buoc "HO5 mapper snapshot OK", "HO5 funding snapshot OK", "from SNAPSHOT", "Init funding fee data:";
+FAIL neu co SYMBOL_MAPPER_PREFLIGHT_FAIL / SYMBOL_MAPPER_FAIL / HO5_*_SNAPSHOT_FAIL / "Error Scanning all Funding data" / "Connection
+refused", hoac result.json thieu sha overlay. parity_compare cung doi sha overlay trong result.json.
+fetch: fetch_selective (kernel_output_with_http_info; chi tai result.json, printDone.csv, sim.out(.gz), full/error.log, a3_funding.json,
+prof_run/config.properties; bo *.bin, a3_ds/, a3_bins/, wfo_ds_pred/, > 600 MB). ks.fetch KHONG con dung.
+Mutant (ban copy tam) deu bi bat: bo overlay nhanh B, thieu ds funding-snap, bo kiem PREFLIGHT_FAIL, fetch tai .bin, parity bo kiem
+overlay, ghim sha funding v2.
+Rui ro: (1) v3 them 3 420 moc funding 2025 so voi store r1-a3 da doc -> neu symbol do co lenh trong A1/S7 thi md5 lech (s123 khong
+lech); khi do can MASTER quyet (vd dataset funding v2 b39b63ed - Kaggle chi giu ban moi nhat). (2) driver phu thuoc file ngoai repo
+~/claude_master/w3/ho5/ho5_k2.py, ho5_k3.py + mapper/SNAP_SHA, fund/OVL_SHA (ghim sha, doi -> dung). (3) overlay la ma CFR decompile.
