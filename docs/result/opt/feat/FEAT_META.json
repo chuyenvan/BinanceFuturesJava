@@ -1,0 +1,258 @@
+{
+ "reports": {
+  "BTC": {
+   "year_stats": {
+    "2019": {
+     "n": 432503,
+     "iv0": 4497,
+     "iv_gt400": 417,
+     "iv_lt5": 4499,
+     "iv_nan": 0,
+     "liq": 3779,
+     "blk": 345,
+     "cmb": 0
+    },
+    "2020": {
+     "n": 1324730,
+     "iv0": 12512,
+     "iv_gt400": 1937,
+     "iv_lt5": 12513,
+     "iv_nan": 0,
+     "liq": 10988,
+     "blk": 4260,
+     "cmb": 0
+    },
+    "2021": {
+     "n": 2933039,
+     "iv0": 9561,
+     "iv_gt400": 1678,
+     "iv_lt5": 9561,
+     "iv_nan": 0,
+     "liq": 24959,
+     "blk": 24527,
+     "cmb": 0
+    },
+    "2022": {
+     "n": 2963267,
+     "iv0": 9915,
+     "iv_gt400": 2792,
+     "iv_lt5": 9915,
+     "iv_nan": 0,
+     "liq": 4452,
+     "blk": 38042,
+     "cmb": 8863
+    },
+    "2023": {
+     "n": 3563983,
+     "iv0": 7402,
+     "iv_gt400": 1255,
+     "iv_lt5": 7415,
+     "iv_nan": 0,
+     "liq": 6262,
+     "blk": 61826,
+     "cmb": 47003
+    },
+    "2024": {
+     "n": 5057573,
+     "iv0": 12069,
+     "iv_gt400": 3170,
+     "iv_lt5": 12098,
+     "iv_nan": 0,
+     "liq": 9805,
+     "blk": 64922,
+     "cmb": 64304
+    },
+    "2025": {
+     "n": 5303254,
+     "iv0": 15706,
+     "iv_gt400": 3248,
+     "iv_lt5": 15810,
+     "iv_nan": 0,
+     "liq": 9845,
+     "blk": 97809,
+     "cmb": 117896
+    }
+   },
+   "non_inverse_dropped": 0,
+   "inst_mismatch": 0,
+   "inst_missing": 0,
+   "days": 2557,
+   "first_day": "2019-01-01",
+   "last_day": "2025-12-31",
+   "trades": 21578349
+  },
+  "ETH": {
+   "year_stats": {
+    "2019": {
+     "n": 74623,
+     "iv0": 1196,
+     "iv_gt400": 149,
+     "iv_lt5": 1198,
+     "iv_nan": 0,
+     "liq": 4269,
+     "blk": 25,
+     "cmb": 0
+    },
+    "2020": {
+     "n": 444312,
+     "iv0": 6145,
+     "iv_gt400": 839,
+     "iv_lt5": 6146,
+     "iv_nan": 0,
+     "liq": 8033,
+     "blk": 766,
+     "cmb": 0
+    },
+    "2021": {
+     "n": 1963152,
+     "iv0": 6713,
+     "iv_gt400": 2376,
+     "iv_lt5": 6713,
+     "iv_nan": 0,
+     "liq": 8914,
+     "blk": 11406,
+     "cmb": 0
+    },
+    "2022": {
+     "n": 3387038,
+     "iv0": 11537,
+     "iv_gt400": 3985,
+     "iv_lt5": 11537,
+     "iv_nan": 0,
+     "liq": 4654,
+     "blk": 37939,
+     "cmb": 9639
+    },
+    "2023": {
+     "n": 2904854,
+     "iv0": 7795,
+     "iv_gt400": 1020,
+     "iv_lt5": 7798,
+     "iv_nan": 0,
+     "liq": 4219,
+     "blk": 36599,
+     "cmb": 25602
+    },
+    "2024": {
+     "n": 3090343,
+     "iv0": 6682,
+     "iv_gt400": 5713,
+     "iv_lt5": 6684,
+     "iv_nan": 0,
+     "liq": 14489,
+     "blk": 35342,
+     "cmb": 33344
+    },
+    "2025": {
+     "n": 3274721,
+     "iv0": 16455,
+     "iv_gt400": 6038,
+     "iv_lt5": 16463,
+     "iv_nan": 0,
+     "liq": 11890,
+     "blk": 44060,
+     "cmb": 45990
+    }
+   },
+   "non_inverse_dropped": 0,
+   "inst_mismatch": 0,
+   "inst_missing": 0,
+   "days": 2467,
+   "first_day": "2019-04-01",
+   "last_day": "2025-12-31",
+   "trades": 15139043
+  }
+ },
+ "dev": false,
+ "pull_state": [
+  [
+   "done",
+   "2022-06-30"
+  ],
+  [
+   "done",
+   "2025-12-31"
+  ],
+  [
+   "done",
+   "2025-12-31"
+  ]
+ ],
+ "code_sha256": "b207fd648f79761dc73df9aed1db3001310e4c91e07d82c1418998baec78cacc",
+ "grid": [
+  1546300800000,
+  1767222000000
+ ],
+ "rows": 61368,
+ "params": {
+  "IV": [
+   5.0,
+   400.0
+  ],
+  "MIN_N": 20,
+  "TENOR": {
+   "s": [
+    1.0,
+    7.0
+   ],
+   "m": [
+    20.0,
+    45.0
+   ],
+   "l": [
+    60.0,
+    120.0
+   ]
+  },
+  "ATM": [
+   0.4,
+   0.6
+  ],
+  "PUT25": [
+   -0.35,
+   -0.15
+  ],
+  "CALL25": [
+   0.15,
+   0.35
+  ],
+  "Z": [
+   2160,
+   720
+  ],
+  "Q": [
+   8760,
+   2160
+  ],
+  "NORM": [
+   720,
+   360
+  ],
+  "RV_ANN": 9359.487165438073,
+  "year_days": 365,
+  "embargo_min": 5
+ },
+ "features": [
+  "f01_dvol",
+  "f02_atm_s",
+  "f03_atm_m",
+  "f04_atm_l",
+  "f05_skew_s",
+  "f06_skew_m",
+  "f07_term",
+  "f08_vrp30",
+  "f09_vrp7",
+  "f10_pcr_vol",
+  "f11_pcr_prem",
+  "f12_dflow",
+  "f13_vflow",
+  "f14_putbuy",
+  "f15_block",
+  "f16_liq",
+  "f17_dvol_chg24",
+  "f18_dvol_chg72",
+  "f19_dvol_ratio"
+ ],
+ "doc": "PROGRAM_OPT feature library (DEV-FEAT). 18 hourly features x {BTC, ETH} + f19 (O1), R1 causal, R2 transforms, E6 hygiene.\nConventions (see CHOICES_FEAT.md):\n - Hour grid t = UTC hour start (ms). A trade is usable at t iff timestamp < t - 5 min. Its 'avail hour'\n   a = ((ts + 5min) // 1h + 1) * 1h is the first grid hour where it is usable. 24h window at t = trades with\n   ts in [t - 24h - 5min, t - 5min) <=> a in [t - 23h, t]; 72h window <=> a in [t - 71h, t].\n - DVOL / Binance kline rows are labelled by candle OPEN time; candle [ts, ts+1h) closes at ts+1h and is usable at t\n   iff ts + 1h <= t. f01(t) = close of DVOL candle with ts = t - 1h (exact, no forward fill).\n - Black-Scholes, r = 0, S = trade index_price, sigma = iv/100, T = (expiry - ts) / (365 d). Deribit BTC/ETH options are\n   inverse (premium in coin): premium USD = price * index_price * amount. Delta = standard BS USD delta N(d1) (call),\n   N(d1) - 1 (put); NO premium adjustment. Vega = S * phi(d1) * sqrt(T) / 100 (USD per 1 vol point per 1 coin).\n - amount = coin units of underlying (contract_size = 1 for all instruments; 'contracts' field is empty in this dump).\n",
+ "data_hash": "1c6a9e0b9df5445b1d624e6166f17afd00be8da30026b31664df49dfb07d8d87"
+}
