@@ -1,0 +1,3214 @@
+{
+ "prereg": "docs/prereg/PREREG_FAMILY2B.md@5f917679",
+ "criteria": "muc 5",
+ "parity_ok": {
+  "A1": true,
+  "S7": true
+ },
+ "rows": {
+  "A05R05-S1|A1": {
+   "tag": "f2b-A05R05-S1-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 17069.0,
+   "years": 4.498288843258043,
+   "cagr": -14.754507804498473,
+   "maxdd": -52.91712707182321,
+   "calmar": -0.2788229184186911,
+   "n_trades": 5441,
+   "pnl_total": -17930.594832399976,
+   "pnl_per_trade": -3.295459443558165,
+   "win_pct": 64.03234699503767,
+   "pnl_year": {
+    "2022": -2581.9485054000015,
+    "2023": 1214.9773029000007,
+    "2024": -2297.4603953,
+    "2025": -10610.720990699994
+   },
+   "pos_years": [
+    2023
+   ],
+   "exit_status": {
+    "TAKE_PROFIT_DONE": 3484,
+    "STOP_LOSS_DONE": 1957
+   },
+   "u_proxy_mean": 0.001442127656580205,
+   "u_proxy_max": 0.358646072540816,
+   "v3_only_pd": {
+    "n_trades_printdone": 5441,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 5441,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A05R05-S1|S7": {
+   "tag": "f2b-A05R05-S1-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 17715.0,
+   "years": 4.498288843258043,
+   "cagr": -14.047618364954017,
+   "maxdd": -51.29010050943137,
+   "calmar": -0.273885569055785,
+   "n_trades": 5421,
+   "pnl_total": -17284.926506499996,
+   "pnl_per_trade": -3.1885125450101452,
+   "win_pct": 64.37926581811475,
+   "pnl_year": {
+    "2022": -2630.729228600002,
+    "2023": 1335.5088400999975,
+    "2024": -1470.0438647000033,
+    "2025": -10917.478734999997
+   },
+   "pos_years": [
+    2023
+   ],
+   "exit_status": {
+    "TAKE_PROFIT_DONE": 3490,
+    "STOP_LOSS_DONE": 1931
+   },
+   "u_proxy_mean": 0.0017012998937815896,
+   "u_proxy_max": 0.37886744701043973,
+   "v3_only_pd": {
+    "n_trades_printdone": 5421,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 5421,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A05R05-S2|A1": {
+   "tag": "f2b-A05R05-S2-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 11619.0,
+   "years": 4.498288843258043,
+   "cagr": -21.740430989602256,
+   "maxdd": -68.47060103937093,
+   "calmar": -0.3175148262113458,
+   "n_trades": 5441,
+   "pnl_total": -23380.81504480003,
+   "pnl_per_trade": -4.297154024039704,
+   "win_pct": 64.03234699503767,
+   "pnl_year": {
+    "2022": -3936.2816193,
+    "2023": 1535.629340699999,
+    "2024": -3395.0973000999993,
+    "2025": -12528.952209699997
+   },
+   "pos_years": [
+    2023
+   ],
+   "exit_status": {
+    "TAKE_PROFIT_DONE": 3484,
+    "STOP_LOSS_DONE": 1957
+   },
+   "u_proxy_mean": 0.0019802119264311735,
+   "u_proxy_max": 0.506090373280943,
+   "v3_only_pd": {
+    "n_trades_printdone": 5441,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 5441,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A05R05-S2|S7": {
+   "tag": "f2b-A05R05-S2-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 12283.0,
+   "years": 4.498288843258043,
+   "cagr": -20.767569012540456,
+   "maxdd": -66.79676912235053,
+   "calmar": -0.31090678913677466,
+   "n_trades": 5421,
+   "pnl_total": -22716.07651030004,
+   "pnl_per_trade": -4.190384893986357,
+   "win_pct": 64.37926581811475,
+   "pnl_year": {
+    "2022": -3885.5327546,
+    "2023": 1700.9956202,
+    "2024": -2413.572798500002,
+    "2025": -13119.703807999982
+   },
+   "pos_years": [
+    2023
+   ],
+   "exit_status": {
+    "TAKE_PROFIT_DONE": 3490,
+    "STOP_LOSS_DONE": 1931
+   },
+   "u_proxy_mean": 0.0023125606230969447,
+   "u_proxy_max": 0.5034157288538332,
+   "v3_only_pd": {
+    "n_trades_printdone": 5421,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 5421,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A05R1-S1|A1": {
+   "tag": "f2b-A05R1-S1-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 25923.0,
+   "years": 4.498288843258043,
+   "cagr": -6.456196120373681,
+   "maxdd": -33.969358262782315,
+   "calmar": -0.19005940796494977,
+   "n_trades": 4670,
+   "pnl_total": -9076.34992080001,
+   "pnl_per_trade": -1.9435438802569616,
+   "win_pct": 53.79014989293362,
+   "pnl_year": {
+    "2022": -269.4577739999999,
+    "2023": 4161.525341400003,
+    "2024": -222.8922330000018,
+    "2025": -11351.15639750001
+   },
+   "pos_years": [
+    2023
+   ],
+   "exit_status": {
+    "TAKE_PROFIT_DONE": 2511,
+    "STOP_LOSS_DONE": 2159
+   },
+   "u_proxy_mean": 0.003977493798063278,
+   "u_proxy_max": 0.355858776376282,
+   "v3_only_pd": {
+    "n_trades_printdone": 4670,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 4670,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A05R1-S1|S7": {
+   "tag": "f2b-A05R1-S1-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 26971.0,
+   "years": 4.498288843258043,
+   "cagr": -5.628398932123813,
+   "maxdd": -33.9797950003687,
+   "calmar": -0.16563957881625657,
+   "n_trades": 4682,
+   "pnl_total": -8028.775090599955,
+   "pnl_per_trade": -1.714817405083288,
+   "win_pct": 54.18624519436138,
+   "pnl_year": {
+    "2022": -961.9101184999984,
+    "2023": 4652.575598600002,
+    "2024": 958.4166039999981,
+    "2025": -11815.46107399999
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "TAKE_PROFIT_DONE": 2535,
+    "STOP_LOSS_DONE": 2147
+   },
+   "u_proxy_mean": 0.004218234488780603,
+   "u_proxy_max": 0.3828331926536077,
+   "v3_only_pd": {
+    "n_trades_printdone": 4682,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 4682,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A05R1-S2|A1": {
+   "tag": "f2b-A05R1-S2-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 21362.0,
+   "years": 4.498288843258043,
+   "cagr": -10.39512839927178,
+   "maxdd": -45.7496096449689,
+   "calmar": -0.22721785999795815,
+   "n_trades": 4670,
+   "pnl_total": -13637.125887480011,
+   "pnl_per_trade": -2.920155436291223,
+   "win_pct": 53.79014989293362,
+   "pnl_year": {
+    "2022": -1149.5191990000008,
+    "2023": 5676.240392299995,
+    "2024": -984.9875835000059,
+    "2025": -15202.322924079996
+   },
+   "pos_years": [
+    2023
+   ],
+   "exit_status": {
+    "TAKE_PROFIT_DONE": 2511,
+    "STOP_LOSS_DONE": 2159
+   },
+   "u_proxy_mean": 0.005429826125930425,
+   "u_proxy_max": 0.5010912134891925,
+   "v3_only_pd": {
+    "n_trades_printdone": 4670,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 4670,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A05R1-S2|S7": {
+   "tag": "f2b-A05R1-S2-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 22714.0,
+   "years": 4.498288843258043,
+   "cagr": -9.164318847344866,
+   "maxdd": -45.817805880797245,
+   "calmar": -0.2000165366099675,
+   "n_trades": 4682,
+   "pnl_total": -12285.225660310081,
+   "pnl_per_trade": -2.6239268817407266,
+   "win_pct": 54.18624519436138,
+   "pnl_year": {
+    "2022": -1957.4789674999959,
+    "2023": 6441.033806740005,
+    "2024": 698.3159170000001,
+    "2025": -16214.335895250018
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "TAKE_PROFIT_DONE": 2535,
+    "STOP_LOSS_DONE": 2147
+   },
+   "u_proxy_mean": 0.005724038857403833,
+   "u_proxy_max": 0.5150324950551003,
+   "v3_only_pd": {
+    "n_trades_printdone": 4682,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 4682,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A05R2-S1|A1": {
+   "tag": "f2b-A05R2-S1-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 34714.0,
+   "years": 4.498288843258043,
+   "cagr": -0.18223638938678066,
+   "maxdd": -28.186863248571193,
+   "calmar": -0.006465295119208354,
+   "n_trades": 3976,
+   "pnl_total": -285.16417886998244,
+   "pnl_per_trade": -0.07172137295522697,
+   "win_pct": 39.73843058350101,
+   "pnl_year": {
+    "2022": -1803.6078459999985,
+    "2023": 7367.660940629996,
+    "2024": 5119.532994999998,
+    "2025": -10387.622162999995
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 2410,
+    "TAKE_PROFIT_DONE": 1566
+   },
+   "u_proxy_mean": 0.010239484393653034,
+   "u_proxy_max": 0.3683992789811176,
+   "v3_only_pd": {
+    "n_trades_printdone": 3976,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3976,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A05R2-S1|S7": {
+   "tag": "f2b-A05R2-S1-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 37450.0,
+   "years": 4.498288843258043,
+   "cagr": 1.5154659373569412,
+   "maxdd": -29.705760775619105,
+   "calmar": 0.051015893812783764,
+   "n_trades": 4064,
+   "pnl_total": 2450.0841458700065,
+   "pnl_per_trade": 0.6028750358932102,
+   "win_pct": 40.79724409448819,
+   "pnl_year": {
+    "2022": -947.1692510000003,
+    "2023": 8661.59946267,
+    "2024": 7429.527870200005,
+    "2025": -12336.351465000007
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 2422,
+    "TAKE_PROFIT_DONE": 1642
+   },
+   "u_proxy_mean": 0.010486655091190164,
+   "u_proxy_max": 0.3765633736499809,
+   "v3_only_pd": {
+    "n_trades_printdone": 4064,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 4064,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A05R2-S2|A1": {
+   "tag": "f2b-A05R2-S2-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 33865.0,
+   "years": 4.498288843258043,
+   "cagr": -0.7301782428093873,
+   "maxdd": -37.42410780393899,
+   "calmar": -0.019510905821314838,
+   "n_trades": 3976,
+   "pnl_total": -1134.2804341199956,
+   "pnl_per_trade": -0.2852817993259546,
+   "win_pct": 39.73843058350101,
+   "pnl_year": {
+    "2022": -3052.142167000001,
+    "2023": 10574.51266048001,
+    "2024": 7131.798310499987,
+    "2025": -15017.896195500005
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 2410,
+    "TAKE_PROFIT_DONE": 1566
+   },
+   "u_proxy_mean": 0.014003923220924154,
+   "u_proxy_max": 0.5015567930064068,
+   "v3_only_pd": {
+    "n_trades_printdone": 3976,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3976,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A05R2-S2|S7": {
+   "tag": "f2b-A05R2-S2-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 36609.0,
+   "years": 4.498288843258043,
+   "cagr": 1.0041895454171668,
+   "maxdd": -39.57606521056199,
+   "calmar": 0.025373658044943043,
+   "n_trades": 4064,
+   "pnl_total": 1609.3996962399813,
+   "pnl_per_trade": 0.39601370478345993,
+   "win_pct": 40.79724409448819,
+   "pnl_year": {
+    "2022": -2131.482177500005,
+    "2023": 12331.065511739997,
+    "2024": 10104.400460999981,
+    "2025": -18288.24756050001
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 2422,
+    "TAKE_PROFIT_DONE": 1642
+   },
+   "u_proxy_mean": 0.014239360650142365,
+   "u_proxy_max": 0.5150324950551003,
+   "v3_only_pd": {
+    "n_trades_printdone": 4064,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 4064,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A10R05-S1|A1": {
+   "tag": "f2b-A10R05-S1-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 34581.0,
+   "years": 4.498288843258043,
+   "cagr": -0.2673806690285718,
+   "maxdd": -27.162110777810632,
+   "calmar": -0.009843884049210248,
+   "n_trades": 3987,
+   "pnl_total": -418.0673204300045,
+   "pnl_per_trade": -0.10485761736393391,
+   "win_pct": 70.27840481565086,
+   "pnl_year": {
+    "2022": -3403.146917000002,
+    "2023": 7422.314322570005,
+    "2024": 4696.381988000005,
+    "2025": -10119.406489000003
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 1190,
+    "TAKE_PROFIT_DONE": 2797
+   },
+   "u_proxy_mean": 0.008460664235732822,
+   "u_proxy_max": 0.3737531078692748,
+   "v3_only_pd": {
+    "n_trades_printdone": 3987,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3987,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A10R05-S1|S7": {
+   "tag": "f2b-A10R05-S1-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 33360.0,
+   "years": 4.498288843258043,
+   "cagr": -1.0611901049973227,
+   "maxdd": -27.13472070098576,
+   "calmar": -0.039108200769458125,
+   "n_trades": 4009,
+   "pnl_total": -1639.2301357799968,
+   "pnl_per_trade": -0.40888753698677893,
+   "win_pct": 70.09229234222998,
+   "pnl_year": {
+    "2022": -3406.294060999996,
+    "2023": 7137.47481872,
+    "2024": 4363.76601449999,
+    "2025": -10175.819081999989
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 1205,
+    "TAKE_PROFIT_DONE": 2804
+   },
+   "u_proxy_mean": 0.008286227488746297,
+   "u_proxy_max": 0.3826677994902294,
+   "v3_only_pd": {
+    "n_trades_printdone": 4009,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 4009,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A10R05-S2|A1": {
+   "tag": "f2b-A10R05-S2-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 33566.0,
+   "years": 4.498288843258043,
+   "cagr": -0.9256960408813852,
+   "maxdd": -36.95857407197614,
+   "calmar": -0.025046854867252437,
+   "n_trades": 3987,
+   "pnl_total": -1433.5727575499845,
+   "pnl_per_trade": -0.3595617651241496,
+   "win_pct": 70.27840481565086,
+   "pnl_year": {
+    "2022": -5194.907072999996,
+    "2023": 10522.247323950001,
+    "2024": 6616.165905000013,
+    "2025": -14959.879654999973
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 1190,
+    "TAKE_PROFIT_DONE": 2797
+   },
+   "u_proxy_mean": 0.01151056644226376,
+   "u_proxy_max": 0.5013774856114127,
+   "v3_only_pd": {
+    "n_trades_printdone": 3987,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3987,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A10R05-S2|S7": {
+   "tag": "f2b-A10R05-S2-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 31467.0,
+   "years": 4.498288843258043,
+   "cagr": -2.3377774238917404,
+   "maxdd": -36.45315196426758,
+   "calmar": -0.06413100919731979,
+   "n_trades": 4009,
+   "pnl_total": -3532.26598035998,
+   "pnl_per_trade": -0.8810840559640758,
+   "win_pct": 70.09229234222998,
+   "pnl_year": {
+    "2022": -5125.159353500001,
+    "2023": 9854.885387339988,
+    "2024": 5669.420147800008,
+    "2025": -14784.284079999981
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 1205,
+    "TAKE_PROFIT_DONE": 2804
+   },
+   "u_proxy_mean": 0.011292795353654928,
+   "u_proxy_max": 0.5150324950551003,
+   "v3_only_pd": {
+    "n_trades_printdone": 4009,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 4009,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A10R1-S1|A1": {
+   "tag": "f2b-A10R1-S1-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 48504.0,
+   "years": 4.498288843258043,
+   "cagr": 7.523398238443657,
+   "maxdd": -23.247384332905963,
+   "calmar": 0.32362342923003673,
+   "n_trades": 3613,
+   "pnl_total": 13504.400306660003,
+   "pnl_per_trade": 3.737724967246057,
+   "win_pct": 56.71187378909494,
+   "pnl_year": {
+    "2022": -5557.429359999995,
+    "2023": 10738.523958259997,
+    "2024": 10648.739831200006,
+    "2025": -9088.722598999993
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 1601,
+    "TAKE_PROFIT_DONE": 2012
+   },
+   "u_proxy_mean": 0.021004847663231362,
+   "u_proxy_max": 0.40732835289932406,
+   "v3_only_pd": {
+    "n_trades_printdone": 3613,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3613,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A10R1-S1|S7": {
+   "tag": "f2b-A10R1-S1-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 50451.0,
+   "years": 4.498288843258043,
+   "cagr": 8.468266242119093,
+   "maxdd": -23.237550225252647,
+   "calmar": 0.3644216434190417,
+   "n_trades": 3653,
+   "pnl_total": 15451.088670830004,
+   "pnl_per_trade": 4.229698513777718,
+   "win_pct": 56.88475225841774,
+   "pnl_year": {
+    "2022": -3830.0121048000037,
+    "2023": 11975.588642629982,
+    "2024": 10854.7901679,
+    "2025": -9342.030062999998
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 1614,
+    "TAKE_PROFIT_DONE": 2039
+   },
+   "u_proxy_mean": 0.02039147536296398,
+   "u_proxy_max": 0.4073672232660298,
+   "v3_only_pd": {
+    "n_trades_printdone": 3653,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3653,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A10R1-S2|A1": {
+   "tag": "f2b-A10R1-S2-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 55106.0,
+   "years": 4.498288843258043,
+   "cagr": 10.617418316742011,
+   "maxdd": -31.759284493223994,
+   "calmar": 0.3343091157802151,
+   "n_trades": 3613,
+   "pnl_total": 20106.51572516999,
+   "pnl_per_trade": 5.565047253022416,
+   "win_pct": 56.71187378909494,
+   "pnl_year": {
+    "2022": -8099.841160000002,
+    "2023": 16202.638268070028,
+    "2024": 17775.496081500016,
+    "2025": -15423.670638000016
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 1601,
+    "TAKE_PROFIT_DONE": 2012
+   },
+   "u_proxy_mean": 0.028313964854018128,
+   "u_proxy_max": 0.5394662277032679,
+   "v3_only_pd": {
+    "n_trades_printdone": 3613,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3613,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A10R1-S2|S7": {
+   "tag": "f2b-A10R1-S2-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 58735.0,
+   "years": 4.498288843258043,
+   "cagr": 12.196934167727314,
+   "maxdd": -31.897001681841907,
+   "calmar": 0.38238497428022195,
+   "n_trades": 3653,
+   "pnl_total": 23735.5890024,
+   "pnl_per_trade": 6.497560635751437,
+   "win_pct": 56.88475225841774,
+   "pnl_year": {
+    "2022": -5552.540302999997,
+    "2023": 18733.272618299994,
+    "2024": 18518.739337000025,
+    "2025": -16398.440777999982
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 1614,
+    "TAKE_PROFIT_DONE": 2039
+   },
+   "u_proxy_mean": 0.027585480310166912,
+   "u_proxy_max": 0.5394946330440141,
+   "v3_only_pd": {
+    "n_trades_printdone": 3653,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3653,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A10R2-S1|A1": {
+   "tag": "f2b-A10R2-S1-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 66379.0,
+   "years": 4.498288843258043,
+   "cagr": 15.290355267376787,
+   "maxdd": -18.696091025876306,
+   "calmar": 0.8178370144975324,
+   "n_trades": 3349,
+   "pnl_total": 31379.8236771301,
+   "pnl_per_trade": 9.369908533033772,
+   "win_pct": 42.6993132278292,
+   "pnl_year": {
+    "2022": -4667.750813000004,
+    "2023": 12163.559461549992,
+    "2024": 18109.11993668,
+    "2025": -1204.1741560000057
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 2116,
+    "TAKE_PROFIT_DONE": 1233
+   },
+   "u_proxy_mean": 0.04362237410162206,
+   "u_proxy_max": 0.44976129676917953,
+   "v3_only_pd": {
+    "n_trades_printdone": 3349,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3349,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A10R2-S1|S7": {
+   "tag": "f2b-A10R2-S1-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 64383.0,
+   "years": 4.498288843258043,
+   "cagr": 14.510497600051497,
+   "maxdd": -19.45528974704811,
+   "calmar": 0.7458381647722893,
+   "n_trades": 3452,
+   "pnl_total": 29383.176986889957,
+   "pnl_per_trade": 8.51192844347913,
+   "win_pct": 42.38122827346466,
+   "pnl_year": {
+    "2022": -4348.398872800014,
+    "2023": 13441.751546590009,
+    "2024": 17562.163595499973,
+    "2025": -3136.4065797000053
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 2205,
+    "TAKE_PROFIT_DONE": 1247
+   },
+   "u_proxy_mean": 0.04519373599936209,
+   "u_proxy_max": 0.452561036649797,
+   "v3_only_pd": {
+    "n_trades_printdone": 3452,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3452,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A10R2-S2|A1": {
+   "tag": "f2b-A10R2-S2-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 85676.0,
+   "years": 4.498288843258043,
+   "cagr": 22.019965140313214,
+   "maxdd": -24.48398424117848,
+   "calmar": 0.8993620042966232,
+   "n_trades": 3349,
+   "pnl_total": 50676.450791606185,
+   "pnl_per_trade": 15.131815703674585,
+   "win_pct": 42.6993132278292,
+   "pnl_year": {
+    "2022": -6730.553633999995,
+    "2023": 19182.374493950014,
+    "2024": 29563.975255600024,
+    "2025": -733.9899740000263
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 2116,
+    "TAKE_PROFIT_DONE": 1233
+   },
+   "u_proxy_mean": 0.05920431394252499,
+   "u_proxy_max": 0.5433570893763345,
+   "v3_only_pd": {
+    "n_trades_printdone": 3349,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3349,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A10R2-S2|S7": {
+   "tag": "f2b-A10R2-S2-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 81834.0,
+   "years": 4.498288843258043,
+   "cagr": 20.781757572719183,
+   "maxdd": -25.73271724815286,
+   "calmar": 0.8076005876997282,
+   "n_trades": 3452,
+   "pnl_total": 46834.06254532002,
+   "pnl_per_trade": 13.567225534565475,
+   "win_pct": 42.38122827346466,
+   "pnl_year": {
+    "2022": -6362.200402900003,
+    "2023": 21423.707288370013,
+    "2024": 29426.608461699998,
+    "2025": -5479.664641000015
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 2205,
+    "TAKE_PROFIT_DONE": 1247
+   },
+   "u_proxy_mean": 0.060789297864482755,
+   "u_proxy_max": 0.5465452121750722,
+   "v3_only_pd": {
+    "n_trades_printdone": 3452,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3452,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A20R05-S1|A1": {
+   "tag": "f2b-A20R05-S1-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 61314.0,
+   "years": 4.498288843258043,
+   "cagr": 13.273893582995221,
+   "maxdd": -20.531245695394652,
+   "calmar": 0.6465215886034951,
+   "n_trades": 3434,
+   "pnl_total": 26314.22316021998,
+   "pnl_per_trade": 7.662848910955148,
+   "win_pct": 69.65637740244613,
+   "pnl_year": {
+    "2022": -4451.625286729998,
+    "2023": 16875.104283430002,
+    "2024": 13197.813803999985,
+    "2025": -5683.0229590000135
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "TAKE_PROFIT_DONE": 2311,
+    "STOP_LOSS_DONE": 1123
+   },
+   "u_proxy_mean": 0.04294187625086894,
+   "u_proxy_max": 0.49503264263411867,
+   "v3_only_pd": {
+    "n_trades_printdone": 3434,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3434,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A20R05-S1|S7": {
+   "tag": "f2b-A20R05-S1-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 70914.0,
+   "years": 4.498288843258043,
+   "cagr": 16.99666043361232,
+   "maxdd": -19.880062052837534,
+   "calmar": 0.854960129824461,
+   "n_trades": 3558,
+   "pnl_total": 35914.03179520009,
+   "pnl_per_trade": 10.093881898594741,
+   "win_pct": 70.71388420460933,
+   "pnl_year": {
+    "2022": -3869.4780301599953,
+    "2023": 20306.641545119983,
+    "2024": 18133.426351100035,
+    "2025": -5564.087034000005
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "TAKE_PROFIT_DONE": 2423,
+    "STOP_LOSS_DONE": 1135
+   },
+   "u_proxy_mean": 0.0448106057685462,
+   "u_proxy_max": 0.4866846277394954,
+   "v3_only_pd": {
+    "n_trades_printdone": 3558,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3558,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A20R05-S2|A1": {
+   "tag": "f2b-A20R05-S2-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 76597.0,
+   "years": 4.498288843258043,
+   "cagr": 19.018986042053164,
+   "maxdd": -25.168534843831026,
+   "calmar": 0.7556652049896676,
+   "n_trades": 3430,
+   "pnl_total": 41597.80242624988,
+   "pnl_per_trade": 12.127639191326496,
+   "win_pct": 69.65014577259475,
+   "pnl_year": {
+    "2022": -5817.54219614,
+    "2023": 28344.544486340015,
+    "2024": 20384.026695400014,
+    "2025": -10186.465870000005
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "TAKE_PROFIT_DONE": 2308,
+    "STOP_LOSS_DONE": 1122
+   },
+   "u_proxy_mean": 0.05841213915903702,
+   "u_proxy_max": 0.581177983284704,
+   "v3_only_pd": {
+    "n_trades_printdone": 3430,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3430,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A20R05-S2|S7": {
+   "tag": "f2b-A20R05-S2-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 91325.0,
+   "years": 4.498288843258043,
+   "cagr": 23.764352421073177,
+   "maxdd": -25.212685355557962,
+   "calmar": 0.9425553877320129,
+   "n_trades": 3554,
+   "pnl_total": 56325.27684592025,
+   "pnl_per_trade": 15.848417795700689,
+   "win_pct": 70.70906021384356,
+   "pnl_year": {
+    "2022": -5104.200271080006,
+    "2023": 33830.93924238999,
+    "2024": 28899.903894899966,
+    "2025": -10687.092645000013
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "TAKE_PROFIT_DONE": 2420,
+    "STOP_LOSS_DONE": 1134
+   },
+   "u_proxy_mean": 0.060892031842170596,
+   "u_proxy_max": 0.5779677065683245,
+   "v3_only_pd": {
+    "n_trades_printdone": 3554,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3554,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A20R1-S1|A1": {
+   "tag": "f2b-A20R1-S1-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 84345.0,
+   "years": 4.498288843258043,
+   "cagr": 21.5959881292477,
+   "maxdd": -17.26873621108461,
+   "calmar": 1.2505830111288325,
+   "n_trades": 3252,
+   "pnl_total": 49346.02724791299,
+   "pnl_per_trade": 15.174055119284438,
+   "win_pct": 56.08856088560886,
+   "pnl_year": {
+    "2022": -1279.304999340004,
+    "2023": 22776.317958565014,
+    "2024": 19405.85834511399,
+    "2025": 1186.2841004999912
+   },
+   "pos_years": [
+    2023,
+    2024,
+    2025
+   ],
+   "exit_status": {
+    "TAKE_PROFIT_DONE": 1486,
+    "STOP_LOSS_DONE": 1766
+   },
+   "u_proxy_mean": 0.07564968126421062,
+   "u_proxy_max": 0.49152756702073847,
+   "v3_only_pd": {
+    "n_trades_printdone": 3252,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3252,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A20R1-S1|S7": {
+   "tag": "f2b-A20R1-S1-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 94035.0,
+   "years": 4.498288843258043,
+   "cagr": 24.57154069236298,
+   "maxdd": -17.055546855775038,
+   "calmar": 1.4406773878401333,
+   "n_trades": 3317,
+   "pnl_total": 59035.49747829594,
+   "pnl_per_trade": 17.797858751370498,
+   "win_pct": 56.88875489900513,
+   "pnl_year": {
+    "2022": 983.4076348659996,
+    "2023": 24926.322727280036,
+    "2024": 23526.73341092001,
+    "2025": 2495.6121086000076
+   },
+   "pos_years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "exit_status": {
+    "TAKE_PROFIT_DONE": 1521,
+    "STOP_LOSS_DONE": 1796
+   },
+   "u_proxy_mean": 0.07769473801889658,
+   "u_proxy_max": 0.4952402886534623,
+   "v3_only_pd": {
+    "n_trades_printdone": 3317,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3317,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A20R1-S2|A1": {
+   "tag": "f2b-A20R1-S2-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 112447.0,
+   "years": 4.498288843258043,
+   "cagr": 29.623221420320967,
+   "maxdd": -21.722838688307387,
+   "calmar": 1.3636901624770645,
+   "n_trades": 3243,
+   "pnl_total": 77447.56885610482,
+   "pnl_per_trade": 23.88145817332865,
+   "win_pct": 56.059204440333026,
+   "pnl_year": {
+    "2022": -1979.311082133004,
+    "2023": 37335.42208138999,
+    "2024": 30564.778297549994,
+    "2025": 1133.3906803999857
+   },
+   "pos_years": [
+    2023,
+    2024,
+    2025
+   ],
+   "exit_status": {
+    "TAKE_PROFIT_DONE": 1480,
+    "STOP_LOSS_DONE": 1763
+   },
+   "u_proxy_mean": 0.10150903172960742,
+   "u_proxy_max": 0.5637196092353647,
+   "v3_only_pd": {
+    "n_trades_printdone": 3243,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3243,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A20R1-S2|S7": {
+   "tag": "f2b-A20R1-S2-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 131730.0,
+   "years": 4.498288843258043,
+   "cagr": 34.26520199614347,
+   "maxdd": -21.460444555652856,
+   "calmar": 1.596667855937669,
+   "n_trades": 3306,
+   "pnl_total": 96730.10131592288,
+   "pnl_per_trade": 29.258953816068626,
+   "win_pct": 56.836055656382335,
+   "pnl_year": {
+    "2022": 2069.9035231249964,
+    "2023": 42720.68230516995,
+    "2024": 38892.38581860002,
+    "2025": 2962.998315099997
+   },
+   "pos_years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "exit_status": {
+    "TAKE_PROFIT_DONE": 1513,
+    "STOP_LOSS_DONE": 1793
+   },
+   "u_proxy_mean": 0.10425683477897388,
+   "u_proxy_max": 0.5654888250717942,
+   "v3_only_pd": {
+    "n_trades_printdone": 3306,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3306,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A20R2-S1|A1": {
+   "tag": "f2b-A20R2-S1-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 106660.0,
+   "years": 4.498288843258043,
+   "cagr": 28.109605624925614,
+   "maxdd": -19.428964568283458,
+   "calmar": 1.4467886606171874,
+   "n_trades": 3109,
+   "pnl_total": 71660.26176151591,
+   "pnl_per_trade": 23.049296160024415,
+   "win_pct": 48.82598906400772,
+   "pnl_year": {
+    "2022": 2221.1903693300033,
+    "2023": 25673.33088015999,
+    "2024": 34365.911523090006,
+    "2025": 4821.469028699994
+   },
+   "pos_years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 2455,
+    "TAKE_PROFIT_DONE": 654
+   },
+   "u_proxy_mean": 0.10214906033768982,
+   "u_proxy_max": 0.489919545669664,
+   "v3_only_pd": {
+    "n_trades_printdone": 3109,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3109,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A20R2-S1|S7": {
+   "tag": "f2b-A20R2-S1-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 105199.0,
+   "years": 4.498288843258043,
+   "cagr": 27.717404442598337,
+   "maxdd": -21.359857615968636,
+   "calmar": 1.2976399440919868,
+   "n_trades": 3171,
+   "pnl_total": 70199.46973743972,
+   "pnl_per_trade": 22.137959551384334,
+   "win_pct": 48.47051403342794,
+   "pnl_year": {
+    "2022": 3726.7334994800012,
+    "2023": 26800.30731693998,
+    "2024": 29677.11778400998,
+    "2025": 5589.267094349987
+   },
+   "pos_years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 2512,
+    "TAKE_PROFIT_DONE": 659
+   },
+   "u_proxy_mean": 0.10349774801981745,
+   "u_proxy_max": 0.48983455605516235,
+   "v3_only_pd": {
+    "n_trades_printdone": 3171,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3171,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A20R2-S2|A1": {
+   "tag": "f2b-A20R2-S2-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 153761.0,
+   "years": 4.498288843258043,
+   "cagr": 38.96131826332736,
+   "maxdd": -24.215809284818068,
+   "calmar": 1.6089207593716013,
+   "n_trades": 3109,
+   "pnl_total": 118761.37092073399,
+   "pnl_per_trade": 38.199218694349945,
+   "win_pct": 48.82598906400772,
+   "pnl_year": {
+    "2022": 2554.9583238300065,
+    "2023": 43954.32458355997,
+    "2024": 57899.64642839002,
+    "2025": 8565.822225299995
+   },
+   "pos_years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 2455,
+    "TAKE_PROFIT_DONE": 654
+   },
+   "u_proxy_mean": 0.13601061287521107,
+   "u_proxy_max": 0.5608123063302346,
+   "v3_only_pd": {
+    "n_trades_printdone": 3109,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3109,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "A20R2-S2|S7": {
+   "tag": "f2b-A20R2-S2-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 154138.0,
+   "years": 4.498288843258043,
+   "cagr": 39.03698902245514,
+   "maxdd": -26.040776201060012,
+   "calmar": 1.4990716375369066,
+   "n_trades": 3171,
+   "pnl_total": 119138.75742170714,
+   "pnl_per_trade": 37.571352072439964,
+   "win_pct": 48.47051403342794,
+   "pnl_year": {
+    "2022": 5000.020804690008,
+    "2023": 46689.99942420991,
+    "2024": 52642.79286378006,
+    "2025": 8699.807819940033
+   },
+   "pos_years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 2512,
+    "TAKE_PROFIT_DONE": 659
+   },
+   "u_proxy_mean": 0.1380522674556759,
+   "u_proxy_max": 0.5628845407682501,
+   "v3_only_pd": {
+    "n_trades_printdone": 3171,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3171,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "B05-S1|A1": {
+   "tag": "f2b-B05-S1-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 52380.0,
+   "years": 4.498288843258043,
+   "cagr": 9.376833447099253,
+   "maxdd": -15.302416085616999,
+   "calmar": 0.6127681664539693,
+   "n_trades": 4270,
+   "pnl_total": 17380.822576265982,
+   "pnl_per_trade": 4.0704502520529235,
+   "win_pct": 50.23419203747073,
+   "pnl_year": {
+    "2022": 2647.297822760002,
+    "2023": 13290.923832599992,
+    "2024": 6988.0914809999895,
+    "2025": -5428.108659477989
+   },
+   "pos_years": [
+    2022,
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 2119,
+    "STOP_MARKET_DONE": 2151
+   },
+   "u_proxy_mean": 0.007171148522447333,
+   "u_proxy_max": 0.3560142348754448,
+   "v3_only_pd": {
+    "n_trades_printdone": 4270,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 4270,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "B05-S1|S7": {
+   "tag": "f2b-B05-S1-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 52246.0,
+   "years": 4.498288843258043,
+   "cagr": 9.314567618724801,
+   "maxdd": -15.944694513011637,
+   "calmar": 0.5841797477602138,
+   "n_trades": 4322,
+   "pnl_total": 17246.922783060076,
+   "pnl_per_trade": 3.990495785067116,
+   "win_pct": 50.34706154558075,
+   "pnl_year": {
+    "2022": 2077.8976937600005,
+    "2023": 13608.659567599996,
+    "2024": 7499.881065399996,
+    "2025": -5926.21806206699
+   },
+   "pos_years": [
+    2022,
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 2140,
+    "STOP_MARKET_DONE": 2182
+   },
+   "u_proxy_mean": 0.007280825448214402,
+   "u_proxy_max": 0.3892901831418496,
+   "v3_only_pd": {
+    "n_trades_printdone": 4322,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 4322,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "B05-S2|A1": {
+   "tag": "f2b-B05-S2-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 61683.0,
+   "years": 4.498288843258043,
+   "cagr": 13.42508784724441,
+   "maxdd": -20.710242692098934,
+   "calmar": 0.6482342117780276,
+   "n_trades": 4270,
+   "pnl_total": 26683.404461816026,
+   "pnl_per_trade": 6.249040857568156,
+   "win_pct": 50.23419203747073,
+   "pnl_year": {
+    "2022": 2872.8311041600073,
+    "2023": 21804.48687049999,
+    "2024": 10580.505120999993,
+    "2025": -8665.663807624016
+   },
+   "pos_years": [
+    2022,
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 2119,
+    "STOP_MARKET_DONE": 2151
+   },
+   "u_proxy_mean": 0.00968181996706619,
+   "u_proxy_max": 0.502354566731523,
+   "v3_only_pd": {
+    "n_trades_printdone": 4270,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 4270,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "B05-S2|S7": {
+   "tag": "f2b-B05-S2-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 60471.0,
+   "years": 4.498288843258043,
+   "cagr": 12.925808783775716,
+   "maxdd": -21.767008727093007,
+   "calmar": 0.59382568114135,
+   "n_trades": 4322,
+   "pnl_total": 25471.800838725034,
+   "pnl_per_trade": 5.893521711875297,
+   "win_pct": 50.34706154558075,
+   "pnl_year": {
+    "2022": 1918.528006239995,
+    "2023": 21897.022401199996,
+    "2024": 11414.696695000006,
+    "2025": -9815.210070265004
+   },
+   "pos_years": [
+    2022,
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 2140,
+    "STOP_MARKET_DONE": 2182
+   },
+   "u_proxy_mean": 0.009713630812028714,
+   "u_proxy_max": 0.5258376726284809,
+   "v3_only_pd": {
+    "n_trades_printdone": 4322,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 4322,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "B10-S1|A1": {
+   "tag": "f2b-B10-S1-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 60420.0,
+   "years": 4.498288843258043,
+   "cagr": 12.90462949513751,
+   "maxdd": -11.434532593761126,
+   "calmar": 1.1285664183753774,
+   "n_trades": 3765,
+   "pnl_total": 25420.977850946987,
+   "pnl_per_trade": 6.751919747927486,
+   "win_pct": 65.0996015936255,
+   "pnl_year": {
+    "2022": -1490.3006567999998,
+    "2023": 15111.172047369997,
+    "2024": 10940.09176619998,
+    "2025": -708.0906329549979
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 1301,
+    "STOP_MARKET_DONE": 2464
+   },
+   "u_proxy_mean": 0.013609029320503296,
+   "u_proxy_max": 0.4073769879787949,
+   "v3_only_pd": {
+    "n_trades_printdone": 3765,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3765,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "B10-S1|S7": {
+   "tag": "f2b-B10-S1-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 60878.0,
+   "years": 4.498288843258043,
+   "cagr": 13.094331929620129,
+   "maxdd": -10.542937678015374,
+   "calmar": 1.2420003161855961,
+   "n_trades": 3816,
+   "pnl_total": 25878.705193897014,
+   "pnl_per_trade": 6.7816313401197625,
+   "win_pct": 65.06813417190776,
+   "pnl_year": {
+    "2022": -1466.3503469199977,
+    "2023": 14639.482571399998,
+    "2024": 11383.519791049968,
+    "2025": -190.568123766998
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 1323,
+    "STOP_MARKET_DONE": 2493
+   },
+   "u_proxy_mean": 0.013332501405659882,
+   "u_proxy_max": 0.4073718185625939,
+   "v3_only_pd": {
+    "n_trades_printdone": 3816,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3816,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "B10-S2|A1": {
+   "tag": "f2b-B10-S2-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 77652.0,
+   "years": 4.498288843258043,
+   "cagr": 19.38147626259179,
+   "maxdd": -15.639002532631984,
+   "calmar": 1.23930386366719,
+   "n_trades": 3765,
+   "pnl_total": 42652.82934080989,
+   "pnl_per_trade": 11.32877273328284,
+   "win_pct": 65.0996015936255,
+   "pnl_year": {
+    "2022": -2514.0826916100023,
+    "2023": 24594.529284700013,
+    "2024": 18611.772298800006,
+    "2025": -651.8531793640019
+   },
+   "pos_years": [
+    2023,
+    2024
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 1301,
+    "STOP_MARKET_DONE": 2464
+   },
+   "u_proxy_mean": 0.018459021783190872,
+   "u_proxy_max": 0.5394938037747906,
+   "v3_only_pd": {
+    "n_trades_printdone": 3765,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3765,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "B10-S2|S7": {
+   "tag": "f2b-B10-S2-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 78447.0,
+   "years": 4.498288843258043,
+   "cagr": 19.652110143797753,
+   "maxdd": -14.665541022070672,
+   "calmar": 1.3400194451894154,
+   "n_trades": 3816,
+   "pnl_total": 43447.51044769395,
+   "pnl_per_trade": 11.38561594541246,
+   "win_pct": 65.06813417190776,
+   "pnl_year": {
+    "2022": -2455.830145400002,
+    "2023": 23774.044802050015,
+    "2024": 19492.61348139996,
+    "2025": 130.9824440240041
+   },
+   "pos_years": [
+    2023,
+    2024,
+    2025
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 1323,
+    "STOP_MARKET_DONE": 2493
+   },
+   "u_proxy_mean": 0.018022059469350864,
+   "u_proxy_max": 0.5394543854502787,
+   "v3_only_pd": {
+    "n_trades_printdone": 3816,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3816,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "B20-S1|A1": {
+   "tag": "f2b-B20-S1-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 85304.0,
+   "years": 4.498288843258043,
+   "cagr": 21.90198692378782,
+   "maxdd": -12.078219069398422,
+   "calmar": 1.813345725718708,
+   "n_trades": 3551,
+   "pnl_total": 50304.40034365315,
+   "pnl_per_trade": 14.166263121276584,
+   "win_pct": 78.85102787947058,
+   "pnl_year": {
+    "2022": -1587.7010652799956,
+    "2023": 22171.428376500022,
+    "2024": 16107.643062139996,
+    "2025": 7235.355163370003
+   },
+   "pos_years": [
+    2023,
+    2024,
+    2025
+   ],
+   "exit_status": {
+    "STOP_MARKET_DONE": 2804,
+    "STOP_LOSS_DONE": 747
+   },
+   "u_proxy_mean": 0.027750491370642966,
+   "u_proxy_max": 0.4073048073644732,
+   "v3_only_pd": {
+    "n_trades_printdone": 3551,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3551,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "B20-S1|S7": {
+   "tag": "f2b-B20-S1-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 89188.0,
+   "years": 4.498288843258043,
+   "cagr": 23.114593813283356,
+   "maxdd": -13.784876851767702,
+   "calmar": 1.6768081472065715,
+   "n_trades": 3655,
+   "pnl_total": 54188.629054878074,
+   "pnl_per_trade": 14.825890302292223,
+   "win_pct": 78.8782489740082,
+   "pnl_year": {
+    "2022": -2048.1868909299997,
+    "2023": 23007.53684619999,
+    "2024": 18743.227291700015,
+    "2025": 6654.842997730004
+   },
+   "pos_years": [
+    2023,
+    2024,
+    2025
+   ],
+   "exit_status": {
+    "STOP_MARKET_DONE": 2895,
+    "STOP_LOSS_DONE": 760
+   },
+   "u_proxy_mean": 0.028230723116928435,
+   "u_proxy_max": 0.4073876023199375,
+   "v3_only_pd": {
+    "n_trades_printdone": 3655,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3655,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "B20-S2|A1": {
+   "tag": "f2b-B20-S2-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 126841.0,
+   "years": 4.498288843258043,
+   "cagr": 33.14107936384754,
+   "maxdd": -15.60907321127808,
+   "calmar": 2.1231932809375254,
+   "n_trades": 3551,
+   "pnl_total": 91841.1075911558,
+   "pnl_per_trade": 25.86344905411315,
+   "win_pct": 78.85102787947058,
+   "pnl_year": {
+    "2022": -2275.4483514400004,
+    "2023": 39585.669865749995,
+    "2024": 28257.630214999946,
+    "2025": 17311.297568650007
+   },
+   "pos_years": [
+    2023,
+    2024,
+    2025
+   ],
+   "exit_status": {
+    "STOP_MARKET_DONE": 2804,
+    "STOP_LOSS_DONE": 747
+   },
+   "u_proxy_mean": 0.03782786634480674,
+   "u_proxy_max": 0.5435868534979634,
+   "v3_only_pd": {
+    "n_trades_printdone": 3551,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3551,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "B20-S2|S7": {
+   "tag": "f2b-B20-S2-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 133234.0,
+   "years": 4.498288843258043,
+   "cagr": 34.60448327671517,
+   "maxdd": -18.40763147570771,
+   "calmar": 1.8798987432132275,
+   "n_trades": 3655,
+   "pnl_total": 98234.17827180895,
+   "pnl_per_trade": 26.876656161917634,
+   "win_pct": 78.8782489740082,
+   "pnl_year": {
+    "2022": -3350.911567760004,
+    "2023": 40860.22628274999,
+    "2024": 33894.053404999984,
+    "2025": 15119.991696870014
+   },
+   "pos_years": [
+    2023,
+    2024,
+    2025
+   ],
+   "exit_status": {
+    "STOP_MARKET_DONE": 2895,
+    "STOP_LOSS_DONE": 760
+   },
+   "u_proxy_mean": 0.03864814564794686,
+   "u_proxy_max": 0.5394897567444945,
+   "v3_only_pd": {
+    "n_trades_printdone": 3655,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "OK",
+   "valid": true,
+   "v3_only": {
+    "n_trades_printdone": 3655,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   }
+  },
+  "NEN|A1": {
+   "tag": "f2b-nen-a1",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 145391.0,
+   "years": 4.498288843258043,
+   "cagr": 37.24291810110903,
+   "maxdd": -16.846465675741527,
+   "calmar": 2.2107259064278306,
+   "n_trades": 3622,
+   "pnl_total": 110391.19260832001,
+   "pnl_per_trade": 30.477965932722256,
+   "win_pct": 84.29044726670348,
+   "pnl_year": {
+    "2022": 2518.42107822,
+    "2023": 34230.88315929998,
+    "2024": 34193.545916929994,
+    "2025": 32501.64506577001
+   },
+   "pos_years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 590,
+    "STOP_MARKET_DONE": 3032
+   },
+   "u_proxy_mean": 0.060907549120353614,
+   "u_proxy_max": 0.5574186460186251,
+   "v3_only_pd": {
+    "n_trades_printdone": 3622,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "PARITY_OK",
+   "valid": true,
+   "v3_only": null
+  },
+  "NEN|S7": {
+   "tag": "f2b-nen-s7",
+   "have": true,
+   "day_first": "20210701",
+   "day_last": "20251230",
+   "n_days": 1644,
+   "eq_first": 35000.0,
+   "eq_last": 138042.0,
+   "years": 4.498288843258043,
+   "cagr": 35.66949210952648,
+   "maxdd": -17.693854950618125,
+   "calmar": 2.015925427730512,
+   "n_trades": 3548,
+   "pnl_total": 103042.89707379584,
+   "pnl_per_trade": 29.04253017863468,
+   "win_pct": 83.70913190529876,
+   "pnl_year": {
+    "2022": 2393.648843245996,
+    "2023": 29526.741037300002,
+    "2024": 31439.140646899978,
+    "2025": 33009.13750034999
+   },
+   "pos_years": [
+    2022,
+    2023,
+    2024,
+    2025
+   ],
+   "exit_status": {
+    "STOP_LOSS_DONE": 596,
+    "STOP_MARKET_DONE": 2952
+   },
+   "u_proxy_mean": 0.060876966500290015,
+   "u_proxy_max": 0.5718875281454225,
+   "v3_only_pd": {
+    "n_trades_printdone": 3548,
+    "v3_only_syms": [
+     "BTCST",
+     "PLANCK",
+     "SNT",
+     "STPT"
+    ],
+    "n_trades_v3_only": 0,
+    "n_trades_v3_only_hold_2025": 0,
+    "v3_only_per_sym": {}
+   },
+   "state": "PARITY_OK",
+   "valid": true,
+   "v3_only": null
+  }
+ },
+ "verdict": {
+  "A05R05-S1": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar -0.2788 <= NEN 2.2107",
+    "A1 maxDD -52.92% sau hon NEN -16.85%",
+    "A1 CAGR -14.75% < 0.5 x NEN 37.24%",
+    "S7 Calmar -0.2739 <= NEN 2.0159",
+    "S7 maxDD -51.29% sau hon NEN -17.69%",
+    "S7 CAGR -14.05% < 0.5 x NEN 35.67%",
+    "nam PnL>0 o ca 2 seed = [2023] (1/4 < 3)"
+   ]
+  },
+  "A05R05-S2": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar -0.3175 <= NEN 2.2107",
+    "A1 maxDD -68.47% sau hon NEN -16.85%",
+    "A1 CAGR -21.74% < 0.5 x NEN 37.24%",
+    "S7 Calmar -0.3109 <= NEN 2.0159",
+    "S7 maxDD -66.80% sau hon NEN -17.69%",
+    "S7 CAGR -20.77% < 0.5 x NEN 35.67%",
+    "nam PnL>0 o ca 2 seed = [2023] (1/4 < 3)"
+   ]
+  },
+  "A05R1-S1": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar -0.1901 <= NEN 2.2107",
+    "A1 maxDD -33.97% sau hon NEN -16.85%",
+    "A1 CAGR -6.46% < 0.5 x NEN 37.24%",
+    "S7 Calmar -0.1656 <= NEN 2.0159",
+    "S7 maxDD -33.98% sau hon NEN -17.69%",
+    "S7 CAGR -5.63% < 0.5 x NEN 35.67%",
+    "nam PnL>0 o ca 2 seed = [2023] (1/4 < 3)"
+   ]
+  },
+  "A05R1-S2": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar -0.2272 <= NEN 2.2107",
+    "A1 maxDD -45.75% sau hon NEN -16.85%",
+    "A1 CAGR -10.40% < 0.5 x NEN 37.24%",
+    "S7 Calmar -0.2000 <= NEN 2.0159",
+    "S7 maxDD -45.82% sau hon NEN -17.69%",
+    "S7 CAGR -9.16% < 0.5 x NEN 35.67%",
+    "nam PnL>0 o ca 2 seed = [2023] (1/4 < 3)"
+   ]
+  },
+  "A05R2-S1": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar -0.0065 <= NEN 2.2107",
+    "A1 maxDD -28.19% sau hon NEN -16.85%",
+    "A1 CAGR -0.18% < 0.5 x NEN 37.24%",
+    "S7 Calmar 0.0510 <= NEN 2.0159",
+    "S7 maxDD -29.71% sau hon NEN -17.69%",
+    "S7 CAGR 1.52% < 0.5 x NEN 35.67%",
+    "nam PnL>0 o ca 2 seed = [2023, 2024] (2/4 < 3)"
+   ]
+  },
+  "A05R2-S2": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar -0.0195 <= NEN 2.2107",
+    "A1 maxDD -37.42% sau hon NEN -16.85%",
+    "A1 CAGR -0.73% < 0.5 x NEN 37.24%",
+    "S7 Calmar 0.0254 <= NEN 2.0159",
+    "S7 maxDD -39.58% sau hon NEN -17.69%",
+    "S7 CAGR 1.00% < 0.5 x NEN 35.67%",
+    "nam PnL>0 o ca 2 seed = [2023, 2024] (2/4 < 3)"
+   ]
+  },
+  "A10R05-S1": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar -0.0098 <= NEN 2.2107",
+    "A1 maxDD -27.16% sau hon NEN -16.85%",
+    "A1 CAGR -0.27% < 0.5 x NEN 37.24%",
+    "S7 Calmar -0.0391 <= NEN 2.0159",
+    "S7 maxDD -27.13% sau hon NEN -17.69%",
+    "S7 CAGR -1.06% < 0.5 x NEN 35.67%",
+    "nam PnL>0 o ca 2 seed = [2023, 2024] (2/4 < 3)"
+   ]
+  },
+  "A10R05-S2": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar -0.0250 <= NEN 2.2107",
+    "A1 maxDD -36.96% sau hon NEN -16.85%",
+    "A1 CAGR -0.93% < 0.5 x NEN 37.24%",
+    "S7 Calmar -0.0641 <= NEN 2.0159",
+    "S7 maxDD -36.45% sau hon NEN -17.69%",
+    "S7 CAGR -2.34% < 0.5 x NEN 35.67%",
+    "nam PnL>0 o ca 2 seed = [2023, 2024] (2/4 < 3)"
+   ]
+  },
+  "A10R1-S1": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar 0.3236 <= NEN 2.2107",
+    "A1 maxDD -23.25% sau hon NEN -16.85%",
+    "A1 CAGR 7.52% < 0.5 x NEN 37.24%",
+    "S7 Calmar 0.3644 <= NEN 2.0159",
+    "S7 maxDD -23.24% sau hon NEN -17.69%",
+    "S7 CAGR 8.47% < 0.5 x NEN 35.67%",
+    "nam PnL>0 o ca 2 seed = [2023, 2024] (2/4 < 3)"
+   ]
+  },
+  "A10R1-S2": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar 0.3343 <= NEN 2.2107",
+    "A1 maxDD -31.76% sau hon NEN -16.85%",
+    "A1 CAGR 10.62% < 0.5 x NEN 37.24%",
+    "S7 Calmar 0.3824 <= NEN 2.0159",
+    "S7 maxDD -31.90% sau hon NEN -17.69%",
+    "S7 CAGR 12.20% < 0.5 x NEN 35.67%",
+    "nam PnL>0 o ca 2 seed = [2023, 2024] (2/4 < 3)"
+   ]
+  },
+  "A10R2-S1": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar 0.8178 <= NEN 2.2107",
+    "A1 maxDD -18.70% sau hon NEN -16.85%",
+    "A1 CAGR 15.29% < 0.5 x NEN 37.24%",
+    "S7 Calmar 0.7458 <= NEN 2.0159",
+    "S7 maxDD -19.46% sau hon NEN -17.69%",
+    "S7 CAGR 14.51% < 0.5 x NEN 35.67%",
+    "nam PnL>0 o ca 2 seed = [2023, 2024] (2/4 < 3)"
+   ]
+  },
+  "A10R2-S2": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar 0.8994 <= NEN 2.2107",
+    "A1 maxDD -24.48% sau hon NEN -16.85%",
+    "S7 Calmar 0.8076 <= NEN 2.0159",
+    "S7 maxDD -25.73% sau hon NEN -17.69%",
+    "nam PnL>0 o ca 2 seed = [2023, 2024] (2/4 < 3)"
+   ]
+  },
+  "A20R05-S1": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar 0.6465 <= NEN 2.2107",
+    "A1 maxDD -20.53% sau hon NEN -16.85%",
+    "A1 CAGR 13.27% < 0.5 x NEN 37.24%",
+    "S7 Calmar 0.8550 <= NEN 2.0159",
+    "S7 maxDD -19.88% sau hon NEN -17.69%",
+    "S7 CAGR 17.00% < 0.5 x NEN 35.67%",
+    "nam PnL>0 o ca 2 seed = [2023, 2024] (2/4 < 3)"
+   ]
+  },
+  "A20R05-S2": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar 0.7557 <= NEN 2.2107",
+    "A1 maxDD -25.17% sau hon NEN -16.85%",
+    "S7 Calmar 0.9426 <= NEN 2.0159",
+    "S7 maxDD -25.21% sau hon NEN -17.69%",
+    "nam PnL>0 o ca 2 seed = [2023, 2024] (2/4 < 3)"
+   ]
+  },
+  "A20R1-S1": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar 1.2506 <= NEN 2.2107",
+    "A1 maxDD -17.27% sau hon NEN -16.85%",
+    "S7 Calmar 1.4407 <= NEN 2.0159"
+   ]
+  },
+  "A20R1-S2": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar 1.3637 <= NEN 2.2107",
+    "A1 maxDD -21.72% sau hon NEN -16.85%",
+    "S7 Calmar 1.5967 <= NEN 2.0159",
+    "S7 maxDD -21.46% sau hon NEN -17.69%"
+   ]
+  },
+  "A20R2-S1": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar 1.4468 <= NEN 2.2107",
+    "A1 maxDD -19.43% sau hon NEN -16.85%",
+    "S7 Calmar 1.2976 <= NEN 2.0159",
+    "S7 maxDD -21.36% sau hon NEN -17.69%"
+   ]
+  },
+  "A20R2-S2": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar 1.6089 <= NEN 2.2107",
+    "A1 maxDD -24.22% sau hon NEN -16.85%",
+    "S7 Calmar 1.4991 <= NEN 2.0159",
+    "S7 maxDD -26.04% sau hon NEN -17.69%"
+   ]
+  },
+  "B05-S1": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar 0.6128 <= NEN 2.2107",
+    "A1 CAGR 9.38% < 0.5 x NEN 37.24%",
+    "S7 Calmar 0.5842 <= NEN 2.0159",
+    "S7 CAGR 9.31% < 0.5 x NEN 35.67%"
+   ]
+  },
+  "B05-S2": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar 0.6482 <= NEN 2.2107",
+    "A1 maxDD -20.71% sau hon NEN -16.85%",
+    "A1 CAGR 13.43% < 0.5 x NEN 37.24%",
+    "S7 Calmar 0.5938 <= NEN 2.0159",
+    "S7 maxDD -21.77% sau hon NEN -17.69%",
+    "S7 CAGR 12.93% < 0.5 x NEN 35.67%"
+   ]
+  },
+  "B10-S1": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar 1.1286 <= NEN 2.2107",
+    "A1 CAGR 12.90% < 0.5 x NEN 37.24%",
+    "S7 Calmar 1.2420 <= NEN 2.0159",
+    "S7 CAGR 13.09% < 0.5 x NEN 35.67%",
+    "nam PnL>0 o ca 2 seed = [2023, 2024] (2/4 < 3)"
+   ]
+  },
+  "B10-S2": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar 1.2393 <= NEN 2.2107",
+    "S7 Calmar 1.3400 <= NEN 2.0159",
+    "nam PnL>0 o ca 2 seed = [2023, 2024] (2/4 < 3)"
+   ]
+  },
+  "B20-S1": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar 1.8133 <= NEN 2.2107",
+    "S7 Calmar 1.6768 <= NEN 2.0159"
+   ]
+  },
+  "B20-S2": {
+   "verdict": "KHONG DAT",
+   "fails": [
+    "A1 Calmar 2.1232 <= NEN 2.2107",
+    "S7 Calmar 1.8799 <= NEN 2.0159",
+    "S7 maxDD -18.41% sau hon NEN -17.69%"
+   ]
+  }
+ },
+ "n_dat": 0
+}
